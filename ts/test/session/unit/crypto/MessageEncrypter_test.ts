@@ -193,7 +193,7 @@ describe('MessageEncrypter', () => {
         // tslint:disable: no-non-null-assertion
         StringUtils.fromHex(keypair!.pubKey)
       );
-      const recipientX25519PublicKeyWithoutPrefix = PubKey.remove05PrefixIfNeeded(recipient.key);
+      const recipientX25519PublicKeyWithoutPrefix = PubKey.removePrefixIfNeeded(recipient.key);
 
       const recipientX25519PublicKey = new Uint8Array(
         StringUtils.fromHex(recipientX25519PublicKeyWithoutPrefix)
@@ -230,7 +230,7 @@ describe('MessageEncrypter', () => {
 
       const recipientX25519PrivateKey = userX25519KeyPair!.privKey;
       const recipientX25519PublicKeyHex = toHex(userX25519KeyPair!.pubKey);
-      const recipientX25519PublicKeyWithoutPrefix = PubKey.remove05PrefixIfNeeded(
+      const recipientX25519PublicKeyWithoutPrefix = PubKey.removePrefixIfNeeded(
         recipientX25519PublicKeyHex
       );
       const recipientX25519PublicKey = new PubKey(recipientX25519PublicKeyWithoutPrefix);

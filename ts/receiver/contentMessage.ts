@@ -19,6 +19,7 @@ import { getAllCachedECKeyPair } from './closedGroups';
 import { handleCallMessage } from './callMessage';
 import { SettingsKey } from '../data/settings-key';
 import { ConversationTypeEnum } from '../models/conversation';
+import { KeyPrefixType } from '../types/KeyPrefixes';
 
 export async function handleSwarmContentMessage(envelope: EnvelopePlus, messageHash: string) {
   try {
@@ -138,7 +139,7 @@ export async function decryptWithSessionProtocol(
   const recipientX25519PrivateKey = x25519KeyPair.privateKeyData;
   const hex = toHex(new Uint8Array(x25519KeyPair.publicKeyData));
 
-  const recipientX25519PublicKey = PubKey.remove05PrefixIfNeeded(hex);
+  const recipientX25519PublicKey = PubKey.removePrefixIfNeeded(hex);
 
   const sodium = await getSodium();
   const signatureSize = sodium.crypto_sign_BYTES;
@@ -187,9 +188,9 @@ export async function decryptWithSessionProtocol(
 
   // set the sender identity on the envelope itself.
   if (isClosedGroup) {
-    envelope.senderIdentity = `05${toHex(senderX25519PublicKey)}`;
+    envelope.senderIdentity = `${KeyPrefixType.standard}${toHex(senderX25519PublicKey)}`;
   } else {
-    envelope.source = `05${toHex(senderX25519PublicKey)}`;
+    envelope.source = `${KeyPrefixType.standard}${toHex(senderX25519PublicKey)}`;
   }
   perfEnd(`decryptWithSessionProtocol-${envelope.id}`, 'decryptWithSessionProtocol');
 

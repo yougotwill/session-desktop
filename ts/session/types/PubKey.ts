@@ -1,3 +1,4 @@
+import { KeyPrefixType } from '../../types/KeyPrefixes';
 import { fromHexToArray } from '../utils/String';
 
 export const getStoragePubKey = (key: string) =>
@@ -118,14 +119,40 @@ export class PubKey {
   }
 
   /**
-   * This removes the 05 prefix from a Pubkey which have it and have a length of 66
+   * @param keyWithOrWithoutPrefix Key with or without prefix
+   * @returns If key is the correct length and has a supported prefix 05 or 15
+   */
+  public static isValidPrefixAndLength(keyWithOrWithoutPrefix: string): boolean {
+    return (
+      keyWithOrWithoutPrefix.length === 66 &&
+      (keyWithOrWithoutPrefix.startsWith(KeyPrefixType.blinded) ||
+        keyWithOrWithoutPrefix.startsWith(KeyPrefixType.standard))
+    );
+  }
+
+  /**
+   * This removes the 05 or 15 prefix from a Pubkey which have it and have a length of 66
    * @param keyWithOrWithoutPrefix the key with or without the prefix
    */
-  public static remove05PrefixIfNeeded(keyWithOrWithoutPrefix: string): string {
-    if (keyWithOrWithoutPrefix.length === 66 && keyWithOrWithoutPrefix.startsWith('05')) {
-      return keyWithOrWithoutPrefix.substr(2);
+  public static removePrefixIfNeeded(keyWithOrWithoutPrefix: string): string {
+    if (this.isValidPrefixAndLength(keyWithOrWithoutPrefix)) {
+      const keyWithoutPrefix = keyWithOrWithoutPrefix.substring(2);
+      return keyWithoutPrefix;
     }
     return keyWithOrWithoutPrefix;
+  }
+
+  /**
+   *
+   * @param key Key with the prefix included.
+   * @returns The prefix
+   */
+  public static getPrefix(key: string): KeyPrefixType | null {
+    if (this.isValidPrefixAndLength(key)) {
+      return key.substring(0, 2) as KeyPrefixType;
+    } else {
+      return null;
+    }
   }
 
   /**
@@ -166,7 +193,7 @@ export class PubKey {
   }
 
   public withoutPrefix(): string {
-    return PubKey.remove05PrefixIfNeeded(this.key);
+    return PubKey.removePrefixIfNeeded(this.key);
   }
 
   public toArray(): Uint8Array {
@@ -174,6 +201,6 @@ export class PubKey {
   }
 
   public withoutPrefixToArray(): Uint8Array {
-    return fromHexToArray(PubKey.remove05PrefixIfNeeded(this.key));
+    return fromHexToArray(PubKey.removePrefixIfNeeded(this.key));
   }
 }
