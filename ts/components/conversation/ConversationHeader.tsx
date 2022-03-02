@@ -364,21 +364,21 @@ export const ConversationHeaderWithDetails = () => {
             <ConversationHeaderTitle />
           </div>
         </div>
-        {!isKickedFromGroup && <ExpirationLength expirationSettingName={expirationSettingName} />}
 
         {!isSelectionMode && (
-          <RelativePositionAnchor>
-            <ConversationHeaderButtonContainer>
-              <CallButton />
-              <AvatarHeader
-                onAvatarClick={() => {
-                  dispatch(openRightPanel());
-                }}
-                pubkey={selectedConvoKey}
-                showBackButton={isMessageDetailOpened}
-              />
-            </ConversationHeaderButtonContainer>
-          </RelativePositionAnchor>
+          <ConversationHeaderRightContainer>
+            {!isKickedFromGroup && (
+              <ExpirationLength expirationSettingName={expirationSettingName} />
+            )}
+            <CallButton />
+            <AvatarHeader
+              onAvatarClick={() => {
+                dispatch(openRightPanel());
+              }}
+              pubkey={selectedConvoKey}
+              showBackButton={isMessageDetailOpened}
+            />
+          </ConversationHeaderRightContainer>
         )}
 
         <ConversationHeaderMenu triggerId={triggerId} />
@@ -389,13 +389,7 @@ export const ConversationHeaderWithDetails = () => {
   );
 };
 
-export const RelativePositionAnchor = styled.div`
-  position: relative;
-`;
-
-export const ConversationHeaderButtonContainer = styled.div`
-  position: absolute;
-  transform: translate(-100%, -50%);
+export const ConversationHeaderRightContainer = styled.div`
   display: flex;
   flex-direction: row;
   align-items: center;
