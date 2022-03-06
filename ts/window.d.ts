@@ -20,7 +20,7 @@ declare global {
     CONSTANTS: any;
     Events: any;
     Lodash: any;
-    LokiSnodeAPI: any;
+    SessionSnodeAPI: any;
     Session: any;
     Signal: SignalInterface;
     StubAppDotNetApi: any;
@@ -36,11 +36,11 @@ declare global {
     i18n: LocalizerType;
     libsignal: LibsignalProtocol;
     log: any;
-    lokiFeatureFlags: {
+    sessionFeatureFlags: {
       useOnionRequests: boolean;
       useCallMessage: boolean;
     };
-    lokiSnodeAPI: LokiSnodeAPI;
+    SessionSnodeAPI: SessionSnodeAPI;
     onLogin: any;
     persistStore?: Persistor;
     restart: any;
@@ -74,5 +74,7 @@ declare global {
     setStartInTray: (val: boolean) => Promise<void>;
     getStartInTray: () => Promise<boolean>;
     libsession: any;
+    getOpenGroupBlockList: () => Array<string>;
+    openGroupBlockList: Array<string>;
   }
 }
