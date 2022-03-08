@@ -2,7 +2,7 @@ import { getV2OpenGroupRoomByRoomId, OpenGroupV2Room } from '../../../../data/op
 import { getConversationController } from '../../../conversations';
 import { getSodium } from '../../../crypto';
 import { PromiseUtils, StringUtils, ToastUtils, UserUtils } from '../../../utils';
-import { fromHexToArray, fromUInt8ArrayToBase64, toHex } from '../../../utils/String';
+import { fromHexToArray, toHex } from '../../../utils/String';
 import { forceSyncConfigurationNowIfNeeded } from '../../../utils/syncUtils';
 import {
   getOpenGroupV2ConversationId,
@@ -47,24 +47,6 @@ export function parseOpenGroupV2(urlWithPubkey: string): OpenGroupV2Room | undef
 }
 
 /**
- * Checks if the group pubkey (hashed as blake2b) is in the list of blocked groups (also hashed)
- * @param serverPubKey PubKey of the open group being evaluated
- * @returns true - group is in the blocklist, false - the group is not in the blocklist
- */
-export const isGroupInBlockList = async (serverPubKey: string): Promise<boolean> => {
-  const blockList = window?.getOpenGroupBlockList();
-  window?.log?.warn({ blockList });
-  if (!blockList || !blockList.length) {
-    return false;
-  }
-
-  const sodium = await getSodium();
-  // generic hash is blake2b
-  const serverPubKeyBlake2bHash = sodium.crypto_generichash(32, serverPubKey, null, 'hex');
-  return blockList.includes(serverPubKeyBlake2bHash);
-};
-
-/**
  * Join an open group using the v2 logic.
  *
  * If you only have an string with all details in it, use parseOpenGroupV2() to extract and check the URL is valid
@@ -75,10 +57,6 @@ export const isGroupInBlockList = async (serverPubKey: string): Promise<boolean>
  */
 async function joinOpenGroupV2(room: OpenGroupV2Room, fromConfigMessage: boolean): Promise<void> {
   if (!room.serverUrl || !room.roomId || room.roomId.length < 2 || !room.serverPublicKey) {
-    return;
-  }
-
-  if (await isGroupInBlockList(room.serverPublicKey)) {
     return;
   }
 
