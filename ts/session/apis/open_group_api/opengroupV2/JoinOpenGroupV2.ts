@@ -1,7 +1,8 @@
 import { getV2OpenGroupRoomByRoomId, OpenGroupV2Room } from '../../../../data/opengroups';
 import { getConversationController } from '../../../conversations';
 import { getSodium } from '../../../crypto';
-import { PromiseUtils, ToastUtils } from '../../../utils';
+import { PromiseUtils, StringUtils, ToastUtils, UserUtils } from '../../../utils';
+import { fromHexToArray, fromUInt8ArrayToBase64, toHex } from '../../../utils/String';
 import { forceSyncConfigurationNowIfNeeded } from '../../../utils/syncUtils';
 import {
   getOpenGroupV2ConversationId,
@@ -111,6 +112,10 @@ async function joinOpenGroupV2(room: OpenGroupV2Room, fromConfigMessage: boolean
       throw new Error(window.i18n('connectToServerFail'));
     }
 
+    // TODO: id-blinding maybe generate the key for the group here.
+    const keypair = createOpenGroupKeyPair(room, true); // todo: get blinding capabilities from endpoint
+    console.warn({ keypair });
+
     // here we managed to connect to the group.
     // if this is not a Sync Message, we should trigger one
     if (!fromConfigMessage) {
@@ -120,6 +125,110 @@ async function joinOpenGroupV2(room: OpenGroupV2Room, fromConfigMessage: boolean
     window?.log?.error('Could not join open group v2', e.message);
     throw e;
   }
+}
+
+type BlindedKeyPair = {
+  /**
+   * The blinded public key of this device to send to open groups
+   */
+  PublicKey: string;
+  /**
+   * The corresponding private key to be used with this public key
+   */
+  SecretKey: string;
+};
+
+async function createOpenGroupKeyPair(
+  room: OpenGroupV2Room,
+  blinded: boolean
+): Promise<BlindedKeyPair | null> {
+  // getting our secretKey
+  const ourKeyPair = await UserUtils.getUserED25519KeyPair();
+  if (!ourKeyPair) {
+    return null;
+  }
+  const ourSecretKey = fromHexToArray(ourKeyPair.privKey);
+  if (blinded) {
+    // a priv, A pub
+    // k = reduced(genericHashed(A))
+    // 15 + kA
+    const sodium = await getSodium();
+    const { crypto_core_ed25519_scalar_reduce, crypto_generichash } = sodium;
+    const hashedServerPubKey = crypto_generichash(64, room.serverPublicKey);
+    const reducedHashOfPubKey = crypto_core_ed25519_scalar_reduce(hashedServerPubKey);
+
+    // ka - blinded private
+    const blindedSecretKey = sodium.crypto_core_ed25519_scalar_mul(
+      reducedHashOfPubKey,
+      ourSecretKey
+    );
+
+    // todo: id-blinding - check if supposed to generate blinded pubkey as well
+    const kA = sodium.crypto_scalarmult_ed25519_base_noclamp(blindedSecretKey);
+
+    const blindedPublicKey = `15${toHex(kA)}`; // blinded session ID - kA
+
+    return {
+      // todo: pk is being returned as string - should it be uint8 or string?
+      PublicKey: blindedPublicKey,
+      SecretKey: toHex(blindedSecretKey),
+    };
+  } else {
+    // for unblinded we send our ed25519 master pubkey in X-SOGS-Pubkey header with 00 prefix to denote it's unblinded
+    return {
+      PublicKey: `00${ourKeyPair.pubKey}`,
+      SecretKey: ourKeyPair.privKey,
+    };
+  }
+}
+
+async function createSignatureForOpenGroup(
+  room: OpenGroupV2Room,
+  blinded: boolean,
+  method: string,
+  path: string,
+  hbody: string
+) {
+  // StringUtils.encode('', 'utf8');
+  const sodium = await getSodium();
+  const nonce = new Uint8Array(sodium.crypto_secretbox_NONCEBYTES);
+  const utf8ToUint8 = (s: string) => new Uint8Array(StringUtils.encode(s, 'utf8'));
+  const timestampBytes = utf8ToUint8(Date.now().toString()); // todo: probably has to be bytes
+
+  // const hbodyBytes = hbody ? utf8ToUint8(hbody) : [];
+  const hbodyBytes = sodium.crypto_generichash(64, hbody);
+
+  // We need to sign:
+  // SERVER_PUBKEY || NONCE || TIMESTAMP || METHOD || PATH || HBODY
+  const toSign = [
+    ...utf8ToUint8(room.serverPublicKey),
+    ...nonce,
+    ...timestampBytes,
+    ...utf8ToUint8(method),
+    ...utf8ToUint8(path),
+    ...hbodyBytes,
+  ];
+
+  let sig;
+  if (blinded) {
+    // sig = blinded_ed25519_signature(toSign, s, ka, KA) // todo: expose s, ka and KA for this
+  } else {
+    // todo: implement signature without blinding
+  }
+}
+
+async function signWithBlindedKey() {
+  // todo: id-blinding - supposedly similar to regular signing. This method should only be called on blinded keys (ones containing 15 prefix) otherwise use the regular signing method
+}
+
+async function generatePrivateKeyScalar(): Promise<Uint8Array | null> {
+  const sodium = await getSodium();
+  const ourKeyPair = await UserUtils.getUserED25519KeyPair();
+  if (!ourKeyPair) {
+    return null;
+  }
+  const EDPrivKey = ourKeyPair.privKey;
+  return sodium.crypto_sign_ed25519_sk_to_curve25519(fromHexToArray(EDPrivKey));
 }
 
 /**
