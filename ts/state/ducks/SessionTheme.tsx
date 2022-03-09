@@ -11,6 +11,9 @@ const accentDarkTheme = '#00f782';
 const borderLightThemeColor = '#f1f1f1';
 const borderDarkThemeColor = '#ffffff0F';
 
+// THEME INDEPEDENT COLORS
+const sessionBlack = '#282829';
+
 // DARK COLORS
 const darkColorAccent = accentDarkTheme;
 const darkColorAccentButton = accentDarkTheme;
@@ -22,7 +25,6 @@ const darkColorTextAccent = accentDarkTheme;
 const darkColorSessionShadow = `0 0 4px 0 ${white}33`;
 const darkColorComposeViewBg = '#232323';
 const darkColorSentMessageBg = accentDarkTheme;
-const darkColorSentMessageText = black;
 const darkColorClickableHovered = '#414347';
 const darkColorSessionBorder = `1px solid ${borderDarkThemeColor}`;
 const darkColorSessionBorderColor = borderDarkThemeColor;
@@ -79,7 +81,7 @@ export const switchHtmlToDarkTheme = () => {
     '--color-sent-message-background',
     darkColorSentMessageBg
   );
-  document.documentElement.style.setProperty('--color-sent-message-text', darkColorSentMessageText);
+  document.documentElement.style.setProperty('--color-sent-message-text', sessionBlack);
   document.documentElement.style.setProperty(
     '--color-clickable-hovered',
     darkColorClickableHovered
@@ -174,7 +176,6 @@ const lightColorTextAccent = '#00c769';
 const lightColorSessionShadow = `0 0 4px 0 ${black}5E`;
 const lightColorComposeViewBg = '#efefef';
 const lightColorSentMessageBg = 'hsl(152, 100%, 40%)';
-const lightColorSentMessageText = white;
 const lightColorClickableHovered = '#dfdfdf';
 const lightColorSessionBorderColor = borderLightThemeColor;
 const lightColorSessionBorder = `1px solid ${lightColorSessionBorderColor}`;
@@ -232,10 +233,7 @@ export const switchHtmlToLightTheme = () => {
     '--color-sent-message-background',
     lightColorSentMessageBg
   );
-  document.documentElement.style.setProperty(
-    '--color-sent-message-text',
-    lightColorSentMessageText
-  );
+  document.documentElement.style.setProperty('--color-sent-message-text', sessionBlack);
   document.documentElement.style.setProperty(
     '--color-clickable-hovered',
     lightColorClickableHovered
@@ -364,7 +362,7 @@ export const SessionGlobalStyles = createGlobalStyle`
     --color-session-shadow: ${lightColorSessionShadow};
     --color-compose-view-button-background: ${lightColorComposeViewBg};
     --color-sent-message-background:  ${lightColorSentMessageBg};
-    --color-sent-message-text:  ${lightColorSentMessageText};
+    --color-sent-message-text:  ${sessionBlack};
     --color-clickable-hovered: ${lightColorClickableHovered};
     --color-session-border:  ${lightColorSessionBorderColor};
     --color-recovery-phrase-banner-background: ${lightColorRecoveryPhraseBannerBg};
