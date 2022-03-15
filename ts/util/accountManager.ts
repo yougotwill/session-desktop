@@ -39,7 +39,10 @@ export async function sessionGenerateKeyPair(seed: ArrayBuffer): Promise<Session
   return x25519KeyPair;
 }
 
-const generateKeypair = async (mnemonic: string, mnemonicLanguage: string) => {
+const generateKeypair = async (
+  mnemonic: string,
+  mnemonicLanguage: string
+): Promise<SessionKeyPair> => {
   let seedHex = mn_decode(mnemonic, mnemonicLanguage);
   // handle shorter than 32 bytes seeds
   const privKeyHexLength = 32 * 2;
@@ -128,7 +131,7 @@ export async function generateMnemonic() {
   return mn_encode(hex);
 }
 
-async function createAccount(identityKeyPair: any) {
+async function createAccount(identityKeyPair: SessionKeyPair) {
   const sodium = await getSodium();
   let password = fromArrayBufferToBase64(sodium.randombytes_buf(16));
   password = password.substring(0, password.length - 2);

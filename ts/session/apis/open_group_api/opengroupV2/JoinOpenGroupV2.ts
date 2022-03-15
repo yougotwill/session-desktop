@@ -174,8 +174,6 @@ export async function getSigningHeaders() {
   console.warn({ unblindedHeaders });
 
   console.warn({
-    // blindedPKCompare:
-    // unblindedPK === '00bac6e71efd7dfa4a83c98ed24f254ab2c267f9ccdb172a5280a0444ad24e89cc',
     unblindedPKCompare:
       blindedPK === '1598932d4bccbe595a8789d7eb1629cefc483a0eaddc7e20e8fe5c771efafd9af5',
     blindedSigCompare:
@@ -276,7 +274,8 @@ async function createSignatureForOpenGroup(
     signature = await blindedED25519Signature(msgParts, ourKeyPair, secretKeyBytes, publicKeyBytes);
   } else {
     // todo: replace with userUtils to get our key rather than from method params.
-    const test = fromHexToArray(toHex(ourKeyPair.privKey));
+    const test = (toHex(new Uint8Array(ourKeyPair.privKey)));
+    ourKeyPair
     console.warn({ test });
     signature = sodium.crypto_sign_detached(toSign, new Uint8Array(ourKeyPair.privKey));
   }
