@@ -121,9 +121,7 @@ type OpenGroupKeyPair = {
 
 export async function getSigningHeaders() {
   // hardcoding test values
-  const signingKeys = await sessionGenerateKeyPair(
-    fromHex('c010d89eccbaf5d1c6d19df766c6eedf965d4a28a56f87c9fc819edb59896dd9')
-  );
+  const signKeyHex = 'c010d89eccbaf5d1c6d19df766c6eedf965d4a28a56f87c9fc819edb59896dd9';
   const serverPubkey = fromHexToArray(
     'c3b3c6f32f0ab5a57f853cc4f30f5da7fda5624b0c77b3fb0829de562ada081d'
   );
@@ -131,6 +129,8 @@ export async function getSigningHeaders() {
   const timestamp = 1642472103;
   const method = 'GET';
   const path = '/room/the-best-room/messages/recent?limit=25';
+
+  const signingKeys = await sessionGenerateKeyPair(fromHex(signKeyHex));
 
   // BLINDED PROCESS
   const { publicKeyBytes, secretKeyBytes } = await createOpenGroupKeyPairBytes(
@@ -274,8 +274,8 @@ async function createSignatureForOpenGroup(
     signature = await blindedED25519Signature(msgParts, ourKeyPair, secretKeyBytes, publicKeyBytes);
   } else {
     // todo: replace with userUtils to get our key rather than from method params.
-    const test = (toHex(new Uint8Array(ourKeyPair.privKey)));
-    ourKeyPair
+    const test = toHex(new Uint8Array(ourKeyPair.privKey));
+    ourKeyPair;
     console.warn({ test });
     signature = sodium.crypto_sign_detached(toSign, new Uint8Array(ourKeyPair.privKey));
   }
