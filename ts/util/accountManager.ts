@@ -10,12 +10,15 @@ import { mn_decode, mn_encode } from '../session/crypto/mnemonic';
 import { ConversationTypeEnum } from '../models/conversation';
 import { SettingsKey } from '../data/settings-key';
 
+export type SessionKeyPair = {
+  pubKey: ArrayBufferLike;
+  privKey: ArrayBufferLike;
+};
+
 /**
  * Might throw
  */
-export async function sessionGenerateKeyPair(
-  seed: ArrayBuffer
-): Promise<{ pubKey: ArrayBufferLike; privKey: ArrayBufferLike }> {
+export async function sessionGenerateKeyPair(seed: ArrayBuffer): Promise<SessionKeyPair> {
   const sodium = await getSodium();
   const ed25519KeyPair = sodium.crypto_sign_seed_keypair(new Uint8Array(seed));
   const x25519PublicKey = sodium.crypto_sign_ed25519_pk_to_curve25519(ed25519KeyPair.publicKey);
