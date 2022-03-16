@@ -12,7 +12,14 @@ import { SettingsKey } from '../data/settings-key';
 import { KeyPair } from 'libsodium-wrappers-sumo';
 
 export type SessionKeyPair = {
+  /**
+   * The curve25519 pubkey with prepended 5
+   */
   pubKey: ArrayBufferLike;
+  
+  /**
+   * The curve25519 secret key
+   */
   privKey: ArrayBufferLike;
   ed25519KeyPair: KeyPair;
 };
