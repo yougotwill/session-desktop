@@ -103,17 +103,6 @@ async function joinOpenGroupV2(room: OpenGroupV2Room, fromConfigMessage: boolean
   }
 }
 
-type OpenGroupKeyPair = {
-  /**
-   * The blinded public key of this device to send to open groups
-   */
-  publicKey: string;
-  /**
-   * The corresponding private key to be used with this public key
-   */
-  secretKey: string;
-};
-
 const debugOutput = (key: string, headers: any, blinded: boolean) => {
   const testSet: any = blinded
     ? {
