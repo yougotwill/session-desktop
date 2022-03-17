@@ -110,7 +110,7 @@ const debugOutput = (key: string, headers: any, blinded: boolean) => {
         'X-SOGS-Timestamp': '1642472103',
         'X-SOGS-Nonce': 'CdB5nyKVmQGCw6s0Bvv8Ww==',
         'X-SOGS-Signature':
-          'n4HK33v7gkcz/3pZuWvzmOlY+AbzbpEN1K12dtCc8Gw0m4iP5gUddGKKLEbmoWNhqJeY2S81Lm9uK2DBBN8aCg==',
+          'kXxMbg6+492jeI+D61s9636ixYctn/qnhknhUhQTt54UR3eP9vslcc3iESdBCyikpqYyyfEOp0z+hjuvXGWyCQ==',
       }
     : {
         'X-SOGS-Pubkey': '00bac6e71efd7dfa4a83c98ed24f254ab2c267f9ccdb172a5280a0444ad24e89cc',
@@ -253,10 +253,7 @@ async function blindedED25519Signature(
 ): Promise<Uint8Array> {
   const sodium = await getSodium();
 
-  const H_rh = sodium
-    .crypto_hash_sha512(ourKeyPair.ed25519KeyPair.privateKey)
-    // .crypto_hash_sha512(new Uint8Array(ourKeyPair.privKey))
-    .slice(0, 32);
+  const H_rh = sodium.crypto_hash_sha512(ourKeyPair.ed25519KeyPair.privateKey).slice(32);
   const r = sodium.crypto_core_ed25519_scalar_reduce(sha512Multipart([H_rh, kA, ...messageParts]));
 
   const sigR = sodium.crypto_scalarmult_ed25519_base_noclamp(r);
@@ -270,12 +267,7 @@ async function blindedED25519Signature(
     sodium.crypto_core_ed25519_scalar_mul(HRAM, ka)
   );
 
-  // const full_sig = new Uint8Array([...sigR, ...sig_s]);
   const full_sig = concatUInt8Array(sigR, sig_s);
-  // const base64Sig = fromUInt8ArrayToBase64(full_sig);
-  // const expectedSig =
-  'n4HK33v7gkcz/3pZuWvzmOlY+AbzbpEN1K12dtCc8Gw0m4iP5gUddGKKLEbmoWNhqJeY2S81Lm9uK2DBBN8aCg==';
-  // debugOutput('blindedSig', base64Sig, expectedSig);
   return full_sig;
 }
 
