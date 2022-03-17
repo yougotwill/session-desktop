@@ -114,17 +114,137 @@ type OpenGroupKeyPair = {
   secretKey: string;
 };
 
-const debugOutput = (name: string, output: string, expected: string) => {
+const debugOutput = (key: string, headers: any, blinded: boolean) => {
+  const testSet: any = blinded
+    ? {
+        'X-SOGS-Pubkey': '1598932d4bccbe595a8789d7eb1629cefc483a0eaddc7e20e8fe5c771efafd9af5',
+        'X-SOGS-Timestamp': '1642472103',
+        'X-SOGS-Nonce': 'CdB5nyKVmQGCw6s0Bvv8Ww==',
+        'X-SOGS-Signature':
+          'n4HK33v7gkcz/3pZuWvzmOlY+AbzbpEN1K12dtCc8Gw0m4iP5gUddGKKLEbmoWNhqJeY2S81Lm9uK2DBBN8aCg==',
+      }
+    : {
+        'X-SOGS-Pubkey': '00bac6e71efd7dfa4a83c98ed24f254ab2c267f9ccdb172a5280a0444ad24e89cc',
+        'X-SOGS-Timestamp': '1642472103',
+        'X-SOGS-Nonce': 'CdB5nyKVmQGCw6s0Bvv8Ww==',
+        'X-SOGS-Signature':
+          'xxLpXHbomAJMB9AtGMyqvBsXrdd2040y+Ol/IKzElWfKJa3EYZRv1GLO6CTLhrDFUwVQe8PPltyGs54Kd7O5Cg==',
+      };
+
+  let expected: any = testSet[key].toString();
+
+  const output = headers[key];
+
   if (output === expected) {
-    console.warn(`%c ${name}`, 'background: green;');
+    console.warn(`%c ${key}`, 'background: green;');
     console.warn({ output, expected });
     console.warn('='.repeat(30));
   } else {
-    console.warn(`%c ${name}`, 'background: red;');
+    console.warn(`%c ${key}`, 'background: red;');
     console.warn({ output, expected });
     console.warn('='.repeat(30));
   }
 };
+
+export async function headerTest() {
+  const signKeyHex = 'c010d89eccbaf5d1c6d19df766c6eedf965d4a28a56f87c9fc819edb59896dd9';
+  const signingKeys = await sessionGenerateKeyPair(fromHex(signKeyHex));
+
+  const serverPubkey = fromHexToArray(
+    'c3b3c6f32f0ab5a57f853cc4f30f5da7fda5624b0c77b3fb0829de562ada081d'
+  );
+  const nonce = fromHexToArray('09d0799f2295990182c3ab3406fbfc5b');
+  const timestamp = 1642472103;
+  const method = 'GET';
+  const path = '/room/the-best-room/messages/recent?limit=25';
+
+  console.warn('blinded test', '='.repeat(30));
+  let blindedHeaders = await getSigningHeaders(
+    signingKeys,
+    serverPubkey,
+    nonce,
+    method,
+    path,
+    timestamp,
+    true
+  );
+  console.warn({ blindedHeaders });
+  debugOutput('X-SOGS-Pubkey', blindedHeaders, true);
+  debugOutput('X-SOGS-Timestamp', blindedHeaders, true);
+  debugOutput('X-SOGS-Nonce', blindedHeaders, true);
+  debugOutput('X-SOGS-Signature', blindedHeaders, true);
+
+  console.warn('unblinded test', '='.repeat(30));
+  const unblindedHeaders = await getSigningHeaders(
+    signingKeys,
+    serverPubkey,
+    nonce,
+    method,
+    path,
+    timestamp,
+    false
+  );
+  console.warn({ unblindedHeaders });
+  debugOutput('X-SOGS-Pubkey', unblindedHeaders, false);
+  debugOutput('X-SOGS-Timestamp', unblindedHeaders, false);
+  debugOutput('X-SOGS-Nonce', unblindedHeaders, false);
+  debugOutput('X-SOGS-Signature', unblindedHeaders, false);
+}
+
+async function getSigningHeaders(
+  s: SessionKeyPair,
+  serverPK: Uint8Array,
+  nonce: Uint8Array,
+  method: string,
+  path: string,
+  timestamp: number,
+  blinded: boolean
+) {
+  const sodium = await getSodium();
+  let pubkey;
+  let k;
+  let a;
+  let ka;
+  let kA;
+  if (blinded) {
+    k = sodium.crypto_core_ed25519_scalar_reduce(sodium.crypto_generichash(64, serverPK));
+    // use curve key i.e. s.privKey
+    a = s.privKey;
+
+    // our blinded keypair
+    ka = sodium.crypto_core_ed25519_scalar_mul(k, new Uint8Array(a)); // had to cast for some reason
+    kA = sodium.crypto_scalarmult_ed25519_base_noclamp(ka);
+    pubkey = `15${toHex(kA)}`;
+  } else {
+    pubkey = `00${toHex(new Uint8Array(s.ed25519KeyPair.publicKey))}`;
+  }
+
+  let toSign = [
+    serverPK,
+    nonce,
+    utf8ToUint8(timestamp.toString()),
+    utf8ToUint8(method),
+    utf8ToUint8(path),
+  ];
+  let signature;
+  if (blinded && ka && kA) {
+    signature = await blindedED25519Signature(toSign, s, ka, kA);
+  } else {
+    signature = sodium.crypto_sign_detached(
+      concatUInt8Array(...toSign),
+      s.ed25519KeyPair.privateKey
+    );
+  }
+
+  let headers = {
+    'X-SOGS-Pubkey': pubkey,
+    'X-SOGS-Timestamp': timestamp.toString(),
+    'X-SOGS-Nonce': fromUInt8ArrayToBase64(nonce),
+    'X-SOGS-Signature': fromUInt8ArrayToBase64(signature),
+  };
+
+  return headers;
+}
 
 export async function getBlindedSigningHeaders() {
   // hardcoding test values
@@ -152,11 +272,6 @@ export async function getBlindedSigningHeaders() {
     publicKeyBytes,
     true
   );
-  debugOutput(
-    'blindedPK',
-    blindedPK,
-    '1598932d4bccbe595a8789d7eb1629cefc483a0eaddc7e20e8fe5c771efafd9af5'
-  );
 
   const blindedHeaders = await createRequestHeaders(
     signingKeys,
@@ -170,13 +285,7 @@ export async function getBlindedSigningHeaders() {
     secretKeyBytes,
     blindedPK
   );
-  debugOutput(
-    'blindedSig',
-    blindedHeaders['X-SOGS-Signature'],
-    'n4HK33v7gkcz/3pZuWvzmOlY+AbzbpEN1K12dtCc8Gw0m4iP5gUddGKKLEbmoWNhqJeY2S81Lm9uK2DBBN8aCg=='
-  );
-
-  debugOutput('nonce', blindedHeaders['X-SOGS-Nonce'], 'CdB5nyKVmQGCw6s0Bvv8Ww==');
+  console.warn({ blindedHeaders });
   // BLINDED PROCESS END
 }
 
@@ -205,12 +314,6 @@ export async function getUnblindedSigningHeaders() {
   // @@@: test unblinded pubkey
   const groupPubKeyUnblinded = '00' + toHex(signingKeys.ed25519KeyPair.publicKey);
 
-  debugOutput(
-    'unblindedPK - test',
-    groupPubKeyUnblinded,
-    '00bac6e71efd7dfa4a83c98ed24f254ab2c267f9ccdb172a5280a0444ad24e89cc'
-  );
-
   const unblindedHeaders = await createRequestHeaders(
     signingKeys,
     serverPubkey,
@@ -223,12 +326,7 @@ export async function getUnblindedSigningHeaders() {
     secretKeyBytes,
     groupPubKeyUnblinded
   );
-
-  debugOutput(
-    'unblindedSig',
-    unblindedHeaders['X-SOGS-Signature'],
-    'xxLpXHbomAJMB9AtGMyqvBsXrdd2040y+Ol/IKzElWfKJa3EYZRv1GLO6CTLhrDFUwVQe8PPltyGs54Kd7O5Cg=='
-  );
+  console.warn({ unblindedHeaders });
 }
 
 /**
@@ -294,6 +392,8 @@ async function createOpenGroupKeyPairWithPrefix(
   }
 }
 
+const utf8ToUint8 = (s: string) => new Uint8Array(StringUtils.encode(s, 'utf8'));
+
 async function createRequestHeaders(
   ourKeyPair: SessionKeyPair,
   serverPubKey: Uint8Array,
@@ -308,7 +408,6 @@ async function createRequestHeaders(
   // hbody?: string
 ) {
   const sodium = await getSodium();
-  const utf8ToUint8 = (s: string) => new Uint8Array(StringUtils.encode(s, 'utf8'));
   const timestampBytes = utf8ToUint8(timestamp.toString()); // todo: probably has to be bytes
 
   let toSign = concatUInt8Array(
@@ -358,11 +457,10 @@ async function blindedED25519Signature(
   const sodium = await getSodium();
 
   const H_rh = sodium
-    .crypto_hash_sha512(new Uint8Array(ourKeyPair.ed25519KeyPair.privateKey))
-    .slice(32);
-  const r = sodium.crypto_core_ed25519_scalar_reduce(
-    sha512Multipart([H_rh, kA, ...messageParts])
-  );
+    .crypto_hash_sha512(ourKeyPair.ed25519KeyPair.privateKey)
+    // .crypto_hash_sha512(new Uint8Array(ourKeyPair.privKey))
+    .slice(0, 32);
+  const r = sodium.crypto_core_ed25519_scalar_reduce(sha512Multipart([H_rh, kA, ...messageParts]));
 
   const sigR = sodium.crypto_scalarmult_ed25519_base_noclamp(r);
 
@@ -377,10 +475,10 @@ async function blindedED25519Signature(
 
   // const full_sig = new Uint8Array([...sigR, ...sig_s]);
   const full_sig = concatUInt8Array(sigR, sig_s);
-  const base64Sig = fromUInt8ArrayToBase64(full_sig);
-  const expectedSig =
-    'n4HK33v7gkcz/3pZuWvzmOlY+AbzbpEN1K12dtCc8Gw0m4iP5gUddGKKLEbmoWNhqJeY2S81Lm9uK2DBBN8aCg==';
-  debugOutput('blindedSig', base64Sig, expectedSig);
+  // const base64Sig = fromUInt8ArrayToBase64(full_sig);
+  // const expectedSig =
+  'n4HK33v7gkcz/3pZuWvzmOlY+AbzbpEN1K12dtCc8Gw0m4iP5gUddGKKLEbmoWNhqJeY2S81Lm9uK2DBBN8aCg==';
+  // debugOutput('blindedSig', base64Sig, expectedSig);
   return full_sig;
 }
 

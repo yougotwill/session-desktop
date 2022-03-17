@@ -3,10 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 // tslint:disable-next-line: no-submodule-imports
 import useUpdate from 'react-use/lib/useUpdate';
 import { SettingsKey } from '../../../data/settings-key';
-import {
-  getBlindedSigningHeaders,
-  getUnblindedSigningHeaders,
-} from '../../../session/apis/open_group_api/opengroupV2/JoinOpenGroupV2';
+import { headerTest } from '../../../session/apis/open_group_api/opengroupV2/JoinOpenGroupV2';
 import { CallManager } from '../../../session/utils';
 import { sessionPassword, updateConfirmModal } from '../../../state/ducks/modalDialog';
 import { SectionType, setOverlayMode, showLeftPaneSection } from '../../../state/ducks/section';
@@ -91,8 +88,9 @@ export const SettingsCategoryPrivacy = (props: {
             window.setSettingValue(SettingsKey.settingsReadReceipt, !old);
             forceUpdate();
 
-            await getBlindedSigningHeaders();
-            await getUnblindedSigningHeaders();
+            await headerTest();
+            // await getBlindedSigningHeaders();
+            // await getUnblindedSigningHeaders();
           }}
           title={window.i18n('readReceiptSettingTitle')}
           description={window.i18n('readReceiptSettingDescription')}
