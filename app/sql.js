@@ -2,11 +2,21 @@ const path = require('path');
 const fs = require('fs');
 const rimraf = require('rimraf');
 const SQL = require('better-sqlite3');
-const { app, dialog, clipboard } = require('electron');
+const { app, dialog, clipboard, Notification } = require('electron');
 const { redactAll } = require('../js/modules/privacy');
-const { remove: removeUserConfig } = require('./user_config');
 
-const { map, isString, fromPairs, forEach, last, isEmpty, isObject, isNumber } = require('lodash');
+const {
+  map,
+  flattenDeep,
+  uniq,
+  isString,
+  fromPairs,
+  forEach,
+  last,
+  isEmpty,
+  isObject,
+  isNumber,
+} = require('lodash');
 
 /* eslint-disable camelcase */
 
@@ -1392,16 +1402,17 @@ function updateToLokiSchemaVersion21(currentVersion, db) {
       `);
 
     // all closed group admins
-    const closedGroupRows = getAllClosedGroupConversations(db) || [];
+    const closedGroups = getAllClosedGroupConversations(db) || [];
 
-    const adminIds = closedGroupRows.map(json => jsonToObject(json).groupAdmins);
-    forEach(adminIds, id => {
-      db.exec(
+    const adminIds = closedGroups.map(g => g.groupAdmins);
+    const flattenedAdmins = uniq(flattenDeep(adminIds)) || [];
+
+    forEach(flattenedAdmins, id => {
+      db.prepare(
         `
         UPDATE ${CONVERSATIONS_TABLE} SET
         json = json_set(json, '$.didApproveMe', 1, '$.isApproved', 1)
-        WHERE type = id 
-        values ($id);
+        WHERE id = $id;
       `
       ).run({
         id,
@@ -1482,6 +1493,14 @@ function _initializePaths(configDir) {
   databaseFilePath = path.join(dbDir, 'db.sqlite');
 }
 
+function showFailedToStart() {
+  const notification = new Notification({
+    title: 'Session failed to start',
+    body: 'Please start from terminal and open a github issue',
+  });
+  notification.show();
+}
+
 function initialize({ configDir, key, messages, passwordAttempt }) {
   if (globalInstance) {
     throw new Error('Cannot initialize more than once!');
@@ -1544,9 +1563,7 @@ function initialize({ configDir, key, messages, passwordAttempt }) {
       clipboard.writeText(`Database startup error:\n\n${redactAll(error.stack)}`);
     } else {
       close();
-      removeDB();
-      removeUserConfig();
-      app.relaunch();
+      showFailedToStart();
     }
 
     app.exit(1);
@@ -2314,8 +2331,8 @@ function getUnreadCountByConversation(conversationId) {
 function getMessageCountByType(conversationId, type = '%') {
   const row = globalInstance
     .prepare(
-      `SELECT count(*) from ${MESSAGES_TABLE} 
-      WHERE conversationId = $conversationId 
+      `SELECT count(*) from ${MESSAGES_TABLE}
+      WHERE conversationId = $conversationId
       AND type = $type;`
     )
     .get({
@@ -2344,6 +2361,9 @@ function getMessagesByConversation(conversationId, { messageId = null } = {}) {
   // If messageId is null, it means we are just opening the convo to the last unread message, or at the bottom
   const firstUnread = getFirstUnreadMessageIdInConversation(conversationId);
 
+  const numberOfMessagesInConvo = getMessagesCountByConversation(globalInstance, conversationId);
+  const floorLoadAllMessagesInConvo = 70;
+
   if (messageId || firstUnread) {
     const messageFound = getMessageById(messageId || firstUnread);
 
@@ -2368,7 +2388,10 @@ function getMessagesByConversation(conversationId, { messageId = null } = {}) {
         .all({
           conversationId,
           messageId: messageId || firstUnread,
-          limit: absLimit,
+          limit:
+            numberOfMessagesInConvo < floorLoadAllMessagesInConvo
+              ? floorLoadAllMessagesInConvo
+              : absLimit,
         });
 
       return map(rows, row => jsonToObject(row.json));
@@ -2378,7 +2401,10 @@ function getMessagesByConversation(conversationId, { messageId = null } = {}) {
     );
   }
 
-  const limit = 2 * absLimit;
+  const limit =
+    numberOfMessagesInConvo < floorLoadAllMessagesInConvo
+      ? floorLoadAllMessagesInConvo
+      : 2 * absLimit;
 
   const rows = globalInstance
     .prepare(

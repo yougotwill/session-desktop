@@ -617,7 +617,8 @@ export async function handleDataExtractionNotification(
     const envelopeTimestamp = Lodash.toNumber(timestamp);
     const referencedAttachmentTimestamp = Lodash.toNumber(referencedAttachment);
 
-    await convo.addSingleOutgoingMessage({
+    await convo.addSingleIncomingMessage({
+      source,
       sent_at: envelopeTimestamp,
       dataExtractionNotification: {
         type,

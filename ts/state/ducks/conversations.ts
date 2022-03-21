@@ -332,6 +332,8 @@ async function getMessages({
   conversationKey: string;
   messageId: string | null;
 }): Promise<Array<MessageModelPropsWithoutConvoProps>> {
+  const beforeTimestamp = Date.now();
+
   const conversation = getConversationController().get(conversationKey);
   if (!conversation) {
     // no valid conversation, early return
@@ -346,6 +348,8 @@ async function getMessages({
   const messageProps: Array<MessageModelPropsWithoutConvoProps> = messageSet.models.map(m =>
     m.getMessageModelProps()
   );
+  const time = Date.now() - beforeTimestamp;
+  window?.log?.info(`Loading ${messageProps.length} messages took ${time}ms to load.`);
   return messageProps;
 }
 
@@ -376,13 +380,10 @@ export const fetchTopMessagesForConversation = createAsyncThunk(
       window.log.info('fetchTopMessagesForConversation: we are already at the top');
       return null;
     }
-    const beforeTimestamp = Date.now();
     const messagesProps = await getMessages({
       conversationKey,
       messageId: oldTopMessageId,
     });
-    const time = Date.now() - beforeTimestamp;
-    window?.log?.info(`Loading ${messagesProps.length} messages took ${time}ms to load.`);
 
     return {
       conversationKey,
@@ -408,7 +409,6 @@ export const fetchBottomMessagesForConversation = createAsyncThunk(
     conversationKey: string;
     oldBottomMessageId: string | null;
   }): Promise<FetchedBottomMessageResults> => {
-    const beforeTimestamp = Date.now();
     // no need to load more bottom if we are already at the bottom
     const mostRecentMessage = await getLastMessageInConversation(conversationKey);
 
@@ -420,8 +420,6 @@ export const fetchBottomMessagesForConversation = createAsyncThunk(
       conversationKey,
       messageId: oldBottomMessageId,
     });
-    const time = Date.now() - beforeTimestamp;
-    window?.log?.info(`Loading ${messagesProps.length} messages took ${time}ms to load.`);
 
     return {
       conversationKey,
@@ -953,6 +951,7 @@ export const {
   quotedMessageToAnimate,
   setNextMessageToPlayId,
   updateMentionsMembers,
+  resetConversationExternal,
 } = actions;
 
 export async function openConversationWithMessages(args: {
@@ -976,10 +975,6 @@ export async function openConversationWithMessages(args: {
       initialMessages,
     })
   );
-}
-
-export function clearConversationFocus() {
-  window.inboxStore?.dispatch(actions.resetConversationExternal());
 }
 
 export async function openConversationToSpecificMessage(args: {

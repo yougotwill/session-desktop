@@ -6,7 +6,6 @@ import { SettingsKey } from '../../../data/settings-key';
 import { headerTest } from '../../../session/apis/open_group_api/opengroupV2/JoinOpenGroupV2';
 import { CallManager } from '../../../session/utils';
 import { sessionPassword, updateConfirmModal } from '../../../state/ducks/modalDialog';
-import { SectionType, setOverlayMode, showLeftPaneSection } from '../../../state/ducks/section';
 import { toggleMessageRequests } from '../../../state/ducks/userConfig';
 import { getHideMessageRequestBanner } from '../../../state/selectors/userConfig';
 import { SessionButtonColor } from '../../basic/SessionButton';
@@ -123,16 +122,6 @@ export const SettingsCategoryPrivacy = (props: {
           title={window.i18n('hideRequestBanner')}
           description={window.i18n('hideRequestBannerDescription')}
           active={useSelector(getHideMessageRequestBanner)}
-        />
-        <SessionSettingButtonItem
-          title={window.i18n('openMessageRequestInbox')}
-          description={window.i18n('openMessageRequestInboxDescription')}
-          onClick={() => {
-            dispatch(showLeftPaneSection(SectionType.Message));
-            dispatch(setOverlayMode('message-requests'));
-          }}
-          buttonColor={SessionButtonColor.Primary}
-          buttonText={window.i18n('openMessageRequestInbox')}
         />
         {!props.hasPassword && (
           <SessionSettingButtonItem

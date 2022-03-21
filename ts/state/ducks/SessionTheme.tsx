@@ -30,8 +30,7 @@ const darkColorSessionBorder = `1px solid ${borderDarkThemeColor}`;
 const darkColorSessionBorderColor = borderDarkThemeColor;
 const darkColorRecoveryPhraseBannerBg = '#1f1f1f';
 const darkColorPillDivider = '#353535';
-const darkColorLastSeenIndicator = '#353535';
-const darkColorLastSeenIndicatorText = '#a8a9aa';
+const darkColorLastSeenIndicator = accentDarkTheme;
 const darkColorQuoteBottomBarBg = '#404040';
 const darkColorCellBackground = '#1b1b1b';
 const darkColorReceivedMessageBg = '#2d2d2d';
@@ -96,10 +95,6 @@ export const switchHtmlToDarkTheme = () => {
   document.documentElement.style.setProperty(
     '--color-last-seen-indicator',
     darkColorLastSeenIndicator
-  );
-  document.documentElement.style.setProperty(
-    '--color-last-seen-indicator-text',
-    darkColorLastSeenIndicatorText
   );
   document.documentElement.style.setProperty(
     '--color-quote-bottom-bar-background',
@@ -172,17 +167,16 @@ const lightColorAccentButton = black;
 const lightColorText = black;
 const lightColorTextOpposite = white;
 const lightColorTextSubtle = `${black}99`;
-const lightColorTextAccent = '#00c769';
+const lightColorTextAccent = accentLightTheme;
 const lightColorSessionShadow = `0 0 4px 0 ${black}5E`;
 const lightColorComposeViewBg = '#efefef';
-const lightColorSentMessageBg = 'hsl(152, 100%, 40%)';
+const lightColorSentMessageBg = accentLightTheme;
 const lightColorClickableHovered = '#dfdfdf';
 const lightColorSessionBorderColor = borderLightThemeColor;
 const lightColorSessionBorder = `1px solid ${lightColorSessionBorderColor}`;
 const lightColorRecoveryPhraseBannerBg = white;
 const lightColorPillDivider = `${black}1A`;
-const lightColorLastSeenIndicator = '#62656a';
-const lightColorLastSeenIndicatorText = '#070c14';
+const lightColorLastSeenIndicator = black;
 const lightColorQuoteBottomBarBg = '#f0f0f0';
 const lightColorCellBackground = '#f9f9f9';
 const lightColorReceivedMessageBg = '#f5f5f5';
@@ -233,7 +227,7 @@ export const switchHtmlToLightTheme = () => {
     '--color-sent-message-background',
     lightColorSentMessageBg
   );
-  document.documentElement.style.setProperty('--color-sent-message-text', sessionBlack);
+  document.documentElement.style.setProperty('--color-sent-message-text', darkColorSentMessageText);
   document.documentElement.style.setProperty(
     '--color-clickable-hovered',
     lightColorClickableHovered
@@ -251,10 +245,6 @@ export const switchHtmlToLightTheme = () => {
   document.documentElement.style.setProperty(
     '--color-last-seen-indicator',
     lightColorLastSeenIndicator
-  );
-  document.documentElement.style.setProperty(
-    '--color-last-seen-indicator-text',
-    lightColorLastSeenIndicatorText
   );
   document.documentElement.style.setProperty(
     '--color-quote-bottom-bar-background',
@@ -362,13 +352,12 @@ export const SessionGlobalStyles = createGlobalStyle`
     --color-session-shadow: ${lightColorSessionShadow};
     --color-compose-view-button-background: ${lightColorComposeViewBg};
     --color-sent-message-background:  ${lightColorSentMessageBg};
-    --color-sent-message-text:  ${sessionBlack};
+    --color-sent-message-text:  ${darkColorSentMessageText};
     --color-clickable-hovered: ${lightColorClickableHovered};
     --color-session-border:  ${lightColorSessionBorderColor};
     --color-recovery-phrase-banner-background: ${lightColorRecoveryPhraseBannerBg};
     --color-pill-divider:  ${lightColorPillDivider};
     --color-last-seen-indicator: ${lightColorLastSeenIndicator};
-    --color-last-seen-indicator-text:  ${lightColorLastSeenIndicatorText};
     --color-quote-bottom-bar-background:  ${lightColorQuoteBottomBarBg};
     --color-cell-background: ${lightColorCellBackground};
     --color-pill-divider-text:  ${lightColorPillDividerText};
