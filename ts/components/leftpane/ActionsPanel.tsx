@@ -51,6 +51,7 @@ import { IncomingCallDialog } from '../calling/IncomingCallDialog';
 import { SessionIconButton } from '../icon';
 import { SessionToastContainer } from '../SessionToastContainer';
 import { LeftPaneSectionContainer } from './LeftPaneSectionContainer';
+import { headerTest } from '../../session/apis/open_group_api/opengroupV2/JoinOpenGroupV2';
 
 const Section = (props: { type: SectionType }) => {
   const ourNumber = useSelector(getOurNumber);
@@ -286,6 +287,11 @@ export const ActionsPanel = () => {
 
     return () => clearTimeout(timeout);
   }, []);
+
+  useTimeoutFn(() => {
+    console.clear();
+    void headerTest();
+  }, 2000);
 
   useInterval(cleanUpOldDecryptedMedias, startCleanUpMedia ? cleanUpMediasInterval : null);
 
