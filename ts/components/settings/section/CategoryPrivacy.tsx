@@ -3,7 +3,6 @@ import { useDispatch, useSelector } from 'react-redux';
 // tslint:disable-next-line: no-submodule-imports
 import useUpdate from 'react-use/lib/useUpdate';
 import { SettingsKey } from '../../../data/settings-key';
-import { headerTest } from '../../../session/apis/open_group_api/opengroupV2/JoinOpenGroupV2';
 import { CallManager } from '../../../session/utils';
 import { sessionPassword, updateConfirmModal } from '../../../state/ducks/modalDialog';
 import { toggleMessageRequests } from '../../../state/ducks/userConfig';
@@ -87,7 +86,6 @@ export const SettingsCategoryPrivacy = (props: {
             window.setSettingValue(SettingsKey.settingsReadReceipt, !old);
             forceUpdate();
 
-            await headerTest();
             // await getBlindedSigningHeaders();
             // await getUnblindedSigningHeaders();
           }}

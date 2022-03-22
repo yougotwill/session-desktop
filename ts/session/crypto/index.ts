@@ -15,14 +15,6 @@ export async function getSodium(): Promise<typeof libsodiumwrappers> {
   return libsodiumwrappers;
 }
 
-export const sha512Multipart = (parts: Array<Uint8Array>) => {
-  const hasher = crypto.createHash('sha512');
-  parts.forEach((element: Uint8Array) => {
-    hasher.update(element);
-  });
-  return hasher.digest();
-};
-
 export const sha256 = (s: string) => {
   return crypto
     .createHash('sha256')
