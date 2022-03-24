@@ -93,7 +93,11 @@ const initOptionsWithDefaults = (options: OnionFetchBasicOptions) => {
 };
 
 /**
- *
+ * @param destinationX25519Key The destination key
+ * @param URL the URL
+ * @param fetchOptions options to be used for fetching
+ * @param options optional onion fetch options
+ * @param abortSignal the abort signal
  * This function can be used to make a request via onion to a non snode server.
  *
  * A non Snode server is for instance the Push Notification server or an OpengroupV2 server.

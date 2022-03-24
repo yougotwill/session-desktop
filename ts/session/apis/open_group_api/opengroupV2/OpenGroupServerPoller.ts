@@ -3,6 +3,7 @@ import { getConversationController } from '../../../conversations';
 import { getOpenGroupV2ConversationId } from '../utils/OpenGroupUtils';
 import { OpenGroupRequestCommonType } from './ApiUtil';
 import {
+  capabilitiesFetchEverything,
   compactFetchEverything,
   getAllBase64AvatarForRooms,
   getAllMemberCount,
@@ -334,6 +335,20 @@ export class OpenGroupServerPoller {
         this.roomIdsToPoll,
         this.abortController.signal
       );
+
+      let capResults = await capabilitiesFetchEverything(
+        this.serverUrl,
+        this.roomIdsToPoll,
+        this.abortController.signal
+      );
+      console.warn({ capResults });
+
+      // let batchResults = await batchFetchEverything(
+      //   this.serverUrl,
+      //   this.roomIdsToPoll,
+      //   this.abortController.signal
+      // );
+      // console.warn({ batchResults });
 
       // check that we are still not aborted
       if (this.abortController.signal.aborted) {

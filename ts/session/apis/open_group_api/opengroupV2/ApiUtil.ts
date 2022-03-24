@@ -25,6 +25,14 @@ export type OpenGroupV2Request = FileServerV2Request & {
   forcedTokenToUse?: string;
 };
 
+// TODO: evaluate if this can be cleaned up
+export type OpenGroupCapabilityRequest = {
+  server: string;
+  endpoint: string;
+  serverPubKey: string;
+  headers: any;
+};
+
 export type OpenGroupV2CompactPollRequest = {
   server: string;
   endpoint: string;

@@ -148,7 +148,7 @@ const debugOutput = (key: string, headers: any, blinded: boolean) => {
 export async function headerTest() {
   const signKeyHexUnused = 'c010d89eccbaf5d1c6d19df766c6eedf965d4a28a56f87c9fc819edb59896dd9';
   const signingKeys = await sessionGenerateKeyPair(fromHex(signKeyHexUnused));
-  const ed52219KeyPair = signingKeys.ed25519KeyPair;
+  const ed52219KeyPair: KeyPair = signingKeys.ed25519KeyPair;
 
   console.warn('signingKeys pub: ', to_hex(ed52219KeyPair.publicKey));
   console.warn('signingKeys priv: ', to_hex(ed52219KeyPair.privateKey));
@@ -162,7 +162,7 @@ export async function headerTest() {
   const path = '/room/the-best-room/messages/recent?limit=25';
 
   console.info('blinded test', '#'.repeat(60));
-  const blindedHeaders = await getSigningHeaders({
+  const blindedHeaders = await getOpenGroupHeaders({
     signingKeys: ed52219KeyPair,
     serverPK,
     nonce,
@@ -178,7 +178,7 @@ export async function headerTest() {
   debugOutput('X-SOGS-Signature', blindedHeaders, true);
 
   console.info('unblinded test', '#'.repeat(60));
-  const unblindedHeaders = await getSigningHeaders({
+  const unblindedHeaders = await getOpenGroupHeaders({
     signingKeys: ed52219KeyPair,
     serverPK,
     nonce,
@@ -194,7 +194,7 @@ export async function headerTest() {
   debugOutput('X-SOGS-Signature', unblindedHeaders, false);
 }
 
-async function getSigningHeaders(data: {
+export async function getOpenGroupHeaders(data: {
   signingKeys: KeyPair;
   serverPK: Uint8Array;
   nonce: Uint8Array;
@@ -202,8 +202,9 @@ async function getSigningHeaders(data: {
   path: string;
   timestamp: number;
   blinded: boolean;
+  body?: string;
 }) {
-  const { signingKeys, serverPK, nonce, method, path, timestamp, blinded } = data;
+  const { signingKeys, serverPK, nonce, method, path, timestamp, blinded, body } = data;
   const sodium = await getSodium();
   let pubkey;
 
@@ -230,13 +231,19 @@ async function getSigningHeaders(data: {
     pubkey = `00${toHex(signingKeys.publicKey)}`;
   }
 
-  const toSign = concatUInt8Array(
+  // SERVER_PUBKEY || NONCE || TIMESTAMP || METHOD || PATH || HASHED_BODY
+  let toSign = concatUInt8Array(
     serverPK,
     nonce,
     stringToUint8Array(timestamp.toString()),
     stringToUint8Array(method),
     stringToUint8Array(path)
   );
+
+  if (body) {
+    toSign = concatUInt8Array(sodium.crypto_generichash(64, body), toSign);
+  }
+
   let signature;
   if (blinded && ka && kA) {
     signature = await blindedED25519Signature(toSign, signingKeys, ka, kA);
@@ -294,6 +301,14 @@ async function blindedED25519Signature(
 export const sha512Multipart = (parts: Array<Uint8Array>) => {
   return crypto_hash_sha512(concatUInt8Array(...parts));
 };
+
+/**
+ * Sending a SOGS DM
+ */
+export async function sendDmTest() {
+  // const sodium = await getSodium();
+  // todo: implement sending dms
+}
 
 /**
  * This function does not throw

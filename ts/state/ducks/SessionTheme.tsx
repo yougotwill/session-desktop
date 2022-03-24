@@ -227,7 +227,8 @@ export const switchHtmlToLightTheme = () => {
     '--color-sent-message-background',
     lightColorSentMessageBg
   );
-  document.documentElement.style.setProperty('--color-sent-message-text', darkColorSentMessageText);
+  // TODO: This might be wrong. Didn't merge correctly.
+  document.documentElement.style.setProperty('--color-sent-message-text', black);
   document.documentElement.style.setProperty(
     '--color-clickable-hovered',
     lightColorClickableHovered
@@ -352,7 +353,8 @@ export const SessionGlobalStyles = createGlobalStyle`
     --color-session-shadow: ${lightColorSessionShadow};
     --color-compose-view-button-background: ${lightColorComposeViewBg};
     --color-sent-message-background:  ${lightColorSentMessageBg};
-    --color-sent-message-text:  ${darkColorSentMessageText};
+    // TODO: this might be wrong text colour. Something happened during merge.
+    --color-sent-message-text:  ${black};
     --color-clickable-hovered: ${lightColorClickableHovered};
     --color-session-border:  ${lightColorSessionBorderColor};
     --color-recovery-phrase-banner-background: ${lightColorRecoveryPhraseBannerBg};
