@@ -256,7 +256,6 @@ async function processOnionRequestErrorAtDestination({
   if (statusCode === 200) {
     return;
   }
-
   window?.log?.info('processOnionRequestErrorAtDestination. statusCode nok:', statusCode);
 
   process406Error(statusCode);
@@ -484,9 +483,6 @@ export async function processOnionResponse({
 
     const status = jsonRes.status_code || jsonRes.status;
 
-    if (status === 400) {
-      debugger;
-    }
     await processOnionRequestErrorAtDestination({
       statusCode: status,
       body: jsonRes?.body, // this is really important. the `.body`. the .body should be a string. for isntance for nodeNotFound but is most likely a dict (Record<string,any>))

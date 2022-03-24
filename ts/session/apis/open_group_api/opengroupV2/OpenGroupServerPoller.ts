@@ -336,7 +336,7 @@ export class OpenGroupServerPoller {
         this.abortController.signal
       );
 
-      let capResults = await capabilitiesFetchEverything(
+      const capResults = await capabilitiesFetchEverything(
         this.serverUrl,
         this.roomIdsToPoll,
         this.abortController.signal

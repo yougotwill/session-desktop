@@ -241,7 +241,7 @@ export async function getOpenGroupHeaders(data: {
   );
 
   if (body) {
-    toSign = concatUInt8Array(sodium.crypto_generichash(64, body), toSign);
+    toSign = concatUInt8Array(toSign, sodium.crypto_generichash(64, body));
   }
 
   let signature;
@@ -252,11 +252,9 @@ export async function getOpenGroupHeaders(data: {
   }
 
   const sogsSignature = fromUInt8ArrayToBase64(signature);
-  console.error('sogsSignature', sogsSignature);
-
   const headers = {
     'X-SOGS-Pubkey': pubkey,
-    'X-SOGS-Timestamp': timestamp,
+    'X-SOGS-Timestamp': `${timestamp}`,
     'X-SOGS-Nonce': fromUInt8ArrayToBase64(nonce),
     'X-SOGS-Signature': sogsSignature,
   };
