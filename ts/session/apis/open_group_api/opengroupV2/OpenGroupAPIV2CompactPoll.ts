@@ -19,6 +19,7 @@ import { getOpenGroupHeaders } from './JoinOpenGroupV2';
 import { UserUtils } from '../../../utils';
 import { fromHexToArray, stringToUint8Array } from '../../../utils/String';
 import { KeyPair } from 'libsodium-wrappers-sumo';
+import { getSodium } from '../../../crypto';
 
 const COMPACT_POLL_ENDPOINT = 'compact_poll';
 
@@ -260,9 +261,10 @@ const getCapabilityFetchRequest = async (
   const firstRoom = roomsRequestInfos[0];
   const path = '/capabilities';
   const method = 'GET';
+  const sodium = await getSodium();
 
   // TODO: remove hardcoded 12.
-  const nonce = crypto.getRandomValues(new Uint8Array(12));
+  const nonce = sodium.randombytes_buf(16);
 
   const userED25519KeyPair = await UserUtils.getUserED25519KeyPair();
   if (!userED25519KeyPair) {
@@ -280,7 +282,7 @@ const getCapabilityFetchRequest = async (
     nonce,
     method,
     path,
-    timestamp: Date.now(),
+    timestamp: Math.floor(Date.now() / 1000),
     blinded: true,
   });
   console.warn({ capabilityHeaders });
@@ -359,21 +361,18 @@ async function sendOpenGroupCapabilityRequest(
   request: OpenGroupCapabilityRequest,
   abortSignal: AbortSignal
 ): Promise<Array<ParsedRoomCompactPollResults> | null> {
-  const {
-    server: serverUrl,
-    endpoint,
-    serverPubKey,
-    // headers
-  } = request;
+  const { server: serverUrl, endpoint, serverPubKey, headers } = request;
   // this will throw if the url is not valid
 
   const builtUrl = new URL(`${serverUrl}/${endpoint}`);
+
+  console.warn('builtUrl: ', builtUrl);
   const res = await sendViaOnionToNonSnode(
     serverPubKey,
     builtUrl,
     {
       method: 'GET',
-      // headers,
+      headers,
       body: undefined,
     },
     {},

@@ -15,7 +15,7 @@ import { Snode } from '../../data/data';
 type OnionFetchOptions = {
   method: string;
   body?: string;
-  headers?: Record<string, string>;
+  headers?: Record<string, string | number>;
 };
 
 type OnionFetchBasicOptions = {
@@ -44,7 +44,7 @@ const buildSendViaOnionPayload = (url: URL, fetchOptions: OnionFetchOptions): On
     // safety issue with file server, just safer to have this
     // no initial /
     endpoint: url.pathname.replace(/^\//, ''),
-    headers: {},
+    headers: fetchOptions.headers || {},
   };
   if (url.search) {
     payloadObj.endpoint += url.search;

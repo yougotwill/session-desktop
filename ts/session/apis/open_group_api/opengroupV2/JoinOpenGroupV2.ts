@@ -112,8 +112,8 @@ async function joinOpenGroupV2(room: OpenGroupV2Room, fromConfigMessage: boolean
 }
 
 const debugOutput = (key: string, headers: any, blinded: boolean) => {
-  const common: Record<string, string> = {
-    'X-SOGS-Timestamp': '1642472103',
+  const common: Record<string, string | number> = {
+    'X-SOGS-Timestamp': 1642472103,
     'X-SOGS-Nonce': 'CdB5nyKVmQGCw6s0Bvv8Ww==',
   };
   const testSet: Record<string, string> = blinded
@@ -130,7 +130,7 @@ const debugOutput = (key: string, headers: any, blinded: boolean) => {
           'xxLpXHbomAJMB9AtGMyqvBsXrdd2040y+Ol/IKzElWfKJa3EYZRv1GLO6CTLhrDFUwVQe8PPltyGs54Kd7O5Cg==',
       };
 
-  const expected = testSet[key].toString();
+  const expected = testSet[key];
 
   const output = headers[key];
 
@@ -251,12 +251,17 @@ export async function getOpenGroupHeaders(data: {
     signature = sodium.crypto_sign_detached(toSign, signingKeys.privateKey);
   }
 
+  const sogsSignature = fromUInt8ArrayToBase64(signature);
+  console.error('sogsSignature', sogsSignature);
+
   const headers = {
     'X-SOGS-Pubkey': pubkey,
-    'X-SOGS-Timestamp': timestamp.toString(),
+    'X-SOGS-Timestamp': timestamp,
     'X-SOGS-Nonce': fromUInt8ArrayToBase64(nonce),
-    'X-SOGS-Signature': fromUInt8ArrayToBase64(signature),
+    'X-SOGS-Signature': sogsSignature,
   };
+
+  console.warn('headers', headers);
 
   return headers;
 }
