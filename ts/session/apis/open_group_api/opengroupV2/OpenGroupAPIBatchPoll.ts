@@ -1,43 +1,15 @@
-import {
-  getV2OpenGroupRoomByRoomId,
-  OpenGroupV2Room,
-  saveV2OpenGroupRoom,
-} from '../../../../data/opengroups';
-import {
-  OpenGroupCapabilityRequest,
-  OpenGroupV2CompactPollRequest,
-  parseMessages,
-} from './ApiUtil';
+import { getV2OpenGroupRoomByRoomId, OpenGroupV2Room } from '../../../../data/opengroups';
+import { OpenGroupCapabilityRequest } from './ApiUtil';
 import { parseStatusCodeFromOnionRequest } from './OpenGroupAPIV2Parser';
 import _ from 'lodash';
 import { sendViaOnionToNonSnode } from '../../../onions/onionSend';
 import { OpenGroupMessageV2 } from './OpenGroupMessageV2';
-import { downloadPreviewOpenGroupV2, getMemberCount } from './OpenGroupAPIV2';
 import { getAuthToken } from './ApiAuth';
-import { DURATION } from '../../../constants';
 import { UserUtils } from '../../../utils';
-import { fromHexToArray, stringToUint8Array } from '../../../utils/String';
+import { fromHexToArray } from '../../../utils/String';
 import { KeyPair } from 'libsodium-wrappers-sumo';
 import { getSodium } from '../../../crypto';
 import { getOpenGroupHeaders } from './OpenGroupAuthentication';
-
-const COMPACT_POLL_ENDPOINT = 'compact_poll';
-
-export const compactFetchEverything = async (
-  serverUrl: string,
-  rooms: Set<string>,
-  abortSignal: AbortSignal
-): Promise<Array<ParsedRoomCompactPollResults> | null> => {
-  // fetch all we need
-  const compactPollRequest = await getCompactPollRequest(serverUrl, rooms);
-  if (!compactPollRequest) {
-    window?.log?.info('Nothing found to be fetched. returning');
-    return null;
-  }
-
-  const result = await sendOpenGroupV2RequestCompactPoll(compactPollRequest, abortSignal);
-  return result ? result : null;
-};
 
 export const capabilitiesFetchEverything = async (
   serverUrl: string,
@@ -48,7 +20,6 @@ export const capabilitiesFetchEverything = async (
   // const compactPollRequest = await getCompactPollRequest(serverUrl, rooms);
 
   const capabilityRequest = await getCapabilityFetchRequest(serverUrl, rooms);
-  console.warn({ capabilityRequest });
 
   if (!capabilityRequest) {
     window?.log?.info('Nothing found to be fetched. returning');
@@ -57,94 +28,6 @@ export const capabilitiesFetchEverything = async (
 
   const result = await sendOpenGroupCapabilityRequest(capabilityRequest, abortSignal);
   return result ? result : null;
-};
-
-export const getAllBase64AvatarForRooms = async (
-  serverUrl: string,
-  rooms: Set<string>,
-  abortSignal: AbortSignal
-): Promise<Array<ParsedBase64Avatar> | null> => {
-  // fetch all we need
-  const allValidRoomInfos = await getAllValidRoomInfos(serverUrl, rooms);
-  if (!allValidRoomInfos?.length) {
-    window?.log?.info('getAllBase64AvatarForRooms: no valid roominfos got.');
-    return null;
-  }
-  if (abortSignal.aborted) {
-    window?.log?.info('preview download aborted, returning null');
-    return null;
-  }
-  // Currently this call will not abort if AbortSignal is aborted,
-  // but the call will return null.
-  const validPreviewBase64 = _.compact(
-    await Promise.all(
-      allValidRoomInfos.map(async room => {
-        try {
-          const base64 = await downloadPreviewOpenGroupV2(room);
-          if (base64) {
-            return {
-              roomId: room.roomId,
-              base64,
-            };
-          }
-        } catch (e) {
-          window?.log?.warn('getPreview failed for room', room);
-        }
-        return null;
-      })
-    )
-  );
-
-  if (abortSignal.aborted) {
-    window?.log?.info('preview download aborted, returning null');
-    return null;
-  }
-
-  return validPreviewBase64 ? validPreviewBase64 : null;
-};
-
-export const getAllMemberCount = async (
-  serverUrl: string,
-  rooms: Set<string>,
-  abortSignal: AbortSignal
-): Promise<Array<ParsedMemberCount> | null> => {
-  // fetch all we need
-  const allValidRoomInfos = await getAllValidRoomInfos(serverUrl, rooms);
-  if (!allValidRoomInfos?.length) {
-    window?.log?.info('getAllMemberCount: no valid roominfos got.');
-    return null;
-  }
-  if (abortSignal.aborted) {
-    window?.log?.info('memberCount aborted, returning null');
-    return null;
-  }
-  // Currently this call will not abort if AbortSignal is aborted,
-  // but the call will return null.
-  const validMemberCount = _.compact(
-    await Promise.all(
-      allValidRoomInfos.map(async room => {
-        try {
-          const memberCount = await getMemberCount(room);
-          if (memberCount !== undefined) {
-            return {
-              roomId: room.roomId,
-              memberCount,
-            };
-          }
-        } catch (e) {
-          window?.log?.warn('getPreview failed for room', room);
-        }
-        return null;
-      })
-    )
-  );
-
-  if (abortSignal.aborted) {
-    window?.log?.info('getMemberCount aborted, returning null');
-    return null;
-  }
-
-  return validMemberCount ? validMemberCount : null;
 };
 
 /**
@@ -201,16 +84,6 @@ const getAllValidRoomInfos = async (
   return validRoomInfos;
 };
 
-// @@: add this for room request info
-type RoomRequestInfo = {
-  from_message_server_id?: number;
-  lastFetchTimestamp?: number;
-  from_deletion_server_id?: number;
-  auth_token: string;
-  room_id: string;
-  serverPublicKey: string;
-};
-
 const getCapabilityFetchRequest = async (
   serverUrl: string,
   rooms: Set<string>
@@ -220,153 +93,55 @@ const getCapabilityFetchRequest = async (
     window?.log?.info('compactPoll: no valid roominfos got.');
     return null;
   }
-
-  const roomsRequestInfos = _.compact(
-    allValidRoomInfos.map(validRoomInfos => {
-      try {
-        const {
-          lastMessageFetchedServerID,
-          lastFetchTimestamp,
-          lastMessageDeletedServerID,
-          token,
-          roomId,
-          serverPublicKey,
-        } = validRoomInfos;
-        const roomRequestContent: Record<string, any> = {
-          room_id: roomId,
-          auth_token: token || '',
-          serverPublicKey,
-          lastFetchTimestamp,
-        };
-        roomRequestContent.from_deletion_server_id = lastMessageDeletedServerID;
-        if (Date.now() - (lastFetchTimestamp || 0) <= DURATION.DAYS * 14) {
-          roomRequestContent.from_message_server_id = lastMessageFetchedServerID;
-        } else {
-          window?.log?.info(
-            `We've been away for a long time... Only fetching last messages of room '${roomId}'`
-          );
-        }
-
-        return roomRequestContent as RoomRequestInfo;
-      } catch (e) {
-        window?.log?.warn('failed to fetch roominfos for room', validRoomInfos.roomId);
-        return null;
-      }
-    })
-  );
-  if (!roomsRequestInfos?.length) {
-    return null;
-  }
-
-  const firstRoom = roomsRequestInfos[0];
-  const path = '/capabilities';
+  const endpoint = '/capabilities';
   const method = 'GET';
   const sodium = await getSodium();
-
-  // TODO: remove hardcoded 12.
   const nonce = sodium.randombytes_buf(16);
 
   const userED25519KeyPair = await UserUtils.getUserED25519KeyPair();
   if (!userED25519KeyPair) {
     return null;
   }
+  const serverPubkey = allValidRoomInfos[0].serverPublicKey;
   const signingKeys: KeyPair = {
     keyType: 'ed25519',
     publicKey: fromHexToArray(userED25519KeyPair.pubKey),
     privateKey: fromHexToArray(userED25519KeyPair.privKey),
   }; // @@: make getHeaders just accept the hex version of the keys or make util function to get it as bytes
+  console.warn('signingKeys', signingKeys);
+
+  console.info('=========== serverpk: ', serverPubkey);
+  console.info('=========== serverpk uint: ', fromHexToArray(serverPubkey));
 
   const capabilityHeaders = await getOpenGroupHeaders({
     signingKeys,
-    serverPK: stringToUint8Array(firstRoom.serverPublicKey),
+    serverPK: fromHexToArray(serverPubkey),
     nonce,
     method,
-    path,
+    path: endpoint,
     timestamp: Math.floor(Date.now() / 1000),
     blinded: true,
   });
-  console.warn({ capabilityHeaders });
 
   // getAllValidRoomInfos return null if the room have not all the same serverPublicKey.
   // so being here, we know this is the case
   return {
     server: serverUrl,
-    serverPubKey: firstRoom.serverPublicKey,
-    endpoint: 'capabilities',
+    serverPubKey: serverPubkey,
+    endpoint,
     headers: capabilityHeaders,
-  };
-};
-/**
- * This return body to be used to do the compactPoll
- */
-const getCompactPollRequest = async (
-  serverUrl: string,
-  rooms: Set<string>
-): Promise<null | OpenGroupV2CompactPollRequest> => {
-  const allValidRoomInfos = await getAllValidRoomInfos(serverUrl, rooms);
-  if (!allValidRoomInfos?.length) {
-    window?.log?.info('compactPoll: no valid roominfos got.');
-    return null;
-  }
-
-  const roomsRequestInfos = _.compact(
-    allValidRoomInfos.map(validRoomInfos => {
-      try {
-        const {
-          lastMessageFetchedServerID,
-          lastFetchTimestamp,
-          lastMessageDeletedServerID,
-          token,
-          roomId,
-        } = validRoomInfos;
-        const roomRequestContent: Record<string, any> = {
-          room_id: roomId,
-          auth_token: token || '',
-        };
-        roomRequestContent.from_deletion_server_id = lastMessageDeletedServerID;
-        if (Date.now() - (lastFetchTimestamp || 0) <= DURATION.DAYS * 14) {
-          roomRequestContent.from_message_server_id = lastMessageFetchedServerID;
-        } else {
-          window?.log?.info(
-            `We've been away for a long time... Only fetching last messages of room '${roomId}'`
-          );
-        }
-
-        return roomRequestContent;
-      } catch (e) {
-        window?.log?.warn('failed to fetch roominfos for room', validRoomInfos.roomId);
-        return null;
-      }
-    })
-  );
-  if (!roomsRequestInfos?.length) {
-    return null;
-  }
-
-  const body = JSON.stringify({
-    requests: roomsRequestInfos,
-  });
-
-  // getAllValidRoomInfos return null if the room have not all the same serverPublicKey.
-  // so being here, we know this is the case
-  return {
-    body,
-    server: serverUrl,
-    serverPubKey: allValidRoomInfos[0].serverPublicKey,
-    endpoint: COMPACT_POLL_ENDPOINT,
   };
 };
 
 async function sendOpenGroupCapabilityRequest(
   request: OpenGroupCapabilityRequest,
   abortSignal: AbortSignal
-): Promise<Array<ParsedRoomCompactPollResults> | null> {
+): Promise<any | null> {
   const { server: serverUrl, endpoint, serverPubKey, headers } = request;
   // this will throw if the url is not valid
 
   const builtUrl = new URL(`${serverUrl}/${endpoint}`);
 
-  console.warn('builtUrl: ', builtUrl);
   const res = await sendViaOnionToNonSnode(
     serverPubKey,
     builtUrl,
@@ -385,103 +160,7 @@ async function sendOpenGroupCapabilityRequest(
     return null;
   }
 
-  const results = await parseCompactPollResults(res, serverUrl);
-  if (!results) {
-    window?.log?.info('got empty capabilities request results');
-    return null;
-  }
-  // get all roomIds which needs a refreshed token
-  const roomWithTokensToRefresh = results.filter(ret => ret.statusCode === 401).map(r => r.roomId);
-
-  // this holds only the poll results which are valid
-  const roomPollValidResults = results.filter(ret => ret.statusCode === 200);
-
-  if (roomWithTokensToRefresh?.length) {
-    window.log.info('We got those rooms to refresh the token with:', roomWithTokensToRefresh);
-    await Promise.all(
-      roomWithTokensToRefresh.map(async roomId => {
-        const roomDetails = await getV2OpenGroupRoomByRoomId({
-          serverUrl,
-          roomId,
-        });
-        if (!roomDetails) {
-          return;
-        }
-        roomDetails.token = undefined;
-        // we might need to retry doing the request here, but how to make sure we don't retry indefinetely?
-        await saveV2OpenGroupRoom(roomDetails);
-        // we should not await for that. We have a only one at a time logic on a per room basis
-        await getAuthToken({ serverUrl, roomId });
-      })
-    );
-  }
-
-  return roomPollValidResults;
-}
-
-/**
- * This call is separate as a lot of the logic is custom (statusCode handled separately, etc)
- */
-async function sendOpenGroupV2RequestCompactPoll(
-  request: OpenGroupV2CompactPollRequest,
-  abortSignal: AbortSignal
-): Promise<Array<ParsedRoomCompactPollResults> | null> {
-  const { server: serverUrl, endpoint, body, serverPubKey } = request;
-  // this will throw if the url is not valid
-  const builtUrl = new URL(`${serverUrl}/${endpoint}`);
-
-  // TODO: id-blinding - remove before commiting. Switch to batch endpoint
-  console.warn({ request });
-
-  const res = await sendViaOnionToNonSnode(
-    serverPubKey,
-    builtUrl,
-    {
-      method: 'POST',
-      body,
-    },
-    {},
-    abortSignal
-  );
-
-  const statusCode = parseStatusCodeFromOnionRequest(res);
-  if (!statusCode) {
-    window?.log?.warn('sendOpenGroupV2RequestCompactPoll Got unknown status code; res:', res);
-    return null;
-  }
-
-  const results = await parseCompactPollResults(res, serverUrl);
-  if (!results) {
-    window?.log?.info('got empty compactPollResults');
-    return null;
-  }
-  // get all roomIds which needs a refreshed token
-  const roomWithTokensToRefresh = results.filter(ret => ret.statusCode === 401).map(r => r.roomId);
-
-  // this holds only the poll results which are valid
-  const roomPollValidResults = results.filter(ret => ret.statusCode === 200);
-
-  if (roomWithTokensToRefresh?.length) {
-    window.log.info('We got those rooms to refresh the token with:', roomWithTokensToRefresh);
-    await Promise.all(
-      roomWithTokensToRefresh.map(async roomId => {
-        const roomDetails = await getV2OpenGroupRoomByRoomId({
-          serverUrl,
-          roomId,
-        });
-        if (!roomDetails) {
-          return;
-        }
-        roomDetails.token = undefined;
-        // we might need to retry doing the request here, but how to make sure we don't retry indefinetely?
-        await saveV2OpenGroupRoom(roomDetails);
-        // we should not await for that. We have a only one at a time logic on a per room basis
-        await getAuthToken({ serverUrl, roomId });
-      })
-    );
-  }
-
-  return roomPollValidResults;
+  return res;
 }
 
 export type ParsedDeletions = Array<{ id: number; deleted_message_id: number }>;
@@ -505,65 +184,4 @@ export type ParsedBase64Avatar = {
 export type ParsedMemberCount = {
   roomId: string;
   memberCount: number;
-};
-
-const parseCompactPollResult = async (
-  singleRoomResult: any,
-  _serverUrl: string
-): Promise<ParsedRoomCompactPollResults | null> => {
-  const {
-    room_id,
-    deletions: rawDeletions,
-    messages: rawMessages,
-    moderators: rawMods,
-    status_code: rawStatusCode,
-  } = singleRoomResult;
-
-  if (
-    !room_id ||
-    rawDeletions === undefined ||
-    rawMessages === undefined ||
-    rawMods === undefined ||
-    !rawStatusCode
-  ) {
-    window?.log?.warn('Invalid compactPoll result', singleRoomResult);
-    return null;
-  }
-
-  const validMessages = await parseMessages(rawMessages);
-
-  const moderators = rawMods.sort() as Array<string>;
-  const deletions = rawDeletions as ParsedDeletions;
-  const statusCode = rawStatusCode as number;
-
-  return {
-    roomId: room_id,
-    deletions,
-    messages: validMessages,
-    moderators,
-    statusCode,
-  };
-};
-
-const parseCompactPollResults = async (
-  res: any,
-  serverUrl: string
-): Promise<Array<ParsedRoomCompactPollResults> | null> => {
-  if (!res || !res.result || !res.result.results || !res.result.results.length) {
-    return null;
-  }
-  const arrayOfResults = res.result.results as Array<any>;
-
-  const parsedResults: Array<ParsedRoomCompactPollResults> = _.compact(
-    await Promise.all(
-      arrayOfResults.map(async m => {
-        return parseCompactPollResult(m, serverUrl);
-      })
-    )
-  );
-
-  if (!parsedResults || !parsedResults.length) {
-    return null;
-  }
-  return parsedResults;
 };

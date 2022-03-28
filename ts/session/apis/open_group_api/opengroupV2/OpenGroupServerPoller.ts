@@ -3,7 +3,6 @@ import { getConversationController } from '../../../conversations';
 import { getOpenGroupV2ConversationId } from '../utils/OpenGroupUtils';
 import { OpenGroupRequestCommonType } from './ApiUtil';
 import {
-  capabilitiesFetchEverything,
   compactFetchEverything,
   getAllBase64AvatarForRooms,
   getAllMemberCount,
@@ -23,6 +22,7 @@ import { DURATION } from '../../../constants';
 import { processNewAttachment } from '../../../../types/MessageAttachment';
 import { MIME } from '../../../../types';
 import { handleOpenGroupV2Message } from '../../../../receiver/opengroup';
+import { capabilitiesFetchEverything } from './OpenGroupAPIBatchPoll';
 
 const pollForEverythingInterval = DURATION.SECONDS * 10;
 const pollForRoomAvatarInterval = DURATION.DAYS * 1;
@@ -342,13 +342,6 @@ export class OpenGroupServerPoller {
         this.abortController.signal
       );
       console.warn({ capResults });
-
-      // let batchResults = await batchFetchEverything(
-      //   this.serverUrl,
-      //   this.roomIdsToPoll,
-      //   this.abortController.signal
-      // );
-      // console.warn({ batchResults });
 
       // check that we are still not aborted
       if (this.abortController.signal.aborted) {

@@ -92,13 +92,26 @@ export async function headerTest() {
   debugOutput('X-SOGS-Signature', unblindedHeaders, false);
 }
 
+/**
+ *
+ * @param data data
+ * @returns
+ */
 export async function getOpenGroupHeaders(data: {
+  /**
+   * Our ED25519 Key pair
+   */
   signingKeys: KeyPair;
+  /**
+   * The server public key - before blinding
+   */
   serverPK: Uint8Array;
   nonce: Uint8Array;
   method: string;
   path: string;
+  /** Note: on server side both text and number timestamps are accepted */
   timestamp: number;
+  /** Apply blinding modifications or not */
   blinded: boolean;
   body?: string;
 }) {
