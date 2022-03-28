@@ -169,6 +169,8 @@ describe('OpenGroupAuthentication', () => {
     91,
   ]);
 
+  const body = 'This is a test message body 12345';
+
   afterEach(() => {
     sandbox.restore();
   });
@@ -216,7 +218,7 @@ describe('OpenGroupAuthentication', () => {
           });
           expect(headers['X-SOGS-Timestamp']).to.be.equal('1642472103');
         });
-        it('should produce correct X-SOGS-Signature', async () => {
+        it('should produce correct X-SOGS-Signature without body', async () => {
           const headers = await getOpenGroupHeaders({
             signingKeys,
             serverPK,
@@ -228,6 +230,22 @@ describe('OpenGroupAuthentication', () => {
           });
           expect(headers['X-SOGS-Signature']).to.be.equal(
             'gYqpWZX6fnF4Gb2xQM3xaXs0WIYEI49+B8q4mUUEg8Rw0ObaHUWfoWjMHMArAtP9QlORfiydsKWz1o6zdPVeCQ=='
+          );
+        });
+
+        it('should produce correct X-SOGS-Signature with body', async () => {
+          const headers = await getOpenGroupHeaders({
+            signingKeys,
+            serverPK,
+            nonce,
+            method,
+            path,
+            timestamp: ts,
+            blinded: true,
+            body,
+          });
+          expect(headers['X-SOGS-Signature']).to.be.equal(
+            'Bs680K7t2VOmbiXNX+uIPa7dDWzxKQfLk8SxdGxe2wwadFQOr9KdAetVmVQ6w4MfyHOD6WiP0JAVb4Tb8I5lAA=='
           );
         });
       });
@@ -273,7 +291,7 @@ describe('OpenGroupAuthentication', () => {
           });
           expect(headers['X-SOGS-Timestamp']).to.be.equal('1642472103');
         });
-        it('should produce correct X-SOGS-Signature', async () => {
+        it('should produce correct X-SOGS-Signature without body', async () => {
           const headers = await getOpenGroupHeaders({
             signingKeys,
             serverPK,
@@ -287,7 +305,23 @@ describe('OpenGroupAuthentication', () => {
             'xxLpXHbomAJMB9AtGMyqvBsXrdd2040y+Ol/IKzElWfKJa3EYZRv1GLO6CTLhrDFUwVQe8PPltyGs54Kd7O5Cg=='
           );
         });
+
+        it('should produce correct X-SOGS-Signature with body', async () => {
+          const headers = await getOpenGroupHeaders({
+            signingKeys,
+            serverPK,
+            nonce,
+            method,
+            path,
+            timestamp: ts,
+            blinded: false,
+            body,
+          });
+          expect(headers['X-SOGS-Signature']).to.be.equal(
+            '2w9zMiGPqa3RApSpVbL0zhh7cUd6Z9skbZlf2XqyDTND2aDadGOAcKpXANcOSA+zi+kmgP8+zVkDdz0JOiB1Cw=='
+          );
+        });
       });
-    });
+
   });
 });
