@@ -177,151 +177,149 @@ describe('OpenGroupAuthentication', () => {
 
   describe('HeaderCreation', () => {
     describe('Blinded Headers', () => {
-      describe('X-SOGS-Nonce', () => {
-        it('should produce correct X-SOGS-Nonce', async () => {
-          const headers = await getOpenGroupHeaders({
-            signingKeys,
-            serverPK,
-            nonce,
-            method,
-            path,
-            timestamp: ts,
-            blinded: true,
-          });
-          expect(headers['X-SOGS-Nonce']).to.be.equal('CdB5nyKVmQGCw6s0Bvv8Ww==');
+      it('should produce correct X-SOGS-Nonce', async () => {
+        const headers = await getOpenGroupHeaders({
+          signingKeys,
+          serverPK,
+          nonce,
+          method,
+          path,
+          timestamp: ts,
+          blinded: true,
         });
-
-        it('should produce correct X-SOGS-Pubkey', async () => {
-          const headers = await getOpenGroupHeaders({
-            signingKeys,
-            serverPK,
-            nonce,
-            method,
-            path,
-            timestamp: ts,
-            blinded: true,
-          });
-          expect(headers['X-SOGS-Pubkey']).to.be.equal(
-            '1598932d4bccbe595a8789d7eb1629cefc483a0eaddc7e20e8fe5c771efafd9af5'
-          );
-        });
-
-        it('should produce correct X-SOGS-Timestamp', async () => {
-          const headers = await getOpenGroupHeaders({
-            signingKeys,
-            serverPK,
-            nonce,
-            method,
-            path,
-            timestamp: ts,
-            blinded: true,
-          });
-          expect(headers['X-SOGS-Timestamp']).to.be.equal('1642472103');
-        });
-        it('should produce correct X-SOGS-Signature without body', async () => {
-          const headers = await getOpenGroupHeaders({
-            signingKeys,
-            serverPK,
-            nonce,
-            method,
-            path,
-            timestamp: ts,
-            blinded: true,
-          });
-          expect(headers['X-SOGS-Signature']).to.be.equal(
-            'gYqpWZX6fnF4Gb2xQM3xaXs0WIYEI49+B8q4mUUEg8Rw0ObaHUWfoWjMHMArAtP9QlORfiydsKWz1o6zdPVeCQ=='
-          );
-        });
-
-        it('should produce correct X-SOGS-Signature with body', async () => {
-          const headers = await getOpenGroupHeaders({
-            signingKeys,
-            serverPK,
-            nonce,
-            method,
-            path,
-            timestamp: ts,
-            blinded: true,
-            body,
-          });
-          expect(headers['X-SOGS-Signature']).to.be.equal(
-            'Bs680K7t2VOmbiXNX+uIPa7dDWzxKQfLk8SxdGxe2wwadFQOr9KdAetVmVQ6w4MfyHOD6WiP0JAVb4Tb8I5lAA=='
-          );
-        });
+        expect(headers['X-SOGS-Nonce']).to.be.equal('CdB5nyKVmQGCw6s0Bvv8Ww==');
       });
 
-      describe('Unblinded Headers', () => {
-        it('should produce correct X-SOGS-Nonce', async () => {
-          const headers = await getOpenGroupHeaders({
-            signingKeys,
-            serverPK,
-            nonce,
-            method,
-            path,
-            timestamp: ts,
-            blinded: false,
-          });
-          expect(headers['X-SOGS-Nonce']).to.be.equal('CdB5nyKVmQGCw6s0Bvv8Ww==');
+      it('should produce correct X-SOGS-Pubkey', async () => {
+        const headers = await getOpenGroupHeaders({
+          signingKeys,
+          serverPK,
+          nonce,
+          method,
+          path,
+          timestamp: ts,
+          blinded: true,
         });
-
-        it('should produce correct X-SOGS-Pubkey', async () => {
-          const headers = await getOpenGroupHeaders({
-            signingKeys,
-            serverPK,
-            nonce,
-            method,
-            path,
-            timestamp: ts,
-            blinded: false,
-          });
-          expect(headers['X-SOGS-Pubkey']).to.be.equal(
-            '00bac6e71efd7dfa4a83c98ed24f254ab2c267f9ccdb172a5280a0444ad24e89cc'
-          );
-        });
-
-        it('should produce correct X-SOGS-Timestamp', async () => {
-          const headers = await getOpenGroupHeaders({
-            signingKeys,
-            serverPK,
-            nonce,
-            method,
-            path,
-            timestamp: ts,
-            blinded: false,
-          });
-          expect(headers['X-SOGS-Timestamp']).to.be.equal('1642472103');
-        });
-        it('should produce correct X-SOGS-Signature without body', async () => {
-          const headers = await getOpenGroupHeaders({
-            signingKeys,
-            serverPK,
-            nonce,
-            method,
-            path,
-            timestamp: ts,
-            blinded: false,
-          });
-          expect(headers['X-SOGS-Signature']).to.be.equal(
-            'xxLpXHbomAJMB9AtGMyqvBsXrdd2040y+Ol/IKzElWfKJa3EYZRv1GLO6CTLhrDFUwVQe8PPltyGs54Kd7O5Cg=='
-          );
-        });
-
-        it('should produce correct X-SOGS-Signature with body', async () => {
-          const headers = await getOpenGroupHeaders({
-            signingKeys,
-            serverPK,
-            nonce,
-            method,
-            path,
-            timestamp: ts,
-            blinded: false,
-            body,
-          });
-          expect(headers['X-SOGS-Signature']).to.be.equal(
-            '2w9zMiGPqa3RApSpVbL0zhh7cUd6Z9skbZlf2XqyDTND2aDadGOAcKpXANcOSA+zi+kmgP8+zVkDdz0JOiB1Cw=='
-          );
-        });
+        expect(headers['X-SOGS-Pubkey']).to.be.equal(
+          '1598932d4bccbe595a8789d7eb1629cefc483a0eaddc7e20e8fe5c771efafd9af5'
+        );
       });
 
+      it('should produce correct X-SOGS-Timestamp', async () => {
+        const headers = await getOpenGroupHeaders({
+          signingKeys,
+          serverPK,
+          nonce,
+          method,
+          path,
+          timestamp: ts,
+          blinded: true,
+        });
+        expect(headers['X-SOGS-Timestamp']).to.be.equal('1642472103');
+      });
+      it('should produce correct X-SOGS-Signature without body', async () => {
+        const headers = await getOpenGroupHeaders({
+          signingKeys,
+          serverPK,
+          nonce,
+          method,
+          path,
+          timestamp: ts,
+          blinded: true,
+        });
+        expect(headers['X-SOGS-Signature']).to.be.equal(
+          'gYqpWZX6fnF4Gb2xQM3xaXs0WIYEI49+B8q4mUUEg8Rw0ObaHUWfoWjMHMArAtP9QlORfiydsKWz1o6zdPVeCQ=='
+        );
+      });
+
+      it('should produce correct X-SOGS-Signature with body', async () => {
+        const headers = await getOpenGroupHeaders({
+          signingKeys,
+          serverPK,
+          nonce,
+          method,
+          path,
+          timestamp: ts,
+          blinded: true,
+          body,
+        });
+        expect(headers['X-SOGS-Signature']).to.be.equal(
+          'Bs680K7t2VOmbiXNX+uIPa7dDWzxKQfLk8SxdGxe2wwadFQOr9KdAetVmVQ6w4MfyHOD6WiP0JAVb4Tb8I5lAA=='
+        );
+      });
+    });
+
+    describe('Unblinded Headers', () => {
+      it('should produce correct X-SOGS-Nonce', async () => {
+        const headers = await getOpenGroupHeaders({
+          signingKeys,
+          serverPK,
+          nonce,
+          method,
+          path,
+          timestamp: ts,
+          blinded: false,
+        });
+        expect(headers['X-SOGS-Nonce']).to.be.equal('CdB5nyKVmQGCw6s0Bvv8Ww==');
+      });
+
+      it('should produce correct X-SOGS-Pubkey', async () => {
+        const headers = await getOpenGroupHeaders({
+          signingKeys,
+          serverPK,
+          nonce,
+          method,
+          path,
+          timestamp: ts,
+          blinded: false,
+        });
+        expect(headers['X-SOGS-Pubkey']).to.be.equal(
+          '00bac6e71efd7dfa4a83c98ed24f254ab2c267f9ccdb172a5280a0444ad24e89cc'
+        );
+      });
+
+      it('should produce correct X-SOGS-Timestamp', async () => {
+        const headers = await getOpenGroupHeaders({
+          signingKeys,
+          serverPK,
+          nonce,
+          method,
+          path,
+          timestamp: ts,
+          blinded: false,
+        });
+        expect(headers['X-SOGS-Timestamp']).to.be.equal('1642472103');
+      });
+      it('should produce correct X-SOGS-Signature without body', async () => {
+        const headers = await getOpenGroupHeaders({
+          signingKeys,
+          serverPK,
+          nonce,
+          method,
+          path,
+          timestamp: ts,
+          blinded: false,
+        });
+        expect(headers['X-SOGS-Signature']).to.be.equal(
+          'xxLpXHbomAJMB9AtGMyqvBsXrdd2040y+Ol/IKzElWfKJa3EYZRv1GLO6CTLhrDFUwVQe8PPltyGs54Kd7O5Cg=='
+        );
+      });
+
+      it('should produce correct X-SOGS-Signature with body', async () => {
+        const headers = await getOpenGroupHeaders({
+          signingKeys,
+          serverPK,
+          nonce,
+          method,
+          path,
+          timestamp: ts,
+          blinded: false,
+          body,
+        });
+        expect(headers['X-SOGS-Signature']).to.be.equal(
+          '2w9zMiGPqa3RApSpVbL0zhh7cUd6Z9skbZlf2XqyDTND2aDadGOAcKpXANcOSA+zi+kmgP8+zVkDdz0JOiB1Cw=='
+        );
+      });
+    });
   });
 });
