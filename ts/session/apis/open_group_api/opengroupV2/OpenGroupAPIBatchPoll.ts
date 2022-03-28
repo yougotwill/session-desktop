@@ -16,7 +16,7 @@ import { downloadPreviewOpenGroupV2, getMemberCount } from './OpenGroupAPIV2';
 import { getAuthToken } from './ApiAuth';
 import { DURATION } from '../../../constants';
 import { UserUtils } from '../../../utils';
-import { fromHexToArray } from '../../../utils/String';
+import { fromHexToArray, stringToUint8Array } from '../../../utils/String';
 import { KeyPair } from 'libsodium-wrappers-sumo';
 import { getSodium } from '../../../crypto';
 import { getOpenGroupHeaders } from './OpenGroupAuthentication';
@@ -48,6 +48,7 @@ export const capabilitiesFetchEverything = async (
   // const compactPollRequest = await getCompactPollRequest(serverUrl, rooms);
 
   const capabilityRequest = await getCapabilityFetchRequest(serverUrl, rooms);
+  console.warn({ capabilityRequest });
 
   if (!capabilityRequest) {
     window?.log?.info('Nothing found to be fetched. returning');
@@ -200,6 +201,16 @@ const getAllValidRoomInfos = async (
   return validRoomInfos;
 };
 
+// @@: add this for room request info
+type RoomRequestInfo = {
+  from_message_server_id?: number;
+  lastFetchTimestamp?: number;
+  from_deletion_server_id?: number;
+  auth_token: string;
+  room_id: string;
+  serverPublicKey: string;
+};
+
 const getCapabilityFetchRequest = async (
   serverUrl: string,
   rooms: Set<string>
@@ -209,42 +220,79 @@ const getCapabilityFetchRequest = async (
     window?.log?.info('compactPoll: no valid roominfos got.');
     return null;
   }
-  const endpoint = '/capabilities';
+
+  const roomsRequestInfos = _.compact(
+    allValidRoomInfos.map(validRoomInfos => {
+      try {
+        const {
+          lastMessageFetchedServerID,
+          lastFetchTimestamp,
+          lastMessageDeletedServerID,
+          token,
+          roomId,
+          serverPublicKey,
+        } = validRoomInfos;
+        const roomRequestContent: Record<string, any> = {
+          room_id: roomId,
+          auth_token: token || '',
+          serverPublicKey,
+          lastFetchTimestamp,
+        };
+        roomRequestContent.from_deletion_server_id = lastMessageDeletedServerID;
+        if (Date.now() - (lastFetchTimestamp || 0) <= DURATION.DAYS * 14) {
+          roomRequestContent.from_message_server_id = lastMessageFetchedServerID;
+        } else {
+          window?.log?.info(
+            `We've been away for a long time... Only fetching last messages of room '${roomId}'`
+          );
+        }
+
+        return roomRequestContent as RoomRequestInfo;
+      } catch (e) {
+        window?.log?.warn('failed to fetch roominfos for room', validRoomInfos.roomId);
+        return null;
+      }
+    })
+  );
+  if (!roomsRequestInfos?.length) {
+    return null;
+  }
+
+  const firstRoom = roomsRequestInfos[0];
+  const path = '/capabilities';
   const method = 'GET';
   const sodium = await getSodium();
+
+  // TODO: remove hardcoded 12.
   const nonce = sodium.randombytes_buf(16);
 
   const userED25519KeyPair = await UserUtils.getUserED25519KeyPair();
   if (!userED25519KeyPair) {
     return null;
   }
-  const serverPubkey = allValidRoomInfos[0].serverPublicKey;
   const signingKeys: KeyPair = {
     keyType: 'ed25519',
     publicKey: fromHexToArray(userED25519KeyPair.pubKey),
     privateKey: fromHexToArray(userED25519KeyPair.privKey),
   }; // @@: make getHeaders just accept the hex version of the keys or make util function to get it as bytes
-  console.warn('signingKeys', signingKeys);
-
-  console.info('=========== serverpk: ', serverPubkey);
-  console.info('=========== serverpk uint: ', fromHexToArray(serverPubkey));
 
   const capabilityHeaders = await getOpenGroupHeaders({
     signingKeys,
-    serverPK: fromHexToArray(serverPubkey),
+    serverPK: stringToUint8Array(firstRoom.serverPublicKey),
     nonce,
     method,
-    path: endpoint,
+    path,
     timestamp: Math.floor(Date.now() / 1000),
     blinded: true,
   });
+  console.warn({ capabilityHeaders });
 
   // getAllValidRoomInfos return null if the room have not all the same serverPublicKey.
   // so being here, we know this is the case
   return {
     server: serverUrl,
-    serverPubKey: serverPubkey,
-    endpoint,
+    serverPubKey: firstRoom.serverPublicKey,
+    endpoint: 'capabilities',
     headers: capabilityHeaders,
   };
 };
@@ -318,6 +366,7 @@ async function sendOpenGroupCapabilityRequest(
 
   const builtUrl = new URL(`${serverUrl}/${endpoint}`);
 
+  console.warn('builtUrl: ', builtUrl);
   const res = await sendViaOnionToNonSnode(
     serverPubKey,
     builtUrl,

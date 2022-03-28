@@ -51,7 +51,7 @@ import { IncomingCallDialog } from '../calling/IncomingCallDialog';
 import { SessionIconButton } from '../icon';
 import { SessionToastContainer } from '../SessionToastContainer';
 import { LeftPaneSectionContainer } from './LeftPaneSectionContainer';
-import { headerTest } from '../../session/apis/open_group_api/opengroupV2/JoinOpenGroupV2';
+import { headerTest } from '../../session/apis/open_group_api/opengroupV2/OpenGroupAuthentication';
 
 const Section = (props: { type: SectionType }) => {
   const ourNumber = useSelector(getOurNumber);
