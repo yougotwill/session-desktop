@@ -3,6 +3,10 @@ import * as sinon from 'sinon';
 import chaiBytes from 'chai-bytes';
 import { getOpenGroupHeaders } from '../../../../session/apis/open_group_api/opengroupV2/OpenGroupAuthentication';
 import { KeyPair } from 'libsodium-wrappers-sumo';
+import {
+  decodeV4Response,
+  encodeV4Request,
+} from '../../../../session/apis/open_group_api/opengroupV2/OpenGroupAPIBatchPoll';
 
 chai.use(chaiBytes);
 
@@ -171,6 +175,13 @@ describe('OpenGroupAuthentication', () => {
 
   const body = 'This is a test message body 12345';
 
+  const postDataToEncoded =
+    '{"method":"POST","endpoint":"/room/test-room/pin/123","headers":{"Content-Type":"application/json"}}';
+
+  const getDataToEncode = '{"method":"GET","endpoint":"/room/test-room"}';
+
+  const responseToDecode = `l129:{"code":200,"headers":{"content-type":"application/octet-stream","content-disposition":"attachment;filename*=UTF-8''myfile.txt"}}11:hello worlde`;
+
   afterEach(() => {
     sandbox.restore();
   });
@@ -320,6 +331,28 @@ describe('OpenGroupAuthentication', () => {
           '2w9zMiGPqa3RApSpVbL0zhh7cUd6Z9skbZlf2XqyDTND2aDadGOAcKpXANcOSA+zi+kmgP8+zVkDdz0JOiB1Cw=='
         );
       });
+    });
+  });
+
+  describe('V4Requests', () => {
+    it('Should bencode POST/PUT request with body successfully', () => {
+      const bencoded = encodeV4Request(postDataToEncoded, '{}');
+      console.warn({ bencoded });
+      expect(bencoded).to.be.equal(
+        'l100:{"method":"POST","endpoint":"/room/test-room/pin/123","headers":{"Content-Type":"application/json"}}2:{}e'
+      );
+    });
+
+    it('Should bencode GET request without body successfully', () => {
+      const bencoded = encodeV4Request(getDataToEncode);
+      console.warn({ bencoded });
+      expect(bencoded).to.be.equal('l45:{"method":"GET","endpoint":"/room/test-room"}e');
+    });
+
+    it('Should decode response successfully', () => {
+      const bencoded = decodeV4Response(responseToDecode);
+      console.warn({ bencoded });
+      // expect(bencoded).to.be.equal('l45:{"method":"GET","endpoint":"/room/test-room"}e');
     });
   });
 });

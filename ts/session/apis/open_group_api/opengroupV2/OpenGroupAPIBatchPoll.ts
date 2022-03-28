@@ -11,14 +11,47 @@ import { KeyPair } from 'libsodium-wrappers-sumo';
 import { getSodium } from '../../../crypto';
 import { getOpenGroupHeaders } from './OpenGroupAuthentication';
 
+// export const testV4Request = async (req: OpenGroupCapabilityRequest) => {
+export const encodeV4Request = (req: string, body?: string): string => {
+  // TODO: take it the request object and body and stringify in here rather than take string params.
+  // explicitly set the header to contain the data type being used
+  const encodeText = (s: string) => {
+    return `${s.length}:${s}`;
+  };
+
+  // N:data - a binary str, where N is number of ascii digits. e.g. 11:hello world enceds the 11 byte string hello world.
+  // @@: double check that this is that same as converting to char codes.
+  const metaEncoded = encodeText(req);
+
+  let bodyEncoded = '';
+  if (body) {
+    bodyEncoded = encodeText(body);
+  }
+
+  const bencoded = `l${metaEncoded}${bodyEncoded}e`;
+  return bencoded;
+};
+
+/**
+ * Nearly identical to request encoding. 2 string bencoded list.
+ * Response differs in that the second body part is always present in a response unlike the requests.
+ * 1. First part contains response metadata
+ * 2. Second part contains the request body.
+ *
+ */
+export const decodeV4Response = (response: string) => {
+  // json part will have code: containing response code and headers for http headers (always lower case)
+  // 1. read first bit till colon to get the length. Substring the next X amount trailing the colon and that's the metadata.
+  // 2. grab the number before the next colon. That's the expected length of the body.
+  // 3. Use the content type from the metadata header to handle the body.
+  console.warn('TO IMPLEMENT', response);
+};
+
 export const capabilitiesFetchEverything = async (
   serverUrl: string,
   rooms: Set<string>,
   abortSignal: AbortSignal
 ): Promise<Array<ParsedRoomCompactPollResults> | null> => {
-  // fetch all we need
-  // const compactPollRequest = await getCompactPollRequest(serverUrl, rooms);
-
   const capabilityRequest = await getCapabilityFetchRequest(serverUrl, rooms);
 
   if (!capabilityRequest) {
