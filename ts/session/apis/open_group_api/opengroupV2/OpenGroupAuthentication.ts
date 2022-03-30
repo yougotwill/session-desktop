@@ -6,8 +6,9 @@ import {
   toHex,
 } from '../../../utils/String';
 import { concatUInt8Array, getSodium } from '../../../crypto';
-import { crypto_hash_sha512, KeyPair, to_hex } from 'libsodium-wrappers-sumo';
+import { crypto_hash_sha512, to_hex } from 'libsodium-wrappers-sumo';
 import { sessionGenerateKeyPair } from '../../../../util/accountManager';
+import { ByteKeyPair } from '../../../utils/User';
 
 const debugOutput = (key: string, headers: any, blinded: boolean) => {
   const common: Record<string, string | number> = {
@@ -46,10 +47,13 @@ const debugOutput = (key: string, headers: any, blinded: boolean) => {
 export async function headerTest() {
   const signKeyHexUnused = 'c010d89eccbaf5d1c6d19df766c6eedf965d4a28a56f87c9fc819edb59896dd9';
   const signingKeys = await sessionGenerateKeyPair(fromHex(signKeyHexUnused));
-  const ed52219KeyPair: KeyPair = signingKeys.ed25519KeyPair;
+  const ed52219KeyPair: ByteKeyPair = {
+    privKeyBytes: signingKeys.ed25519KeyPair.privateKey,
+    pubKeyBytes: signingKeys.ed25519KeyPair.publicKey,
+  };
 
-  console.warn('signingKeys pub: ', to_hex(ed52219KeyPair.publicKey));
-  console.warn('signingKeys priv: ', to_hex(ed52219KeyPair.privateKey));
+  console.warn('signingKeys pub: ', to_hex(ed52219KeyPair.pubKeyBytes));
+  console.warn('signingKeys priv: ', to_hex(ed52219KeyPair.privKeyBytes));
 
   const serverPK = fromHexToArray(
     'c3b3c6f32f0ab5a57f853cc4f30f5da7fda5624b0c77b3fb0829de562ada081d'
@@ -101,7 +105,7 @@ export async function getOpenGroupHeaders(data: {
   /**
    * Our ED25519 Key pair
    */
-  signingKeys: KeyPair;
+  signingKeys: ByteKeyPair;
   /**
    * The server public key - before blinding
    */
@@ -125,7 +129,7 @@ export async function getOpenGroupHeaders(data: {
     const k = sodium.crypto_core_ed25519_scalar_reduce(sodium.crypto_generichash(64, serverPK));
 
     // use curve key i.e. s.privKey
-    let a = sodium.crypto_sign_ed25519_sk_to_curve25519(signingKeys.privateKey);
+    let a = sodium.crypto_sign_ed25519_sk_to_curve25519(signingKeys.privKeyBytes);
 
     if (a.length > 32) {
       console.warn('length of signing key is too loong, cutting to 32: oldlength', length);
@@ -139,7 +143,7 @@ export async function getOpenGroupHeaders(data: {
 
     pubkey = `15${toHex(kA)}`;
   } else {
-    pubkey = `00${toHex(signingKeys.publicKey)}`;
+    pubkey = `00${toHex(signingKeys.pubKeyBytes)}`;
   }
 
   // SERVER_PUBKEY || NONCE || TIMESTAMP || METHOD || PATH || HASHED_BODY
@@ -159,7 +163,7 @@ export async function getOpenGroupHeaders(data: {
   if (blinded && ka && kA) {
     signature = await blindedED25519Signature(toSign, signingKeys, ka, kA);
   } else {
-    signature = sodium.crypto_sign_detached(toSign, signingKeys.privateKey);
+    signature = sodium.crypto_sign_detached(toSign, signingKeys.privKeyBytes);
   }
 
   const sogsSignature = fromUInt8ArrayToBase64(signature);
@@ -185,13 +189,13 @@ export async function getOpenGroupHeaders(data: {
  */
 async function blindedED25519Signature(
   messageParts: Uint8Array,
-  ourKeyPair: KeyPair,
+  ourKeyPair: ByteKeyPair,
   ka: Uint8Array,
   kA: Uint8Array
 ): Promise<Uint8Array> {
   const sodium = await getSodium();
 
-  const sEncode = ourKeyPair.privateKey.slice(0, 32);
+  const sEncode = ourKeyPair.privKeyBytes.slice(0, 32);
 
   const shaFullLength = sodium.crypto_hash_sha512(sEncode);
 

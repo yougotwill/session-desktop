@@ -7,7 +7,6 @@ import { OpenGroupMessageV2 } from './OpenGroupMessageV2';
 import { getAuthToken } from './ApiAuth';
 import { UserUtils } from '../../../utils';
 import { fromHexToArray } from '../../../utils/String';
-import { KeyPair } from 'libsodium-wrappers-sumo';
 import { getSodium } from '../../../crypto';
 import { getOpenGroupHeaders } from './OpenGroupAuthentication';
 
@@ -63,6 +62,57 @@ export const decodeV4Response = (response: string) => {
     meta,
     bodyData,
   };
+};
+
+export const batchPoll = async (serverUrl: string, roomId: string) => {
+  const batchRequest = getBatchRequest(serverUrl, roomId);
+  console.warn({ batchRequest });
+};
+
+const getBatchRequest = async (serverUrl: string, roomId: string) => {
+  const endpoint = '/batch';
+  const method = 'GET';
+
+  const fetchedInfo = await getV2OpenGroupRoomByRoomId({
+    serverUrl,
+    roomId,
+  });
+
+  if (!fetchedInfo) {
+    return;
+  }
+
+  const headers = getOurOpenGroupHeaders(fetchedInfo?.serverPublicKey, endpoint, method, false);
+
+  console.warn({ headers });
+};
+
+const getOurOpenGroupHeaders = async (
+  serverPublicKey: string,
+  endpoint: string,
+  method: string,
+  blinded: boolean
+) => {
+  // todo: refactor open group headers to just get our device.
+  const sodium = await getSodium();
+  const nonce = sodium.randombytes_buf(16);
+
+  const signingKeys = await UserUtils.getUserED25519KeyPairBytes();
+  if (!signingKeys) {
+    return;
+  }
+
+  const timestamp = Math.floor(Date.now() / 1000);
+
+  return getOpenGroupHeaders({
+    signingKeys,
+    serverPK: fromHexToArray(serverPublicKey),
+    nonce,
+    method,
+    path: endpoint,
+    timestamp,
+    blinded,
+  });
 };
 
 export const capabilitiesFetchEverything = async (
@@ -154,11 +204,17 @@ const getCapabilityFetchRequest = async (
     return null;
   }
   const serverPubkey = allValidRoomInfos[0].serverPublicKey;
-  const signingKeys: KeyPair = {
-    keyType: 'ed25519',
-    publicKey: fromHexToArray(userED25519KeyPair.pubKey),
-    privateKey: fromHexToArray(userED25519KeyPair.privKey),
-  }; // @@: make getHeaders just accept the hex version of the keys or make util function to get it as bytes
+  const signingKeys = await UserUtils.getUserED25519KeyPairBytes();
+
+  if (!signingKeys) {
+    window?.log?.info('Unable to get ed25519 keypair bytes for request header creation');
+    return null;
+  }
+
+  // {
+  //   publicKey: fromHexToArray(userED25519KeyPair.pubKey),
+  //   privateKey: fromHexToArray(userED25519KeyPair.privKey),
+  // }; // @@: make getHeaders just accept the hex version of the keys or make util function to get it as bytes
   console.warn('signingKeys', signingKeys);
 
   console.info('=========== serverpk: ', serverPubkey);

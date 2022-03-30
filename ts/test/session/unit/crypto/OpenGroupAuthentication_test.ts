@@ -2,20 +2,19 @@ import chai, { expect } from 'chai';
 import * as sinon from 'sinon';
 import chaiBytes from 'chai-bytes';
 import { getOpenGroupHeaders } from '../../../../session/apis/open_group_api/opengroupV2/OpenGroupAuthentication';
-import { KeyPair } from 'libsodium-wrappers-sumo';
 import {
   decodeV4Response,
   encodeV4Request,
 } from '../../../../session/apis/open_group_api/opengroupV2/OpenGroupAPIBatchPoll';
+import { ByteKeyPair } from '../../../../session/utils/User';
 
 chai.use(chaiBytes);
 
 // tslint:disable-next-line: max-func-body-length
 describe('OpenGroupAuthentication', () => {
   const sandbox = sinon.createSandbox();
-  const signingKeys: KeyPair = {
-    keyType: 'ed25519',
-    privateKey: new Uint8Array([
+  const signingKeys: ByteKeyPair = {
+    privKeyBytes: new Uint8Array([
       192,
       16,
       216,
@@ -81,7 +80,7 @@ describe('OpenGroupAuthentication', () => {
       137,
       204,
     ]),
-    publicKey: new Uint8Array([
+    pubKeyBytes: new Uint8Array([
       186,
       198,
       231,
