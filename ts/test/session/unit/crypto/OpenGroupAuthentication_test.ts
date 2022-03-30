@@ -182,6 +182,15 @@ describe('OpenGroupAuthentication', () => {
 
   const responseToDecode = `l129:{"code":200,"headers":{"content-type":"application/octet-stream","content-disposition":"attachment;filename*=UTF-8''myfile.txt"}}11:hello worlde`;
 
+  // const expectedResponseMeta = {
+  //   code: 200,
+  //   headers: {
+  //     'content-type': 'application/octet-stream',
+  //     'content-disposition': "attachment;filename*=UTF-8''myfile.txt",
+  //   },
+  // };
+  // const expectedResponseBody = 'hello world';
+
   afterEach(() => {
     sandbox.restore();
   });
@@ -337,7 +346,6 @@ describe('OpenGroupAuthentication', () => {
   describe('V4Requests', () => {
     it('Should bencode POST/PUT request with body successfully', () => {
       const bencoded = encodeV4Request(postDataToEncoded, '{}');
-      console.warn({ bencoded });
       expect(bencoded).to.be.equal(
         'l100:{"method":"POST","endpoint":"/room/test-room/pin/123","headers":{"Content-Type":"application/json"}}2:{}e'
       );
@@ -345,14 +353,16 @@ describe('OpenGroupAuthentication', () => {
 
     it('Should bencode GET request without body successfully', () => {
       const bencoded = encodeV4Request(getDataToEncode);
-      console.warn({ bencoded });
       expect(bencoded).to.be.equal('l45:{"method":"GET","endpoint":"/room/test-room"}e');
     });
 
-    it('Should decode response successfully', () => {
+    it('Should decode bencoded response successfully', () => {
       const bencoded = decodeV4Response(responseToDecode);
       console.warn({ bencoded });
-      // expect(bencoded).to.be.equal('l45:{"method":"GET","endpoint":"/room/test-room"}e');
+
+      // TODO: check how to deep equality check the body instead of stringifying.
+      // expect(JSON.stringify(bencoded.bodyData)).to.be.equal(JSON.stringify(expectedResponseBody));
+      // expect(bencoded.meta).to.be.equal(expectedResponseMeta);
     });
   });
 });

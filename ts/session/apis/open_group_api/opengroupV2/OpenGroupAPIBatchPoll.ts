@@ -44,7 +44,25 @@ export const decodeV4Response = (response: string) => {
   // 1. read first bit till colon to get the length. Substring the next X amount trailing the colon and that's the metadata.
   // 2. grab the number before the next colon. That's the expected length of the body.
   // 3. Use the content type from the metadata header to handle the body.
-  console.warn('TO IMPLEMENT', response);
+  const firstDelimitIdx = response.indexOf(':');
+  const metaLength = parseInt(response.slice(1, firstDelimitIdx));
+
+  const metaStartIdx = firstDelimitIdx + 1;
+  const metaEndIdx = metaStartIdx + metaLength;
+  const meta = JSON.parse(response.slice(metaStartIdx, metaEndIdx));
+
+  const finalIdxBeforeBody = response.indexOf(':', metaEndIdx);
+  const bodyLength = parseInt(response.slice(metaEndIdx, finalIdxBeforeBody));
+
+  const bodyData = response.slice(finalIdxBeforeBody + 1, finalIdxBeforeBody + (1 + bodyLength));
+
+  console.warn({ meta });
+  console.warn({ bodyData });
+
+  return {
+    meta,
+    bodyData,
+  };
 };
 
 export const capabilitiesFetchEverything = async (
