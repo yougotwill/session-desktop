@@ -9,6 +9,7 @@ import { UserUtils } from '../../../utils';
 import { fromHexToArray } from '../../../utils/String';
 import { getSodium } from '../../../crypto';
 import { getOpenGroupHeaders } from './OpenGroupAuthentication';
+import { APPLICATION_JSON } from '../../../../types/MIME';
 
 type BatchFetchRequestOptions = {
   method: 'GET';
@@ -45,12 +46,15 @@ type BatchRequest = {
   /** Used by server to processing request */
   body: string;
   /** Used by server to processing request and authenication */
-  headers: {
-    'X-SOGS-Pubkey': string;
-    'X-SOGS-Timestamp': string | number;
-    'X-SOGS-Signature': string;
-    'X-SOGS-Nonce': string;
-  };
+  headers: BatchRequestHeaders;
+};
+
+export type BatchRequestHeaders = {
+  'X-SOGS-Pubkey': string;
+  'X-SOGS-Timestamp': string | number;
+  'X-SOGS-Signature': string;
+  'X-SOGS-Nonce': string;
+  'Content-Type'?: string;
 };
 
 export const encodeV4Request = (req: string, body?: string): string => {
@@ -64,10 +68,13 @@ export const encodeV4Request = (req: string, body?: string): string => {
   // @@: double check that this is that same as converting to char codes.
   const metaEncoded = encodeText(req);
 
+  // TODO: add different conversions for different encoding types
   let bodyEncoded = '';
-  if (body) {
-    bodyEncoded = encodeText(body);
-  }
+  // TODO: clean up line
+  bodyEncoded = encodeText(body ? body : JSON.stringify({}));
+
+  console.warn({ metaEncoded });
+  console.warn({ bodyEncoded });
 
   const bencoded = `l${metaEncoded}${bodyEncoded}e`;
   return bencoded;
@@ -104,7 +111,8 @@ export const decodeV4Response = (response: string) => {
 export const batchPoll = async (
   serverUrl: string,
   roomInfos: Set<string>,
-  abortSignal: AbortSignal
+  abortSignal: AbortSignal,
+  useV4: boolean = false
 ) => {
   window?.log?.warn({ roomInfos });
 
@@ -124,7 +132,7 @@ export const batchPoll = async (
   }
   const { serverPublicKey } = fetchedRoomInfo;
 
-  const batchRequest = await getBatchRequest(serverPublicKey, roomId);
+  const batchRequest = await getBatchRequest(serverPublicKey, roomId, useV4);
   console.warn({ batchRequest });
 
   if (!batchRequest) {
@@ -132,20 +140,21 @@ export const batchPoll = async (
     return;
   }
 
-  sendOpenGroupBatchRequest(serverUrl, serverPublicKey, batchRequest, abortSignal);
+  sendOpenGroupBatchRequest(serverUrl, serverPublicKey, batchRequest, abortSignal, useV4);
   // sendOpenGroupBatchRequest(serverUrl, serverPublicKey, batchRequest, abortSignal, true);
 };
 
 const getBatchRequest = async (
   serverPublicKey: string,
-  roomId: string
+  roomId: string,
+  useV4: boolean = false
 ): Promise<BatchRequest | undefined> => {
   const endpoint = '/batch';
   const method = 'POST';
 
   // TODO: hardcoding batch request for capabilities and messages for now.
   // TODO: add testing
-  const batchCommands: Array<BatchSubRequest> = [
+  const batchBody: Array<BatchSubRequest> = [
     {
       // gets the last 100 messages for the room
       method: 'GET',
@@ -159,13 +168,13 @@ const getBatchRequest = async (
 
   // TODO: swap out batchCommands for body fn parameter
   // TODO: confirm that the X-SOGS Pubkey is lowercase k or not.
-  const headers = batchCommands
+  const headers = batchBody
     ? await getOurOpenGroupHeaders(
         serverPublicKey,
         endpoint,
         method,
         false,
-        JSON.stringify(batchCommands)
+        JSON.stringify(batchBody)
       )
     : await getOurOpenGroupHeaders(serverPublicKey, endpoint, method, false);
 
@@ -174,10 +183,15 @@ const getBatchRequest = async (
     return;
   }
 
+  if (useV4) {
+    // TODO: check if batch will always be json
+    headers['Content-Type'] = APPLICATION_JSON;
+  }
+
   return {
     endpoint: '/batch',
     method: 'POST',
-    body: JSON.stringify(batchCommands),
+    body: JSON.stringify(batchBody),
     headers,
   };
 };
@@ -188,7 +202,7 @@ const getOurOpenGroupHeaders = async (
   method: string,
   blinded: boolean,
   body?: string
-) => {
+): Promise<BatchRequestHeaders | undefined> => {
   // todo: refactor open group headers to just get our device.
   const sodium = await getSodium();
   const nonce = sodium.randombytes_buf(16);
