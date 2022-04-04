@@ -38,10 +38,6 @@ type BatchBodyRequest = BatchJsonSubrequestOptions | Batch64SubrequestOptions;
 type BatchSubRequest = BatchBodyRequest | BatchFetchRequestOptions;
 
 type BatchRequest = {
-  /** Used by us to determine sending address */
-  serverUrl: string;
-  /** Used by us to determine sending address */
-  serverPubkey: string;
   /** Used by server to processing request */
   endpoint: string;
   /** Used by server to processing request */
@@ -57,7 +53,6 @@ type BatchRequest = {
   };
 };
 
-// export const testV4Request = async (req: OpenGroupCapabilityRequest) => {
 export const encodeV4Request = (req: string, body?: string): string => {
   // TODO: take it the request object and body and stringify in here rather than take string params.
   // explicitly set the header to contain the data type being used
@@ -83,7 +78,6 @@ export const encodeV4Request = (req: string, body?: string): string => {
  * Response differs in that the second body part is always present in a response unlike the requests.
  * 1. First part contains response metadata
  * 2. Second part contains the request body.
- *
  */
 export const decodeV4Response = (response: string) => {
   // json part will have code: containing response code and headers for http headers (always lower case)
@@ -101,10 +95,6 @@ export const decodeV4Response = (response: string) => {
   const bodyLength = parseInt(response.slice(metaEndIdx, finalIdxBeforeBody));
 
   const bodyData = response.slice(finalIdxBeforeBody + 1, finalIdxBeforeBody + (1 + bodyLength));
-
-  console.warn({ meta });
-  console.warn({ bodyData });
-
   return {
     meta,
     bodyData,
@@ -123,8 +113,18 @@ export const batchPoll = async (
     return;
   }
 
-  const [firstRoom] = roomInfos;
-  const batchRequest = await getBatchRequest(serverUrl, firstRoom);
+  const [roomId] = roomInfos;
+  const fetchedRoomInfo = await getV2OpenGroupRoomByRoomId({
+    serverUrl,
+    roomId,
+  });
+  if (!fetchedRoomInfo || !fetchedRoomInfo?.serverPublicKey) {
+    window?.log?.warn('Couldnt get fetched info or server public key -- aborting batch request');
+    return;
+  }
+  const { serverPublicKey } = fetchedRoomInfo;
+
+  const batchRequest = await getBatchRequest(serverPublicKey, roomId);
   console.warn({ batchRequest });
 
   if (!batchRequest) {
@@ -132,27 +132,16 @@ export const batchPoll = async (
     return;
   }
 
-  sendOpenGroupBatchRequest(batchRequest, abortSignal);
+  sendOpenGroupBatchRequest(serverUrl, serverPublicKey, batchRequest, abortSignal);
+  // sendOpenGroupBatchRequest(serverUrl, serverPublicKey, batchRequest, abortSignal, true);
 };
 
 const getBatchRequest = async (
-  serverUrl: string,
+  serverPublicKey: string,
   roomId: string
 ): Promise<BatchRequest | undefined> => {
   const endpoint = '/batch';
-  const method = 'GET';
-
-  const fetchedRoomInfo = await getV2OpenGroupRoomByRoomId({
-    serverUrl,
-    roomId,
-  });
-
-  if (!fetchedRoomInfo || !fetchedRoomInfo?.serverPublicKey) {
-    window?.log?.warn('Couldnt get fetched info or server public key -- aborting batch request');
-    return;
-  }
-
-  const { serverPublicKey } = fetchedRoomInfo;
+  const method = 'POST';
 
   // TODO: hardcoding batch request for capabilities and messages for now.
   // TODO: add testing
@@ -163,9 +152,8 @@ const getBatchRequest = async (
       path: '/capabilities',
     },
     {
-      // gets the last 25 messages for the room
       method: 'GET',
-      path: '/room/<token>/message/recent?limit=25',
+      path: `/room/${roomId}/messages/recent?limit=25`,
     },
   ];
 
@@ -187,8 +175,6 @@ const getBatchRequest = async (
   }
 
   return {
-    serverUrl,
-    serverPubkey: serverPublicKey,
     endpoint: '/batch',
     method: 'POST',
     body: JSON.stringify(batchCommands),
@@ -228,23 +214,32 @@ const getOurOpenGroupHeaders = async (
 };
 
 const sendOpenGroupBatchRequest = async (
+  serverUrl: string,
+  serverPubkey: string,
   request: BatchRequest,
-  abortSignal: AbortSignal
+  abortSignal: AbortSignal,
+  useV4: boolean = false
 ): Promise<any> => {
-  const { serverUrl, endpoint, serverPubkey, headers, method, body } = request;
+  const { endpoint, headers, method, body } = request;
 
-  const builtUrl = new URL(`${serverUrl}/${endpoint}`);
-  const res = await sendViaOnionToNonSnode(
-    serverPubkey,
-    builtUrl,
-    {
-      method,
-      headers,
-      body,
-    },
-    {},
-    abortSignal
-  );
+  let res;
+  if (useV4) {
+    const batchRequestV4 = encodeV4Request(JSON.stringify(request.headers), request.body);
+    console.warn({ batchRequestV4 });
+  } else {
+    const builtUrl = new URL(`${serverUrl}/${endpoint}`);
+    res = await sendViaOnionToNonSnode(
+      serverPubkey,
+      builtUrl,
+      {
+        method,
+        headers,
+        body,
+      },
+      {},
+      abortSignal
+    );
+  }
 
   console.warn({ batchRes: res });
   const status = parseStatusCodeFromOnionRequest(res);
@@ -332,42 +327,13 @@ const getCapabilityFetchRequest = async (
   }
   const endpoint = '/capabilities';
   const method = 'GET';
-  const sodium = await getSodium();
-  const nonce = sodium.randombytes_buf(16);
-
-  const userED25519KeyPair = await UserUtils.getUserED25519KeyPair();
-  if (!userED25519KeyPair) {
-    return null;
-  }
   const serverPubkey = allValidRoomInfos[0].serverPublicKey;
-  const signingKeys = await UserUtils.getUserED25519KeyPairBytes();
 
-  if (!signingKeys) {
-    window?.log?.info('Unable to get ed25519 keypair bytes for request header creation');
+  const capabilityHeaders = await getOurOpenGroupHeaders(serverPubkey, endpoint, method, true);
+  if (!capabilityHeaders) {
     return null;
   }
 
-  // {
-  //   publicKey: fromHexToArray(userED25519KeyPair.pubKey),
-  //   privateKey: fromHexToArray(userED25519KeyPair.privKey),
-  // }; // @@: make getHeaders just accept the hex version of the keys or make util function to get it as bytes
-  console.warn('signingKeys', signingKeys);
-
-  console.info('=========== serverpk: ', serverPubkey);
-  console.info('=========== serverpk uint: ', fromHexToArray(serverPubkey));
-
-  const capabilityHeaders = await getOpenGroupHeaders({
-    signingKeys,
-    serverPK: fromHexToArray(serverPubkey),
-    nonce,
-    method,
-    path: endpoint,
-    timestamp: Math.floor(Date.now() / 1000),
-    blinded: true,
-  });
-
-  // getAllValidRoomInfos return null if the room have not all the same serverPublicKey.
-  // so being here, we know this is the case
   return {
     server: serverUrl,
     serverPubKey: serverPubkey,
