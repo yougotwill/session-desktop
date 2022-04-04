@@ -22,7 +22,7 @@ import { DURATION } from '../../../constants';
 import { processNewAttachment } from '../../../../types/MessageAttachment';
 import { MIME } from '../../../../types';
 import { handleOpenGroupV2Message } from '../../../../receiver/opengroup';
-import { capabilitiesFetchEverything } from './OpenGroupAPIBatchPoll';
+import { batchPoll, capabilitiesFetchEverything } from './OpenGroupAPIBatchPoll';
 
 const pollForEverythingInterval = DURATION.SECONDS * 10;
 const pollForRoomAvatarInterval = DURATION.DAYS * 1;
@@ -335,6 +335,8 @@ export class OpenGroupServerPoller {
         this.roomIdsToPoll,
         this.abortController.signal
       );
+
+      await batchPoll(this.serverUrl, this.roomIdsToPoll, this.abortController.signal);
 
       const capResults = await capabilitiesFetchEverything(
         this.serverUrl,

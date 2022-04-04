@@ -10,6 +10,53 @@ import { fromHexToArray } from '../../../utils/String';
 import { getSodium } from '../../../crypto';
 import { getOpenGroupHeaders } from './OpenGroupAuthentication';
 
+type BatchFetchRequestOptions = {
+  method: 'GET';
+  path: string;
+  headers?: any;
+};
+
+/**
+ * Should only have this or the json field but not both at the same time
+ */
+type BatchBodyRequestSharedOptions = {
+  method: 'POST' | 'PUT';
+  path: string;
+  headers?: any;
+};
+
+interface BatchJsonSubrequestOptions extends BatchBodyRequestSharedOptions {
+  json: string;
+}
+
+interface Batch64SubrequestOptions extends BatchBodyRequestSharedOptions {
+  b64: string;
+}
+
+type BatchBodyRequest = BatchJsonSubrequestOptions | Batch64SubrequestOptions;
+
+type BatchSubRequest = BatchBodyRequest | BatchFetchRequestOptions;
+
+type BatchRequest = {
+  /** Used by us to determine sending address */
+  serverUrl: string;
+  /** Used by us to determine sending address */
+  serverPubkey: string;
+  /** Used by server to processing request */
+  endpoint: string;
+  /** Used by server to processing request */
+  method: string;
+  /** Used by server to processing request */
+  body: string;
+  /** Used by server to processing request and authenication */
+  headers: {
+    'X-SOGS-Pubkey': string;
+    'X-SOGS-Timestamp': string | number;
+    'X-SOGS-Signature': string;
+    'X-SOGS-Nonce': string;
+  };
+};
+
 // export const testV4Request = async (req: OpenGroupCapabilityRequest) => {
 export const encodeV4Request = (req: string, body?: string): string => {
   // TODO: take it the request object and body and stringify in here rather than take string params.
@@ -64,34 +111,97 @@ export const decodeV4Response = (response: string) => {
   };
 };
 
-export const batchPoll = async (serverUrl: string, roomId: string) => {
-  const batchRequest = getBatchRequest(serverUrl, roomId);
+export const batchPoll = async (
+  serverUrl: string,
+  roomInfos: Set<string>,
+  abortSignal: AbortSignal
+) => {
+  window?.log?.warn({ roomInfos });
+
+  if (!serverUrl.includes('.dev')) {
+    window?.log?.warn('not a dev url -- cancelling early');
+    return;
+  }
+
+  const [firstRoom] = roomInfos;
+  const batchRequest = await getBatchRequest(serverUrl, firstRoom);
   console.warn({ batchRequest });
+
+  if (!batchRequest) {
+    window?.log?.error('Could not generate batch request. Aborting request');
+    return;
+  }
+
+  sendOpenGroupBatchRequest(batchRequest, abortSignal);
 };
 
-const getBatchRequest = async (serverUrl: string, roomId: string) => {
+const getBatchRequest = async (
+  serverUrl: string,
+  roomId: string
+): Promise<BatchRequest | undefined> => {
   const endpoint = '/batch';
   const method = 'GET';
 
-  const fetchedInfo = await getV2OpenGroupRoomByRoomId({
+  const fetchedRoomInfo = await getV2OpenGroupRoomByRoomId({
     serverUrl,
     roomId,
   });
 
-  if (!fetchedInfo) {
+  if (!fetchedRoomInfo || !fetchedRoomInfo?.serverPublicKey) {
+    window?.log?.warn('Couldnt get fetched info or server public key -- aborting batch request');
     return;
   }
 
-  const headers = getOurOpenGroupHeaders(fetchedInfo?.serverPublicKey, endpoint, method, false);
+  const { serverPublicKey } = fetchedRoomInfo;
 
-  console.warn({ headers });
+  // TODO: hardcoding batch request for capabilities and messages for now.
+  // TODO: add testing
+  const batchCommands: Array<BatchSubRequest> = [
+    {
+      // gets the last 100 messages for the room
+      method: 'GET',
+      path: '/capabilities',
+    },
+    {
+      // gets the last 25 messages for the room
+      method: 'GET',
+      path: '/room/<token>/message/recent?limit=25',
+    },
+  ];
+
+  // TODO: swap out batchCommands for body fn parameter
+  // TODO: confirm that the X-SOGS Pubkey is lowercase k or not.
+  const headers = batchCommands
+    ? await getOurOpenGroupHeaders(
+        serverPublicKey,
+        endpoint,
+        method,
+        false,
+        JSON.stringify(batchCommands)
+      )
+    : await getOurOpenGroupHeaders(serverPublicKey, endpoint, method, false);
+
+  if (!headers) {
+    window?.log?.error('Unable to create headers for batch request - aborting');
+    return;
+  }
+
+  return {
+    serverUrl,
+    serverPubkey: serverPublicKey,
+    endpoint: '/batch',
+    method: 'POST',
+    body: JSON.stringify(batchCommands),
+    headers,
+  };
 };
 
 const getOurOpenGroupHeaders = async (
   serverPublicKey: string,
   endpoint: string,
   method: string,
-  blinded: boolean
+  blinded: boolean,
+  body?: string
 ) => {
   // todo: refactor open group headers to just get our device.
   const sodium = await getSodium();
@@ -99,6 +209,7 @@ const getOurOpenGroupHeaders = async (
 
   const signingKeys = await UserUtils.getUserED25519KeyPairBytes();
   if (!signingKeys) {
+    console.warn('Unable to get signing keys');
     return;
   }
 
@@ -112,7 +223,32 @@ const getOurOpenGroupHeaders = async (
     path: endpoint,
     timestamp,
     blinded,
+    body,
   });
+};
+
+const sendOpenGroupBatchRequest = async (
+  request: BatchRequest,
+  abortSignal: AbortSignal
+): Promise<any> => {
+  const { serverUrl, endpoint, serverPubkey, headers, method, body } = request;
+
+  const builtUrl = new URL(`${serverUrl}/${endpoint}`);
+  const res = await sendViaOnionToNonSnode(
+    serverPubkey,
+    builtUrl,
+    {
+      method,
+      headers,
+      body,
+    },
+    {},
+    abortSignal
+  );
+
+  console.warn({ batchRes: res });
+  const status = parseStatusCodeFromOnionRequest(res);
+  console.warn({ batchStatus: status });
 };
 
 export const capabilitiesFetchEverything = async (
@@ -249,6 +385,8 @@ async function sendOpenGroupCapabilityRequest(
 
   const builtUrl = new URL(`${serverUrl}/${endpoint}`);
 
+  console.warn({ batchUrl: builtUrl });
+
   const res = await sendViaOnionToNonSnode(
     serverPubKey,
     builtUrl,
@@ -261,10 +399,12 @@ async function sendOpenGroupCapabilityRequest(
     abortSignal
   );
 
+  console.warn({ capabilityRequest: res });
+
   const statusCode = parseStatusCodeFromOnionRequest(res);
   if (!statusCode) {
     window?.log?.warn('Capabilities Request Got unknown status code; res:', res);
-    return null;
+    // return null;
   }
 
   return res;

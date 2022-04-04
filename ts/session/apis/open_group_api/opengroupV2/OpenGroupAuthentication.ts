@@ -174,8 +174,6 @@ export async function getOpenGroupHeaders(data: {
     'X-SOGS-Signature': sogsSignature,
   };
 
-  console.warn('headers', headers);
-
   return headers;
 }
 
