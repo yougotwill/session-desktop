@@ -16,6 +16,7 @@ type OnionFetchOptions = {
   method: string;
   body?: string;
   headers?: Record<string, string | number>;
+  useV4?: boolean;
 };
 
 type OnionFetchBasicOptions = {
@@ -110,7 +111,8 @@ export const sendViaOnionToNonSnode = async (
   url: URL,
   fetchOptions: OnionFetchOptions,
   options: OnionFetchBasicOptions = {},
-  abortSignal?: AbortSignal
+  abortSignal?: AbortSignal,
+  useV4: boolean = false
 ): Promise<{
   result: SnodeResponse;
   txtResponse: string;
@@ -150,6 +152,10 @@ export const sendViaOnionToNonSnode = async (
           throw new Error('getOnionPathForSending is emtpy');
         }
 
+        if (useV4) {
+          console.warn({ payloadObj });
+        }
+
         /**
          * This call handles ejecting a snode or a path if needed. If that happens, it throws a retryable error and the pRetry
          * call above will call us again with the same params but a different path.
@@ -161,6 +167,7 @@ export const sendViaOnionToNonSnode = async (
           finalDestOptions: payloadObj,
           finalRelayOptions,
           abortSignal,
+          useV4,
         });
       },
       {

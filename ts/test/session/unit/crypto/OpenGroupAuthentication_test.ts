@@ -2,11 +2,11 @@ import chai, { expect } from 'chai';
 import * as sinon from 'sinon';
 import chaiBytes from 'chai-bytes';
 import { getOpenGroupHeaders } from '../../../../session/apis/open_group_api/opengroupV2/OpenGroupAuthentication';
+import { ByteKeyPair } from '../../../../session/utils/User';
 import {
   decodeV4Response,
   encodeV4Request,
-} from '../../../../session/apis/open_group_api/opengroupV2/OpenGroupAPIBatchPoll';
-import { ByteKeyPair } from '../../../../session/utils/User';
+} from '../../../../session/apis/open_group_api/opengroupV2/OpenGroupPollingUtils';
 
 chai.use(chaiBytes);
 
