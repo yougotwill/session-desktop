@@ -56,9 +56,7 @@ export async function sendOpenGroupCapabilityRequest(
 
   const builtUrl = new URL(`${serverUrl}/${endpoint}`);
 
-  console.warn({ batchUrl: builtUrl });
-
-  const res = await sendViaOnionToNonSnode(
+  const res = (await sendViaOnionToNonSnode(
     serverPubKey,
     builtUrl,
     {
@@ -67,11 +65,11 @@ export async function sendOpenGroupCapabilityRequest(
       body: undefined,
     },
     {},
-    abortSignal,
-    true
-  );
+    abortSignal
+    // true
+  )) as any;
 
-  console.warn({ capabilityRequest: res });
+  console.warn('capabilityRequest: ', res?.result?.capabilities);
 
   const statusCode = parseStatusCodeFromOnionRequest(res);
   if (!statusCode) {

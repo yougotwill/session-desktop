@@ -152,10 +152,6 @@ export const sendViaOnionToNonSnode = async (
           throw new Error('getOnionPathForSending is emtpy');
         }
 
-        if (useV4) {
-          console.warn({ payloadObj });
-        }
-
         /**
          * This call handles ejecting a snode or a path if needed. If that happens, it throws a retryable error and the pRetry
          * call above will call us again with the same params but a different path.
@@ -171,7 +167,8 @@ export const sendViaOnionToNonSnode = async (
         });
       },
       {
-        retries: 2, // retry 3 (2+1) times at most
+        // retries: 2, // retry 3 (2+1) times at most
+        retries: 0, // retry 3 (2+1) times at most
         minTimeout: 500,
         onFailedAttempt: e => {
           window?.log?.warn(

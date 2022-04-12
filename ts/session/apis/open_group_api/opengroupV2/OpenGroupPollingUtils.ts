@@ -1,53 +1,12 @@
 import { getV2OpenGroupRoomByRoomId, OpenGroupV2Room } from '../../../../data/opengroups';
-import { OpenGroupCapabilityRequest } from './ApiUtil';
-import { parseStatusCodeFromOnionRequest } from './OpenGroupAPIV2Parser';
 import _ from 'lodash';
-import { sendViaOnionToNonSnode } from '../../../onions/onionSend';
 import { OpenGroupMessageV2 } from './OpenGroupMessageV2';
 import { getAuthToken } from './ApiAuth';
 import { UserUtils } from '../../../utils';
 import { fromHexToArray } from '../../../utils/String';
-import { getSodium } from '../../../crypto';
+import { concatUInt8Array, getSodium } from '../../../crypto';
 import { getOpenGroupHeaders } from './OpenGroupAuthentication';
-import { APPLICATION_JSON } from '../../../../types/MIME';
-
-type BatchFetchRequestOptions = {
-  method: 'GET';
-  path: string;
-  headers?: any;
-};
-
-/**
- * Should only have this or the json field but not both at the same time
- */
-type BatchBodyRequestSharedOptions = {
-  method: 'POST' | 'PUT';
-  path: string;
-  headers?: any;
-};
-
-interface BatchJsonSubrequestOptions extends BatchBodyRequestSharedOptions {
-  json: string;
-}
-
-interface Batch64SubrequestOptions extends BatchBodyRequestSharedOptions {
-  b64: string;
-}
-
-type BatchBodyRequest = BatchJsonSubrequestOptions | Batch64SubrequestOptions;
-
-type BatchSubRequest = BatchBodyRequest | BatchFetchRequestOptions;
-
-type BatchRequest = {
-  /** Used by server to processing request */
-  endpoint: string;
-  /** Used by server to processing request */
-  method: string;
-  /** Used by server to processing request */
-  body: string;
-  /** Used by server to processing request and authenication */
-  headers: OpenGroupRequestHeaders;
-};
+import { to_base64 } from 'libsodium-wrappers-sumo';
 
 export type OpenGroupRequestHeaders = {
   'X-SOGS-Pubkey': string;
@@ -58,32 +17,36 @@ export type OpenGroupRequestHeaders = {
   'Content-Type'?: string;
 };
 
-export const encodeV4Request = (requestHeaders: string, body?: string): string => {
-  // TODO: take it the request object and body and stringify in here rather than take string params.
-  // explicitly set the header to contain the data type being used
-  const bencodeSegment = (s: string) => {
-    // const textEncoder = new TextEncoder();
-    // const segmentBytes = textEncoder.encode()
-    const asciiBytes = Buffer.from(s, 'ascii');
-    console.warn({ asciiBytes });
-    // return `${s.length}:${s}`;
-    return `${asciiBytes.length}:${asciiBytes}`;
-  };
+export const encodeV4Request = (requestInfo: any): Uint8Array => {
+  // for reference
+  //   {
+  //     "method": "POST",
+  //     "body": "[{\"method\":\"GET\",\"path\":\"/capabilities\"},{\"method\":\"GET\",\"path\":\"/room/omg/messages/recent?limit=25\"}]",
+  //     "endpoint": "/batch",
+  //     "headers": {
+  //         "X-SOGS-Pubkey": "0020be78d4c4755e6595cb240f404bc245138e27d6f06b9f6d47e7328af3d6d95d",
+  //         "X-SOGS-Timestamp": "1649595222",
+  //         "X-SOGS-Nonce": "5AJvZK87oSoPoiuFQKy7xA==",
+  //         "X-SOGS-Signature": "z6DEbF83e3VrYk+gozizZT6Wb2Lp2QPscUq2V2MdFO+ZV8dsdM5wCeAxNCHgpqdTs160Boj9ygYjxhQLe6ERAA==",
+  //         "Content-Type": "application/json"
+  //     }
+  // }
 
-  // N:data - a binary str, where N is number of ascii digits. e.g. 11:hello world enceds the 11 byte string hello world.
-  // @@: double check that this is that same as converting to char codes.
-  const requestHeadersBencoded = bencodeSegment(requestHeaders);
-
-  // TODO: add different conversions for different encoding types
-  let bodyEncoded = '';
-  // TODO: clean up line
-  bodyEncoded = bencodeSegment(body ? body : JSON.stringify({}));
-  // console.warn({ metaEncoded });
-  // console.warn({ bodyEncoded });
-
-  const bencoded = `l${requestHeadersBencoded}${bodyEncoded}e`;
-  console.warn({ bencoded });
-  return bencoded;
+  // TODO: we ned to remove the leading forward slash for non-legacy endpoints.
+  // legacy needs the leading slash.
+  // requestInfo.endpoint =
+  //   requestInfo.endpoint.charAt(0) === '/' ? requestInfo.endpoint.substr(1) : requestInfo.endpoint;
+  const { body } = requestInfo;
+  const requestInfoData = Buffer.from(JSON.stringify(requestInfo), 'ascii');
+  const bodyData = Buffer.from(body, 'ascii');
+  const prefixData = Buffer.from(`l${requestInfoData.length}:`, 'ascii');
+  const suffixData = Buffer.from('e', 'ascii');
+  if (body) {
+    const bodyCountdata = Buffer.from(`${bodyData.length}:`, 'ascii');
+    return concatUInt8Array(prefixData, requestInfoData, bodyCountdata, bodyData, suffixData);
+  } else {
+    return concatUInt8Array(prefixData, requestInfoData, suffixData);
+  }
 };
 
 /**
@@ -114,94 +77,6 @@ export const decodeV4Response = (response: string) => {
   };
 };
 
-export const batchPoll = async (
-  serverUrl: string,
-  roomInfos: Set<string>,
-  abortSignal: AbortSignal,
-  useV4: boolean = false
-) => {
-  window?.log?.warn({ roomInfos });
-
-  if (!serverUrl.includes('.dev')) {
-    window?.log?.warn('not a dev url -- cancelling early');
-    return;
-  }
-
-  const [roomId] = roomInfos;
-  const fetchedRoomInfo = await getV2OpenGroupRoomByRoomId({
-    serverUrl,
-    roomId,
-  });
-  if (!fetchedRoomInfo || !fetchedRoomInfo?.serverPublicKey) {
-    window?.log?.warn('Couldnt get fetched info or server public key -- aborting batch request');
-    return;
-  }
-  const { serverPublicKey } = fetchedRoomInfo;
-
-  const batchRequest = await getBatchRequest(serverPublicKey, roomId, useV4);
-  console.warn({ batchRequest });
-
-  if (!batchRequest) {
-    window?.log?.error('Could not generate batch request. Aborting request');
-    return;
-  }
-
-  sendOpenGroupBatchRequest(serverUrl, serverPublicKey, batchRequest, abortSignal, useV4);
-  // sendOpenGroupBatchRequest(serverUrl, serverPublicKey, batchRequest, abortSignal, true);
-};
-
-const getBatchRequest = async (
-  serverPublicKey: string,
-  roomId: string,
-  useV4: boolean = false
-): Promise<BatchRequest | undefined> => {
-  const endpoint = '/batch';
-  const method = 'POST';
-
-  // TODO: hardcoding batch request for capabilities and messages for now.
-  // TODO: add testing
-  const batchBody: Array<BatchSubRequest> = [
-    {
-      // gets the last 100 messages for the room
-      method: 'GET',
-      path: '/capabilities',
-    },
-    {
-      method: 'GET',
-      path: `/room/${roomId}/messages/recent?limit=25`,
-    },
-  ];
-
-  // TODO: swap out batchCommands for body fn parameter
-  // TODO: confirm that the X-SOGS Pubkey is lowercase k or not.
-  const headers = batchBody
-    ? await getOurOpenGroupHeaders(
-        serverPublicKey,
-        endpoint,
-        method,
-        false,
-        JSON.stringify(batchBody)
-      )
-    : await getOurOpenGroupHeaders(serverPublicKey, endpoint, method, false);
-
-  if (!headers) {
-    window?.log?.error('Unable to create headers for batch request - aborting');
-    return;
-  }
-
-  if (useV4) {
-    // TODO: check if batch will always be json
-    headers['Content-Type'] = APPLICATION_JSON;
-  }
-
-  return {
-    endpoint: '/batch',
-    method: 'POST',
-    body: JSON.stringify(batchBody),
-    headers,
-  };
-};
-
 export const getOurOpenGroupHeaders = async (
   serverPublicKey: string,
   endpoint: string,
@@ -212,6 +87,8 @@ export const getOurOpenGroupHeaders = async (
   // todo: refactor open group headers to just get our device.
   const sodium = await getSodium();
   const nonce = sodium.randombytes_buf(16);
+
+  console.warn('Nonce: ', to_base64(nonce));
 
   const signingKeys = await UserUtils.getUserED25519KeyPairBytes();
   if (!signingKeys) {
@@ -231,67 +108,6 @@ export const getOurOpenGroupHeaders = async (
     blinded,
     body,
   });
-};
-
-const sendOpenGroupBatchRequest = async (
-  serverUrl: string,
-  serverPubkey: string,
-  request: BatchRequest,
-  abortSignal: AbortSignal,
-  useV4: boolean = false
-): Promise<any> => {
-  const { endpoint, headers, method, body } = request;
-  const builtUrl = new URL(`${serverUrl}/${endpoint}`);
-
-  let res;
-  if (useV4) {
-    // const batchRequestV4 = encodeV4Request(JSON.stringify(request.headers), request.body);
-    // console.warn({ batchRequestV4 });
-    res = await sendViaOnionToNonSnode(
-      serverPubkey,
-      builtUrl,
-      {
-        method,
-        headers,
-        body,
-      },
-      {},
-      abortSignal,
-      true
-    );
-  } else {
-    res = await sendViaOnionToNonSnode(
-      serverPubkey,
-      builtUrl,
-      {
-        method,
-        headers,
-        body,
-      },
-      {},
-      abortSignal
-    );
-  }
-
-  console.warn({ batchRes: res });
-  const status = parseStatusCodeFromOnionRequest(res);
-  console.warn({ batchStatus: status });
-};
-
-export const capabilitiesFetchEverything = async (
-  serverUrl: string,
-  rooms: Set<string>,
-  abortSignal: AbortSignal
-): Promise<Array<ParsedRoomCompactPollResults> | null> => {
-  const capabilityRequest = await getCapabilityFetchRequest(serverUrl, rooms);
-
-  if (!capabilityRequest) {
-    window?.log?.info('Nothing found to be fetched. returning');
-    return null;
-  }
-
-  const result = await sendOpenGroupCapabilityRequest(capabilityRequest, abortSignal);
-  return result ? result : null;
 };
 
 /**
@@ -347,66 +163,6 @@ export const getAllValidRoomInfos = async (
   }
   return validRoomInfos;
 };
-
-const getCapabilityFetchRequest = async (
-  serverUrl: string,
-  rooms: Set<string>
-): Promise<null | OpenGroupCapabilityRequest> => {
-  const allValidRoomInfos = await getAllValidRoomInfos(serverUrl, rooms);
-  if (!allValidRoomInfos?.length) {
-    window?.log?.info('compactPoll: no valid roominfos got.');
-    return null;
-  }
-  const endpoint = '/capabilities';
-  const method = 'GET';
-  const serverPubkey = allValidRoomInfos[0].serverPublicKey;
-
-  const capabilityHeaders = await getOurOpenGroupHeaders(serverPubkey, endpoint, method, true);
-  if (!capabilityHeaders) {
-    return null;
-  }
-
-  return {
-    server: serverUrl,
-    serverPubKey: serverPubkey,
-    endpoint,
-    headers: capabilityHeaders,
-  };
-};
-
-async function sendOpenGroupCapabilityRequest(
-  request: OpenGroupCapabilityRequest,
-  abortSignal: AbortSignal
-): Promise<any | null> {
-  const { server: serverUrl, endpoint, serverPubKey, headers } = request;
-  // this will throw if the url is not valid
-
-  const builtUrl = new URL(`${serverUrl}/${endpoint}`);
-
-  console.warn({ batchUrl: builtUrl });
-
-  const res = await sendViaOnionToNonSnode(
-    serverPubKey,
-    builtUrl,
-    {
-      method: 'GET',
-      headers,
-      body: undefined,
-    },
-    {},
-    abortSignal
-  );
-
-  console.warn({ capabilityRequest: res });
-
-  const statusCode = parseStatusCodeFromOnionRequest(res);
-  if (!statusCode) {
-    window?.log?.warn('Capabilities Request Got unknown status code; res:', res);
-    // return null;
-  }
-
-  return res;
-}
 
 export type ParsedDeletions = Array<{ id: number; deleted_message_id: number }>;
 

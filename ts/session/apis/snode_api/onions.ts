@@ -16,6 +16,7 @@ import { ERROR_CODE_NO_CONNECT } from './SNodeAPI';
 import { Onions } from '.';
 import { hrefPnServerDev, hrefPnServerProd } from '../push_notification_api/PnServer';
 import { encodeV4Request } from '../open_group_api/opengroupV2/OpenGroupPollingUtils';
+import { textToArrayBuffer } from '../open_group_api/opengroupV2/ApiUtil';
 
 export const resetSnodeFailureCount = () => {
   snodeFailureCount = {};
@@ -48,28 +49,18 @@ export const CLOCK_OUT_OF_SYNC_MESSAGE_ERROR =
 // for decryption, and an ephemeral_key to send to the next hop
 async function encryptForPubKey(
   pubKeyX25519hex: string,
-  reqObj: any,
+  requestInfo: any,
   useV4: boolean = false
 ): Promise<DestinationContext> {
   if (useV4) {
-    console.warn({ reqObj });
+    const plaintext = encodeV4Request(requestInfo);
+    return window.callWorker('encryptForPubkey', pubKeyX25519hex, plaintext);
+  } else {
+    // regular non-v4
+    const textEncoder = new TextEncoder();
+    const plaintext = textEncoder.encode(JSON.stringify(requestInfo));
+    return window.callWorker('encryptForPubkey', pubKeyX25519hex, plaintext);
   }
-
-  const { headers, body } = reqObj;
-
-  const reqStr =
-    useV4 && headers ? encodeV4Request(JSON.stringify(headers), body) : JSON.stringify(reqObj);
-
-  if (useV4) {
-    console.warn({ reqStr });
-  }
-
-  const textEncoder = new TextEncoder();
-  const plaintext = textEncoder.encode(reqStr);
-
-  console.warn({ plaintext });
-
-  return window.callWorker('encryptForPubkey', pubKeyX25519hex, plaintext);
 }
 
 export type DestinationRelayV2 = {
@@ -125,7 +116,8 @@ async function buildOnionCtxs(
   nodePath: Array<Snode>,
   destCtx: DestinationContext,
   targetED25519Hex?: string,
-  finalRelayOptions?: FinalRelayOptions
+  finalRelayOptions?: FinalRelayOptions,
+  useV4?: boolean
 ) {
   const ctxes = [destCtx];
   if (!nodePath) {
@@ -145,6 +137,10 @@ async function buildOnionCtxs(
         finalRelayOptions?.host === hrefPnServerDev || finalRelayOptions?.host === hrefPnServerProd;
       if (!isCallToPn) {
         target = '/loki/v3/lsrpc';
+      }
+
+      if (useV4 === true) {
+        target = '/oxen/v4/lsrpc';
       }
 
       dest = {
@@ -201,9 +197,10 @@ async function buildOnionGuardNodePayload(
   nodePath: Array<Snode>,
   destCtx: DestinationContext,
   targetED25519Hex?: string,
-  finalRelayOptions?: FinalRelayOptions
+  finalRelayOptions?: FinalRelayOptions,
+  useV4?: boolean
 ) {
-  const ctxes = await buildOnionCtxs(nodePath, destCtx, targetED25519Hex, finalRelayOptions);
+  const ctxes = await buildOnionCtxs(nodePath, destCtx, targetED25519Hex, finalRelayOptions, useV4);
 
   // this is the OUTER side of the onion, the one encoded with multiple layer
   // So the one we will send to the first guard node.
@@ -399,7 +396,14 @@ const debug = false;
 /**
  * Only exported for testing purpose
  */
-export async function decodeOnionResult(symmetricKey: ArrayBuffer, ciphertext: string) {
+export async function decodeOnionResult(
+  symmetricKey: ArrayBuffer,
+  ciphertext: string
+): Promise<{
+  ciphertextBuffer: Uint8Array;
+  plaintext: string;
+  plaintextBuffer: Buffer;
+}> {
   let parsedCiphertext = ciphertext;
   try {
     const jsonRes = JSON.parse(ciphertext);
@@ -415,7 +419,11 @@ export async function decodeOnionResult(symmetricKey: ArrayBuffer, ciphertext: s
     new Uint8Array(ciphertextBuffer)
   );
 
-  return { plaintext: new TextDecoder().decode(plaintextBuffer), ciphertextBuffer };
+  return {
+    ciphertextBuffer,
+    plaintext: new TextDecoder().decode(plaintextBuffer),
+    plaintextBuffer,
+  };
 }
 
 const STATUS_NO_STATUS = 8888;
@@ -515,6 +523,44 @@ export async function processOnionResponse({
     );
     throw e;
   }
+}
+
+export async function processOnionResponseV4({
+  response,
+  symmetricKey,
+  guardNode,
+  abortSignal,
+  associatedWith,
+  lsrpcEd25519Key,
+}: {
+  // response?: { text: () => Promise<string>; status: number };
+  response?: Response;
+  symmetricKey?: ArrayBuffer;
+  guardNode: Snode;
+  lsrpcEd25519Key?: string;
+  abortSignal?: AbortSignal;
+  associatedWith?: string;
+  // }): Promise<SnodeResponse> {
+}): Promise<any> {
+  processAbortedRequest(abortSignal);
+
+  if (!symmetricKey) {
+    window?.log?.error('No symmetric key to decode response.');
+    return;
+  }
+
+  const cipherText = (await response?.text()) || '';
+  console.warn({ cipherText });
+
+  const arrBuff = await textToArrayBuffer(cipherText);
+  const plaintextBuffer = await window.callWorker(
+    // 'DecryptAESGCM',
+    'DecryptAESGCM',
+    new Uint8Array(symmetricKey),
+    new Uint8Array(arrBuff)
+  );
+  console.warn({ plaintextBuffer });
+
 }
 
 export const snodeHttpsAgent = new https.Agent({
@@ -688,14 +734,28 @@ export const sendOnionRequestHandlingSnodeEject = async ({
   }
   // this call will handle the common onion failure logic.
   // if an error is not retryable a AbortError is triggered, which is handled by pRetry and retries are stopped
-  const processed = await processOnionResponse({
-    response,
-    symmetricKey: decodingSymmetricKey,
-    guardNode: nodePath[0],
-    lsrpcEd25519Key: finalDestOptions?.destination_ed25519_hex,
-    abortSignal,
-    associatedWith,
-  });
+  let processed;
+  if (useV4) {
+    processed = await processOnionResponseV4({
+      response,
+      symmetricKey: decodingSymmetricKey,
+      guardNode: nodePath[0],
+      lsrpcEd25519Key: finalDestOptions?.destination_ed25519_hex,
+      abortSignal,
+      associatedWith,
+    });
+
+    console.warn({ processed });
+  } else {
+    processed = await processOnionResponse({
+      response,
+      symmetricKey: decodingSymmetricKey,
+      guardNode: nodePath[0],
+      lsrpcEd25519Key: finalDestOptions?.destination_ed25519_hex,
+      abortSignal,
+      associatedWith,
+    });
+  }
 
   return processed;
 };
@@ -768,7 +828,6 @@ const sendOnionRequest = async ({
 
       const plaintext = encodeCiphertextPlusJson(bodyEncoded, options);
       destCtx = await window.callWorker('encryptForPubkey', destX25519hex, plaintext);
-    } else {
     }
   } catch (e) {
     window?.log?.error(
@@ -795,10 +854,9 @@ const sendOnionRequest = async ({
     nodePath,
     destCtx,
     targetEd25519hex,
-    finalRelayOptions
+    finalRelayOptions,
+    useV4
   );
-
-  console.warn({ guardPayload: payload });
 
   const guardNode = nodePath[0];
 
@@ -823,7 +881,6 @@ const sendOnionRequest = async ({
   // window?.log?.info('insecureNodeFetch => plaintext for sendOnionRequest');
 
   const response = await insecureNodeFetch(guardUrl, guardFetchOptions);
-  console.warn({ response });
   return { response, decodingSymmetricKey: destCtx.symmetricKey };
 };
 

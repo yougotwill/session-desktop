@@ -344,7 +344,7 @@ describe('OpenGroupAuthentication', () => {
 
   describe('V4Requests', () => {
     it('Should bencode POST/PUT request with body successfully', () => {
-      const bencoded = encodeV4Request(postDataToEncoded, '{}');
+      const bencoded = encodeV4Request(postDataToEncoded);
       expect(bencoded).to.be.equal(
         'l100:{"method":"POST","endpoint":"/room/test-room/pin/123","headers":{"Content-Type":"application/json"}}2:{}e'
       );

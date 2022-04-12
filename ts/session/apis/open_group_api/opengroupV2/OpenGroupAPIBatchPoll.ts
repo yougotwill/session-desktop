@@ -50,9 +50,9 @@ export const batchPoll = async (
   abortSignal: AbortSignal,
   useV4: boolean = false
 ) => {
-  window?.log?.warn({ roomInfos });
-
-  if (!serverUrl.includes('.dev')) {
+  // if (!serverUrl.includes('.dev')) {
+  // if (!(serverUrl.includes('.dev') || serverUrl.includes(':8080'))) {
+  if (!serverUrl.includes(':8080')) {
     window?.log?.warn('not a dev url -- cancelling early');
     return;
   }
