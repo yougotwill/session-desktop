@@ -24,6 +24,7 @@ import { MIME } from '../../../../types';
 import { handleOpenGroupV2Message } from '../../../../receiver/opengroup';
 import { batchPoll } from './OpenGroupAPIBatchPoll';
 import { capabilitiesFetchEverything } from './OpenGroupCapabilityPoll';
+import { ResponseDecodedV4 } from './OpenGroupPollingUtils';
 
 const pollForEverythingInterval = DURATION.SECONDS * 10;
 const pollForRoomAvatarInterval = DURATION.DAYS * 1;
@@ -337,14 +338,23 @@ export class OpenGroupServerPoller {
         this.abortController.signal
       );
 
-      await batchPoll(this.serverUrl, this.roomIdsToPoll, this.abortController.signal, true);
-
+      let batchPollResults = await batchPoll(
+        this.serverUrl,
+        this.roomIdsToPoll,
+        this.abortController.signal,
+        true
+      );
       // const capResults = await capabilitiesFetchEverything(
       //   this.serverUrl,
       //   this.roomIdsToPoll,
       //   this.abortController.signal
       // );
       // console.warn({ capResults });
+
+      // TODO: move this to it's own polling function entirely. I.e. use it's own timer
+      if (batchPollResults) {
+        await handleBatchPollResults(this.serverUrl, batchPollResults);
+      }
 
       // check that we are still not aborted
       if (this.abortController.signal.aborted) {
@@ -367,6 +377,12 @@ export class OpenGroupServerPoller {
     }
   }
 }
+
+const handleBatchPollResults = (serverUrl: string, batchPollResults: ResponseDecodedV4) => {
+  console.warn({ handleBatchPollResults: batchPollResults });
+
+  
+};
 
 const handleDeletions = async (
   deleted: ParsedDeletions,

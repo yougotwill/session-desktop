@@ -49,31 +49,59 @@ export const encodeV4Request = (requestInfo: any): Uint8Array => {
   }
 };
 
+export type ResponseDecodedV4 = {
+  metadata: {
+    code: number;
+    headers: any;
+  };
+  body: any;
+  bodyContentType: string;
+};
+
 /**
  * Nearly identical to request encoding. 2 string bencoded list.
  * Response differs in that the second body part is always present in a response unlike the requests.
  * 1. First part contains response metadata
  * 2. Second part contains the request body.
  */
-export const decodeV4Response = (response: string) => {
+export const decodeV4Response = (response: string): ResponseDecodedV4 | undefined => {
   // json part will have code: containing response code and headers for http headers (always lower case)
   // 1. read first bit till colon to get the length. Substring the next X amount trailing the colon and that's the metadata.
   // 2. grab the number before the next colon. That's the expected length of the body.
   // 3. Use the content type from the metadata header to handle the body.
+  if (!(response.startsWith('l') && response.endsWith('e'))) {
+    window?.log?.error(
+      'Batch response is missing prefix and suffix characters - Dropping response'
+    );
+    return;
+  }
+
   const firstDelimitIdx = response.indexOf(':');
   const metaLength = parseInt(response.slice(1, firstDelimitIdx));
 
-  const metaStartIdx = firstDelimitIdx + 1;
-  const metaEndIdx = metaStartIdx + metaLength;
-  const meta = JSON.parse(response.slice(metaStartIdx, metaEndIdx));
+  const metaStartIndex = firstDelimitIdx + 1;
+  const metaEndIndex = metaStartIndex + metaLength;
+  const metadata = JSON.parse(response.slice(metaStartIndex, metaEndIndex));
 
-  const finalIdxBeforeBody = response.indexOf(':', metaEndIdx);
-  const bodyLength = parseInt(response.slice(metaEndIdx, finalIdxBeforeBody));
+  const beforeBodyIndex = response.indexOf(':', metaEndIndex);
+  const bodyLength = parseInt(response.slice(metaEndIndex, beforeBodyIndex));
+  const bodyText = response.slice(beforeBodyIndex + 1, beforeBodyIndex + (1 + bodyLength));
 
-  const bodyData = response.slice(finalIdxBeforeBody + 1, finalIdxBeforeBody + (1 + bodyLength));
+  const bodyContentType: string = metadata?.headers['content-type'];
+  let bodyParsed;
+  switch (bodyContentType) {
+    // TODO; add cases for other data types
+    case 'application/json':
+      bodyParsed = JSON.parse(bodyText);
+      break;
+    default:
+      window?.log?.warn('decodeV4Response - No content-type information for response');
+  }
+
   return {
-    meta,
-    bodyData,
+    metadata,
+    body: bodyParsed,
+    bodyContentType,
   };
 };
 

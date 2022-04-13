@@ -1,4 +1,4 @@
-import { default as insecureNodeFetch, RequestInit } from 'node-fetch';
+import { default as insecureNodeFetch, RequestInit, Response } from 'node-fetch';
 import https from 'https';
 
 import { dropSnodeFromSnodePool, dropSnodeFromSwarmIfNeeded, updateSwarmFor } from './snodePool';
@@ -16,7 +16,7 @@ import { ERROR_CODE_NO_CONNECT } from './SNodeAPI';
 import { Onions } from '.';
 import { hrefPnServerDev, hrefPnServerProd } from '../push_notification_api/PnServer';
 import { encodeV4Request } from '../open_group_api/opengroupV2/OpenGroupPollingUtils';
-import { textToArrayBuffer } from '../open_group_api/opengroupV2/ApiUtil';
+import { to_string } from 'libsodium-wrappers-sumo';
 
 export const resetSnodeFailureCount = () => {
   snodeFailureCount = {};
@@ -35,7 +35,7 @@ export const OXEN_SERVER_ERROR = 'Oxen Server error';
  */
 export interface SnodeResponse {
   body: string;
-  status: number;
+  status?: number;
 }
 
 export const NEXT_NODE_NOT_FOUND_PREFIX = 'Next node not found: ';
@@ -528,39 +528,36 @@ export async function processOnionResponse({
 export async function processOnionResponseV4({
   response,
   symmetricKey,
-  guardNode,
   abortSignal,
-  associatedWith,
-  lsrpcEd25519Key,
 }: {
-  // response?: { text: () => Promise<string>; status: number };
   response?: Response;
   symmetricKey?: ArrayBuffer;
   guardNode: Snode;
   lsrpcEd25519Key?: string;
   abortSignal?: AbortSignal;
   associatedWith?: string;
-  // }): Promise<SnodeResponse> {
-}): Promise<any> {
+}): Promise<SnodeResponse | undefined> {
   processAbortedRequest(abortSignal);
 
   if (!symmetricKey) {
     window?.log?.error('No symmetric key to decode response.');
-    return;
+    return undefined;
   }
 
-  const cipherText = (await response?.text()) || '';
-  console.warn({ cipherText });
+  const cipherText = (await response?.arrayBuffer()) || [];
 
-  const arrBuff = await textToArrayBuffer(cipherText);
   const plaintextBuffer = await window.callWorker(
-    // 'DecryptAESGCM',
     'DecryptAESGCM',
     new Uint8Array(symmetricKey),
-    new Uint8Array(arrBuff)
+    new Uint8Array(cipherText)
   );
   console.warn({ plaintextBuffer });
-
+  // console.warn('plaintext2: ', to_string(plaintextBuffer));
+  const plainText = to_string(plaintextBuffer);
+  console.warn({ plainText });
+  return {
+    body: plainText,
+  };
 }
 
 export const snodeHttpsAgent = new https.Agent({
@@ -700,7 +697,7 @@ export const sendOnionRequestHandlingSnodeEject = async ({
   abortSignal?: AbortSignal;
   associatedWith?: string;
   useV4?: boolean;
-}): Promise<SnodeResponse> => {
+}): Promise<SnodeResponse | undefined> => {
   // this sendOnionRequest() call has to be the only one like this.
   // If you need to call it, call it through sendOnionRequestHandlingSnodeEject because this is the one handling path rebuilding and known errors
   let response;
@@ -734,8 +731,8 @@ export const sendOnionRequestHandlingSnodeEject = async ({
   }
   // this call will handle the common onion failure logic.
   // if an error is not retryable a AbortError is triggered, which is handled by pRetry and retries are stopped
-  let processed;
-  if (useV4) {
+  let processed: SnodeResponse | undefined;
+  if (useV4 && response) {
     processed = await processOnionResponseV4({
       response,
       symmetricKey: decodingSymmetricKey,

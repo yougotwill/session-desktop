@@ -93,6 +93,12 @@ const initOptionsWithDefaults = (options: OnionFetchBasicOptions) => {
   return _.defaults(options, defaultFetchBasicOptions);
 };
 
+export type OnionSnodeResponse = {
+  result: SnodeResponse;
+  txtResponse: string;
+  response: string;
+}
+
 /**
  * @param destinationX25519Key The destination key
  * @param URL the URL
@@ -113,11 +119,7 @@ export const sendViaOnionToNonSnode = async (
   options: OnionFetchBasicOptions = {},
   abortSignal?: AbortSignal,
   useV4: boolean = false
-): Promise<{
-  result: SnodeResponse;
-  txtResponse: string;
-  response: string;
-} | null> => {
+): Promise<OnionSnodeResponse | null> => {
   const castedDestinationX25519Key =
     typeof destinationX25519Key !== 'string' ? toHex(destinationX25519Key) : destinationX25519Key;
   // FIXME audric looks like this might happen for opengroupv1
@@ -142,7 +144,7 @@ export const sendViaOnionToNonSnode = async (
     finalRelayOptions.port = url.port ? toNumber(url.port) : 80;
   }
 
-  let result: SnodeResponse;
+  let result: SnodeResponse | undefined;
   try {
     result = await pRetry(
       async () => {
@@ -179,6 +181,12 @@ export const sendViaOnionToNonSnode = async (
     );
   } catch (e) {
     window?.log?.warn('sendViaOnionToNonSnodeRetryable failed ', e.message);
+    return null;
+  }
+
+  if (!result) {
+    // v4 failed responses result is undefined
+    window?.log?.warn('sendViaOnionToSnodeRetryable failed during V4 request');
     return null;
   }
 

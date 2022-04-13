@@ -1,10 +1,16 @@
 import { getV2OpenGroupRoomByRoomId } from '../../../../data/opengroups';
 import { parseStatusCodeFromOnionRequest } from './OpenGroupAPIV2Parser';
 import _ from 'lodash';
-import { sendViaOnionToNonSnode } from '../../../onions/onionSend';
+import { OnionSnodeResponse, sendViaOnionToNonSnode } from '../../../onions/onionSend';
 import { OpenGroupMessageV2 } from './OpenGroupMessageV2';
 import { APPLICATION_JSON } from '../../../../types/MIME';
-import { getOurOpenGroupHeaders, OpenGroupRequestHeaders } from './OpenGroupPollingUtils';
+import {
+  decodeV4Response,
+  getOurOpenGroupHeaders,
+  OpenGroupRequestHeaders,
+  ResponseDecodedV4,
+} from './OpenGroupPollingUtils';
+import { SnodeResponse } from '../../snode_api/onions';
 
 type BatchFetchRequestOptions = {
   method: 'GET';
@@ -49,12 +55,12 @@ export const batchPoll = async (
   roomInfos: Set<string>,
   abortSignal: AbortSignal,
   useV4: boolean = false
-) => {
+): Promise<ResponseDecodedV4 | null> => {
   // if (!serverUrl.includes('.dev')) {
   // if (!(serverUrl.includes('.dev') || serverUrl.includes(':8080'))) {
   if (!serverUrl.includes(':8080')) {
     window?.log?.warn('not a dev url -- cancelling early');
-    return;
+    return null;
   }
 
   const [roomId] = roomInfos;
@@ -64,7 +70,7 @@ export const batchPoll = async (
   });
   if (!fetchedRoomInfo || !fetchedRoomInfo?.serverPublicKey) {
     window?.log?.warn('Couldnt get fetched info or server public key -- aborting batch request');
-    return;
+    return null;
   }
   const { serverPublicKey } = fetchedRoomInfo;
 
@@ -73,11 +79,17 @@ export const batchPoll = async (
 
   if (!batchRequest) {
     window?.log?.error('Could not generate batch request. Aborting request');
-    return;
+    return null;
   }
 
-  sendOpenGroupBatchRequest(serverUrl, serverPublicKey, batchRequest, abortSignal, useV4);
-  // sendOpenGroupBatchRequest(serverUrl, serverPublicKey, batchRequest, abortSignal, true);
+  const result = await sendOpenGroupBatchRequest(
+    serverUrl,
+    serverPublicKey,
+    batchRequest,
+    abortSignal,
+    useV4
+  );
+  return result ? result : null;
 };
 
 const getBatchRequest = async (
@@ -142,9 +154,9 @@ const sendOpenGroupBatchRequest = async (
   const { endpoint, headers, method, body } = request;
   const builtUrl = new URL(`${serverUrl}/${endpoint}`);
 
-  let res;
+  let batchResponse: OnionSnodeResponse | null;
   if (useV4) {
-    res = await sendViaOnionToNonSnode(
+    batchResponse = await sendViaOnionToNonSnode(
       serverPubkey,
       builtUrl,
       {
@@ -157,7 +169,7 @@ const sendOpenGroupBatchRequest = async (
       true
     );
   } else {
-    res = await sendViaOnionToNonSnode(
+    batchResponse = await sendViaOnionToNonSnode(
       serverPubkey,
       builtUrl,
       {
@@ -170,30 +182,17 @@ const sendOpenGroupBatchRequest = async (
     );
   }
 
-  console.warn({ batchRes: res });
-  const status = parseStatusCodeFromOnionRequest(res);
-  console.warn({ batchStatus: status });
-};
+  if (!batchResponse) {
+    window?.log?.error('Undefined batch response - cancelling batch request');
+    return;
+  }
 
-export type ParsedDeletions = Array<{ id: number; deleted_message_id: number }>;
+  const decodedResponse = decodeV4Response(batchResponse.result.body);
+  console.warn({ decodedData: decodedResponse });
+  if (!decodedResponse) {
+    window?.log?.error('Unable to decode response - dropping batch response');
+    return;
+  }
 
-type StatusCodeType = {
-  statusCode: number;
-};
-
-export type ParsedRoomCompactPollResults = StatusCodeType & {
-  roomId: string;
-  deletions: ParsedDeletions;
-  messages: Array<OpenGroupMessageV2>;
-  moderators: Array<string>;
-};
-
-export type ParsedBase64Avatar = {
-  roomId: string;
-  base64: string;
-};
-
-export type ParsedMemberCount = {
-  roomId: string;
-  memberCount: number;
+  return decodedResponse;
 };
