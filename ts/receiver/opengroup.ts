@@ -1,4 +1,4 @@
-import { noop } from 'lodash';
+import _, { noop } from 'lodash';
 import { ConversationTypeEnum } from '../models/conversation';
 import {
   createPublicMessageSentFromNotUs,
@@ -7,6 +7,7 @@ import {
 import { SignalService } from '../protobuf';
 import { OpenGroupRequestCommonType } from '../session/apis/open_group_api/opengroupV2/ApiUtil';
 import { OpenGroupMessageV2 } from '../session/apis/open_group_api/opengroupV2/OpenGroupMessageV2';
+import { OpenGroupMessageV4 } from '../session/apis/open_group_api/opengroupV2/OpenGroupServerPoller';
 import { getOpenGroupV2ConversationId } from '../session/apis/open_group_api/utils/OpenGroupUtils';
 import { getConversationController } from '../session/conversations';
 import { removeMessagePadding } from '../session/crypto/BufferPadding';
@@ -15,14 +16,95 @@ import { fromBase64ToArray } from '../session/utils/String';
 import { isOpengroupMessageDuplicate } from './dataMessage';
 import { handleMessageJob, toRegularMessage } from './queuedJob';
 
+const addMessageOpenGroupMessageToConvo = async (
+  decoded: any,
+  sender: string,
+  sentTimestamp: number,
+  serverId: number,
+  conversationId: string
+) => {
+  const conversation = getConversationController().get(conversationId);
+  const isMe = UserUtils.isUsFromCache(sender);
+
+  const commonAttributes = { serverTimestamp: sentTimestamp, serverId, conversationId };
+  const attributesForNotUs = { ...commonAttributes, sender };
+  // those lines just create an empty message with some basic stuff set.
+  // the whole decoding of data is happening in handleMessageJob()
+  const msgModel = isMe
+    ? createPublicMessageSentFromUs(commonAttributes)
+    : createPublicMessageSentFromNotUs(attributesForNotUs);
+
+  // WARNING this is important that the isOpengroupMessageDuplicate is made INSIDE the conversation.queueJob call
+  const isDuplicate = await isOpengroupMessageDuplicate(attributesForNotUs);
+
+  if (isDuplicate) {
+    window?.log?.info('Received duplicate opengroup message. Dropping it.');
+    return;
+  }
+
+  await handleMessageJob(
+    msgModel,
+    conversation,
+    toRegularMessage(decoded?.dataMessage as SignalService.DataMessage),
+    noop,
+    sender,
+    ''
+  );
+};
+
 export async function handleOpenGroupV2Message(
   message: OpenGroupMessageV2,
   roomInfos: OpenGroupRequestCommonType
 ) {
   const { base64EncodedData, sentTimestamp, sender, serverId } = message;
+  if (!sender || !serverId) {
+    window?.log?.error('handleOpenGroupV2Message - No sender or server information to add message');
+    return;
+  }
+  await handleOpenGroupMessage(roomInfos, base64EncodedData, sentTimestamp, sender, serverId);
+}
+
+export const handleOpenGroupV4Message = async (
+  message: OpenGroupMessageV4,
+  roomInfos: OpenGroupRequestCommonType,
+  capabilities?: Array<string>
+) => {
+  const {
+    data,
+    id,
+    posted,
+    signature,
+    // seqno,
+    // session_id,
+  } = message;
+
+  // console.warn({ data, id, posted, seqno, session_id, signature });
+  // console.warn({ roomInfos });
+  console.warn({ handleOGV4Caps: capabilities });
+
+  // TODO: check that these are the correct equivalent fields
+  await handleOpenGroupMessage(roomInfos, data, posted, signature, id);
+};
+
+/**
+ * Common checks and decoding that takes place for both v2 and v4 message types.
+ * @param roomInfos
+ * @param base64EncodedData
+ * @param sentTimestamp
+ * @param sender
+ * @param serverId
+ * @returns
+ */
+const handleOpenGroupMessage = async (
+  roomInfos: OpenGroupRequestCommonType,
+  base64EncodedData: string,
+  sentTimestamp: number,
+  sender: string,
+  serverId: number
+) => {
   const { serverUrl, roomId } = roomInfos;
   if (!base64EncodedData || !sentTimestamp || !sender || !serverId) {
-    window?.log?.warn('Invalid data passed to handleOpenGroupV2Message.', message);
+    window?.log?.warn('Invalid data passed to handleOpenGroupV2Message.');
     return;
   }
 
@@ -58,31 +140,6 @@ export async function handleOpenGroupV2Message(
   }
 
   void conversation.queueJob(async () => {
-    const isMe = UserUtils.isUsFromCache(sender);
-
-    const commonAttributes = { serverTimestamp: sentTimestamp, serverId, conversationId };
-    const attributesForNotUs = { ...commonAttributes, sender };
-    // those lines just create an empty message with some basic stuff set.
-    // the whole decoding of data is happening in handleMessageJob()
-    const msgModel = isMe
-      ? createPublicMessageSentFromUs(commonAttributes)
-      : createPublicMessageSentFromNotUs(attributesForNotUs);
-
-    // WARNING this is important that the isOpengroupMessageDuplicate is made INSIDE the conversation.queueJob call
-    const isDuplicate = await isOpengroupMessageDuplicate(attributesForNotUs);
-
-    if (isDuplicate) {
-      window?.log?.info('Received duplicate opengroup message. Dropping it.');
-      return;
-    }
-
-    await handleMessageJob(
-      msgModel,
-      conversation,
-      toRegularMessage(decoded?.dataMessage as SignalService.DataMessage),
-      noop,
-      sender,
-      ''
-    );
+    addMessageOpenGroupMessageToConvo(decoded, sender, sentTimestamp, serverId, conversationId);
   });
-}
+};

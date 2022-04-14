@@ -21,10 +21,20 @@ import { sha256 } from '../../../crypto';
 import { DURATION } from '../../../constants';
 import { processNewAttachment } from '../../../../types/MessageAttachment';
 import { MIME } from '../../../../types';
-import { handleOpenGroupV2Message } from '../../../../receiver/opengroup';
-import { batchPoll } from './OpenGroupAPIBatchPoll';
-import { capabilitiesFetchEverything } from './OpenGroupCapabilityPoll';
+import { handleOpenGroupV2Message, handleOpenGroupV4Message } from '../../../../receiver/opengroup';
+import { batchPoll, SubrequestOption, SubrequestOptionType } from './OpenGroupAPIBatchPoll';
 import { ResponseDecodedV4 } from './OpenGroupPollingUtils';
+
+export type OpenGroupMessageV4 = {
+  seqno: number;
+  session_id: string;
+  /** base64 */
+  signature: string;
+  /** timestamp number with decimal */
+  posted: number;
+  id: number;
+  data: string;
+};
 
 const pollForEverythingInterval = DURATION.SECONDS * 10;
 const pollForRoomAvatarInterval = DURATION.DAYS * 1;
@@ -318,6 +328,24 @@ export class OpenGroupServerPoller {
     }
   }
 
+  private buildSubrequestOptions() {
+    const subrequestOptions: Array<SubrequestOption> = [];
+    subrequestOptions.push({
+      type: SubrequestOptionType.capabilities,
+      capabilities: true,
+    });
+    // adding a poll subrequest for each room on the SOGS
+    this.roomIdsToPoll.forEach(roomId => {
+      subrequestOptions.push({
+        type: SubrequestOptionType.messages,
+        messages: {
+          roomId,
+        },
+      });
+    });
+    return subrequestOptions;
+  }
+
   private async compactPoll() {
     if (!this.shouldPoll()) {
       return;
@@ -332,17 +360,23 @@ export class OpenGroupServerPoller {
         throw new Error('Poller aborted');
       }
 
-      let compactFetchResults = await compactFetchEverything(
-        this.serverUrl,
-        this.roomIdsToPoll,
-        this.abortController.signal
-      );
+      // let compactFetchResults = await compactFetchEverything(
+      //   this.serverUrl,
+      //   this.roomIdsToPoll,
+      //   this.abortController.signal
+      // );
+      // TODO: temp to silence yarn warnings
+      let compactFetchResults = Array<any>([]);
 
-      let batchPollResults = await batchPoll(
+      const subrequestOptions: Array<SubrequestOption> = this.buildSubrequestOptions();
+
+      // TODO: move to own async function
+      const batchPollResults = await batchPoll(
         this.serverUrl,
         this.roomIdsToPoll,
         this.abortController.signal,
-        true
+        true,
+        subrequestOptions
       );
       // const capResults = await capabilitiesFetchEverything(
       //   this.serverUrl,
@@ -353,12 +387,12 @@ export class OpenGroupServerPoller {
 
       // TODO: move this to it's own polling function entirely. I.e. use it's own timer
       if (batchPollResults) {
-        await handleBatchPollResults(this.serverUrl, batchPollResults);
+        await handleBatchPollResults(this.serverUrl, batchPollResults, subrequestOptions);
       }
 
       // check that we are still not aborted
       if (this.abortController.signal.aborted) {
-        throw new Error('Abort controller was canceled. dropping request');
+        throw new Error('Abort controller was cancelled. dropping request');
       }
       if (!compactFetchResults) {
         throw new Error('compactFetch: no results');
@@ -378,10 +412,78 @@ export class OpenGroupServerPoller {
   }
 }
 
-const handleBatchPollResults = (serverUrl: string, batchPollResults: ResponseDecodedV4) => {
-  console.warn({ handleBatchPollResults: batchPollResults });
+/**
+ * @param subrequestOptionsLookup list of subrequests used for the batch request (order sensitive)
+ * @param batchPollResults The result from the batch request (order sensitive)
+ */
+const getCapabilitiesFromBatch = (
+  subrequestOptionsLookup: Array<SubrequestOption>,
+  batchPollResults: ResponseDecodedV4
+) => {
+  const capabilitiesBatchIndex = _.findIndex(
+    subrequestOptionsLookup,
+    (subrequest: SubrequestOption) => {
+      console.warn({ subrequest });
+      return subrequest.type === SubrequestOptionType.capabilities;
+    }
+  );
+  const capabilities = batchPollResults.body[capabilitiesBatchIndex].body.capabilities;
+  return capabilities;
+};
 
-  
+const handleBatchPollResults = async (
+  serverUrl: string,
+  batchPollResults: ResponseDecodedV4,
+  /** using this as explicit way to ensure order and prevent case where two  */
+  subrequestOptionsLookup: Array<SubrequestOption>
+) => {
+  // @@: Might not need the explicit type field.
+  // pro: prevents cases where accidentally two fields for the opt. e.g. capability and message fields truthy.
+  // con: the data can be inferred (excluding above case) so it's close to being a redundant field
+
+  // note: handling capabilities first before handling anything else as it affects how things are handled.
+  const capabilities = getCapabilitiesFromBatch(subrequestOptionsLookup, batchPollResults);
+
+  // TODO: typing for subrequest result, but may be annoying to do.
+  await Promise.all(
+    batchPollResults.body.map(async (subResponse: any, index: number) => {
+      // using subreqOptions as request type lookup,
+      //assumes batch subresponse order matches the subrequest order
+      const subrequestOption = subrequestOptionsLookup[index];
+      const responseType = subrequestOptionsLookup[index].type;
+      if (responseType === SubrequestOptionType.capabilities) {
+        handleCapabilities(subResponse);
+      }
+      if (responseType === SubrequestOptionType.messages) {
+        if (!subrequestOption || !subrequestOption.messages) {
+          window?.log?.error(
+            'handleBatchPollResults - missing fields required for message subresponse'
+          );
+          return false;
+        }
+        const convoId = getOpenGroupV2ConversationId(serverUrl, subrequestOption.messages.roomId);
+        const convo = getConversationController().get(convoId);
+
+        return handleNewMessagesV4(subResponse.body, convoId, convo, capabilities);
+      }
+    })
+  );
+};
+
+const handleCapabilities = (capabilities: {
+  code: number;
+  headers: any;
+  body: {
+    capabilities: Array<string>;
+  };
+}) => {
+  const { code } = capabilities;
+  if (code !== 200) {
+    window?.log?.error('Failed capabilities subrequest - cancelling response handling');
+    return;
+  }
+
+  // TODO: implement - update capabilities. Unsure whether to store in DB or save to instance of this obj.
 };
 
 const handleDeletions = async (
@@ -420,26 +522,54 @@ const handleDeletions = async (
   }
 };
 
+const getRoomAndUpdateLastFetchTimestamp = async (
+  conversationId: string,
+  newMessages: Array<OpenGroupMessageV2 | OpenGroupMessageV4>
+) => {
+  const roomInfos = await getV2OpenGroupRoom(conversationId);
+  if (!roomInfos || !roomInfos.serverUrl || !roomInfos.roomId) {
+    throw new Error(`No room for convo ${conversationId}`);
+  }
+
+  if (!newMessages.length) {
+    // if we got no new messages, just write our last update timestamp to the db
+    roomInfos.lastFetchTimestamp = Date.now();
+    window?.log?.info(
+      `No new messages for ${roomInfos.roomId}... just updating our last fetched timestamp`
+    );
+    await saveV2OpenGroupRoom(roomInfos);
+    return null;
+  }
+  return roomInfos;
+};
+
 const handleNewMessages = async (
   newMessages: Array<OpenGroupMessageV2>,
   conversationId: string,
   _convo?: ConversationModel
 ) => {
-  try {
-    const roomInfos = await getV2OpenGroupRoom(conversationId);
-    if (!roomInfos || !roomInfos.serverUrl || !roomInfos.roomId) {
-      throw new Error(`No room for convo ${conversationId}`);
-    }
+  // #region data examples
+  // @@: Example body of a message from compact polling.
+  // data: "ChEKATE4spz6rYIwqgYECgJva4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+  // public_key: "0588ee09cce1cbf57ae1bfeb457ba769059bd8b510b273640b9c215168f3cc1636"
+  // server_id: 210
+  // signature: "UCoc/HbonrXtxBDSyj48yzLdyVgPr4WPCrdf4TKQsgoBfBx7YV4Z4OwTNVhV3kdfs1cc+4fIYY1XSyz+eOFjDw=="
+  // timestamp: 1649900688833
 
-    if (!newMessages.length) {
-      // if we got no new messages, just write our last update timestamp to the db
-      roomInfos.lastFetchTimestamp = Date.now();
-      window?.log?.info(
-        `No new messages for ${roomInfos.roomId}... just updating our last fetched timestamp`
-      );
-      await saveV2OpenGroupRoom(roomInfos);
+  // @@: example of message from batch polling response (using recent and limit 25)
+  // data: "ChIKAjEwOJLox6qCMKoGBAoCb2uAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+  // id: 22
+  // posted: 1649893620.0719833
+  // seqno: 22
+  // session_id: "0588ee09cce1cbf57ae1bfeb457ba769059bd8b510b273640b9c215168f3cc1636"
+  // signature: "iOChOyolb6zmcuXkSKv+p6Ejk9T9ETNSvJP51iWovZBvigIZTXau/gAVA56j4MzSiYMtLYieXXGxWGd5TqVSAw=="
+  // #endregion
+  try {
+    const roomInfos = await getRoomAndUpdateLastFetchTimestamp(conversationId, newMessages);
+    if (!roomInfos) {
       return;
     }
+
     const incomingMessageIds = _.compact(newMessages.map(n => n.serverId));
     const maxNewMessageId = Math.max(...incomingMessageIds);
     // TODO filter out duplicates ?
@@ -457,11 +587,62 @@ const handleNewMessages = async (
     }
 
     // we need to update the timestamp even if we don't have a new MaxMessageServerId
-    if (roomInfos) {
-      roomInfos.lastMessageFetchedServerID = maxNewMessageId;
-      roomInfos.lastFetchTimestamp = Date.now();
-      await saveV2OpenGroupRoom(roomInfos);
+    roomInfos.lastMessageFetchedServerID = maxNewMessageId;
+    roomInfos.lastFetchTimestamp = Date.now();
+    await saveV2OpenGroupRoom(roomInfos);
+  } catch (e) {
+    window?.log?.warn('handleNewMessages failed:', e);
+  }
+};
+
+const handleNewMessagesV4 = async (
+  newMessages: Array<OpenGroupMessageV4>,
+  conversationId: string,
+  _convo?: ConversationModel,
+  capabilities?: Array<string>
+) => {
+  // #region data examples
+  // @@: Example body of a message from compact polling.
+  // data: "ChEKATE4spz6rYIwqgYECgJva4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+  // public_key: "0588ee09cce1cbf57ae1bfeb457ba769059bd8b510b273640b9c215168f3cc1636"
+  // server_id: 210
+  // signature: "UCoc/HbonrXtxBDSyj48yzLdyVgPr4WPCrdf4TKQsgoBfBx7YV4Z4OwTNVhV3kdfs1cc+4fIYY1XSyz+eOFjDw=="
+  // timestamp: 1649900688833
+
+  // @@: example of message from batch polling response (using recent and limit 25)
+  // data: "ChIKAjEwOJLox6qCMKoGBAoCb2uAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+  // id: 22
+  // posted: 1649893620.0719833
+  // seqno: 22
+  // session_id: "0588ee09cce1cbf57ae1bfeb457ba769059bd8b510b273640b9c215168f3cc1636"
+  // signature: "iOChOyolb6zmcuXkSKv+p6Ejk9T9ETNSvJP51iWovZBvigIZTXau/gAVA56j4MzSiYMtLYieXXGxWGd5TqVSAw=="
+  // #endregion
+  try {
+    const roomInfos = await getRoomAndUpdateLastFetchTimestamp(conversationId, newMessages);
+    if (!roomInfos) {
+      return;
     }
+
+    const incomingMessageIds = _.compact(newMessages.map(n => n.id));
+    const maxNewMessageId = Math.max(...incomingMessageIds);
+    // TODO filter out duplicates ?
+
+    const roomDetails: OpenGroupRequestCommonType = _.pick(roomInfos, 'serverUrl', 'roomId');
+
+    // tslint:disable-next-line: prefer-for-of
+    for (let index = 0; index < newMessages.length; index++) {
+      const newMessage = newMessages[index];
+      try {
+        await handleOpenGroupV4Message(newMessage, roomDetails, capabilities);
+      } catch (e) {
+        window?.log?.warn('handleOpenGroupV2Message', e);
+      }
+    }
+
+    // we need to update the timestamp even if we don't have a new MaxMessageServerId
+    roomInfos.lastMessageFetchedServerID = maxNewMessageId;
+    roomInfos.lastFetchTimestamp = Date.now();
+    await saveV2OpenGroupRoom(roomInfos);
   } catch (e) {
     window?.log?.warn('handleNewMessages failed:', e);
   }

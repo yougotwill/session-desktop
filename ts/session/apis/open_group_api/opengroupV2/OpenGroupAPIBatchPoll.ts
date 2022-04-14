@@ -1,8 +1,6 @@
 import { getV2OpenGroupRoomByRoomId } from '../../../../data/opengroups';
-import { parseStatusCodeFromOnionRequest } from './OpenGroupAPIV2Parser';
 import _ from 'lodash';
 import { OnionSnodeResponse, sendViaOnionToNonSnode } from '../../../onions/onionSend';
-import { OpenGroupMessageV2 } from './OpenGroupMessageV2';
 import { APPLICATION_JSON } from '../../../../types/MIME';
 import {
   decodeV4Response,
@@ -10,7 +8,6 @@ import {
   OpenGroupRequestHeaders,
   ResponseDecodedV4,
 } from './OpenGroupPollingUtils';
-import { SnodeResponse } from '../../snode_api/onions';
 
 type BatchFetchRequestOptions = {
   method: 'GET';
@@ -54,15 +51,16 @@ export const batchPoll = async (
   serverUrl: string,
   roomInfos: Set<string>,
   abortSignal: AbortSignal,
-  useV4: boolean = false
+  useV4: boolean = false,
+  batchRequestOptions: Array<SubrequestOption>
 ): Promise<ResponseDecodedV4 | null> => {
-  // if (!serverUrl.includes('.dev')) {
   // if (!(serverUrl.includes('.dev') || serverUrl.includes(':8080'))) {
   if (!serverUrl.includes(':8080')) {
     window?.log?.warn('not a dev url -- cancelling early');
     return null;
   }
 
+  // getting server pk for room
   const [roomId] = roomInfos;
   const fetchedRoomInfo = await getV2OpenGroupRoomByRoomId({
     serverUrl,
@@ -74,9 +72,9 @@ export const batchPoll = async (
   }
   const { serverPublicKey } = fetchedRoomInfo;
 
-  const batchRequest = await getBatchRequest(serverPublicKey, roomId, useV4);
+  // creating batch request
+  const batchRequest = await getBatchRequest(serverPublicKey, useV4, batchRequestOptions);
   console.warn({ batchRequest });
-
   if (!batchRequest) {
     window?.log?.error('Could not generate batch request. Aborting request');
     return null;
@@ -92,39 +90,61 @@ export const batchPoll = async (
   return result ? result : null;
 };
 
-const getBatchRequest = async (
-  serverPublicKey: string,
-  roomId: string,
-  useV4: boolean = false
-): Promise<BatchRequest | undefined> => {
-  const endpoint = '/batch';
-  const method = 'POST';
+export enum SubrequestOptionType {
+  'capabilities',
+  'messages',
+}
 
-  // TODO: hardcoding batch request for capabilities and messages for now.
-  // TODO: add testing
-  const batchBody: Array<BatchSubRequest> = [
-    {
-      // gets the last 100 messages for the room
+export type SubrequestOption = {
+  type: SubrequestOptionType;
+  capabilities?: boolean;
+  messages?: {
+    roomId: string;
+  };
+};
+
+const buildBatchSubrequest = (options: SubrequestOption): BatchSubRequest | null => {
+  if (options.capabilities) {
+    return {
       method: 'GET',
       path: '/capabilities',
-    },
-    {
+    };
+  }
+
+  if (options.messages) {
+    // TODO: allow more options for path building
+    return {
       method: 'GET',
-      path: `/room/${roomId}/messages/recent?limit=25`,
-    },
-  ];
+      path: `/room/${options.messages.roomId}/messages/recent?limit=25`,
+    };
+  }
+
+  return null;
+};
+
+const getBatchRequest = async (
+  serverPublicKey: string,
+  useV4: boolean = false,
+  batchOptions: Array<SubrequestOption>
+): Promise<BatchRequest | undefined> => {
+  const BATCH_ENDPOINT = '/batch';
+  const BATCH_METHOD = 'POST';
+
+  // TODO: add testing
+  const batchBody = batchOptions.map(options => {
+    return buildBatchSubrequest(options);
+  });
 
   // TODO: swap out batchCommands for body fn parameter
-  // TODO: confirm that the X-SOGS Pubkey is lowercase k or not.
   const headers = batchBody
     ? await getOurOpenGroupHeaders(
         serverPublicKey,
-        endpoint,
-        method,
+        BATCH_ENDPOINT,
+        BATCH_METHOD,
         false,
         JSON.stringify(batchBody)
       )
-    : await getOurOpenGroupHeaders(serverPublicKey, endpoint, method, false);
+    : await getOurOpenGroupHeaders(serverPublicKey, BATCH_ENDPOINT, BATCH_METHOD, false);
 
   if (!headers) {
     window?.log?.error('Unable to create headers for batch request - aborting');
@@ -137,8 +157,8 @@ const getBatchRequest = async (
   }
 
   return {
-    endpoint: '/batch',
-    method: 'POST',
+    endpoint: BATCH_ENDPOINT,
+    method: BATCH_METHOD,
     body: JSON.stringify(batchBody),
     headers,
   };
@@ -188,7 +208,6 @@ const sendOpenGroupBatchRequest = async (
   }
 
   const decodedResponse = decodeV4Response(batchResponse.result.body);
-  console.warn({ decodedData: decodedResponse });
   if (!decodedResponse) {
     window?.log?.error('Unable to decode response - dropping batch response');
     return;

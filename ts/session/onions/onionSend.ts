@@ -97,7 +97,7 @@ export type OnionSnodeResponse = {
   result: SnodeResponse;
   txtResponse: string;
   response: string;
-}
+};
 
 /**
  * @param destinationX25519Key The destination key

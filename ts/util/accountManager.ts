@@ -16,7 +16,7 @@ export type SessionKeyPair = {
    * The curve25519 pubkey with prepended 5
    */
   pubKey: ArrayBufferLike;
-  
+
   /**
    * The curve25519 secret key
    */

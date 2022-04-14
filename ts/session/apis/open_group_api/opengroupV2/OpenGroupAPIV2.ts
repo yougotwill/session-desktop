@@ -97,8 +97,6 @@ export async function sendApiV2Request(
 
   const destinationX25519Key = await getDestinationPubKey(request);
 
-  console.warn({ headers });
-
   // Because auth happens on a per-room basis, we need both to make an authenticated request
   if (isOpenGroupV2Request(request) && request.isAuthRequired && request.room) {
     // this call will either return the token on the db,
