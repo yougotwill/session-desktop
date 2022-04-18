@@ -459,11 +459,10 @@ const handleBatchPollResults = async (
           window?.log?.error(
             'handleBatchPollResults - missing fields required for message subresponse'
           );
-          return false;
+          return;
         }
         const convoId = getOpenGroupV2ConversationId(serverUrl, subrequestOption.messages.roomId);
         const convo = getConversationController().get(convoId);
-
         return handleNewMessagesV4(subResponse.body, convoId, convo, capabilities);
       }
     })
@@ -548,22 +547,6 @@ const handleNewMessages = async (
   conversationId: string,
   _convo?: ConversationModel
 ) => {
-  // #region data examples
-  // @@: Example body of a message from compact polling.
-  // data: "ChEKATE4spz6rYIwqgYECgJva4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
-  // public_key: "0588ee09cce1cbf57ae1bfeb457ba769059bd8b510b273640b9c215168f3cc1636"
-  // server_id: 210
-  // signature: "UCoc/HbonrXtxBDSyj48yzLdyVgPr4WPCrdf4TKQsgoBfBx7YV4Z4OwTNVhV3kdfs1cc+4fIYY1XSyz+eOFjDw=="
-  // timestamp: 1649900688833
-
-  // @@: example of message from batch polling response (using recent and limit 25)
-  // data: "ChIKAjEwOJLox6qCMKoGBAoCb2uAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
-  // id: 22
-  // posted: 1649893620.0719833
-  // seqno: 22
-  // session_id: "0588ee09cce1cbf57ae1bfeb457ba769059bd8b510b273640b9c215168f3cc1636"
-  // signature: "iOChOyolb6zmcuXkSKv+p6Ejk9T9ETNSvJP51iWovZBvigIZTXau/gAVA56j4MzSiYMtLYieXXGxWGd5TqVSAw=="
-  // #endregion
   try {
     const roomInfos = await getRoomAndUpdateLastFetchTimestamp(conversationId, newMessages);
     if (!roomInfos) {
@@ -608,14 +591,6 @@ const handleNewMessagesV4 = async (
   // server_id: 210
   // signature: "UCoc/HbonrXtxBDSyj48yzLdyVgPr4WPCrdf4TKQsgoBfBx7YV4Z4OwTNVhV3kdfs1cc+4fIYY1XSyz+eOFjDw=="
   // timestamp: 1649900688833
-
-  // @@: example of message from batch polling response (using recent and limit 25)
-  // data: "ChIKAjEwOJLox6qCMKoGBAoCb2uAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
-  // id: 22
-  // posted: 1649893620.0719833
-  // seqno: 22
-  // session_id: "0588ee09cce1cbf57ae1bfeb457ba769059bd8b510b273640b9c215168f3cc1636"
-  // signature: "iOChOyolb6zmcuXkSKv+p6Ejk9T9ETNSvJP51iWovZBvigIZTXau/gAVA56j4MzSiYMtLYieXXGxWGd5TqVSAw=="
   // #endregion
   try {
     const roomInfos = await getRoomAndUpdateLastFetchTimestamp(conversationId, newMessages);
@@ -635,13 +610,14 @@ const handleNewMessagesV4 = async (
       try {
         await handleOpenGroupV4Message(newMessage, roomDetails, capabilities);
       } catch (e) {
-        window?.log?.warn('handleOpenGroupV2Message', e);
+        window?.log?.warn('handleOpenGroupV4Message', e);
       }
     }
 
     // we need to update the timestamp even if we don't have a new MaxMessageServerId
     roomInfos.lastMessageFetchedServerID = maxNewMessageId;
     roomInfos.lastFetchTimestamp = Date.now();
+    // TODO: save capabilities to the room in database. (or in cache if possible)
     await saveV2OpenGroupRoom(roomInfos);
   } catch (e) {
     window?.log?.warn('handleNewMessages failed:', e);
