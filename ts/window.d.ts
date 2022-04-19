@@ -38,7 +38,6 @@ declare global {
     log: any;
     sessionFeatureFlags: {
       useOnionRequests: boolean;
-      useCallMessage: boolean;
     };
     SessionSnodeAPI: SessionSnodeAPI;
     onLogin: any;
@@ -59,6 +58,7 @@ declare global {
     userConfig: any;
     versionInfo: any;
     getConversations: () => ConversationCollection;
+    readyForUpdates: () => void;
     MediaRecorder: any;
 
     contextMenuShown: boolean;
