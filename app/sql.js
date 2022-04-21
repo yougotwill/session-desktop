@@ -123,6 +123,7 @@ module.exports = {
   saveV2OpenGroupRoom,
   getAllV2OpenGroupRooms,
   getV2OpenGroupRoomByRoomId,
+  getV2OpenGroupRoomsByServerUrl,
   removeV2OpenGroupRoom,
   removeOneOpenGroupV1Message,
 };
@@ -3302,6 +3303,21 @@ function getV2OpenGroupRoomByRoomId(serverUrl, roomId) {
   }
 
   return jsonToObject(row.json);
+}
+
+function getV2OpenGroupRoomsByServerUrl(serverUrl) {
+  const rows = globalInstance
+    .prepare(`SELECT * FROM ${OPEN_GROUP_ROOMS_V2_TABLE} WHERE serverUrl = $serverUrl;`)
+    .all({
+      serverUrl,
+    });
+
+  if (!rows) {
+    return null;
+  }
+
+  // return rows;
+  return rows.map(r => JSON.parse(r.json));
 }
 
 function saveV2OpenGroupRoom(opengroupsv2Room) {

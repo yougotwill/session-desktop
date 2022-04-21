@@ -5,11 +5,19 @@ import { channels } from './channels';
 
 export type OpenGroupV2Room = {
   serverUrl: string;
-  serverPublicKey: string; // this is actually shared for all this server's room
+
+  /** this is actually shared for all this server's room */
+  serverPublicKey: string;
   roomId: string;
-  roomName?: string; // a user displayed name
-  imageID?: string; // the url to the group's image
-  conversationId?: string; // the linked ConversationModel.id
+
+  /** a user displayed name */
+  roomName?: string;
+
+  /** the url to the group's image */
+  imageID?: string;
+
+  /** the linked ConversationModel.id */
+  conversationId?: string;
   lastMessageFetchedServerID?: number;
   /**
    * This value represents the rowId of the last message deleted. Not the id of the last message ID
@@ -20,6 +28,15 @@ export type OpenGroupV2Room = {
    */
   lastFetchTimestamp?: number;
   token?: string; // currently, the token is on a per room basis
+
+  upload?: boolean;
+  write?: boolean;
+  read?: boolean;
+
+  /**
+   * This is shared across all rooms in a server.
+   */
+  capabilities?: Array<string>;
 };
 
 export async function getAllV2OpenGroupRooms(): Promise<Map<string, OpenGroupV2Room> | undefined> {
@@ -48,6 +65,18 @@ export async function getV2OpenGroupRoom(
   }
   const opengroupv2Rooms = channels.getV2OpenGroupRoom(conversationId);
 
+  if (!opengroupv2Rooms) {
+    return undefined;
+  }
+
+  return opengroupv2Rooms;
+}
+
+export async function getV2OpenGroupRoomsByServerUrl(
+  serverUrl: string
+): Promise<Array<OpenGroupV2Room> | undefined> {
+  // do validation check for serverUrl
+  const opengroupv2Rooms = channels.getV2OpenGroupRoomsByServerUrl(serverUrl);
   if (!opengroupv2Rooms) {
     return undefined;
   }
@@ -88,6 +117,7 @@ export const channelsToMake = {
   getAllV2OpenGroupRooms,
   getV2OpenGroupRoom,
   getV2OpenGroupRoomByRoomId,
+  getV2OpenGroupRoomsByServerUrl,
   saveV2OpenGroupRoom,
   removeV2OpenGroupRoom,
   getAllOpenGroupV2Conversations,

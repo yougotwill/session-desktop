@@ -6,7 +6,6 @@ import { UserUtils } from '../../../utils';
 import { fromHexToArray } from '../../../utils/String';
 import { concatUInt8Array, getSodium } from '../../../crypto';
 import { getOpenGroupHeaders } from './OpenGroupAuthentication';
-import { to_base64 } from 'libsodium-wrappers-sumo';
 
 export type OpenGroupRequestHeaders = {
   'X-SOGS-Pubkey': string;
@@ -105,6 +104,15 @@ export const decodeV4Response = (response: string): ResponseDecodedV4 | undefine
   };
 };
 
+/**
+ * Creates headers for an authenticated open group request using our information
+ * @param serverPublicKey Public key of server we're requesting to
+ * @param endpoint endpoint of request we're making
+ * @param method method of request we're making
+ * @param blinded is the server being requested to blinded or not
+ * @param body the body of the request we're mkaing
+ * @returns object of headers, including X-SOGS and other headers.
+ */
 export const getOurOpenGroupHeaders = async (
   serverPublicKey: string,
   endpoint: string,
@@ -112,20 +120,16 @@ export const getOurOpenGroupHeaders = async (
   blinded: boolean,
   body?: string
 ): Promise<OpenGroupRequestHeaders | undefined> => {
-  // todo: refactor open group headers to just get our device.
   const sodium = await getSodium();
   const nonce = sodium.randombytes_buf(16);
 
-  console.warn('Nonce: ', to_base64(nonce));
-
   const signingKeys = await UserUtils.getUserED25519KeyPairBytes();
   if (!signingKeys) {
-    console.warn('Unable to get signing keys');
+    window?.log?.error('getOurOpenGroupHeaders - Unable to get our signing keys');
     return;
   }
 
   const timestamp = Math.floor(Date.now() / 1000);
-
   return getOpenGroupHeaders({
     signingKeys,
     serverPK: fromHexToArray(serverPublicKey),

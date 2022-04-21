@@ -93,20 +93,33 @@ export const batchPoll = async (
 export enum SubrequestOptionType {
   'capabilities',
   'messages',
+  'pollInfo',
+  'inbox',
 }
 
 export type SubrequestOption = {
   type: SubrequestOptionType;
   capabilities?: boolean;
+  inbox?: boolean;
   messages?: {
     roomId: string;
   };
+  pollInfo?: {
+    roomId: string;
+    infoUpdated?: number;
+  };
 };
 
-const buildBatchSubrequest = (options: SubrequestOption): BatchSubRequest | null => {
+/**
+ *
+ * @param options Array of subrequest options to be made.
+ * @returns
+ */
+const makeBatchRequestPayload = (options: SubrequestOption): BatchSubRequest | null => {
+  const GET_METHOD = 'GET';
   if (options.capabilities) {
     return {
-      method: 'GET',
+      method: GET_METHOD,
       path: '/capabilities',
     };
   }
@@ -114,8 +127,23 @@ const buildBatchSubrequest = (options: SubrequestOption): BatchSubRequest | null
   if (options.messages) {
     // TODO: allow more options for path building
     return {
-      method: 'GET',
-      path: `/room/${options.messages.roomId}/messages/recent?limit=25`,
+      method: GET_METHOD,
+      // path: `/room/${options.messages.roomId}/messages/recent?limit=25`,
+      path: `/room/${options.messages.roomId}/messages/recent`,
+    };
+  }
+
+  if (options.inbox) {
+    return {
+      method: GET_METHOD,
+      path: '/inbox',
+    };
+  }
+
+  if (options.pollInfo) {
+    return {
+      method: GET_METHOD,
+      path: `/room/${options.pollInfo.roomId}/pollInfo/${options.pollInfo.infoUpdated}`,
     };
   }
 
@@ -132,7 +160,7 @@ const getBatchRequest = async (
 
   // TODO: add testing
   const batchBody = batchOptions.map(options => {
-    return buildBatchSubrequest(options);
+    return makeBatchRequestPayload(options);
   });
 
   // TODO: swap out batchCommands for body fn parameter

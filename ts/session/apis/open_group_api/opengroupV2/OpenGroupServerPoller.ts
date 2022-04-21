@@ -3,7 +3,6 @@ import { getConversationController } from '../../../conversations';
 import { getOpenGroupV2ConversationId } from '../utils/OpenGroupUtils';
 import { OpenGroupRequestCommonType } from './ApiUtil';
 import {
-  compactFetchEverything,
   getAllBase64AvatarForRooms,
   getAllMemberCount,
   ParsedBase64Avatar,
@@ -11,10 +10,15 @@ import {
   ParsedMemberCount,
   ParsedRoomCompactPollResults,
 } from './OpenGroupAPIV2CompactPoll';
-import _ from 'lodash';
+import _, { forEach } from 'lodash';
 import { ConversationModel } from '../../../../models/conversation';
 import { getMessageIdsFromServerIds, removeMessage } from '../../../../data/data';
-import { getV2OpenGroupRoom, saveV2OpenGroupRoom } from '../../../../data/opengroups';
+import {
+  getV2OpenGroupRoom,
+  getV2OpenGroupRoomsByServerUrl,
+  OpenGroupV2Room,
+  saveV2OpenGroupRoom,
+} from '../../../../data/opengroups';
 import { OpenGroupMessageV2 } from './OpenGroupMessageV2';
 import autoBind from 'auto-bind';
 import { sha256 } from '../../../crypto';
@@ -26,6 +30,7 @@ import { batchPoll, SubrequestOption, SubrequestOptionType } from './OpenGroupAP
 import { ResponseDecodedV4 } from './OpenGroupPollingUtils';
 
 export type OpenGroupMessageV4 = {
+  /** AFAIK: indicates the number of the message in the group. e.g. 2nd message will be 1 or 2 */
   seqno: number;
   session_id: string;
   /** base64 */
@@ -328,14 +333,33 @@ export class OpenGroupServerPoller {
     }
   }
 
-  private buildSubrequestOptions() {
+  /**
+   * creates subrequest options for a batch request.
+   * We need: capabilities, pollInfo, recent messages, DM request inbox messages
+   * @returns Array of subrequest options for our main batch request
+   */
+  private async makeSubrequestInfo() {
     const subrequestOptions: Array<SubrequestOption> = [];
+
+    // capabilities
     subrequestOptions.push({
       type: SubrequestOptionType.capabilities,
       capabilities: true,
     });
-    // adding a poll subrequest for each room on the SOGS
+
+    // adding room specific SOGS subrequests
     this.roomIdsToPoll.forEach(roomId => {
+      // poll info
+      subrequestOptions.push({
+        type: SubrequestOptionType.pollInfo,
+        pollInfo: {
+          roomId,
+          infoUpdated: 0,
+          // infoUpdated: -1,
+        },
+      });
+
+      // messages
       subrequestOptions.push({
         type: SubrequestOptionType.messages,
         messages: {
@@ -343,6 +367,22 @@ export class OpenGroupServerPoller {
         },
       });
     });
+
+    if (this.serverUrl) {
+      const rooms = await getV2OpenGroupRoomsByServerUrl(this.serverUrl);
+      if (rooms?.length) {
+        const { capabilities } = rooms[0];
+        if (capabilities?.includes('blinding')) {
+          // This only works for servers with blinding capabilities
+          // adding inbox subrequest info
+          subrequestOptions.push({
+            type: SubrequestOptionType.inbox,
+            inbox: true,
+          });
+        }
+      }
+    }
+
     return subrequestOptions;
   }
 
@@ -367,8 +407,7 @@ export class OpenGroupServerPoller {
       // );
       // TODO: temp to silence yarn warnings
       let compactFetchResults = Array<any>([]);
-
-      const subrequestOptions: Array<SubrequestOption> = this.buildSubrequestOptions();
+      const subrequestOptions: Array<SubrequestOption> = await this.makeSubrequestInfo();
 
       // TODO: move to own async function
       const batchPollResults = await batchPoll(
@@ -378,12 +417,6 @@ export class OpenGroupServerPoller {
         true,
         subrequestOptions
       );
-      // const capResults = await capabilitiesFetchEverything(
-      //   this.serverUrl,
-      //   this.roomIdsToPoll,
-      //   this.abortController.signal
-      // );
-      // console.warn({ capResults });
 
       // TODO: move this to it's own polling function entirely. I.e. use it's own timer
       if (batchPollResults) {
@@ -423,7 +456,6 @@ const getCapabilitiesFromBatch = (
   const capabilitiesBatchIndex = _.findIndex(
     subrequestOptionsLookup,
     (subrequest: SubrequestOption) => {
-      console.warn({ subrequest });
       return subrequest.type === SubrequestOptionType.capabilities;
     }
   );
@@ -443,6 +475,9 @@ const handleBatchPollResults = async (
 
   // note: handling capabilities first before handling anything else as it affects how things are handled.
   const capabilities = getCapabilitiesFromBatch(subrequestOptionsLookup, batchPollResults);
+  await handleCapabilities(capabilities, serverUrl);
+
+  console.warn({ batchPollResults });
 
   // TODO: typing for subrequest result, but may be annoying to do.
   await Promise.all(
@@ -451,38 +486,68 @@ const handleBatchPollResults = async (
       //assumes batch subresponse order matches the subrequest order
       const subrequestOption = subrequestOptionsLookup[index];
       const responseType = subrequestOptionsLookup[index].type;
-      if (responseType === SubrequestOptionType.capabilities) {
-        handleCapabilities(subResponse);
-      }
-      if (responseType === SubrequestOptionType.messages) {
-        if (!subrequestOption || !subrequestOption.messages) {
-          window?.log?.error(
-            'handleBatchPollResults - missing fields required for message subresponse'
+
+      switch (responseType) {
+        case SubrequestOptionType.messages:
+          return handleNewMessagesResponseV4(
+            subResponse.body,
+            serverUrl,
+            subrequestOption,
+            capabilities
           );
-          return;
-        }
-        const convoId = getOpenGroupV2ConversationId(serverUrl, subrequestOption.messages.roomId);
-        const convo = getConversationController().get(convoId);
-        return handleNewMessagesV4(subResponse.body, convoId, convo, capabilities);
+
+        // redundant - Probably already getting handled first due to the early search before this loop
+        case SubrequestOptionType.pollInfo:
+          // TODO: handle handle pollInfo
+          console.warn('STUB - handle poll info');
+          break;
+
+        case SubrequestOptionType.inbox:
+          // TODO: handle inbox
+          console.warn(' STUB - handle inbox');
+          break;
+
+        default:
+          console.warn('No matching subrequest response body');
       }
     })
   );
 };
 
-const handleCapabilities = (capabilities: {
-  code: number;
-  headers: any;
-  body: {
-    capabilities: Array<string>;
-  };
-}) => {
-  const { code } = capabilities;
-  if (code !== 200) {
+const handleCapabilities = async (
+  capabilities: Array<string>,
+  serverUrl: string
+  // roomId: string
+) => {
+  if (!capabilities) {
     window?.log?.error('Failed capabilities subrequest - cancelling response handling');
     return;
   }
 
+  // get all v2OpenGroup rooms with the matching serverUrl and set the capabilities.
+  console.warn('cap and su, ', capabilities, serverUrl);
   // TODO: implement - update capabilities. Unsure whether to store in DB or save to instance of this obj.
+  const rooms = await getV2OpenGroupRoomsByServerUrl(serverUrl);
+  console.warn({ groupsByServerUrl: rooms });
+
+  if (!rooms || !rooms.length) {
+    window?.log?.error('handleCapabilities - Found no groups with matching server url');
+    return;
+  }
+
+  await Promise.all(
+    rooms.map(async (room: OpenGroupV2Room) => {
+      // doing this to get the roomId? and conversationId? Optionally could include
+      const roomUpdate = { ...room, capabilities };
+      console.warn({ roomUpdate });
+      await saveV2OpenGroupRoom(roomUpdate);
+    })
+  );
+};
+
+const handleInboxMessages = async (inboxResponse: any, serverUrl: string) => {
+  // inbox messages are blinded so decrypt them using the blinding logic.
+  // handle them as a message request after that.
 };
 
 const handleDeletions = async (
@@ -578,10 +643,45 @@ const handleNewMessages = async (
   }
 };
 
-const handleNewMessagesV4 = async (
+// TODO: Move to separate (v3?) openGroupAPIV3.ts
+const handlePollInfoResponse = async (
+  pollInfoResponseBody: {
+    active_users: number;
+    read: boolean;
+    token: string;
+    upload: boolean;
+    write: boolean;
+  },
+  serverUrl: string,
+  roomId: string
+) => {
+  // example body structure
+  // body:
+  // active_users: 2
+  // read: true
+  // token: "warricktest"
+  // upload: true
+  // write: true
+
+  const { active_users, read, token, upload, write } = pollInfoResponseBody;
+  const pollInfo = {
+    activeUsers: active_users,
+    read,
+    token,
+    upload,
+    write,
+  };
+
+  console.warn({ pollInfo });
+
+  const convo = await getOpenGroupV2ConversationId(serverUrl, roomId);
+  // TODO: handle pollInfo
+};
+
+const handleNewMessagesResponseV4 = async (
   newMessages: Array<OpenGroupMessageV4>,
-  conversationId: string,
-  _convo?: ConversationModel,
+  serverUrl: string,
+  subrequestOption: SubrequestOption,
   capabilities?: Array<string>
 ) => {
   // #region data examples
@@ -592,8 +692,15 @@ const handleNewMessagesV4 = async (
   // signature: "UCoc/HbonrXtxBDSyj48yzLdyVgPr4WPCrdf4TKQsgoBfBx7YV4Z4OwTNVhV3kdfs1cc+4fIYY1XSyz+eOFjDw=="
   // timestamp: 1649900688833
   // #endregion
+  if (!subrequestOption || !subrequestOption.messages) {
+    window?.log?.error('handleBatchPollResults - missing fields required for message subresponse');
+    return;
+  }
+
   try {
-    const roomInfos = await getRoomAndUpdateLastFetchTimestamp(conversationId, newMessages);
+    const { roomId } = subrequestOption.messages;
+    const convoId = await getOpenGroupV2ConversationId(serverUrl, roomId);
+    const roomInfos = await getRoomAndUpdateLastFetchTimestamp(convoId, newMessages);
     if (!roomInfos) {
       return;
     }
