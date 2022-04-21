@@ -663,6 +663,14 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       const shouldApprove = !this.isApproved() && this.isPrivate();
       const incomingMessageCount = await getMessageCountByType(this.id, MessageDirection.incoming);
       const hasIncomingMessages = incomingMessageCount > 0;
+
+      if (this.id.startsWith('15')) {
+        console.warn('Sending a blinded message to this user');
+
+        await this.sendBlindedMessageRequest(chatMessageParams);
+
+        return;
+      }
       if (shouldApprove) {
         await this.setIsApproved(true);
         if (hasIncomingMessages) {
@@ -798,6 +806,15 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       expireTimer: 0,
     });
     this.updateLastMessage();
+  }
+
+  public async sendBlindedMessageRequest(messageParams: VisibleMessageParams) {
+    // TODO: add early cancellation conditions
+    // encrypt the message using blinding
+    // await getMessageQueue().sendToOpenGroupV2(
+    //   message,
+    //   roomInfos
+    // )
   }
 
   public async sendMessageRequestResponse(isApproved: boolean) {

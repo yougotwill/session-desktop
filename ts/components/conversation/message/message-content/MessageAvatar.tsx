@@ -65,7 +65,8 @@ export const MessageAvatar = (props: Props) => {
     <div className="module-message__author-avatar" key={`msg-avatar-${sender}`}>
       <Avatar
         size={AvatarSize.S}
-        onAvatarClick={(!isPublic && onMessageAvatarClick) || undefined}
+        // onAvatarClick={(!isPublic && onMessageAvatarClick) || undefined}
+        onAvatarClick={onMessageAvatarClick}
         pubkey={sender}
       />
       {isSenderAdmin && <CrownIcon />}

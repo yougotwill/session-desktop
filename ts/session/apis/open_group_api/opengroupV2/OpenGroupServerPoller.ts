@@ -3,6 +3,7 @@ import { getConversationController } from '../../../conversations';
 import { getOpenGroupV2ConversationId } from '../utils/OpenGroupUtils';
 import { OpenGroupRequestCommonType } from './ApiUtil';
 import {
+  compactFetchEverything,
   getAllBase64AvatarForRooms,
   getAllMemberCount,
   ParsedBase64Avatar,
@@ -400,13 +401,14 @@ export class OpenGroupServerPoller {
         throw new Error('Poller aborted');
       }
 
-      // let compactFetchResults = await compactFetchEverything(
-      //   this.serverUrl,
-      //   this.roomIdsToPoll,
-      //   this.abortController.signal
-      // );
+      let compactFetchResults = await compactFetchEverything(
+        this.serverUrl,
+        this.roomIdsToPoll,
+        this.abortController.signal
+      );
       // TODO: temp to silence yarn warnings
-      let compactFetchResults = Array<any>([]);
+      // let compactFetchResults = Array<any>([]);
+
       const subrequestOptions: Array<SubrequestOption> = await this.makeSubrequestInfo();
 
       // TODO: move to own async function
@@ -715,6 +717,7 @@ const handleNewMessagesResponseV4 = async (
     for (let index = 0; index < newMessages.length; index++) {
       const newMessage = newMessages[index];
       try {
+        // await handleOpenGroupV4Message(newMessage, roomDetails, capabilities);
         await handleOpenGroupV4Message(newMessage, roomDetails, capabilities);
       } catch (e) {
         window?.log?.warn('handleOpenGroupV4Message', e);

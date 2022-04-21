@@ -61,6 +61,7 @@ export async function handleOpenGroupV2Message(
     window?.log?.error('handleOpenGroupV2Message - No sender or server information to add message');
     return;
   }
+  console.warn({ v2message: message });
   await handleOpenGroupMessage(roomInfos, base64EncodedData, sentTimestamp, sender, serverId);
 }
 
@@ -73,17 +74,17 @@ export const handleOpenGroupV4Message = async (
     data,
     id,
     posted,
-    signature,
+    // signature,
     // seqno,
-    // session_id,
+    session_id,
   } = message;
+  console.warn({ capabilities });
+  console.warn({ message });
 
-  // console.warn({ data, id, posted, seqno, session_id, signature });
-  // console.warn({ roomInfos });
-  console.warn({ handleOGV4Caps: capabilities });
+  const formatted_timestamp = Math.trunc(posted / 1000);
 
   // TODO: check that these are the correct equivalent fields
-  await handleOpenGroupMessage(roomInfos, data, posted, signature, id);
+  await handleOpenGroupMessage(roomInfos, data, formatted_timestamp, session_id, id);
 };
 
 /**

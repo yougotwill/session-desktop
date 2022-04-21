@@ -55,10 +55,10 @@ export const batchPoll = async (
   batchRequestOptions: Array<SubrequestOption>
 ): Promise<ResponseDecodedV4 | null> => {
   // if (!(serverUrl.includes('.dev') || serverUrl.includes(':8080'))) {
-  if (!serverUrl.includes(':8080')) {
-    window?.log?.warn('not a dev url -- cancelling early');
-    return null;
-  }
+  // if (!serverUrl.includes(':8080')) {
+  //   window?.log?.warn('not a dev url -- cancelling early');
+  //   return null;
+  // }
 
   // getting server pk for room
   const [roomId] = roomInfos;
