@@ -2,8 +2,10 @@ import chai, { expect } from 'chai';
 import * as sinon from 'sinon';
 import chaiBytes from 'chai-bytes';
 import {
-  encryptBlindedOpenGroupMessage,
+  decryptBlindedMessage,
+  encryptBlindedMessage,
   getOpenGroupHeaders,
+  testWhole,
 } from '../../../../session/apis/open_group_api/opengroupV2/OpenGroupAuthentication';
 import { ByteKeyPair } from '../../../../session/utils/User';
 import {
@@ -194,6 +196,10 @@ describe('OpenGroupAuthentication', () => {
   // };
   // const expectedResponseBody = 'hello world';
 
+  const testRecipientPK = '0588ee09cce1cbf57ae1bfeb457ba769059bd8b510b273640b9c215168f3cc1636';
+  const testRecipientPKBlinded =
+    '1598932d4bccbe595a8789d7eb1629cefc483a0eaddc7e20e8fe5c771efafd9af5';
+
   afterEach(() => {
     sandbox.restore();
   });
@@ -347,9 +353,22 @@ describe('OpenGroupAuthentication', () => {
   });
 
   describe('Message Encryption', () => {
-    it('Should encrypt message correctly', async () => {
-      const res = await encryptBlindedOpenGroupMessage(bodyToEncrypt);
+    it('Should encrypt blinded message correctly', async () => {
+      // const data = await encryptBlindedMessage(
+      //   bodyToEncrypt,
+      //   // testRecipientPK,
+      //   testRecipientPKBlinded,
+      //   serverPK,
+      //   signingKeys
+      // );
+      // console.warn({ data });
+      // if (data) {
+      //   await decryptBlindedMessage(data, serverPK, testRecipientPKBlinded, signingKeys);
+      // }
+
+      await testWhole();
     });
+    // TODO: decrypt using same data
   });
 
   describe('Message Decryption', () => {});

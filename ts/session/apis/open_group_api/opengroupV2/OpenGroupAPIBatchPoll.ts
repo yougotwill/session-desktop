@@ -60,6 +60,11 @@ export const batchPoll = async (
   //   return null;
   // }
 
+  if (!serverUrl.includes('.dev')) {
+    window?.log?.warn('not a dev url -- cancelling early');
+    return null;
+  }
+
   // getting server pk for room
   const [roomId] = roomInfos;
   const fetchedRoomInfo = await getV2OpenGroupRoomByRoomId({
