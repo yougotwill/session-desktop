@@ -242,14 +242,6 @@ export const getBlindingValues = async (
 };
 
 /**
- * Sending a SOGS DM
- */
-export async function sendDmTest() {
-  // const sodium = await getSodium();
-  // todo: implement sending dms
-}
-
-/**
  * Used for encrypting a blinded message (request) to a SOGS user.
  * @param body body of the message being encrypted
  * @param serverPK the server public key being sent to. Cannot be b64 encoded. Use fromHex and be sure to exclude the blinded 00/15/05 prefixes
@@ -257,212 +249,17 @@ export async function sendDmTest() {
  */
 export const encryptBlindedMessage = async (
   body: any,
-  recipientPubKey: string,
-  serverPK: Uint8Array,
-  signingKeysArg?: ByteKeyPair
+  aSignKeyBytes: ByteKeyPair,
+  bSignKeyBytes: ByteKeyPair,
+  serverPubKey: Uint8Array
 ): Promise<Uint8Array | null> => {
-  // TODO: need a, kB, kA and kB for this to work.
-  // a - our group specific enc_key
-  // kB - their group specific 15 pubkey
-  // kA - our group spec. 15 pubkey
-
-  const signingKeys = signingKeysArg
-    ? signingKeysArg
-    : await UserUtils.getUserED25519KeyPairBytes();
-  if (!signingKeys) {
-    window?.log?.error('encryptBlindedOpenGroupMessage - failed to get signing key data');
-    return null;
-  }
-
-  // our blinding values
-  const { a, ka, kA } = await getBlindingValues(serverPK, signingKeys);
-  console.warn(a, ka, kA);
-
-  // the user we're sending to
-  const kB = new Uint8Array(fromHex(recipientPubKey.substring(2)));
-
   const sodium = await getSodium();
-  const encryptKey = sodium.crypto_generichash(
-    32,
-    concatUInt8Array(sodium.crypto_scalarmult_ed25519_noclamp(a, kB), kA, kB)
-  );
-
-  // inner data: msg || A (i.e. the sender's ed25519 master pubkey, *not* the kA blinded pubkey)
-  const plaintext = concatUInt8Array(
-    new Uint8Array(StringUtils.encode(body, 'utf8')),
-    signingKeys.pubKeyBytes
-  );
-
-  const nonce = sodium.randombytes_buf(24);
-
-  const ciphertext = sodium.crypto_aead_xchacha20poly1305_ietf_encrypt(
-    plaintext,
-    null,
-    null,
-    nonce,
-    encryptKey
-  );
-
-  // not sure what this part is for but it's in the example
-  // after looking at the decrypt - it might be to denote the encryption version
-  const prefixData = new Uint8Array(StringUtils.encode('\x00', 'utf8'));
-  const data = concatUInt8Array(prefixData, ciphertext, nonce);
-
-  // TODO: if it doesn't work. Add logging on pysogs dev instance. Copy example values and use output for TDD.
-  return data;
-};
-
-export const decryptBlindedMessage = async (
-  data: Uint8Array,
-  serverPubKey: Uint8Array,
-  senderPubKey: string,
-  signingKeysArg?: ByteKeyPair
-): Promise<any> => {
-  //  Decrypting a SOGS DM
-  //  Opening the box on the recipient end.
-
-  //  I receive alongside the message from sogs (i.e. this is the blinded session id minus the '15')
-  //  kA=...
-
-  //  Calculate the shared encryption key (see above)
-  const sodium = await getSodium();
-
-  const signingKeys = signingKeysArg
-    ? signingKeysArg
-    : await UserUtils.getUserED25519KeyPairBytes();
-
-  if (!signingKeys) {
-    window?.log?.error('decryptBlindedMessage - Cannot get signing keys required for decryption');
-    return;
-  }
-
-  // the user we're sending to
-  // const kB = fromHexToArray(senderPubKey.substring(2));
-  const k = sodium.crypto_core_ed25519_scalar_reduce(sodium.crypto_generichash(64, serverPubKey));
-  const kB = sodium.crypto_scalarmult_ed25519_noclamp(k, fromHexToArray(senderPubKey.substring(2)));
-
-  const { a, ka, kA } = await getBlindingValues(serverPubKey, signingKeys);
-
-  console.warn({
-    senderPubKey,
-    a,
-    kB,
-    kA,
-  });
-
-  const decryptKey = sodium.crypto_generichash(
-    32,
-    concatUInt8Array(sodium.crypto_scalarmult_ed25519_noclamp(a, kB), kB, kA)
-  );
-
-  // enc and dec key on either side of the pipeline should be equal length.
-
-  const dataEndIdx = data.length - 1;
-  const version = data[0];
-
-  if (version !== 0) {
-    window?.log?.error(
-      'decryptBlindedOpenGroupMessage - Unsupported/Unrecognized encryption version'
-    );
-    return;
-  }
-
-  // todo: add early exit condition for if version isn't right
-
-  // const ciphertext = data.slice(1, dataEndIdx - 24);
-  const ciphertext = data.slice(1, data.length - 24);
-  // const nonce = data.slice(dataEndIdx - 24);
-  // const nonce = data.slice(data.length - 24);
-  const nonce = data.slice(data.length - 12);
-
-  console.warn({ nonce, nonceLength: nonce.length });
-  const plaintext = sodium.crypto_aead_chacha20poly1305_ietf_decrypt(
-    null,
-    ciphertext,
-    null,
-    nonce,
-    decryptKey
-  );
-
-  if (plaintext.length <= 32) {
-    window?.log?.warn('plain text isnt as long as expected. Possible error');
-  }
-
-  const plaintextLastIdx = plaintext.length - 1;
-  const message = plaintext.slice(0, plaintextLastIdx - 32);
-  const senderUnblindedEd25519Key = plaintext.slice(plaintextLastIdx - 32);
-
-  const messageStr = StringUtils.decode(message, 'utf8');
-  const senderSessionId = `05${to_hex(senderUnblindedEd25519Key)}`;
-  console.warn({ messageStr });
-  console.warn({ senderSessionId });
-  // msg should equal the cake in decrypt msg. Sender PK (without prefix) should === A
-};
-
-export const testWhole = async () => {
-  // const b_pk = "1598932d4bccbe595a8789d7eb1629cefc483a0eaddc7e20e8fe5c771efafd9af5";
-  // const a_stuff =
-  const sodium = await getSodium();
-  const body = 'hello 🎂';
-
-  const serverPubKey = new Uint8Array([
-    195,
-    179,
-    198,
-    243,
-    47,
-    10,
-    181,
-    165,
-    127,
-    133,
-    60,
-    196,
-    243,
-    15,
-    93,
-    167,
-    253,
-    165,
-    98,
-    75,
-    12,
-    119,
-    179,
-    251,
-    8,
-    41,
-    222,
-    86,
-    42,
-    218,
-    8,
-    29,
-  ]);
-
-  const aSeed = '697cd26586b0ce239adf5fcce214d7ba2542547ef531972a9baed9c91f93ffaa';
-  const bSeed = '823853e33a95fb947755b45111bef521db06f6ee6e3dbf85f4df202079ac8ac6';
-
-  const aSignKeys = await sessionGenerateKeyPair(fromHex(aSeed));
-  const bSignKeys = await sessionGenerateKeyPair(fromHex(bSeed));
-
-  const aSignKeyBytes: ByteKeyPair = {
-    privKeyBytes: aSignKeys.ed25519KeyPair.privateKey,
-    pubKeyBytes: aSignKeys.ed25519KeyPair.publicKey,
-  };
-  const bSignKeyBytes: ByteKeyPair = {
-    privKeyBytes: bSignKeys.ed25519KeyPair.privateKey,
-    pubKeyBytes: bSignKeys.ed25519KeyPair.publicKey,
-  };
 
   const aBlindingValues = await getBlindingValues(serverPubKey, aSignKeyBytes);
   const bBlindingValues = await getBlindingValues(serverPubKey, bSignKeyBytes);
 
-  const k = sodium.crypto_core_ed25519_scalar_reduce(sodium.crypto_generichash(64, serverPubKey));
-
-  const { a: b, ka: kb, kA: kB } = bBlindingValues;
-
-  const { a, ka, kA } = aBlindingValues;
+  const { kA: kB } = bBlindingValues;
+  const { a, kA } = aBlindingValues;
 
   const encryptKey = sodium.crypto_generichash(
     32,
@@ -489,24 +286,48 @@ export const testWhole = async () => {
   // after looking at the decrypt - it might be to denote the encryption version
   const prefixData = new Uint8Array(StringUtils.encode('\x00', 'utf8'));
   const data = concatUInt8Array(prefixData, ciphertext, nonce);
+  return data;
+};
 
-  // TODO: if it doesn't work. Add logging on pysogs dev instance. Copy example values and use output for TDD.
-  // return data;
+/**
+ *
+ * @param data The data to be decrypted from the sender
+ * @param aSignKeyBytes the sender's keypair bytes
+ * @param bSignKeyBytes the receivers keypair bytes
+ * @param serverPubKey the server the message is sent to
+ */
+export const decryptBlindedMessage = async (
+  data: Uint8Array,
+  aSignKeyBytes: ByteKeyPair,
+  bSignKeyBytes: ByteKeyPair,
+  serverPubKey: Uint8Array
+): Promise<| {
+    messageText: string;
+    senderED25519PubKey: string;
+    senderSessionId: string;
+  }
+| undefined> => {
+  const sodium = await getSodium();
 
-  // decrypting ============================
+  const aBlindingValues = await getBlindingValues(serverPubKey, aSignKeyBytes);
+  const bBlindingValues = await getBlindingValues(serverPubKey, bSignKeyBytes);
+  const { kA } = aBlindingValues;
+  const { a: b, kA: kB } = bBlindingValues;
+
+  const k = sodium.crypto_core_ed25519_scalar_reduce(sodium.crypto_generichash(64, serverPubKey));
+
   const decryptKey = sodium.crypto_generichash(
     32,
     concatUInt8Array(sodium.crypto_scalarmult_ed25519_noclamp(b, kA), kA, kB)
   );
 
-  console.warn({
-    keysMatch: to_hex(encryptKey) === to_hex(decryptKey),
-    encKey: to_hex(encryptKey),
-    decKey: to_hex(decryptKey),
-  });
-
   const version = data[0];
-  console.warn({ version });
+  if (version !== 0) {
+    window?.log?.error(
+      'decryptBlindedMessage - Dropping message due to unsupported encryption version'
+    );
+    return;
+  }
 
   const nonceLength = sodium.crypto_aead_xchacha20poly1305_ietf_NPUBBYTES;
   const ciphertextIncoming = data.slice(1, data.length - nonceLength);
@@ -522,7 +343,9 @@ export const testWhole = async () => {
 
   console.warn({ plaintextIncoming });
   if (plaintextIncoming.length <= 32) {
-    throw Error;
+    // throw Error;
+    window?.log?.error('decryptBlindedMessage: plaintext unsufficient length');
+    return;
   }
 
   const msg = plaintextIncoming.slice(0, plaintextIncoming.length - 32);
@@ -532,9 +355,16 @@ export const testWhole = async () => {
     throw Error;
   }
 
-  const strMsg = StringUtils.decode(msg, 'utf8');
-  console.warn({ strMsg });
+  const messageText = StringUtils.decode(msg, 'utf8');
+  console.warn({ messageText });
 
   const senderSessionId = '05' + to_hex(sodium.crypto_sign_ed25519_pk_to_curve25519(senderEdpk));
-  console.warn({ senderSessionId });
+  const senderED25519PubKey = to_hex(senderEdpk);
+  console.warn({ senderED25519PubKey });
+
+  return {
+    messageText,
+    senderED25519PubKey,
+    senderSessionId,
+  };
 };

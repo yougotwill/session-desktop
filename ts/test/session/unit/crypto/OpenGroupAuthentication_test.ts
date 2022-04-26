@@ -1,24 +1,24 @@
-import chai, { expect } from 'chai';
+import chai, { assert, expect } from 'chai';
 import * as sinon from 'sinon';
 import chaiBytes from 'chai-bytes';
 import {
   decryptBlindedMessage,
   encryptBlindedMessage,
   getOpenGroupHeaders,
-  testWhole,
 } from '../../../../session/apis/open_group_api/opengroupV2/OpenGroupAuthentication';
 import { ByteKeyPair } from '../../../../session/utils/User';
 import {
   decodeV4Response,
   encodeV4Request,
 } from '../../../../session/apis/open_group_api/opengroupV2/OpenGroupPollingUtils';
+import { to_hex } from 'libsodium-wrappers-sumo';
 
 chai.use(chaiBytes);
 
 // tslint:disable-next-line: max-func-body-length
 describe('OpenGroupAuthentication', () => {
   const sandbox = sinon.createSandbox();
-  const signingKeys: ByteKeyPair = {
+  const signingKeysA: ByteKeyPair = {
     privKeyBytes: new Uint8Array([
       192,
       16,
@@ -120,7 +120,111 @@ describe('OpenGroupAuthentication', () => {
       204,
     ]),
   };
-  const serverPK = new Uint8Array([
+
+  const signingKeysB: ByteKeyPair = {
+    privKeyBytes: new Uint8Array([
+      130,
+      56,
+      83,
+      227,
+      58,
+      149,
+      251,
+      148,
+      119,
+      85,
+      180,
+      81,
+      17,
+      190,
+      245,
+      33,
+      219,
+      6,
+      246,
+      238,
+      110,
+      61,
+      191,
+      133,
+      244,
+      223,
+      32,
+      32,
+      121,
+      172,
+      138,
+      198,
+      215,
+      25,
+      249,
+      139,
+      235,
+      31,
+      251,
+      12,
+      100,
+      87,
+      84,
+      131,
+      231,
+      45,
+      87,
+      251,
+      204,
+      133,
+      20,
+      3,
+      118,
+      71,
+      29,
+      47,
+      245,
+      62,
+      216,
+      163,
+      254,
+      248,
+      195,
+      109,
+    ]),
+    pubKeyBytes: new Uint8Array([
+      215,
+      25,
+      249,
+      139,
+      235,
+      31,
+      251,
+      12,
+      100,
+      87,
+      84,
+      131,
+      231,
+      45,
+      87,
+      251,
+      204,
+      133,
+      20,
+      3,
+      118,
+      71,
+      29,
+      47,
+      245,
+      62,
+      216,
+      163,
+      254,
+      248,
+      195,
+      109,
+    ]),
+  };
+
+  const serverPubKey = new Uint8Array([
     195,
     179,
     198,
@@ -177,14 +281,13 @@ describe('OpenGroupAuthentication', () => {
     91,
   ]);
 
-  const body = 'This is a test message body 12345';
-  const bodyToEncrypt = 'hello 🎂';
+  // const body = 'This is a test message body 12345';
+  const body = 'hello 🎂';
 
   const postDataToEncoded =
     '{"method":"POST","endpoint":"/room/test-room/pin/123","headers":{"Content-Type":"application/json"}}';
 
   const getDataToEncode = '{"method":"GET","endpoint":"/room/test-room"}';
-
   const responseToDecode = `l129:{"code":200,"headers":{"content-type":"application/octet-stream","content-disposition":"attachment;filename*=UTF-8''myfile.txt"}}11:hello worlde`;
 
   // const expectedResponseMeta = {
@@ -196,10 +299,6 @@ describe('OpenGroupAuthentication', () => {
   // };
   // const expectedResponseBody = 'hello world';
 
-  const testRecipientPK = '0588ee09cce1cbf57ae1bfeb457ba769059bd8b510b273640b9c215168f3cc1636';
-  const testRecipientPKBlinded =
-    '1598932d4bccbe595a8789d7eb1629cefc483a0eaddc7e20e8fe5c771efafd9af5';
-
   afterEach(() => {
     sandbox.restore();
   });
@@ -208,8 +307,8 @@ describe('OpenGroupAuthentication', () => {
     describe('Blinded Headers', () => {
       it('should produce correct X-SOGS-Nonce', async () => {
         const headers = await getOpenGroupHeaders({
-          signingKeys,
-          serverPK,
+          signingKeys: signingKeysA,
+          serverPK: serverPubKey,
           nonce,
           method,
           path,
@@ -221,8 +320,8 @@ describe('OpenGroupAuthentication', () => {
 
       it('should produce correct X-SOGS-Pubkey', async () => {
         const headers = await getOpenGroupHeaders({
-          signingKeys,
-          serverPK,
+          signingKeys: signingKeysA,
+          serverPK: serverPubKey,
           nonce,
           method,
           path,
@@ -236,8 +335,8 @@ describe('OpenGroupAuthentication', () => {
 
       it('should produce correct X-SOGS-Timestamp', async () => {
         const headers = await getOpenGroupHeaders({
-          signingKeys,
-          serverPK,
+          signingKeys: signingKeysA,
+          serverPK: serverPubKey,
           nonce,
           method,
           path,
@@ -248,8 +347,8 @@ describe('OpenGroupAuthentication', () => {
       });
       it('should produce correct X-SOGS-Signature without body', async () => {
         const headers = await getOpenGroupHeaders({
-          signingKeys,
-          serverPK,
+          signingKeys: signingKeysA,
+          serverPK: serverPubKey,
           nonce,
           method,
           path,
@@ -263,8 +362,8 @@ describe('OpenGroupAuthentication', () => {
 
       it('should produce correct X-SOGS-Signature with body', async () => {
         const headers = await getOpenGroupHeaders({
-          signingKeys,
-          serverPK,
+          signingKeys: signingKeysA,
+          serverPK: serverPubKey,
           nonce,
           method,
           path,
@@ -281,8 +380,8 @@ describe('OpenGroupAuthentication', () => {
     describe('Unblinded Headers', () => {
       it('should produce correct X-SOGS-Nonce', async () => {
         const headers = await getOpenGroupHeaders({
-          signingKeys,
-          serverPK,
+          signingKeys: signingKeysA,
+          serverPK: serverPubKey,
           nonce,
           method,
           path,
@@ -294,8 +393,8 @@ describe('OpenGroupAuthentication', () => {
 
       it('should produce correct X-SOGS-Pubkey', async () => {
         const headers = await getOpenGroupHeaders({
-          signingKeys,
-          serverPK,
+          signingKeys: signingKeysA,
+          serverPK: serverPubKey,
           nonce,
           method,
           path,
@@ -309,8 +408,8 @@ describe('OpenGroupAuthentication', () => {
 
       it('should produce correct X-SOGS-Timestamp', async () => {
         const headers = await getOpenGroupHeaders({
-          signingKeys,
-          serverPK,
+          signingKeys: signingKeysA,
+          serverPK: serverPubKey,
           nonce,
           method,
           path,
@@ -321,8 +420,8 @@ describe('OpenGroupAuthentication', () => {
       });
       it('should produce correct X-SOGS-Signature without body', async () => {
         const headers = await getOpenGroupHeaders({
-          signingKeys,
-          serverPK,
+          signingKeys: signingKeysA,
+          serverPK: serverPubKey,
           nonce,
           method,
           path,
@@ -336,8 +435,8 @@ describe('OpenGroupAuthentication', () => {
 
       it('should produce correct X-SOGS-Signature with body', async () => {
         const headers = await getOpenGroupHeaders({
-          signingKeys,
-          serverPK,
+          signingKeys: signingKeysA,
+          serverPK: serverPubKey,
           nonce,
           method,
           path,
@@ -352,23 +451,20 @@ describe('OpenGroupAuthentication', () => {
     });
   });
 
-  describe('Message Encryption', () => {
+  describe('Blinded Message Encryption', () => {
     it('Should encrypt blinded message correctly', async () => {
-      // const data = await encryptBlindedMessage(
-      //   bodyToEncrypt,
-      //   // testRecipientPK,
-      //   testRecipientPKBlinded,
-      //   serverPK,
-      //   signingKeys
-      // );
-      // console.warn({ data });
-      // if (data) {
-      //   await decryptBlindedMessage(data, serverPK, testRecipientPKBlinded, signingKeys);
-      // }
-
-      await testWhole();
+      const data = await encryptBlindedMessage(body, signingKeysA, signingKeysB, serverPubKey);
+      if (data) {
+        const decrypted = await decryptBlindedMessage(
+          data,
+          signingKeysA,
+          signingKeysB,
+          serverPubKey
+        );
+        expect(decrypted?.messageText).to.be.equal(body);
+        expect(decrypted?.senderED25519PubKey).to.be.equal(to_hex(signingKeysA.pubKeyBytes));
+      }
     });
-    // TODO: decrypt using same data
   });
 
   describe('Message Decryption', () => {});
