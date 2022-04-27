@@ -80,11 +80,15 @@ export const ConversationNotificationSetting = ['all', 'disabled', 'mentions_onl
 export type ConversationNotificationSettingType = typeof ConversationNotificationSetting[number];
 
 export interface ConversationAttributes {
-  profileName?: string;
   id: string;
+  profileName?: string;
   name?: string;
   // members are all members for this group. zombies excluded
   members: Array<string>;
+  active_at: number;
+
+  //json
+
   zombies: Array<string>; // only used for closed groups. Zombies are users which left but not yet removed by the admin
   left: boolean;
   expireTimer: number;
@@ -93,23 +97,21 @@ export interface ConversationAttributes {
   lastMessageStatus: LastMessageStatusType;
   lastMessage: string | null;
 
-  active_at: number;
   lastJoinedTimestamp: number; // ClosedGroup: last time we were added to this group
   groupAdmins?: Array<string>;
   isKickedFromGroup?: boolean;
   avatarPath?: string;
-  isMe?: boolean;
   subscriberCount?: number;
   is_medium_group?: boolean;
   type: string;
   avatarPointer?: string;
+
   avatar?: any;
+  profile?: any;
+
   /* Avatar hash is currently used for opengroupv2. it's sha256 hash of the base64 avatar data. */
   avatarHash?: string;
-  server?: any;
   nickname?: string;
-  profile?: any;
-  profileAvatar?: any;
   /**
    * Consider this being a hex string if it set
    */
@@ -122,8 +124,8 @@ export interface ConversationAttributes {
 }
 
 export interface ConversationAttributesOptionals {
-  profileName?: string;
   id: string;
+  profileName?: string;
   name?: string;
   members?: Array<string>;
   zombies?: Array<string>;
@@ -134,22 +136,18 @@ export interface ConversationAttributesOptionals {
   lastMessageStatus?: LastMessageStatusType;
   lastMessage: string | null;
   active_at?: number;
-  timestamp?: number; // timestamp of what?
   lastJoinedTimestamp?: number;
   groupAdmins?: Array<string>;
   isKickedFromGroup?: boolean;
   avatarPath?: string;
-  isMe?: boolean;
   subscriberCount?: number;
   is_medium_group?: boolean;
   type: string;
   avatarPointer?: string;
   avatar?: any;
   avatarHash?: string;
-  server?: any;
   nickname?: string;
   profile?: any;
-  profileAvatar?: any;
   /**
    * Consider this being a hex string if it set
    */
@@ -1283,10 +1281,10 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
   }
 
   public async setProfileAvatar(avatar: null | { path: string }, avatarHash?: string) {
-    const profileAvatar = this.get('avatar');
+    const originalAvatar = this.get('avatar');
     const existingHash = this.get('avatarHash');
     let shouldCommit = false;
-    if (!_.isEqual(profileAvatar, avatar)) {
+    if (!_.isEqual(originalAvatar, avatar)) {
       this.set({ avatar });
       shouldCommit = true;
     }
@@ -1432,7 +1430,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
   }
 
   public getAvatarPath() {
-    const avatar = this.get('avatar') || this.get('profileAvatar');
+    const avatar = this.get('avatar');
     if (typeof avatar === 'string') {
       return avatar;
     }

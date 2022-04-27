@@ -228,21 +228,14 @@ export const migrateDataToFileSystem = async (data?: ArrayBuffer) => {
   return path;
 };
 
-export async function deleteExternalFilesOfConversation(conversation: {
-  avatar: any;
-  profileAvatar: any;
-}) {
+export async function deleteExternalFilesOfConversation(conversation: { avatar: any }) {
   if (!conversation) {
     return;
   }
 
-  const { avatar, profileAvatar } = conversation;
+  const { avatar } = conversation;
 
   if (avatar && avatar.path) {
     await deleteOnDisk(avatar.path);
-  }
-
-  if (profileAvatar && profileAvatar.path) {
-    await deleteOnDisk(profileAvatar.path);
   }
 }

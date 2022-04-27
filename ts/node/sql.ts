@@ -23,6 +23,7 @@ import { LocaleMessagesType } from './locale'; // checked - only node
 import { PubKey } from '../session/types/PubKey'; // checked - only node
 import { StorageItem } from './storage_item'; // checked - only node
 import { getAppRootPath } from './getRootPath';
+import { ConversationAttributes } from '../models/conversation';
 // tslint:disable: no-console quotemark non-literal-fs-path one-variable-per-declaration
 const openDbOptions = {
   // tslint:disable-next-line: no-constant-condition
@@ -2951,16 +2952,12 @@ function getExternalFilesForMessage(message: any) {
   return files;
 }
 
-function getExternalFilesForConversation(conversation: any) {
-  const { avatar, profileAvatar } = conversation;
+function getExternalFilesForConversation(conversation: ConversationAttributes) {
+  const { avatar } = conversation;
   const files = [];
 
   if (avatar && avatar.path) {
     files.push(avatar.path);
-  }
-
-  if (profileAvatar && profileAvatar.path) {
-    files.push(profileAvatar.path);
   }
 
   return files;
@@ -3035,7 +3032,7 @@ function removeKnownAttachments(allAttachments: any) {
 
     const conversations = map(rows, row => jsonToObject(row.json));
     forEach(conversations, conversation => {
-      const externalFiles = getExternalFilesForConversation(conversation);
+      const externalFiles = getExternalFilesForConversation(conversation as ConversationAttributes);
       forEach(externalFiles, file => {
         // tslint:disable-next-line: no-dynamic-delete
         delete lookup[file];
