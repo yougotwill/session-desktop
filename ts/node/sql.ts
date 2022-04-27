@@ -3360,7 +3360,10 @@ function cleanUpMessagesJson() {
 }
 
 function cleanUpOldOpengroups() {
-  const v2Convos = getAllOpenGroupV2Conversations();
+  const ourNumber = getItemById('number_id');
+  if (!ourNumber || !ourNumber.value) {
+    return;
+  }
 
   // For each opengroups, if it has more than 1000 messages, we remove all the messages older than 2 months.
   // So this does not limit the size of opengroup history to 1000 messages but to 2 months.
@@ -3370,8 +3373,13 @@ function cleanUpOldOpengroups() {
   const maxMessagePerOpengroupConvo = 2000;
 
   // first remove very old messages for each opengroups
+  const v2Convos = getAllOpenGroupV2Conversations();
 
+  if (!v2Convos || !v2Convos.length) {
+    return;
+  }
   dropFtsAndTriggers(assertGlobalInstance());
+
   v2Convos.forEach(convo => {
     const convoId = convo.id;
     const messagesInConvoBefore = getMessagesCountByConversation(convoId);
@@ -3418,10 +3426,6 @@ function cleanUpOldOpengroups() {
     )
     .all();
 
-  const ourNumber = getItemById('number_id');
-  if (!ourNumber || !ourNumber.value) {
-    return;
-  }
   const ourPubkey = ourNumber.value.split('.')[0];
 
   const allInactiveAndWithoutMessagesConvo = allInactiveConvos
