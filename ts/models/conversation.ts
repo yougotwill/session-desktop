@@ -63,6 +63,11 @@ import {
 } from '../types/MessageAttachment';
 import { getOurPubKeyStrFromCache } from '../session/utils/User';
 import { MessageRequestResponse } from '../session/messages/outgoing/controlMessage/MessageRequestResponse';
+import { encryptBlindedMessage } from '../session/apis/open_group_api/opengroupV2/OpenGroupAuthentication';
+import { getSodium } from '../session/crypto';
+import { from_base64, from_hex } from 'libsodium-wrappers-sumo';
+import { fromBase64 } from 'bytebuffer';
+import { getV2OpenGroupRoom, getV2OpenGroupRoomsByServerUrl } from '../data/opengroups';
 
 export enum ConversationTypeEnum {
   GROUP = 'group',
@@ -117,6 +122,7 @@ export interface ConversationAttributes {
   isPinned: boolean;
   isApproved: boolean;
   didApproveMe: boolean;
+  origin?: string;
 }
 
 export interface ConversationAttributesOptionals {
@@ -375,6 +381,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     const left = !!this.get('left');
     const expireTimer = this.get('expireTimer');
     const currentNotificationSetting = this.get('triggerNotificationsFor');
+    const origin = this.get('origin');
 
     // To reduce the redux store size, only set fields which cannot be undefined.
     // For instance, a boolean can usually be not set if false, etc
@@ -468,6 +475,10 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
 
     if (expireTimer) {
       toRet.expireTimer = expireTimer;
+    }
+
+    if (origin) {
+      toRet.origin = origin;
     }
 
     if (
@@ -664,11 +675,11 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       const incomingMessageCount = await getMessageCountByType(this.id, MessageDirection.incoming);
       const hasIncomingMessages = incomingMessageCount > 0;
 
-      if (this.id.startsWith('15')) {
+      // TODO: just 15 use blinding. allowing 05 for debugging.
+      // if (this.id.startsWith('15')) {
+      if (this.id.startsWith('15') || this.id.startsWith('05')) {
         console.warn('Sending a blinded message to this user');
-
         await this.sendBlindedMessageRequest(chatMessageParams);
-
         return;
       }
       if (shouldApprove) {
@@ -810,11 +821,41 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
 
   public async sendBlindedMessageRequest(messageParams: VisibleMessageParams) {
     // TODO: add early cancellation conditions
-    // encrypt the message using blinding
-    // await getMessageQueue().sendToOpenGroupV2(
-    //   message,
-    //   roomInfos
-    // )
+    const ourSignKeyBytes = await UserUtils.getUserED25519KeyPairBytes();
+    const groupUrl = this.getOrigin();
+
+    if (!ourSignKeyBytes || !groupUrl) {
+      window?.log?.error(
+        'sendBlindedMessageRequest - Cannot get required information for encrypting blinded message.'
+      );
+      return;
+    }
+
+    console.warn({ groupUrl });
+
+    const roomInfo = await getV2OpenGroupRoom(groupUrl);
+
+    if (!roomInfo) {
+      window?.log?.error('Could not find room with matching server url');
+      return;
+    }
+
+    const serverPubKey = roomInfo.serverPublicKey;
+    console.warn({ serverPubKey });
+
+    const encryptedMsg = await encryptBlindedMessage({
+      body: messageParams.body || '',
+      senderSigningKey: ourSignKeyBytes,
+      serverPubKey: from_hex(serverPubKey),
+      // recipientBlindedPublicKey: from_hex(this.id.slice(2)),
+      recipientBlindedPublicKey: from_hex(
+        // using one grabbed from Jason's test server
+        '154f3ff16c7c57e47a74d462d80101dce5f4602fd45bc8e4b6e4cd794411dedd52'.slice(2)
+      ),
+    });
+
+    console.warn({ encryptedMsg });
+    // await getMessageQueue().sendToOpenGroupV2();
   }
 
   public async sendMessageRequestResponse(isApproved: boolean) {
@@ -1292,6 +1333,16 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     }
   }
 
+  public async setOrigin(value: string) {
+    if (value == this.get('origin')) {
+      return;
+    }
+    this.set({
+      origin: value,
+    });
+    await this.commit();
+  }
+
   public async setSubscriberCount(count: number) {
     if (this.get('subscriberCount') !== count) {
       this.set({ subscriberCount: count });
@@ -1389,6 +1440,14 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       return this.get('name') || name;
     }
     return this.get('name') || 'Unknown group';
+  }
+
+  /**
+   *
+   * @returns The open group this contact/conversation originated from
+   */
+  public getOrigin() {
+    return this.get('origin');
   }
 
   /**

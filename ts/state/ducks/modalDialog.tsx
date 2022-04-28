@@ -27,6 +27,7 @@ export type UserDetailsModalState = {
   conversationId: string;
   authorAvatarPath: string | null;
   userName: string;
+  origin?: string;
 } | null;
 
 export type ModalState = {

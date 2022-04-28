@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useSelector } from 'react-redux';
 // tslint:disable no-submodule-imports
 
 import useCopyToClipboard from 'react-use/lib/useCopyToClipboard';
@@ -8,22 +9,22 @@ import { ConversationTypeEnum } from '../../models/conversation';
 import { getConversationController } from '../../session/conversations';
 import { ToastUtils } from '../../session/utils';
 import { openConversationWithMessages } from '../../state/ducks/conversations';
-import { updateUserDetailsModal } from '../../state/ducks/modalDialog';
+import { updateUserDetailsModal, UserDetailsModalState } from '../../state/ducks/modalDialog';
+import { getSelectedConversationKey } from '../../state/selectors/conversations';
 import { Avatar, AvatarSize } from '../avatar/Avatar';
 import { SessionButton, SessionButtonColor, SessionButtonType } from '../basic/SessionButton';
 import { SessionIdEditable } from '../basic/SessionIdEditable';
 import { SpacerLG } from '../basic/Text';
 import { SessionWrapperModal } from '../SessionWrapperModal';
 
-type Props = {
-  conversationId: string;
-  authorAvatarPath: string | null;
-  userName: string;
-};
+export const UserDetailsDialog = (props: UserDetailsModalState) => {
+  if (!props) {
+    return null;
+  }
 
-export const UserDetailsDialog = (props: Props) => {
   const [isEnlargedImageShown, setIsEnlargedImageShown] = useState(false);
   const convo = getConversationController().get(props.conversationId);
+  const convoOrigin = useSelector(getSelectedConversationKey);
 
   const size = isEnlargedImageShown ? AvatarSize.HUGE : AvatarSize.XL;
 
@@ -39,7 +40,12 @@ export const UserDetailsDialog = (props: Props) => {
       ConversationTypeEnum.PRIVATE
     );
 
+    if (convoOrigin) {
+      conversation.setOrigin(convoOrigin);
+    }
+
     await openConversationWithMessages({ conversationKey: conversation.id, messageId: null });
+
     closeDialog();
   }
 
@@ -49,7 +55,7 @@ export const UserDetailsDialog = (props: Props) => {
       void onClickStartConversation();
     },
     undefined,
-    [props.conversationId]
+    [props?.conversationId]
   );
 
   return (
@@ -75,7 +81,7 @@ export const UserDetailsDialog = (props: Props) => {
           buttonType={SessionButtonType.Default}
           buttonColor={SessionButtonColor.Primary}
           onClick={() => {
-            copyToClipboard(props.conversationId);
+            copyToClipboard(props.senderSessionId);
             ToastUtils.pushCopiedToClipBoard();
           }}
         />

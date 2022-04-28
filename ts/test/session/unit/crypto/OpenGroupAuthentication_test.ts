@@ -453,7 +453,12 @@ describe('OpenGroupAuthentication', () => {
 
   describe('Blinded Message Encryption', () => {
     it('Should encrypt blinded message correctly', async () => {
-      const data = await encryptBlindedMessage(body, signingKeysA, signingKeysB, serverPubKey);
+      const data = await encryptBlindedMessage({
+        body,
+        senderSigningKey: signingKeysA,
+        serverPubKey,
+        recipientSigningKey: signingKeysB,
+      });
       if (data) {
         const decrypted = await decryptBlindedMessage(
           data,

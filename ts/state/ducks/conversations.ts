@@ -265,6 +265,7 @@ export interface ReduxConversationType {
   isPinned?: boolean;
   isApproved?: boolean;
   didApproveMe?: boolean;
+  origin?: string;
 }
 
 export interface NotificationForConvoOption {

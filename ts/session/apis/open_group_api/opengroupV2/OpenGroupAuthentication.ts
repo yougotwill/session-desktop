@@ -247,18 +247,41 @@ export const getBlindingValues = async (
  * @param serverPK the server public key being sent to. Cannot be b64 encoded. Use fromHex and be sure to exclude the blinded 00/15/05 prefixes
  * @returns
  */
-export const encryptBlindedMessage = async (
-  body: any,
-  aSignKeyBytes: ByteKeyPair,
-  bSignKeyBytes: ByteKeyPair,
-  serverPubKey: Uint8Array
-): Promise<Uint8Array | null> => {
+export const encryptBlindedMessage = async (options: {
+  body: any;
+  senderSigningKey: ByteKeyPair;
+  /** Pubkey that corresponds to the recipients blinded PubKey */
+  serverPubKey: Uint8Array;
+  recipientSigningKey?: ByteKeyPair;
+  recipientBlindedPublicKey?: Uint8Array;
+}): Promise<Uint8Array | null> => {
+  const {
+    body,
+    senderSigningKey,
+    serverPubKey,
+    recipientSigningKey,
+    recipientBlindedPublicKey,
+  } = options;
   const sodium = await getSodium();
 
-  const aBlindingValues = await getBlindingValues(serverPubKey, aSignKeyBytes);
-  const bBlindingValues = await getBlindingValues(serverPubKey, bSignKeyBytes);
+  console.warn({ options });
 
-  const { kA: kB } = bBlindingValues;
+  const aBlindingValues = await getBlindingValues(serverPubKey, senderSigningKey);
+
+  let kB;
+  if (!recipientBlindedPublicKey && recipientSigningKey) {
+    const bBlindingValues = await getBlindingValues(serverPubKey, recipientSigningKey);
+    kB = bBlindingValues.kA;
+  }
+  if (recipientBlindedPublicKey) {
+    kB = recipientBlindedPublicKey;
+  }
+
+  if (!kB) {
+    window?.log?.error('No recipient-side data provided for encryption');
+    return null;
+  }
+
   const { a, kA } = aBlindingValues;
 
   const encryptKey = sodium.crypto_generichash(
@@ -269,7 +292,7 @@ export const encryptBlindedMessage = async (
   // inner data: msg || A (i.e. the sender's ed25519 master pubkey, *not* the kA blinded pubkey)
   const plaintext = concatUInt8Array(
     new Uint8Array(StringUtils.encode(body, 'utf8')),
-    aSignKeyBytes.pubKeyBytes
+    senderSigningKey.pubKeyBytes
   );
 
   const nonce = sodium.randombytes_buf(sodium.crypto_aead_xchacha20poly1305_ietf_NPUBBYTES);

@@ -37,7 +37,6 @@ export const MessageAvatar = (props: Props) => {
     authorProfileName,
     conversationType,
     direction,
-    isPublic,
     isSenderAdmin,
     lastMessageOfSeries,
   } = avatarProps;
