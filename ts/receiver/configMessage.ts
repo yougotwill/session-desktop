@@ -151,9 +151,9 @@ const handleContactFromConfig = async (
       toHex(contactReceived.publicKey),
       ConversationTypeEnum.PRIVATE
     );
-    const profile = {
+    const profile: SignalService.DataMessage.ILokiProfile = {
       displayName: contactReceived.name,
-      profilePictre: contactReceived.profilePicture,
+      profilePicture: contactReceived.profilePicture,
     };
 
     const existingActiveAt = contactConvo.get('active_at');

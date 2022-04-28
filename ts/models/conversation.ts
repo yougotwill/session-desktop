@@ -1,5 +1,5 @@
 import Backbone from 'backbone';
-import _ from 'lodash';
+import _, { isEmpty, isString } from 'lodash';
 import { getMessageQueue } from '../session';
 import { getConversationController } from '../session/conversations';
 import { ClosedGroupVisibleMessage } from '../session/messages/outgoing/visibleMessage/ClosedGroupVisibleMessage';
@@ -81,13 +81,18 @@ export type ConversationNotificationSettingType = typeof ConversationNotificatio
 
 export interface ConversationAttributes {
   id: string;
+  type: string;
+
   profileName?: string;
   name?: string;
+  nickname?: string;
+
+  profile?: any;
+  profileKey?: string; // Consider this being a hex string if it set
+
   // members are all members for this group. zombies excluded
   members: Array<string>;
   active_at: number;
-
-  //json
 
   zombies: Array<string>; // only used for closed groups. Zombies are users which left but not yet removed by the admin
   left: boolean;
@@ -100,22 +105,13 @@ export interface ConversationAttributes {
   lastJoinedTimestamp: number; // ClosedGroup: last time we were added to this group
   groupAdmins?: Array<string>;
   isKickedFromGroup?: boolean;
-  avatarPath?: string;
   subscriberCount?: number;
   is_medium_group?: boolean;
-  type: string;
-  avatarPointer?: string;
 
-  avatar?: any;
-  profile?: any;
+  avatarPointer?: string; // this is the url of the avatar. Most likely a fsv2 url
+  avatar?: string | { path?: string }; // this is the avatar path locally once downloaded and stored in the application attachments folder
+  avatarHash?: string; //Avatar hash is currently used for opengroupv2. it's sha256 hash of the base64 avatar data.
 
-  /* Avatar hash is currently used for opengroupv2. it's sha256 hash of the base64 avatar data. */
-  avatarHash?: string;
-  nickname?: string;
-  /**
-   * Consider this being a hex string if it set
-   */
-  profileKey?: string;
   triggerNotificationsFor: ConversationNotificationSettingType;
   isTrustedForAttachmentDownload: boolean;
   isPinned: boolean;
@@ -139,19 +135,16 @@ export interface ConversationAttributesOptionals {
   lastJoinedTimestamp?: number;
   groupAdmins?: Array<string>;
   isKickedFromGroup?: boolean;
-  avatarPath?: string;
   subscriberCount?: number;
   is_medium_group?: boolean;
   type: string;
-  avatarPointer?: string;
-  avatar?: any;
-  avatarHash?: string;
+  avatarPointer?: string; // this is the url of the avatar. Most likely a fsv2 url
+  avatar?: string | { path?: string }; // this is the avatar path locally once downloaded and stored in the application attachments folder
+  avatarHash?: string; //Avatar hash is currently used for opengroupv2. it's sha256 hash of the base64 avatar data.
   nickname?: string;
   profile?: any;
-  /**
-   * Consider this being a hex string if it set
-   */
-  profileKey?: string;
+
+  profileKey?: string; // Consider this being a hex string if it set
   triggerNotificationsFor?: ConversationNotificationSettingType;
   isTrustedForAttachmentDownload?: boolean;
   isPinned: boolean;
@@ -1198,7 +1191,22 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     // a user cannot remove an avatar. Only change it
     // if you change this behavior, double check all setLokiProfile calls (especially the one in EditProfileDialog)
     if (newProfile.avatar) {
-      await this.setProfileAvatar({ path: newProfile.avatar }, newProfile.avatarHash);
+      const originalAvatar = this.get('avatar');
+      const existingHash = this.get('avatarHash');
+      let shouldCommit = false;
+      if (!_.isEqual(originalAvatar, newProfile.avatar)) {
+        this.set({ avatar: newProfile.avatar });
+        shouldCommit = true;
+      }
+
+      if (existingHash !== newProfile.avatarHash) {
+        this.set({ avatarHash: newProfile.avatarHash });
+        shouldCommit = true;
+      }
+
+      if (shouldCommit) {
+        await this.commit();
+      }
     }
 
     await this.updateProfileName();
@@ -1229,9 +1237,9 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     return Array.isArray(groupAdmins) && groupAdmins.includes(pubKey);
   }
 
-  public async setProfileName(name: string) {
+  public async setProfileName(name: string | null) {
     const profileName = this.get('profileName');
-    if (profileName !== name) {
+    if (profileName !== name && name) {
       this.set({ profileName: name });
       await this.commit();
     }
@@ -1280,24 +1288,6 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     // Not sure if we care about updating the database
   }
 
-  public async setProfileAvatar(avatar: null | { path: string }, avatarHash?: string) {
-    const originalAvatar = this.get('avatar');
-    const existingHash = this.get('avatarHash');
-    let shouldCommit = false;
-    if (!_.isEqual(originalAvatar, avatar)) {
-      this.set({ avatar });
-      shouldCommit = true;
-    }
-
-    if (existingHash !== avatarHash) {
-      this.set({ avatarHash });
-      shouldCommit = true;
-    }
-
-    if (shouldCommit) {
-      await this.commit();
-    }
-  }
   /**
    * profileKey MUST be a hex string
    * @param profileKey MUST be a hex string
@@ -1431,12 +1421,12 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
 
   public getAvatarPath() {
     const avatar = this.get('avatar');
-    if (typeof avatar === 'string') {
+    if (isString(avatar)) {
       return avatar;
-    }
-
-    if (typeof avatar?.path === 'string') {
-      return getAbsoluteAttachmentPath(avatar.path);
+    } else {
+      if (avatar && isString(avatar.path) && !isEmpty(avatar.path)) {
+        return getAbsoluteAttachmentPath(avatar.path);
+      }
     }
 
     return null;

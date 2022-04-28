@@ -193,7 +193,7 @@ const getValidContacts = (convos: Array<ConversationModel>) => {
 
       return new ConfigurationMessageContact({
         publicKey: c.id as string,
-        displayName: c.getLokiProfile()?.displayName,
+        displayName: c.getLokiProfile()?.displayName || 'Anonymous',
         profilePictureURL: c.get('avatarPointer'),
         profileKey: !profileKeyForContact?.length ? undefined : profileKeyForContact,
         isApproved: c.isApproved(),
@@ -229,7 +229,7 @@ export const getCurrentConfigurationMessage = async (
   const profileKey = ourProfileKeyHex ? fromHexToArray(ourProfileKeyHex) : undefined;
 
   const profilePicture = ourConvo?.get('avatarPointer') || undefined;
-  const displayName = ourConvo?.getLokiProfile()?.displayName || undefined;
+  const displayName = ourConvo?.getLokiProfile()?.displayName || 'Anonymous'; // this should never be undefined, but well...
 
   const activeOpenGroups = [...opengroupV2CompleteUrls];
 

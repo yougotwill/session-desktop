@@ -2901,7 +2901,7 @@ function getMessagesWithFileAttachments(conversationId: string, limit: number) {
 }
 
 function getExternalFilesForMessage(message: any) {
-  const { attachments, contact, quote, preview } = message;
+  const { attachments, quote, preview } = message;
   const files: Array<any> = [];
 
   forEach(attachments, attachment => {
@@ -2929,16 +2929,6 @@ function getExternalFilesForMessage(message: any) {
     });
   }
 
-  if (contact && contact.length) {
-    forEach(contact, item => {
-      const { avatar } = item;
-
-      if (avatar && avatar.avatar && avatar.avatar.path) {
-        files.push(avatar.avatar.path);
-      }
-    });
-  }
-
   if (preview && preview.length) {
     forEach(preview, item => {
       const { image } = item;
@@ -2956,8 +2946,15 @@ function getExternalFilesForConversation(conversation: ConversationAttributes) {
   const { avatar } = conversation;
   const files = [];
 
-  if (avatar && avatar.path) {
-    files.push(avatar.path);
+  if (isString(avatar)) {
+    files.push(avatar);
+  }
+
+  if (isObject(avatar)) {
+    const avatarObj = avatar as Record<string, any>;
+    if (isString(avatarObj.path)) {
+      files.push(avatarObj.path);
+    }
   }
 
   return files;

@@ -11,6 +11,7 @@ describe('DecryptedAttachmentsManager', () => {
     DecryptedAttachmentsManager.resetDecryptedUrlForTesting();
     TestUtils.stubWindowLog();
     Sinon.stub(DecryptedAttachmentsManager, 'getLocalAttachmentPath').returns('/local/attachment');
+    Sinon.stub(DecryptedAttachmentsManager, 'getAbsoluteAttachmentPath').returns;
   });
 
   afterEach(() => {

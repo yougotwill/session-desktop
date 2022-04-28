@@ -36,8 +36,6 @@ export type GroupInfo = {
   zombies?: Array<string>;
   activeAt?: number;
   expireTimer?: number | null;
-  avatar?: any;
-  color?: any; // what is this???
   blocked?: boolean;
   admins?: Array<string>;
   secretKey?: Uint8Array;
@@ -61,7 +59,6 @@ export interface MemberChanges {
  * @param groupId the conversationID
  * @param groupName the new name (or just pass the old one if nothing changed)
  * @param members the new members (or just pass the old one if nothing changed)
- * @param avatar the new avatar (or just pass the old one if nothing changed)
  * @returns nothing
  */
 export async function initiateClosedGroupUpdate(
@@ -88,7 +85,6 @@ export async function initiateClosedGroupUpdate(
     zombies: convo.get('zombies')?.filter(z => members.includes(z)),
     activeAt: Date.now(),
     expireTimer: convo.get('expireTimer'),
-    avatar: null,
   };
 
   const diff = buildGroupDiff(convo, groupDetails);

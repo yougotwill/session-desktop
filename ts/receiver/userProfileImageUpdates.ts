@@ -84,7 +84,7 @@ async function createOrUpdateProfile(
   if (newProfile.displayName !== profile.displayName) {
     changes = true;
   }
-  newProfile.displayName = profile.displayName;
+  newProfile.displayName = profile.displayName || undefined;
 
   if (profile.profilePicture && profileKey) {
     const prevPointer = conversation.get('avatarPointer');

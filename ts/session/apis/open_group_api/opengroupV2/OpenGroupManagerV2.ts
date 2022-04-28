@@ -195,7 +195,6 @@ export class OpenGroupManagerV2 {
       conversation.set({
         active_at: Date.now(),
         name: room.roomName,
-        avatarPath: room.roomName,
         isApproved: true,
       });
       await conversation.commit();

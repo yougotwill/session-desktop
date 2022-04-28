@@ -447,7 +447,7 @@ export async function uploadOurAvatar(newAvatarDecrypted?: ArrayBuffer) {
     contentType: MIME.IMAGE_UNKNOWN, // contentType is mostly used to generate previews and screenshot. We do not care for those in this case.
   });
   // Replace our temporary image with the attachment pointer from the server:
-  ourConvo.set('avatar', null);
+  ourConvo.set('avatar', undefined);
   const displayName = ourConvo.get('profileName');
 
   // write the profileKey even if it did not change
