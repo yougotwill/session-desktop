@@ -122,7 +122,11 @@ export interface ConversationAttributes {
   isPinned: boolean;
   isApproved: boolean;
   didApproveMe: boolean;
+
+  /** The open group chat this conversation originated from (if from closed group) */
   origin?: string;
+
+  blindedPubKey?: string;
 }
 
 export interface ConversationAttributesOptionals {
@@ -382,6 +386,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     const expireTimer = this.get('expireTimer');
     const currentNotificationSetting = this.get('triggerNotificationsFor');
     const origin = this.get('origin');
+    const blindedPubKey = this.get('blindedPubKey');
 
     // To reduce the redux store size, only set fields which cannot be undefined.
     // For instance, a boolean can usually be not set if false, etc
@@ -479,6 +484,10 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
 
     if (origin) {
       toRet.origin = origin;
+    }
+
+    if (blindedPubKey) {
+      toRet.blindedPubKey = blindedPubKey;
     }
 
     if (
@@ -677,6 +686,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
 
       // TODO: just 15 use blinding. allowing 05 for debugging.
       // if (this.id.startsWith('15')) {
+      // TODO: retroactively add prefix for existing IDs to prevent false positives
       if (this.id.startsWith('15') || this.id.startsWith('05')) {
         console.warn('Sending a blinded message to this user');
         await this.sendBlindedMessageRequest(chatMessageParams);
@@ -703,9 +713,16 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
           throw new Error('Could not find this room in db');
         }
 
-        // we need the return await so that errors are caught in the catch {}
-        await getMessageQueue().sendToOpenGroupV2(chatMessageOpenGroupV2, roomInfos);
-        return;
+        const openGroup = await getV2OpenGroupRoom(this.id);
+        console.warn({ openGroup });
+
+        if (openGroup?.capabilities?.includes('blind')) {
+          // send with blinding
+          await getMessageQueue().sendToOpenGroupV2(chatMessageOpenGroupV2, roomInfos);
+        } else {
+          // we need the return await so that errors are caught in the catch {}
+          await getMessageQueue().sendToOpenGroupV2(chatMessageOpenGroupV2, roomInfos);
+        }
       }
 
       const destinationPubkey = new PubKey(destination);

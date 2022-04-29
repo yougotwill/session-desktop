@@ -9,7 +9,7 @@ import { concatUInt8Array, getSodium } from '../../../crypto';
 import { crypto_hash_sha512, to_hex } from 'libsodium-wrappers-sumo';
 import { sessionGenerateKeyPair } from '../../../../util/accountManager';
 import { ByteKeyPair } from '../../../utils/User';
-import { StringUtils, UserUtils } from '../../../utils';
+import { StringUtils } from '../../../utils';
 
 const debugOutput = (key: string, headers: any, blinded: boolean) => {
   const common: Record<string, string | number> = {
@@ -205,6 +205,23 @@ async function blindedED25519Signature(
 
 export const sha512Multipart = (parts: Array<Uint8Array>) => {
   return crypto_hash_sha512(concatUInt8Array(...parts));
+};
+
+/**
+ * Creates a blinded pubkey for specific use with a certain open group
+ * @param serverPK The server we're blinding against
+ * @param signingKeys Our signing keys (ED25519)
+ * @returns Prefixed blinded pubkey for the open group
+ */
+export const getBlindedPubKey = async (
+  serverPK: Uint8Array,
+  signingKeys: ByteKeyPair
+): Promise<string | null> => {
+  const blindedPubKeyBytes = await getBlindingValues(serverPK, signingKeys);
+  if (blindedPubKeyBytes) {
+    return `15${to_hex(blindedPubKeyBytes.kA)}`;
+  }
+  return null;
 };
 
 export const getBlindingValues = async (

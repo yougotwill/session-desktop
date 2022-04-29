@@ -11,9 +11,13 @@ import {
   ParsedMemberCount,
   ParsedRoomCompactPollResults,
 } from './OpenGroupAPIV2CompactPoll';
-import _, { forEach } from 'lodash';
+import _ from 'lodash';
 import { ConversationModel } from '../../../../models/conversation';
-import { getMessageIdsFromServerIds, removeMessage } from '../../../../data/data';
+import {
+  getConversationById,
+  getMessageIdsFromServerIds,
+  removeMessage,
+} from '../../../../data/data';
 import {
   getV2OpenGroupRoom,
   getV2OpenGroupRoomsByServerUrl,
@@ -29,6 +33,9 @@ import { MIME } from '../../../../types';
 import { handleOpenGroupV2Message, handleOpenGroupV4Message } from '../../../../receiver/opengroup';
 import { batchPoll, SubrequestOption, SubrequestOptionType } from './OpenGroupAPIBatchPoll';
 import { ResponseDecodedV4 } from './OpenGroupPollingUtils';
+import { getBlindedPubKey } from './OpenGroupAuthentication';
+import { UserUtils } from '../../../utils';
+import { from_hex } from 'libsodium-wrappers-sumo';
 
 export type OpenGroupMessageV4 = {
   /** AFAIK: indicates the number of the message in the group. e.g. 2nd message will be 1 or 2 */
@@ -527,7 +534,7 @@ const handleCapabilities = async (
   }
 
   // get all v2OpenGroup rooms with the matching serverUrl and set the capabilities.
-  console.warn('cap and su, ', capabilities, serverUrl);
+  console.warn('capabilities and server url, ', capabilities, serverUrl);
   // TODO: implement - update capabilities. Unsure whether to store in DB or save to instance of this obj.
   const rooms = await getV2OpenGroupRoomsByServerUrl(serverUrl);
   console.warn({ groupsByServerUrl: rooms });
@@ -540,9 +547,49 @@ const handleCapabilities = async (
   await Promise.all(
     rooms.map(async (room: OpenGroupV2Room) => {
       // doing this to get the roomId? and conversationId? Optionally could include
+
+      // TODO: uncomment once complete
+      // if (_.isEqual(room.capabilities, capabilities)) {
+      //   return;
+      // }
+
+      // updating the db values for the open group room
       const roomUpdate = { ...room, capabilities };
-      console.warn({ roomUpdate });
       await saveV2OpenGroupRoom(roomUpdate);
+
+      // updating values in the conversation
+      // generate blindedPK for
+      if (capabilities.includes('blind') && room.conversationId) {
+        // generate blinded PK for the room and save it to the conversation.
+        const conversationToAddBlindedKey = await getConversationById(room.conversationId);
+
+        if (!conversationToAddBlindedKey) {
+          window?.log?.error('No conversation to add blinded pubkey to');
+        }
+
+        const ourSignKeyBytes = await UserUtils.getUserED25519KeyPairBytes();
+        if (!room.serverPublicKey || !ourSignKeyBytes) {
+          window?.log?.error(
+            'handleCapabilities - missing required signing keys or server public key for blinded key generation'
+          );
+          return;
+        }
+
+        const blindedPubKey = await getBlindedPubKey(
+          from_hex(room.serverPublicKey),
+          ourSignKeyBytes
+        );
+
+        if (!blindedPubKey) {
+          window?.log?.error('Failed to generate blinded pubkey');
+          return;
+        }
+
+        await conversationToAddBlindedKey?.set({
+          blindedPubKey,
+        });
+
+      }
     })
   );
 };

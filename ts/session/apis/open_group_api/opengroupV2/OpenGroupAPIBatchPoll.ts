@@ -55,12 +55,12 @@ export const batchPoll = async (
   batchRequestOptions: Array<SubrequestOption>
 ): Promise<ResponseDecodedV4 | null> => {
   // if (!(serverUrl.includes('.dev') || serverUrl.includes(':8080'))) {
-  // if (!serverUrl.includes(':8080')) {
-  //   window?.log?.warn('not a dev url -- cancelling early');
-  //   return null;
-  // }
+  if (!serverUrl.includes(':8080')) {
+    //   window?.log?.warn('not a dev url -- cancelling early');
+    //   return null;
+    // }
 
-  if (!serverUrl.includes('.dev')) {
+    // if (!serverUrl.includes('.dev')) {
     window?.log?.warn('not a dev url -- cancelling early');
     return null;
   }
@@ -174,7 +174,8 @@ const getBatchRequest = async (
         serverPublicKey,
         BATCH_ENDPOINT,
         BATCH_METHOD,
-        false,
+        // false,
+        true,
         JSON.stringify(batchBody)
       )
     : await getOurOpenGroupHeaders(serverPublicKey, BATCH_ENDPOINT, BATCH_METHOD, false);
