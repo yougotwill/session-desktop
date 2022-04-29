@@ -2,7 +2,7 @@ import React from 'react';
 
 import { getConversationController } from '../../session/conversations';
 import { ToastUtils, UserUtils } from '../../session/utils';
-import { ConversationTypeEnum } from '../../models/conversation';
+import { ConversationTypeEnum } from '../../models/conversationAttributes';
 import { getCompleteUrlForV2ConvoId } from '../../interactions/conversationInteractions';
 import _ from 'lodash';
 import { VALIDATION } from '../../session/constants';

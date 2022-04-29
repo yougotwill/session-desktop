@@ -3,11 +3,8 @@
 
 import _ from 'lodash';
 import { MessageResultProps } from '../components/search/MessageSearchResults';
-import {
-  ConversationCollection,
-  ConversationModel,
-  ConversationTypeEnum,
-} from '../models/conversation';
+import { ConversationCollection, ConversationModel } from '../models/conversation';
+import { ConversationTypeEnum } from '../models/conversationAttributes';
 import { MessageCollection, MessageModel } from '../models/message';
 import { MessageAttributes, MessageDirection } from '../models/messageType';
 import { HexKeyPair } from '../receiver/keypairs';
@@ -108,7 +105,7 @@ function _cleanData(data: any): any {
 // Basic
 export async function shutdown(): Promise<void> {
   // Stop accepting new SQL jobs, flush outstanding queue
-  await dataInit._shutdown();
+  await dataInit.shutdown();
   await close();
 }
 // Note: will need to restart the app after calling this, to set up afresh
@@ -194,7 +191,7 @@ export async function removeAllClosedGroupEncryptionKeyPairs(
 
 // Conversation
 export async function saveConversation(data: ReduxConversationType): Promise<void> {
-  const cleaned = _.omit(data, 'isOnline');
+  const cleaned = _.omit(_cleanData(data), 'isOnline');
   await channels.saveConversation(cleaned);
 }
 
@@ -204,11 +201,6 @@ export async function getConversationById(id: string): Promise<ConversationModel
     return new ConversationModel(data);
   }
   return undefined;
-}
-
-export async function updateConversation(data: ReduxConversationType): Promise<void> {
-  const cleanedData = _cleanData(data);
-  await channels.updateConversation(cleanedData);
 }
 
 export async function removeConversation(id: string): Promise<void> {
@@ -224,14 +216,6 @@ export async function removeConversation(id: string): Promise<void> {
 
 export async function getAllConversations(): Promise<ConversationCollection> {
   const conversations = await channels.getAllConversations();
-
-  const collection = new ConversationCollection();
-  collection.add(conversations);
-  return collection;
-}
-
-export async function getAllOpenGroupV1Conversations(): Promise<ConversationCollection> {
-  const conversations = await channels.getAllOpenGroupV1Conversations();
 
   const collection = new ConversationCollection();
   collection.add(conversations);

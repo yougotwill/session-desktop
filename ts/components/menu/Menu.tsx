@@ -38,7 +38,7 @@ import {
 import {
   ConversationNotificationSetting,
   ConversationNotificationSettingType,
-} from '../../models/conversation';
+} from '../../models/conversationAttributes';
 import { getConversationController } from '../../session/conversations';
 import { ToastUtils } from '../../session/utils';
 import {

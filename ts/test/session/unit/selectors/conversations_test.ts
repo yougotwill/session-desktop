@@ -1,5 +1,5 @@
 import { assert } from 'chai';
-import { ConversationTypeEnum } from '../../../../models/conversation';
+import { ConversationTypeEnum } from '../../../../models/conversationAttributes';
 
 import { ConversationLookupType } from '../../../../state/ducks/conversations';
 import {

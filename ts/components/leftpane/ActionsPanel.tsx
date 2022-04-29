@@ -4,11 +4,9 @@ import { syncConfigurationIfNeeded } from '../../session/utils/syncUtils';
 
 import {
   generateAttachmentKeyIfEmpty,
-  getAllOpenGroupV1Conversations,
   getItemById,
   hasSyncedInitialConfigurationItem,
   lastAvatarUploadTimestamp,
-  removeConversation,
 } from '../../data/data';
 import { getMessageQueue } from '../../session/sending';
 import { useDispatch, useSelector } from 'react-redux';
@@ -29,7 +27,6 @@ import { SectionType, setOverlayMode, showLeftPaneSection } from '../../state/du
 import { cleanUpOldDecryptedMedias } from '../../session/crypto/DecryptedAttachmentsManager';
 
 import { DURATION } from '../../session/constants';
-import { conversationChanged, conversationRemoved } from '../../state/ducks/conversations';
 import { editProfileModal, onionPathModal } from '../../state/ducks/modalDialog';
 import { uploadOurAvatar } from '../../interactions/conversationInteractions';
 import { ModalContainer } from '../dialog/ModalContainer';
@@ -195,28 +192,6 @@ const triggerSyncIfNeeded = async () => {
   }
 };
 
-const removeAllV1OpenGroups = async () => {
-  const allV1Convos = (await getAllOpenGroupV1Conversations()).models || [];
-  // do not remove messages of opengroupv1 for now. We have to find a way of doing it without making the whole app extremely slow
-  // tslint:disable-next-line: prefer-for-of
-  for (let index = 0; index < allV1Convos.length; index++) {
-    const v1Convo = allV1Convos[index];
-    try {
-      await removeConversation(v1Convo.id);
-      window.log.info(`deleting v1convo : ${v1Convo.id}`);
-      getConversationController().unsafeDelete(v1Convo);
-      if (window.inboxStore) {
-        window.inboxStore?.dispatch(conversationRemoved(v1Convo.id));
-        window.inboxStore?.dispatch(
-          conversationChanged({ id: v1Convo.id, data: v1Convo.getConversationModelProps() })
-        );
-      }
-    } catch (e) {
-      window.log.warn(`failed to delete opengroupv1 ${v1Convo.id}`, e);
-    }
-  }
-};
-
 const triggerAvatarReUploadIfNeeded = async () => {
   const lastTimeStampAvatarUpload = (await getItemById(lastAvatarUploadTimestamp))?.value || 0;
 
@@ -236,10 +211,6 @@ const doAppStartUp = () => {
   void getMessageQueue().processAllPending();
 
   void setupTheme();
-
-  // keep that one to make sure our users upgrade to new sessionIDS
-  void removeAllV1OpenGroups();
-
   // this generates the key to encrypt attachments locally
   void generateAttachmentKeyIfEmpty();
   void getOpenGroupManager().startPolling();

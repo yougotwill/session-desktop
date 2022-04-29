@@ -5,7 +5,7 @@ import {
   removeV2OpenGroupRoom,
   saveV2OpenGroupRoom,
 } from '../../../../data/opengroups';
-import { ConversationModel, ConversationTypeEnum } from '../../../../models/conversation';
+import { ConversationModel } from '../../../../models/conversation';
 import { getConversationController } from '../../../conversations';
 import { allowOnlyOneAtATime } from '../../../utils/Promise';
 import { getOpenGroupV2ConversationId } from '../utils/OpenGroupUtils';
@@ -15,6 +15,7 @@ import { OpenGroupServerPoller } from './OpenGroupServerPoller';
 
 import _ from 'lodash';
 import autoBind from 'auto-bind';
+import { ConversationTypeEnum } from '../../../../models/conversationAttributes';
 
 let instance: OpenGroupManagerV2 | undefined;
 

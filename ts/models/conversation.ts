@@ -18,15 +18,14 @@ import {
   getUnreadByConversation,
   getUnreadCountByConversation,
   removeMessage as dataRemoveMessage,
+  saveConversation,
   saveMessages,
-  updateConversation,
 } from '../../ts/data/data';
 import { toHex } from '../session/utils/String';
 import {
   actions as conversationActions,
   conversationChanged,
   conversationsChanged,
-  LastMessageStatusType,
   MessageModelPropsWithoutConvoProps,
   ReduxConversationType,
 } from '../state/ducks/conversations';
@@ -65,123 +64,12 @@ import { getOurPubKeyStrFromCache } from '../session/utils/User';
 import { MessageRequestResponse } from '../session/messages/outgoing/controlMessage/MessageRequestResponse';
 import { Notifications } from '../util/notifications';
 import { Storage } from '../util/storage';
-
-export enum ConversationTypeEnum {
-  GROUP = 'group',
-  PRIVATE = 'private',
-}
-
-/**
- * all: all  notifications enabled, the default
- * disabled: no notifications at all
- * mentions_only: trigger a notification only on mentions of ourself
- */
-export const ConversationNotificationSetting = ['all', 'disabled', 'mentions_only'] as const;
-export type ConversationNotificationSettingType = typeof ConversationNotificationSetting[number];
-
-export interface ConversationAttributes {
-  id: string;
-  type: string;
-
-  profileName?: string;
-  name?: string;
-  nickname?: string;
-
-  profile?: any;
-  profileKey?: string; // Consider this being a hex string if it set
-
-  // members are all members for this group. zombies excluded
-  members: Array<string>;
-  active_at: number;
-
-  zombies: Array<string>; // only used for closed groups. Zombies are users which left but not yet removed by the admin
-  left: boolean;
-  expireTimer: number;
-  mentionedUs: boolean;
-  unreadCount: number;
-  lastMessageStatus: LastMessageStatusType;
-  lastMessage: string | null;
-
-  lastJoinedTimestamp: number; // ClosedGroup: last time we were added to this group
-  groupAdmins?: Array<string>;
-  isKickedFromGroup?: boolean;
-  subscriberCount?: number;
-  is_medium_group?: boolean;
-
-  avatarPointer?: string; // this is the url of the avatar. Most likely a fsv2 url
-  avatar?: string | { path?: string }; // this is the avatar path locally once downloaded and stored in the application attachments folder
-  avatarHash?: string; //Avatar hash is currently used for opengroupv2. it's sha256 hash of the base64 avatar data.
-
-  triggerNotificationsFor: ConversationNotificationSettingType;
-  isTrustedForAttachmentDownload: boolean;
-  isPinned: boolean;
-  isApproved: boolean;
-  didApproveMe: boolean;
-}
-
-export interface ConversationAttributesOptionals {
-  id: string;
-  profileName?: string;
-  name?: string;
-  members?: Array<string>;
-  zombies?: Array<string>;
-  left?: boolean;
-  expireTimer?: number;
-  mentionedUs?: boolean;
-  unreadCount?: number;
-  lastMessageStatus?: LastMessageStatusType;
-  lastMessage: string | null;
-  active_at?: number;
-  lastJoinedTimestamp?: number;
-  groupAdmins?: Array<string>;
-  isKickedFromGroup?: boolean;
-  subscriberCount?: number;
-  is_medium_group?: boolean;
-  type: string;
-  avatarPointer?: string; // this is the url of the avatar. Most likely a fsv2 url
-  avatar?: string | { path?: string }; // this is the avatar path locally once downloaded and stored in the application attachments folder
-  avatarHash?: string; //Avatar hash is currently used for opengroupv2. it's sha256 hash of the base64 avatar data.
-  nickname?: string;
-  profile?: any;
-
-  profileKey?: string; // Consider this being a hex string if it set
-  triggerNotificationsFor?: ConversationNotificationSettingType;
-  isTrustedForAttachmentDownload?: boolean;
-  isPinned: boolean;
-  isApproved?: boolean;
-  didApproveMe?: boolean;
-}
-
-/**
- * This function mutates optAttributes
- * @param optAttributes the entry object attributes to set the defaults to.
- */
-export const fillConvoAttributesWithDefaults = (
-  optAttributes: ConversationAttributesOptionals
-): ConversationAttributes => {
-  return _.defaults(optAttributes, {
-    members: [],
-    zombies: [],
-    left: false,
-    unreadCount: 0,
-    lastMessageStatus: null,
-    lastJoinedTimestamp: new Date('1970-01-01Z00:00:00:000').getTime(),
-    groupAdmins: [],
-    isKickedFromGroup: false,
-    isMe: false,
-    subscriberCount: 0,
-    is_medium_group: false,
-    lastMessage: null,
-    expireTimer: 0,
-    mentionedUs: false,
-    active_at: 0,
-    triggerNotificationsFor: 'all', // if the settings is not set in the db, this is the default
-    isTrustedForAttachmentDownload: false, // we don't trust a contact until we say so
-    isPinned: false,
-    isApproved: false,
-    didApproveMe: false,
-  });
-};
+import {
+  ConversationAttributes,
+  ConversationNotificationSetting,
+  ConversationTypeEnum,
+  fillConvoAttributesWithDefaults,
+} from './conversationAttributes';
 
 export class ConversationModel extends Backbone.Model<ConversationAttributes> {
   public updateLastMessage: () => any;
@@ -197,7 +85,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
 
   private pending?: Promise<any>;
 
-  constructor(attributes: ConversationAttributesOptionals) {
+  constructor(attributes: ConversationAttributes) {
     super(fillConvoAttributesWithDefaults(attributes));
 
     // This may be overridden by getConversationController().getOrCreate, and signify
@@ -1001,7 +889,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
   public async commit() {
     perfStart(`conversationCommit-${this.attributes.id}`);
     // write to DB
-    await updateConversation(this.attributes);
+    await saveConversation(this.attributes);
     this.triggerUIRefresh();
     perfEnd(`conversationCommit-${this.attributes.id}`, 'conversationCommit');
   }
@@ -1166,7 +1054,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     }
     // make sure to save the lokiDisplayName as name in the db. so a search of conversation returns it.
     // (we look for matches in name too)
-    const realUserName = this.getLokiProfile()?.displayName;
+    const realUserName = this.getRealSessionUsername();
 
     if (!trimmed || !trimmed.length) {
       this.set({ nickname: undefined, name: realUserName });
@@ -1175,25 +1063,26 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     }
 
     await this.commit();
-
-    await this.updateProfileName();
   }
-  public async setLokiProfile(newProfile: {
+
+  public async setSessionProfile(newProfile: {
     displayName?: string | null;
-    avatar?: string;
+    avatar?: string | null;
     avatarHash?: string;
   }) {
-    if (!_.isEqual(this.get('profile'), newProfile)) {
-      this.set({ profile: newProfile });
-      await this.commit();
+    let shouldCommit = false;
+
+    const existingSessionName = this.getRealSessionUsername();
+    if (newProfile.displayName !== existingSessionName && newProfile.displayName) {
+      this.set({ profile: { displayName: newProfile.displayName } });
+      shouldCommit = true;
     }
 
     // a user cannot remove an avatar. Only change it
-    // if you change this behavior, double check all setLokiProfile calls (especially the one in EditProfileDialog)
+    // if you change this behavior, double check all setSessionProfile calls (especially the one in EditProfileDialog)
     if (newProfile.avatar) {
       const originalAvatar = this.get('avatar');
       const existingHash = this.get('avatarHash');
-      let shouldCommit = false;
       if (!_.isEqual(originalAvatar, newProfile.avatar)) {
         this.set({ avatar: newProfile.avatar });
         shouldCommit = true;
@@ -1203,24 +1092,21 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
         this.set({ avatarHash: newProfile.avatarHash });
         shouldCommit = true;
       }
-
-      if (shouldCommit) {
-        await this.commit();
-      }
     }
 
-    await this.updateProfileName();
+    if (shouldCommit) {
+      await this.commit();
+    }
   }
-  public async updateProfileName() {
-    // Prioritise nickname over the profile display name
-    const nickname = this.getNickname();
-    const displayName = this.getLokiProfile()?.displayName;
 
-    const profileName = nickname || displayName || null;
-    await this.setProfileName(profileName);
-  }
-  public getLokiProfile() {
-    return this.get('profile');
+  /**
+   * This returns the session username as defined by that user
+   */
+  public getRealSessionUsername() {
+    if (this.isPrivate() || this.isClosedGroup()) {
+      return this.get('profile')?.displayName;
+    }
+    return null;
   }
   public getNickname() {
     return this.get('nickname');
@@ -1235,14 +1121,6 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     }
     const groupAdmins = this.getGroupAdmins();
     return Array.isArray(groupAdmins) && groupAdmins.includes(pubKey);
-  }
-
-  public async setProfileName(name: string | null) {
-    const profileName = this.get('profileName');
-    if (profileName !== name && name) {
-      this.set({ profileName: name });
-      await this.commit();
-    }
   }
 
   public async setIsPinned(value: boolean) {
@@ -1353,8 +1231,8 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
   public getTitle() {
     if (this.isPrivate()) {
       const profileName = this.getProfileName();
-      const number = this.getNumber();
-      const name = profileName ? `${profileName} (${PubKey.shorten(number)})` : number;
+      const convoPubkey = this.id;
+      const name = profileName ? `${profileName} (${PubKey.shorten(convoPubkey)})` : convoPubkey;
 
       return this.get('name') || name;
     }
@@ -1406,13 +1284,6 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       return this.get('profileName');
     }
     return undefined;
-  }
-
-  public getNumber() {
-    if (!this.isPrivate()) {
-      return '';
-    }
-    return this.id;
   }
 
   public isPrivate() {
@@ -1606,6 +1477,19 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     await this.commit();
     return model;
   }
+
+  // private async updateProfileName() {
+  //   // Prioritise nickname over the profile display name
+  //   const nickname = this.getNickname();
+  //   const displayName = this.getRealSessionUsername();
+
+  //   const newProfileName = nickname || displayName || null;
+  //   const oldProfileName = this.get('profileName');
+  //   if (oldProfileName !== newProfileName && newProfileName) {
+  //     this.set({ profileName: newProfileName });
+  //     await this.commit();
+  //   }
+  // }
 
   private async clearContactTypingTimer(_sender: string) {
     if (!!this.typingTimer) {

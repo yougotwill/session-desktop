@@ -1,10 +1,5 @@
 import { getAllConversations, removeConversation, saveConversation } from '../../data/data';
-import {
-  ConversationAttributes,
-  ConversationCollection,
-  ConversationModel,
-  ConversationTypeEnum,
-} from '../../models/conversation';
+import { ConversationCollection, ConversationModel } from '../../models/conversation';
 import { BlockedNumberController } from '../../util';
 import { getSwarmFor } from '../apis/snode_api/snodePool';
 import { PubKey } from '../types';
@@ -14,6 +9,7 @@ import _ from 'lodash';
 import { getOpenGroupManager } from '../apis/open_group_api/opengroupV2/OpenGroupManagerV2';
 
 import { deleteAllMessagesByConvoIdNoConfirmation } from '../../interactions/conversationInteractions';
+import { ConversationTypeEnum } from '../../models/conversationAttributes';
 
 let instance: ConversationController | null;
 
@@ -62,10 +58,6 @@ export class ConversationController {
   // Needed for some model setup which happens during the initial fetch() call below
   public getUnsafe(id: string): ConversationModel | undefined {
     return this.conversations.get(id);
-  }
-
-  public dangerouslyCreateAndAdd(attributes: ConversationAttributes) {
-    return this.conversations.add(attributes);
   }
 
   public getOrCreate(id: string, type: ConversationTypeEnum) {
@@ -272,8 +264,6 @@ export class ConversationController {
             // tslint:disable-next-line: no-void-expression
             promises.push(conversation.updateLastMessage());
           }
-
-          promises.concat([conversation.updateProfileName()]);
         });
 
         await Promise.all(promises);

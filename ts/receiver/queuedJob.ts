@@ -4,7 +4,7 @@ import { Quote } from './types';
 import { PubKey } from '../session/types';
 import _ from 'lodash';
 import { getConversationController } from '../session/conversations';
-import { ConversationModel, ConversationTypeEnum } from '../models/conversation';
+import { ConversationModel } from '../models/conversation';
 import { MessageModel, sliceQuoteText } from '../models/message';
 import { getMessageCountByType, getMessagesBySentAt } from '../../ts/data/data';
 
@@ -15,6 +15,7 @@ import { MessageDirection } from '../models/messageType';
 import { LinkPreviews } from '../util/linkPreviews';
 import { GoogleChrome } from '../util';
 import { appendFetchAvatarAndProfileJob } from './userProfileImageUpdates';
+import { ConversationTypeEnum } from '../models/conversationAttributes';
 
 function contentTypeSupported(type: string): boolean {
   const Chrome = GoogleChrome;

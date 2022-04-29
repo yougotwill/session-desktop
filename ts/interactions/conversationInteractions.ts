@@ -5,7 +5,10 @@ import {
 } from '../session/apis/open_group_api/utils/OpenGroupUtils';
 import { getV2OpenGroupRoom } from '../data/opengroups';
 import { CallManager, SyncUtils, ToastUtils, UserUtils } from '../session/utils';
-import { ConversationNotificationSettingType, ConversationTypeEnum } from '../models/conversation';
+import {
+  ConversationNotificationSettingType,
+  ConversationTypeEnum,
+} from '../models/conversationAttributes';
 
 import _ from 'lodash';
 import { getConversationController } from '../session/conversations';
@@ -454,7 +457,7 @@ export async function uploadOurAvatar(newAvatarDecrypted?: ArrayBuffer) {
   ourConvo.set({ profileKey: toHex(profileKey) });
   // Replace our temporary image with the attachment pointer from the server:
   // this commits already
-  await ourConvo.setLokiProfile({
+  await ourConvo.setSessionProfile({
     avatar: upgraded.path,
     displayName,
   });

@@ -8,7 +8,7 @@ import { SessionSpinner } from '../../basic/SessionSpinner';
 import { OverlayHeader } from './OverlayHeader';
 import { setOverlayMode } from '../../../state/ducks/section';
 import { PubKey } from '../../../session/types';
-import { ConversationTypeEnum } from '../../../models/conversation';
+import { ConversationTypeEnum } from '../../../models/conversationAttributes';
 import { SNodeAPI } from '../../../session/apis/snode_api';
 import { onsNameRegex } from '../../../session/apis/snode_api/SNodeAPI';
 import { getConversationController } from '../../../session/conversations';

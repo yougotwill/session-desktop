@@ -25,7 +25,7 @@ import {
 
 import { ECKeyPair, HexKeyPair } from './keypairs';
 import { UserUtils } from '../session/utils';
-import { ConversationModel, ConversationTypeEnum } from '../models/conversation';
+import { ConversationModel } from '../models/conversation';
 import _ from 'lodash';
 import { forceSyncConfigurationNowIfNeeded } from '../session/utils/syncUtils';
 import { ClosedGroupEncryptionPairReplyMessage } from '../session/messages/outgoing/controlMessage/group/ClosedGroupEncryptionPairReplyMessage';
@@ -36,6 +36,7 @@ import { MessageModel } from '../models/message';
 
 import { updateConfirmModal } from '../state/ducks/modalDialog';
 import { perfEnd, perfStart } from '../session/utils/Performance';
+import { ConversationTypeEnum } from '../models/conversationAttributes';
 
 export const distributingClosedGroupEncryptionKeyPairs = new Map<string, ECKeyPair>();
 

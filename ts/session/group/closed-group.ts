@@ -13,7 +13,7 @@ import { encryptUsingSessionProtocol } from '../crypto/MessageEncrypter';
 import { ECKeyPair } from '../../receiver/keypairs';
 import { UserUtils } from '../utils';
 import { ClosedGroupMemberLeftMessage } from '../messages/outgoing/controlMessage/group/ClosedGroupMemberLeftMessage';
-import { ConversationModel, ConversationTypeEnum } from '../../models/conversation';
+import { ConversationModel } from '../../models/conversation';
 import { MessageModel } from '../../models/message';
 import {
   addKeyPairToCacheAndDBIfNeeded,
@@ -28,6 +28,7 @@ import { ClosedGroupNewMessage } from '../messages/outgoing/controlMessage/group
 import { ClosedGroupRemovedMembersMessage } from '../messages/outgoing/controlMessage/group/ClosedGroupRemovedMembersMessage';
 import { getSwarmPollingInstance } from '../apis/snode_api';
 import { getNowWithNetworkOffset } from '../apis/snode_api/SNodeAPI';
+import { ConversationTypeEnum } from '../../models/conversationAttributes';
 
 export type GroupInfo = {
   id: string;

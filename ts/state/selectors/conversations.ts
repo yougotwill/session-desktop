@@ -14,7 +14,7 @@ import {
 
 import { getIntl, getOurNumber } from './user';
 import { BlockedNumberController } from '../../util';
-import { ConversationModel, ConversationTypeEnum } from '../../models/conversation';
+import { ConversationModel } from '../../models/conversation';
 import { LocalizerType } from '../../types/Util';
 import { ConversationHeaderTitleProps } from '../../components/conversation/ConversationHeader';
 import _ from 'lodash';
@@ -34,6 +34,7 @@ import { LightBoxOptions } from '../../components/conversation/SessionConversati
 import { getConversationController } from '../../session/conversations';
 import { UserUtils } from '../../session/utils';
 import { Storage } from '../../util/storage';
+import { ConversationTypeEnum } from '../../models/conversationAttributes';
 
 export const getConversations = (state: StateType): ConversationsStateType => state.conversations;
 

@@ -6,7 +6,6 @@ import { trigger } from '../shims/events';
 
 import { actions as userActions } from '../state/ducks/user';
 import { mn_decode, mn_encode } from '../session/crypto/mnemonic';
-import { ConversationTypeEnum } from '../models/conversation';
 import { SettingsKey } from '../data/settings-key';
 import {
   saveRecoveryPhrase,
@@ -16,6 +15,7 @@ import {
   Storage,
 } from './storage';
 import { Registration } from './registration';
+import { ConversationTypeEnum } from '../models/conversationAttributes';
 
 /**
  * Might throw
@@ -177,7 +177,7 @@ async function registrationDone(ourPubkey: string, displayName: string) {
     ourPubkey,
     ConversationTypeEnum.PRIVATE
   );
-  await conversation.setLokiProfile({ displayName });
+  await conversation.setSessionProfile({ displayName });
   await conversation.setIsApproved(true);
   await conversation.setDidApproveMe(true);
 

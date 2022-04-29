@@ -18,9 +18,9 @@ import { perfEnd, perfStart } from '../session/utils/Performance';
 import { getAllCachedECKeyPair } from './closedGroups';
 import { handleCallMessage } from './callMessage';
 import { SettingsKey } from '../data/settings-key';
-import { ConversationTypeEnum } from '../models/conversation';
 import { ReadReceipts } from '../util/readReceipts';
 import { Storage } from '../util/storage';
+import { ConversationTypeEnum } from '../models/conversationAttributes';
 
 export async function handleSwarmContentMessage(envelope: EnvelopePlus, messageHash: string) {
   try {

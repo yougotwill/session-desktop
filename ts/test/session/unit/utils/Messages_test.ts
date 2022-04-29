@@ -211,27 +211,6 @@ describe('Message Utils', () => {
   describe('getCurrentConfigurationMessage', () => {
     const ourNumber = TestUtils.generateFakePubKey().key;
 
-    // let convos: Array<ConversationModel>;
-    // const mockValidOpenGroup = new MockConversation({
-    //   type: ConversationTypeEnum.GROUP,
-    //   id: `${openGroupPrefix}1@chat-dev.lokinet.org`,
-    // });
-
-    // const mockValidOpenGroup2 = new MockConversation({
-    //   type: ConversationTypeEnum.GROUP,
-    //   id: `${openGroupPrefix}1@chat-dev2.lokinet.org`,
-    // });
-
-    // const mockValidClosedGroup = new MockConversation({
-    //   type: ConversationTypeEnum.GROUP,
-    // });
-
-    // const mockValidPrivate = {
-    //   id: TestUtils.generateFakePubKey(),
-    //   isMediumGroup: () => false,
-    //   isPublic: () => false,
-    // };
-
     beforeEach(() => {
       // convos = [];
       Sinon.stub(UserUtils, 'getOurPubKeyStrFromCache').resolves(ourNumber);
@@ -242,6 +221,9 @@ describe('Message Utils', () => {
       // convos = [];
       Sinon.restore();
     });
+
+    // tslint:disable-next-line: no-empty
+    it.skip('filter out non active open groups', () => {});
 
     // it('filter out non active open groups', async () => {
     //   // override the first open group and make it inactive

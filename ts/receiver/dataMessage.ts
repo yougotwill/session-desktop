@@ -10,7 +10,7 @@ import { StringUtils, UserUtils } from '../session/utils';
 import { getConversationController } from '../session/conversations';
 import { handleClosedGroupControlMessage } from './closedGroups';
 import { getMessageBySenderAndSentAt } from '../../ts/data/data';
-import { ConversationModel, ConversationTypeEnum } from '../models/conversation';
+import { ConversationModel } from '../models/conversation';
 
 import {
   createSwarmMessageSentFromNotUs,
@@ -20,6 +20,7 @@ import { MessageModel } from '../models/message';
 import { isUsFromCache } from '../session/utils/User';
 import { appendFetchAvatarAndProfileJob } from './userProfileImageUpdates';
 import { toLogFormat } from '../types/attachments/Errors';
+import { ConversationTypeEnum } from '../models/conversationAttributes';
 
 function cleanAttachment(attachment: any) {
   return {

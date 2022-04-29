@@ -4,7 +4,7 @@ import { Avatar, AvatarSize } from '../avatar/Avatar';
 
 import { contextMenu } from 'react-contexify';
 import styled from 'styled-components';
-import { ConversationNotificationSettingType } from '../../models/conversation';
+import { ConversationNotificationSettingType } from '../../models/conversationAttributes';
 import {
   getConversationHeaderTitleProps,
   getCurrentNotificationSettingText,

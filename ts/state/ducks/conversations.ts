@@ -8,10 +8,6 @@ import {
   getOldestMessageInConversation,
 } from '../../data/data';
 import {
-  ConversationNotificationSettingType,
-  ConversationTypeEnum,
-} from '../../models/conversation';
-import {
   MessageDeliveryStatus,
   MessageModelType,
   PropsForDataExtractionNotification,
@@ -21,6 +17,10 @@ import { omit } from 'lodash';
 import { ReplyingToMessageProps } from '../../components/conversation/composition/CompositionBox';
 import { QuotedAttachmentType } from '../../components/conversation/message/message-content/Quote';
 import { LightBoxOptions } from '../../components/conversation/SessionConversation';
+import {
+  ConversationTypeEnum,
+  ConversationNotificationSettingType,
+} from '../../models/conversationAttributes';
 
 export type CallNotificationType = 'missed-call' | 'started-call' | 'answered-a-call';
 export type PropsForCallNotification = {
@@ -222,6 +222,11 @@ export type LastMessageType = {
   text: string | null;
 };
 
+/**
+ * This closely matches ConversationAttributes except making a lot of fields optional.
+ * The size of the redux store is an issue considering the number of conversations we have, so having optional fields here
+ * allows us to not have them set if they have their default values.
+ */
 export interface ReduxConversationType {
   id: string;
   /**

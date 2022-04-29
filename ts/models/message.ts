@@ -21,7 +21,7 @@ import {
 
 import autoBind from 'auto-bind';
 import { getFirstUnreadMessageWithMention, saveMessage } from '../../ts/data/data';
-import { ConversationModel, ConversationTypeEnum } from './conversation';
+import { ConversationModel } from './conversation';
 import {
   FindAndFormatContactType,
   LastMessageStatusType,
@@ -64,6 +64,7 @@ import { ExpirationTimerOptions } from '../util/expiringMessages';
 import { Notifications } from '../util/notifications';
 import { Storage } from '../util/storage';
 import { LinkPreviews } from '../util/linkPreviews';
+import { ConversationTypeEnum } from './conversationAttributes';
 // tslint:disable: cyclomatic-complexity
 
 /**

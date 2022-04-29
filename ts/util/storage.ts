@@ -87,7 +87,7 @@ export async function setLocalPubKey(pubkey: string) {
   await put('number_id', `${pubkey}.1`);
 }
 
-export function getNumber() {
+export function getOurPubKeyStrFromStorage() {
   const numberId = get('number_id') as string | undefined;
   if (numberId === undefined) {
     return undefined;

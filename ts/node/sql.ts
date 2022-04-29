@@ -7,7 +7,6 @@ import { app, clipboard, dialog, Notification } from 'electron';
 import {
   chunk,
   difference,
-  flattenDeep,
   forEach,
   fromPairs,
   isEmpty,
@@ -16,18 +15,25 @@ import {
   isString,
   last,
   map,
-  uniq,
 } from 'lodash';
 import { redactAll } from '../util/privacy'; // checked - only node
 import { LocaleMessagesType } from './locale'; // checked - only node
 import { PubKey } from '../session/types/PubKey'; // checked - only node
 import { StorageItem } from './storage_item'; // checked - only node
 import { getAppRootPath } from './getRootPath';
-import { ConversationAttributes } from '../models/conversation';
+import { ConversationAttributes } from '../models/conversationAttributes';
+import {
+  arrayStrToJson,
+  formatRowOfConversation,
+  jsonToObject,
+  objectToJSON,
+  toSqliteBoolean,
+} from './database_utility';
 // tslint:disable: no-console quotemark non-literal-fs-path one-variable-per-declaration
 const openDbOptions = {
   // tslint:disable-next-line: no-constant-condition
   verbose: false ? console.log : undefined,
+
   nativeBinding: path.join(
     getAppRootPath(),
     'node_modules',
@@ -50,13 +56,6 @@ const ATTACHMENT_DOWNLOADS_TABLE = 'attachment_downloads';
 const CLOSED_GROUP_V2_KEY_PAIRS_TABLE = 'encryptionKeyPairsForClosedGroupV2';
 
 const MAX_PUBKEYS_MEMBERS = 300;
-
-function objectToJSON(data: Record<any, any>) {
-  return JSON.stringify(data);
-}
-function jsonToObject(json: string): Record<string, any> {
-  return JSON.parse(json);
-}
 
 function getSQLiteVersion(db: BetterSqlite3.Database) {
   const { sqlite_version } = db.prepare('select sqlite_version() as sqlite_version').get();
@@ -767,6 +766,7 @@ const LOKI_SCHEMA_VERSIONS = [
   updateToLokiSchemaVersion20,
   updateToLokiSchemaVersion21,
   updateToLokiSchemaVersion22,
+  updateToLokiSchemaVersion23,
 ];
 
 function updateToLokiSchemaVersion1(currentVersion: number, db: BetterSqlite3.Database) {
@@ -952,21 +952,19 @@ function updateToLokiSchemaVersion9(currentVersion: number, db: BetterSqlite3.Da
   db.transaction(() => {
     const rows = db
       .prepare(
-        `SELECT json FROM ${CONVERSATIONS_TABLE} WHERE
+        `SELECT * FROM ${CONVERSATIONS_TABLE} WHERE
       type = 'group' AND
       id LIKE '__textsecure_group__!%';
     `
       )
       .all();
 
-    const objs = map(rows, row => jsonToObject(row.json));
-
     const conversationIdRows = db
       .prepare(`SELECT id FROM ${CONVERSATIONS_TABLE} ORDER BY id ASC;`)
       .all();
 
     const allOldConversationIds = map(conversationIdRows, row => row.id);
-    objs.forEach(o => {
+    rows.forEach(o => {
       const oldId = o.id;
       const newId = oldId.replace('__textsecure_group__!', '');
       console.log(`migrating conversation, ${oldId} to ${newId}`);
@@ -1039,7 +1037,48 @@ function updateToLokiSchemaVersion11(currentVersion: number, db: BetterSqlite3.D
   console.log(`updateToLokiSchemaVersion${targetVersion}: starting...`);
 
   db.transaction(() => {
-    updateExistingClosedGroupV1ToClosedGroupV2(db);
+    // the migration is called only once, so all current groups not being open groups are v1 closed group.
+    const allClosedGroupV1Ids = db
+      .prepare(
+        `SELECT id FROM ${CONVERSATIONS_TABLE} WHERE
+      type = 'group' AND
+      id NOT LIKE 'publicChat:%';`
+      )
+      .all()
+      .map(m => m.id) as Array<string>;
+
+    allClosedGroupV1Ids.forEach(groupV1Id => {
+      try {
+        console.log('Migrating closed group v1 to v2: pubkey', groupV1Id);
+        const groupV1IdentityKey = getIdentityKeyById(groupV1Id, db);
+        if (!groupV1IdentityKey) {
+          return;
+        }
+        const encryptionPubKeyWithoutPrefix = remove05PrefixFromStringIfNeeded(
+          groupV1IdentityKey.id
+        );
+
+        // Note:
+        // this is what we get from getIdentityKeyById:
+        //   {
+        //     id: string;
+        //     secretKey?: string;
+        //   }
+
+        // and this is what we want saved in db:
+        //   {
+        //    publicHex: string; // without prefix
+        //    privateHex: string;
+        //   }
+        const keyPair = {
+          publicHex: encryptionPubKeyWithoutPrefix,
+          privateHex: groupV1IdentityKey.secretKey,
+        };
+        addClosedGroupEncryptionKeyPair(groupV1Id, keyPair, db);
+      } catch (e) {
+        console.error(e);
+      }
+    });
     writeLokiSchemaVersion(targetVersion, db);
   })();
   console.log(`updateToLokiSchemaVersion${targetVersion}: success!`);
@@ -1278,7 +1317,7 @@ function updateToLokiSchemaVersion20(currentVersion: number, db: BetterSqlite3.D
       if (obj?.nickname?.length && obj?.profile?.displayName?.length) {
         // this one has a nickname set, but name is unset, set it to the displayName in the lokiProfile if it's exisitng
         obj.name = obj.profile.displayName;
-        updateConversation(obj, db);
+        saveConversation(obj as any, db);
       }
     });
     writeLokiSchemaVersion(targetVersion, db);
@@ -1299,24 +1338,6 @@ function updateToLokiSchemaVersion21(currentVersion: number, db: BetterSqlite3.D
         json = json_set(json, '$.didApproveMe', 1, '$.isApproved', 1)
         WHERE type = 'private';
       `);
-
-    // all closed group admins
-    const closedGroups = getAllClosedGroupConversations(db) || [];
-
-    const adminIds = closedGroups.map(g => g.groupAdmins);
-    const flattenedAdmins = uniq(flattenDeep(adminIds)) || [];
-
-    forEach(flattenedAdmins, id => {
-      db.prepare(
-        `
-        UPDATE ${CONVERSATIONS_TABLE} SET
-        json = json_set(json, '$.didApproveMe', 1, '$.isApproved', 1)
-        WHERE id = $id;
-      `
-      ).run({
-        id,
-      });
-    });
 
     writeLokiSchemaVersion(targetVersion, db);
   })();
@@ -1358,6 +1379,134 @@ function updateToLokiSchemaVersion22(currentVersion: number, db: BetterSqlite3.D
     writeLokiSchemaVersion(targetVersion, db);
   })();
   console.log(`updateToLokiSchemaVersion${targetVersion}: success!`);
+}
+
+function updateToLokiSchemaVersion23(currentVersion: number, db: BetterSqlite3.Database) {
+  const targetVersion = 23;
+  if (currentVersion >= targetVersion) {
+    return;
+  }
+  console.log(`updateToLokiSchemaVersion${targetVersion}: starting...`);
+
+  console.warn('============= before ==========');
+
+  printTableColumns(CONVERSATIONS_TABLE, db);
+  db.transaction(() => {
+    db.prepare(
+      `DELETE FROM ${CONVERSATIONS_TABLE} WHERE
+      type = 'group' AND
+      id LIKE 'publicChat:1@%';` // it's unlikely there is still a publicChat v1 convo in the db, but run this in a migration to be 100% sure (previously, run on app start instead)
+    ).run();
+
+    db.exec(`
+       ALTER TABLE ${CONVERSATIONS_TABLE} ADD COLUMN zombies TEXT DEFAULT "[]";
+       ALTER TABLE ${CONVERSATIONS_TABLE} ADD COLUMN left INTEGER;
+       ALTER TABLE ${CONVERSATIONS_TABLE} ADD COLUMN expireTimer INTEGER;
+       ALTER TABLE ${CONVERSATIONS_TABLE} ADD COLUMN mentionedUs INTEGER;
+       ALTER TABLE ${CONVERSATIONS_TABLE} ADD COLUMN unreadCount INTEGER;
+       ALTER TABLE ${CONVERSATIONS_TABLE} ADD COLUMN lastMessageStatus TEXT;
+       ALTER TABLE ${CONVERSATIONS_TABLE} ADD COLUMN lastMessage TEXT;
+       ALTER TABLE ${CONVERSATIONS_TABLE} ADD COLUMN lastJoinedTimestamp INTEGER;
+       ALTER TABLE ${CONVERSATIONS_TABLE} ADD COLUMN groupAdmins TEXT DEFAULT "[]";
+       ALTER TABLE ${CONVERSATIONS_TABLE} ADD COLUMN isKickedFromGroup INTEGER;
+       ALTER TABLE ${CONVERSATIONS_TABLE} ADD COLUMN subscriberCount INTEGER;
+       ALTER TABLE ${CONVERSATIONS_TABLE} ADD COLUMN is_medium_group INTEGER;
+
+       ALTER TABLE ${CONVERSATIONS_TABLE} ADD COLUMN avatarPointer TEXT; -- this is the url of the avatar for that conversation
+       ALTER TABLE ${CONVERSATIONS_TABLE} ADD COLUMN avatar TEXT; -- this is the avatar path, so the avatar once downloaded and stored locally in the syste,
+       ALTER TABLE ${CONVERSATIONS_TABLE} ADD COLUMN avatarHash TEXT; -- only used for opengroup avatar.
+       ALTER TABLE ${CONVERSATIONS_TABLE} ADD COLUMN nickname TEXT;
+       ALTER TABLE ${CONVERSATIONS_TABLE} ADD COLUMN profileKey TEXT;
+       ALTER TABLE ${CONVERSATIONS_TABLE} ADD COLUMN triggerNotificationsFor TEXT DEFAULT "all";
+       ALTER TABLE ${CONVERSATIONS_TABLE} ADD COLUMN isTrustedForAttachmentDownload INTEGER DEFAULT "FALSE";
+       ALTER TABLE ${CONVERSATIONS_TABLE} ADD COLUMN isPinned INTEGER DEFAULT "FALSE";
+       ALTER TABLE ${CONVERSATIONS_TABLE} ADD COLUMN isApproved INTEGER DEFAULT "FALSE";
+       ALTER TABLE ${CONVERSATIONS_TABLE} ADD COLUMN didApproveMe INTEGER DEFAULT "FALSE";
+       ALTER TABLE ${CONVERSATIONS_TABLE} ADD COLUMN avatarInProfile TEXT;
+       ALTER TABLE ${CONVERSATIONS_TABLE} ADD COLUMN displayNameInProfile TEXT;
+
+       UPDATE ${CONVERSATIONS_TABLE} SET
+        zombies = json_extract(json, '$.zombies'),
+        members = json_extract(json, '$.members'),
+        left = json_extract(json, '$.left'),
+        expireTimer = json_extract(json, '$.expireTimer'),
+        mentionedUs = json_extract(json, '$.mentionedUs'),
+        unreadCount = json_extract(json, '$.unreadCount'),
+        lastMessageStatus = json_extract(json, '$.lastMessageStatus'),
+        lastMessage = json_extract(json, '$.lastMessage'),
+        lastJoinedTimestamp = json_extract(json, '$.lastJoinedTimestamp'),
+        groupAdmins = json_extract(json, '$.groupAdmins'),
+        isKickedFromGroup = json_extract(json, '$.isKickedFromGroup'),
+        subscriberCount = json_extract(json, '$.subscriberCount'),
+        is_medium_group = json_extract(json, '$.is_medium_group'),
+        avatarPointer = json_extract(json, '$.avatarPointer'),
+        avatarHash = json_extract(json, '$.avatarHash'),
+        avatar = json_extract(json, '$.avatar'),
+        nickname = json_extract(json, '$.nickname'),
+        profileKey = json_extract(json, '$.profileKey'),
+        triggerNotificationsFor = json_extract(json, '$.triggerNotificationsFor'),
+        isTrustedForAttachmentDownload = json_extract(json, '$.isTrustedForAttachmentDownload'),
+        isPinned = json_extract(json, '$.isPinned'),
+        isApproved = json_extract(json, '$.isApproved'),
+        didApproveMe = json_extract(json, '$.didApproveMe'),
+        avatarInProfile = json_extract(json, '$.profile.avatar'),
+        displayNameInProfile =  json_extract(json, '$.profile.displayName');
+
+        UPDATE ${CONVERSATIONS_TABLE} SET json = json_remove(json,
+            '$.zombies',
+            '$.members',
+            '$.left',
+            '$.expireTimer',
+            '$.mentionedUs',
+            '$.unreadCount',
+            '$.lastMessageStatus',
+            '$.lastJoinedTimestamp',
+            '$.lastMessage',
+            '$.groupAdmins',
+            '$.isKickedFromGroup',
+            '$.subscriberCount',
+            '$.is_medium_group',
+            '$.avatarPointer',
+            '$.avatarHash',
+            '$.avatar',
+            '$.nickname',
+            '$.profileKey',
+            '$.triggerNotificationsFor',
+            '$.isTrustedForAttachmentDownload',
+            '$.isPinned',
+            '$.isApproved',
+            '$.type',
+            '$.version',
+            '$.isMe',
+            '$.didApproveMe',
+            '$.active_at',
+            '$.id',
+            '$.moderators',
+            '$.sessionRestoreSeen',
+            '$.profileName',
+            '$.timestamp',
+            '$.profile',
+            '$.name',
+            '$.profileAvatar',
+            '$.avatarPath
+        ');
+
+        ALTER TABLE ${CONVERSATIONS_TABLE} DROP COLUMN json;
+       `);
+
+    // console.warn(db.prepare(`SELECT json from ${CONVERSATIONS_TABLE} LIMIT 10000;`).all({}));
+
+    writeLokiSchemaVersion(targetVersion, db);
+  })();
+
+  console.warn('============= after ==========');
+  printTableColumns(CONVERSATIONS_TABLE, db);
+
+  console.log(`updateToLokiSchemaVersion${targetVersion}: success!`);
+}
+
+function printTableColumns(table: string, db: BetterSqlite3.Database) {
+  console.warn(db.pragma(`table_info('${table}');`));
 }
 
 function writeLokiSchemaVersion(newVersion: number, db: BetterSqlite3.Database) {
@@ -1445,6 +1594,7 @@ let databaseFilePath: string | undefined;
 function _initializePaths(configDir: string) {
   const dbDir = path.join(configDir, 'sql');
   fs.mkdirSync(dbDir, { recursive: true });
+  console.info('Made sure db folder exists at:', dbDir);
   databaseFilePath = path.join(dbDir, 'db.sqlite');
 }
 
@@ -1481,7 +1631,6 @@ async function initializeSql({
   if (!isObject(messages)) {
     throw new Error('initialize: message is required!');
   }
-
   _initializePaths(configDir);
 
   let db;
@@ -1513,8 +1662,8 @@ async function initializeSql({
 
     console.info('total message count before cleaning: ', getMessageCount());
     console.info('total conversation count before cleaning: ', getConversationCount());
-    cleanUpOldOpengroups();
-    cleanUpUnusedNodeForKeyEntries();
+    cleanUpOldOpengroupsOnStart();
+    cleanUpUnusedNodeForKeyEntriesOnStart();
     printDbStats();
 
     console.info('total message count after cleaning: ', getMessageCount());
@@ -1746,75 +1895,133 @@ function getConversationCount() {
   return row['count(*)'];
 }
 
-function saveConversation(data: any, instance?: BetterSqlite3.Database) {
-  const { id, active_at, type, members, name, profileName } = data;
-
-  assertGlobalInstanceOrInstance(instance)
-    .prepare(
-      `INSERT INTO ${CONVERSATIONS_TABLE} (
-    id,
-    json,
-
-    active_at,
-    type,
-    members,
-    name,
-    profileName
-  ) values (
-    $id,
-    $json,
-
-    $active_at,
-    $type,
-    $members,
-    $name,
-    $profileName
-  );`
-    )
-    .run({
-      id,
-      json: objectToJSON(data),
-
-      active_at,
-      type,
-      members: members ? members.join(' ') : null,
-      name,
-      profileName,
-    });
-}
-
-function updateConversation(data: any, instance?: BetterSqlite3.Database) {
+// tslint:disable-next-line: max-func-body-length
+function saveConversation(data: ConversationAttributes, instance?: BetterSqlite3.Database) {
   const {
     id,
-    // eslint-disable-next-line camelcase
     active_at,
     type,
     members,
     name,
     profileName,
+    nickname,
+    profileKey,
+    zombies,
+    left,
+    expireTimer,
+    mentionedUs,
+    unreadCount,
+    lastMessageStatus,
+    lastMessage,
+    lastJoinedTimestamp,
+    groupAdmins,
+    isKickedFromGroup,
+    subscriberCount,
+    is_medium_group,
+    avatarPointer,
+    // avatar,
+    avatarHash,
+    triggerNotificationsFor,
+    isTrustedForAttachmentDownload,
+    isPinned,
+    isApproved,
+    didApproveMe,
   } = data;
+
+  // console.warn('==============================');
+  // keys(data).forEach(n => {
+  //   console.warn(`=> ${n} ${typeof data[n]}: ${data[n]}`);
+  // });
+
+  // profile?: any;
 
   assertGlobalInstanceOrInstance(instance)
     .prepare(
-      `UPDATE ${CONVERSATIONS_TABLE} SET
-    json = $json,
-
-    active_at = $active_at,
-    type = $type,
-    members = $members,
-    name = $name,
-    profileName = $profileName
-    WHERE id = $id;`
+      `INSERT OR REPLACE INTO ${CONVERSATIONS_TABLE} (
+	id,
+	active_at,
+	type,
+	members,
+	name,
+	profileName,
+  nickname,
+  profileKey,
+  zombies,
+  left,
+  expireTimer,
+  mentionedUs,
+  unreadCount,
+  lastMessageStatus,
+  lastMessage,
+  lastJoinedTimestamp,
+  groupAdmins,
+  isKickedFromGroup,
+  subscriberCount,
+  is_medium_group,
+  avatarPointer,
+  avatarHash,
+  triggerNotificationsFor,
+  isTrustedForAttachmentDownload,
+  isPinned,
+  isApproved,
+  didApproveMe
+	) values (
+	    $id,
+	    $active_at,
+	    $type,
+	    $members,
+	    $name,
+	    $profileName,
+      $nickname,
+      $profileKey,
+      $zombies,
+      $left,
+      $expireTimer,
+      $mentionedUs,
+      $unreadCount,
+      $lastMessageStatus,
+      $lastMessage,
+      $lastJoinedTimestamp,
+      $groupAdmins,
+      $isKickedFromGroup,
+      $subscriberCount,
+      $is_medium_group,
+      $avatarPointer,
+      $avatarHash,
+      $triggerNotificationsFor,
+      $isTrustedForAttachmentDownload,
+      $isPinned,
+      $isApproved,
+      $didApproveMe)`
     )
     .run({
       id,
-      json: objectToJSON(data),
-
       active_at,
       type,
-      members: members ? members.join(' ') : null,
+      members: members && members.length ? arrayStrToJson(members) : '[]',
       name,
       profileName,
+      nickname,
+      profileKey,
+      zombies: zombies && zombies.length ? arrayStrToJson(zombies) : '[]',
+      groupAdmins: groupAdmins && groupAdmins.length ? arrayStrToJson(groupAdmins) : '[]',
+      left: toSqliteBoolean(left),
+      expireTimer,
+      mentionedUs: toSqliteBoolean(mentionedUs),
+      unreadCount,
+      lastMessageStatus: lastMessageStatus || null,
+      lastMessage,
+      lastJoinedTimestamp,
+      isKickedFromGroup: toSqliteBoolean(isKickedFromGroup),
+      subscriberCount,
+      is_medium_group: toSqliteBoolean(is_medium_group),
+      avatarPointer,
+      avatarHash,
+      triggerNotificationsFor: triggerNotificationsFor,
+      isTrustedForAttachmentDownload: toSqliteBoolean(isTrustedForAttachmentDownload),
+      isPinned: toSqliteBoolean(isPinned),
+      isApproved: toSqliteBoolean(isApproved),
+      didApproveMe: toSqliteBoolean(didApproveMe),
     });
 }
 
@@ -1845,47 +2052,46 @@ function getConversationById(id: string) {
       id,
     });
 
-  if (!row) {
-    return null;
-  }
-
-  return jsonToObject(row.json);
+  return formatRowOfConversation(row);
 }
 
 function getAllConversations() {
   const rows = assertGlobalInstance()
-    .prepare(`SELECT json FROM ${CONVERSATIONS_TABLE} ORDER BY id ASC;`)
+    .prepare(`SELECT * FROM ${CONVERSATIONS_TABLE} ORDER BY id ASC;`)
     .all();
-  return map(rows, row => jsonToObject(row.json));
-}
-
-function getAllOpenGroupV1Conversations() {
-  const rows = assertGlobalInstance()
-    .prepare(
-      `SELECT json FROM ${CONVERSATIONS_TABLE} WHERE
-      type = 'group' AND
-      id LIKE 'publicChat:1@%'
-     ORDER BY id ASC;`
-    )
-    .all();
-
-  return map(rows, row => jsonToObject(row.json));
+  return (rows || []).map(formatRowOfConversation);
 }
 
 function getAllOpenGroupV2Conversations() {
-  // first _ matches all opengroupv1,
+  // first _ matches all opengroupv1 (they are com),
   // second _ force a second char to be there, so it can only be opengroupv2 convos
 
   const rows = assertGlobalInstance()
     .prepare(
-      `SELECT json FROM ${CONVERSATIONS_TABLE} WHERE
+      `SELECT * FROM ${CONVERSATIONS_TABLE} WHERE
       type = 'group' AND
       id LIKE 'publicChat:__%@%'
      ORDER BY id ASC;`
     )
     .all();
 
-  return map(rows, row => jsonToObject(row.json));
+  return (rows || []).map(formatRowOfConversation);
+}
+
+function getAllOpenGroupV2ConversationsIds() {
+  // first _ matches all opengroupv1 (they are com),
+  // second _ force a second char to be there, so it can only be opengroupv2 convos
+
+  const rows = assertGlobalInstance()
+    .prepare(
+      `SELECT id FROM ${CONVERSATIONS_TABLE} WHERE
+      type = 'group' AND
+      id LIKE 'publicChat:__%@%'
+     ORDER BY id ASC;`
+    )
+    .all();
+
+  return map(rows, row => row.id);
 }
 
 function getPubkeysInPublicConversation(conversationId: string) {
@@ -1905,7 +2111,7 @@ function getPubkeysInPublicConversation(conversationId: string) {
 function getAllGroupsInvolvingId(id: string) {
   const rows = assertGlobalInstance()
     .prepare(
-      `SELECT json FROM ${CONVERSATIONS_TABLE} WHERE
+      `SELECT * FROM ${CONVERSATIONS_TABLE} WHERE
       type = 'group' AND
       members LIKE $id
      ORDER BY id ASC;`
@@ -1914,13 +2120,13 @@ function getAllGroupsInvolvingId(id: string) {
       id: `%${id}%`,
     });
 
-  return map(rows, row => jsonToObject(row.json));
+  return (rows || []).map(formatRowOfConversation);
 }
 
 function searchConversations(query: string) {
   const rows = assertGlobalInstance()
     .prepare(
-      `SELECT json FROM ${CONVERSATIONS_TABLE} WHERE
+      `SELECT * FROM ${CONVERSATIONS_TABLE} WHERE
       (
         name LIKE $name OR
         profileName LIKE $profileName
@@ -1934,7 +2140,7 @@ function searchConversations(query: string) {
       limit: 50,
     });
 
-  return map(rows, row => jsonToObject(row.json));
+  return (rows || []).map(formatRowOfConversation);
 }
 
 // order by clause is the same as orderByClause but with a table prefix so we cannot reuse it
@@ -2324,7 +2530,7 @@ function filterAlreadyFetchedOpengroupMessage(
 function getUnreadByConversation(conversationId: string) {
   const rows = assertGlobalInstance()
     .prepare(
-      `SELECT json FROM ${MESSAGES_TABLE} WHERE
+      `SELECT * FROM ${MESSAGES_TABLE} WHERE
       unread = $unread AND
       conversationId = $conversationId
      ORDER BY received_at DESC;`
@@ -2334,16 +2540,15 @@ function getUnreadByConversation(conversationId: string) {
       conversationId,
     });
 
-  return map(rows, row => jsonToObject(row.json));
+  return rows;
 }
 
 function getUnreadCountByConversation(conversationId: string) {
   const row = assertGlobalInstance()
     .prepare(
-      `SELECT count(*) from ${MESSAGES_TABLE} WHERE
+      `SELECT count(*) FROM ${MESSAGES_TABLE} WHERE
     unread = $unread AND
-    conversationId = $conversationId
-    ORDER BY received_at DESC;`
+    conversationId = $conversationId;`
     )
     .get({
       unread: 1,
@@ -2942,16 +3147,22 @@ function getExternalFilesForMessage(message: any) {
   return files;
 }
 
-function getExternalFilesForConversation(conversation: ConversationAttributes) {
-  const { avatar } = conversation;
+function getExternalFilesForConversation(
+  conversationAvatar:
+    | string
+    | {
+        path?: string | undefined;
+      }
+    | undefined
+) {
   const files = [];
 
-  if (isString(avatar)) {
-    files.push(avatar);
+  if (isString(conversationAvatar)) {
+    files.push(conversationAvatar);
   }
 
-  if (isObject(avatar)) {
-    const avatarObj = avatar as Record<string, any>;
+  if (isObject(conversationAvatar)) {
+    const avatarObj = conversationAvatar as Record<string, any>;
     if (isString(avatarObj.path)) {
       files.push(avatarObj.path);
     }
@@ -3015,9 +3226,9 @@ function removeKnownAttachments(allAttachments: any) {
   );
 
   while (!complete) {
-    const rows = assertGlobalInstance()
+    const conversations = assertGlobalInstance()
       .prepare(
-        `SELECT json FROM ${CONVERSATIONS_TABLE}
+        `SELECT * FROM ${CONVERSATIONS_TABLE}
        WHERE id > $id
        ORDER BY id ASC
        LIMIT $chunkSize;`
@@ -3027,9 +3238,9 @@ function removeKnownAttachments(allAttachments: any) {
         chunkSize,
       });
 
-    const conversations = map(rows, row => jsonToObject(row.json));
     forEach(conversations, conversation => {
-      const externalFiles = getExternalFilesForConversation(conversation as ConversationAttributes);
+      const avatar = (conversation as ConversationAttributes)?.avatar;
+      const externalFiles = getExternalFilesForConversation(avatar);
       forEach(externalFiles, file => {
         // tslint:disable-next-line: no-dynamic-delete
         delete lookup[file];
@@ -3060,61 +3271,11 @@ function getMessagesCountByConversation(
   return row ? row['count(*)'] : 0;
 }
 
-function getAllClosedGroupConversations(instance?: BetterSqlite3.Database) {
-  const rows = assertGlobalInstanceOrInstance(instance)
-    .prepare(
-      `SELECT json FROM ${CONVERSATIONS_TABLE} WHERE
-      type = 'group' AND
-      id NOT LIKE 'publicChat:%'
-      ORDER BY id ASC;`
-    )
-    .all();
-
-  return map(rows, row => jsonToObject(row.json));
-}
-
 function remove05PrefixFromStringIfNeeded(str: string) {
   if (str.length === 66 && str.startsWith('05')) {
     return str.substr(2);
   }
   return str;
-}
-
-function updateExistingClosedGroupV1ToClosedGroupV2(db: BetterSqlite3.Database) {
-  // the migration is called only once, so all current groups not being open groups are v1 closed group.
-  const allClosedGroupV1 = getAllClosedGroupConversations(db) || [];
-
-  allClosedGroupV1.forEach(groupV1 => {
-    const groupId = groupV1.id;
-    try {
-      console.log('Migrating closed group v1 to v2: pubkey', groupId);
-      const groupV1IdentityKey = getIdentityKeyById(groupId, db);
-      if (!groupV1IdentityKey) {
-        return;
-      }
-      const encryptionPubKeyWithoutPrefix = remove05PrefixFromStringIfNeeded(groupV1IdentityKey.id);
-
-      // Note:
-      // this is what we get from getIdentityKeyById:
-      //   {
-      //     id: string;
-      //     secretKey?: string;
-      //   }
-
-      // and this is what we want saved in db:
-      //   {
-      //    publicHex: string; // without prefix
-      //    privateHex: string;
-      //   }
-      const keyPair = {
-        publicHex: encryptionPubKeyWithoutPrefix,
-        privateHex: groupV1IdentityKey.secretKey,
-      };
-      addClosedGroupEncryptionKeyPair(groupId, keyPair, db);
-    } catch (e) {
-      console.error(e);
-    }
-  });
 }
 
 /**
@@ -3191,15 +3352,17 @@ function removeAllClosedGroupEncryptionKeyPairs(groupPublicKey: string) {
  */
 function getAllV2OpenGroupRooms() {
   const rows = assertGlobalInstance()
-    .prepare(`SELECT json FROM ${OPEN_GROUP_ROOMS_V2_TABLE};`)
+    .prepare(`SELECT * FROM ${OPEN_GROUP_ROOMS_V2_TABLE};`)
     .all();
 
-  return map(rows, row => jsonToObject(row.json));
+  return rows;
 }
 
 function getV2OpenGroupRoom(conversationId: string) {
   const row = assertGlobalInstance()
-    .prepare(`SELECT * FROM ${OPEN_GROUP_ROOMS_V2_TABLE} WHERE conversationId = $conversationId;`)
+    .prepare(
+      `SELECT json FROM ${OPEN_GROUP_ROOMS_V2_TABLE} WHERE conversationId = $conversationId;`
+    )
     .get({
       conversationId,
     });
@@ -3305,12 +3468,12 @@ function printDbStats() {
  * Remove all the unused entries in the snodes for pubkey table.
  * This table is used to know which snodes we should contact to send a message to a recipient
  */
-function cleanUpUnusedNodeForKeyEntries() {
-  // we have to allow private and closed group entries
+function cleanUpUnusedNodeForKeyEntriesOnStart() {
+  // we have to keep private and closed group ids
   const allIdsToKeep =
     assertGlobalInstance()
       .prepare(
-        `SELECT id FROM ${CONVERSATIONS_TABLE} WHERE id NOT LIKE 'publicChat:1@%'
+        `SELECT id FROM ${CONVERSATIONS_TABLE} WHERE id NOT LIKE 'publicChat:%'
     `
       )
       .all()
@@ -3353,7 +3516,7 @@ function cleanUpMessagesJson() {
   console.info(`cleanUpMessagesJson took ${Date.now() - start}ms`);
 }
 
-function cleanUpOldOpengroups() {
+function cleanUpOldOpengroupsOnStart() {
   const ourNumber = getItemById('number_id');
   if (!ourNumber || !ourNumber.value) {
     return;
@@ -3367,15 +3530,14 @@ function cleanUpOldOpengroups() {
   const maxMessagePerOpengroupConvo = 2000;
 
   // first remove very old messages for each opengroups
-  const v2Convos = getAllOpenGroupV2Conversations();
+  const v2ConvosIds = getAllOpenGroupV2ConversationsIds();
 
-  if (!v2Convos || !v2Convos.length) {
+  if (!v2ConvosIds || !v2ConvosIds.length) {
     return;
   }
   dropFtsAndTriggers(assertGlobalInstance());
 
-  v2Convos.forEach(convo => {
-    const convoId = convo.id;
+  v2ConvosIds.forEach(convoId => {
     const messagesInConvoBefore = getMessagesCountByConversation(convoId);
 
     if (messagesInConvoBefore >= maxMessagePerOpengroupConvo) {
@@ -3406,7 +3568,7 @@ function cleanUpOldOpengroups() {
       const convoProps = getConversationById(convoId);
       if (convoProps) {
         convoProps.unreadCount = unreadCount;
-        updateConversation(convoProps);
+        saveConversation(convoProps);
       }
     }
   });
@@ -3515,13 +3677,30 @@ function fillWithTestData(numConvosToAdd: number, numMsgsToAdd: number) {
   for (let index = 0; index < numConvosToAdd; index++) {
     const activeAt = Date.now() - index;
     const id = Date.now() - 1000 * index;
-    const convoObjToAdd = {
+    const convoObjToAdd: ConversationAttributes = {
       active_at: activeAt,
       members: [],
       profileName: `${activeAt}`,
       name: `${activeAt}`,
       id: `05${id}`,
       type: 'group',
+      didApproveMe: false,
+      expireTimer: 0,
+      groupAdmins: [],
+      isApproved: false,
+      isKickedFromGroup: false,
+      isPinned: false,
+      isTrustedForAttachmentDownload: false,
+      is_medium_group: false,
+      lastJoinedTimestamp: 0,
+      lastMessage: null,
+      lastMessageStatus: undefined,
+      left: false,
+      mentionedUs: false,
+      subscriberCount: 0,
+      triggerNotificationsFor: 'all',
+      unreadCount: 0,
+      zombies: [],
     };
     convosIdsAdded.push(id);
     try {
@@ -3616,10 +3795,8 @@ export const sqlNode = {
   getConversationCount,
   saveConversation,
   getConversationById,
-  updateConversation,
   removeConversation,
   getAllConversations,
-  getAllOpenGroupV1Conversations,
   getAllOpenGroupV2Conversations,
   getPubkeysInPublicConversation,
   getAllGroupsInvolvingId,

@@ -160,7 +160,7 @@ const getValidClosedGroups = async (convos: Array<ConversationModel>) => {
 const getValidContacts = (convos: Array<ConversationModel>) => {
   // Filter contacts
   const contactsModels = convos.filter(
-    c => !!c.get('active_at') && c.getLokiProfile()?.displayName && c.isPrivate()
+    c => !!c.get('active_at') && c.getRealSessionUsername() && c.isPrivate()
   );
 
   const contacts = contactsModels.map(c => {
@@ -193,7 +193,7 @@ const getValidContacts = (convos: Array<ConversationModel>) => {
 
       return new ConfigurationMessageContact({
         publicKey: c.id as string,
-        displayName: c.getLokiProfile()?.displayName || 'Anonymous',
+        displayName: c.getRealSessionUsername() || 'Anonymous',
         profilePictureURL: c.get('avatarPointer'),
         profileKey: !profileKeyForContact?.length ? undefined : profileKeyForContact,
         isApproved: c.isApproved(),
@@ -229,7 +229,7 @@ export const getCurrentConfigurationMessage = async (
   const profileKey = ourProfileKeyHex ? fromHexToArray(ourProfileKeyHex) : undefined;
 
   const profilePicture = ourConvo?.get('avatarPointer') || undefined;
-  const displayName = ourConvo?.getLokiProfile()?.displayName || 'Anonymous'; // this should never be undefined, but well...
+  const displayName = ourConvo?.getRealSessionUsername() || 'Anonymous'; // this should never be undefined, but well...
 
   const activeOpenGroups = [...opengroupV2CompleteUrls];
 

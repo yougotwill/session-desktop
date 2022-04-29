@@ -4,11 +4,11 @@ import { searchConversations, searchMessages } from '../../../ts/data/data';
 
 import { ReduxConversationType } from './conversations';
 import { PubKey } from '../../session/types';
-import { ConversationTypeEnum } from '../../models/conversation';
 import _ from 'lodash';
 import { getConversationController } from '../../session/conversations';
 import { MessageResultProps } from '../../components/search/MessageSearchResults';
 import { UserUtils } from '../../session/utils';
+import { ConversationTypeEnum } from '../../models/conversationAttributes';
 
 // State
 

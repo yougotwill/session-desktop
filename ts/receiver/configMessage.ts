@@ -1,6 +1,5 @@
 import _ from 'lodash';
 import { createOrUpdateItem, getItemById, hasSyncedInitialConfigurationItem } from '../data/data';
-import { ConversationTypeEnum } from '../models/conversation';
 import {
   joinOpenGroupV2WithUIEvents,
   parseOpenGroupV2,
@@ -18,6 +17,7 @@ import { EnvelopePlus } from './types';
 import { ConversationInteraction } from '../interactions';
 import { getLastProfileUpdateTimestamp, setLastProfileUpdateTimestamp } from '../util/storage';
 import { appendFetchAvatarAndProfileJob, updateOurProfileSync } from './userProfileImageUpdates';
+import { ConversationTypeEnum } from '../models/conversationAttributes';
 
 async function handleOurProfileUpdate(
   sentAt: number | Long,

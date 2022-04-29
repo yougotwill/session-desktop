@@ -5,7 +5,7 @@ import { PubKey } from '../types';
 import { fromHexToArray, toHex } from './String';
 import { getConversationController } from '../conversations';
 import { LokiProfile } from '../../types/Message';
-import { getNumber, Storage } from '../../util/storage';
+import { getOurPubKeyStrFromStorage, Storage } from '../../util/storage';
 import { SessionKeyPair } from '../../receiver/keypairs';
 
 export type HexKeyPair = {
@@ -30,7 +30,7 @@ export function isUsFromCache(pubKey: string | PubKey | undefined): boolean {
  * Returns the public key of this current device as a STRING, or throws an error
  */
 export function getOurPubKeyStrFromCache(): string {
-  const ourNumber = getNumber();
+  const ourNumber = getOurPubKeyStrFromStorage();
   if (!ourNumber) {
     throw new Error('ourNumber is not set');
   }
@@ -89,7 +89,7 @@ export function getOurProfile(): LokiProfile | undefined {
     const profileKeyAsBytes = ourProfileKeyHex ? fromHexToArray(ourProfileKeyHex) : null;
 
     const avatarPointer = ourConversation.get('avatarPointer');
-    const displayName = ourConversation.getLokiProfile()?.displayName || 'Anonymous';
+    const displayName = ourConversation.getRealSessionUsername() || 'Anonymous';
     return {
       displayName,
       avatarPointer,

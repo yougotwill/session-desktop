@@ -13,13 +13,10 @@ import * as DataItem from '../../../../../ts/data/channelsItem';
 import { getSwarmPollingInstance, SNodeAPI, SnodePool } from '../../../../session/apis/snode_api';
 import { SwarmPolling } from '../../../../session/apis/snode_api/swarmPolling';
 import { SWARM_POLLING_TIMEOUT } from '../../../../session/constants';
-import {
-  ConversationCollection,
-  ConversationModel,
-  ConversationTypeEnum,
-} from '../../../../models/conversation';
+import { ConversationCollection, ConversationModel } from '../../../../models/conversation';
 import { PubKey } from '../../../../session/types';
 import { generateFakeSnodes } from '../../../test-utils/utils';
+import { ConversationTypeEnum } from '../../../../models/conversationAttributes';
 // tslint:disable: chai-vague-errors
 
 chai.use(chaiAsPromised as any);

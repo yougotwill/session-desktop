@@ -10,7 +10,7 @@ import { processNewAttachment } from '../types/MessageAttachment';
 import { MIME } from '../types';
 import { autoScaleForIncomingAvatar } from '../util/attachmentsUtil';
 import { decryptProfile } from '../util/crypto/profileEncrypter';
-import { ConversationModel, ConversationTypeEnum } from '../models/conversation';
+import { ConversationModel } from '../models/conversation';
 import { SignalService } from '../protobuf';
 import { getConversationController } from '../session/conversations';
 import { UserUtils } from '../session/utils';
@@ -42,7 +42,7 @@ export async function appendFetchAvatarAndProfileJob(
     // );
     return;
   }
-  window.log.info(`[profile-update] queuing fetching avatar for ${conversation.id}`);
+  // window.log.info(`[profile-update] queuing fetching avatar for ${conversation.id}`);
   const task = allowOnlyOneAtATime(oneAtaTimeStr, async () => {
     return createOrUpdateProfile(conversation, profile, profileKey);
   });
@@ -77,8 +77,13 @@ async function createOrUpdateProfile(
   profile: SignalService.DataMessage.ILokiProfile,
   profileKey?: Uint8Array | null
 ) {
+  if (!conversation.isPrivate()) {
+    window.log.warn('createOrUpdateProfile can only be used for private convos');
+    return;
+  }
   // Retain old values unless changed:
-  const newProfile = conversation.get('profile') || {};
+  const newProfile: { displayName?: string; avatar?: string | null } =
+    conversation.get('profile') || {};
 
   let changes = false;
   if (newProfile.displayName !== profile.displayName) {
@@ -139,12 +144,8 @@ async function createOrUpdateProfile(
     newProfile.avatar = null;
   }
 
-  const conv = await getConversationController().getOrCreateAndWait(
-    conversation.id,
-    ConversationTypeEnum.PRIVATE
-  );
-  await conv.setLokiProfile(newProfile);
+  await conversation.setSessionProfile(newProfile);
   if (changes) {
-    await conv.commit();
+    await conversation.commit();
   }
 }
