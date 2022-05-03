@@ -1410,7 +1410,6 @@ function updateToLokiSchemaVersion23(currentVersion: number, db: BetterSqlite3.D
        ALTER TABLE ${CONVERSATIONS_TABLE} ADD COLUMN is_medium_group INTEGER;
 
        ALTER TABLE ${CONVERSATIONS_TABLE} ADD COLUMN avatarPointer TEXT; -- this is the url of the avatar for that conversation
-       ALTER TABLE ${CONVERSATIONS_TABLE} ADD COLUMN avatar TEXT; -- this is the avatar path, so the avatar once downloaded and stored locally in the syste,
        ALTER TABLE ${CONVERSATIONS_TABLE} ADD COLUMN avatarHash TEXT; -- only used for opengroup avatar.
        ALTER TABLE ${CONVERSATIONS_TABLE} ADD COLUMN nickname TEXT;
        ALTER TABLE ${CONVERSATIONS_TABLE} ADD COLUMN profileKey TEXT;
@@ -1438,7 +1437,6 @@ function updateToLokiSchemaVersion23(currentVersion: number, db: BetterSqlite3.D
         is_medium_group = json_extract(json, '$.is_medium_group'),
         avatarPointer = json_extract(json, '$.avatarPointer'),
         avatarHash = json_extract(json, '$.avatarHash'),
-        -- avatar = json_extract(json, '$.avatar'), avatar is no longer used. We rely on avatarInProfile only
         nickname = json_extract(json, '$.nickname'),
         profileKey = json_extract(json, '$.profileKey'),
         triggerNotificationsFor = json_extract(json, '$.triggerNotificationsFor'),
@@ -1446,7 +1444,7 @@ function updateToLokiSchemaVersion23(currentVersion: number, db: BetterSqlite3.D
         isPinned = json_extract(json, '$.isPinned'),
         isApproved = json_extract(json, '$.isApproved'),
         didApproveMe = json_extract(json, '$.didApproveMe'),
-        avatarInProfile = json_extract(json, '$.profile.avatar'),
+        avatarInProfile = json_extract(json, '$.profile.avatar'),-- avatar is no longer used. We rely on avatarInProfile only
         displayNameInProfile =  json_extract(json, '$.profile.displayName');
 
         UPDATE ${CONVERSATIONS_TABLE} SET json = json_remove(json,

@@ -47,6 +47,16 @@ const allowedKeysFormatRowOfConversation = [
   'subscriberCount',
   'expireTimer',
   'active_at',
+  'id',
+  'type',
+  'name',
+  'profileName',
+  'avatarPointer',
+  'avatarHash',
+  'nickname',
+  'profileKey',
+  'avatarInProfile',
+  'displayNameInProfile',
 ];
 
 export function formatRowOfConversation(row?: Record<string, any>): ConversationAttributes | null {
@@ -54,7 +64,6 @@ export function formatRowOfConversation(row?: Record<string, any>): Conversation
     return null;
   }
 
-  console.warn('Object.keys(row)', Object.keys(row));
   const foundInRowButNotInAllowed = difference(
     Object.keys(row),
     allowedKeysFormatRowOfConversation
