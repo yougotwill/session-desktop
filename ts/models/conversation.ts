@@ -762,7 +762,6 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       ? lastMessageModel.getMessagePropStatus()
       : undefined;
     const lastMessageUpdate = createLastMessageUpdate({
-      currentTimestamp: this.get('active_at'),
       lastMessage: lastMessageJSON,
       lastMessageStatus: lastMessageStatusModel,
       lastMessageNotificationText: lastMessageModel

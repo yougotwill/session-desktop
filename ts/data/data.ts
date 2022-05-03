@@ -4,14 +4,13 @@
 import _ from 'lodash';
 import { MessageResultProps } from '../components/search/MessageSearchResults';
 import { ConversationCollection, ConversationModel } from '../models/conversation';
-import { ConversationTypeEnum } from '../models/conversationAttributes';
+import { ConversationAttributes, ConversationTypeEnum } from '../models/conversationAttributes';
 import { MessageCollection, MessageModel } from '../models/message';
 import { MessageAttributes, MessageDirection } from '../models/messageType';
 import { HexKeyPair } from '../receiver/keypairs';
 import { getConversationController } from '../session/conversations';
 import { getSodiumRenderer } from '../session/crypto';
 import { PubKey } from '../session/types';
-import { ReduxConversationType } from '../state/ducks/conversations';
 import { MsgDuplicateSearchOpenGroup } from '../types/sqlSharedTypes';
 import { ExpirationTimerOptions } from '../util/expiringMessages';
 import { Storage } from '../util/storage';
@@ -190,8 +189,8 @@ export async function removeAllClosedGroupEncryptionKeyPairs(
 }
 
 // Conversation
-export async function saveConversation(data: ReduxConversationType): Promise<void> {
-  const cleaned = _.omit(_cleanData(data), 'isOnline');
+export async function saveConversation(data: ConversationAttributes): Promise<void> {
+  const cleaned = _cleanData(data);
   await channels.saveConversation(cleaned);
 }
 

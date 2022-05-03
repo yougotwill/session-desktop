@@ -81,8 +81,7 @@ export class ConversationController {
     conversation = this.conversations.add({
       id,
       type,
-      version: 2,
-    } as any);
+    });
 
     const create = async () => {
       try {

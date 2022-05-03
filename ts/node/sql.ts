@@ -24,6 +24,7 @@ import { getAppRootPath } from './getRootPath';
 import { ConversationAttributes } from '../models/conversationAttributes';
 import {
   arrayStrToJson,
+  assertValidConversationAttributes,
   formatRowOfConversation,
   jsonToObject,
   objectToJSON,
@@ -1317,7 +1318,7 @@ function updateToLokiSchemaVersion20(currentVersion: number, db: BetterSqlite3.D
       if (obj?.nickname?.length && obj?.profile?.displayName?.length) {
         // this one has a nickname set, but name is unset, set it to the displayName in the lokiProfile if it's exisitng
         obj.name = obj.profile.displayName;
-        saveConversation(obj as any, db);
+        saveConversation(obj as ConversationAttributes, db);
       }
     });
     writeLokiSchemaVersion(targetVersion, db);
@@ -1496,9 +1497,9 @@ function updateToLokiSchemaVersion23(currentVersion: number, db: BetterSqlite3.D
   console.log(`updateToLokiSchemaVersion${targetVersion}: success!`);
 }
 
-function printTableColumns(table: string, db: BetterSqlite3.Database) {
-  console.warn(db.pragma(`table_info('${table}');`));
-}
+// function printTableColumns(table: string, db: BetterSqlite3.Database) {
+//   console.warn(db.pragma(`table_info('${table}');`));
+// }
 
 function writeLokiSchemaVersion(newVersion: number, db: BetterSqlite3.Database) {
   db.prepare(
@@ -1888,6 +1889,8 @@ function getConversationCount() {
 
 // tslint:disable-next-line: max-func-body-length
 function saveConversation(data: ConversationAttributes, instance?: BetterSqlite3.Database) {
+  const formatted = assertValidConversationAttributes(data);
+
   const {
     id,
     active_at,
@@ -1910,7 +1913,6 @@ function saveConversation(data: ConversationAttributes, instance?: BetterSqlite3
     subscriberCount,
     is_medium_group,
     avatarPointer,
-    // avatar,
     avatarHash,
     triggerNotificationsFor,
     isTrustedForAttachmentDownload,
@@ -1919,7 +1921,7 @@ function saveConversation(data: ConversationAttributes, instance?: BetterSqlite3
     didApproveMe,
     avatarInProfile,
     displayNameInProfile,
-  } = data;
+  } = formatted;
 
   assertGlobalInstanceOrInstance(instance)
     .prepare(

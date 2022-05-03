@@ -1,4 +1,4 @@
-import { difference } from 'lodash';
+import { difference, pick } from 'lodash';
 import { ConversationAttributes } from '../models/conversationAttributes';
 
 export function objectToJSON(data: Record<any, any>) {
@@ -127,4 +127,61 @@ export function formatRowOfConversation(row?: Record<string, any>): Conversation
   }
 
   return convo;
+}
+
+const allowedKeysOfConversationAttributes = [
+  'groupAdmins',
+  'members',
+  'zombies',
+  'isTrustedForAttachmentDownload',
+  'isPinned',
+  'isApproved',
+  'didApproveMe',
+  'is_medium_group',
+  'mentionedUs',
+  'isKickedFromGroup',
+  'left',
+  'lastMessage',
+  'lastMessageStatus',
+  'triggerNotificationsFor',
+  'unreadCount',
+  'lastJoinedTimestamp',
+  'subscriberCount',
+  'expireTimer',
+  'active_at',
+  'id',
+  'type',
+  'name',
+  'profileName',
+  'avatarPointer',
+  'avatarHash',
+  'nickname',
+  'profileKey',
+  'avatarInProfile',
+  'displayNameInProfile',
+];
+
+/**
+ * assertValidConversationAttributes is used to make sure that only the keys stored in the database are sent from the renderer.
+ * We could also add some type checking here to make sure what is sent by the renderer matches what we expect to store in the DB
+ */
+export function assertValidConversationAttributes(
+  data: ConversationAttributes
+): ConversationAttributes {
+  // first make sure all keys of the object data are expected to be there
+  const foundInAttributesButNotInAllowed = difference(
+    Object.keys(data),
+    allowedKeysOfConversationAttributes
+  );
+
+  if (foundInAttributesButNotInAllowed?.length) {
+    console.warn(
+      `assertValidConversationAttributes: an invalid key was given in the record: ${foundInAttributesButNotInAllowed}`
+    );
+    throw new Error(
+      `assertValidConversationAttributes: found a not allowed key: ${foundInAttributesButNotInAllowed[0]}`
+    );
+  }
+
+  return pick(data, allowedKeysOfConversationAttributes) as ConversationAttributes;
 }

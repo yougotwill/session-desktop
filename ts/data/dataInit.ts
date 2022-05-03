@@ -92,7 +92,7 @@ const channelsToMake = new Set([
 
 const SQL_CHANNEL_KEY = 'sql-channel';
 let _shutdownPromise: any = null;
-const DATABASE_UPDATE_TIMEOUT = 30 * 60 * 1000; // two minutes // FIXME audric
+const DATABASE_UPDATE_TIMEOUT = 2 * 60 * 1000; // two minutes
 
 export const jobs = Object.create(null);
 const _DEBUG = false;
