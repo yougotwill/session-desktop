@@ -316,9 +316,7 @@ async function commitProfileEdits(newName: string, scaledAvatarUrl: string | nul
     return;
   }
   // do not update the avatar if it did not change
-  await conversation.setSessionProfile({
-    displayName: newName,
-  });
+  await conversation.setSessionDisplayNameNoCommit(newName);
   // might be good to not trigger a sync if the name did not change
   await conversation.commit();
   await setLastProfileUpdateTimestamp(Date.now());

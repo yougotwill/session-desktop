@@ -24,7 +24,7 @@ export interface ConversationAttributes {
   nickname?: string; // this is the nane WE gave to that user
   name?: string; // for open and closed groups, this is currently the name of it (for now) // FIXME Audric
 
-  profile?: any;
+  displayNameInProfile?: string;
   profileKey?: string; // Consider this being a hex string if it set
 
   members: Array<string>; // members are all members for this group. zombies excluded
@@ -42,8 +42,8 @@ export interface ConversationAttributes {
 
   is_medium_group: boolean;
 
-  avatarPointer?: string; // this is the url of the avatar on the file server v2
-  avatar?: string | { path?: string }; // this is the avatar path locally once downloaded and stored in the application attachments folder
+  avatarPointer?: string; // this is the url of the avatar on the file server v2. we use this to detect if we need to redownload the avatar from someone (not useful for opengroups)
+  avatarInProfile?: string; // this is the avatar path locally once downloaded and stored in the application attachments folder
   avatarHash?: string; //Avatar hash is currently used for opengroupv2. it's sha256 hash of the base64 avatar data.
 
   triggerNotificationsFor: ConversationNotificationSettingType;
@@ -56,6 +56,8 @@ export interface ConversationAttributes {
 /**
  * This function mutates optAttributes
  * @param optAttributes the entry object attributes to set the defaults to.
+ *
+ * Test are in ConversationModels_test.ts
  */
 export const fillConvoAttributesWithDefaults = (
   optAttributes: ConversationAttributes

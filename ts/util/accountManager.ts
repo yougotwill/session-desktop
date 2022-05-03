@@ -177,9 +177,10 @@ async function registrationDone(ourPubkey: string, displayName: string) {
     ourPubkey,
     ConversationTypeEnum.PRIVATE
   );
-  await conversation.setSessionProfile({ displayName });
-  await conversation.setIsApproved(true);
-  await conversation.setDidApproveMe(true);
+  conversation.setSessionDisplayNameNoCommit(displayName);
+
+  await conversation.setIsApproved(true, false);
+  await conversation.setDidApproveMe(true, false);
 
   await conversation.commit();
   const user = {

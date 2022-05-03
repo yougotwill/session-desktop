@@ -200,7 +200,7 @@ const getCompactPollRequest = async (
           auth_token: token || '',
         };
         roomRequestContent.from_deletion_server_id = lastMessageDeletedServerID;
-        if (Date.now() - (lastFetchTimestamp || 0) <= DURATION.DAYS * 14) {
+        if (Date.now() - (lastFetchTimestamp || 0) <= DURATION.DAYS * 7) {
           roomRequestContent.from_message_server_id = lastMessageFetchedServerID;
         } else {
           window?.log?.info(

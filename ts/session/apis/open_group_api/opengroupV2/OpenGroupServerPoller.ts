@@ -507,16 +507,12 @@ const handleBase64AvatarUpdate = async (
           contentType: MIME.IMAGE_UNKNOWN, // contentType is mostly used to generate previews and screenshot. We do not care for those in this case.          // url: `${serverUrl}/${res.roomId}`,
         });
         // update the hash on the conversationModel
+        // this does commit to DB and UI
         await convo.setSessionProfile({
           displayName: convo.getName() || window.i18n('unknown'),
-          avatar: upgradedAttachment.path,
+          avatarPath: upgradedAttachment.path,
           avatarHash: newHash,
         });
-        convo.set({
-          avatarHash: newHash,
-        });
-        // trigger the write to db and refresh the UI
-        await convo.commit();
       }
     })
   );

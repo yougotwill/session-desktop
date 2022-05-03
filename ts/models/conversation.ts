@@ -1,5 +1,5 @@
 import Backbone from 'backbone';
-import _, { isEmpty, isString } from 'lodash';
+import _, { isString } from 'lodash';
 import { getMessageQueue } from '../session';
 import { getConversationController } from '../session/conversations';
 import { ClosedGroupVisibleMessage } from '../session/messages/outgoing/visibleMessage/ClosedGroupVisibleMessage';
@@ -1043,7 +1043,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     }
   }
 
-  public async setNickname(nickname?: string) {
+  public async setNickname(nickname: string | null) {
     if (!this.isPrivate()) {
       window.log.info('cannot setNickname to a non private conversation.');
       return;
@@ -1067,35 +1067,45 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
 
   public async setSessionProfile(newProfile: {
     displayName?: string | null;
-    avatar?: string | null;
+    avatarPath?: string | null;
     avatarHash?: string;
   }) {
-    let shouldCommit = false;
+    let changes = false;
 
     const existingSessionName = this.getRealSessionUsername();
     if (newProfile.displayName !== existingSessionName && newProfile.displayName) {
-      this.set({ profile: { displayName: newProfile.displayName } });
-      shouldCommit = true;
+      this.set({
+        displayNameInProfile: newProfile.displayName,
+        profileName: newProfile.displayName,
+      });
+      changes = true;
     }
 
     // a user cannot remove an avatar. Only change it
     // if you change this behavior, double check all setSessionProfile calls (especially the one in EditProfileDialog)
-    if (newProfile.avatar) {
-      const originalAvatar = this.get('avatar');
-      const existingHash = this.get('avatarHash');
-      if (!_.isEqual(originalAvatar, newProfile.avatar)) {
-        this.set({ avatar: newProfile.avatar });
-        shouldCommit = true;
+    if (newProfile.avatarPath) {
+      const originalAvatar = this.get('avatarInProfile');
+      if (!_.isEqual(originalAvatar, newProfile.avatarPath)) {
+        this.set({ avatarInProfile: newProfile.avatarPath });
+        changes = true;
       }
+      const existingHash = this.get('avatarHash');
 
       if (existingHash !== newProfile.avatarHash) {
         this.set({ avatarHash: newProfile.avatarHash });
-        shouldCommit = true;
+        changes = true;
       }
     }
 
-    if (shouldCommit) {
+    if (changes) {
       await this.commit();
+    }
+  }
+
+  public setSessionDisplayNameNoCommit(newDisplayName?: string | null) {
+    const existingSessionName = this.getRealSessionUsername();
+    if (newDisplayName !== existingSessionName && newDisplayName) {
+      this.set({ displayNameInProfile: newDisplayName });
     }
   }
 
@@ -1104,9 +1114,9 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
    */
   public getRealSessionUsername() {
     if (this.isPrivate() || this.isClosedGroup()) {
-      return this.get('profile')?.displayName;
+      return this.get('displayNameInProfile');
     }
-    return null;
+    return undefined;
   }
   public getNickname() {
     return this.get('nickname');
@@ -1290,14 +1300,14 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     return this.get('type') === ConversationTypeEnum.PRIVATE;
   }
 
-  public getAvatarPath() {
-    const avatar = this.get('avatar');
+  public getAvatarPath(): string | null {
+    const avatar = this.get('avatarInProfile');
     if (isString(avatar)) {
       return avatar;
-    } else {
-      if (avatar && isString(avatar.path) && !isEmpty(avatar.path)) {
-        return getAbsoluteAttachmentPath(avatar.path);
-      }
+    }
+
+    if (avatar) {
+      throw new Error('avatarInProfile must be a string as we do not allow the {path: xxx} syntax');
     }
 
     return null;
@@ -1477,19 +1487,6 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     await this.commit();
     return model;
   }
-
-  // private async updateProfileName() {
-  //   // Prioritise nickname over the profile display name
-  //   const nickname = this.getNickname();
-  //   const displayName = this.getRealSessionUsername();
-
-  //   const newProfileName = nickname || displayName || null;
-  //   const oldProfileName = this.get('profileName');
-  //   if (oldProfileName !== newProfileName && newProfileName) {
-  //     this.set({ profileName: newProfileName });
-  //     await this.commit();
-  //   }
-  // }
 
   private async clearContactTypingTimer(_sender: string) {
     if (!!this.typingTimer) {

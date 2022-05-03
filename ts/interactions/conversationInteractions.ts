@@ -313,7 +313,7 @@ export async function setNotificationForConvoId(
 }
 export async function clearNickNameByConvoId(conversationId: string) {
   const conversation = getConversationController().get(conversationId);
-  await conversation.setNickname(undefined);
+  await conversation.setNickname(null);
 }
 
 export function showChangeNickNameByConvoId(conversationId: string) {
@@ -450,7 +450,7 @@ export async function uploadOurAvatar(newAvatarDecrypted?: ArrayBuffer) {
     contentType: MIME.IMAGE_UNKNOWN, // contentType is mostly used to generate previews and screenshot. We do not care for those in this case.
   });
   // Replace our temporary image with the attachment pointer from the server:
-  ourConvo.set('avatar', undefined);
+  ourConvo.set('avatarInProfile', undefined);
   const displayName = ourConvo.get('profileName');
 
   // write the profileKey even if it did not change
@@ -458,7 +458,7 @@ export async function uploadOurAvatar(newAvatarDecrypted?: ArrayBuffer) {
   // Replace our temporary image with the attachment pointer from the server:
   // this commits already
   await ourConvo.setSessionProfile({
-    avatar: upgraded.path,
+    avatarPath: upgraded.path,
     displayName,
   });
   const newTimestampReupload = Date.now();

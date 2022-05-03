@@ -151,7 +151,7 @@ const handleContactFromConfig = async (
       toHex(contactReceived.publicKey),
       ConversationTypeEnum.PRIVATE
     );
-    const profile: SignalService.DataMessage.ILokiProfile = {
+    const profileInDataMessage: SignalService.DataMessage.ILokiProfile = {
       displayName: contactReceived.name,
       profilePicture: contactReceived.profilePicture,
     };
@@ -185,7 +185,11 @@ const handleContactFromConfig = async (
       await BlockedNumberController.unblock(contactConvo.id);
     }
 
-    void appendFetchAvatarAndProfileJob(contactConvo, profile, contactReceived.profileKey);
+    void appendFetchAvatarAndProfileJob(
+      contactConvo,
+      profileInDataMessage,
+      contactReceived.profileKey
+    );
   } catch (e) {
     window?.log?.warn('failed to handle  a new closed group from configuration message');
   }

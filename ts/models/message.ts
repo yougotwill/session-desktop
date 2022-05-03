@@ -339,32 +339,6 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
     };
   }
 
-  public findContact(pubkey: string) {
-    return getConversationController().get(pubkey);
-  }
-
-  public findAndFormatContact(pubkey: string): FindAndFormatContactType {
-    const contactModel = this.findContact(pubkey);
-    let profileName;
-    let isMe = false;
-
-    if (pubkey === UserUtils.getOurPubKeyStrFromCache()) {
-      profileName = window.i18n('you');
-      isMe = true;
-    } else {
-      profileName = contactModel ? contactModel.getProfileName() : null;
-    }
-
-    return {
-      pubkey: pubkey,
-      avatarPath: contactModel ? contactModel.getAvatarPath() : null,
-      name: (contactModel ? contactModel.getName() : null) as string | null,
-      profileName: profileName as string | null,
-      title: (contactModel ? contactModel.getTitle() : null) as string | null,
-      isMe,
-    };
-  }
-
   // tslint:disable-next-line: cyclomatic-complexity
   public getPropsForGroupUpdateMessage(): PropsForGroupUpdate | null {
     const groupUpdate = this.getGroupUpdateAsArray();
@@ -1163,6 +1137,29 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
       return false;
     }
   }
+
+  private findAndFormatContact(pubkey: string): FindAndFormatContactType {
+    const contactModel = getConversationController().get(pubkey);
+    let profileName;
+    let isMe = false;
+
+    if (pubkey === UserUtils.getOurPubKeyStrFromCache()) {
+      profileName = window.i18n('you');
+      isMe = true;
+    } else {
+      profileName = contactModel ? contactModel.getProfileName() : null;
+    }
+
+    return {
+      pubkey: pubkey,
+      avatarPath: contactModel ? contactModel.getAvatarPath() : null,
+      name: (contactModel ? contactModel.getName() : null) as string | null,
+      profileName: profileName as string | null,
+      title: (contactModel ? contactModel.getTitle() : null) as string | null,
+      isMe,
+    };
+  }
+
   private dispatchMessageUpdate() {
     updatesToDispatch.set(this.id, this.getMessageModelProps());
     trotthledAllMessagesDispatch();

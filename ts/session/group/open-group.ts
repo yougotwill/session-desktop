@@ -61,7 +61,7 @@ export async function initiateOpenGroupUpdate(
       const newHash = sha256(fromArrayBufferToBase64(downloaded.buffer));
       await convo.setSessionProfile({
         displayName: groupName || convo.get('name') || 'Unknown',
-        avatar: upgraded.path,
+        avatarPath: upgraded.path,
         avatarHash: newHash,
       });
     } catch (e) {

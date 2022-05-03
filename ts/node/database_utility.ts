@@ -1,3 +1,4 @@
+import { difference } from 'lodash';
 import { ConversationAttributes } from '../models/conversationAttributes';
 
 export function objectToJSON(data: Record<any, any>) {
@@ -25,24 +26,54 @@ export function toSqliteBoolean(val: boolean): number {
   return val ? 1 : 0;
 }
 
+// this is used to make sure when storing something in the database you remember to add the wrapping for it in formatRowOfConversation
+const allowedKeysFormatRowOfConversation = [
+  'groupAdmins',
+  'members',
+  'zombies',
+  'isTrustedForAttachmentDownload',
+  'isPinned',
+  'isApproved',
+  'didApproveMe',
+  'is_medium_group',
+  'mentionedUs',
+  'isKickedFromGroup',
+  'left',
+  'lastMessage',
+  'lastMessageStatus',
+  'triggerNotificationsFor',
+  'unreadCount',
+  'lastJoinedTimestamp',
+  'subscriberCount',
+  'expireTimer',
+  'active_at',
+];
+
 export function formatRowOfConversation(row?: Record<string, any>): ConversationAttributes | null {
   if (!row) {
     return null;
   }
 
+  console.warn('Object.keys(row)', Object.keys(row));
+  const foundInRowButNotInAllowed = difference(
+    Object.keys(row),
+    allowedKeysFormatRowOfConversation
+  );
+
+  if (foundInRowButNotInAllowed?.length) {
+    console.warn('foundInRowButNotInAllowed', foundInRowButNotInAllowed);
+
+    throw new Error(
+      `formatRowOfConversation: an invalid key was given in the record: ${foundInRowButNotInAllowed[0]}`
+    );
+  }
+
   const convo: ConversationAttributes = row as ConversationAttributes;
 
-  if (convo.groupAdmins?.length) {
-    convo.groupAdmins = convo.groupAdmins?.length ? jsonToArray(row.groupAdmins) : [];
-  }
-
-  if (convo.members?.length) {
-    convo.members = row.members?.length ? jsonToArray(row.members) : [];
-  }
-
-  if (convo.zombies?.length) {
-    convo.zombies = row.zombies?.length ? jsonToArray(row.zombies) : [];
-  }
+  convo.groupAdmins =
+    convo.groupAdmins?.length && row.groupAdmins.length > 5 ? jsonToArray(row.groupAdmins) : [];
+  convo.members = row.members?.length && row.members.length > 5 ? jsonToArray(row.members) : [];
+  convo.zombies = row.zombies?.length && row.zombies.length > 5 ? jsonToArray(row.zombies) : [];
 
   // sqlite stores boolean as integer. to clean thing up we force the expected boolean fields to be boolean
   convo.isTrustedForAttachmentDownload = Boolean(convo.isTrustedForAttachmentDownload);

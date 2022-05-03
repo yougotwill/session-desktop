@@ -1388,9 +1388,6 @@ function updateToLokiSchemaVersion23(currentVersion: number, db: BetterSqlite3.D
   }
   console.log(`updateToLokiSchemaVersion${targetVersion}: starting...`);
 
-  console.warn('============= before ==========');
-
-  printTableColumns(CONVERSATIONS_TABLE, db);
   db.transaction(() => {
     db.prepare(
       `DELETE FROM ${CONVERSATIONS_TABLE} WHERE
@@ -1441,7 +1438,7 @@ function updateToLokiSchemaVersion23(currentVersion: number, db: BetterSqlite3.D
         is_medium_group = json_extract(json, '$.is_medium_group'),
         avatarPointer = json_extract(json, '$.avatarPointer'),
         avatarHash = json_extract(json, '$.avatarHash'),
-        avatar = json_extract(json, '$.avatar'),
+        -- avatar = json_extract(json, '$.avatar'), avatar is no longer used. We rely on avatarInProfile only
         nickname = json_extract(json, '$.nickname'),
         profileKey = json_extract(json, '$.profileKey'),
         triggerNotificationsFor = json_extract(json, '$.triggerNotificationsFor'),
@@ -1468,7 +1465,6 @@ function updateToLokiSchemaVersion23(currentVersion: number, db: BetterSqlite3.D
             '$.is_medium_group',
             '$.avatarPointer',
             '$.avatarHash',
-            '$.avatar',
             '$.nickname',
             '$.profileKey',
             '$.triggerNotificationsFor',
@@ -1498,9 +1494,6 @@ function updateToLokiSchemaVersion23(currentVersion: number, db: BetterSqlite3.D
 
     writeLokiSchemaVersion(targetVersion, db);
   })();
-
-  console.warn('============= after ==========');
-  printTableColumns(CONVERSATIONS_TABLE, db);
 
   console.log(`updateToLokiSchemaVersion${targetVersion}: success!`);
 }
@@ -1926,14 +1919,9 @@ function saveConversation(data: ConversationAttributes, instance?: BetterSqlite3
     isPinned,
     isApproved,
     didApproveMe,
+    avatarInProfile,
+    displayNameInProfile,
   } = data;
-
-  // console.warn('==============================');
-  // keys(data).forEach(n => {
-  //   console.warn(`=> ${n} ${typeof data[n]}: ${data[n]}`);
-  // });
-
-  // profile?: any;
 
   assertGlobalInstanceOrInstance(instance)
     .prepare(
@@ -1964,7 +1952,9 @@ function saveConversation(data: ConversationAttributes, instance?: BetterSqlite3
   isTrustedForAttachmentDownload,
   isPinned,
   isApproved,
-  didApproveMe
+  didApproveMe,
+  avatarInProfile,
+  displayNameInProfile
 	) values (
 	    $id,
 	    $active_at,
@@ -1992,7 +1982,9 @@ function saveConversation(data: ConversationAttributes, instance?: BetterSqlite3
       $isTrustedForAttachmentDownload,
       $isPinned,
       $isApproved,
-      $didApproveMe)`
+      $didApproveMe,
+      $avatarInProfile,
+      $displayNameInProfile)`
     )
     .run({
       id,
@@ -2022,6 +2014,8 @@ function saveConversation(data: ConversationAttributes, instance?: BetterSqlite3
       isPinned: toSqliteBoolean(isPinned),
       isApproved: toSqliteBoolean(isApproved),
       didApproveMe: toSqliteBoolean(didApproveMe),
+      avatarInProfile,
+      displayNameInProfile,
     });
 }
 
@@ -3171,7 +3165,7 @@ function getExternalFilesForConversation(
   return files;
 }
 
-function removeKnownAttachments(allAttachments: any) {
+function removeKnownAttachments(allAttachments: Array<string>) {
   const lookup = fromPairs(map(allAttachments, file => [file, true]));
   const chunkSize = 50;
 
@@ -3239,7 +3233,7 @@ function removeKnownAttachments(allAttachments: any) {
       });
 
     forEach(conversations, conversation => {
-      const avatar = (conversation as ConversationAttributes)?.avatar;
+      const avatar = (conversation as ConversationAttributes)?.avatarInProfile;
       const externalFiles = getExternalFilesForConversation(avatar);
       forEach(externalFiles, file => {
         // tslint:disable-next-line: no-dynamic-delete
