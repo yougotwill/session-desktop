@@ -1232,7 +1232,7 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
       }
       if (groupUpdate.joined && groupUpdate.joined.length) {
         const names = groupUpdate.joined.map((pubKey: string) =>
-          getConversationController().getContactProfileNameOrFullPubKey(pubKey)
+          getConversationController().getContactProfileNameOrShortenedPubKey(pubKey)
         );
 
         if (names.length > 1) {
@@ -1240,6 +1240,7 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
         } else {
           messages.push(window.i18n('joinedTheGroup', names));
         }
+        return messages.join(' ');
       }
 
       if (groupUpdate.kicked && groupUpdate.kicked.length) {

@@ -767,7 +767,7 @@ const LOKI_SCHEMA_VERSIONS = [
   updateToLokiSchemaVersion20,
   updateToLokiSchemaVersion21,
   updateToLokiSchemaVersion22,
-  updateToLokiSchemaVersion23,
+  updateToLokiSchemaVersion24,
 ];
 
 function updateToLokiSchemaVersion1(currentVersion: number, db: BetterSqlite3.Database) {
@@ -1382,19 +1382,29 @@ function updateToLokiSchemaVersion22(currentVersion: number, db: BetterSqlite3.D
   console.log(`updateToLokiSchemaVersion${targetVersion}: success!`);
 }
 
-function updateToLokiSchemaVersion23(currentVersion: number, db: BetterSqlite3.Database) {
-  const targetVersion = 23;
+function updateToLokiSchemaVersion24(currentVersion: number, db: BetterSqlite3.Database) {
+  const targetVersion = 24;
   if (currentVersion >= targetVersion) {
     return;
   }
   console.log(`updateToLokiSchemaVersion${targetVersion}: starting...`);
 
   db.transaction(() => {
+    // it's unlikely there is still a publicChat v1 convo in the db, but run this in a migration to be 100% sure (previously, run on app start instead)
     db.prepare(
       `DELETE FROM ${CONVERSATIONS_TABLE} WHERE
       type = 'group' AND
-      id LIKE 'publicChat:1@%';` // it's unlikely there is still a publicChat v1 convo in the db, but run this in a migration to be 100% sure (previously, run on app start instead)
+      id LIKE 'publicChat:1@%';`
     ).run();
+
+    console.warn(
+      'before',
+      db
+        .prepare(
+          `select * from ${CONVERSATIONS_TABLE} WHERE id = '05f87de712ab58aa3ba64c260a0d4ce79d1c68669d85f5cc6cb1bf85125a717326';`
+        )
+        .all()
+    );
 
     db.exec(`
        ALTER TABLE ${CONVERSATIONS_TABLE} ADD COLUMN zombies TEXT DEFAULT "[]";
@@ -1445,7 +1455,7 @@ function updateToLokiSchemaVersion23(currentVersion: number, db: BetterSqlite3.D
         isPinned = json_extract(json, '$.isPinned'),
         isApproved = json_extract(json, '$.isApproved'),
         didApproveMe = json_extract(json, '$.didApproveMe'),
-        avatarInProfile = json_extract(json, '$.profile.avatar'),-- avatar is no longer used. We rely on avatarInProfile only
+        avatarInProfile = json_extract(json, '$.profile.avatar'),-- profile.avatar is no longer used. We rely on avatarInProfile only
         displayNameInProfile =  json_extract(json, '$.profile.displayName');
 
         UPDATE ${CONVERSATIONS_TABLE} SET json = json_remove(json,
@@ -1487,10 +1497,20 @@ function updateToLokiSchemaVersion23(currentVersion: number, db: BetterSqlite3.D
         ');
 
         ALTER TABLE ${CONVERSATIONS_TABLE} DROP COLUMN json;
+        UPDATE ${CONVERSATIONS_TABLE} SET displayNameInProfile = name WHERE
+        type = 'group' AND
+        id NOT LIKE 'publicChat:%';
+
+
        `);
-
-    // console.warn(db.prepare(`SELECT json from ${CONVERSATIONS_TABLE} LIMIT 10000;`).all({}));
-
+    console.warn(
+      'after',
+      db
+        .prepare(
+          `select * from ${CONVERSATIONS_TABLE} WHERE id = '05f87de712ab58aa3ba64c260a0d4ce79d1c68669d85f5cc6cb1bf85125a717326';`
+        )
+        .all()
+    );
     writeLokiSchemaVersion(targetVersion, db);
   })();
 
@@ -1887,6 +1907,31 @@ function getConversationCount() {
   return row['count(*)'];
 }
 
+
+
+open groups
+OK displayNameInProfile & name & profileName are set correctly and no nicknames allowed
+
+
+OK closed groups
+name & displayName is set correctly and no nicknames allowed
+
+private chats
+OK profileName & displayNameInProfile are valid if nickname unset
+
+private chat with nickname set
+profileName & nickname are set to nickanme but displayNameInProfile is null
+
+
+note to self
+OK profileName and displayNameInProfile are set
+
+
+
+=> all names to displayNameInProfile no matter the type
+for private chats, nickname can be set or null, and overrides the displayNameInProfile if set
+
+
 // tslint:disable-next-line: max-func-body-length
 function saveConversation(data: ConversationAttributes, instance?: BetterSqlite3.Database) {
   const formatted = assertValidConversationAttributes(data);
@@ -1923,6 +1968,12 @@ function saveConversation(data: ConversationAttributes, instance?: BetterSqlite3
     displayNameInProfile,
   } = formatted;
 
+  console.warn('=========formatted', formatted);
+
+  // shorten the last message as we never need more than 60 chars (and it bloats the redux/ipc calls uselessly
+
+  const shortenedLastMessage =
+    isString(lastMessage) && lastMessage.length > 60 ? lastMessage.substring(60) : lastMessage;
   assertGlobalInstanceOrInstance(instance)
     .prepare(
       `INSERT OR REPLACE INTO ${CONVERSATIONS_TABLE} (
@@ -1984,7 +2035,8 @@ function saveConversation(data: ConversationAttributes, instance?: BetterSqlite3
       $isApproved,
       $didApproveMe,
       $avatarInProfile,
-      $displayNameInProfile)`
+      $displayNameInProfile
+      )`
     )
     .run({
       id,
@@ -1996,20 +2048,21 @@ function saveConversation(data: ConversationAttributes, instance?: BetterSqlite3
       nickname,
       profileKey,
       zombies: zombies && zombies.length ? arrayStrToJson(zombies) : '[]',
-      groupAdmins: groupAdmins && groupAdmins.length ? arrayStrToJson(groupAdmins) : '[]',
       left: toSqliteBoolean(left),
       expireTimer,
       mentionedUs: toSqliteBoolean(mentionedUs),
       unreadCount,
-      lastMessageStatus: lastMessageStatus || null,
-      lastMessage,
+      lastMessageStatus,
+      lastMessage: shortenedLastMessage,
+
       lastJoinedTimestamp,
+      groupAdmins: groupAdmins && groupAdmins.length ? arrayStrToJson(groupAdmins) : '[]',
       isKickedFromGroup: toSqliteBoolean(isKickedFromGroup),
       subscriberCount,
       is_medium_group: toSqliteBoolean(is_medium_group),
       avatarPointer,
       avatarHash,
-      triggerNotificationsFor: triggerNotificationsFor,
+      triggerNotificationsFor,
       isTrustedForAttachmentDownload: toSqliteBoolean(isTrustedForAttachmentDownload),
       isPinned: toSqliteBoolean(isPinned),
       isApproved: toSqliteBoolean(isApproved),

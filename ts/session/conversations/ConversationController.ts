@@ -128,14 +128,6 @@ export class ConversationController {
     return conversation.getContactProfileNameOrShortenedPubKey();
   }
 
-  public getContactProfileNameOrFullPubKey(pubKey: string): string {
-    const conversation = this.conversations.get(pubKey);
-    if (!conversation) {
-      return pubKey;
-    }
-    return conversation.getContactProfileNameOrFullPubKey();
-  }
-
   public isMediumGroup(hexEncodedGroupPublicKey: string): boolean {
     const convo = this.conversations.get(hexEncodedGroupPublicKey);
     if (convo) {

@@ -18,8 +18,8 @@ import { ReplyingToMessageProps } from '../../components/conversation/compositio
 import { QuotedAttachmentType } from '../../components/conversation/message/message-content/Quote';
 import { LightBoxOptions } from '../../components/conversation/SessionConversation';
 import {
-  ConversationTypeEnum,
   ConversationNotificationSettingType,
+  ConversationTypeEnum,
 } from '../../models/conversationAttributes';
 
 export type CallNotificationType = 'missed-call' | 'started-call' | 'answered-a-call';

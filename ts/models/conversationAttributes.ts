@@ -21,11 +21,11 @@ export interface ConversationAttributes {
   active_at: number;
 
   profileName?: string; // this is the name the user/closed group/ opengroup has set
-  nickname?: string; // this is the nane WE gave to that user
+  nickname?: string; // this is the name WE gave to that user (only applicable to private chats, not closed group neither opengroups)
   name?: string; // for open and closed groups, this is currently the name of it (for now) // FIXME Audric
 
   displayNameInProfile?: string;
-  profileKey?: string; // Consider this being a hex string if it set
+  profileKey?: string; // Consider this being a hex string if it is set
 
   members: Array<string>; // members are all members for this group. zombies excluded
   zombies: Array<string>; // only used for closed groups. Zombies are users which left but not yet removed by the admin
@@ -42,7 +42,7 @@ export interface ConversationAttributes {
 
   is_medium_group: boolean;
 
-  avatarPointer?: string; // this is the url of the avatar on the file server v2. we use this to detect if we need to redownload the avatar from someone (not useful for opengroups)
+  avatarPointer?: string; // this is the url of the avatar on the file server v2. we use this to detect if we need to redownload the avatar from someone (not used for opengroups)
   avatarInProfile?: string; // this is the avatar path locally once downloaded and stored in the application attachments folder
   avatarHash?: string; //Avatar hash is currently used for opengroupv2. it's sha256 hash of the base64 avatar data.
 

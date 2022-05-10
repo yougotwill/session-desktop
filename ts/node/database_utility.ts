@@ -1,4 +1,4 @@
-import { difference, pick } from 'lodash';
+import { difference, omit, pick } from 'lodash';
 import { ConversationAttributes } from '../models/conversationAttributes';
 
 export function objectToJSON(data: Record<any, any>) {
@@ -13,7 +13,7 @@ function jsonToArray(json: string): Array<string> {
   try {
     return JSON.parse(json);
   } catch (e) {
-    window.log.warn('jsontoarray failed:', e.message);
+    console.warn('jsontoarray failed:', e.message);
     return [];
   }
 }
@@ -70,14 +70,14 @@ export function formatRowOfConversation(row?: Record<string, any>): Conversation
   );
 
   if (foundInRowButNotInAllowed?.length) {
-    console.warn('foundInRowButNotInAllowed', foundInRowButNotInAllowed);
+    console.warn('formatRowOfConversation: foundInRowButNotInAllowed: ', foundInRowButNotInAllowed);
 
-    throw new Error(
-      `formatRowOfConversation: an invalid key was given in the record: ${foundInRowButNotInAllowed[0]}`
-    );
+    // throw new Error(
+    //   `formatRowOfConversation: an invalid key was given in the record: ${foundInRowButNotInAllowed[0]}`
+    // );
   }
 
-  const convo: ConversationAttributes = row as ConversationAttributes;
+  const convo: ConversationAttributes = omit(row, 'json') as ConversationAttributes;
 
   convo.groupAdmins =
     convo.groupAdmins?.length && row.groupAdmins.length > 5 ? jsonToArray(row.groupAdmins) : [];

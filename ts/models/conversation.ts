@@ -1117,6 +1117,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     }
     return undefined;
   }
+
   public getNickname() {
     return this.get('nickname');
   }
@@ -1261,31 +1262,14 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       );
     }
 
-    const profileName = this.get('profileName');
     const pubkey = this.id;
     if (UserUtils.isUsFromCache(pubkey)) {
       return window.i18n('you');
     }
-    return profileName || PubKey.shorten(pubkey);
-  }
 
-  /**
-   * For a private convo, returns the loki profilename if set, or a full length
-   * version of the contact pubkey.
-   * Throws an error if called on a group convo.
-   */
-  public getContactProfileNameOrFullPubKey() {
-    if (!this.isPrivate()) {
-      throw new Error(
-        'getContactProfileNameOrFullPubKey() cannot be called with a non private convo.'
-      );
-    }
-    const profileName = this.get('profileName');
-    const pubkey = this.id;
-    if (UserUtils.isUsFromCache(pubkey)) {
-      return window.i18n('you');
-    }
-    return profileName || pubkey;
+    const profileName = this.get('displayNameInProfile');
+
+    return profileName || PubKey.shorten(pubkey);
   }
 
   public getProfileName() {
@@ -1628,7 +1612,7 @@ export class ConversationCollection extends Backbone.Collection<ConversationMode
   constructor(models?: Array<ConversationModel>) {
     super(models);
     this.comparator = (m: ConversationModel) => {
-      return -m.get('active_at');
+      return -(m.get('active_at') || 0);
     };
   }
 }
