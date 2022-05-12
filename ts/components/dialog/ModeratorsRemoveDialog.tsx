@@ -83,7 +83,7 @@ export const RemoveModeratorsDialog = (props: Props) => {
   const existingMods = convoProps.groupAdmins || [];
   const hasMods = existingMods.length !== 0;
 
-  const title = `${i18n('removeModerators')}: ${convoProps.name}`;
+  const title = `${i18n('removeModerators')}: ${convoProps.displayNameInProfile}`;
   return (
     <SessionWrapperModal title={title} onClose={closeDialog}>
       <Flex container={true} flexDirection="column" alignItems="center">

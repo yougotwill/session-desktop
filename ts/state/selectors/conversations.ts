@@ -289,8 +289,8 @@ function getConversationTitle(
   conversation: ReduxConversationType,
   testingi18n?: LocalizerType
 ): string {
-  if (conversation.name) {
-    return conversation.name;
+  if (conversation.displayNameInProfile) {
+    return conversation.displayNameInProfile;
   }
 
   if (conversation.type === 'group') {
@@ -412,7 +412,10 @@ export const _getSortedConversations = (
     }
 
     // Add Open Group to list as soon as the name has been set
-    if (conversation.isPublic && (!conversation.name || conversation.name === 'Unknown group')) {
+    if (
+      conversation.isPublic &&
+      (!conversation.displayNameInProfile || conversation.displayNameInProfile === 'Unknown group')
+    ) {
       continue;
     }
 
@@ -535,8 +538,6 @@ export const getConversationHeaderTitleProps = createSelector(getSelectedConvers
     isMe: !!state.isMe,
     members: state.members || [],
     isPublic: !!state.isPublic,
-    profileName: state.profileName,
-    name: state.name,
     subscriberCount: state.subscriberCount,
     isGroup: state.type === 'group',
     currentNotificationSetting: state.currentNotificationSetting,
@@ -772,6 +773,7 @@ export const getMessagePropsByMessageId = createSelector(
   getSortedMessagesOfSelectedConversation,
   getConversationLookup,
   getMessageId,
+  // tslint:disable-next-line: cyclomatic-complexity
   (
     _convoState,
     messages: Array<SortedMessageModelProps>,
@@ -817,8 +819,13 @@ export const getMessagePropsByMessageId = createSelector(
     const isSenderAdmin = groupAdmins.includes(sender);
     const senderIsUs = sender === ourPubkey;
 
-    const authorName = foundSenderConversation.name || null;
-    const authorProfileName = senderIsUs ? window.i18n('you') : foundSenderConversation.profileName;
+    const authorName =
+      foundSenderConversation.nickname || foundSenderConversation.displayNameInProfile || null;
+    const authorProfileName = senderIsUs
+      ? window.i18n('you')
+      : foundSenderConversation.nickname ||
+        foundSenderConversation.displayNameInProfile ||
+        window.i18n('anonymous');
 
     const messageProps: MessageModelPropsWithConvoProps = {
       ...foundMessageProps,

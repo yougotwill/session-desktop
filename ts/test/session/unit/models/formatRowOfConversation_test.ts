@@ -284,9 +284,7 @@ describe('formatRowOfConversation', () => {
         fillConvoAttributesWithDefaults({
           id: '123456',
           type: 'group',
-          profileName: 'profileName',
           nickname: 'nickname',
-          name: 'name',
           displayNameInProfile: 'displayNameInProfile',
           profileKey: '',
           avatarPointer: 'avatarPointer',

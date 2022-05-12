@@ -490,7 +490,7 @@ export class SessionConversation extends React.Component<Props, State> {
 
     const allMembers = allPubKeys.map((pubKey: string) => {
       const conv = getConversationController().get(pubKey);
-      const profileName = conv?.getProfileName() || 'Anonymous';
+      const profileName = conv?.getNicknameOrRealUsernameOrPlaceholder();
 
       return {
         id: pubKey,

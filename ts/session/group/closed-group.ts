@@ -193,7 +193,7 @@ export async function addUpdateMessage(
 function buildGroupDiff(convo: ConversationModel, update: GroupInfo): GroupDiff {
   const groupDiff: GroupDiff = {};
 
-  if (convo.get('name') !== update.name) {
+  if (convo.get('displayNameInProfile') !== update.name) {
     groupDiff.newName = update.name;
   }
 

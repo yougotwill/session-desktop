@@ -16,21 +16,23 @@ export function useOurAvatarPath() {
 
 /**
  *
- * @returns convo.profileName || convo.name || convo.id or undefined if the convo is not found
+ * @returns convo.nickname || convo.displayNameInProfile || convo.id or undefined if the convo is not found
  */
 export function useConversationUsername(convoId?: string) {
   const convoProps = useConversationPropsById(convoId);
 
-  return convoProps?.profileName || convoProps?.name || convoId;
+  return convoProps?.nickname || convoProps?.displayNameInProfile || convoId;
 }
 
 /**
- * Returns either the nickname, profileName, or the shorten pubkey
+ * Returns either the nickname, displayNameInProfile, or the shorten pubkey
  */
 export function useConversationUsernameOrShorten(convoId?: string) {
   const convoProps = useConversationPropsById(convoId);
 
-  return convoProps?.profileName || convoProps?.name || (convoId && PubKey.shorten(convoId));
+  return (
+    convoProps?.nickname || convoProps?.displayNameInProfile || (convoId && PubKey.shorten(convoId))
+  );
 }
 
 /**
@@ -39,7 +41,7 @@ export function useConversationUsernameOrShorten(convoId?: string) {
  */
 export function useConversationRealName(convoId?: string) {
   const convoProps = useConversationPropsById(convoId);
-  return convoProps?.isPrivate ? convoProps?.name : undefined;
+  return convoProps?.isPrivate ? convoProps?.displayNameInProfile : undefined;
 }
 
 /**
@@ -52,7 +54,7 @@ export function useConversationsUsernameWithQuoteOrFullPubkey(pubkeys: Array<str
         return window.i18n('you');
       }
       const convo = state.conversations.conversationLookup[pubkey];
-      const nameGot = convo?.profileName || convo?.name;
+      const nameGot = convo?.displayNameInProfile;
       return nameGot?.length ? `"${nameGot}"` : pubkey;
     });
   });

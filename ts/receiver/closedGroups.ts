@@ -564,7 +564,7 @@ async function handleClosedGroupNameChanged(
   const newName = groupUpdate.name;
   window?.log?.info(`Got a group update for group ${envelope.source}, type: NAME_CHANGED`);
 
-  if (newName !== convo.get('name')) {
+  if (newName !== convo.get('displayNameInProfile')) {
     const groupDiff: ClosedGroup.GroupDiff = {
       newName,
     };
@@ -574,7 +574,7 @@ async function handleClosedGroupNameChanged(
       envelope.senderIdentity,
       _.toNumber(envelope.timestamp)
     );
-    convo.set({ name: newName });
+    convo.set({ displayNameInProfile: newName });
     convo.updateLastMessage();
     await convo.commit();
   }

@@ -517,7 +517,7 @@ class CompositionBoxInner extends React.Component<Props, State> {
       const conv = getConversationController().get(pubKey);
       let profileName = 'Anonymous';
       if (conv) {
-        profileName = conv.getProfileName() || 'Anonymous';
+        profileName = conv.getNicknameOrRealUsernameOrPlaceholder();
       }
       return {
         id: pubKey,

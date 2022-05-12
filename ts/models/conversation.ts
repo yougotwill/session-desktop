@@ -241,8 +241,6 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     const weAreAdmin = this.isAdmin(ourNumber);
     const isMe = this.isMe();
     const isTyping = !!this.typingTimer;
-    const name = this.getName();
-    const profileName = this.getProfileName();
     const unreadCount = this.get('unreadCount') || undefined;
     const mentionedUs = this.get('mentionedUs') || undefined;
     const isBlocked = this.isBlocked();
@@ -255,6 +253,8 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     const left = !!this.get('left');
     const expireTimer = this.get('expireTimer');
     const currentNotificationSetting = this.get('triggerNotificationsFor');
+    const displayNameInProfile = this.get('displayNameInProfile');
+    const nickname = this.get('nickname');
 
     // To reduce the redux store size, only set fields which cannot be undefined.
     // For instance, a boolean can usually be not set if false, etc
@@ -294,12 +294,12 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       toRet.avatarPath = avatarPath;
     }
 
-    if (name) {
-      toRet.name = name;
+    if (displayNameInProfile) {
+      toRet.displayNameInProfile = displayNameInProfile;
     }
 
-    if (profileName) {
-      toRet.profileName = profileName;
+    if (nickname) {
+      toRet.nickname = nickname;
     }
 
     if (unreadCount) {
@@ -1056,9 +1056,9 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     const realUserName = this.getRealSessionUsername();
 
     if (!trimmed || !trimmed.length) {
-      this.set({ nickname: undefined, name: realUserName });
+      this.set({ nickname: undefined, displayNameInProfile: realUserName });
     } else {
-      this.set({ nickname: trimmed, name: realUserName });
+      this.set({ nickname: trimmed, displayNameInProfile: realUserName });
     }
 
     await this.commit();
@@ -1075,7 +1075,6 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     if (newProfile.displayName !== existingSessionName && newProfile.displayName) {
       this.set({
         displayNameInProfile: newProfile.displayName,
-        profileName: newProfile.displayName,
       });
       changes = true;
     }
@@ -1109,17 +1108,41 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
   }
 
   /**
-   * This returns the session username as defined by that user
+   * @returns `displayNameInProfile` so the real username as defined by that user/group
    */
-  public getRealSessionUsername() {
-    if (this.isPrivate() || this.isClosedGroup()) {
-      return this.get('displayNameInProfile');
-    }
-    return undefined;
+  public getRealSessionUsername(): string | undefined {
+    return this.get('displayNameInProfile');
   }
 
-  public getNickname() {
-    return this.get('nickname');
+  /**
+   * @returns `nickname` so the nickname we forced for that user. For a group, this returns `undefined`
+   */
+  public getNickname(): string | undefined {
+    return this.isPrivate() ? this.get('nickname') : undefined;
+  }
+
+  /**
+   * @returns `getNickname` if a private convo and a nickname is set, or `getRealSessionUsername`
+   */
+  public getNicknameOrRealUsername(): string | undefined {
+    return this.getNickname() || this.getRealSessionUsername();
+  }
+
+  /**
+   * @returns `getNickname` if a private convo and a nickname is set, or `getRealSessionUsername`
+   *
+   * Can also a localized 'Anonymous' for an unknown private chat and localized 'Unknown' for an unknown group (open/closed)
+   */
+  public getNicknameOrRealUsernameOrPlaceholder(): string {
+    const nickOrReal = this.getNickname() || this.getRealSessionUsername();
+
+    if (nickOrReal) {
+      return nickOrReal;
+    }
+    if (this.isPrivate()) {
+      return window.i18n('anonymous');
+    }
+    return window.i18n('unknown');
   }
 
   public isAdmin(pubKey?: string) {
@@ -1219,13 +1242,6 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     );
   }
 
-  public getName() {
-    if (this.isPrivate()) {
-      return this.get('name');
-    }
-    return this.get('name') || window.i18n('unknown');
-  }
-
   public isPinned() {
     return Boolean(this.get('isPinned'));
   }
@@ -1239,14 +1255,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
   }
 
   public getTitle() {
-    if (this.isPrivate()) {
-      const profileName = this.getProfileName();
-      const convoPubkey = this.id;
-      const name = profileName ? `${profileName} (${PubKey.shorten(convoPubkey)})` : convoPubkey;
-
-      return this.get('name') || name;
-    }
-    return this.get('name') || 'Unknown group';
+    return this.getNicknameOrRealUsernameOrPlaceholder();
   }
 
   /**
@@ -1272,13 +1281,6 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     return profileName || PubKey.shorten(pubkey);
   }
 
-  public getProfileName() {
-    if (this.isPrivate()) {
-      return this.get('profileName');
-    }
-    return undefined;
-  }
-
   public isPrivate() {
     return this.get('type') === ConversationTypeEnum.PRIVATE;
   }
@@ -1299,17 +1301,17 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
   public async getNotificationIcon() {
     const avatarUrl = this.getAvatarPath();
     const noIconUrl = 'images/session/session_icon_32.png';
-    if (avatarUrl) {
-      const decryptedAvatarUrl = await getDecryptedMediaUrl(avatarUrl, IMAGE_JPEG, true);
 
-      if (!decryptedAvatarUrl) {
-        window.log.warn('Could not decrypt avatar stored locally for getNotificationIcon..');
-        return noIconUrl;
-      }
-      return decryptedAvatarUrl;
-    } else {
+    if (!avatarUrl) {
       return noIconUrl;
     }
+    const decryptedAvatarUrl = await getDecryptedMediaUrl(avatarUrl, IMAGE_JPEG, true);
+
+    if (!decryptedAvatarUrl) {
+      window.log.warn('Could not decrypt avatar stored locally for getNotificationIcon..');
+      return noIconUrl;
+    }
+    return decryptedAvatarUrl;
   }
 
   public async notify(message: MessageModel) {
@@ -1424,9 +1426,11 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       conversationId,
       iconUrl,
       isExpiringMessage: false,
-      message: window.i18n('incomingCallFrom', this.getTitle()),
+      message: window.i18n('incomingCallFrom', [
+        this.getNicknameOrRealUsername() || window.i18n('anonymous'),
+      ]),
       messageSentAt: now,
-      title: this.getTitle(),
+      title: this.getNicknameOrRealUsernameOrPlaceholder(),
     });
   }
 

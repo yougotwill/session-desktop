@@ -195,7 +195,7 @@ export class OpenGroupManagerV2 {
       // mark isApproved as this is a public chat
       conversation.set({
         active_at: Date.now(),
-        name: room.roomName,
+        displayNameInProfile: room.roomName,
         isApproved: true,
       });
       await conversation.commit();

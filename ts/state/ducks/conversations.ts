@@ -230,13 +230,10 @@ export type LastMessageType = {
 export interface ReduxConversationType {
   id: string;
   /**
-   * For a group, this is the groupName. For a private convo, this is always the realName of that user as he defined it (and so not a custom nickname)
+   * This must hold the real session username of the user for a private chat (not the nickname), and the real name of the group/closed group otherwise
    */
-  name?: string;
-  /**
-   * profileName is the bad duck. if a nickname is set, this holds the value of it. Otherwise, it holds the name of that user as he defined it
-   */
-  profileName?: string;
+  displayNameInProfile?: string;
+  nickname?: string;
   hasNickname?: boolean;
 
   activeAt?: number;

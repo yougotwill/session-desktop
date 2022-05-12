@@ -89,7 +89,6 @@ async function createOrUpdateProfile(
   if (existingDisplayName !== newDisplayName) {
     changes = true;
     conversation.set('displayNameInProfile', newDisplayName || undefined);
-    conversation.set('profileName', newDisplayName || undefined);
   }
 
   if (profileInDataMessage.profilePicture && profileKey) {

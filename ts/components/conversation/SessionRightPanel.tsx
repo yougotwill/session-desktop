@@ -192,7 +192,7 @@ export const SessionRightPanelWithDetails = () => {
   const {
     id,
     subscriberCount,
-    name,
+    displayNameInProfile,
     isKickedFromGroup,
     left,
     isPublic,
@@ -237,7 +237,7 @@ export const SessionRightPanelWithDetails = () => {
   return (
     <div className="group-settings">
       <HeaderItem />
-      <h2>{name}</h2>
+      <h2>{displayNameInProfile}</h2>
       {showMemberCount && (
         <>
           <SpacerLG />

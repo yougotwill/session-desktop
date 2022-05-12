@@ -191,6 +191,7 @@ export async function removeAllClosedGroupEncryptionKeyPairs(
 // Conversation
 export async function saveConversation(data: ConversationAttributes): Promise<void> {
   const cleaned = _cleanData(data);
+
   await channels.saveConversation(cleaned);
 }
 

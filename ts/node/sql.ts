@@ -1382,6 +1382,7 @@ function updateToLokiSchemaVersion22(currentVersion: number, db: BetterSqlite3.D
   console.log(`updateToLokiSchemaVersion${targetVersion}: success!`);
 }
 
+// tslint:disable-next-line: max-func-body-length
 function updateToLokiSchemaVersion24(currentVersion: number, db: BetterSqlite3.Database) {
   const targetVersion = 24;
   if (currentVersion >= targetVersion) {
@@ -1396,15 +1397,6 @@ function updateToLokiSchemaVersion24(currentVersion: number, db: BetterSqlite3.D
       type = 'group' AND
       id LIKE 'publicChat:1@%';`
     ).run();
-
-    console.warn(
-      'before',
-      db
-        .prepare(
-          `select * from ${CONVERSATIONS_TABLE} WHERE id = '05f87de712ab58aa3ba64c260a0d4ce79d1c68669d85f5cc6cb1bf85125a717326';`
-        )
-        .all()
-    );
 
     db.exec(`
        ALTER TABLE ${CONVERSATIONS_TABLE} ADD COLUMN zombies TEXT DEFAULT "[]";
@@ -1430,6 +1422,7 @@ function updateToLokiSchemaVersion24(currentVersion: number, db: BetterSqlite3.D
        ALTER TABLE ${CONVERSATIONS_TABLE} ADD COLUMN isApproved INTEGER DEFAULT "FALSE";
        ALTER TABLE ${CONVERSATIONS_TABLE} ADD COLUMN didApproveMe INTEGER DEFAULT "FALSE";
        ALTER TABLE ${CONVERSATIONS_TABLE} ADD COLUMN avatarInProfile TEXT;
+       ALTER TABLE ${CONVERSATIONS_TABLE} ADD COLUMN avatarPathInAvatar TEXT; -- this is very temporary, removed right below
        ALTER TABLE ${CONVERSATIONS_TABLE} ADD COLUMN displayNameInProfile TEXT;
 
        UPDATE ${CONVERSATIONS_TABLE} SET
@@ -1455,7 +1448,8 @@ function updateToLokiSchemaVersion24(currentVersion: number, db: BetterSqlite3.D
         isPinned = json_extract(json, '$.isPinned'),
         isApproved = json_extract(json, '$.isApproved'),
         didApproveMe = json_extract(json, '$.didApproveMe'),
-        avatarInProfile = json_extract(json, '$.profile.avatar'),-- profile.avatar is no longer used. We rely on avatarInProfile only
+        avatarInProfile = json_extract(json, '$.profile.avatar'),-- profile.avatar is no longer used. We rely on avatarInProfile only (for private chats and opengroups )
+        avatarPathInAvatar = json_extract(json, '$.avatar.path'),-- this is very temporary
         displayNameInProfile =  json_extract(json, '$.profile.displayName');
 
         UPDATE ${CONVERSATIONS_TABLE} SET json = json_remove(json,
@@ -1501,16 +1495,23 @@ function updateToLokiSchemaVersion24(currentVersion: number, db: BetterSqlite3.D
         type = 'group' AND
         id NOT LIKE 'publicChat:%';
 
+        ALTER TABLE ${CONVERSATIONS_TABLE} DROP COLUMN profileName;
+        ALTER TABLE ${CONVERSATIONS_TABLE} DROP COLUMN name;
+
+        -- we want to rely on avatarInProfile only, but it can be set either in avatarInProfile or in avatarPathInAvatar.
+        -- make sure to override avatarInProfile with the value from avatarPathInAvatar if avatarInProfile is unset
+        UPDATE ${CONVERSATIONS_TABLE} SET avatarInProfile = avatarPathInAvatar WHERE avatarInProfile IS NULL;
+        ALTER TABLE ${CONVERSATIONS_TABLE} DROP COLUMN avatarPathInAvatar;
+
+        CREATE INDEX conversation_nickname ON ${CONVERSATIONS_TABLE} (
+          nickname
+        );
+        CREATE INDEX conversation_displayNameInProfile ON ${CONVERSATIONS_TABLE} (
+          displayNameInProfile
+        );
 
        `);
-    console.warn(
-      'after',
-      db
-        .prepare(
-          `select * from ${CONVERSATIONS_TABLE} WHERE id = '05f87de712ab58aa3ba64c260a0d4ce79d1c68669d85f5cc6cb1bf85125a717326';`
-        )
-        .all()
-    );
+
     writeLokiSchemaVersion(targetVersion, db);
   })();
 
@@ -1907,31 +1908,6 @@ function getConversationCount() {
   return row['count(*)'];
 }
 
-
-
-open groups
-OK displayNameInProfile & name & profileName are set correctly and no nicknames allowed
-
-
-OK closed groups
-name & displayName is set correctly and no nicknames allowed
-
-private chats
-OK profileName & displayNameInProfile are valid if nickname unset
-
-private chat with nickname set
-profileName & nickname are set to nickanme but displayNameInProfile is null
-
-
-note to self
-OK profileName and displayNameInProfile are set
-
-
-
-=> all names to displayNameInProfile no matter the type
-for private chats, nickname can be set or null, and overrides the displayNameInProfile if set
-
-
 // tslint:disable-next-line: max-func-body-length
 function saveConversation(data: ConversationAttributes, instance?: BetterSqlite3.Database) {
   const formatted = assertValidConversationAttributes(data);
@@ -1941,8 +1917,6 @@ function saveConversation(data: ConversationAttributes, instance?: BetterSqlite3
     active_at,
     type,
     members,
-    name,
-    profileName,
     nickname,
     profileKey,
     zombies,
@@ -1968,8 +1942,6 @@ function saveConversation(data: ConversationAttributes, instance?: BetterSqlite3
     displayNameInProfile,
   } = formatted;
 
-  console.warn('=========formatted', formatted);
-
   // shorten the last message as we never need more than 60 chars (and it bloats the redux/ipc calls uselessly
 
   const shortenedLastMessage =
@@ -1981,8 +1953,6 @@ function saveConversation(data: ConversationAttributes, instance?: BetterSqlite3
 	active_at,
 	type,
 	members,
-	name,
-	profileName,
   nickname,
   profileKey,
   zombies,
@@ -2011,8 +1981,6 @@ function saveConversation(data: ConversationAttributes, instance?: BetterSqlite3
 	    $active_at,
 	    $type,
 	    $members,
-	    $name,
-	    $profileName,
       $nickname,
       $profileKey,
       $zombies,
@@ -2043,8 +2011,6 @@ function saveConversation(data: ConversationAttributes, instance?: BetterSqlite3
       active_at,
       type,
       members: members && members.length ? arrayStrToJson(members) : '[]',
-      name,
-      profileName,
       nickname,
       profileKey,
       zombies: zombies && zombies.length ? arrayStrToJson(zombies) : '[]',
@@ -2175,15 +2141,15 @@ function searchConversations(query: string) {
     .prepare(
       `SELECT * FROM ${CONVERSATIONS_TABLE} WHERE
       (
-        name LIKE $name OR
-        profileName LIKE $profileName
+        displayNameInProfile LIKE $displayNameInProfile OR
+        nickname LIKE $nickname
       ) AND active_at IS NOT NULL AND active_at > 0
      ORDER BY active_at DESC
      LIMIT $limit`
     )
     .all({
-      name: `%${query}%`,
-      profileName: `%${query}%`,
+      displayNameInProfile: `%${query}%`,
+      nickname: `%${query}%`,
       limit: 50,
     });
 
@@ -3727,8 +3693,7 @@ function fillWithTestData(numConvosToAdd: number, numMsgsToAdd: number) {
     const convoObjToAdd: ConversationAttributes = {
       active_at: activeAt,
       members: [],
-      profileName: `${activeAt}`,
-      name: `${activeAt}`,
+      displayNameInProfile: `${activeAt}`,
       id: `05${id}`,
       type: 'group',
       didApproveMe: false,

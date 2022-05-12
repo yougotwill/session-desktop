@@ -1140,22 +1140,22 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
 
   private findAndFormatContact(pubkey: string): FindAndFormatContactType {
     const contactModel = getConversationController().get(pubkey);
-    let profileName;
+    let profileName: string | null = null;
     let isMe = false;
 
     if (pubkey === UserUtils.getOurPubKeyStrFromCache()) {
       profileName = window.i18n('you');
       isMe = true;
     } else {
-      profileName = contactModel ? contactModel.getProfileName() : null;
+      profileName = contactModel?.getNicknameOrRealUsername() || null;
     }
 
     return {
       pubkey: pubkey,
       avatarPath: contactModel ? contactModel.getAvatarPath() : null,
-      name: (contactModel ? contactModel.getName() : null) as string | null,
-      profileName: profileName as string | null,
-      title: (contactModel ? contactModel.getTitle() : null) as string | null,
+      name: contactModel?.getRealSessionUsername() || null,
+      profileName,
+      title: contactModel?.getTitle() || null,
       isMe,
     };
   }

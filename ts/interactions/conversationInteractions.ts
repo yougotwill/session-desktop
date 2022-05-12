@@ -451,7 +451,7 @@ export async function uploadOurAvatar(newAvatarDecrypted?: ArrayBuffer) {
   });
   // Replace our temporary image with the attachment pointer from the server:
   ourConvo.set('avatarInProfile', undefined);
-  const displayName = ourConvo.get('profileName');
+  const displayName = ourConvo.get('displayNameInProfile');
 
   // write the profileKey even if it did not change
   ourConvo.set({ profileKey: toHex(profileKey) });

@@ -1130,7 +1130,7 @@ export async function handleMissedCall(
 
   const displayname =
     incomingCallConversation?.getNickname() ||
-    incomingCallConversation?.getProfileName() ||
+    incomingCallConversation?.getRealSessionUsername() ||
     'Unknown';
 
   switch (reason) {

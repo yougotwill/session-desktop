@@ -73,7 +73,7 @@ export const BanOrUnBanUserDialog = (props: {
 
   const inputTextToDisplay =
     wasGivenAPubkey && sourceConvoProps
-      ? `${sourceConvoProps.profileName} ${PubKey.shorten(sourceConvoProps.id)}`
+      ? `${sourceConvoProps.displayNameInProfile} ${PubKey.shorten(sourceConvoProps.id)}`
       : undefined;
 
   /**
@@ -97,7 +97,7 @@ export const BanOrUnBanUserDialog = (props: {
     setInProgress(false);
   };
 
-  const chatName = convo.get('name');
+  const chatName = convo.getNicknameOrRealUsernameOrPlaceholder();
   const title = `${isBan ? window.i18n('banUser') : window.i18n('unbanUser')}: ${chatName}`;
 
   const onPubkeyBoxChanges = (e: React.ChangeEvent<HTMLInputElement>) => {

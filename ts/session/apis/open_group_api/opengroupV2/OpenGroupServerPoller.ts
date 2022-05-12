@@ -509,7 +509,7 @@ const handleBase64AvatarUpdate = async (
         // update the hash on the conversationModel
         // this does commit to DB and UI
         await convo.setSessionProfile({
-          displayName: convo.getName() || window.i18n('unknown'),
+          displayName: convo.getRealSessionUsername() || window.i18n('unknown'),
           avatarPath: upgradedAttachment.path,
           avatarHash: newHash,
         });

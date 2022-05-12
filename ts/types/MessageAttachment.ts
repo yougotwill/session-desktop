@@ -1,5 +1,5 @@
 import { ipcRenderer } from 'electron';
-import { isArrayBuffer, isEmpty, isUndefined, omit } from 'lodash';
+import { isArrayBuffer, isEmpty, isString, isUndefined, omit } from 'lodash';
 import {
   createAbsolutePathGetter,
   createReader,
@@ -13,6 +13,7 @@ import {
   loadData,
   replaceUnicodeV2,
 } from './attachments/migrations';
+import { ConversationAttributes } from '../models/conversationAttributes';
 
 // tslint:disable: prefer-object-spread
 
@@ -215,14 +216,16 @@ export const migrateDataToFileSystem = async (data?: ArrayBuffer) => {
   return path;
 };
 
-export async function deleteExternalFilesOfConversation(conversation?: { avatar?: any }) {
-  if (!conversation) {
+export async function deleteExternalFilesOfConversation(
+  conversationAttributes: ConversationAttributes
+) {
+  if (!conversationAttributes) {
     return;
   }
 
-  const { avatar } = conversation;
+  const { avatarInProfile } = conversationAttributes;
 
-  if (avatar && avatar.path) {
-    await deleteOnDisk(avatar.path);
+  if (isString(avatarInProfile)) {
+    await deleteOnDisk(avatarInProfile);
   }
 }

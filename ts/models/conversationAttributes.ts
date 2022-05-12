@@ -20,11 +20,9 @@ export interface ConversationAttributes {
 
   active_at: number;
 
-  profileName?: string; // this is the name the user/closed group/ opengroup has set
+  displayNameInProfile?: string; // no matter the type of conversation, this is the real name as set by the user/name of the open or closed group
   nickname?: string; // this is the name WE gave to that user (only applicable to private chats, not closed group neither opengroups)
-  name?: string; // for open and closed groups, this is currently the name of it (for now) // FIXME Audric
 
-  displayNameInProfile?: string;
   profileKey?: string; // Consider this being a hex string if it is set
 
   members: Array<string>; // members are all members for this group. zombies excluded

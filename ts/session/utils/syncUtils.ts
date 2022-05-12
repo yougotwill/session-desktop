@@ -130,7 +130,7 @@ const getValidClosedGroups = async (convos: Array<ConversationModel>) => {
       !c.get('left') &&
       !c.get('isKickedFromGroup') &&
       !c.isBlocked() &&
-      c.get('name')
+      c.get('displayNameInProfile')
   );
 
   const closedGroups = await Promise.all(
@@ -143,7 +143,7 @@ const getValidClosedGroups = async (convos: Array<ConversationModel>) => {
 
       return new ConfigurationMessageClosedGroup({
         publicKey: groupPubKey,
-        name: c.get('name') || '',
+        name: c.get('displayNameInProfile') || '',
         members: c.get('members') || [],
         admins: c.get('groupAdmins') || [],
         encryptionKeyPair: ECKeyPair.fromHexKeyPair(fetchEncryptionKeyPair),

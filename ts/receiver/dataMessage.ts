@@ -39,10 +39,9 @@ function cleanAttachments(decrypted: SignalService.DataMessage) {
 
   // Here we go from binary to string/base64 in all AttachmentPointer digest/key fields
 
-  if (group && group.type === SignalService.GroupContext.Type.UPDATE) {
-    if (group.avatar !== null) {
-      group.avatar = cleanAttachment(group.avatar);
-    }
+  // we do not care about group.avatar on Session
+  if (group && group.avatar !== null) {
+    group.avatar = null;
   }
 
   decrypted.attachments = (decrypted.attachments || []).map(cleanAttachment);

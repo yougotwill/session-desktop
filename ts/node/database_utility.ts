@@ -49,8 +49,6 @@ const allowedKeysFormatRowOfConversation = [
   'active_at',
   'id',
   'type',
-  'name',
-  'profileName',
   'avatarPointer',
   'avatarHash',
   'nickname',
@@ -72,9 +70,9 @@ export function formatRowOfConversation(row?: Record<string, any>): Conversation
   if (foundInRowButNotInAllowed?.length) {
     console.warn('formatRowOfConversation: foundInRowButNotInAllowed: ', foundInRowButNotInAllowed);
 
-    // throw new Error(
-    //   `formatRowOfConversation: an invalid key was given in the record: ${foundInRowButNotInAllowed[0]}`
-    // );
+    throw new Error(
+      `formatRowOfConversation: an invalid key was given in the record: ${foundInRowButNotInAllowed[0]}`
+    );
   }
 
   const convo: ConversationAttributes = omit(row, 'json') as ConversationAttributes;
@@ -151,8 +149,6 @@ const allowedKeysOfConversationAttributes = [
   'active_at',
   'id',
   'type',
-  'name',
-  'profileName',
   'avatarPointer',
   'avatarHash',
   'nickname',

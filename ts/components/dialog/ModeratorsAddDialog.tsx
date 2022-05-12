@@ -60,7 +60,7 @@ export const AddModeratorsDialog = (props: Props) => {
   };
 
   const { i18n } = window;
-  const chatName = convo.get('name');
+  const chatName = convo.getNicknameOrRealUsernameOrPlaceholder();
 
   const title = `${i18n('addModerators')}: ${chatName}`;
 

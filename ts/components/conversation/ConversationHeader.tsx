@@ -241,14 +241,12 @@ export const StyledSubtitleContainer = styled.div`
 
 export type ConversationHeaderTitleProps = {
   conversationKey: string;
-  profileName?: string;
   isMe: boolean;
   isGroup: boolean;
   isPublic: boolean;
   members: Array<any>;
   subscriberCount?: number;
   isKickedFromGroup: boolean;
-  name?: string;
   currentNotificationSetting?: ConversationNotificationSettingType;
 };
 

@@ -52,8 +52,8 @@ export class EditProfileDialog extends React.Component<{}, State> {
     this.convo = getConversationController().get(UserUtils.getOurPubKeyStrFromCache());
 
     this.state = {
-      profileName: this.convo.getProfileName() || '',
-      updatedProfileName: this.convo.getProfileName() || '',
+      profileName: this.convo.getRealSessionUsername() || '',
+      updatedProfileName: this.convo.getRealSessionUsername() || '',
       oldAvatarPath: this.convo.getAvatarPath() || '',
       newAvatarObjectUrl: null,
       mode: 'default',

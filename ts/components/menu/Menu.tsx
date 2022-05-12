@@ -86,7 +86,7 @@ function showClearNickname(
   isPrivate: boolean,
   isRequest: boolean
 ): boolean {
-  return !isMe && hasNickname && isPrivate && isRequest;
+  return !isMe && hasNickname && isPrivate && !isRequest;
 }
 
 function showChangeNickname(isMe: boolean, isPrivate: boolean, isRequest: boolean) {
