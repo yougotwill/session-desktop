@@ -434,6 +434,7 @@ export type LocalizerKeys =
   | 'trimDatabaseConfirmationBody'
   | 'respondingToRequestWarning'
   | 'messageRequestPending'
+  | 'pleaseWaitOpenAndOptimizeDb'
   | 'messageRequestAccepted'
   | 'messageRequestAcceptedOurs'
   | 'messageRequestAcceptedOursNoName'

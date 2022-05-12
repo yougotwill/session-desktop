@@ -44,7 +44,6 @@ declare global {
     restart: any;
     getSeedNodeList: () => Array<any> | undefined;
     setPassword: any;
-    storage: any;
     isOnline: boolean;
     toggleMediaPermissions: () => Promise<void>;
     toggleCallMediaPermissionsTo: (enabled: boolean) => Promise<void>;

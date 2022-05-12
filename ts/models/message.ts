@@ -1329,7 +1329,7 @@ const trotthledAllMessagesDispatch = _.debounce(
     updatesToDispatch.clear();
   },
   2000,
-  { trailing: true, maxWait: 5000 }
+  { trailing: true, maxWait: 2000 }
 );
 
 const updatesToDispatch: Map<string, MessageModelPropsWithoutConvoProps> = new Map();
