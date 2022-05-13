@@ -1167,7 +1167,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
 
   public async setIsApproved(value: boolean, shouldCommit: boolean = true) {
     if (value !== this.isApproved()) {
-      window?.log?.info(`Setting ${this.attributes.profileName} isApproved to:: ${value}`);
+      window?.log?.info(`Setting ${ed25519Str(this.id)} isApproved to: ${value}`);
       this.set({
         isApproved: value,
       });
@@ -1180,7 +1180,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
 
   public async setDidApproveMe(value: boolean, shouldCommit: boolean = true) {
     if (value !== this.didApproveMe()) {
-      window?.log?.info(`Setting ${this.attributes.profileName} didApproveMe to:: ${value}`);
+      window?.log?.info(`Setting ${ed25519Str(this.id)} didApproveMe to: ${value}`);
       this.set({
         didApproveMe: value,
       });
@@ -1607,7 +1607,7 @@ const trotthledAllConversationsDispatch = _.debounce(
     updatesToDispatch.clear();
   },
   2000,
-  { maxWait: 2000, trailing: true }
+  { maxWait: 2000, trailing: true, leading: true }
 );
 
 const updatesToDispatch: Map<string, ReduxConversationType> = new Map();

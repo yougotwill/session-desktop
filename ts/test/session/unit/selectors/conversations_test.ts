@@ -246,6 +246,7 @@ describe('state/selectors/conversations', () => {
           weAreAdmin: false,
           isGroup: false,
           isPrivate: false,
+          displayNameInProfile: 'C',
 
           avatarPath: '',
           groupAdmins: [],

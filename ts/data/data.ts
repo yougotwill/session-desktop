@@ -11,7 +11,7 @@ import { HexKeyPair } from '../receiver/keypairs';
 import { getConversationController } from '../session/conversations';
 import { getSodiumRenderer } from '../session/crypto';
 import { PubKey } from '../session/types';
-import { MsgDuplicateSearchOpenGroup } from '../types/sqlSharedTypes';
+import { MsgDuplicateSearchOpenGroup, UpdateLastHashType } from '../types/sqlSharedTypes';
 import { ExpirationTimerOptions } from '../util/expiringMessages';
 import { Storage } from '../util/storage';
 import { channels } from './channels';
@@ -287,12 +287,7 @@ export async function saveSeenMessageHashes(
   await channels.saveSeenMessageHashes(_cleanData(data));
 }
 
-export async function updateLastHash(data: {
-  convoId: string;
-  snode: string;
-  hash: string;
-  expiresAt: number;
-}): Promise<void> {
+export async function updateLastHash(data: UpdateLastHashType): Promise<void> {
   await channels.updateLastHash(_cleanData(data));
 }
 
@@ -503,8 +498,12 @@ export async function getFirstUnreadMessageWithMention(
 export async function hasConversationOutgoingMessage(conversationId: string): Promise<boolean> {
   return channels.hasConversationOutgoingMessage(conversationId);
 }
-export async function getLastHashBySnode(convoId: string, snode: string): Promise<string> {
-  return channels.getLastHashBySnode(convoId, snode);
+export async function getLastHashBySnode(
+  convoId: string,
+  snode: string,
+  namespace: number
+): Promise<string> {
+  return channels.getLastHashBySnode(convoId, snode, namespace);
 }
 
 export async function getSeenMessagesByHashList(hashes: Array<string>): Promise<any> {
