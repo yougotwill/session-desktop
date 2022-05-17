@@ -2160,21 +2160,6 @@ function getPubkeysInPublicConversation(conversationId: string) {
   return map(rows, row => row.source);
 }
 
-function getAllGroupsInvolvingId(id: string) {
-  const rows = assertGlobalInstance()
-    .prepare(
-      `SELECT * FROM ${CONVERSATIONS_TABLE} WHERE
-      type = 'group' AND
-      members LIKE $id
-     ORDER BY id ASC;`
-    )
-    .all({
-      id: `%${id}%`,
-    });
-
-  return (rows || []).map(formatRowOfConversation);
-}
-
 function searchConversations(query: string) {
   const rows = assertGlobalInstance()
     .prepare(
@@ -2797,7 +2782,10 @@ function getFirstUnreadMessageIdInConversation(conversationId: string) {
   return rows[0].id;
 }
 
-function getFirstUnreadMessageWithMention(conversationId: string, ourpubkey: string) {
+function getFirstUnreadMessageWithMention(
+  conversationId: string,
+  ourpubkey: string
+): string | undefined {
   if (!ourpubkey || !ourpubkey.length) {
     throw new Error('getFirstUnreadMessageWithMention needs our pubkey but nothing was given');
   }
@@ -3860,7 +3848,6 @@ export const sqlNode = {
   getAllConversations,
   getAllOpenGroupV2Conversations,
   getPubkeysInPublicConversation,
-  getAllGroupsInvolvingId,
   removeAllConversations,
 
   searchConversations,

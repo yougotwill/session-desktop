@@ -229,14 +229,6 @@ export async function getPubkeysInPublicConversation(id: string): Promise<Array<
   return channels.getPubkeysInPublicConversation(id);
 }
 
-export async function getAllGroupsInvolvingId(id: string): Promise<ConversationCollection> {
-  const conversations = await channels.getAllGroupsInvolvingId(id);
-
-  const collection = new ConversationCollection();
-  collection.add(conversations);
-  return collection;
-}
-
 export async function searchConversations(query: string): Promise<Array<any>> {
   const conversations = await channels.searchConversations(query);
   return conversations;
