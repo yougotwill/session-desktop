@@ -51,7 +51,7 @@ export async function initializeLogger() {
           type: 'rotating-file',
           path: logFile,
           period: '1d',
-          count: 3,
+          count: 1,
         },
       ],
     });
