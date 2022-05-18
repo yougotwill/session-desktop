@@ -18,6 +18,7 @@ export interface ConversationAttributes {
   id: string;
   type: string;
 
+  // 0 means inactive (undefined and null too but we try to get rid of them and only have 0 = inactive)
   active_at: number;
 
   displayNameInProfile?: string; // no matter the type of conversation, this is the real name as set by the user/name of the open or closed group

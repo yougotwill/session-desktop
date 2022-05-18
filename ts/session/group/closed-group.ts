@@ -28,7 +28,7 @@ import { ClosedGroupNewMessage } from '../messages/outgoing/controlMessage/group
 import { ClosedGroupRemovedMembersMessage } from '../messages/outgoing/controlMessage/group/ClosedGroupRemovedMembersMessage';
 import { getSwarmPollingInstance } from '../apis/snode_api';
 import { getNowWithNetworkOffset } from '../apis/snode_api/SNodeAPI';
-import { ConversationTypeEnum } from '../../models/conversationAttributes';
+import { ConversationAttributes, ConversationTypeEnum } from '../../models/conversationAttributes';
 
 export type GroupInfo = {
   id: string;
@@ -224,26 +224,26 @@ export async function updateOrCreateClosedGroup(details: GroupInfo) {
     ConversationTypeEnum.GROUP
   );
 
-  const updates: any = {
-    name: details.name,
+  const updates: Pick<
+    ConversationAttributes,
+    | 'type'
+    | 'members'
+    | 'displayNameInProfile'
+    | 'is_medium_group'
+    | 'active_at'
+    | 'left'
+    | 'lastJoinedTimestamp'
+    | 'zombies'
+  > = {
+    displayNameInProfile: details.name,
     members: details.members,
     type: 'group',
     is_medium_group: true,
+    zombies: details.zombies?.length ? details.zombies : [],
+    active_at: details.activeAt ? details.activeAt : 0,
+    left: details.activeAt ? false : true,
+    lastJoinedTimestamp: details.activeAt && weWereJustAdded ? Date.now() : details.activeAt || 0,
   };
-
-  if (details.activeAt) {
-    updates.active_at = details.activeAt;
-    updates.timestamp = updates.active_at;
-
-    updates.left = false;
-    updates.lastJoinedTimestamp = weWereJustAdded ? Date.now() : updates.active_at;
-  } else {
-    updates.left = true;
-  }
-
-  if (details.zombies) {
-    updates.zombies = details.zombies;
-  }
 
   conversation.set(updates);
 
@@ -253,7 +253,7 @@ export async function updateOrCreateClosedGroup(details: GroupInfo) {
   }
 
   if (details.admins?.length) {
-    await conversation.updateGroupAdmins(details.admins);
+    await conversation.updateGroupAdmins(details.admins, false);
   }
 
   await conversation.commit();

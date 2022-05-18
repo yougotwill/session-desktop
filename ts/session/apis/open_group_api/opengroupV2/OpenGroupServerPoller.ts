@@ -474,7 +474,7 @@ const handleCompactPollResults = async (
       }
 
       // this already do the commit
-      await convo.updateGroupAdmins(res.moderators);
+      await convo.updateGroupAdmins(res.moderators, true);
     })
   );
 };
