@@ -227,7 +227,7 @@ window.getSeedNodeList = () =>
       ];
 
 const { locale: localFromEnv } = config;
-window.i18n = setupi18n(localFromEnv, localeMessages);
+window.i18n = setupi18n(localFromEnv || 'en', localeMessages);
 
 window.addEventListener('contextmenu', e => {
   const editable = e && e.target.closest('textarea, input, [contenteditable="true"]');

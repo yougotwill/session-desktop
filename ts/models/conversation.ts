@@ -882,7 +882,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
 
   public triggerUIRefresh() {
     updatesToDispatch.set(this.id, this.getConversationModelProps());
-    trotthledAllConversationsDispatch();
+    throttledAllConversationsDispatch();
   }
 
   public async commit() {
@@ -1597,7 +1597,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
   }
 }
 
-const trotthledAllConversationsDispatch = _.debounce(
+const throttledAllConversationsDispatch = _.debounce(
   () => {
     if (updatesToDispatch.size === 0) {
       return;
@@ -1606,8 +1606,8 @@ const trotthledAllConversationsDispatch = _.debounce(
 
     updatesToDispatch.clear();
   },
-  2000,
-  { maxWait: 2000, trailing: true, leading: true }
+  500,
+  { trailing: true, leading: true, maxWait: 1000 }
 );
 
 const updatesToDispatch: Map<string, ReduxConversationType> = new Map();

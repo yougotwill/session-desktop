@@ -3567,10 +3567,12 @@ function cleanUpMessagesJson() {
 function cleanUpOldOpengroupsOnStart() {
   const ourNumber = getItemById('number_id');
   if (!ourNumber || !ourNumber.value) {
+    console.info('cleanUpOldOpengroups: ourNumber is not set');
     return;
   }
   const v2ConvosIds = getAllOpenGroupV2ConversationsIds();
   if (!v2ConvosIds || !v2ConvosIds.length) {
+    console.info('cleanUpOldOpengroups: v2Convos is empty');
     return;
   }
   // For each opengroups, if it has more than 1000 messages, we remove all the messages older than 2 months.
@@ -3581,9 +3583,9 @@ function cleanUpOldOpengroupsOnStart() {
   const maxMessagePerOpengroupConvo = 2000;
 
   // first remove very old messages for each opengroups
-
-  assertGlobalInstance().transaction(() => {
-    dropFtsAndTriggers(assertGlobalInstance());
+  const db = assertGlobalInstance();
+  db.transaction(() => {
+    dropFtsAndTriggers(db);
     v2ConvosIds.forEach(convoId => {
       const messagesInConvoBefore = getMessagesCountByConversation(convoId);
 
@@ -3646,11 +3648,9 @@ function cleanUpOldOpengroupsOnStart() {
 
       const chunks = chunk(allInactiveAndWithoutMessagesConvo, 500);
       chunks.forEach(ch => {
-        assertGlobalInstance()
-          .prepare(
-            `DELETE FROM ${CONVERSATIONS_TABLE} WHERE id IN (${ch.map(() => '?').join(',')});`
-          )
-          .run(ch);
+        db.prepare(
+          `DELETE FROM ${CONVERSATIONS_TABLE} WHERE id IN (${ch.map(() => '?').join(',')});`
+        ).run(ch);
       });
 
       console.info(
@@ -3662,8 +3662,8 @@ function cleanUpOldOpengroupsOnStart() {
 
     cleanUpMessagesJson();
 
-    rebuildFtsTable(assertGlobalInstance());
-  });
+    rebuildFtsTable(db);
+  })();
 }
 
 // tslint:disable: binary-expression-operand-order insecure-random
