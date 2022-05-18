@@ -3570,11 +3570,26 @@ function cleanUpOldOpengroupsOnStart() {
     console.info('cleanUpOldOpengroups: ourNumber is not set');
     return;
   }
+  const pruneSetting = getItemById('prune-setting')?.value;
+
+  if (pruneSetting === undefined) {
+    console.info(
+      'Prune settings is undefined, skipping cleanUpOldOpengroups but we will need to ask user'
+    );
+    return;
+  }
+
+  if (!pruneSetting) {
+    console.info('Prune setting not enabled, skipping cleanUpOldOpengroups');
+    return;
+  }
+
   const v2ConvosIds = getAllOpenGroupV2ConversationsIds();
   if (!v2ConvosIds || !v2ConvosIds.length) {
     console.info('cleanUpOldOpengroups: v2Convos is empty');
     return;
   }
+
   // For each opengroups, if it has more than 1000 messages, we remove all the messages older than 2 months.
   // So this does not limit the size of opengroup history to 1000 messages but to 2 months.
   // This is the only way we can cleanup conversations objects from users which just sent messages a while ago and with whom we never interacted.
@@ -3592,20 +3607,20 @@ function cleanUpOldOpengroupsOnStart() {
       if (messagesInConvoBefore >= maxMessagePerOpengroupConvo) {
         const minute = 1000 * 60;
         const sixMonths = minute * 60 * 24 * 30 * 6;
-        const messagesTimestampToRemove = Date.now() - sixMonths;
+        const limitTimestamp = Date.now() - sixMonths;
         const countToRemove = assertGlobalInstance()
           .prepare(
             `SELECT count(*) from ${MESSAGES_TABLE} WHERE serverTimestamp <= $serverTimestamp AND conversationId = $conversationId;`
           )
-          .get({ conversationId: convoId, serverTimestamp: Date.now() - sixMonths })['count(*)'];
+          .get({ conversationId: convoId, serverTimestamp: limitTimestamp })['count(*)'];
         const start = Date.now();
 
         assertGlobalInstance()
           .prepare(
             `
-      DELETE FROM ${MESSAGES_TABLE} WHERE serverTimestamp <= $serverTimestamp AND conversationId = $conversationId`
+        DELETE FROM ${MESSAGES_TABLE} WHERE serverTimestamp <= $serverTimestamp AND conversationId = $conversationId`
           )
-          .run({ conversationId: convoId, serverTimestamp: messagesTimestampToRemove }); // delete messages older than sixMonths
+          .run({ conversationId: convoId, serverTimestamp: limitTimestamp }); // delete messages older than 6 months ago.
         const messagesInConvoAfter = getMessagesCountByConversation(convoId);
 
         console.info(
