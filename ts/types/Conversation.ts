@@ -1,5 +1,4 @@
 import { LastMessageStatusType } from '../state/ducks/conversations';
-import { Message } from './Message';
 
 interface ConversationLastMessageUpdate {
   lastMessage: string;
@@ -7,15 +6,13 @@ interface ConversationLastMessageUpdate {
 }
 
 export const createLastMessageUpdate = ({
-  lastMessage,
   lastMessageStatus,
   lastMessageNotificationText,
 }: {
-  lastMessage?: Message;
   lastMessageStatus?: LastMessageStatusType;
   lastMessageNotificationText?: string;
 }): ConversationLastMessageUpdate => {
-  if (!lastMessage) {
+  if (!lastMessageNotificationText) {
     return {
       lastMessage: '',
       lastMessageStatus: undefined,

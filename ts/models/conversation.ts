@@ -754,27 +754,45 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
   }
 
   public async bouncyUpdateLastMessage() {
-    if (!this.id) {
-      return;
-    }
-    if (!this.get('active_at')) {
+    if (!this.id || !this.get('active_at')) {
       return;
     }
     const messages = await getLastMessagesByConversation(this.id, 1, true);
+
+    if (!messages || !messages.length) {
+      return;
+    }
     const lastMessageModel = messages.at(0);
-    const lastMessageJSON = lastMessageModel ? lastMessageModel.toJSON() : null;
     const lastMessageStatusModel = lastMessageModel
       ? lastMessageModel.getMessagePropStatus()
       : undefined;
     const lastMessageUpdate = createLastMessageUpdate({
-      lastMessage: lastMessageJSON,
       lastMessageStatus: lastMessageStatusModel,
       lastMessageNotificationText: lastMessageModel
         ? lastMessageModel.getNotificationText()
         : undefined,
     });
-    this.set(lastMessageUpdate);
-    await this.commit();
+
+    if (
+      lastMessageUpdate.lastMessage !== this.get('lastMessage') ||
+      lastMessageUpdate.lastMessageStatus !== this.get('lastMessageStatus')
+    ) {
+      const lastMessageAttribute = this.get('lastMessage');
+      if (
+        lastMessageUpdate.lastMessageStatus === this.get('lastMessageStatus') &&
+        lastMessageUpdate.lastMessage &&
+        lastMessageUpdate.lastMessage.length > 40 &&
+        lastMessageAttribute &&
+        lastMessageAttribute.length > 40 &&
+        lastMessageUpdate.lastMessage.startsWith(lastMessageAttribute)
+      ) {
+        // if status is the same, and text have a long length which start with the db status, do not trigger an update.
+        // we only store the first 60 chars in the db for the lastMessage attributes (see sql.ts)
+        return;
+      }
+      this.set(lastMessageUpdate);
+      await this.commit();
+    }
   }
 
   public async updateExpireTimer(
