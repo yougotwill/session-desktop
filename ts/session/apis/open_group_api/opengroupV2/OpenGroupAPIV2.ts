@@ -560,7 +560,7 @@ export const addModerator = async (
 };
 
 export const removeModerator = async (
-  userToAddAsMods: PubKey,
+  userToRemoveFromMods: PubKey,
   roomInfos: OpenGroupRequestCommonType
 ): Promise<boolean> => {
   const request: OpenGroupV2Request = {
@@ -568,7 +568,7 @@ export const removeModerator = async (
     room: roomInfos.roomId,
     server: roomInfos.serverUrl,
     isAuthRequired: true,
-    endpoint: `moderators/${userToAddAsMods.key}`,
+    endpoint: `moderators/${userToRemoveFromMods.key}`,
   };
   const removeModResult = await exports.sendApiV2Request(request);
   const isOk = parseStatusCodeFromOnionRequest(removeModResult) === 200;

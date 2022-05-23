@@ -504,7 +504,10 @@ class CompositionBoxInner extends React.Component<Props, State> {
     }
   }
 
-  private fetchUsersForClosedGroup(query: any, callback: any) {
+  private fetchUsersForClosedGroup(
+    query: string,
+    callback: (data: Array<SuggestionDataItem>) => void
+  ) {
     const { selectedConversation } = this.props;
     if (!selectedConversation) {
       return;
@@ -516,10 +519,9 @@ class CompositionBoxInner extends React.Component<Props, State> {
 
     const allMembers = allPubKeys.map(pubKey => {
       const conv = getConversationController().get(pubKey);
-      let profileName = 'Anonymous';
-      if (conv) {
-        profileName = conv.getNicknameOrRealUsernameOrPlaceholder();
-      }
+      const profileName =
+        conv?.getNicknameOrRealUsernameOrPlaceholder() || window.i18n('anonymous');
+
       return {
         id: pubKey,
         authorProfileName: profileName,
