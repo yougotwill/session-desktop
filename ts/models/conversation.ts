@@ -372,7 +372,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     return toRet;
   }
 
-  public async updateGroupAdmins(groupAdmins: Array<string>, shoudCommit: boolean) {
+  public async updateGroupAdmins(groupAdmins: Array<string>, shouldCommit: boolean) {
     const existingAdmins = _.uniq(_.sortBy(this.getGroupAdmins()));
     const newAdmins = _.uniq(_.sortBy(groupAdmins));
 
@@ -380,7 +380,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       return;
     }
     this.set({ groupAdmins });
-    if (shoudCommit) {
+    if (shouldCommit) {
       await this.commit();
     }
   }
