@@ -214,7 +214,7 @@ class CompositionBoxInner extends React.Component<Props, State> {
 
   constructor(props: Props) {
     super(props);
-    this.state = getDefaultState();
+    this.state = getDefaultState(props.selectedConversationKey);
 
     this.textarea = React.createRef();
     this.fileInput = React.createRef();
