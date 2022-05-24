@@ -5,7 +5,7 @@ import {
 } from '../../../ts/data/data';
 import { getMessageQueue } from '..';
 import { getConversationController } from '../conversations';
-import uuid from 'uuid';
+import { v4 as uuidv4 } from 'uuid';
 import { UserUtils } from '.';
 import { ECKeyPair } from '../../receiver/keypairs';
 import {
@@ -234,7 +234,7 @@ export const getCurrentConfigurationMessage = async (
   const activeOpenGroups = [...opengroupV2CompleteUrls];
 
   return new ConfigurationMessage({
-    identifier: uuid(),
+    identifier: uuidv4(),
     timestamp: Date.now(),
     activeOpenGroups,
     activeClosedGroups: onlyValidClosedGroup,

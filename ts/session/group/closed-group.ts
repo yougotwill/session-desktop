@@ -6,7 +6,7 @@ import { fromHexToArray, toHex } from '../utils/String';
 import { BlockedNumberController } from '../../util/blockedNumberController';
 import { getConversationController } from '../conversations';
 import { getLatestClosedGroupEncryptionKeyPair } from '../../data/data';
-import uuid from 'uuid';
+import { v4 as uuidv4 } from 'uuid';
 import { SignalService } from '../../protobuf';
 import { generateCurve25519KeyPairWithoutPrefix } from '../crypto';
 import { encryptUsingSessionProtocol } from '../crypto/MessageEncrypter';
@@ -385,7 +385,7 @@ async function sendAddedMembers(
     admins,
     members,
     keypair: encryptionKeyPair,
-    identifier: messageId || uuid(),
+    identifier: messageId || uuidv4(),
     expireTimer: existingExpireTimer,
   });
 
