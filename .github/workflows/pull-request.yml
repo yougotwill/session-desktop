@@ -67,3 +67,7 @@ jobs:
 
       - name: Unit Test
         run: yarn test
+
+      # yarn audit will return a non 0 exit code and so make the build fail if a single security issue is found
+      - name: Audit dependencies
+        run: yarn audit
