@@ -1,6 +1,7 @@
 import { filter, isNumber, omit } from 'lodash';
 // tslint:disable-next-line: no-submodule-imports
-import uuid from 'uuid';
+import { v4 as uuidv4 } from 'uuid';
+
 import * as Constants from '../constants';
 import {
   getMessageById,
@@ -70,7 +71,7 @@ export async function addJob(attachment: any, job: any = {}) {
     throw new Error('attachments_download/addJob: index must be a number');
   }
 
-  const id = uuid.v4();
+  const id = uuidv4();
   const timestamp = Date.now();
   const toSave = {
     ...job,

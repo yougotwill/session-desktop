@@ -259,7 +259,7 @@ describe('formatRowOfConversation', () => {
       );
     });
 
-    it('zombies ["12345", "52345"] fills it with []', () => {
+    it('zombies ["12345", "52345"] fills it with ["12345", "52345"]', () => {
       expect(
         formatRowOfConversation({ zombies: '["12345", "52345"]' })
       ).to.be.have.deep.property('zombies', ['12345', '52345']);

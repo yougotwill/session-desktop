@@ -33,6 +33,13 @@ export interface ConversationAttributes {
   mentionedUs: boolean;
   unreadCount: number;
   lastMessageStatus: LastMessageStatusType;
+
+  /**
+   * lastMessage is actually just a preview of the last message text, shortened to 60 chars.
+   * This is to avoid filling the redux store with a huge last message when it's only used in the
+   * preview of a conversation (leftpane).
+   * The shortening is made in sql.ts directly.
+   */
   lastMessage: string | null;
   lastJoinedTimestamp: number; // ClosedGroup: last time we were added to this group
   groupAdmins: Array<string>;
