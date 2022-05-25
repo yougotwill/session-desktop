@@ -2115,7 +2115,7 @@ function getAllConversations() {
 }
 
 function getAllOpenGroupV2Conversations() {
-  // first _ matches all opengroupv1 (they are com),
+  // first _ matches all opengroupv1 (they are completely removed in a migration now),
   // second _ force a second char to be there, so it can only be opengroupv2 convos
 
   const rows = assertGlobalInstance()
@@ -2131,7 +2131,7 @@ function getAllOpenGroupV2Conversations() {
 }
 
 function getAllOpenGroupV2ConversationsIds(): Array<string> {
-  // first _ matches all opengroupv1 (they are com),
+  // first _ matches all opengroupv1 (they are completely removed in a migration now),
   // second _ force a second char to be there, so it can only be opengroupv2 convos
 
   const rows = assertGlobalInstance()

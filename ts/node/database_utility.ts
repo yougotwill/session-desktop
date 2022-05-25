@@ -2,8 +2,7 @@ import { difference, omit, pick } from 'lodash';
 import { ConversationAttributes } from '../models/conversationAttributes';
 
 export function objectToJSON(data: Record<any, any>) {
-  const str = JSON.stringify(data);
-  return str;
+  return JSON.stringify(data);
 }
 export function jsonToObject(json: string): Record<string, any> {
   return JSON.parse(json);
@@ -77,10 +76,18 @@ export function formatRowOfConversation(row?: Record<string, any>): Conversation
 
   const convo: ConversationAttributes = omit(row, 'json') as ConversationAttributes;
 
+  // if the stringified array of admins/members/zombies length is less than 5,
+  // we consider there is nothing to parse and just return []
+  const minLengthNoParsing = 5;
+
   convo.groupAdmins =
-    convo.groupAdmins?.length && row.groupAdmins.length > 5 ? jsonToArray(row.groupAdmins) : [];
-  convo.members = row.members?.length && row.members.length > 5 ? jsonToArray(row.members) : [];
-  convo.zombies = row.zombies?.length && row.zombies.length > 5 ? jsonToArray(row.zombies) : [];
+    row.groupAdmins?.length && row.groupAdmins.length > minLengthNoParsing
+      ? jsonToArray(row.groupAdmins)
+      : [];
+  convo.members =
+    row.members?.length && row.members.length > minLengthNoParsing ? jsonToArray(row.members) : [];
+  convo.zombies =
+    row.zombies?.length && row.zombies.length > minLengthNoParsing ? jsonToArray(row.zombies) : [];
 
   // sqlite stores boolean as integer. to clean thing up we force the expected boolean fields to be boolean
   convo.isTrustedForAttachmentDownload = Boolean(convo.isTrustedForAttachmentDownload);
