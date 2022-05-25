@@ -1,6 +1,8 @@
+import _ from 'lodash';
 import { getV2OpenGroupRoomByRoomId, OpenGroupV2Room } from '../../../../data/opengroups';
 import { getConversationController } from '../../../conversations';
 import { PromiseUtils, ToastUtils } from '../../../utils';
+
 import { forceSyncConfigurationNowIfNeeded } from '../../../utils/syncUtils';
 import {
   getOpenGroupV2ConversationId,
@@ -9,6 +11,7 @@ import {
   publicKeyParam,
 } from '../utils/OpenGroupUtils';
 import { getOpenGroupManager } from './OpenGroupManagerV2';
+// tslint:disable: variable-name
 
 // Inputs that should work:
 // https://sessionopengroup.co/main?public_key=658d29b91892a2389505596b135e76a53db6e11d613a51dbd3d0816adffb231c

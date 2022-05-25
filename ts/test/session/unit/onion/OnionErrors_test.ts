@@ -118,7 +118,11 @@ describe('OnionPathsErrors', () => {
       SNodeAPI.Onions,
       'decodeOnionResult'
     ).callsFake((_symkey: ArrayBuffer, plaintext: string) =>
-      Promise.resolve({ plaintext, ciphertextBuffer: new Uint8Array() })
+      Promise.resolve({
+        plaintext,
+        ciphertextBuffer: new Uint8Array(),
+        plaintextBuffer: Buffer.alloc(0),
+      })
     );
   });
 

@@ -95,10 +95,13 @@ export const SettingsCategoryPrivacy = (props: {
         />
 
         <SessionToggleWithDescription
-          onClickToggle={() => {
+          onClickToggle={async () => {
             const old = Boolean(window.getSettingValue(SettingsKey.settingsReadReceipt));
             window.setSettingValue(SettingsKey.settingsReadReceipt, !old);
             forceUpdate();
+
+            // await getBlindedSigningHeaders();
+            // await getUnblindedSigningHeaders();
           }}
           title={window.i18n('readReceiptSettingTitle')}
           description={window.i18n('readReceiptSettingDescription')}

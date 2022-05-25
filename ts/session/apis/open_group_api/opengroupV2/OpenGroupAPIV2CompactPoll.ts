@@ -244,6 +244,9 @@ async function sendOpenGroupV2RequestCompactPoll(
   // this will throw if the url is not valid
   const builtUrl = new URL(`${serverUrl}/${endpoint}`);
 
+  // TODO: id-blinding - remove before commiting. Switch to batch endpoint
+  console.warn({ request });
+
   const res = await sendViaOnionToNonSnode(
     serverPubKey,
     builtUrl,

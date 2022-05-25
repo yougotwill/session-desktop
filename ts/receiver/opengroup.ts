@@ -6,6 +6,7 @@ import {
 import { SignalService } from '../protobuf';
 import { OpenGroupRequestCommonType } from '../session/apis/open_group_api/opengroupV2/ApiUtil';
 import { OpenGroupMessageV2 } from '../session/apis/open_group_api/opengroupV2/OpenGroupMessageV2';
+import { OpenGroupMessageV4 } from '../session/apis/open_group_api/opengroupV2/OpenGroupServerPoller';
 import { getOpenGroupV2ConversationId } from '../session/apis/open_group_api/utils/OpenGroupUtils';
 import { getConversationController } from '../session/conversations';
 import { removeMessagePadding } from '../session/crypto/BufferPadding';
@@ -19,9 +20,49 @@ export async function handleOpenGroupV2Message(
   roomInfos: OpenGroupRequestCommonType
 ) {
   const { base64EncodedData, sentTimestamp, sender, serverId } = message;
+  if (!sender || !serverId) {
+    window?.log?.error('handleOpenGroupV2Message - No sender or server information to add message');
+    return;
+  }
+  console.warn({ v2message: message });
+  await handleOpenGroupMessage(roomInfos, base64EncodedData, sentTimestamp, sender, serverId);
+}
+
+export const handleOpenGroupV4Message = async (
+  message: OpenGroupMessageV4,
+  roomInfos: OpenGroupRequestCommonType,
+  capabilities?: Array<string>
+) => {
+  const {
+    data,
+    id,
+    posted,
+    // signature,
+    // seqno,
+    session_id,
+  } = message;
+  console.warn({ capabilities });
+  console.warn({ message });
+
+  const formattedTimestamp = Math.trunc(posted / 1000);
+
+  // TODO: check that these are the correct equivalent fields
+  await handleOpenGroupMessage(roomInfos, data, formattedTimestamp, session_id, id);
+};
+
+/**
+ * Common checks and decoding that takes place for both v2 and v4 message types.
+ */
+const handleOpenGroupMessage = async (
+  roomInfos: OpenGroupRequestCommonType,
+  base64EncodedData: string,
+  sentTimestamp: number,
+  sender: string,
+  serverId: number
+) => {
   const { serverUrl, roomId } = roomInfos;
   if (!base64EncodedData || !sentTimestamp || !sender || !serverId) {
-    window?.log?.warn('Invalid data passed to handleOpenGroupV2Message.', message);
+    window?.log?.warn('Invalid data passed to handleOpenGroupV2Message.');
     return;
   }
 
@@ -83,4 +124,4 @@ export async function handleOpenGroupV2Message(
       ''
     );
   });
-}
+};

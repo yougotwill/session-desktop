@@ -3439,6 +3439,21 @@ function getV2OpenGroupRoomByRoomId(serverUrl: string, roomId: string) {
   return jsonToObject(row.json);
 }
 
+function getV2OpenGroupRoomsByServerUrl(serverUrl: string) {
+  const rows = assertGlobalInstance()
+    .prepare(`SELECT json FROM ${OPEN_GROUP_ROOMS_V2_TABLE} WHERE serverUrl = $serverUrl;`)
+    .all({
+      serverUrl,
+    });
+
+  if (!rows) {
+    return null;
+  }
+
+  // return rows;
+  return rows.map(r => jsonToObject(r.json));
+}
+
 function saveV2OpenGroupRoom(opengroupsv2Room: any) {
   const { serverUrl, roomId, conversationId } = opengroupsv2Room;
   assertGlobalInstance()
@@ -3930,6 +3945,7 @@ export const sqlNode = {
 
   // open group v2
   getV2OpenGroupRoom,
+  getV2OpenGroupRoomsByServerUrl,
   saveV2OpenGroupRoom,
   getAllV2OpenGroupRooms,
   getV2OpenGroupRoomByRoomId,

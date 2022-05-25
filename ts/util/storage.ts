@@ -1,8 +1,9 @@
 import { createOrUpdateItem, getAllItems, removeItemById } from '../data/channelsItem';
+import { SessionKeyPair } from '../receiver/keypairs';
 
 let ready = false;
 
-type ValueType = string | number | boolean;
+type ValueType = string | number | boolean | SessionKeyPair;
 type InsertedValueType = { id: string; value: ValueType };
 let items: Record<string, InsertedValueType>;
 let callbacks: Array<() => void> = [];

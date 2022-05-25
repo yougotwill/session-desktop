@@ -138,7 +138,7 @@ const TripleDotsMenu = (props: { triggerId: string; showBackButton: boolean }) =
     return null;
   }
   return (
-    <div
+    <TripleDotContainer
       role="button"
       onClick={(e: any) => {
         contextMenu.show({
@@ -149,9 +149,15 @@ const TripleDotsMenu = (props: { triggerId: string; showBackButton: boolean }) =
       data-testid="three-dots-conversation-options"
     >
       <SessionIconButton iconType="ellipses" iconSize="medium" />
-    </div>
+    </TripleDotContainer>
   );
 };
+
+const TripleDotContainer = styled.div`
+  flex: 1 0 25%;
+  user-select: none;
+  box-sizing: border-box;
+`;
 
 const ExpirationLength = (props: { expirationSettingName?: string }) => {
   const { expirationSettingName } = props;
@@ -366,16 +372,23 @@ export const ConversationHeaderWithDetails = () => {
           }}
           showBackButton={isMessageDetailOpened}
         />
+        <TripleDotsMenu triggerId={triggerId} showBackButton={isMessageDetailOpened} />
 
         <div className="module-conversation-header__title-container">
           <div className="module-conversation-header__title-flex">
-            <TripleDotsMenu triggerId={triggerId} showBackButton={isMessageDetailOpened} />
             <ConversationHeaderTitle />
           </div>
         </div>
 
         {!isSelectionMode && (
-          <Flex container={true} flexDirection="row" alignItems="center">
+          <Flex
+            container={true}
+            flexDirection="row"
+            alignItems="center"
+            flex="1 0 25%"
+            justifyContent="flex-end"
+            minWidth="200px"
+          >
             {!isKickedFromGroup && (
               <ExpirationLength expirationSettingName={expirationSettingName} />
             )}

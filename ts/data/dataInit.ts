@@ -8,8 +8,10 @@ const channelsToMakeForOpengroupV2 = [
   'getV2OpenGroupRoomByRoomId',
   'saveV2OpenGroupRoom',
   'removeV2OpenGroupRoom',
+  'getV2OpenGroupRoomsByServerUrl',
   'getAllOpenGroupV2Conversations',
 ];
+
 const channelsToMake = new Set([
   'shutdown',
   'close',

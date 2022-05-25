@@ -16,14 +16,14 @@ import {
 } from './storage';
 import { Registration } from './registration';
 import { ConversationTypeEnum } from '../models/conversationAttributes';
+import { SessionKeyPair } from '../receiver/keypairs';
 
 /**
  * Might throw
  */
-export async function sessionGenerateKeyPair(
-  seed: ArrayBuffer
-): Promise<{ pubKey: ArrayBufferLike; privKey: ArrayBufferLike }> {
+export async function sessionGenerateKeyPair(seed: ArrayBuffer): Promise<SessionKeyPair> {
   const sodium = await getSodiumRenderer();
+
   const ed25519KeyPair = sodium.crypto_sign_seed_keypair(new Uint8Array(seed));
   const x25519PublicKey = sodium.crypto_sign_ed25519_pk_to_curve25519(ed25519KeyPair.publicKey);
   // prepend version byte (coming from `processKeys(raw_keys)`)
@@ -43,7 +43,10 @@ export async function sessionGenerateKeyPair(
   return x25519KeyPair;
 }
 
-const generateKeypair = async (mnemonic: string, mnemonicLanguage: string) => {
+const generateKeypair = async (
+  mnemonic: string,
+  mnemonicLanguage: string
+): Promise<SessionKeyPair> => {
   let seedHex = mn_decode(mnemonic, mnemonicLanguage);
   // handle shorter than 32 bytes seeds
   const privKeyHexLength = 32 * 2;
@@ -132,8 +135,9 @@ export async function generateMnemonic() {
   return mn_encode(hex);
 }
 
-async function createAccount(identityKeyPair: any) {
+async function createAccount(identityKeyPair: SessionKeyPair) {
   const sodium = await getSodiumRenderer();
+
   let password = fromArrayBufferToBase64(sodium.randombytes_buf(16));
   password = password.substring(0, password.length - 2);
 

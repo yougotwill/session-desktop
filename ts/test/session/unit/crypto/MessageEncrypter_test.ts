@@ -11,6 +11,7 @@ import chaiBytes from 'chai-bytes';
 import { PubKey } from '../../../../session/types';
 import { fromHex, toHex } from '../../../../session/utils/String';
 import { addMessagePadding } from '../../../../session/crypto/BufferPadding';
+import { SessionKeyPair } from '../../../../receiver/keypairs';
 
 chai.use(chaiBytes);
 
@@ -23,7 +24,7 @@ describe('MessageEncrypter', () => {
       'be1d11154ff9b6de77873f0b6b0bcc460000000000000000000000000000000037e1631b002de498caf7c5c1712718bde7f257c6dadeed0c21abf5e939e6c309',
   };
 
-  const ourIdentityKeypair = {
+  const ourIdentityKeypair: SessionKeyPair = {
     pubKey: new Uint8Array([
       5,
       44,
@@ -93,6 +94,11 @@ describe('MessageEncrypter', () => {
       192,
       105,
     ]),
+    ed25519KeyPair: {
+      privateKey: new Uint8Array(),
+      publicKey: new Uint8Array(),
+      keyType: 'ed25519',
+    },
   };
 
   beforeEach(() => {
@@ -184,7 +190,7 @@ describe('MessageEncrypter', () => {
         // tslint:disable: no-non-null-assertion
         StringUtils.fromHex(keypair!.pubKey)
       );
-      const recipientX25519PublicKeyWithoutPrefix = PubKey.remove05PrefixIfNeeded(recipient.key);
+      const recipientX25519PublicKeyWithoutPrefix = PubKey.removePrefixIfNeeded(recipient.key);
 
       const recipientX25519PublicKey = new Uint8Array(
         StringUtils.fromHex(recipientX25519PublicKeyWithoutPrefix)
@@ -221,7 +227,7 @@ describe('MessageEncrypter', () => {
 
       const recipientX25519PrivateKey = userX25519KeyPair!.privKey;
       const recipientX25519PublicKeyHex = toHex(userX25519KeyPair!.pubKey);
-      const recipientX25519PublicKeyWithoutPrefix = PubKey.remove05PrefixIfNeeded(
+      const recipientX25519PublicKeyWithoutPrefix = PubKey.removePrefixIfNeeded(
         recipientX25519PublicKeyHex
       );
       const recipientX25519PublicKey = new PubKey(recipientX25519PublicKeyWithoutPrefix);

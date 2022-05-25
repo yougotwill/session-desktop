@@ -71,6 +71,10 @@ import {
   fillConvoAttributesWithDefaults,
 } from './conversationAttributes';
 
+import { encryptBlindedMessage } from '../session/apis/open_group_api/opengroupV2/OpenGroupAuthentication';
+import { from_hex } from 'libsodium-wrappers-sumo';
+import { getV2OpenGroupRoom } from '../data/opengroups';
+
 export class ConversationModel extends Backbone.Model<ConversationAttributes> {
   public updateLastMessage: () => any;
   public throttledBumpTyping: () => void;
@@ -230,9 +234,10 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     return groupAdmins && groupAdmins?.length > 0 ? groupAdmins : [];
   }
 
-  // tslint:disable-next-line: cyclomatic-complexity
+  // tslint:disable-next-line: cyclomatic-complexity max-func-body-length
   public getConversationModelProps(): ReduxConversationType {
     const groupAdmins = this.getGroupAdmins();
+    // tslint:disable-next-line: cyclomatic-complexity
     const isPublic = this.isPublic();
 
     const members = this.isGroup() && !isPublic ? this.get('members') : [];
@@ -258,6 +263,8 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     const currentNotificationSetting = this.get('triggerNotificationsFor');
     const displayNameInProfile = this.get('displayNameInProfile');
     const nickname = this.get('nickname');
+    const origin = this.get('origin');
+    const blindedPubKey = this.get('blindedPubKey');
 
     // To reduce the redux store size, only set fields which cannot be undefined.
     // For instance, a boolean can usually be not set if false, etc
@@ -351,6 +358,14 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
 
     if (expireTimer) {
       toRet.expireTimer = expireTimer;
+    }
+
+    if (origin) {
+      toRet.origin = origin;
+    }
+
+    if (blindedPubKey) {
+      toRet.blindedPublicKey = blindedPubKey;
     }
 
     if (
@@ -548,6 +563,15 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       const shouldApprove = !this.isApproved() && this.isPrivate();
       const incomingMessageCount = await getMessageCountByType(this.id, MessageDirection.incoming);
       const hasIncomingMessages = incomingMessageCount > 0;
+
+      // TODO: just 15 use blinding. allowing 05 for debugging.
+      // if (this.id.startsWith('15')) {
+      // TODO: retroactively add prefix for existing IDs to prevent false positives
+      if (this.id.startsWith('15') || this.id.startsWith('05')) {
+        console.warn('Sending a blinded message to this user');
+        await this.sendBlindedMessageRequest(chatMessageParams);
+        return;
+      }
       if (shouldApprove) {
         await this.setIsApproved(true);
         if (hasIncomingMessages) {
@@ -569,9 +593,16 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
           throw new Error('Could not find this room in db');
         }
 
-        // we need the return await so that errors are caught in the catch {}
-        await getMessageQueue().sendToOpenGroupV2(chatMessageOpenGroupV2, roomInfos);
-        return;
+        const openGroup = await getV2OpenGroupRoom(this.id);
+        console.warn({ openGroup });
+
+        if (openGroup?.capabilities?.includes('blind')) {
+          // send with blinding
+          await getMessageQueue().sendToOpenGroupV2(chatMessageOpenGroupV2, roomInfos);
+        } else {
+          // we need the return await so that errors are caught in the catch {}
+          await getMessageQueue().sendToOpenGroupV2(chatMessageOpenGroupV2, roomInfos);
+        }
       }
 
       const destinationPubkey = new PubKey(destination);
@@ -683,6 +714,45 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       expireTimer: 0,
     });
     this.updateLastMessage();
+  }
+
+  public async sendBlindedMessageRequest(messageParams: VisibleMessageParams) {
+    // TODO: add early cancellation conditions
+    const ourSignKeyBytes = await UserUtils.getUserED25519KeyPairBytes();
+    const groupUrl = this.getOrigin();
+
+    if (!ourSignKeyBytes || !groupUrl) {
+      window?.log?.error(
+        'sendBlindedMessageRequest - Cannot get required information for encrypting blinded message.'
+      );
+      return;
+    }
+
+    console.warn({ groupUrl });
+
+    const roomInfo = await getV2OpenGroupRoom(groupUrl);
+
+    if (!roomInfo) {
+      window?.log?.error('Could not find room with matching server url');
+      return;
+    }
+
+    const serverPubKey = roomInfo.serverPublicKey;
+    console.warn({ serverPubKey });
+
+    const encryptedMsg = await encryptBlindedMessage({
+      body: messageParams.body || '',
+      senderSigningKey: ourSignKeyBytes,
+      serverPubKey: from_hex(serverPubKey),
+      // recipientBlindedPublicKey: from_hex(this.id.slice(2)),
+      recipientBlindedPublicKey: from_hex(
+        // using one grabbed from Jason's test server
+        '154f3ff16c7c57e47a74d462d80101dce5f4602fd45bc8e4b6e4cd794411dedd52'.slice(2)
+      ),
+    });
+
+    console.warn({ encryptedMsg });
+    // await getMessageQueue().sendToOpenGroupV2();
   }
 
   public async sendMessageRequestResponse(isApproved: boolean) {
@@ -1221,6 +1291,16 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     }
   }
 
+  public async setOrigin(value: string) {
+    if (value == this.get('origin')) {
+      return;
+    }
+    this.set({
+      origin: value,
+    });
+    await this.commit();
+  }
+
   public async setSubscriberCount(count: number) {
     if (this.get('subscriberCount') !== count) {
       this.set({ subscriberCount: count });
@@ -1286,6 +1366,14 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
 
   public getTitle() {
     return this.getNicknameOrRealUsernameOrPlaceholder();
+  }
+
+  /**
+   *
+   * @returns The open group this contact/conversation originated from
+   */
+  public getOrigin() {
+    return this.get('origin');
   }
 
   /**

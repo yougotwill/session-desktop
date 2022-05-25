@@ -15,7 +15,8 @@ import { Snode } from '../../data/data';
 type OnionFetchOptions = {
   method: string;
   body?: string;
-  headers?: Record<string, string>;
+  headers?: Record<string, string | number>;
+  useV4?: boolean;
 };
 
 type OnionFetchBasicOptions = {
@@ -44,7 +45,7 @@ const buildSendViaOnionPayload = (url: URL, fetchOptions: OnionFetchOptions): On
     // safety issue with file server, just safer to have this
     // no initial /
     endpoint: url.pathname.replace(/^\//, ''),
-    headers: {},
+    headers: fetchOptions.headers || {},
   };
   if (url.search) {
     payloadObj.endpoint += url.search;
@@ -92,8 +93,18 @@ const initOptionsWithDefaults = (options: OnionFetchBasicOptions) => {
   return _.defaults(options, defaultFetchBasicOptions);
 };
 
+export type OnionSnodeResponse = {
+  result: SnodeResponse;
+  txtResponse: string;
+  response: string;
+};
+
 /**
- *
+ * @param destinationX25519Key The destination key
+ * @param URL the URL
+ * @param fetchOptions options to be used for fetching
+ * @param options optional onion fetch options
+ * @param abortSignal the abort signal
  * This function can be used to make a request via onion to a non snode server.
  *
  * A non Snode server is for instance the Push Notification server or an OpengroupV2 server.
@@ -106,12 +117,9 @@ export const sendViaOnionToNonSnode = async (
   url: URL,
   fetchOptions: OnionFetchOptions,
   options: OnionFetchBasicOptions = {},
-  abortSignal?: AbortSignal
-): Promise<{
-  result: SnodeResponse;
-  txtResponse: string;
-  response: string;
-} | null> => {
+  abortSignal?: AbortSignal,
+  useV4: boolean = false
+): Promise<OnionSnodeResponse | null> => {
   const castedDestinationX25519Key =
     typeof destinationX25519Key !== 'string' ? toHex(destinationX25519Key) : destinationX25519Key;
   // FIXME audric looks like this might happen for opengroupv1
@@ -136,7 +144,7 @@ export const sendViaOnionToNonSnode = async (
     finalRelayOptions.port = url.port ? toNumber(url.port) : 80;
   }
 
-  let result: SnodeResponse;
+  let result: SnodeResponse | undefined;
   try {
     result = await pRetry(
       async () => {
@@ -157,10 +165,12 @@ export const sendViaOnionToNonSnode = async (
           finalDestOptions: payloadObj,
           finalRelayOptions,
           abortSignal,
+          useV4,
         });
       },
       {
-        retries: 2, // retry 3 (2+1) times at most
+        // retries: 2, // retry 3 (2+1) times at most
+        retries: 0, // retry 3 (2+1) times at most
         minTimeout: 500,
         onFailedAttempt: e => {
           window?.log?.warn(
@@ -171,6 +181,12 @@ export const sendViaOnionToNonSnode = async (
     );
   } catch (e) {
     window?.log?.warn('sendViaOnionToNonSnodeRetryable failed ', e.message);
+    return null;
+  }
+
+  if (!result) {
+    // v4 failed responses result is undefined
+    window?.log?.warn('sendViaOnionToSnodeRetryable failed during V4 request');
     return null;
   }
 

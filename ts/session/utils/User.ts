@@ -13,6 +13,11 @@ export type HexKeyPair = {
   privKey: string;
 };
 
+export type ByteKeyPair = {
+  pubKeyBytes: Uint8Array;
+  privKeyBytes: Uint8Array;
+};
+
 /**
  * Check if this pubkey is us, using the cache.
  * Throws an error if our pubkey is not set
@@ -64,20 +69,32 @@ export async function getIdentityKeyPair(): Promise<SessionKeyPair | undefined> 
 }
 
 export async function getUserED25519KeyPair(): Promise<HexKeyPair | undefined> {
+  const ed25519KeyPairBytes = await getUserED25519KeyPairBytes();
+  if (ed25519KeyPairBytes) {
+    const { pubKeyBytes, privKeyBytes } = ed25519KeyPairBytes;
+    return {
+      pubKey: toHex(pubKeyBytes),
+      privKey: toHex(privKeyBytes),
+    };
+  }
+  return undefined;
+}
+
+export const getUserED25519KeyPairBytes = async (): Promise<ByteKeyPair | undefined> => {
   // 'identityKey' keeps the ed25519KeyPair under a ed25519KeyPair field.
   // it is only set if the user migrated to the ed25519 way of generating a key
   const item = await getIdentityKeyPair();
   const ed25519KeyPair = (item as any)?.ed25519KeyPair;
   if (ed25519KeyPair?.publicKey && ed25519KeyPair?.privateKey) {
-    const pubKeyAsArray = _.map(ed25519KeyPair.publicKey, a => a);
-    const privKeyAsArray = _.map(ed25519KeyPair.privateKey, a => a);
+    const pubKeyBytes = new Uint8Array(_.map(ed25519KeyPair.publicKey, a => a));
+    const privKeyBytes = new Uint8Array(_.map(ed25519KeyPair.privateKey, a => a));
     return {
-      pubKey: toHex(new Uint8Array(pubKeyAsArray)),
-      privKey: toHex(new Uint8Array(privKeyAsArray)),
+      pubKeyBytes,
+      privKeyBytes,
     };
   }
   return undefined;
-}
+};
 
 export function getOurProfile(): LokiProfile | undefined {
   try {

@@ -289,16 +289,14 @@
 }
 
 .module-conversation-header__title-container {
-  flex-grow: 1;
-  flex-shrink: 1;
+  flex: 1 1 50%;
   min-width: 0;
   display: block;
   text-align: center;
+  max-width: 50%;
 }
 
 .module-conversation-header__title-flex {
-  margin-inline-start: auto;
-  margin-inline-end: auto;
   display: inline-flex;
   flex-direction: row;
   align-items: center;

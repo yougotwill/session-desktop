@@ -50,6 +50,11 @@ export interface ConversationAttributes {
   isPinned: boolean;
   isApproved: boolean;
   didApproveMe: boolean;
+
+  /** The open group chat this conversation originated from (if from closed group) */
+  origin?: string;
+
+  blindedPubKey?: string;
 }
 
 /**

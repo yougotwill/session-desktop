@@ -4,7 +4,7 @@ import { handleSwarmDataMessage } from './dataMessage';
 import { removeFromCache, updateCache } from './cache';
 import { SignalService } from '../protobuf';
 import _, * as Lodash from 'lodash';
-import { PubKey } from '../session/types';
+import { KeyPrefixType, PubKey } from '../session/types';
 
 import { BlockedNumberController } from '../util/blockedNumberController';
 import { GroupUtils, UserUtils } from '../session/utils';
@@ -20,12 +20,12 @@ import { handleCallMessage } from './callMessage';
 import { SettingsKey } from '../data/settings-key';
 import { ReadReceipts } from '../util/readReceipts';
 import { Storage } from '../util/storage';
-import { ConversationTypeEnum } from '../models/conversationAttributes';
 import { getMessageBySenderAndTimestamp } from '../data/data';
 import {
   deleteMessagesFromSwarmAndCompletelyLocally,
   deleteMessagesFromSwarmAndMarkAsDeletedLocally,
 } from '../interactions/conversations/unsendingInteractions';
+import { ConversationTypeEnum } from '../models/conversationAttributes';
 
 export async function handleSwarmContentMessage(envelope: EnvelopePlus, messageHash: string) {
   try {
@@ -143,7 +143,7 @@ export async function decryptWithSessionProtocol(
   const recipientX25519PrivateKey = x25519KeyPair.privateKeyData;
   const hex = toHex(new Uint8Array(x25519KeyPair.publicKeyData));
 
-  const recipientX25519PublicKey = PubKey.remove05PrefixIfNeeded(hex);
+  const recipientX25519PublicKey = PubKey.removePrefixIfNeeded(hex);
 
   const sodium = await getSodiumRenderer();
   const signatureSize = sodium.crypto_sign_BYTES;
@@ -192,9 +192,9 @@ export async function decryptWithSessionProtocol(
 
   // set the sender identity on the envelope itself.
   if (isClosedGroup) {
-    envelope.senderIdentity = `05${toHex(senderX25519PublicKey)}`;
+    envelope.senderIdentity = `${KeyPrefixType.standard}${toHex(senderX25519PublicKey)}`;
   } else {
-    envelope.source = `05${toHex(senderX25519PublicKey)}`;
+    envelope.source = `${KeyPrefixType.standard}${toHex(senderX25519PublicKey)}`;
   }
   perfEnd(`decryptWithSessionProtocol-${envelope.id}`, 'decryptWithSessionProtocol');
 
