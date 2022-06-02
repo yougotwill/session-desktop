@@ -1292,7 +1292,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
   }
 
   public async setOrigin(value: string) {
-    if (value == this.get('origin')) {
+    if (value === this.get('origin')) {
       return;
     }
     this.set({

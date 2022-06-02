@@ -11,12 +11,13 @@ import { PROTOCOLS } from '../constants';
 import { toHex } from '../utils/String';
 import pRetry from 'p-retry';
 import { Snode } from '../../data/data';
+import { decodeV4Response } from './onionv4';
 
-type OnionFetchOptions = {
+export type OnionFetchOptions = {
   method: string;
   body?: string;
   headers?: Record<string, string | number>;
-  useV4?: boolean;
+  useV4: boolean;
 };
 
 type OnionFetchBasicOptions = {
@@ -117,14 +118,15 @@ export const sendViaOnionToNonSnode = async (
   url: URL,
   fetchOptions: OnionFetchOptions,
   options: OnionFetchBasicOptions = {},
-  abortSignal?: AbortSignal,
-  useV4: boolean = false
+  abortSignal?: AbortSignal
 ): Promise<OnionSnodeResponse | null> => {
   const castedDestinationX25519Key =
     typeof destinationX25519Key !== 'string' ? toHex(destinationX25519Key) : destinationX25519Key;
   // FIXME audric looks like this might happen for opengroupv1
   if (!destinationX25519Key || typeof destinationX25519Key !== 'string') {
     window?.log?.error('sendViaOnion - called without a server public key or not a string key');
+
+    throw new Error('sendViaOnion - called without a server public key or not a string key');
   }
 
   const defaultedOptions = initOptionsWithDefaults(options);
@@ -165,7 +167,7 @@ export const sendViaOnionToNonSnode = async (
           finalDestOptions: payloadObj,
           finalRelayOptions,
           abortSignal,
-          useV4,
+          useV4: fetchOptions.useV4,
         });
       },
       {
@@ -204,11 +206,16 @@ export const sendViaOnionToNonSnode = async (
 
   let { body } = result;
   if (typeof body === 'string') {
-    // adn does uses this path
+    // and does uses this path
     // log.info(`sendViaOnion - got text response ${url.toString()}`);
     txtResponse = result.body;
+
     try {
-      body = JSON.parse(result.body);
+      if (fetchOptions.useV4) {
+        body = decodeV4Response(result.body)?.body;
+      } else {
+        body = JSON.parse(result.body);
+      }
     } catch (e) {
       window?.log?.error("sendViaOnion Can't decode JSON body", typeof result.body, result.body);
     }

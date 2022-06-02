@@ -472,6 +472,7 @@ describe('OpenGroupAuthentication', () => {
     });
   });
 
+  // tslint:disable-next-line: no-empty
   describe('Message Decryption', () => {});
 
   describe('V4Requests', () => {

@@ -114,15 +114,13 @@ describe('OnionPathsErrors', () => {
     await OnionPaths.getOnionPath({});
 
     oldOnionPaths = OnionPaths.TEST_getTestOnionPath();
-    Sinon.stub(
-      SNodeAPI.Onions,
-      'decodeOnionResult'
-    ).callsFake((_symkey: ArrayBuffer, plaintext: string) =>
-      Promise.resolve({
-        plaintext,
-        ciphertextBuffer: new Uint8Array(),
-        plaintextBuffer: Buffer.alloc(0),
-      })
+    Sinon.stub(SNodeAPI.Onions, 'decodeOnionResult').callsFake(
+      (_symkey: ArrayBuffer, plaintext: string) =>
+        Promise.resolve({
+          plaintext,
+          ciphertextBuffer: new Uint8Array(),
+          plaintextBuffer: Buffer.alloc(0),
+        })
     );
   });
 

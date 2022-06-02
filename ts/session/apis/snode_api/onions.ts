@@ -16,8 +16,8 @@ import { ERROR_CODE_NO_CONNECT } from './SNodeAPI';
 import { Onions } from '.';
 import { hrefPnServerDev, hrefPnServerProd } from '../push_notification_api/PnServer';
 import { callUtilsWorker } from '../../../webworker/workers/util_worker_interface';
-import { encodeV4Request } from '../open_group_api/opengroupV2/OpenGroupPollingUtils';
 import { to_string } from 'libsodium-wrappers-sumo';
+import { encodeV4Request } from '../../onions/onionv4';
 
 export const resetSnodeFailureCount = () => {
   snodeFailureCount = {};
@@ -46,16 +46,20 @@ export const ERROR_421_HANDLED_RETRY_REQUEST =
 export const CLOCK_OUT_OF_SYNC_MESSAGE_ERROR =
   'Your clock is out of sync with the network. Check your clock.';
 
+async function encryptOnionV4RequestForPubkey(pubKeyX25519hex: string, requestInfo: any) {
+  const plaintext = encodeV4Request(requestInfo);
+
+  return callUtilsWorker('encryptForPubkey', pubKeyX25519hex, plaintext) as Promise<
+    DestinationContext
+  >;
+}
 // Returns the actual ciphertext, symmetric key that will be used
 // for decryption, and an ephemeral_key to send to the next hop
 async function encryptForPubKey(
   pubKeyX25519hex: string,
-  requestInfo: any,
-  useV4: boolean = false
+  requestInfo: any
 ): Promise<DestinationContext> {
-  const plaintext = useV4
-    ? encodeV4Request(requestInfo)
-    : new TextEncoder().encode(JSON.stringify(requestInfo));
+  const plaintext = new TextEncoder().encode(JSON.stringify(requestInfo));
 
   return callUtilsWorker('encryptForPubkey', pubKeyX25519hex, plaintext) as Promise<
     DestinationContext
@@ -114,9 +118,9 @@ function encodeCiphertextPlusJson(
 async function buildOnionCtxs(
   nodePath: Array<Snode>,
   destCtx: DestinationContext,
+  useV4: boolean,
   targetED25519Hex?: string,
-  finalRelayOptions?: FinalRelayOptions,
-  useV4?: boolean
+  finalRelayOptions?: FinalRelayOptions
 ) {
   const ctxes = [destCtx];
   if (!nodePath) {
@@ -147,7 +151,6 @@ async function buildOnionCtxs(
         target,
         method: 'POST',
       };
-      // FIXME http open groups v2 are not working
       // tslint:disable-next-line: no-http-string
       if (finalRelayOptions?.protocol === 'http') {
         dest.protocol = finalRelayOptions.protocol;
@@ -195,11 +198,11 @@ async function buildOnionCtxs(
 async function buildOnionGuardNodePayload(
   nodePath: Array<Snode>,
   destCtx: DestinationContext,
+  useV4: boolean,
   targetED25519Hex?: string,
-  finalRelayOptions?: FinalRelayOptions,
-  useV4?: boolean
+  finalRelayOptions?: FinalRelayOptions
 ) {
-  const ctxes = await buildOnionCtxs(nodePath, destCtx, targetED25519Hex, finalRelayOptions, useV4);
+  const ctxes = await buildOnionCtxs(nodePath, destCtx, useV4, targetED25519Hex, finalRelayOptions);
 
   // this is the OUTER side of the onion, the one encoded with multiple layer
   // So the one we will send to the first guard node.
@@ -563,6 +566,11 @@ export const snodeHttpsAgent = new https.Agent({
   rejectUnauthorized: false,
 });
 
+/**
+ * As far as I know, FinalRelayOptions is only used for contacting non service node. So PN server, opengroups, fileserver, etc.
+ * It contains the details the last service node of the onion path needs to use to contact who we need to contact.
+ * So things, like the ip/port and protocol of the opengroup server/fileserver/PN server.
+ */
 export type FinalRelayOptions = {
   host: string;
   protocol?: 'http' | 'https'; // default to https
@@ -683,7 +691,7 @@ export const sendOnionRequestHandlingSnodeEject = async ({
   abortSignal,
   associatedWith,
   finalRelayOptions,
-  useV4 = false,
+  useV4,
 }: {
   nodePath: Array<Snode>;
   destX25519Any: string;
@@ -695,7 +703,7 @@ export const sendOnionRequestHandlingSnodeEject = async ({
   finalRelayOptions?: FinalRelayOptions;
   abortSignal?: AbortSignal;
   associatedWith?: string;
-  useV4?: boolean;
+  useV4: boolean;
 }): Promise<SnodeResponse | undefined> => {
   // this sendOnionRequest() call has to be the only one like this.
   // If you need to call it, call it through sendOnionRequestHandlingSnodeEject because this is the one handling path rebuilding and known errors
@@ -711,7 +719,6 @@ export const sendOnionRequestHandlingSnodeEject = async ({
       abortSignal,
       useV4,
     });
-
     response = result.response;
     if (
       !_.isEmpty(finalRelayOptions) &&
@@ -730,20 +737,8 @@ export const sendOnionRequestHandlingSnodeEject = async ({
   }
   // this call will handle the common onion failure logic.
   // if an error is not retryable a AbortError is triggered, which is handled by pRetry and retries are stopped
-  let processed: SnodeResponse | undefined;
   if (useV4 && response) {
-    processed = await processOnionResponseV4({
-      response,
-      symmetricKey: decodingSymmetricKey,
-      guardNode: nodePath[0],
-      lsrpcEd25519Key: finalDestOptions?.destination_ed25519_hex,
-      abortSignal,
-      associatedWith,
-    });
-
-    console.warn({ processed });
-  } else {
-    processed = await processOnionResponse({
+    return processOnionResponseV4({
       response,
       symmetricKey: decodingSymmetricKey,
       guardNode: nodePath[0],
@@ -753,7 +748,14 @@ export const sendOnionRequestHandlingSnodeEject = async ({
     });
   }
 
-  return processed;
+  return processOnionResponse({
+    response,
+    symmetricKey: decodingSymmetricKey,
+    guardNode: nodePath[0],
+    lsrpcEd25519Key: finalDestOptions?.destination_ed25519_hex,
+    abortSignal,
+    associatedWith,
+  });
 };
 
 /**
@@ -764,8 +766,8 @@ export const sendOnionRequestHandlingSnodeEject = async ({
  *
  *
  * @param nodePath the onion path to use to send the request
- * @param finalDestOptions those are the options for the request from 3 to R. It contains for instance the payload and headers.
- * @param finalRelayOptions  those are the options 3 will use to make a request to R. It contains for instance the host to make the request to
+ * @param finalDestOptions those are the options for the request from 3 to Receiver. It contains for instance the payload and headers.
+ * @param finalRelayOptions  those are the options 3 will use to make a request to R. It contains the host and port to make the request to, if the target is not a snode
  */
 const sendOnionRequest = async ({
   nodePath,
@@ -773,7 +775,7 @@ const sendOnionRequest = async ({
   finalDestOptions,
   finalRelayOptions,
   abortSignal,
-  useV4 = false,
+  useV4,
 }: {
   nodePath: Array<Snode>;
   destX25519Any: string;
@@ -782,14 +784,14 @@ const sendOnionRequest = async ({
     headers?: Record<string, string>;
     body?: string;
   };
-  finalRelayOptions?: FinalRelayOptions;
+  finalRelayOptions?: FinalRelayOptions; // use only when the target is not a snode
   abortSignal?: AbortSignal;
-  useV4?: boolean;
+  useV4: boolean;
 }) => {
   // get destination pubkey in array buffer format
   let destX25519hex = destX25519Any;
 
-  // Warning be sure to do a copy otherwise the delete below creates issue with retries
+  // Warning: be sure to do a copy otherwise the delete below creates issue with retries
   const copyFinalDestOptions = _.cloneDeep(finalDestOptions);
   if (typeof destX25519hex !== 'string') {
     // convert AB to hex
@@ -811,11 +813,14 @@ const sendOnionRequest = async ({
   // do we need this?
   options.headers = options.headers || {};
 
-  const isLsrpc = !!finalRelayOptions;
+  // finalRelayOptions is set only if we try to communicate with something else than a service node as end target of the request.
+  // so if that field is set, we are trying to communicate with a file server or an opengroup or whatever,
+  // and if that field is not set, we are trying to communicate with a service node (for a retrieve/send/whatever request)
+  const isRequestToSnode = !finalRelayOptions;
 
   let destCtx: DestinationContext;
   try {
-    if (!isLsrpc) {
+    if (isRequestToSnode) {
       const body = options.body || '';
       delete options.body;
 
@@ -829,14 +834,9 @@ const sendOnionRequest = async ({
         plaintext
       )) as DestinationContext;
     } else {
-      if (useV4) {
-        console.warn('usev4, encryptForPubKey');
-        destCtx = await encryptForPubKey(destX25519hex, options, useV4);
-      } else {
-        console.warn('nousev4, encryptForPubKey');
-
-        destCtx = await encryptForPubKey(destX25519hex, options);
-      }
+      destCtx = useV4
+        ? await encryptOnionV4RequestForPubkey(destX25519hex, options)
+        : await encryptForPubKey(destX25519hex, options);
     }
   } catch (e) {
     window?.log?.error(
@@ -856,9 +856,9 @@ const sendOnionRequest = async ({
   const payload = await buildOnionGuardNodePayload(
     nodePath,
     destCtx,
+    useV4,
     targetEd25519hex,
-    finalRelayOptions,
-    useV4
+    finalRelayOptions
   );
 
   const guardNode = nodePath[0];
@@ -890,6 +890,8 @@ const sendOnionRequest = async ({
 async function sendOnionRequestSnodeDest(
   onionPath: Array<Snode>,
   targetNode: Snode,
+  headers: Record<string, any>,
+
   plaintext?: string,
   associatedWith?: string
 ) {
@@ -899,8 +901,10 @@ async function sendOnionRequestSnodeDest(
     finalDestOptions: {
       destination_ed25519_hex: targetNode.pubkey_ed25519,
       body: plaintext,
+      headers,
     },
     associatedWith,
+    useV4: false,
   });
 }
 
@@ -915,8 +919,10 @@ export async function lokiOnionFetch({
   targetNode,
   associatedWith,
   body,
+  headers,
 }: {
   targetNode: Snode;
+  headers: Record<string, any>;
   body?: string;
   associatedWith?: string;
 }): Promise<SnodeResponse | undefined> {
@@ -925,7 +931,13 @@ export async function lokiOnionFetch({
       async () => {
         // Get a path excluding `targetNode`:
         const path = await OnionPaths.getOnionPath({ toExclude: targetNode });
-        const result = await sendOnionRequestSnodeDest(path, targetNode, body, associatedWith);
+        const result = await sendOnionRequestSnodeDest(
+          path,
+          targetNode,
+          headers,
+          body,
+          associatedWith
+        );
         return result;
       },
       {

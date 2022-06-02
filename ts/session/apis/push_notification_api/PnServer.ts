@@ -1,5 +1,5 @@
 import { callUtilsWorker } from '../../../webworker/workers/util_worker_interface';
-import { sendViaOnionToNonSnode } from '../../onions/onionSend';
+import { OnionFetchOptions, sendViaOnionToNonSnode } from '../../onions/onionSend';
 
 const pnServerPubkeyHex = '642a6585919742e5a2d4dc51244964fbcd8bcab2b75612407de58b810740d049';
 
@@ -38,19 +38,22 @@ const serverRequest = async (
   const { method, objBody } = options;
 
   const url = new URL(endpoint);
-  const fetchOptions: any = {};
-  const headers: any = {};
+  const headers: Record<string, any> = {};
+  headers['Content-Type'] = 'application/json';
+
+  // the pn server does not support v4 yet
+
+  const fetchOptions: OnionFetchOptions = { useV4: false, headers, method };
+
   try {
-    headers['Content-Type'] = 'application/json';
     fetchOptions.body = JSON.stringify(objBody);
-    fetchOptions.headers = headers;
-    fetchOptions.method = method;
   } catch (e) {
     window?.log?.error('onionSend:::notifyPnServer - set up error:', e.code, e.message);
     return false;
   }
 
   try {
+    // I assume PN server does not understand v4 onion request yet
     const onionResponse = await sendViaOnionToNonSnode(pnServerPubkeyHex, url, fetchOptions);
     if (
       !onionResponse ||

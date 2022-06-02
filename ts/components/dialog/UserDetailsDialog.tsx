@@ -18,12 +18,7 @@ import { SpacerLG } from '../basic/Text';
 import { SessionWrapperModal } from '../SessionWrapperModal';
 
 export const UserDetailsDialog = (props: UserDetailsModalState) => {
-  if (!props) {
-    return null;
-  }
-
   const [isEnlargedImageShown, setIsEnlargedImageShown] = useState(false);
-  const convo = getConversationController().get(props.conversationId);
   const convoOrigin = useSelector(getSelectedConversationKey);
 
   const size = isEnlargedImageShown ? AvatarSize.HUGE : AvatarSize.XL;
@@ -35,13 +30,18 @@ export const UserDetailsDialog = (props: UserDetailsModalState) => {
   }
 
   async function onClickStartConversation() {
+    if (!props) {
+      return;
+    }
+    const convo = getConversationController().get(props.conversationId);
+
     const conversation = await getConversationController().getOrCreateAndWait(
       convo.id,
       ConversationTypeEnum.PRIVATE
     );
 
     if (convoOrigin) {
-      conversation.setOrigin(convoOrigin);
+      await conversation.setOrigin(convoOrigin);
     }
 
     await openConversationWithMessages({ conversationKey: conversation.id, messageId: null });
@@ -57,6 +57,10 @@ export const UserDetailsDialog = (props: UserDetailsModalState) => {
     undefined,
     [props?.conversationId]
   );
+
+  if (!props) {
+    return null;
+  }
 
   return (
     <SessionWrapperModal title={props.userName} onClose={closeDialog} showExitIcon={true}>

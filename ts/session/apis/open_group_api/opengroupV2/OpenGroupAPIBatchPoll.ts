@@ -2,12 +2,8 @@ import { getV2OpenGroupRoomByRoomId } from '../../../../data/opengroups';
 import _ from 'lodash';
 import { OnionSnodeResponse, sendViaOnionToNonSnode } from '../../../onions/onionSend';
 import { APPLICATION_JSON } from '../../../../types/MIME';
-import {
-  decodeV4Response,
-  getOurOpenGroupHeaders,
-  OpenGroupRequestHeaders,
-  ResponseDecodedV4,
-} from './OpenGroupPollingUtils';
+import { getOurOpenGroupHeaders, OpenGroupRequestHeaders } from './OpenGroupPollingUtils';
+import { decodeV4Response, ResponseDecodedV4 } from '../../../onions/onionv4';
 
 type BatchFetchRequestOptions = {
   method: 'GET';
@@ -51,7 +47,7 @@ export const batchPoll = async (
   serverUrl: string,
   roomInfos: Set<string>,
   abortSignal: AbortSignal,
-  useV4: boolean = false,
+  useV4: boolean,
   batchRequestOptions: Array<SubrequestOption>
 ): Promise<ResponseDecodedV4 | null> => {
   // if (!(serverUrl.includes('.dev') || serverUrl.includes(':8080'))) {
@@ -118,7 +114,6 @@ export type SubrequestOption = {
 /**
  *
  * @param options Array of subrequest options to be made.
- * @returns
  */
 const makeBatchRequestPayload = (options: SubrequestOption): BatchSubRequest | null => {
   const GET_METHOD = 'GET';
@@ -157,7 +152,7 @@ const makeBatchRequestPayload = (options: SubrequestOption): BatchSubRequest | n
 
 const getBatchRequest = async (
   serverPublicKey: string,
-  useV4: boolean = false,
+  useV4: boolean,
   batchOptions: Array<SubrequestOption>
 ): Promise<BatchRequest | undefined> => {
   const BATCH_ENDPOINT = '/batch';
@@ -203,38 +198,24 @@ const sendOpenGroupBatchRequest = async (
   serverPubkey: string,
   request: BatchRequest,
   abortSignal: AbortSignal,
-  useV4: boolean = false
+  useV4: boolean
 ): Promise<any> => {
   const { endpoint, headers, method, body } = request;
   const builtUrl = new URL(`${serverUrl}/${endpoint}`);
 
   let batchResponse: OnionSnodeResponse | null;
-  if (useV4) {
-    batchResponse = await sendViaOnionToNonSnode(
-      serverPubkey,
-      builtUrl,
-      {
-        method,
-        headers,
-        body,
-      },
-      {},
-      abortSignal,
-      true
-    );
-  } else {
-    batchResponse = await sendViaOnionToNonSnode(
-      serverPubkey,
-      builtUrl,
-      {
-        method,
-        headers,
-        body,
-      },
-      {},
-      abortSignal
-    );
-  }
+  batchResponse = await sendViaOnionToNonSnode(
+    serverPubkey,
+    builtUrl,
+    {
+      method,
+      headers,
+      body,
+      useV4,
+    },
+    {},
+    abortSignal
+  );
 
   if (!batchResponse) {
     window?.log?.error('Undefined batch response - cancelling batch request');

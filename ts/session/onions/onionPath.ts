@@ -291,7 +291,6 @@ export async function testGuardNode(snode: Data.Snode) {
   const params = { pubKey };
   const body = {
     jsonrpc: '2.0',
-    id: '0',
     method,
     params,
   };

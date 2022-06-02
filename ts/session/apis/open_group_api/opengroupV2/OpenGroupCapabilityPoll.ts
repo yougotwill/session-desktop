@@ -44,6 +44,8 @@ export const getCapabilityFetchRequest = async (
     serverPubKey: serverPubkey,
     endpoint,
     headers: capabilityHeaders,
+    useV4: false, // before we make that request, we are unsure if the server supports v4 or not.
+    // We need to do that one (and it to succeed) to make sure the server understands v4 onion requests
   };
 };
 
@@ -51,7 +53,7 @@ export async function sendOpenGroupCapabilityRequest(
   request: OpenGroupCapabilityRequest,
   abortSignal: AbortSignal
 ): Promise<any | null> {
-  const { server: serverUrl, endpoint, serverPubKey, headers } = request;
+  const { server: serverUrl, endpoint, serverPubKey, headers, useV4 } = request;
   // this will throw if the url is not valid
 
   const builtUrl = new URL(`${serverUrl}/${endpoint}`);
@@ -63,13 +65,11 @@ export async function sendOpenGroupCapabilityRequest(
       method: 'GET',
       headers,
       body: undefined,
+      useV4,
     },
     {},
     abortSignal
-    // true
   )) as any;
-
-  console.warn('capabilityRequest: ', res?.result?.capabilities);
 
   const statusCode = parseStatusCodeFromOnionRequest(res);
   if (!statusCode) {

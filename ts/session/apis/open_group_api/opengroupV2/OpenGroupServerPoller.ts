@@ -34,10 +34,10 @@ import { handleOpenGroupV2Message, handleOpenGroupV4Message } from '../../../../
 import { callUtilsWorker } from '../../../../webworker/workers/util_worker_interface';
 import { filterDuplicatesFromDbAndIncoming } from './SogsFilterDuplicate';
 import { batchPoll, SubrequestOption, SubrequestOptionType } from './OpenGroupAPIBatchPoll';
-import { ResponseDecodedV4 } from './OpenGroupPollingUtils';
 import { getBlindedPubKey } from './OpenGroupAuthentication';
 import { UserUtils } from '../../../utils';
 import { from_hex } from 'libsodium-wrappers-sumo';
+import { ResponseDecodedV4 } from '../../../onions/onionv4';
 
 export type OpenGroupMessageV4 = {
   /** AFAIK: indicates the number of the message in the group. e.g. 2nd message will be 1 or 2 */
@@ -102,6 +102,7 @@ export class OpenGroupServerPoller {
     if (!roomInfos?.length) {
       throw new Error('Empty roomInfos list');
     }
+
     // check that all rooms are from the same serverUrl
     const firstUrl = roomInfos[0].serverUrl;
     const every = roomInfos.every(r => r.serverUrl === firstUrl);
@@ -415,8 +416,6 @@ export class OpenGroupServerPoller {
         this.roomIdsToPoll,
         this.abortController.signal
       );
-      // TODO: temp to silence yarn warnings
-      // let compactFetchResults = Array<any>([]);
 
       const subrequestOptions: Array<SubrequestOption> = await this.makeSubrequestInfo();
 
@@ -757,7 +756,7 @@ const handleNewMessagesResponseV4 = async (
 
   try {
     const { roomId } = subrequestOption.messages;
-    const convoId = await getOpenGroupV2ConversationId(serverUrl, roomId);
+    const convoId = getOpenGroupV2ConversationId(serverUrl, roomId);
     const roomInfos = await getRoomAndUpdateLastFetchTimestamp(convoId, newMessages);
     if (!roomInfos) {
       return;

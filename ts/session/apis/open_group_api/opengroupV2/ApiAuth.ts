@@ -7,6 +7,10 @@ import { OpenGroupRequestCommonType, OpenGroupV2Request } from './ApiUtil';
 import { sendApiV2Request } from './OpenGroupAPIV2';
 import { parseStatusCodeFromOnionRequest } from './OpenGroupAPIV2Parser';
 
+/**
+ * This function should probably be removed, alongside the all token/ claim token logic, and from the database too.
+ * this is the old way of contacting sogs
+ */
 async function claimAuthToken(
   authToken: string,
   serverUrl: string,
@@ -22,6 +26,7 @@ async function claimAuthToken(
     queryParams: { public_key: getOurPubKeyStrFromCache() },
     isAuthRequired: false,
     endpoint: 'claim_auth_token',
+    useV4: false,
   };
   const result = await sendApiV2Request(request);
   const statusCode = parseStatusCodeFromOnionRequest(result);
@@ -77,7 +82,10 @@ async function oneAtATimeGetAuth({ serverUrl, roomId }: OpenGroupRequestCommonTy
     }
   });
 }
-
+/**
+ * This function should probably be removed, alongside the all token/ claim token logic, and from the database too.
+ * this is the old way of contacting sogs
+ */
 export async function getAuthToken({
   serverUrl,
   roomId,
@@ -85,6 +93,10 @@ export async function getAuthToken({
   return oneAtATimeGetAuth({ roomId, serverUrl });
 }
 
+/**
+ * This function should probably be removed, alongside the all token/ claim token logic, and from the database too.
+ * this is the old way of contacting sogs
+ */
 // tslint:disable: member-ordering
 export async function requestNewAuthToken({
   serverUrl,
@@ -105,6 +117,7 @@ export async function requestNewAuthToken({
     queryParams: parameters,
     isAuthRequired: false,
     endpoint: 'auth_token_challenge',
+    useV4: false,
   };
   const json = (await sendApiV2Request(request)) as any;
   // parse the json

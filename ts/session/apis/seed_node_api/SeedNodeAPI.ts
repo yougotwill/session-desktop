@@ -237,7 +237,6 @@ async function getSnodesFromSeedUrl(urlObj: URL): Promise<Array<any>> {
 
   const body = {
     jsonrpc: '2.0',
-    id: '0',
     method: 'get_n_service_nodes',
     params,
   };

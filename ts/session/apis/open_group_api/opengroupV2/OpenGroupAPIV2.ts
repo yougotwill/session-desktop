@@ -85,7 +85,6 @@ export async function sendApiV2Request(
   if (!window.getGlobalOnlineStatus()) {
     throw new pRetry.AbortError('Network is not available');
   }
-
   // set the headers sent by the caller, and the roomId.
   const headers = request.headers || {};
   if (FSv2.isOpenGroupV2Request(request)) {
@@ -128,6 +127,7 @@ export async function sendApiV2Request(
         method: request.method,
         headers,
         body,
+        useV4: request.useV4,
       },
       { noJson: true }
     );
@@ -161,6 +161,7 @@ export async function sendApiV2Request(
       method: request.method,
       headers,
       body,
+      useV4: request.useV4,
     });
     return res as object;
   }
@@ -182,6 +183,7 @@ export async function openGroupV2GetRoomInfo({
     room: roomId,
     isAuthRequired: false,
     endpoint: `rooms/${roomId}`,
+    useV4: false,
   };
   const result = await exports.sendApiV2Request(request);
   if (result?.result?.room) {
@@ -224,6 +226,7 @@ export const postMessageRetryable = async (
     queryParams: json,
     isAuthRequired: true,
     endpoint: 'messages',
+    useV4: false,
   };
 
   const result = await exports.sendApiV2Request(request);
@@ -279,6 +282,7 @@ export const banUser = async (
     isAuthRequired: true,
     queryParams,
     endpoint,
+    useV4: false,
   };
   const banResult = await exports.sendApiV2Request(request);
   const isOk = parseStatusCodeFromOnionRequest(banResult) === 200;
@@ -295,6 +299,7 @@ export const unbanUser = async (
     server: roomInfos.serverUrl,
     isAuthRequired: true,
     endpoint: `block_list/${userToBan.key}`,
+    useV4: false,
   };
   const unbanResult = await exports.sendApiV2Request(request);
   const isOk = parseStatusCodeFromOnionRequest(unbanResult) === 200;
@@ -315,6 +320,7 @@ export const deleteMessageByServerIds = async (
     isAuthRequired: true,
     endpoint: 'delete_messages',
     queryParams: { ids: idsToRemove },
+    useV4: false,
   };
   const messageDeletedResult = await exports.sendApiV2Request(request);
   const isOk = parseStatusCodeFromOnionRequest(messageDeletedResult) === 200;
@@ -330,6 +336,7 @@ export const getAllRoomInfos = async (roomInfos: OpenGroupV2Room) => {
     isAuthRequired: false,
     endpoint: 'rooms',
     serverPublicKey: roomInfos.serverPublicKey,
+    useV4: false,
   };
   const result = await exports.sendApiV2Request(request);
   const statusCode = parseStatusCodeFromOnionRequest(result);
@@ -351,6 +358,7 @@ export const getMemberCount = async (
     server: roomInfos.serverUrl,
     isAuthRequired: true,
     endpoint: 'member_count',
+    useV4: false,
   };
   const result = await exports.sendApiV2Request(request);
   if (parseStatusCodeFromOnionRequest(result) !== 200) {
@@ -389,6 +397,7 @@ export const downloadFileOpenGroupV2 = async (
     server: roomInfos.serverUrl,
     isAuthRequired: true,
     endpoint: `files/${fileId}`,
+    useV4: false,
   };
 
   const result = await exports.sendApiV2Request(request);
@@ -416,6 +425,7 @@ export const downloadFileOpenGroupV2ByUrl = async (
     server: roomInfos.serverUrl,
     isAuthRequired: false,
     endpoint: pathName,
+    useV4: false,
   };
 
   const result = await exports.sendApiV2Request(request);
@@ -448,6 +458,7 @@ export const downloadPreviewOpenGroupV2 = async (
     isAuthRequired: false,
     endpoint: `rooms/${roomInfos.roomId}/image`,
     serverPublicKey: roomInfos.serverPublicKey,
+    useV4: false,
   };
 
   const result = await exports.sendApiV2Request(request);
@@ -487,6 +498,7 @@ export const uploadFileOpenGroupV2 = async (
     isAuthRequired: true,
     endpoint: filesEndpoint,
     queryParams,
+    useV4: false,
   };
 
   const result = await exports.sendApiV2Request(request);
@@ -527,6 +539,7 @@ export const uploadImageForRoomOpenGroupV2 = async (
     isAuthRequired: true,
     endpoint: imageEndpoint,
     queryParams,
+    useV4: false,
   };
 
   const result = await exports.sendApiV2Request(request);
@@ -553,6 +566,7 @@ export const addModerator = async (
     isAuthRequired: true,
     queryParams: { public_key: userToAddAsMods.key, room_id: roomInfos.roomId },
     endpoint: 'moderators',
+    useV4: false,
   };
   const addModResult = await exports.sendApiV2Request(request);
   const isOk = parseStatusCodeFromOnionRequest(addModResult) === 200;
@@ -569,6 +583,7 @@ export const removeModerator = async (
     server: roomInfos.serverUrl,
     isAuthRequired: true,
     endpoint: `moderators/${userToRemoveFromMods.key}`,
+    useV4: false,
   };
   const removeModResult = await exports.sendApiV2Request(request);
   const isOk = parseStatusCodeFromOnionRequest(removeModResult) === 200;

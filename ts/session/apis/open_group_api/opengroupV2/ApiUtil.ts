@@ -32,6 +32,7 @@ export type OpenGroupCapabilityRequest = {
   endpoint: string;
   serverPubKey: string;
   headers: Record<string, string | number>;
+  useV4: boolean;
 };
 
 export type OpenGroupV2CompactPollRequest = {

@@ -14,7 +14,8 @@ export type FileServerV2Request = {
   endpoint: string;
   // queryParams are used for post or get, but not the same way
   queryParams?: Record<string, any>;
-  headers?: Record<string, string>;
+  headers?: Record<string, string | number>;
+  useV4: boolean;
 };
 
 const FILES_ENDPOINT = 'files';
@@ -43,6 +44,7 @@ export const uploadFileToFsV2 = async (
     method: 'POST',
     endpoint: FILES_ENDPOINT,
     queryParams,
+    useV4: false,
   };
 
   const result = await sendApiV2Request(request);
@@ -86,6 +88,7 @@ export const downloadFileFromFSv2 = async (
   const request: FileServerV2Request = {
     method: 'GET',
     endpoint: `${FILES_ENDPOINT}/${fileId}`,
+    useV4: false,
   };
 
   const result = await sendApiV2Request(request);
@@ -155,6 +158,7 @@ export const getLatestDesktopReleaseFileToFsV2 = async (): Promise<string | null
     method: 'GET',
     endpoint: RELEASE_VERSION_ENDPOINT,
     queryParams,
+    useV4: false,
   };
 
   const result = await sendApiV2Request(request);

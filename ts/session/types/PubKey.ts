@@ -30,7 +30,7 @@ export class PubKey {
   public static readonly PREFIX_GROUP_TEXTSECURE = '__textsecure_group__!';
   // prettier-ignore
   private static readonly regex: RegExp = new RegExp(
-    `^(${PubKey.PREFIX_GROUP_TEXTSECURE})?(05)?(${PubKey.HEX}{64}|${PubKey.HEX}{32})$`
+    `^(${PubKey.PREFIX_GROUP_TEXTSECURE})?(${KeyPrefixType.standard}|${KeyPrefixType.blinded}|${KeyPrefixType.unblinded})?(${PubKey.HEX}{64}|${PubKey.HEX}{32})$`
   );
   /**
    * If you want to update this regex. Be sure that those are matches ;

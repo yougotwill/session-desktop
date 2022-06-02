@@ -3,6 +3,7 @@ import { concatUInt8Array, getSodiumRenderer } from '../../../crypto';
 import { crypto_hash_sha512, to_hex } from 'libsodium-wrappers-sumo';
 import { ByteKeyPair } from '../../../utils/User';
 import { StringUtils } from '../../../utils';
+import { KeyPrefixType } from '../../../types';
 
 /**
  *
@@ -36,9 +37,9 @@ export async function getOpenGroupHeaders(data: {
     const blindingValues = await getBlindingValues(serverPK, signingKeys);
     ka = blindingValues.ka;
     kA = blindingValues.kA;
-    pubkey = `15${toHex(kA)}`;
+    pubkey = `${KeyPrefixType.blinded}${toHex(kA)}`;
   } else {
-    pubkey = `00${toHex(signingKeys.pubKeyBytes)}`;
+    pubkey = `${KeyPrefixType.unblinded}${toHex(signingKeys.pubKeyBytes)}`;
   }
 
   // SERVER_PUBKEY || NONCE || TIMESTAMP || METHOD || PATH || HASHED_BODY
@@ -125,7 +126,7 @@ export const getBlindedPubKey = async (
 ): Promise<string | null> => {
   const blindedPubKeyBytes = await getBlindingValues(serverPK, signingKeys);
   if (blindedPubKeyBytes) {
-    return `15${to_hex(blindedPubKeyBytes.kA)}`;
+    return `${KeyPrefixType.blinded}${to_hex(blindedPubKeyBytes.kA)}`;
   }
   return null;
 };
@@ -303,7 +304,9 @@ export const decryptBlindedMessage = async (
   const messageText = StringUtils.decode(msg, 'utf8');
   console.warn({ messageText });
 
-  const senderSessionId = `05${to_hex(sodium.crypto_sign_ed25519_pk_to_curve25519(senderEdpk))}`;
+  const senderSessionId = `${KeyPrefixType.standard}${to_hex(
+    sodium.crypto_sign_ed25519_pk_to_curve25519(senderEdpk)
+  )}`;
   const senderED25519PubKey = to_hex(senderEdpk);
   console.warn({ senderED25519PubKey });
 

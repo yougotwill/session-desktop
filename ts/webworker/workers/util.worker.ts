@@ -191,9 +191,6 @@ async function encryptForPubkey(pubkeyX25519str: string, payloadBytes: Uint8Arra
     assertArrayBufferView(payloadBytes);
     const ran = (await getSodiumWorker()).randombytes_buf(32);
     const ephemeral = generateKeyPair(ran);
-    // Signal protocol prepends with "0x05"
-    // keys.pubKey = keys.pubKey.slice(1);
-    // return { pubKey: keys.public, privKey: keys.private };
     const pubkeyX25519Buffer = fromHexToArray(pubkeyX25519str);
     const symmetricKey = await deriveSymmetricKey(
       pubkeyX25519Buffer,
