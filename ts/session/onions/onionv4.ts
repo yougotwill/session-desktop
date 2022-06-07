@@ -1,3 +1,4 @@
+import { from_string } from 'libsodium-wrappers-sumo';
 import { toNumber } from 'lodash';
 import { concatUInt8Array } from '../crypto';
 
@@ -21,23 +22,16 @@ export const encodeV4Request = (requestInfo: { body?: any }): Uint8Array => {
   // requestInfo.endpoint =
   //   requestInfo.endpoint.charAt(0) === '/' ? requestInfo.endpoint.substr(1) : requestInfo.endpoint;
   const { body } = requestInfo;
-  const requestInfoData = Buffer.from(JSON.stringify(requestInfo), 'ascii');
-  const bodyData = Buffer.from(body, 'ascii');
-  const prefixData = Buffer.from(`l${requestInfoData.length}:`, 'ascii');
-  const suffixData = Buffer.from('e', 'ascii');
-  let concatenated: Uint8Array;
+  const requestInfoData = from_string(JSON.stringify(requestInfo));
+  const prefixData = from_string(`l${requestInfoData.length}:`);
+  const suffixData = from_string('e');
   if (body) {
-    const bodyCountdata = Buffer.from(`${bodyData.length}:`, 'ascii');
-    concatenated = concatUInt8Array(
-      prefixData,
-      requestInfoData,
-      bodyCountdata,
-      bodyData,
-      suffixData
-    );
+    const bodyData = from_string(body);
+
+    const bodyCountdata = from_string(`${bodyData.length}:`);
+    return concatUInt8Array(prefixData, requestInfoData, bodyCountdata, bodyData, suffixData);
   }
-  concatenated = concatUInt8Array(prefixData, requestInfoData, suffixData);
-  return concatenated;
+  return concatUInt8Array(prefixData, requestInfoData, suffixData);
 };
 
 export type ResponseDecodedV4 = {
@@ -87,7 +81,10 @@ export const decodeV4Response = (response: string): ResponseDecodedV4 | undefine
         bodyParsed = JSON.parse(bodyText);
         break;
       default:
-        window?.log?.warn('decodeV4Response - No content-type information for response');
+        window?.log?.warn(
+          'decodeV4Response - No or unknown content-type information for response: ',
+          bodyContentType
+        );
     }
 
     return {

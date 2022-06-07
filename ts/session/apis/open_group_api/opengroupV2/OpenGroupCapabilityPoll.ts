@@ -1,9 +1,9 @@
 import { OpenGroupCapabilityRequest } from './ApiUtil';
-import { parseStatusCodeFromOnionRequest } from './OpenGroupAPIV2Parser';
-import _ from 'lodash';
-import { sendViaOnionToNonSnode } from '../../../onions/onionSend';
+import _, { isArray } from 'lodash';
+import { sendViaOnionV4ToNonSnode } from '../../../onions/onionSend';
 import { getAllValidRoomInfos, getOurOpenGroupHeaders } from './OpenGroupPollingUtils';
-import { OpenGroupMessageV2 } from './OpenGroupMessageV2';
+import { ParsedRoomCompactPollResults } from './OpenGroupAPIV2CompactPoll';
+import { parseStatusCodeFromOnionRequestV4 } from './OpenGroupAPIV2Parser';
 
 export const capabilitiesFetchEverything = async (
   serverUrl: string,
@@ -21,7 +21,7 @@ export const capabilitiesFetchEverything = async (
   return result ? result : null;
 };
 
-export const getCapabilityFetchRequest = async (
+const getCapabilityFetchRequest = async (
   serverUrl: string,
   rooms: Set<string>
 ): Promise<null | OpenGroupCapabilityRequest> => {
@@ -44,12 +44,12 @@ export const getCapabilityFetchRequest = async (
     serverPubKey: serverPubkey,
     endpoint,
     headers: capabilityHeaders,
-    useV4: false, // before we make that request, we are unsure if the server supports v4 or not.
+    useV4: true, // before we make that request, we are unsure if the server supports v4 or not.
     // We need to do that one (and it to succeed) to make sure the server understands v4 onion requests
   };
 };
 
-export async function sendOpenGroupCapabilityRequest(
+async function sendOpenGroupCapabilityRequest(
   request: OpenGroupCapabilityRequest,
   abortSignal: AbortSignal
 ): Promise<any | null> {
@@ -57,41 +57,31 @@ export async function sendOpenGroupCapabilityRequest(
   // this will throw if the url is not valid
 
   const builtUrl = new URL(`${serverUrl}/${endpoint}`);
-
-  const res = (await sendViaOnionToNonSnode(
+  const res = await sendViaOnionV4ToNonSnode(
     serverPubKey,
     builtUrl,
     {
       method: 'GET',
       headers,
-      body: undefined,
       useV4,
     },
     {},
     abortSignal
-  )) as any;
+  );
 
-  const statusCode = parseStatusCodeFromOnionRequest(res);
+  // We do not check for status code for this call, but just check the results we get
+  const statusCode = parseStatusCodeFromOnionRequestV4(res);
   if (!statusCode) {
     window?.log?.warn('Capabilities Request Got unknown status code; res:', res);
-    // return null;
+    return null;
   }
 
-  return res;
+  const respAny = res?.body;
+  if (respAny?.capabilities && isArray(respAny)) {
+    return res;
+  }
+  return null;
 }
-
-export type ParsedDeletions = Array<{ id: number; deleted_message_id: number }>;
-
-type StatusCodeType = {
-  statusCode: number;
-};
-
-export type ParsedRoomCompactPollResults = StatusCodeType & {
-  roomId: string;
-  deletions: ParsedDeletions;
-  messages: Array<OpenGroupMessageV2>;
-  moderators: Array<string>;
-};
 
 export type ParsedBase64Avatar = {
   roomId: string;

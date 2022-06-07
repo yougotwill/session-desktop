@@ -1,5 +1,4 @@
 import chai, { expect } from 'chai';
-import * as sinon from 'sinon';
 import chaiBytes from 'chai-bytes';
 import {
   decryptBlindedMessage,
@@ -7,18 +6,49 @@ import {
   getOpenGroupHeaders,
 } from '../../../../session/apis/open_group_api/opengroupV2/OpenGroupAuthentication';
 import { ByteKeyPair } from '../../../../session/utils/User';
-// import {
-//   decodeV4Response,
-//   encodeV4Request,
-// } from '../../../../session/apis/open_group_api/opengroupV2/OpenGroupPollingUtils';
 import { to_hex } from 'libsodium-wrappers-sumo';
+import { fromBase64, fromHex } from 'bytebuffer';
 
 chai.use(chaiBytes);
 
 // tslint:disable-next-line: max-func-body-length
 describe('OpenGroupAuthentication', () => {
-  const sandbox = sinon.createSandbox();
+  const secondPartPrivKey = new Uint8Array([
+    186,
+    198,
+    231,
+    30,
+    253,
+    125,
+    250,
+    74,
+    131,
+    201,
+    142,
+    210,
+    79,
+    37,
+    74,
+    178,
+    194,
+    103,
+    249,
+    204,
+    219,
+    23,
+    42,
+    82,
+    128,
+    160,
+    68,
+    74,
+    210,
+    78,
+    137,
+    204,
+  ]);
   const signingKeysA: ByteKeyPair = {
+    // 881132ee03dbd2da065aa4c94f96081f62142dc8011d1b7a00de83e4aab38ce4
     privKeyBytes: new Uint8Array([
       192,
       16,
@@ -52,73 +82,10 @@ describe('OpenGroupAuthentication', () => {
       137,
       109,
       217,
-      186,
-      198,
-      231,
-      30,
-      253,
-      125,
-      250,
-      74,
-      131,
-      201,
-      142,
-      210,
-      79,
-      37,
-      74,
-      178,
-      194,
-      103,
-      249,
-      204,
-      219,
-      23,
-      42,
-      82,
-      128,
-      160,
-      68,
-      74,
-      210,
-      78,
-      137,
-      204,
+      ...secondPartPrivKey,
     ]),
-    pubKeyBytes: new Uint8Array([
-      186,
-      198,
-      231,
-      30,
-      253,
-      125,
-      250,
-      74,
-      131,
-      201,
-      142,
-      210,
-      79,
-      37,
-      74,
-      178,
-      194,
-      103,
-      249,
-      204,
-      219,
-      23,
-      42,
-      82,
-      128,
-      160,
-      68,
-      74,
-      210,
-      78,
-      137,
-      204,
-    ]),
+    // 057aecdcade88d881d2327ab011afd2e04c2ec6acffc9e9df45aaf78a151bd2f7d
+    pubKeyBytes: secondPartPrivKey,
   };
 
   const signingKeysB: ByteKeyPair = {
@@ -223,65 +190,16 @@ describe('OpenGroupAuthentication', () => {
       109,
     ]),
   };
+  const serverPubKey = new Uint8Array(
+    fromHex('c3b3c6f32f0ab5a57f853cc4f30f5da7fda5624b0c77b3fb0829de562ada081d').toArrayBuffer()
+  );
 
-  const serverPubKey = new Uint8Array([
-    195,
-    179,
-    198,
-    243,
-    47,
-    10,
-    181,
-    165,
-    127,
-    133,
-    60,
-    196,
-    243,
-    15,
-    93,
-    167,
-    253,
-    165,
-    98,
-    75,
-    12,
-    119,
-    179,
-    251,
-    8,
-    41,
-    222,
-    86,
-    42,
-    218,
-    8,
-    29,
-  ]);
   const ts = 1642472103;
   const method = 'GET';
   const path = '/room/the-best-room/messages/recent?limit=25';
 
-  const nonce = new Uint8Array([
-    9,
-    208,
-    121,
-    159,
-    34,
-    149,
-    153,
-    1,
-    130,
-    195,
-    171,
-    52,
-    6,
-    251,
-    252,
-    91,
-  ]);
+  const nonce = new Uint8Array(fromBase64('CdB5nyKVmQGCw6s0Bvv8Ww==').toArrayBuffer());
 
-  // const body = 'This is a test message body 12345';
   const body = 'hello 🎂';
 
   // const postDataToEncoded =
@@ -299,10 +217,7 @@ describe('OpenGroupAuthentication', () => {
   // };
   // const expectedResponseBody = 'hello world';
 
-  afterEach(() => {
-    sandbox.restore();
-  });
-
+  // tslint:disable-next-line: max-func-body-length
   describe('HeaderCreation', () => {
     describe('Blinded Headers', () => {
       it('should produce correct X-SOGS-Nonce', async () => {

@@ -67,7 +67,9 @@ export class SwarmPolling {
     if (waitForFirstPoll) {
       await this.pollForAllKeys();
     } else {
-      void this.pollForAllKeys();
+      setTimeout(() => {
+        void this.pollForAllKeys();
+      }, 4000);
     }
   }
 

@@ -1,6 +1,10 @@
 import { getV2OpenGroupRoomByRoomId } from '../../../../data/opengroups';
-import _ from 'lodash';
-import { OnionSnodeResponse, sendViaOnionToNonSnode } from '../../../onions/onionSend';
+import _, { isEmpty } from 'lodash';
+import {
+  OnionSnodeResponse,
+  sendViaOnionToNonSnode,
+  sendViaOnionV4ToNonSnode,
+} from '../../../onions/onionSend';
 import { APPLICATION_JSON } from '../../../../types/MIME';
 import { getOurOpenGroupHeaders, OpenGroupRequestHeaders } from './OpenGroupPollingUtils';
 import { decodeV4Response, ResponseDecodedV4 } from '../../../onions/onionv4';
@@ -47,20 +51,8 @@ export const batchPoll = async (
   serverUrl: string,
   roomInfos: Set<string>,
   abortSignal: AbortSignal,
-  useV4: boolean,
-  batchRequestOptions: Array<SubrequestOption>
+  batchRequestOptions: Array<OpenGroupBatchRow>
 ): Promise<ResponseDecodedV4 | null> => {
-  // if (!(serverUrl.includes('.dev') || serverUrl.includes(':8080'))) {
-  if (!serverUrl.includes(':8080')) {
-    //   window?.log?.warn('not a dev url -- cancelling early');
-    //   return null;
-    // }
-
-    // if (!serverUrl.includes('.dev')) {
-    window?.log?.warn('not a dev url -- cancelling early');
-    return null;
-  }
-
   // getting server pk for room
   const [roomId] = roomInfos;
   const fetchedRoomInfo = await getV2OpenGroupRoomByRoomId({
@@ -74,8 +66,8 @@ export const batchPoll = async (
   const { serverPublicKey } = fetchedRoomInfo;
 
   // creating batch request
-  const batchRequest = await getBatchRequest(serverPublicKey, useV4, batchRequestOptions);
-  console.warn({ batchRequest });
+  const batchRequest = await getBatchRequest(serverPublicKey, batchRequestOptions);
+  console.warn('batch request: ', batchRequest);
   if (!batchRequest) {
     window?.log?.error('Could not generate batch request. Aborting request');
     return null;
@@ -85,8 +77,7 @@ export const batchPoll = async (
     serverUrl,
     serverPublicKey,
     batchRequest,
-    abortSignal,
-    useV4
+    abortSignal
   );
   return result ? result : null;
 };
@@ -98,7 +89,7 @@ export enum SubrequestOptionType {
   'inbox',
 }
 
-export type SubrequestOption = {
+export type OpenGroupBatchRow = {
   type: SubrequestOptionType;
   capabilities?: boolean;
   inbox?: boolean;
@@ -115,7 +106,7 @@ export type SubrequestOption = {
  *
  * @param options Array of subrequest options to be made.
  */
-const makeBatchRequestPayload = (options: SubrequestOption): BatchSubRequest | null => {
+const makeBatchRequestPayload = (options: OpenGroupBatchRow): BatchSubRequest | null => {
   const GET_METHOD = 'GET';
   if (options.capabilities) {
     return {
@@ -150,45 +141,46 @@ const makeBatchRequestPayload = (options: SubrequestOption): BatchSubRequest | n
   return null;
 };
 
+/**
+ * Get the request to get all of the details we care from an opengroup, accross all rooms.
+ * Only compatible with v4 onion requests.
+ */
 const getBatchRequest = async (
   serverPublicKey: string,
-  useV4: boolean,
-  batchOptions: Array<SubrequestOption>
+  batchOptions: Array<OpenGroupBatchRow>
 ): Promise<BatchRequest | undefined> => {
-  const BATCH_ENDPOINT = '/batch';
-  const BATCH_METHOD = 'POST';
+  const batchEndpoint = '/batch';
+  const batchMethod = 'POST';
+  if (!batchOptions || isEmpty(batchOptions)) {
+    return undefined;
+  }
 
-  // TODO: add testing
   const batchBody = batchOptions.map(options => {
     return makeBatchRequestPayload(options);
   });
 
+  const stringBody = JSON.stringify(batchBody);
+
   // TODO: swap out batchCommands for body fn parameter
-  const headers = batchBody
-    ? await getOurOpenGroupHeaders(
-        serverPublicKey,
-        BATCH_ENDPOINT,
-        BATCH_METHOD,
-        // false,
-        true,
-        JSON.stringify(batchBody)
-      )
-    : await getOurOpenGroupHeaders(serverPublicKey, BATCH_ENDPOINT, BATCH_METHOD, false);
+  const headers = await getOurOpenGroupHeaders(
+    serverPublicKey,
+    batchEndpoint,
+    batchMethod,
+    true,
+    stringBody
+  );
 
   if (!headers) {
     window?.log?.error('Unable to create headers for batch request - aborting');
     return;
   }
 
-  if (useV4) {
-    // TODO: check if batch will always be json
-    headers['Content-Type'] = APPLICATION_JSON;
-  }
+  headers['Content-Type'] = APPLICATION_JSON;
 
   return {
-    endpoint: BATCH_ENDPOINT,
-    method: BATCH_METHOD,
-    body: JSON.stringify(batchBody),
+    endpoint: batchEndpoint,
+    method: batchMethod,
+    body: stringBody,
     headers,
   };
 };
@@ -197,21 +189,18 @@ const sendOpenGroupBatchRequest = async (
   serverUrl: string,
   serverPubkey: string,
   request: BatchRequest,
-  abortSignal: AbortSignal,
-  useV4: boolean
+  abortSignal: AbortSignal
 ): Promise<any> => {
   const { endpoint, headers, method, body } = request;
   const builtUrl = new URL(`${serverUrl}/${endpoint}`);
-
-  let batchResponse: OnionSnodeResponse | null;
-  batchResponse = await sendViaOnionToNonSnode(
+  const batchResponse = await sendViaOnionV4ToNonSnode(
     serverPubkey,
     builtUrl,
     {
       method,
       headers,
       body,
-      useV4,
+      useV4: true,
     },
     {},
     abortSignal
@@ -221,6 +210,7 @@ const sendOpenGroupBatchRequest = async (
     window?.log?.error('Undefined batch response - cancelling batch request');
     return;
   }
+  debugger;
 
   const decodedResponse = decodeV4Response(batchResponse.result.body);
   if (!decodedResponse) {

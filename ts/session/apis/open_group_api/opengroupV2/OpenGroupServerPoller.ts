@@ -33,7 +33,7 @@ import { MIME } from '../../../../types';
 import { handleOpenGroupV2Message, handleOpenGroupV4Message } from '../../../../receiver/opengroup';
 import { callUtilsWorker } from '../../../../webworker/workers/util_worker_interface';
 import { filterDuplicatesFromDbAndIncoming } from './SogsFilterDuplicate';
-import { batchPoll, SubrequestOption, SubrequestOptionType } from './OpenGroupAPIBatchPoll';
+import { batchPoll, OpenGroupBatchRow, SubrequestOptionType } from './OpenGroupAPIBatchPoll';
 import { getBlindedPubKey } from './OpenGroupAuthentication';
 import { UserUtils } from '../../../utils';
 import { from_hex } from 'libsodium-wrappers-sumo';
@@ -350,7 +350,7 @@ export class OpenGroupServerPoller {
    * @returns Array of subrequest options for our main batch request
    */
   private async makeSubrequestInfo() {
-    const subrequestOptions: Array<SubrequestOption> = [];
+    const subrequestOptions: Array<OpenGroupBatchRow> = [];
 
     // capabilities
     subrequestOptions.push({
@@ -417,14 +417,13 @@ export class OpenGroupServerPoller {
         this.abortController.signal
       );
 
-      const subrequestOptions: Array<SubrequestOption> = await this.makeSubrequestInfo();
+      const subrequestOptions: Array<OpenGroupBatchRow> = await this.makeSubrequestInfo();
 
       // TODO: move to own async function
       const batchPollResults = await batchPoll(
         this.serverUrl,
         this.roomIdsToPoll,
         this.abortController.signal,
-        true,
         subrequestOptions
       );
 
@@ -460,12 +459,12 @@ export class OpenGroupServerPoller {
  * @param batchPollResults The result from the batch request (order sensitive)
  */
 const getCapabilitiesFromBatch = (
-  subrequestOptionsLookup: Array<SubrequestOption>,
+  subrequestOptionsLookup: Array<OpenGroupBatchRow>,
   batchPollResults: ResponseDecodedV4
 ) => {
   const capabilitiesBatchIndex = _.findIndex(
     subrequestOptionsLookup,
-    (subrequest: SubrequestOption) => {
+    (subrequest: OpenGroupBatchRow) => {
       return subrequest.type === SubrequestOptionType.capabilities;
     }
   );
@@ -477,7 +476,7 @@ const handleBatchPollResults = async (
   serverUrl: string,
   batchPollResults: ResponseDecodedV4,
   /** using this as explicit way to ensure order and prevent case where two  */
-  subrequestOptionsLookup: Array<SubrequestOption>
+  subrequestOptionsLookup: Array<OpenGroupBatchRow>
 ) => {
   // @@: Might not need the explicit type field.
   // pro: prevents cases where accidentally two fields for the opt. e.g. capability and message fields truthy.
@@ -586,9 +585,10 @@ const handleCapabilities = async (
           return;
         }
 
-        await conversationToAddBlindedKey?.set({
-          blindedPubKey,
-        });
+        throw new Error('yo todo');
+        // await conversationToAddBlindedKey?.set({
+        //   blindedPubKey,
+        // });
       }
     })
   );
@@ -738,7 +738,7 @@ const handlePollInfoResponse = async (
 const handleNewMessagesResponseV4 = async (
   newMessages: Array<OpenGroupMessageV4>,
   serverUrl: string,
-  subrequestOption: SubrequestOption,
+  subrequestOption: OpenGroupBatchRow,
   capabilities?: Array<string>
 ) => {
   // #region data examples

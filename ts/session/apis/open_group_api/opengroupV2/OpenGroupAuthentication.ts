@@ -4,6 +4,28 @@ import { crypto_hash_sha512, to_hex } from 'libsodium-wrappers-sumo';
 import { ByteKeyPair } from '../../../utils/User';
 import { StringUtils } from '../../../utils';
 import { KeyPrefixType } from '../../../types';
+import { OpenGroupRequestHeaders } from './OpenGroupPollingUtils';
+
+async function getSignature({
+  blinded,
+  ka,
+  kA,
+  toSign,
+  signingKeys,
+}: {
+  blinded: boolean;
+  ka?: Uint8Array;
+  kA?: Uint8Array;
+  toSign: Uint8Array;
+  signingKeys: ByteKeyPair;
+}) {
+  const sodium = await getSodiumRenderer();
+
+  if (blinded && ka && kA) {
+    return blindedED25519Signature(toSign, signingKeys, ka, kA);
+  }
+  return sodium.crypto_sign_detached(toSign, signingKeys.privKeyBytes);
+}
 
 /**
  *
@@ -26,7 +48,7 @@ export async function getOpenGroupHeaders(data: {
   /** Apply blinding modifications or not */
   blinded: boolean;
   body?: string;
-}) {
+}): Promise<OpenGroupRequestHeaders> {
   const { signingKeys, serverPK, nonce, method, path, timestamp, blinded, body } = data;
   const sodium = await getSodiumRenderer();
   let pubkey;
@@ -52,22 +74,17 @@ export async function getOpenGroupHeaders(data: {
   );
 
   if (body) {
-    toSign = concatUInt8Array(toSign, sodium.crypto_generichash(64, body));
-  }
+    const bodyHashed = sodium.crypto_generichash(64, body);
 
-  let signature;
-  if (blinded && ka && kA) {
-    signature = await blindedED25519Signature(toSign, signingKeys, ka, kA);
-  } else {
-    signature = sodium.crypto_sign_detached(toSign, signingKeys.privKeyBytes);
+    toSign = concatUInt8Array(toSign, bodyHashed);
   }
+  const signature = await getSignature({ blinded, kA, ka, signingKeys, toSign });
 
-  const sogsSignature = fromUInt8ArrayToBase64(signature);
-  const headers = {
+  const headers: OpenGroupRequestHeaders = {
     'X-SOGS-Pubkey': pubkey,
     'X-SOGS-Timestamp': `${timestamp}`,
     'X-SOGS-Nonce': fromUInt8ArrayToBase64(nonce),
-    'X-SOGS-Signature': sogsSignature,
+    'X-SOGS-Signature': fromUInt8ArrayToBase64(signature),
   };
 
   return headers;

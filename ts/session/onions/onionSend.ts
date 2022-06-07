@@ -5,6 +5,7 @@ import {
   FinalRelayOptions,
   sendOnionRequestHandlingSnodeEject,
   SnodeResponse,
+  STATUS_NO_STATUS,
 } from '../apis/snode_api/onions';
 import _, { toNumber } from 'lodash';
 import { PROTOCOLS } from '../constants';
@@ -42,7 +43,7 @@ const buildSendViaOnionPayload = (url: URL, fetchOptions: OnionFetchOptions): On
   let tempHeaders = fetchOptions.headers || {};
   const payloadObj = {
     method: fetchOptions.method || 'GET',
-    body: fetchOptions.body || ('' as any),
+    body: fetchOptions.body || (undefined as any),
     // safety issue with file server, just safer to have this
     // no initial /
     endpoint: url.pathname.replace(/^\//, ''),
@@ -100,6 +101,11 @@ export type OnionSnodeResponse = {
   response: string;
 };
 
+export type OnionV4SnodeResponse = {
+  body: string | null;
+  status_code: number;
+};
+
 /**
  * @param destinationX25519Key The destination key
  * @param URL the URL
@@ -122,7 +128,7 @@ export const sendViaOnionToNonSnode = async (
 ): Promise<OnionSnodeResponse | null> => {
   const castedDestinationX25519Key =
     typeof destinationX25519Key !== 'string' ? toHex(destinationX25519Key) : destinationX25519Key;
-  // FIXME audric looks like this might happen for opengroupv1
+  // Note looks like this might happen for opengroupv1 which should be removed by now
   if (!destinationX25519Key || typeof destinationX25519Key !== 'string') {
     window?.log?.error('sendViaOnion - called without a server public key or not a string key');
 
@@ -172,7 +178,7 @@ export const sendViaOnionToNonSnode = async (
       },
       {
         // retries: 2, // retry 3 (2+1) times at most
-        retries: 0, // retry 3 (2+1) times at most
+        retries: 0, // FIXME audric rollback retry 3 (2+1) times at most
         minTimeout: 500,
         onFailedAttempt: e => {
           window?.log?.warn(
@@ -206,13 +212,12 @@ export const sendViaOnionToNonSnode = async (
 
   let { body } = result;
   if (typeof body === 'string') {
-    // and does uses this path
-    // log.info(`sendViaOnion - got text response ${url.toString()}`);
     txtResponse = result.body;
 
     try {
       if (fetchOptions.useV4) {
-        body = decodeV4Response(result.body)?.body;
+        const decodedV4 = decodeV4Response(result.body);
+        body = decodedV4?.body;
       } else {
         body = JSON.parse(result.body);
       }
@@ -225,4 +230,99 @@ export const sendViaOnionToNonSnode = async (
     txtResponse = JSON.stringify(body);
   }
   return { result, txtResponse, response: body };
+};
+
+export const sendViaOnionV4ToNonSnode = async (
+  destinationX25519Key: string,
+  url: URL,
+  fetchOptions: OnionFetchOptions,
+  options: OnionFetchBasicOptions = {},
+  abortSignal?: AbortSignal
+): Promise<OnionV4SnodeResponse | null> => {
+  const castedDestinationX25519Key =
+    typeof destinationX25519Key !== 'string' ? toHex(destinationX25519Key) : destinationX25519Key;
+
+  const defaultedOptions = initOptionsWithDefaults(options);
+
+  const payloadObj = buildSendViaOnionPayload(url, fetchOptions);
+  // if protocol is forced to 'http:' => just use http (without the ':').
+  // otherwise use https as protocol (this is the default)
+  const forcedHttp = url.protocol === PROTOCOLS.HTTP;
+  const finalRelayOptions: FinalRelayOptions = {
+    host: url.hostname,
+  };
+
+  if (forcedHttp) {
+    finalRelayOptions.protocol = 'http';
+  }
+  if (forcedHttp) {
+    finalRelayOptions.port = url.port ? toNumber(url.port) : 80;
+  }
+
+  let result: SnodeResponse | undefined;
+  try {
+    result = await pRetry(
+      async () => {
+        const pathNodes = await getOnionPathForSending();
+
+        if (!pathNodes) {
+          throw new Error('getOnionPathForSending is emtpy');
+        }
+
+        /**
+         * This call handles ejecting a snode or a path if needed. If that happens, it throws a retryable error and the pRetry
+         * call above will call us again with the same params but a different path.
+         * If the error is not recoverable, it throws a pRetry.AbortError.
+         */
+        return sendOnionRequestHandlingSnodeEject({
+          nodePath: pathNodes,
+          destX25519Any: castedDestinationX25519Key,
+          finalDestOptions: payloadObj,
+          finalRelayOptions,
+          abortSignal,
+          useV4: true,
+        });
+      },
+      {
+        // retries: 2, // retry 3 (2+1) times at most
+        retries: 0, // FIXME audric rollback retry 3 (2+1) times at most
+        minTimeout: 500,
+        onFailedAttempt: e => {
+          window?.log?.warn(
+            `sendViaOnionV4ToNonSnodeRetryable attempt #${e.attemptNumber} failed. ${e.retriesLeft} retries left...`
+          );
+        },
+      }
+    );
+  } catch (e) {
+    window?.log?.warn('sendViaOnionV4ToNonSnodeRetryable failed ', e.message);
+    return null;
+  }
+
+  if (!result) {
+    // v4 failed responses result is undefined
+    window?.log?.warn('sendViaOnionV4ToNonSnodeRetryable failed during V4 request');
+    return null;
+  }
+
+  // If we expect something which is not json, just return the body we got.
+  if (defaultedOptions.noJson) {
+    return {
+      status_code: result.status || STATUS_NO_STATUS,
+      body: result.body,
+    };
+  }
+
+  try {
+    // this only decodes single entries, and not
+    const decodedV4 = decodeV4Response(result.body);
+    return { status_code: decodedV4?.metadata.code || STATUS_NO_STATUS, body: decodedV4?.body };
+  } catch (e) {
+    window?.log?.error(
+      "sendViaOnionV4ToNonSnode Can't decode JSON body",
+      typeof result.body,
+      result.body
+    );
+    return { status_code: STATUS_NO_STATUS, body: null };
+  }
 };

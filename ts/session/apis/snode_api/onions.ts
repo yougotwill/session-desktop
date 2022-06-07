@@ -430,7 +430,7 @@ export async function decodeOnionResult(
   };
 }
 
-const STATUS_NO_STATUS = 8888;
+export const STATUS_NO_STATUS = 8888;
 /**
  * Only exported for testing purpose
  */
@@ -556,7 +556,6 @@ export async function processOnionResponseV4({
     new Uint8Array(cipherText)
   );
   const plainText = to_string(plaintextBuffer);
-  console.warn({ plainText });
   return {
     body: plainText,
   };

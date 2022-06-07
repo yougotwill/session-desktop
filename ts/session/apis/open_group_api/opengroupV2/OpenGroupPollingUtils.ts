@@ -40,11 +40,13 @@ export const getOurOpenGroupHeaders = async (
     return;
   }
 
+  const nonce = (await getSodiumRenderer()).randombytes_buf(16);
+
   const timestamp = Math.floor(getNowWithNetworkOffset() / 1000);
   return getOpenGroupHeaders({
     signingKeys,
     serverPK: fromHexToArray(serverPublicKey),
-    nonce: (await getSodiumRenderer()).randombytes_buf(16),
+    nonce,
     method,
     path: endpoint,
     timestamp,

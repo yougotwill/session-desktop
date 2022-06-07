@@ -19,6 +19,10 @@ export const parseStatusCodeFromOnionRequest = (onionResult: any): number | unde
   return undefined;
 };
 
+export function parseStatusCodeFromOnionRequestV4(onionResult: any) {
+  return onionResult?.status_code || undefined;
+}
+
 export const parseMemberCount = (onionResult: any): number | undefined => {
   if (!onionResult) {
     return undefined;
