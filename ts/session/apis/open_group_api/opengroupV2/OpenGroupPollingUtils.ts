@@ -5,7 +5,7 @@ import { getAuthToken } from './ApiAuth';
 import { UserUtils } from '../../../utils';
 import { fromHexToArray } from '../../../utils/String';
 import { getSodiumRenderer } from '../../../crypto';
-import { getOpenGroupHeaders } from './OpenGroupAuthentication';
+import { getOpenGroupHeaders } from '../sogsv3/sogsBlinding';
 import { getNowWithNetworkOffset } from '../../snode_api/SNodeAPI';
 
 export type OpenGroupRequestHeaders = {

@@ -4,7 +4,7 @@ import { crypto_hash_sha512, to_hex } from 'libsodium-wrappers-sumo';
 import { ByteKeyPair } from '../../../utils/User';
 import { StringUtils } from '../../../utils';
 import { KeyPrefixType } from '../../../types';
-import { OpenGroupRequestHeaders } from './OpenGroupPollingUtils';
+import { OpenGroupRequestHeaders } from '../opengroupV2/OpenGroupPollingUtils';
 
 async function getSignature({
   blinded,
@@ -27,10 +27,6 @@ async function getSignature({
   return sodium.crypto_sign_detached(toSign, signingKeys.privKeyBytes);
 }
 
-/**
- *
- * @param data data
- */
 export async function getOpenGroupHeaders(data: {
   /**
    * Our ED25519 Key pair

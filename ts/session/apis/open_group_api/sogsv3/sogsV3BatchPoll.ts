@@ -1,12 +1,11 @@
 import { getV2OpenGroupRoomByRoomId } from '../../../../data/opengroups';
 import _, { isEmpty } from 'lodash';
-import {
-  OnionSnodeResponse,
-  sendViaOnionToNonSnode,
-  sendViaOnionV4ToNonSnode,
-} from '../../../onions/onionSend';
+import { sendViaOnionV4ToNonSnode } from '../../../onions/onionSend';
 import { APPLICATION_JSON } from '../../../../types/MIME';
-import { getOurOpenGroupHeaders, OpenGroupRequestHeaders } from './OpenGroupPollingUtils';
+import {
+  getOurOpenGroupHeaders,
+  OpenGroupRequestHeaders,
+} from '../opengroupV2/OpenGroupPollingUtils';
 import { decodeV4Response, ResponseDecodedV4 } from '../../../onions/onionv4';
 
 type BatchFetchRequestOptions = {
@@ -73,12 +72,7 @@ export const batchPoll = async (
     return null;
   }
 
-  const result = await sendOpenGroupBatchRequest(
-    serverUrl,
-    serverPublicKey,
-    batchRequest,
-    abortSignal
-  );
+  const result = await sendSogsBatchRequest(serverUrl, serverPublicKey, batchRequest, abortSignal);
   return result ? result : null;
 };
 
@@ -185,7 +179,7 @@ const getBatchRequest = async (
   };
 };
 
-const sendOpenGroupBatchRequest = async (
+const sendSogsBatchRequest = async (
   serverUrl: string,
   serverPubkey: string,
   request: BatchRequest,

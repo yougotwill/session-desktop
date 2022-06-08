@@ -1,11 +1,11 @@
-import { OpenGroupCapabilityRequest } from './ApiUtil';
-import _, { isArray } from 'lodash';
+import { OpenGroupCapabilityRequest } from '../opengroupV2/ApiUtil';
+import _, { isArray, isEmpty, isObject } from 'lodash';
 import { sendViaOnionV4ToNonSnode } from '../../../onions/onionSend';
-import { getAllValidRoomInfos, getOurOpenGroupHeaders } from './OpenGroupPollingUtils';
-import { ParsedRoomCompactPollResults } from './OpenGroupAPIV2CompactPoll';
-import { parseStatusCodeFromOnionRequestV4 } from './OpenGroupAPIV2Parser';
+import { getAllValidRoomInfos, getOurOpenGroupHeaders } from '../opengroupV2/OpenGroupPollingUtils';
+import { ParsedRoomCompactPollResults } from '../opengroupV2/OpenGroupAPIV2CompactPoll';
+import { parseStatusCodeFromOnionRequestV4 } from '../opengroupV2/OpenGroupAPIV2Parser';
 
-export const capabilitiesFetchEverything = async (
+export const capabilitiesFetchAllForRooms = async (
   serverUrl: string,
   rooms: Set<string>,
   abortSignal: AbortSignal
@@ -76,11 +76,19 @@ async function sendOpenGroupCapabilityRequest(
     return null;
   }
 
-  const respAny = res?.body;
-  if (respAny?.capabilities && isArray(respAny)) {
-    return res;
+  const parsedCapabilities = res?.body ? parseCapabilities(res.body) : [];
+  return parsedCapabilities;
+}
+
+/**
+ * @param body is the object containing a .capabilities field we should extract the list from.
+ * @returns the sorted list of capabilities contained in that response, or null
+ */
+export function parseCapabilities(body: any): null | Array<string> {
+  if (!body || isEmpty(body) || !isObject(body) || !isArray(body.capabilities)) {
+    return null;
   }
-  return null;
+  return ((body.capabilities as Array<string>) || []).sort();
 }
 
 export type ParsedBase64Avatar = {

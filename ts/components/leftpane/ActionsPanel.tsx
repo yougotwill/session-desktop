@@ -58,7 +58,6 @@ import { UserUtils } from '../../session/utils';
 
 import { Storage } from '../../util/storage';
 import { SettingsKey } from '../../data/settings-key';
-import { capabilitiesFetchEverything } from '../../session/apis/open_group_api/opengroupV2/OpenGroupCapabilityPoll';
 
 const Section = (props: { type: SectionType }) => {
   const ourNumber = useSelector(getOurNumber);
@@ -229,12 +228,6 @@ const doAppStartUp = () => {
   void getSwarmPollingInstance().start();
 
   void loadDefaultRooms();
-
-  void capabilitiesFetchEverything(
-    'http://bilb.us:8082',
-    new Set(['fishing']),
-    new AbortController().signal
-  );
 
   debounce(triggerAvatarReUploadIfNeeded, 200);
 

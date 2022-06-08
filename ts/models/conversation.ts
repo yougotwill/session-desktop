@@ -71,7 +71,7 @@ import {
   fillConvoAttributesWithDefaults,
 } from './conversationAttributes';
 
-import { encryptBlindedMessage } from '../session/apis/open_group_api/opengroupV2/OpenGroupAuthentication';
+import { encryptBlindedMessage } from '../session/apis/open_group_api/sogsv3/sogsBlinding';
 import { from_hex } from 'libsodium-wrappers-sumo';
 import { getV2OpenGroupRoom } from '../data/opengroups';
 

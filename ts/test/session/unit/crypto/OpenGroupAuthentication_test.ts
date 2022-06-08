@@ -4,7 +4,7 @@ import {
   decryptBlindedMessage,
   encryptBlindedMessage,
   getOpenGroupHeaders,
-} from '../../../../session/apis/open_group_api/opengroupV2/OpenGroupAuthentication';
+} from '../../../../session/apis/open_group_api/sogsv3/sogsBlinding';
 import { ByteKeyPair } from '../../../../session/utils/User';
 import { to_hex } from 'libsodium-wrappers-sumo';
 import { fromBase64, fromHex } from 'bytebuffer';
