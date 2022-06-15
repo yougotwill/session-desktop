@@ -71,12 +71,10 @@ export async function getOpenGroupHeaders(data: {
 
   if (body) {
     const bodyHashed = sodium.crypto_generichash(64, body);
-    console.warn('bodyHashed', to_hex(bodyHashed));
 
     toSign = concatUInt8Array(toSign, bodyHashed);
   }
   const signature = await getSignature({ blinded, kA, ka, signingKeys, toSign });
-  console.warn(`toSign for ${path}: ${to_hex(toSign)}`);
 
   const headers: OpenGroupRequestHeaders = {
     'X-SOGS-Pubkey': pubkey,

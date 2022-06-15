@@ -1,12 +1,11 @@
 import { APPLICATION_JSON } from '../../../../types/MIME';
-import { sendViaOnionV4ToNonSnode } from '../../../onions/onionSend';
+import { sendJsonViaOnionV4ToNonSnode } from '../../../onions/onionSend';
 import { UserUtils } from '../../../utils';
 import { OpenGroupCapabilityRequest } from '../opengroupV2/ApiUtil';
 import { parseStatusCodeFromOnionRequestV4 } from '../opengroupV2/OpenGroupAPIV2Parser';
 import { OpenGroupMessageV2 } from '../opengroupV2/OpenGroupMessageV2';
 import {
   getAllValidRoomInfos,
-  getOurOpenGroupHeaders,
   OpenGroupRequestHeaders,
 } from '../opengroupV2/OpenGroupPollingUtils';
 
@@ -38,33 +37,19 @@ export const sendMessageOnionV4 = async (
     const serverPubkey = allValidRoomInfos[0].serverPublicKey;
 
     const ourKeyPair = await UserUtils.getIdentityKeyPair();
-    const builtUrl = new URL(`${serverUrl}/${endpoint}`);
 
     const signedMessage = await message.sign(ourKeyPair);
     const json = signedMessage.toJson();
     const stringifiedBody = JSON.stringify(json);
-    const headers = await getOurOpenGroupHeaders(
-      serverPubkey,
+    const res = await sendJsonViaOnionV4ToNonSnode({
+      serverUrl,
       endpoint,
-      method,
-      blinded,
-      stringifiedBody
-    );
-    if (!headers) {
-      return null;
-    }
-    const res = await sendViaOnionV4ToNonSnode(
       serverPubkey,
-      builtUrl,
-      {
-        method,
-        headers: addJsonContentTypeToHeaders(headers),
-        body: stringifiedBody,
-        useV4: true,
-      },
-      {},
-      abortSignal
-    );
+      method,
+      abortSignal,
+      blinded,
+      stringifiedBody,
+    });
     const statusCode = parseStatusCodeFromOnionRequestV4(res);
     if (!statusCode) {
       window?.log?.warn('sendSogsMessageWithOnionV4 Got unknown status code; res:', res);

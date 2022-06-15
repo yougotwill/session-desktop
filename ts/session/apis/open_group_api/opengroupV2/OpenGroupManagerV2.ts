@@ -189,6 +189,7 @@ export class OpenGroupManagerV2 {
       );
       room.imageID = roomInfos.imageId || undefined;
       room.roomName = roomInfos.name || undefined;
+      roomInfos.capabilities = roomInfos.capabilities;
       await saveV2OpenGroupRoom(room);
 
       // mark active so it's not in the contacts list but in the conversation list

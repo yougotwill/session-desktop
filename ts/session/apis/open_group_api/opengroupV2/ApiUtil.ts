@@ -45,6 +45,7 @@ export type OpenGroupV2Info = {
   id: string;
   name: string;
   imageId?: string;
+  capabilities?: Array<string>;
 };
 
 export type OpenGroupV2InfoJoinable = OpenGroupV2Info & {

@@ -236,8 +236,6 @@ async function sendOpenGroupV2RequestCompactPoll(
   // this will throw if the url is not valid
   const builtUrl = new URL(`${serverUrl}/${endpoint}`);
 
-  // FIXME audric  useV4 is dependent of if the opengroup supports it or not
-
   const res = await sendViaOnionToNonSnode(
     serverPubKey,
     builtUrl,

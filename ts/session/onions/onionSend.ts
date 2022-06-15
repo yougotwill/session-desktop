@@ -13,6 +13,8 @@ import { toHex } from '../utils/String';
 import pRetry from 'p-retry';
 import { Snode } from '../../data/data';
 import { decodeV4Response } from './onionv4';
+import { getOurOpenGroupHeaders } from '../apis/open_group_api/opengroupV2/OpenGroupPollingUtils';
+import { addJsonContentTypeToHeaders } from '../apis/open_group_api/sogsv3/sogsV3SendMessage';
 
 export type OnionFetchOptions = {
   method: string;
@@ -103,6 +105,11 @@ export type OnionSnodeResponse = {
 
 export type OnionV4SnodeResponse = {
   body: string | object | null;
+  status_code: number;
+};
+
+export type OnionV4JSONSnodeResponse = {
+  body: object | null;
   status_code: number;
 };
 
@@ -321,6 +328,7 @@ export const sendViaOnionV4ToNonSnode = async (
   try {
     // this only decodes single entries, and not
     const decodedV4 = decodeV4Response(result.body);
+
     return { status_code: decodedV4?.metadata?.code || STATUS_NO_STATUS, body: decodedV4?.body };
   } catch (e) {
     window?.log?.error(
@@ -331,3 +339,48 @@ export const sendViaOnionV4ToNonSnode = async (
     return { status_code: STATUS_NO_STATUS, body: null };
   }
 };
+
+export async function sendJsonViaOnionV4ToNonSnode(sendOptions: {
+  serverUrl: string;
+  endpoint: string;
+  serverPubkey: string;
+  blinded: boolean;
+  method: string;
+  stringifiedBody: string | null;
+  abortSignal: AbortSignal;
+}): Promise<OnionV4JSONSnodeResponse | null> {
+  const {
+    serverUrl,
+    endpoint,
+    serverPubkey,
+    method,
+    blinded,
+    stringifiedBody,
+    abortSignal,
+  } = sendOptions;
+  const builtUrl = new URL(`${serverUrl}/${endpoint}`);
+  const headers = await getOurOpenGroupHeaders(
+    serverPubkey,
+    endpoint,
+    method,
+    blinded,
+    stringifiedBody
+  );
+  if (!headers) {
+    return null;
+  }
+  const res = await sendViaOnionV4ToNonSnode(
+    serverPubkey,
+    builtUrl,
+    {
+      method,
+      headers: addJsonContentTypeToHeaders(headers),
+      body: stringifiedBody || undefined,
+      useV4: true,
+    },
+    {},
+    abortSignal
+  );
+
+  return res as OnionV4JSONSnodeResponse;
+}

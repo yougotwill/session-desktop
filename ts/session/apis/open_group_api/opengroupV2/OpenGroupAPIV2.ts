@@ -4,7 +4,11 @@ import {
   saveV2OpenGroupRoom,
 } from '../../../../data/opengroups';
 import { FSv2 } from '../../file_server_api';
-import { sendViaOnionToNonSnode } from '../../../onions/onionSend';
+import {
+  sendJsonViaOnionV4ToNonSnode,
+  sendViaOnionToNonSnode,
+  sendViaOnionV4ToNonSnode,
+} from '../../../onions/onionSend';
 import { PubKey } from '../../../types';
 import { OpenGroupRequestCommonType, OpenGroupV2Info, OpenGroupV2Request } from './ApiUtil';
 import {
@@ -16,6 +20,8 @@ import {
 import { isOpenGroupV2Request } from '../../file_server_api/FileServerApiV2';
 import pRetry from 'p-retry';
 import { callUtilsWorker } from '../../../../webworker/workers/util_worker_interface';
+import { capabilitiesFetchAllForRooms } from '../sogsv3/sogsV3Capabilities';
+import { uniq } from 'lodash';
 
 // used to be overwritten by testing
 export const getMinTimeout = () => 1000;
@@ -153,27 +159,32 @@ export async function openGroupV2GetRoomInfo({
   roomId: string;
   serverUrl: string;
 }): Promise<OpenGroupV2Info | null> {
-  const request: OpenGroupV2Request = {
+  const abortSignal = new AbortController().signal;
+  const result = await sendJsonViaOnionV4ToNonSnode({
+    blinded: false,
     method: 'GET',
-    server: serverUrl,
-    room: roomId,
-    endpoint: `rooms/${roomId}`,
-    useV4: false,
-  };
-  const result = await exports.sendApiV2Request(request);
-  if (result?.result?.room) {
-    const { id, name, image_id: imageId } = result?.result?.room;
+    serverUrl,
+    endpoint: `/legacy/rooms/${roomId}`,
+    abortSignal,
+    stringifiedBody: null,
+    serverPubkey: 'a37f6ac417b9bc33ae8b4b6a4c7a4330070a171a9317be100e961262af203e4d',
+  });
+  const room = (result?.body as any)?.room as Record<string, any> | undefined;
+  if (room) {
+    const { id, name, image_id: imageId } = room;
 
     if (!id || !name) {
       window?.log?.warn('getRoominfo Parsing failed');
       return null;
     }
+
+    const caps = await capabilitiesFetchAllForRooms(serverUrl, new Set([roomId]), abortSignal);
     const info: OpenGroupV2Info = {
       id,
       name,
       imageId,
+      capabilities: caps ? uniq(caps) : undefined,
     };
-
     return info;
   }
   window?.log?.warn('getInfo failed');
