@@ -2,13 +2,12 @@ import _, { compact, isArray, isObject, pick } from 'lodash';
 import { saveV2OpenGroupRoom } from '../../../../data/opengroups';
 import { handleOpenGroupV4Message } from '../../../../receiver/opengroup';
 import { OpenGroupRequestCommonType } from '../opengroupV2/ApiUtil';
-import { OpenGroupBatchRow } from './sogsV3BatchPoll';
+import { BatchSogsReponse, OpenGroupBatchRow } from './sogsV3BatchPoll';
 import {
   getRoomAndUpdateLastFetchTimestamp,
   OpenGroupMessageV4,
 } from '../opengroupV2/OpenGroupServerPoller';
 import { getOpenGroupV2ConversationId } from '../utils/OpenGroupUtils';
-import { DecodedResponseV4 } from '../../../onions/onionv4';
 import { handleCapabilities } from './sogsCapabilities';
 import { getConversationController } from '../../../conversations';
 import { ConversationModel } from '../../../../models/conversation';
@@ -148,7 +147,7 @@ async function handleInboxMessages(_inboxResponse: any, _serverUrl: string) {
 
 export const handleBatchPollResults = async (
   serverUrl: string,
-  batchPollResults: DecodedResponseV4,
+  batchPollResults: BatchSogsReponse,
   /** using this as explicit way to ensure order  */
   subrequestOptionsLookup: Array<OpenGroupBatchRow>,
   roomIdsStillPolled: Set<string> // if we get anything for a room we stopped polling, we need to skip it.

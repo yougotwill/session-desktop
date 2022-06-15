@@ -65,7 +65,7 @@ export const filterDuplicatesFromDbAndIncomingV4 = async (
   window.log.debug(
     `[perf] filterDuplicatesFromDbAndIncomingV4 took ${Date.now() - start}ms for ${
       newMessages.length
-    }:${filtered.length} messages`
+    } messages;   already duplicates:${filtered.length} `
   );
   const opengroupMessagesV4Filtered = filteredInDb?.map(f => {
     return newMessages.find(m => m.session_id === f.sender && m.posted === f.serverTimestamp);

@@ -6,10 +6,10 @@ import {
   OpenGroupV2Room,
   saveV2OpenGroupRoom,
 } from '../../../../data/opengroups';
-import { DecodedResponseBodiesV4, DecodedResponseV4 } from '../../../onions/onionv4';
+import { DecodedResponseBodiesV4 } from '../../../onions/onionv4';
 import { UserUtils } from '../../../utils';
 import { getBlindedPubKey } from './sogsBlinding';
-import { OpenGroupBatchRow } from './sogsV3BatchPoll';
+import { BatchSogsReponse, OpenGroupBatchRow } from './sogsV3BatchPoll';
 import { parseCapabilities } from './sogsV3Capabilities';
 
 /**
@@ -34,10 +34,13 @@ export const getCapabilitiesFromBatch = (
 /** using this as explicit way to ensure order  */
 export const handleCapabilities = async (
   subrequestOptionsLookup: Array<OpenGroupBatchRow>,
-  batchPollResults: DecodedResponseV4,
+  batchPollResults: BatchSogsReponse,
   serverUrl: string
   // roomId: string
 ): Promise<null | Array<string>> => {
+  if (!batchPollResults.body) {
+    return null;
+  }
   const capabilities = getCapabilitiesFromBatch(subrequestOptionsLookup, batchPollResults.body);
   if (!capabilities) {
     window?.log?.error(
