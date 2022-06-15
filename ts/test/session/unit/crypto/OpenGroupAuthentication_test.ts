@@ -229,6 +229,7 @@ describe('OpenGroupAuthentication', () => {
           path,
           timestamp: ts,
           blinded: true,
+          body: null,
         });
         expect(headers['X-SOGS-Nonce']).to.be.equal('CdB5nyKVmQGCw6s0Bvv8Ww==');
       });
@@ -242,6 +243,7 @@ describe('OpenGroupAuthentication', () => {
           path,
           timestamp: ts,
           blinded: true,
+          body: null,
         });
         expect(headers['X-SOGS-Pubkey']).to.be.equal(
           '1598932d4bccbe595a8789d7eb1629cefc483a0eaddc7e20e8fe5c771efafd9af5'
@@ -257,6 +259,7 @@ describe('OpenGroupAuthentication', () => {
           path,
           timestamp: ts,
           blinded: true,
+          body: null,
         });
         expect(headers['X-SOGS-Timestamp']).to.be.equal('1642472103');
       });
@@ -269,6 +272,7 @@ describe('OpenGroupAuthentication', () => {
           path,
           timestamp: ts,
           blinded: true,
+          body: null,
         });
         expect(headers['X-SOGS-Signature']).to.be.equal(
           'gYqpWZX6fnF4Gb2xQM3xaXs0WIYEI49+B8q4mUUEg8Rw0ObaHUWfoWjMHMArAtP9QlORfiydsKWz1o6zdPVeCQ=='
@@ -302,6 +306,7 @@ describe('OpenGroupAuthentication', () => {
           path,
           timestamp: ts,
           blinded: false,
+          body: null,
         });
         expect(headers['X-SOGS-Nonce']).to.be.equal('CdB5nyKVmQGCw6s0Bvv8Ww==');
       });
@@ -315,6 +320,7 @@ describe('OpenGroupAuthentication', () => {
           path,
           timestamp: ts,
           blinded: false,
+          body: null,
         });
         expect(headers['X-SOGS-Pubkey']).to.be.equal(
           '00bac6e71efd7dfa4a83c98ed24f254ab2c267f9ccdb172a5280a0444ad24e89cc'
@@ -330,6 +336,7 @@ describe('OpenGroupAuthentication', () => {
           path,
           timestamp: ts,
           blinded: false,
+          body: null,
         });
         expect(headers['X-SOGS-Timestamp']).to.be.equal('1642472103');
       });
@@ -342,6 +349,7 @@ describe('OpenGroupAuthentication', () => {
           path,
           timestamp: ts,
           blinded: false,
+          body: null,
         });
         expect(headers['X-SOGS-Signature']).to.be.equal(
           'xxLpXHbomAJMB9AtGMyqvBsXrdd2040y+Ol/IKzElWfKJa3EYZRv1GLO6CTLhrDFUwVQe8PPltyGs54Kd7O5Cg=='

@@ -15,6 +15,7 @@ import { ERROR_CODE_NO_CONNECT } from '../apis/snode_api/SNodeAPI';
 import { getStoragePubKey } from '../types/PubKey';
 
 import { OnionPaths } from './';
+import { APPLICATION_JSON } from '../../types/MIME';
 
 const ONION_REQUEST_HOPS = 3;
 export let onionPaths: Array<Array<Data.Snode>> = [];
@@ -299,7 +300,7 @@ export async function testGuardNode(snode: Data.Snode) {
     method: 'POST',
     body: JSON.stringify(body),
     headers: {
-      'Content-Type': 'application/json',
+      'Content-Type': APPLICATION_JSON,
       'User-Agent': 'WhatsApp',
       'Accept-Language': 'en-us',
     },

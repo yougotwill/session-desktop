@@ -74,6 +74,7 @@ import {
 import { encryptBlindedMessage } from '../session/apis/open_group_api/sogsv3/sogsBlinding';
 import { from_hex } from 'libsodium-wrappers-sumo';
 import { getV2OpenGroupRoom } from '../data/opengroups';
+import { roomHasBlindEnabled } from '../session/apis/open_group_api/sogsv3/sogsV3Capabilities';
 
 export class ConversationModel extends Backbone.Model<ConversationAttributes> {
   public updateLastMessage: () => any;
@@ -596,13 +597,13 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
         const openGroup = await getV2OpenGroupRoom(this.id);
         console.warn({ openGroup });
 
-        if (openGroup?.capabilities?.includes('blind')) {
-          // send with blinding
-          await getMessageQueue().sendToOpenGroupV2(chatMessageOpenGroupV2, roomInfos);
-        } else {
-          // we need the return await so that errors are caught in the catch {}
-          await getMessageQueue().sendToOpenGroupV2(chatMessageOpenGroupV2, roomInfos);
-        }
+        // send with blinding if we need to
+        await getMessageQueue().sendToOpenGroupV2(
+          chatMessageOpenGroupV2,
+          roomInfos,
+          Boolean(roomHasBlindEnabled(openGroup))
+        );
+        return;
       }
 
       const destinationPubkey = new PubKey(destination);
@@ -796,7 +797,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       attachments,
       sent_at: networkTimestamp,
       expireTimer,
-      serverTimestamp: this.isPublic() ? Date.now() : undefined,
+      serverTimestamp: this.isPublic() ? Date.now() / 1000 : undefined,
       groupInvitation,
     });
 
@@ -1309,13 +1310,17 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     // Not sure if we care about updating the database
   }
 
-  public async setPollInfo(infos: {
+  /**
+   * Saves the infos of that room directly on the conversation table.
+   * This does not write anything to the db if no changes are detected
+   */
+  public async setPollInfo(infos?: {
     subscriberCount: number;
     read: boolean;
     write: boolean;
     upload: boolean;
   }) {
-    if (isEmpty(infos)) {
+    if (!infos || isEmpty(infos)) {
       return;
     }
     let hasChange = false;
@@ -1343,8 +1348,6 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       hasChange = true;
       this.set('uploadCapability', Boolean(upload));
     }
-
-    console.warn('pollInfos:', { subscriberCount, read, write, upload });
 
     // only trigger a write to the db if a change is detected
     if (hasChange) {

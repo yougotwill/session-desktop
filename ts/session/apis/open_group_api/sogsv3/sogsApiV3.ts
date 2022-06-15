@@ -12,6 +12,7 @@ import { DecodedResponseV4 } from '../../../onions/onionv4';
 import { handleCapabilities } from './sogsCapabilities';
 import { getConversationController } from '../../../conversations';
 import { ConversationModel } from '../../../../models/conversation';
+import { filterDuplicatesFromDbAndIncomingV4 } from '../opengroupV2/SogsFilterDuplicate';
 
 /**
  * Get the convo matching those criteria and make sure it is an opengroup convo, or return null.
@@ -38,7 +39,11 @@ function getSogsConvoOrReturnEarly(serverUrl: string, roomId: string): Conversat
   return foundConvo;
 }
 
-// TODO: Move to separate (v3?) openGroupAPIV3.ts
+/**
+ *
+ * Handle the pollinfo from the response of a pysogs.
+ * Pollinfos contains the subscriberCount (active users), the read, upload and write things we as a user can do.
+ */
 async function handlePollInfoResponse(
   statusCode: number,
   pollInfoResponseBody: {
@@ -82,7 +87,7 @@ async function handlePollInfoResponse(
 }
 
 const handleNewMessagesResponseV4 = async (
-  newMessages: Array<OpenGroupMessageV4>,
+  messages: Array<OpenGroupMessageV4>,
   serverUrl: string,
   subrequestOption: OpenGroupBatchRow,
   capabilities: Array<string> | null,
@@ -103,10 +108,12 @@ const handleNewMessagesResponseV4 = async (
       return;
     }
     const convoId = getOpenGroupV2ConversationId(serverUrl, roomId);
-    const roomInfos = await getRoomAndUpdateLastFetchTimestamp(convoId, newMessages);
+    const roomInfos = await getRoomAndUpdateLastFetchTimestamp(convoId, messages);
     if (!roomInfos) {
       return;
     }
+
+    const newMessages = await filterDuplicatesFromDbAndIncomingV4(messages);
 
     const incomingMessageIds = compact(newMessages.map(n => n.id));
     const maxNewMessageId = Math.max(...incomingMessageIds);

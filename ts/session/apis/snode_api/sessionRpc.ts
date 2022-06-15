@@ -10,6 +10,8 @@ import {
   snodeHttpsAgent,
   SnodeResponse,
 } from './onions';
+import { addJsonContentTypeToHeaders } from '../open_group_api/sogsv3/sogsV3SendMessage';
+import { APPLICATION_JSON } from '../../../types/MIME';
 
 export interface LokiFetchOptions {
   method: string;
@@ -71,7 +73,7 @@ async function lokiFetch({
     (fetchOptions as any).headers = {
       'User-Agent': 'WhatsApp',
       'Accept-Language': 'en-us',
-      'Content-Type': 'application/json',
+      'Content-Type': APPLICATION_JSON,
     };
 
     window?.log?.warn(`insecureNodeFetch => lokiFetch of ${url}`);
@@ -140,9 +142,7 @@ export async function snodeRpc(
   const fetchOptions: LokiFetchOptions = {
     method: 'POST',
     body: JSON.stringify(body),
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers: addJsonContentTypeToHeaders({}),
   };
 
   return lokiFetch({

@@ -203,7 +203,7 @@ describe('MessageSender', () => {
       const message = TestUtils.generateOpenGroupVisibleMessage();
       const roomInfos = TestUtils.generateOpenGroupV2RoomInfos();
 
-      await MessageSender.sendToOpenGroupV2(message, roomInfos);
+      await MessageSender.sendToOpenGroupV2(message, roomInfos, false);
       expect(postMessageRetryableStub.callCount).to.eq(1);
     });
 
@@ -215,7 +215,7 @@ describe('MessageSender', () => {
       Sinon.stub(ApiV2, 'getMinTimeout').returns(2);
 
       postMessageRetryableStub.onThirdCall().resolves();
-      await MessageSender.sendToOpenGroupV2(message, roomInfos);
+      await MessageSender.sendToOpenGroupV2(message, roomInfos, false);
       expect(postMessageRetryableStub.callCount).to.eq(3);
     });
 
@@ -226,7 +226,7 @@ describe('MessageSender', () => {
       postMessageRetryableStub.throws('fake error');
       postMessageRetryableStub.onCall(4).resolves();
       try {
-        await MessageSender.sendToOpenGroupV2(message, roomInfos);
+        await MessageSender.sendToOpenGroupV2(message, roomInfos, false);
         throw new Error('Error expected');
       } catch (e) {
         expect(e.name).to.eq('fake error');

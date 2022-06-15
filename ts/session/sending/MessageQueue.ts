@@ -65,13 +65,18 @@ export class MessageQueue {
    */
   public async sendToOpenGroupV2(
     message: OpenGroupVisibleMessage,
-    roomInfos: OpenGroupRequestCommonType
+    roomInfos: OpenGroupRequestCommonType,
+    blinded: boolean
   ) {
     // No queue needed for Open Groups v2; send directly
     const error = new Error('Failed to send message to open group.');
 
     try {
-      const { sentTimestamp, serverId } = await MessageSender.sendToOpenGroupV2(message, roomInfos);
+      const { sentTimestamp, serverId } = await MessageSender.sendToOpenGroupV2(
+        message,
+        roomInfos,
+        blinded
+      );
       if (!serverId || serverId === -1) {
         throw new Error(`Invalid serverId returned by server: ${serverId}`);
       }
@@ -80,7 +85,10 @@ export class MessageQueue {
         serverTimestamp: sentTimestamp,
       });
     } catch (e) {
-      window?.log?.warn(`Failed to send message to open group: ${roomInfos}`, e);
+      window?.log?.warn(
+        `Failed to send message to open group: ${roomInfos.serverUrl}:${roomInfos.roomId}`,
+        e.message
+      );
       void MessageSentHandler.handleMessageSentFailure(message, e || error);
     }
   }

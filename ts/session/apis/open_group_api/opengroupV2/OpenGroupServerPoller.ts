@@ -25,6 +25,7 @@ import { callUtilsWorker } from '../../../../webworker/workers/util_worker_inter
 import { filterDuplicatesFromDbAndIncoming } from './SogsFilterDuplicate';
 import { OpenGroupBatchRow, sogsBatchPoll } from '../sogsv3/sogsV3BatchPoll';
 import { handleBatchPollResults } from '../sogsv3/sogsApiV3';
+import { roomHasBlindEnabled } from '../sogsv3/sogsV3Capabilities';
 
 export type OpenGroupMessageV4 = {
   /** AFAIK: indicates the number of the message in the group. e.g. 2nd message will be 1 or 2 */
@@ -357,19 +358,18 @@ export class OpenGroupServerPoller {
       });
 
       // messages
-      // subrequestOptions.push({
-      //   type: 'messages',
-      //   messages: {
-      //     roomId,
-      //   },
-      // });
+      subrequestOptions.push({
+        type: 'messages',
+        messages: {
+          roomId,
+        },
+      });
     });
 
     // if (this.serverUrl) {
     //   const rooms = await getV2OpenGroupRoomsByServerUrl(this.serverUrl);
     //   if (rooms?.length) {
-    //     const { capabilities } = rooms[0];
-    //     if (capabilities?.includes('blinding')) {
+    //     if (roomHasBlindEnabled(rooms[0])) {
     //       // This only works for servers with blinding capabilities
     //       // adding inbox subrequest info
     //       subrequestOptions.push({

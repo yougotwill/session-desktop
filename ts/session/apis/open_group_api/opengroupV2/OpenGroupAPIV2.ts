@@ -4,7 +4,7 @@ import {
   saveV2OpenGroupRoom,
 } from '../../../../data/opengroups';
 import { FSv2 } from '../../file_server_api';
-import { sendViaOnionToNonSnode } from '../../../onions/onionSend';
+import { sendViaOnionToNonSnode, sendViaOnionV4ToNonSnode } from '../../../onions/onionSend';
 import { PubKey } from '../../../types';
 import { OpenGroupRequestCommonType, OpenGroupV2Info, OpenGroupV2Request } from './ApiUtil';
 import {
@@ -204,69 +204,6 @@ export async function openGroupV2GetRoomInfo({
   window?.log?.warn('getInfo failed');
   return null;
 }
-
-/**
- * Send the specified message to the specified room.
- * If an error happens, this function throws it
- * Exported only for testing
- */
-export const postMessageRetryable = async (
-  message: OpenGroupMessageV2,
-  room: OpenGroupRequestCommonType
-) => {
-  const ourKeyPair = await UserUtils.getIdentityKeyPair();
-
-  const signedMessage = await message.sign(ourKeyPair);
-  const json = signedMessage.toJson();
-
-  const request: OpenGroupV2Request = {
-    method: 'POST',
-    room: room.roomId,
-    server: room.serverUrl,
-    queryParams: json,
-    isAuthRequired: true,
-    endpoint: 'messages',
-    useV4: false,
-  };
-
-  const result = await exports.sendApiV2Request(request);
-
-  const statusCode = parseStatusCodeFromOnionRequest(result);
-
-  if (statusCode !== 200) {
-    throw new Error(`Could not postMessage, status code: ${statusCode}`);
-  }
-  const rawMessage = result?.result?.message;
-  if (!rawMessage) {
-    throw new Error('postMessage parsing failed');
-  }
-  // this will throw if the json is not valid
-  return OpenGroupMessageV2.fromJson(rawMessage);
-};
-
-export const postMessage = async (
-  message: OpenGroupMessageV2,
-  room: OpenGroupRequestCommonType
-) => {
-  const result = await pRetry(
-    async () => {
-      return exports.postMessageRetryable(message, room);
-    },
-    {
-      retries: 3, // each path can fail 3 times before being dropped, we have 3 paths at most
-      factor: 2,
-      minTimeout: exports.getMinTimeout(),
-      maxTimeout: 4000,
-      onFailedAttempt: e => {
-        window?.log?.warn(
-          `postMessageRetryable attempt #${e.attemptNumber} failed. ${e.retriesLeft} retries left...`
-        );
-      },
-    }
-  );
-  return result;
-  // errors are saved on the message itself if this pRetry fails too many times
-};
 
 export const banUser = async (
   userToBan: PubKey,

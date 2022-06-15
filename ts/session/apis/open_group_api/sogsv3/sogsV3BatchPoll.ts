@@ -71,7 +71,7 @@ export const sogsBatchPoll = async (
 
   // creating batch request
   const batchRequest = await getBatchRequest(serverPublicKey, batchRequestOptions);
-  console.warn('batchRequest: ', batchRequest);
+  // console.warn('batchRequest: ', batchRequest);
   if (!batchRequest) {
     window?.log?.error('Could not generate batch request. Aborting request');
     return null;
@@ -152,6 +152,8 @@ const getBatchRequest = async (
     return undefined;
   }
 
+  return undefined;
+  console.warn;
   const batchBody = batchOptions.map(options => {
     return makeBatchRequestPayload(options);
   });
@@ -214,7 +216,7 @@ const sendSogsBatchRequest = async (
     return;
   }
   if (isObject(batchResponse.body)) {
-    console.warn('batchResponse:', batchResponse);
+    // console.warn('batchResponse:', batchResponse);
 
     return batchResponse;
   }

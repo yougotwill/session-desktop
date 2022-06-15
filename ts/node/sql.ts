@@ -2031,6 +2031,9 @@ function saveConversation(data: ConversationAttributes, instance?: BetterSqlite3
   groupAdmins,
   isKickedFromGroup,
   subscriberCount,
+  readCapability,
+  writeCapability,
+  uploadCapability,
   is_medium_group,
   avatarPointer,
   avatarHash,
@@ -2579,7 +2582,18 @@ function getMessageBySenderAndTimestamp({
 function filterAlreadyFetchedOpengroupMessage(
   msgDetails: Array<{ sender: string; serverTimestamp: number }> // MsgDuplicateSearchOpenGroup
 ): Array<{ sender: string; serverTimestamp: number }> {
-  return msgDetails.filter(msg => {
+  const filteredNonBlinded = msgDetails.filter(msg => {
+    console.warn(
+      'PLOP ',
+      assertGlobalInstance()
+        .prepare(
+          `SELECT *  FROM ${MESSAGES_TABLE} WHERE
+    source = $sender;`
+        )
+        .all({
+          sender: msg.sender,
+        })
+    );
     const rows = assertGlobalInstance()
       .prepare(
         `SELECT source, serverTimestamp  FROM ${MESSAGES_TABLE} WHERE
@@ -2598,6 +2612,8 @@ function filterAlreadyFetchedOpengroupMessage(
     }
     return true;
   });
+
+  return filteredNonBlinded;
 }
 
 function getUnreadByConversation(conversationId: string) {

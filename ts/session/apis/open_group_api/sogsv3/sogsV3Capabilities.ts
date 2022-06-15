@@ -3,6 +3,7 @@ import _, { isArray, isEmpty, isObject } from 'lodash';
 import { sendViaOnionV4ToNonSnode } from '../../../onions/onionSend';
 import { getAllValidRoomInfos, getOurOpenGroupHeaders } from '../opengroupV2/OpenGroupPollingUtils';
 import { parseStatusCodeFromOnionRequestV4 } from '../opengroupV2/OpenGroupAPIV2Parser';
+import { OpenGroupV2Room } from '../../../../data/opengroups';
 
 export const capabilitiesFetchAllForRooms = async (
   serverUrl: string,
@@ -33,7 +34,13 @@ const getCapabilityFetchRequest = async (
   const method = 'GET';
   const serverPubkey = allValidRoomInfos[0].serverPublicKey;
 
-  const capabilityHeaders = await getOurOpenGroupHeaders(serverPubkey, endpoint, method, true);
+  const capabilityHeaders = await getOurOpenGroupHeaders(
+    serverPubkey,
+    endpoint,
+    method,
+    true,
+    null
+  );
   if (!capabilityHeaders) {
     return null;
   }
@@ -43,7 +50,8 @@ const getCapabilityFetchRequest = async (
     serverPubKey: serverPubkey,
     endpoint,
     headers: capabilityHeaders,
-    useV4: true, // before we make that request, we are unsure if the server supports v4 or not.
+    useV4: true,
+    method,
     // We need to do that one (and it to succeed) to make sure the server understands v4 onion requests
   };
 };
@@ -52,7 +60,7 @@ async function sendOpenGroupCapabilityRequest(
   request: OpenGroupCapabilityRequest,
   abortSignal: AbortSignal
 ): Promise<Array<string> | null> {
-  const { server: serverUrl, endpoint, serverPubKey, headers, useV4 } = request;
+  const { server: serverUrl, endpoint, method, serverPubKey, headers } = request;
   // this will throw if the url is not valid
 
   const builtUrl = new URL(`${serverUrl}/${endpoint}`);
@@ -60,9 +68,9 @@ async function sendOpenGroupCapabilityRequest(
     serverPubKey,
     builtUrl,
     {
-      method: 'GET',
+      method,
       headers,
-      useV4,
+      useV4: true,
     },
     {},
     abortSignal
@@ -99,3 +107,7 @@ export type ParsedMemberCount = {
   roomId: string;
   memberCount: number;
 };
+
+export function roomHasBlindEnabled(openGroup?: OpenGroupV2Room) {
+  return Boolean(openGroup?.capabilities?.includes('blind'));
+}

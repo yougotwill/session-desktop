@@ -13,6 +13,7 @@ export class MessageSentHandler {
     result: { serverId: number; serverTimestamp: number }
   ) {
     const { serverId, serverTimestamp } = result;
+
     try {
       const foundMessage = await MessageSentHandler.fetchHandleMessageSentData(sentMessage);
 
@@ -21,6 +22,8 @@ export class MessageSentHandler {
           'handlePublicMessageSentSuccess(): The message should be in memory for an openGroup message'
         );
       }
+
+      // serverTimestamp can be a fractional number where first part is seconds and second part is nanosecs depending on the pysogs version.
 
       foundMessage.set({
         serverTimestamp,

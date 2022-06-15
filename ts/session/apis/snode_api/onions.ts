@@ -833,6 +833,8 @@ const sendOnionRequest = async ({
         plaintext
       )) as DestinationContext;
     } else {
+      console.error('options', useV4, options);
+
       destCtx = useV4
         ? await encryptOnionV4RequestForPubkey(destX25519hex, options)
         : await encryptForPubKey(destX25519hex, options);

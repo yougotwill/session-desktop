@@ -9,6 +9,7 @@ import * as Data from '../../../data/data';
 import pRetry from 'p-retry';
 import { SeedNodeAPI } from '.';
 import { allowOnlyOneAtATime } from '../../utils/Promise';
+import { APPLICATION_JSON } from '../../../types/MIME';
 
 // tslint:disable: function-name
 
@@ -270,7 +271,7 @@ async function getSnodesFromSeedUrl(urlObj: URL): Promise<Array<any>> {
     );
   }
 
-  if (response.headers.get('Content-Type') !== 'application/json') {
+  if (response.headers.get('Content-Type') !== APPLICATION_JSON) {
     window?.log?.error('Response is not json');
     throw new Error(`getSnodesFromSeedUrl: response is not json Content-Type from ${urlObj.href}`);
   }

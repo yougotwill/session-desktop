@@ -32,6 +32,7 @@ export type OpenGroupCapabilityRequest = {
   endpoint: string;
   serverPubKey: string;
   headers: Record<string, string | number>;
+  method: string;
   useV4: boolean;
 };
 

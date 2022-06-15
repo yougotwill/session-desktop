@@ -41,13 +41,10 @@ export const handleOpenGroupV4Message = async (
     // seqno,
     session_id,
   } = message;
-  console.warn({ capabilities });
-  console.warn({ message });
-
-  const formattedTimestamp = Math.trunc(posted / 1000);
+  console.warn({ message, capabilities });
 
   // TODO: check that these are the correct equivalent fields
-  await handleOpenGroupMessage(roomInfos, data, formattedTimestamp, session_id, id);
+  await handleOpenGroupMessage(roomInfos, data, posted, session_id, id);
 };
 
 /**

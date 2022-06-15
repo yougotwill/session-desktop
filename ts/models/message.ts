@@ -65,6 +65,7 @@ import { Notifications } from '../util/notifications';
 import { Storage } from '../util/storage';
 import { LinkPreviews } from '../util/linkPreviews';
 import { ConversationTypeEnum } from './conversationAttributes';
+import { roomHasBlindEnabled } from '../session/apis/open_group_api/sogsv3/sogsV3Capabilities';
 // tslint:disable: cyclomatic-complexity
 
 /**
@@ -821,7 +822,13 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
         }
 
         const openGroupMessage = new OpenGroupVisibleMessage(openGroupParams);
-        return getMessageQueue().sendToOpenGroupV2(openGroupMessage, roomInfos);
+        const openGroup = await getV2OpenGroupRoom(this.id);
+
+        return getMessageQueue().sendToOpenGroupV2(
+          openGroupMessage,
+          roomInfos,
+          roomHasBlindEnabled(openGroup)
+        );
       }
 
       const { body, attachments, preview, quote } = await this.uploadData();

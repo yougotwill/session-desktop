@@ -1,3 +1,4 @@
+import { APPLICATION_JSON } from '../../../types/MIME';
 import { callUtilsWorker } from '../../../webworker/workers/util_worker_interface';
 import { OnionFetchOptions, sendViaOnionToNonSnode } from '../../onions/onionSend';
 
@@ -39,7 +40,7 @@ const serverRequest = async (
 
   const url = new URL(endpoint);
   const headers: Record<string, any> = {};
-  headers['Content-Type'] = 'application/json';
+  headers['Content-Type'] = APPLICATION_JSON;
 
   // the pn server does not support v4 yet
 

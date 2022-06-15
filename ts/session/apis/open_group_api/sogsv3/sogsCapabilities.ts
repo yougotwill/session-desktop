@@ -28,7 +28,6 @@ export const getCapabilitiesFromBatch = (
   );
   const capabilities: Array<string> | null =
     parseCapabilities(bodies?.[capabilitiesBatchIndex]?.body) || null;
-  console.warn('getCapabilitiesFromBatch: capabilities: ', capabilities?.sort());
   return capabilities;
 };
 
@@ -48,12 +47,10 @@ export const handleCapabilities = async (
   }
 
   // get all v2OpenGroup rooms with the matching serverUrl and set the capabilities.
-  console.warn('capabilities and server url, ', capabilities, serverUrl);
   // TODO: implement - update capabilities. Unsure whether to store in DB or save to instance of this obj.
 
   // FIXME to cache and avoid writing if no changes
   const rooms = await getV2OpenGroupRoomsByServerUrl(serverUrl);
-  console.warn({ groupsByServerUrl: rooms });
 
   if (!rooms || !rooms.length) {
     window?.log?.error('handleCapabilities - Found no groups with matching server url');

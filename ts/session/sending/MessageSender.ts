@@ -7,7 +7,6 @@ import pRetry from 'p-retry';
 import { PubKey } from '../types';
 import { UserUtils } from '../utils';
 import { OpenGroupRequestCommonType } from '../apis/open_group_api/opengroupV2/ApiUtil';
-import { postMessage } from '../apis/open_group_api/opengroupV2/OpenGroupAPIV2';
 import { OpenGroupMessageV2 } from '../apis/open_group_api/opengroupV2/OpenGroupMessageV2';
 import { fromUInt8ArrayToBase64 } from '../utils/String';
 import { OpenGroupVisibleMessage } from '../messages/outgoing/visibleMessage/OpenGroupVisibleMessage';
@@ -23,6 +22,7 @@ import { ed25519Str } from '../onions/onionPath';
 import { EmptySwarmError } from '../utils/errors';
 import ByteBuffer from 'bytebuffer';
 import { getHasSeenHF190, getHasSeenHF191 } from '../apis/snode_api/hfHandling';
+import { sendMessageOnionV4 } from '../apis/open_group_api/sogsv3/sogsV3SendMessage';
 
 const DEFAULT_CONNECTIONS = 1;
 
@@ -272,18 +272,25 @@ function wrapEnvelope(envelope: SignalService.Envelope): Uint8Array {
  */
 export async function sendToOpenGroupV2(
   rawMessage: OpenGroupVisibleMessage,
-  roomInfos: OpenGroupRequestCommonType
+  roomInfos: OpenGroupRequestCommonType,
+  blinded: boolean
 ): Promise<OpenGroupMessageV2> {
   // we agreed to pad message for opengroupv2
   const paddedBody = addMessagePadding(rawMessage.plainTextBuffer());
   const v2Message = new OpenGroupMessageV2({
-    sentTimestamp: Date.now(),
+    sentTimestamp: getNowWithNetworkOffset(),
     sender: UserUtils.getOurPubKeyStrFromCache(),
     base64EncodedData: fromUInt8ArrayToBase64(paddedBody),
     // the signature is added in the postMessage())
   });
 
   // Warning: postMessage throws
-  const sentMessage = await postMessage(v2Message, roomInfos);
-  return sentMessage;
+  const msg = await sendMessageOnionV4(
+    roomInfos.serverUrl,
+    roomInfos.roomId,
+    new AbortController().signal,
+    v2Message,
+    blinded
+  );
+  return msg;
 }
