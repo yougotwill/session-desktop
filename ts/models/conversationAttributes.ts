@@ -44,7 +44,11 @@ export interface ConversationAttributes {
   lastJoinedTimestamp: number; // ClosedGroup: last time we were added to this group
   groupAdmins: Array<string>;
   isKickedFromGroup: boolean;
+
   subscriberCount: number;
+  readCapability: boolean;
+  writeCapability: boolean;
+  uploadCapability: boolean;
 
   is_medium_group: boolean;
 

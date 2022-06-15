@@ -44,6 +44,9 @@ const allowedKeysFormatRowOfConversation = [
   'unreadCount',
   'lastJoinedTimestamp',
   'subscriberCount',
+  'readCapability',
+  'writeCapability',
+  'uploadCapability',
   'expireTimer',
   'active_at',
   'id',
@@ -98,6 +101,9 @@ export function formatRowOfConversation(row?: Record<string, any>): Conversation
   convo.mentionedUs = Boolean(convo.mentionedUs);
   convo.isKickedFromGroup = Boolean(convo.isKickedFromGroup);
   convo.left = Boolean(convo.left);
+  convo.readCapability = Boolean(convo.readCapability);
+  convo.writeCapability = Boolean(convo.writeCapability);
+  convo.uploadCapability = Boolean(convo.uploadCapability);
 
   if (!convo.lastMessage) {
     convo.lastMessage = null;
@@ -152,6 +158,9 @@ const allowedKeysOfConversationAttributes = [
   'unreadCount',
   'lastJoinedTimestamp',
   'subscriberCount',
+  'readCapability',
+  'writeCapability',
+  'uploadCapability',
   'expireTimer',
   'active_at',
   'id',
@@ -178,7 +187,7 @@ export function assertValidConversationAttributes(
   );
 
   if (foundInAttributesButNotInAllowed?.length) {
-    console.warn(
+    console.error(
       `assertValidConversationAttributes: an invalid key was given in the record: ${foundInAttributesButNotInAllowed}`
     );
     throw new Error(

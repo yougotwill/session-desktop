@@ -102,7 +102,7 @@ export type OnionSnodeResponse = {
 };
 
 export type OnionV4SnodeResponse = {
-  body: string | null;
+  body: string | object | null;
   status_code: number;
 };
 
@@ -216,8 +216,7 @@ export const sendViaOnionToNonSnode = async (
 
     try {
       if (fetchOptions.useV4) {
-        const decodedV4 = decodeV4Response(result.body);
-        body = decodedV4?.body;
+        throw new Error('use the other sendv4 for sending v4');
       } else {
         body = JSON.parse(result.body);
       }
@@ -299,6 +298,12 @@ export const sendViaOnionV4ToNonSnode = async (
     return null;
   }
 
+  if (abortSignal?.aborted) {
+    window?.log?.warn('sendViaOnionV4ToNonSnodeRetryable request aborted.');
+
+    return null;
+  }
+
   if (!result) {
     // v4 failed responses result is undefined
     window?.log?.warn('sendViaOnionV4ToNonSnodeRetryable failed during V4 request');
@@ -316,7 +321,7 @@ export const sendViaOnionV4ToNonSnode = async (
   try {
     // this only decodes single entries, and not
     const decodedV4 = decodeV4Response(result.body);
-    return { status_code: decodedV4?.metadata.code || STATUS_NO_STATUS, body: decodedV4?.body };
+    return { status_code: decodedV4?.metadata?.code || STATUS_NO_STATUS, body: decodedV4?.body };
   } catch (e) {
     window?.log?.error(
       "sendViaOnionV4ToNonSnode Can't decode JSON body",

@@ -29,10 +29,6 @@ export type OpenGroupV2Room = {
   lastFetchTimestamp?: number;
   token?: string; // currently, the token is on a per room basis
 
-  upload?: boolean;
-  write?: boolean;
-  read?: boolean;
-
   /**
    * This is shared across all rooms in a server.
    */

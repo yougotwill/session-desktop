@@ -31,7 +31,7 @@ export async function handleOpenGroupV2Message(
 export const handleOpenGroupV4Message = async (
   message: OpenGroupMessageV4,
   roomInfos: OpenGroupRequestCommonType,
-  capabilities?: Array<string>
+  capabilities: Array<string> | null
 ) => {
   const {
     data,

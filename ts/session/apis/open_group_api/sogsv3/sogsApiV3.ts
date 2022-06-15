@@ -1,72 +1,93 @@
-import { from_hex } from 'libsodium-wrappers-sumo';
-import _ from 'lodash';
-import { getConversationById } from '../../../../data/data';
-import {
-  getV2OpenGroupRoomsByServerUrl,
-  OpenGroupV2Room,
-  saveV2OpenGroupRoom,
-} from '../../../../data/opengroups';
+import _, { compact, isArray, isObject, pick } from 'lodash';
+import { saveV2OpenGroupRoom } from '../../../../data/opengroups';
 import { handleOpenGroupV4Message } from '../../../../receiver/opengroup';
-import { ResponseDecodedV4 } from '../../../onions/onionv4';
-import { UserUtils } from '../../../utils';
 import { OpenGroupRequestCommonType } from '../opengroupV2/ApiUtil';
-import { OpenGroupBatchRow, SubrequestOptionType } from './sogsV3BatchPoll';
-import { getBlindedPubKey } from './sogsBlinding';
+import { OpenGroupBatchRow } from './sogsV3BatchPoll';
 import {
   getRoomAndUpdateLastFetchTimestamp,
   OpenGroupMessageV4,
 } from '../opengroupV2/OpenGroupServerPoller';
 import { getOpenGroupV2ConversationId } from '../utils/OpenGroupUtils';
+import { DecodedResponseV4 } from '../../../onions/onionv4';
+import { handleCapabilities } from './sogsCapabilities';
+import { getConversationController } from '../../../conversations';
+import { ConversationModel } from '../../../../models/conversation';
+
+/**
+ * Get the convo matching those criteria and make sure it is an opengroup convo, or return null.
+ * If you get null, you most likely need to cancel the processing of whatever you are doing
+ */
+function getSogsConvoOrReturnEarly(serverUrl: string, roomId: string): ConversationModel | null {
+  const convoId = getOpenGroupV2ConversationId(serverUrl, roomId);
+  if (!convoId) {
+    window.log.info(`getSogsConvoOrReturnEarly: convoId not built with ${serverUrl}: ${roomId}`);
+    return null;
+  }
+
+  const foundConvo = getConversationController().get(convoId);
+  if (!foundConvo) {
+    window.log.info('getSogsConvoOrReturnEarly: convo not found: ', convoId);
+    return null;
+  }
+
+  if (!foundConvo.isOpenGroupV2()) {
+    window.log.info('getSogsConvoOrReturnEarly: convo not an opengroup: ', convoId);
+    return null;
+  }
+
+  return foundConvo;
+}
 
 // TODO: Move to separate (v3?) openGroupAPIV3.ts
 async function handlePollInfoResponse(
+  statusCode: number,
   pollInfoResponseBody: {
     active_users: number;
     read: boolean;
     token: string;
     upload: boolean;
     write: boolean;
-  }
-  // serverUrl: string,
-  // roomId: string
+  },
+  serverUrl: string,
+  roomIdsStillPolled: Set<string>
 ) {
-  // example body structure
-  // body:
-  // active_users: 2
-  // read: true
-  // token: "warricktest"
-  // upload: true
-  // write: true
+  if (statusCode !== 200) {
+    window.log.info('handlePollInfoResponse subRequest status code is not 200');
+    return;
+  }
 
-  const { active_users, read, token, upload, write } = pollInfoResponseBody;
-  const pollInfo = {
-    activeUsers: active_users,
-    read,
-    token,
-    upload,
-    write,
-  };
+  if (!isObject(pollInfoResponseBody)) {
+    window.log.info('handlePollInfoResponse pollInfoResponseBody is not object');
+    return;
+  }
 
-  console.warn({ pollInfo });
+  const { active_users, read, upload, write, token } = pollInfoResponseBody;
 
-  // const convo = await getOpenGroupV2ConversationId(serverUrl, roomId);
-  // TODO: handle pollInfo
+  if (!token || !serverUrl) {
+    window.log.info('handlePollInfoResponse token and serverUrl must be set');
+    return;
+  }
+
+  if (!roomIdsStillPolled.has(token)) {
+    window.log.info('handlePollInfoResponse room is no longer polled: ', token);
+    return;
+  }
+
+  const foundConvo = getSogsConvoOrReturnEarly(serverUrl, token);
+  if (!foundConvo) {
+    return; // we already print something in getSogsConvoOrReturnEarly
+  }
+
+  await foundConvo.setPollInfo({ read, write, upload, subscriberCount: active_users });
 }
 
 const handleNewMessagesResponseV4 = async (
   newMessages: Array<OpenGroupMessageV4>,
   serverUrl: string,
   subrequestOption: OpenGroupBatchRow,
-  capabilities?: Array<string>
+  capabilities: Array<string> | null,
+  roomIdsStillPolled: Set<string>
 ) => {
-  // #region data examples
-  // @@: Example body of a message from compact polling.
-  // data: "ChEKATE4spz6rYIwqgYECgJva4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
-  // public_key: "0588ee09cce1cbf57ae1bfeb457ba769059bd8b510b273640b9c215168f3cc1636"
-  // server_id: 210
-  // signature: "UCoc/HbonrXtxBDSyj48yzLdyVgPr4WPCrdf4TKQsgoBfBx7YV4Z4OwTNVhV3kdfs1cc+4fIYY1XSyz+eOFjDw=="
-  // timestamp: 1649900688833
-  // #endregion
   if (!subrequestOption || !subrequestOption.messages) {
     window?.log?.error('handleBatchPollResults - missing fields required for message subresponse');
     return;
@@ -74,23 +95,29 @@ const handleNewMessagesResponseV4 = async (
 
   try {
     const { roomId } = subrequestOption.messages;
+
+    if (!roomIdsStillPolled.has(roomId)) {
+      window.log.info(
+        `handleNewMessagesResponseV4: we are no longer polling for ${roomId}: skipping`
+      );
+      return;
+    }
     const convoId = getOpenGroupV2ConversationId(serverUrl, roomId);
     const roomInfos = await getRoomAndUpdateLastFetchTimestamp(convoId, newMessages);
     if (!roomInfos) {
       return;
     }
 
-    const incomingMessageIds = _.compact(newMessages.map(n => n.id));
+    const incomingMessageIds = compact(newMessages.map(n => n.id));
     const maxNewMessageId = Math.max(...incomingMessageIds);
     // TODO filter out duplicates ?
 
-    const roomDetails: OpenGroupRequestCommonType = _.pick(roomInfos, 'serverUrl', 'roomId');
+    const roomDetails: OpenGroupRequestCommonType = pick(roomInfos, 'serverUrl', 'roomId');
 
     // tslint:disable-next-line: prefer-for-of
     for (let index = 0; index < newMessages.length; index++) {
       const newMessage = newMessages[index];
       try {
-        // await handleOpenGroupV4Message(newMessage, roomDetails, capabilities);
         await handleOpenGroupV4Message(newMessage, roomDetails, capabilities);
       } catch (e) {
         window?.log?.warn('handleOpenGroupV4Message', e);
@@ -112,142 +139,69 @@ async function handleInboxMessages(_inboxResponse: any, _serverUrl: string) {
   // handle them as a message request after that.
 }
 
-/**
- * @param subrequestOptionsLookup list of subrequests used for the batch request (order sensitive)
- * @param batchPollResults The result from the batch request (order sensitive)
- */
-const getCapabilitiesFromBatch = (
-  subrequestOptionsLookup: Array<OpenGroupBatchRow>,
-  batchPollResults: ResponseDecodedV4
-) => {
-  const capabilitiesBatchIndex = _.findIndex(
-    subrequestOptionsLookup,
-    (subrequest: OpenGroupBatchRow) => {
-      return subrequest.type === SubrequestOptionType.capabilities;
-    }
-  );
-  const capabilities = batchPollResults.body[capabilitiesBatchIndex].body.capabilities;
-  return capabilities;
-};
-
 export const handleBatchPollResults = async (
   serverUrl: string,
-  batchPollResults: ResponseDecodedV4,
-  /** using this as explicit way to ensure order and prevent case where two  */
-  subrequestOptionsLookup: Array<OpenGroupBatchRow>
+  batchPollResults: DecodedResponseV4,
+  /** using this as explicit way to ensure order  */
+  subrequestOptionsLookup: Array<OpenGroupBatchRow>,
+  roomIdsStillPolled: Set<string> // if we get anything for a room we stopped polling, we need to skip it.
 ) => {
   // @@: Might not need the explicit type field.
   // pro: prevents cases where accidentally two fields for the opt. e.g. capability and message fields truthy.
   // con: the data can be inferred (excluding above case) so it's close to being a redundant field
 
   // note: handling capabilities first before handling anything else as it affects how things are handled.
-  const capabilities = getCapabilitiesFromBatch(subrequestOptionsLookup, batchPollResults);
-  await handleCapabilities(capabilities, serverUrl);
 
-  console.warn({ batchPollResults });
-
-  // TODO: typing for subrequest result, but may be annoying to do.
-  await Promise.all(
-    batchPollResults.body.map(async (subResponse: any, index: number) => {
-      // using subreqOptions as request type lookup,
-      //assumes batch subresponse order matches the subrequest order
-      const subrequestOption = subrequestOptionsLookup[index];
-      const responseType = subrequestOptionsLookup[index].type;
-
-      switch (responseType) {
-        case SubrequestOptionType.messages:
-          return handleNewMessagesResponseV4(
-            subResponse.body,
-            serverUrl,
-            subrequestOption,
-            capabilities
-          );
-
-        // redundant - Probably already getting handled first due to the early search before this loop
-        case SubrequestOptionType.pollInfo:
-          // TODO: handle handle pollInfo
-          console.warn('STUB - handle poll info');
-          break;
-
-        case SubrequestOptionType.inbox:
-          // TODO: handle inbox
-          console.warn(' STUB - handle inbox');
-          break;
-
-        default:
-          console.warn('No matching subrequest response body');
-      }
-    })
+  const capabilities = await handleCapabilities(
+    subrequestOptionsLookup,
+    batchPollResults,
+    serverUrl
   );
-};
 
-const handleCapabilities = async (
-  capabilities: Array<string>,
-  serverUrl: string
-  // roomId: string
-) => {
-  if (!capabilities) {
-    window?.log?.error('Failed capabilities subrequest - cancelling response handling');
-    return;
+  if (batchPollResults && isArray(batchPollResults.body)) {
+    // TODO: typing for subrequest result, but may be annoying to do.
+    await Promise.all(
+      batchPollResults.body.map(async (subResponse: any, index: number) => {
+        // using subreqOptions as request type lookup,
+        //assumes batch subresponse order matches the subrequest order
+        const subrequestOption = subrequestOptionsLookup[index];
+        const responseType = subrequestOption.type;
+
+        switch (responseType) {
+          case 'capabilities':
+            // capabilities are handled in handleCapabilities and are skipped here just to avoid the default case below
+            break;
+          case 'messages':
+            return handleNewMessagesResponseV4(
+              subResponse.body,
+              serverUrl,
+              subrequestOption,
+              capabilities,
+              roomIdsStillPolled
+            );
+
+          // redundant - Probably already getting handled first due to the early search before this loop
+          case 'pollInfo':
+            // TODO: handle handle pollInfo
+            await handlePollInfoResponse(
+              subResponse.code,
+              subResponse.body,
+              serverUrl,
+              roomIdsStillPolled
+            );
+            break;
+
+          case 'inbox':
+            // TODO: handle inbox
+            console.error(' STUB - handle inbox');
+            await handleInboxMessages(subResponse.body, serverUrl);
+
+            break;
+
+          default:
+            console.error('No matching subrequest response body for type: ', responseType);
+        }
+      })
+    );
   }
-
-  // get all v2OpenGroup rooms with the matching serverUrl and set the capabilities.
-  console.warn('capabilities and server url, ', capabilities, serverUrl);
-  // TODO: implement - update capabilities. Unsure whether to store in DB or save to instance of this obj.
-  const rooms = await getV2OpenGroupRoomsByServerUrl(serverUrl);
-  console.warn({ groupsByServerUrl: rooms });
-
-  if (!rooms || !rooms.length) {
-    window?.log?.error('handleCapabilities - Found no groups with matching server url');
-    return;
-  }
-
-  await Promise.all(
-    rooms.map(async (room: OpenGroupV2Room) => {
-      // doing this to get the roomId? and conversationId? Optionally could include
-
-      // TODO: uncomment once complete
-      // if (_.isEqual(room.capabilities, capabilities)) {
-      //   return;
-      // }
-
-      // updating the db values for the open group room
-      const roomUpdate = { ...room, capabilities };
-      await saveV2OpenGroupRoom(roomUpdate);
-
-      // updating values in the conversation
-      // generate blindedPK for
-      if (capabilities.includes('blind') && room.conversationId) {
-        // generate blinded PK for the room and save it to the conversation.
-        const conversationToAddBlindedKey = await getConversationById(room.conversationId);
-
-        if (!conversationToAddBlindedKey) {
-          window?.log?.error('No conversation to add blinded pubkey to');
-        }
-
-        const ourSignKeyBytes = await UserUtils.getUserED25519KeyPairBytes();
-        if (!room.serverPublicKey || !ourSignKeyBytes) {
-          window?.log?.error(
-            'handleCapabilities - missing required signing keys or server public key for blinded key generation'
-          );
-          return;
-        }
-
-        const blindedPubKey = await getBlindedPubKey(
-          from_hex(room.serverPublicKey),
-          ourSignKeyBytes
-        );
-
-        if (!blindedPubKey) {
-          window?.log?.error('Failed to generate blinded pubkey');
-          return;
-        }
-
-        throw new Error('yo todo');
-        // await conversationToAddBlindedKey?.set({
-        //   blindedPubKey,
-        // });
-      }
-    })
-  );
 };

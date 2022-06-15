@@ -34,14 +34,19 @@ export const encodeV4Request = (requestInfo: { body?: any }): Uint8Array => {
   return concatUInt8Array(prefixData, requestInfoData, suffixData);
 };
 
-export type ResponseDecodedV4 = {
+export type DecodedResponseV4 = {
   metadata: {
     code: number;
-    headers: any;
+    headers?: Record<string, string>;
   };
-  body: any;
+  body: any; // might be object, or binary or maybe some other stuff..
   bodyContentType: string;
 };
+
+/**
+ * When we do a batch request, we get a list of bodies in the body of the response. This is the type for those bodies
+ */
+export type DecodedResponseBodiesV4 = Array<any>;
 
 /**
  * Nearly identical to request encoding. 2 string bencoded list.
@@ -49,7 +54,7 @@ export type ResponseDecodedV4 = {
  * 1. First part contains response metadata
  * 2. Second part contains the request body.
  */
-export const decodeV4Response = (response: string): ResponseDecodedV4 | undefined => {
+export const decodeV4Response = (response: string): DecodedResponseV4 | undefined => {
   // json part will have code: containing response code and headers for http headers (always lower case)
   // 1. read first bit till colon to get the length. Substring the next X amount trailing the colon and that's the metadata.
   // 2. grab the number before the next colon. That's the expected length of the body.
@@ -74,7 +79,7 @@ export const decodeV4Response = (response: string): ResponseDecodedV4 | undefine
     const bodyText = response.slice(beforeBodyIndex + 1, beforeBodyIndex + (bodyLength + 1));
 
     const bodyContentType: string = metadata?.headers['content-type'];
-    let bodyParsed;
+    let bodyParsed: object | null = null;
     switch (bodyContentType) {
       // TODO; add cases for other data types
       case 'application/json':

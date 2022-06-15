@@ -1,12 +1,11 @@
 import { getV2OpenGroupRoomByRoomId } from '../../../../data/opengroups';
-import _, { isEmpty } from 'lodash';
+import _, { isEmpty, isObject } from 'lodash';
 import { sendViaOnionV4ToNonSnode } from '../../../onions/onionSend';
 import { APPLICATION_JSON } from '../../../../types/MIME';
 import {
   getOurOpenGroupHeaders,
   OpenGroupRequestHeaders,
 } from '../opengroupV2/OpenGroupPollingUtils';
-import { decodeV4Response, ResponseDecodedV4 } from '../../../onions/onionv4';
 
 type BatchFetchRequestOptions = {
   method: 'GET';
@@ -46,14 +45,20 @@ type BatchRequest = {
   headers: OpenGroupRequestHeaders;
 };
 
-export const batchPoll = async (
+export type BatchSogsReponse = {
+  status_code: number;
+  body?: Array<{ body: object; code: number; headers?: Record<string, string> }>;
+};
+
+export const sogsBatchPoll = async (
   serverUrl: string,
   roomInfos: Set<string>,
   abortSignal: AbortSignal,
   batchRequestOptions: Array<OpenGroupBatchRow>
-): Promise<ResponseDecodedV4 | null> => {
+): Promise<BatchSogsReponse | null> => {
   // getting server pk for room
   const [roomId] = roomInfos;
+  // FIXME we should cache those and replace all of those calls with the cached calls
   const fetchedRoomInfo = await getV2OpenGroupRoomByRoomId({
     serverUrl,
     roomId,
@@ -66,27 +71,25 @@ export const batchPoll = async (
 
   // creating batch request
   const batchRequest = await getBatchRequest(serverPublicKey, batchRequestOptions);
-  console.warn('batch request: ', batchRequest);
+  console.warn('batchRequest: ', batchRequest);
   if (!batchRequest) {
     window?.log?.error('Could not generate batch request. Aborting request');
     return null;
   }
 
   const result = await sendSogsBatchRequest(serverUrl, serverPublicKey, batchRequest, abortSignal);
-  return result ? result : null;
+  if (abortSignal.aborted) {
+    window.log.info('sendSogsBatchRequest aborted.');
+    return null;
+  }
+
+  return result || null;
 };
 
-export enum SubrequestOptionType {
-  'capabilities',
-  'messages',
-  'pollInfo',
-  'inbox',
-}
+export type SubrequestOptionType = 'capabilities' | 'messages' | 'pollInfo' | 'inbox';
 
 export type OpenGroupBatchRow = {
   type: SubrequestOptionType;
-  capabilities?: boolean;
-  inbox?: boolean;
   messages?: {
     roomId: string;
   };
@@ -102,14 +105,14 @@ export type OpenGroupBatchRow = {
  */
 const makeBatchRequestPayload = (options: OpenGroupBatchRow): BatchSubRequest | null => {
   const GET_METHOD = 'GET';
-  if (options.capabilities) {
+  if (options.type === 'capabilities') {
     return {
       method: GET_METHOD,
       path: '/capabilities',
     };
   }
 
-  if (options.messages) {
+  if (options.type === 'messages' && options.messages) {
     // TODO: allow more options for path building
     return {
       method: GET_METHOD,
@@ -118,14 +121,14 @@ const makeBatchRequestPayload = (options: OpenGroupBatchRow): BatchSubRequest | 
     };
   }
 
-  if (options.inbox) {
+  if (options.type === 'inbox') {
     return {
       method: GET_METHOD,
       path: '/inbox',
     };
   }
 
-  if (options.pollInfo) {
+  if (options.type === 'pollInfo' && options.pollInfo) {
     return {
       method: GET_METHOD,
       path: `/room/${options.pollInfo.roomId}/pollInfo/${options.pollInfo.infoUpdated}`,
@@ -184,9 +187,11 @@ const sendSogsBatchRequest = async (
   serverPubkey: string,
   request: BatchRequest,
   abortSignal: AbortSignal
-): Promise<any> => {
+): Promise<null | any> => {
   const { endpoint, headers, method, body } = request;
   const builtUrl = new URL(`${serverUrl}/${endpoint}`);
+
+  // this function extracts the body and status_code and JSON.parse it already
   const batchResponse = await sendViaOnionV4ToNonSnode(
     serverPubkey,
     builtUrl,
@@ -200,17 +205,20 @@ const sendSogsBatchRequest = async (
     abortSignal
   );
 
+  if (abortSignal.aborted) {
+    return null;
+  }
+
   if (!batchResponse) {
-    window?.log?.error('Undefined batch response - cancelling batch request');
+    window?.log?.error('sogsbatch: Undefined batch response - cancelling batch request');
     return;
   }
-  debugger;
+  if (isObject(batchResponse.body)) {
+    console.warn('batchResponse:', batchResponse);
 
-  const decodedResponse = decodeV4Response(batchResponse.result.body);
-  if (!decodedResponse) {
-    window?.log?.error('Unable to decode response - dropping batch response');
-    return;
+    return batchResponse;
   }
+  window?.log?.warn('sogsbatch: batch response decoded body is not object. Reutrning null');
 
-  return decodedResponse;
+  return null;
 };

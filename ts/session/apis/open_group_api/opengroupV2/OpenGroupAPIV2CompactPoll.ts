@@ -26,9 +26,8 @@ export const compactFetchEverything = async (
     return null;
   }
 
-  // const result = await sendOpenGroupV2RequestCompactPoll(compactPollRequest, abortSignal);
-  // return result ? result : null;
-  return null;
+  const result = await sendOpenGroupV2RequestCompactPoll(compactPollRequest, abortSignal);
+  return result ? result : null;
 };
 
 export const getAllBase64AvatarForRooms = async (

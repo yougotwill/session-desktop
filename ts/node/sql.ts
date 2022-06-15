@@ -772,6 +772,7 @@ const LOKI_SCHEMA_VERSIONS = [
   updateToLokiSchemaVersion22,
   updateToLokiSchemaVersion23,
   updateToLokiSchemaVersion24,
+  updateToLokiSchemaVersion25,
 ];
 
 function updateToLokiSchemaVersion1(currentVersion: number, db: BetterSqlite3.Database) {
@@ -1557,6 +1558,28 @@ function updateToLokiSchemaVersion24(currentVersion: number, db: BetterSqlite3.D
   console.log(`updateToLokiSchemaVersion${targetVersion}: success!`);
 }
 
+function updateToLokiSchemaVersion25(currentVersion: number, db: BetterSqlite3.Database) {
+  const targetVersion = 25;
+  if (currentVersion >= targetVersion) {
+    return;
+  }
+  console.log(`updateToLokiSchemaVersion${targetVersion}: starting...`);
+
+  db.transaction(() => {
+    // mark all conversation as read/write/upload capability to be true on migration.
+    // the next batch poll will update them if needed
+    db.exec(`
+        ALTER TABLE ${CONVERSATIONS_TABLE} ADD COLUMN readCapability INTEGER DEFAULT 1;
+        ALTER TABLE ${CONVERSATIONS_TABLE} ADD COLUMN writeCapability INTEGER DEFAULT 1;
+        ALTER TABLE ${CONVERSATIONS_TABLE} ADD COLUMN uploadCapability INTEGER DEFAULT 1;
+       `);
+
+    writeLokiSchemaVersion(targetVersion, db);
+  })();
+
+  console.log(`updateToLokiSchemaVersion${targetVersion}: success!`);
+}
+
 // function printTableColumns(table: string, db: BetterSqlite3.Database) {
 //   console.warn(db.pragma(`table_info('${table}');`));
 // }
@@ -1969,6 +1992,9 @@ function saveConversation(data: ConversationAttributes, instance?: BetterSqlite3
     groupAdmins,
     isKickedFromGroup,
     subscriberCount,
+    readCapability,
+    writeCapability,
+    uploadCapability,
     is_medium_group,
     avatarPointer,
     avatarHash,
@@ -2033,6 +2059,9 @@ function saveConversation(data: ConversationAttributes, instance?: BetterSqlite3
       $groupAdmins,
       $isKickedFromGroup,
       $subscriberCount,
+      $readCapability,
+      $writeCapability,
+      $uploadCapability,
       $is_medium_group,
       $avatarPointer,
       $avatarHash,
@@ -2064,6 +2093,10 @@ function saveConversation(data: ConversationAttributes, instance?: BetterSqlite3
       groupAdmins: groupAdmins && groupAdmins.length ? arrayStrToJson(groupAdmins) : '[]',
       isKickedFromGroup: toSqliteBoolean(isKickedFromGroup),
       subscriberCount,
+      readCapability,
+      writeCapability,
+      uploadCapability,
+
       is_medium_group: toSqliteBoolean(is_medium_group),
       avatarPointer,
       avatarHash,
@@ -3777,6 +3810,9 @@ function fillWithTestData(numConvosToAdd: number, numMsgsToAdd: number) {
       left: false,
       mentionedUs: false,
       subscriberCount: 0,
+      readCapability: true,
+      writeCapability: true,
+      uploadCapability: true,
       triggerNotificationsFor: 'all',
       unreadCount: 0,
       zombies: [],

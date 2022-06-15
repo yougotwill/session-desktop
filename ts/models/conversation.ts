@@ -1,5 +1,5 @@
 import Backbone from 'backbone';
-import _, { isString } from 'lodash';
+import _, { isEmpty, isNumber, isString } from 'lodash';
 import { getMessageQueue } from '../session';
 import { getConversationController } from '../session/conversations';
 import { ClosedGroupVisibleMessage } from '../session/messages/outgoing/visibleMessage/ClosedGroupVisibleMessage';
@@ -1307,6 +1307,49 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       await this.commit();
     }
     // Not sure if we care about updating the database
+  }
+
+  public async setPollInfo(infos: {
+    subscriberCount: number;
+    read: boolean;
+    write: boolean;
+    upload: boolean;
+  }) {
+    if (isEmpty(infos)) {
+      return;
+    }
+    let hasChange = false;
+    const { read, write, upload, subscriberCount } = infos;
+    if (
+      isNumber(infos.subscriberCount) &&
+      infos.subscriberCount !== 0 &&
+      this.get('subscriberCount') !== subscriberCount
+    ) {
+      hasChange = true;
+      this.set('subscriberCount', subscriberCount);
+    }
+
+    if (Boolean(this.get('readCapability')) !== Boolean(read)) {
+      hasChange = true;
+      this.set('readCapability', Boolean(read));
+    }
+
+    if (Boolean(this.get('writeCapability')) !== Boolean(write)) {
+      hasChange = true;
+      this.set('writeCapability', Boolean(write));
+    }
+
+    if (Boolean(this.get('uploadCapability')) !== Boolean(upload)) {
+      hasChange = true;
+      this.set('uploadCapability', Boolean(upload));
+    }
+
+    console.warn('pollInfos:', { subscriberCount, read, write, upload });
+
+    // only trigger a write to the db if a change is detected
+    if (hasChange) {
+      await this.commit();
+    }
   }
 
   /**

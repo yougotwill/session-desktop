@@ -2,14 +2,13 @@ import { OpenGroupCapabilityRequest } from '../opengroupV2/ApiUtil';
 import _, { isArray, isEmpty, isObject } from 'lodash';
 import { sendViaOnionV4ToNonSnode } from '../../../onions/onionSend';
 import { getAllValidRoomInfos, getOurOpenGroupHeaders } from '../opengroupV2/OpenGroupPollingUtils';
-import { ParsedRoomCompactPollResults } from '../opengroupV2/OpenGroupAPIV2CompactPoll';
 import { parseStatusCodeFromOnionRequestV4 } from '../opengroupV2/OpenGroupAPIV2Parser';
 
 export const capabilitiesFetchAllForRooms = async (
   serverUrl: string,
   rooms: Set<string>,
   abortSignal: AbortSignal
-): Promise<Array<ParsedRoomCompactPollResults> | null> => {
+): Promise<Array<string> | null> => {
   const capabilityRequest = await getCapabilityFetchRequest(serverUrl, rooms);
 
   if (!capabilityRequest) {
@@ -27,7 +26,7 @@ const getCapabilityFetchRequest = async (
 ): Promise<null | OpenGroupCapabilityRequest> => {
   const allValidRoomInfos = await getAllValidRoomInfos(serverUrl, rooms);
   if (!allValidRoomInfos?.length) {
-    window?.log?.info('compactPoll: no valid roominfos got.');
+    window?.log?.info('getCapabilityFetchRequest: no valid roominfos got.');
     return null;
   }
   const endpoint = '/capabilities';
@@ -52,7 +51,7 @@ const getCapabilityFetchRequest = async (
 async function sendOpenGroupCapabilityRequest(
   request: OpenGroupCapabilityRequest,
   abortSignal: AbortSignal
-): Promise<any | null> {
+): Promise<Array<string> | null> {
   const { server: serverUrl, endpoint, serverPubKey, headers, useV4 } = request;
   // this will throw if the url is not valid
 

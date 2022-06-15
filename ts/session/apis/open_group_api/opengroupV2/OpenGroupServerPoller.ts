@@ -3,7 +3,6 @@ import { getConversationController } from '../../../conversations';
 import { getOpenGroupV2ConversationId } from '../utils/OpenGroupUtils';
 import { OpenGroupRequestCommonType } from './ApiUtil';
 import {
-  compactFetchEverything,
   getAllBase64AvatarForRooms,
   getAllMemberCount,
   ParsedBase64Avatar,
@@ -14,11 +13,7 @@ import {
 import _, { now } from 'lodash';
 import { ConversationModel } from '../../../../models/conversation';
 import { getMessageIdsFromServerIds, removeMessage } from '../../../../data/data';
-import {
-  getV2OpenGroupRoom,
-  getV2OpenGroupRoomsByServerUrl,
-  saveV2OpenGroupRoom,
-} from '../../../../data/opengroups';
+import { getV2OpenGroupRoom, saveV2OpenGroupRoom } from '../../../../data/opengroups';
 import { OpenGroupMessageV2 } from './OpenGroupMessageV2';
 import autoBind from 'auto-bind';
 import { sha256 } from '../../../crypto';
@@ -28,7 +23,7 @@ import { MIME } from '../../../../types';
 import { handleOpenGroupV2Message } from '../../../../receiver/opengroup';
 import { callUtilsWorker } from '../../../../webworker/workers/util_worker_interface';
 import { filterDuplicatesFromDbAndIncoming } from './SogsFilterDuplicate';
-import { batchPoll, OpenGroupBatchRow, SubrequestOptionType } from '../sogsv3/sogsV3BatchPoll';
+import { OpenGroupBatchRow, sogsBatchPoll } from '../sogsv3/sogsV3BatchPoll';
 import { handleBatchPollResults } from '../sogsv3/sogsApiV3';
 
 export type OpenGroupMessageV4 = {
@@ -346,15 +341,14 @@ export class OpenGroupServerPoller {
 
     // capabilities
     subrequestOptions.push({
-      type: SubrequestOptionType.capabilities,
-      capabilities: true,
+      type: 'capabilities',
     });
 
     // adding room specific SOGS subrequests
     this.roomIdsToPoll.forEach(roomId => {
       // poll info
       subrequestOptions.push({
-        type: SubrequestOptionType.pollInfo,
+        type: 'pollInfo',
         pollInfo: {
           roomId,
           infoUpdated: 0,
@@ -363,28 +357,27 @@ export class OpenGroupServerPoller {
       });
 
       // messages
-      subrequestOptions.push({
-        type: SubrequestOptionType.messages,
-        messages: {
-          roomId,
-        },
-      });
+      // subrequestOptions.push({
+      //   type: 'messages',
+      //   messages: {
+      //     roomId,
+      //   },
+      // });
     });
 
-    if (this.serverUrl) {
-      const rooms = await getV2OpenGroupRoomsByServerUrl(this.serverUrl);
-      if (rooms?.length) {
-        const { capabilities } = rooms[0];
-        if (capabilities?.includes('blinding')) {
-          // This only works for servers with blinding capabilities
-          // adding inbox subrequest info
-          subrequestOptions.push({
-            type: SubrequestOptionType.inbox,
-            inbox: true,
-          });
-        }
-      }
-    }
+    // if (this.serverUrl) {
+    //   const rooms = await getV2OpenGroupRoomsByServerUrl(this.serverUrl);
+    //   if (rooms?.length) {
+    //     const { capabilities } = rooms[0];
+    //     if (capabilities?.includes('blinding')) {
+    //       // This only works for servers with blinding capabilities
+    //       // adding inbox subrequest info
+    //       subrequestOptions.push({
+    //         type: 'inbox',
+    //       });
+    //     }
+    //   }
+    // }
 
     return subrequestOptions;
   }
@@ -403,41 +396,43 @@ export class OpenGroupServerPoller {
         throw new Error('Poller aborted');
       }
 
-      let compactFetchResults = await compactFetchEverything(
-        this.serverUrl,
-        this.roomIdsToPoll,
-        this.abortController.signal
-      );
-
       const subrequestOptions: Array<OpenGroupBatchRow> = await this.makeSubrequestInfo();
 
-      // TODO: move to own async function
-      const batchPollResults = await batchPoll(
+      if (!subrequestOptions || subrequestOptions.length === 0) {
+        throw new Error('compactFetch: no subrequestOptions');
+      }
+
+      const batchPollResults = await sogsBatchPoll(
         this.serverUrl,
         this.roomIdsToPoll,
         this.abortController.signal,
         subrequestOptions
       );
 
-      // TODO: move this to it's own polling function entirely. I.e. use it's own timer
-      if (batchPollResults) {
-        await handleBatchPollResults(this.serverUrl, batchPollResults, subrequestOptions);
+      if (!batchPollResults) {
+        throw new Error('compactFetch: no batchPollResults');
       }
 
       // check that we are still not aborted
       if (this.abortController.signal.aborted) {
         throw new Error('Abort controller was cancelled. dropping request');
       }
-      if (!compactFetchResults) {
-        throw new Error('compactFetch: no results');
+
+      if (batchPollResults.status_code !== 200) {
+        throw new Error('batchPollResults general status code is not 200');
       }
       // we were not aborted, make sure to filter out roomIds we are not polling for anymore
-      compactFetchResults = compactFetchResults.filter(result =>
-        this.roomIdsToPoll.has(result.roomId)
-      );
+      // compactFetchResults = compactFetchResults.filter(result =>
+      //   this.roomIdsToPoll.has(result.roomId)
+      // );
 
       // ==> At this point all those results need to trigger conversation updates, so update what we have to update
-      await handleCompactPollResults(this.serverUrl, compactFetchResults);
+      await handleBatchPollResults(
+        this.serverUrl,
+        batchPollResults,
+        subrequestOptions,
+        this.roomIdsToPoll
+      );
     } catch (e) {
       window?.log?.warn('Got error while compact fetch:', e.message);
     } finally {
