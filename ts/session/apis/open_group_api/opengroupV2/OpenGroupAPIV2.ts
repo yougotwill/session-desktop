@@ -4,18 +4,10 @@ import {
   saveV2OpenGroupRoom,
 } from '../../../../data/opengroups';
 import { FSv2 } from '../../file_server_api';
-import {
-  sendJsonViaOnionV4ToNonSnode,
-  sendViaOnionToNonSnode,
-  sendViaOnionV4ToNonSnode,
-} from '../../../onions/onionSend';
+import { sendJsonViaOnionV4ToNonSnode, sendViaOnionToNonSnode } from '../../../onions/onionSend';
 import { PubKey } from '../../../types';
 import { OpenGroupRequestCommonType, OpenGroupV2Info, OpenGroupV2Request } from './ApiUtil';
-import {
-  parseMemberCount,
-  parseRooms,
-  parseStatusCodeFromOnionRequest,
-} from './OpenGroupAPIV2Parser';
+import { parseRooms, parseStatusCodeFromOnionRequest } from './OpenGroupAPIV2Parser';
 
 import { isOpenGroupV2Request } from '../../file_server_api/FileServerApiV2';
 import pRetry from 'p-retry';
@@ -266,35 +258,6 @@ export const getAllRoomInfos = async (roomInfos: OpenGroupV2Room) => {
   }
 
   return parseRooms(result);
-};
-
-export const getMemberCount = async (
-  roomInfos: OpenGroupRequestCommonType
-): Promise<number | undefined> => {
-  const request: OpenGroupV2Request = {
-    method: 'GET',
-    room: roomInfos.roomId,
-    server: roomInfos.serverUrl,
-    endpoint: 'member_count',
-    useV4: false,
-  };
-  const result = await exports.sendApiV2Request(request);
-  if (parseStatusCodeFromOnionRequest(result) !== 200) {
-    window?.log?.warn(
-      `getMemberCount failed invalid status code for serverUrl:'${roomInfos.serverUrl}' roomId:'${roomInfos.roomId}; '`,
-      result
-    );
-    return;
-  }
-  const count = parseMemberCount(result);
-  if (count === undefined) {
-    window?.log?.warn(
-      `getMemberCount failed invalid count for serverUrl:'${roomInfos.serverUrl}' roomId:'${roomInfos.roomId}'`
-    );
-    return;
-  }
-
-  return count;
 };
 
 /**

@@ -75,7 +75,6 @@ export const sendMessageOnionV4 = async (
       timestamp: rawMessage.posted,
       signature: rawMessage.signature,
     };
-    debugger;
 
     // this will throw if the json is not valid
     const parsed = OpenGroupMessageV2.fromJson(toParse);

@@ -4,10 +4,8 @@ import { getOpenGroupV2ConversationId } from '../utils/OpenGroupUtils';
 import { OpenGroupRequestCommonType } from './ApiUtil';
 import {
   getAllBase64AvatarForRooms,
-  getAllMemberCount,
   ParsedBase64Avatar,
   ParsedDeletions,
-  ParsedMemberCount,
   ParsedRoomCompactPollResults,
 } from './OpenGroupAPIV2CompactPoll';
 import _, { now } from 'lodash';
@@ -40,7 +38,6 @@ export type OpenGroupMessageV4 = {
 
 const pollForEverythingInterval = DURATION.SECONDS * 10;
 const pollForRoomAvatarInterval = DURATION.DAYS * 1;
-const pollForMemberCountInterval = DURATION.MINUTES * 10;
 
 /**
  * An OpenGroupServerPollerV2 polls for everything for a particular server. We should
@@ -80,7 +77,6 @@ export class OpenGroupServerPoller {
    */
   private isPolling = false;
   private isPreviewPolling = false;
-  private isMemberCountPolling = false;
   private wasStopped = false;
 
   constructor(roomInfos: Array<OpenGroupRequestCommonType>) {
@@ -111,10 +107,6 @@ export class OpenGroupServerPoller {
     this.pollForRoomAvatarTimer = global.setInterval(
       this.previewPerRoomPoll,
       pollForRoomAvatarInterval
-    );
-    this.pollForMemberCountTimer = global.setInterval(
-      this.pollForAllMemberCount,
-      pollForMemberCountInterval
     );
 
     if (this.roomIdsToPoll.size) {
@@ -191,7 +183,6 @@ export class OpenGroupServerPoller {
   private async triggerPollAfterAdd(_room?: OpenGroupRequestCommonType) {
     await this.compactPoll();
     await this.previewPerRoomPoll();
-    await this.pollForAllMemberCount();
   }
 
   private shouldPoll() {
@@ -224,25 +215,6 @@ export class OpenGroupServerPoller {
     }
     // return early if a poll is already in progress
     if (this.isPreviewPolling) {
-      return false;
-    }
-    if (!window.getGlobalOnlineStatus()) {
-      window?.log?.info('OpenGroupServerPoller: offline');
-      return false;
-    }
-    return true;
-  }
-
-  private shouldPollForMemberCount() {
-    if (this.wasStopped) {
-      window?.log?.error('Serverpoller was stopped. PolLForMemberCount should not happen');
-      return false;
-    }
-    if (!this.roomIdsToPoll.size) {
-      return false;
-    }
-    // return early if a poll is already in progress
-    if (this.isMemberCountPolling) {
       return false;
     }
     if (!window.getGlobalOnlineStatus()) {
@@ -288,46 +260,6 @@ export class OpenGroupServerPoller {
       window?.log?.warn('Got error while preview fetch:', e);
     } finally {
       this.isPreviewPolling = false;
-    }
-  }
-
-  private async pollForAllMemberCount() {
-    if (!this.shouldPollForMemberCount()) {
-      return;
-    }
-    // do everything with throwing so we can check only at one place
-    // what we have to clean
-    try {
-      this.isMemberCountPolling = true;
-      // don't try to make the request if we are aborted
-      if (this.abortController.signal.aborted) {
-        throw new Error('Poller aborted');
-      }
-
-      let memberCountGotResults = await getAllMemberCount(
-        this.serverUrl,
-        this.roomIdsToPoll,
-        this.abortController.signal
-      );
-
-      // check that we are still not aborted
-      if (this.abortController.signal.aborted) {
-        throw new Error('Abort controller was canceled. Dropping memberCount request');
-      }
-      if (!memberCountGotResults) {
-        throw new Error('MemberCount: no results');
-      }
-      // we were not aborted, make sure to filter out roomIds we are not polling for anymore
-      memberCountGotResults = memberCountGotResults.filter(result =>
-        this.roomIdsToPoll.has(result.roomId)
-      );
-
-      // ==> At this point all those results need to trigger conversation updates, so update what we have to update
-      await handleAllMemberCount(this.serverUrl, memberCountGotResults);
-    } catch (e) {
-      window?.log?.warn('Got error while memberCount fetch:', e);
-    } finally {
-      this.isMemberCountPolling = false;
     }
   }
 
@@ -609,29 +541,3 @@ const handleBase64AvatarUpdate = async (
     })
   );
 };
-
-async function handleAllMemberCount(
-  serverUrl: string,
-  memberCountGotResults: Array<ParsedMemberCount>
-) {
-  if (!memberCountGotResults.length) {
-    return;
-  }
-
-  await Promise.all(
-    memberCountGotResults.map(async roomCount => {
-      const conversationId = getOpenGroupV2ConversationId(serverUrl, roomCount.roomId);
-
-      const convo = getConversationController().get(conversationId);
-      if (!convo) {
-        window?.log?.warn('cannot update conversation memberCount as it does not exist');
-        return;
-      }
-      if (convo.get('subscriberCount') !== roomCount.memberCount) {
-        convo.set({ subscriberCount: roomCount.memberCount });
-        // triggers the save to db and the refresh of the UI
-        await convo.commit();
-      }
-    })
-  );
-}
