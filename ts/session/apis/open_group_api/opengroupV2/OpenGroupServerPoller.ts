@@ -25,7 +25,6 @@ import { callUtilsWorker } from '../../../../webworker/workers/util_worker_inter
 import { filterDuplicatesFromDbAndIncoming } from './SogsFilterDuplicate';
 import { OpenGroupBatchRow, sogsBatchPoll } from '../sogsv3/sogsV3BatchPoll';
 import { handleBatchPollResults } from '../sogsv3/sogsApiV3';
-import { roomHasBlindEnabled } from '../sogsv3/sogsV3Capabilities';
 
 export type OpenGroupMessageV4 = {
   /** AFAIK: indicates the number of the message in the group. e.g. 2nd message will be 1 or 2 */
@@ -542,6 +541,7 @@ const handleNewMessages = async (
   }
 };
 
+// to remove once we mapped all the logic to the new batch poll call
 const handleCompactPollResults = async (
   serverUrl: string,
   results: Array<ParsedRoomCompactPollResults>

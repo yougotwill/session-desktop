@@ -190,9 +190,9 @@ describe('MessageSender', () => {
         TestUtils.generateFakePubKey().key
       );
 
-      postMessageRetryableStub = Sinon.stub(ApiV2, 'postMessageRetryable').resolves(
-        TestUtils.generateOpenGroupMessageV2()
-      );
+      // postMessageRetryableStub = Sinon.stub(ApiV2, 'postMessageRetryable').resolves(
+      //   TestUtils.generateOpenGroupMessageV2()
+      // );
     });
 
     afterEach(() => {

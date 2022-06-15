@@ -4,7 +4,7 @@ import {
   saveV2OpenGroupRoom,
 } from '../../../../data/opengroups';
 import { FSv2 } from '../../file_server_api';
-import { sendViaOnionToNonSnode, sendViaOnionV4ToNonSnode } from '../../../onions/onionSend';
+import { sendViaOnionToNonSnode } from '../../../onions/onionSend';
 import { PubKey } from '../../../types';
 import { OpenGroupRequestCommonType, OpenGroupV2Info, OpenGroupV2Request } from './ApiUtil';
 import {
@@ -12,13 +12,10 @@ import {
   parseRooms,
   parseStatusCodeFromOnionRequest,
 } from './OpenGroupAPIV2Parser';
-import { OpenGroupMessageV2 } from './OpenGroupMessageV2';
 
 import { isOpenGroupV2Request } from '../../file_server_api/FileServerApiV2';
-import { getAuthToken } from './ApiAuth';
 import pRetry from 'p-retry';
 import { callUtilsWorker } from '../../../../webworker/workers/util_worker_interface';
-import { UserUtils } from '../../../utils';
 
 // used to be overwritten by testing
 export const getMinTimeout = () => 1000;
@@ -99,27 +96,7 @@ export async function sendApiV2Request(
   const destinationX25519Key = await getDestinationPubKey(request);
 
   // Because auth happens on a per-room basis, we need both to make an authenticated request
-  if (isOpenGroupV2Request(request) && request.isAuthRequired && request.room) {
-    // this call will either return the token on the db,
-    // or the promise currently fetching a new token for that same room
-    // or fetch from the open group a new token for that room.
-
-    if (request.forcedTokenToUse) {
-      window?.log?.info('sendV2Request. Forcing token to use for room:', request.room);
-    }
-    const token =
-      request.forcedTokenToUse ||
-      (await getAuthToken({
-        roomId: request.room,
-        serverUrl: request.server,
-      }));
-
-    if (!token) {
-      window?.log?.error('Failed to get token for open group v2');
-      return null;
-    }
-
-    headers.Authorization = token;
+  if (isOpenGroupV2Request(request) && request.room) {
     const res = await sendViaOnionToNonSnode(
       destinationX25519Key,
       builtUrl,
@@ -150,7 +127,6 @@ export async function sendApiV2Request(
         window?.log?.warn('Got 401, but this room does not exist');
         return null;
       }
-      roomDetails.token = undefined;
       // we might need to retry doing the request here, but how to make sure we don't retry indefinetely?
       await saveV2OpenGroupRoom(roomDetails);
     }
@@ -181,7 +157,6 @@ export async function openGroupV2GetRoomInfo({
     method: 'GET',
     server: serverUrl,
     room: roomId,
-    isAuthRequired: false,
     endpoint: `rooms/${roomId}`,
     useV4: false,
   };
@@ -216,7 +191,6 @@ export const banUser = async (
     method: 'POST',
     room: roomInfos.roomId,
     server: roomInfos.serverUrl,
-    isAuthRequired: true,
     queryParams,
     endpoint,
     useV4: false,
@@ -234,7 +208,6 @@ export const unbanUser = async (
     method: 'DELETE',
     room: roomInfos.roomId,
     server: roomInfos.serverUrl,
-    isAuthRequired: true,
     endpoint: `block_list/${userToBan.key}`,
     useV4: false,
   };
@@ -254,7 +227,6 @@ export const deleteMessageByServerIds = async (
     method: 'POST',
     room: roomInfos.roomId,
     server: roomInfos.serverUrl,
-    isAuthRequired: true,
     endpoint: 'delete_messages',
     queryParams: { ids: idsToRemove },
     useV4: false,
@@ -270,7 +242,6 @@ export const getAllRoomInfos = async (roomInfos: OpenGroupV2Room) => {
     method: 'GET',
     room: roomInfos.roomId,
     server: roomInfos.serverUrl,
-    isAuthRequired: false,
     endpoint: 'rooms',
     serverPublicKey: roomInfos.serverPublicKey,
     useV4: false,
@@ -293,7 +264,6 @@ export const getMemberCount = async (
     method: 'GET',
     room: roomInfos.roomId,
     server: roomInfos.serverUrl,
-    isAuthRequired: true,
     endpoint: 'member_count',
     useV4: false,
   };
@@ -332,7 +302,6 @@ export const downloadFileOpenGroupV2 = async (
     method: 'GET',
     room: roomInfos.roomId,
     server: roomInfos.serverUrl,
-    isAuthRequired: true,
     endpoint: `files/${fileId}`,
     useV4: false,
   };
@@ -360,7 +329,6 @@ export const downloadFileOpenGroupV2ByUrl = async (
     method: 'GET',
     room: roomInfos.roomId,
     server: roomInfos.serverUrl,
-    isAuthRequired: false,
     endpoint: pathName,
     useV4: false,
   };
@@ -392,7 +360,6 @@ export const downloadPreviewOpenGroupV2 = async (
     method: 'GET',
     room: roomInfos.roomId,
     server: roomInfos.serverUrl,
-    isAuthRequired: false,
     endpoint: `rooms/${roomInfos.roomId}/image`,
     serverPublicKey: roomInfos.serverPublicKey,
     useV4: false,
@@ -432,7 +399,6 @@ export const uploadFileOpenGroupV2 = async (
     method: 'POST',
     room: roomInfos.roomId,
     server: roomInfos.serverUrl,
-    isAuthRequired: true,
     endpoint: filesEndpoint,
     queryParams,
     useV4: false,
@@ -473,7 +439,6 @@ export const uploadImageForRoomOpenGroupV2 = async (
     method: 'POST',
     room: roomInfos.roomId,
     server: roomInfos.serverUrl,
-    isAuthRequired: true,
     endpoint: imageEndpoint,
     queryParams,
     useV4: false,
@@ -500,7 +465,6 @@ export const addModerator = async (
     method: 'POST',
     room: roomInfos.roomId,
     server: roomInfos.serverUrl,
-    isAuthRequired: true,
     queryParams: { public_key: userToAddAsMods.key, room_id: roomInfos.roomId },
     endpoint: 'moderators',
     useV4: false,
@@ -518,7 +482,6 @@ export const removeModerator = async (
     method: 'DELETE',
     room: roomInfos.roomId,
     server: roomInfos.serverUrl,
-    isAuthRequired: true,
     endpoint: `moderators/${userToRemoveFromMods.key}`,
     useV4: false,
   };

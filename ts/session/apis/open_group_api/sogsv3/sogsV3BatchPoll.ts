@@ -1,11 +1,11 @@
 import { getV2OpenGroupRoomByRoomId } from '../../../../data/opengroups';
 import _, { isEmpty, isObject } from 'lodash';
 import { sendViaOnionV4ToNonSnode } from '../../../onions/onionSend';
-import { APPLICATION_JSON } from '../../../../types/MIME';
 import {
   getOurOpenGroupHeaders,
   OpenGroupRequestHeaders,
 } from '../opengroupV2/OpenGroupPollingUtils';
+import { addJsonContentTypeToHeaders } from './sogsV3SendMessage';
 
 type BatchFetchRequestOptions = {
   method: 'GET';
@@ -152,8 +152,6 @@ const getBatchRequest = async (
     return undefined;
   }
 
-  return undefined;
-  console.warn;
   const batchBody = batchOptions.map(options => {
     return makeBatchRequestPayload(options);
   });
@@ -174,13 +172,11 @@ const getBatchRequest = async (
     return;
   }
 
-  headers['Content-Type'] = APPLICATION_JSON;
-
   return {
     endpoint: batchEndpoint,
     method: batchMethod,
     body: stringBody,
-    headers,
+    headers: addJsonContentTypeToHeaders(headers),
   };
 };
 

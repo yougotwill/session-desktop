@@ -10,7 +10,6 @@ import {
   snodeHttpsAgent,
   SnodeResponse,
 } from './onions';
-import { addJsonContentTypeToHeaders } from '../open_group_api/sogsv3/sogsV3SendMessage';
 import { APPLICATION_JSON } from '../../../types/MIME';
 
 export interface LokiFetchOptions {
@@ -142,7 +141,7 @@ export async function snodeRpc(
   const fetchOptions: LokiFetchOptions = {
     method: 'POST',
     body: JSON.stringify(body),
-    headers: addJsonContentTypeToHeaders({}),
+    headers: { 'Content-Type': APPLICATION_JSON },
   };
 
   return lokiFetch({

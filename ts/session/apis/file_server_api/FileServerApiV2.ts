@@ -108,13 +108,14 @@ export const downloadFileFromFSv2 = async (
 
 /**
  * This is a typescript type guard
- * request.isAuthRequired Must be set for an OpenGroupV2Request
- * @returns true if request.isAuthRequired is not undefined
+ * Uses the serverPublicKey field to determine if this is a file server call or an opengroup call
  */
 export function isOpenGroupV2Request(
   request: FileServerV2Request | OpenGroupV2Request
 ): request is OpenGroupV2Request {
-  return (request as OpenGroupV2Request).isAuthRequired !== undefined;
+  return Boolean(
+    (request as any).serverPublicKey && (request as any).serverPublicKey === fileServerV2PubKey
+  );
 }
 
 /**

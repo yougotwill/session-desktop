@@ -27,7 +27,6 @@ export type OpenGroupV2Room = {
    * This value is set with the current timestamp whenever we get new messages.
    */
   lastFetchTimestamp?: number;
-  token?: string; // currently, the token is on a per room basis
 
   /**
    * This is shared across all rooms in a server.

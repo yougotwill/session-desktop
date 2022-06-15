@@ -2583,17 +2583,6 @@ function filterAlreadyFetchedOpengroupMessage(
   msgDetails: Array<{ sender: string; serverTimestamp: number }> // MsgDuplicateSearchOpenGroup
 ): Array<{ sender: string; serverTimestamp: number }> {
   const filteredNonBlinded = msgDetails.filter(msg => {
-    console.warn(
-      'PLOP ',
-      assertGlobalInstance()
-        .prepare(
-          `SELECT *  FROM ${MESSAGES_TABLE} WHERE
-    source = $sender;`
-        )
-        .all({
-          sender: msg.sender,
-        })
-    );
     const rows = assertGlobalInstance()
       .prepare(
         `SELECT source, serverTimestamp  FROM ${MESSAGES_TABLE} WHERE

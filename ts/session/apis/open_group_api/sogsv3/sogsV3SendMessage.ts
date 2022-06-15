@@ -9,7 +9,6 @@ import {
   getOurOpenGroupHeaders,
   OpenGroupRequestHeaders,
 } from '../opengroupV2/OpenGroupPollingUtils';
-import { roomHasBlindEnabled } from './sogsV3Capabilities';
 
 export function addJsonContentTypeToHeaders(
   headers: OpenGroupRequestHeaders
@@ -98,6 +97,7 @@ export const sendMessageOnionV4 = async (
     return parsed;
   }
 
+  return null;
   //     throw new Error('blinded send todo');
   //     const ourKeyPair = await UserUtils.getIdentityKeyPair();
 

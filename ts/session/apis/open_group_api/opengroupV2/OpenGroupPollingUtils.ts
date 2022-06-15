@@ -1,7 +1,6 @@
 import { getV2OpenGroupRoomByRoomId, OpenGroupV2Room } from '../../../../data/opengroups';
 import _ from 'lodash';
 import { OpenGroupMessageV2 } from './OpenGroupMessageV2';
-import { getAuthToken } from './ApiAuth';
 import { UserUtils } from '../../../utils';
 import { fromHexToArray } from '../../../utils/String';
 import { getSodiumRenderer } from '../../../crypto';
@@ -80,9 +79,8 @@ export const getAllValidRoomInfos = async (
             return null;
           }
           allServerPubKeys.push(fetchedInfo.serverPublicKey);
-          const tokenInProgress = await getAuthToken({ serverUrl, roomId });
 
-          return { ...fetchedInfo, token: tokenInProgress || undefined };
+          return fetchedInfo;
         } catch (e) {
           window?.log?.warn('failed to fetch roominfos for room', roomId);
           return null;

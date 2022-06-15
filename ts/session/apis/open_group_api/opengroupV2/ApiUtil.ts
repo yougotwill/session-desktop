@@ -21,9 +21,7 @@ export type OpenGroupRequestCommonType = {
 export type OpenGroupV2Request = FileServerV2Request & {
   room: string;
   server: string;
-  isAuthRequired: boolean;
   serverPublicKey?: string; // if not provided, a db called will be made to try to get it.
-  forcedTokenToUse?: string;
 };
 
 // TODO: evaluate if this can be cleaned up

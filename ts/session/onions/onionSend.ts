@@ -244,7 +244,6 @@ export const sendViaOnionV4ToNonSnode = async (
   const defaultedOptions = initOptionsWithDefaults(options);
 
   const payloadObj = buildSendViaOnionPayload(url, fetchOptions);
-  console.warn('buildSendViaOnionPayload', payloadObj);
   // if protocol is forced to 'http:' => just use http (without the ':').
   // otherwise use https as protocol (this is the default)
   const forcedHttp = url.protocol === PROTOCOLS.HTTP;

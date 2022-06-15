@@ -1,15 +1,10 @@
-import {
-  getV2OpenGroupRoomByRoomId,
-  OpenGroupV2Room,
-  saveV2OpenGroupRoom,
-} from '../../../../data/opengroups';
+import { getV2OpenGroupRoomByRoomId, OpenGroupV2Room } from '../../../../data/opengroups';
 import { OpenGroupV2CompactPollRequest, parseMessages } from './ApiUtil';
 import { parseStatusCodeFromOnionRequest } from './OpenGroupAPIV2Parser';
 import _ from 'lodash';
 import { sendViaOnionToNonSnode } from '../../../onions/onionSend';
 import { OpenGroupMessageV2 } from './OpenGroupMessageV2';
 import { downloadPreviewOpenGroupV2, getMemberCount } from './OpenGroupAPIV2';
-import { getAuthToken } from './ApiAuth';
 import { DURATION } from '../../../constants';
 
 const COMPACT_POLL_ENDPOINT = 'compact_poll';
@@ -143,9 +138,8 @@ const getAllValidRoomInfos = async (
             return null;
           }
           allServerPubKeys.push(fetchedInfo.serverPublicKey);
-          const tokenInProgress = await getAuthToken({ serverUrl, roomId });
 
-          return { ...fetchedInfo, token: tokenInProgress || undefined };
+          return fetchedInfo;
         } catch (e) {
           window?.log?.warn('failed to fetch roominfos for room', roomId);
           return null;
@@ -192,12 +186,10 @@ const getCompactPollRequest = async (
           lastMessageFetchedServerID,
           lastFetchTimestamp,
           lastMessageDeletedServerID,
-          token,
           roomId,
         } = validRoomInfos;
         const roomRequestContent: Record<string, any> = {
           room_id: roomId,
-          auth_token: token || '',
         };
         roomRequestContent.from_deletion_server_id = lastMessageDeletedServerID;
         if (Date.now() - (lastFetchTimestamp || 0) <= DURATION.DAYS * 7) {
@@ -269,31 +261,9 @@ async function sendOpenGroupV2RequestCompactPoll(
     window?.log?.info('got empty compactPollResults');
     return null;
   }
-  // get all roomIds which needs a refreshed token
-  const roomWithTokensToRefresh = results.filter(ret => ret.statusCode === 401).map(r => r.roomId);
 
   // this holds only the poll results which are valid
   const roomPollValidResults = results.filter(ret => ret.statusCode === 200);
-
-  if (roomWithTokensToRefresh?.length) {
-    window.log.info('We got those rooms to refresh the token with:', roomWithTokensToRefresh);
-    await Promise.all(
-      roomWithTokensToRefresh.map(async roomId => {
-        const roomDetails = await getV2OpenGroupRoomByRoomId({
-          serverUrl,
-          roomId,
-        });
-        if (!roomDetails) {
-          return;
-        }
-        roomDetails.token = undefined;
-        // we might need to retry doing the request here, but how to make sure we don't retry indefinetely?
-        await saveV2OpenGroupRoom(roomDetails);
-        // we should not await for that. We have a only one at a time logic on a per room basis
-        await getAuthToken({ serverUrl, roomId });
-      })
-    );
-  }
 
   return roomPollValidResults;
 }
