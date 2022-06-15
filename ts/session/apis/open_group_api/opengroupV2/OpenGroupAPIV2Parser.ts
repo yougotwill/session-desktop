@@ -34,11 +34,13 @@ export const parseMemberCount = (onionResult: any): number | undefined => {
   return undefined;
 };
 
-export const parseRooms = (onionResult: any): undefined | Array<OpenGroupV2Info> => {
-  if (!onionResult) {
+export const parseRooms = (
+  jsonResult?: Record<string, any>
+): undefined | Array<OpenGroupV2Info> => {
+  if (!jsonResult) {
     return undefined;
   }
-  const rooms = onionResult?.result?.rooms as Array<any>;
+  const rooms = jsonResult?.body?.rooms as Array<any>;
   if (!rooms || !rooms.length) {
     window?.log?.warn('getAllRoomInfos failed invalid infos');
     return [];

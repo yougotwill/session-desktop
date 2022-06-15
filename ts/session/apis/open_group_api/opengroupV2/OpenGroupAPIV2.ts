@@ -240,24 +240,22 @@ export const deleteMessageByServerIds = async (
 };
 
 export const getAllRoomInfos = async (roomInfos: OpenGroupV2Room) => {
-  // room should not be required here
-  const request: OpenGroupV2Request = {
+  const res = await sendJsonViaOnionV4ToNonSnode({
+    blinded: false,
+    endpoint: '/legacy/rooms',
     method: 'GET',
-    room: roomInfos.roomId,
-    server: roomInfos.serverUrl,
-    endpoint: 'rooms',
-    serverPublicKey: roomInfos.serverPublicKey,
-    useV4: false,
-  };
-  const result = await exports.sendApiV2Request(request);
-  const statusCode = parseStatusCodeFromOnionRequest(result);
+    serverPubkey: roomInfos.serverPublicKey,
+    stringifiedBody: null,
+    abortSignal: new AbortController().signal,
+    serverUrl: roomInfos.serverUrl,
+  });
 
-  if (statusCode !== 200) {
-    window?.log?.warn('getAllRoomInfos failed invalid status code');
-    return;
+  if (res?.status_code === 200) {
+    return parseRooms(res);
   }
 
-  return parseRooms(result);
+  window?.log?.warn('getAllRoomInfos failed invalid status code:', res?.status_code);
+  return;
 };
 
 /**
