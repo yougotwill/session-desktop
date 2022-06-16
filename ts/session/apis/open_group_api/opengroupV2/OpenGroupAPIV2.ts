@@ -13,7 +13,7 @@ import { isOpenGroupV2Request } from '../../file_server_api/FileServerApiV2';
 import pRetry from 'p-retry';
 import { callUtilsWorker } from '../../../../webworker/workers/util_worker_interface';
 import {
-  capabilitiesFetchAllForRooms,
+  capabilitiesFetchForServer,
   capabilitiesListHasBlindEnabled,
 } from '../sogsv3/sogsV3Capabilities';
 import { uniq } from 'lodash';
@@ -69,7 +69,7 @@ const getDestinationPubKey = async (
  * This send function is to be used for all non polling stuff.
  * This function can be used for OpengroupV2 request OR File Server V2 request
  * Download and upload of attachments for instance, but most of the logic happens in
- * the compact_poll endpoint.
+ * the batch_poll endpoint.
  *
  */
 export async function sendApiV2Request(
@@ -150,13 +150,15 @@ export async function sendApiV2Request(
  */
 export async function openGroupV2GetRoomInfo({
   serverUrl,
+  serverPublicKey,
   roomId,
 }: {
-  roomId: string;
+  serverPublicKey: string;
   serverUrl: string;
+  roomId: string;
 }): Promise<OpenGroupV2Info | null> {
   const abortSignal = new AbortController().signal;
-  const caps = await capabilitiesFetchAllForRooms(serverUrl, new Set([roomId]), abortSignal);
+  const caps = await capabilitiesFetchForServer(serverUrl, serverPublicKey, abortSignal);
 
   if (!caps || caps.length === 0) {
     window?.log?.warn('getInfo failed because capabilities failed');
@@ -164,7 +166,7 @@ export async function openGroupV2GetRoomInfo({
   }
 
   const hasBlindingEnabled = capabilitiesListHasBlindEnabled(caps);
-  window?.log?.info(`openGroupV2GetRoomInfo capabilities for  ${serverUrl}:${roomId}: ${caps}`);
+  window?.log?.info(`openGroupV2GetRoomInfo capabilities for  ${serverUrl}: ${caps}`);
 
   const result = await sendJsonViaOnionV4ToNonSnode({
     blinded: hasBlindingEnabled,

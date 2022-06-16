@@ -1,23 +1,18 @@
 import _, { isArray, isEmpty, isObject } from 'lodash';
 import { sendJsonViaOnionV4ToNonSnode } from '../../../onions/onionSend';
-import { getAllValidRoomInfos, getOurOpenGroupHeaders } from '../opengroupV2/OpenGroupPollingUtils';
+import { getOurOpenGroupHeaders } from '../opengroupV2/OpenGroupPollingUtils';
 import { parseStatusCodeFromOnionRequestV4 } from '../opengroupV2/OpenGroupAPIV2Parser';
 import { OpenGroupV2Room } from '../../../../data/opengroups';
 import { AbortSignal } from 'abort-controller';
 
-export const capabilitiesFetchAllForRooms = async (
+export const capabilitiesFetchForServer = async (
   serverUrl: string,
-  rooms: Set<string>,
+  serverPubKey: string,
   abortSignal: AbortSignal
 ): Promise<Array<string> | null> => {
-  const allValidRoomInfos = await getAllValidRoomInfos(serverUrl, rooms);
-  if (!allValidRoomInfos?.length) {
-    window?.log?.info('getCapabilityFetchRequest: no valid roominfos got.');
-    return null;
-  }
   const endpoint = '/capabilities';
   const method = 'GET';
-  const serverPubkey = allValidRoomInfos[0].serverPublicKey;
+  const serverPubkey = serverPubKey;
   const blinded = true; // for capabilities, blinding is always enabled as the request will fail if the server requires blinding
   const capabilityHeaders = await getOurOpenGroupHeaders(
     serverPubkey,

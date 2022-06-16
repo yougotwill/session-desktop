@@ -595,7 +595,6 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
         }
 
         const openGroup = getV2OpenGroupRoom(this.id);
-
         // send with blinding if we need to
         await getMessageQueue().sendToOpenGroupV2(
           chatMessageOpenGroupV2,

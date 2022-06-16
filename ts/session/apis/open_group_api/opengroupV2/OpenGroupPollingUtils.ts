@@ -79,9 +79,7 @@ export const getAllValidRoomInfos = async (
             return null;
           }
           allServerPubKeys.push(fetchedInfo.serverPublicKey);
-          if (!fetchedInfo.serverPublicKey) {
-            debugger;
-          }
+
           return fetchedInfo;
         } catch (e) {
           window?.log?.warn('failed to fetch roominfos for room', roomId);

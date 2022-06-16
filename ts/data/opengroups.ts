@@ -1,4 +1,4 @@
-import { isEqual } from 'lodash';
+import { isNumber } from 'lodash';
 import { ConversationCollection } from '../models/conversation';
 import { OpenGroupRequestCommonType } from '../session/apis/open_group_api/opengroupV2/ApiUtil';
 import { isOpenGroupV2 } from '../session/apis/open_group_api/utils/OpenGroupUtils';
@@ -125,20 +125,29 @@ export async function saveV2OpenGroupRoom(room: OpenGroupV2Room): Promise<void> 
 
   if (!found) {
     await channels.saveV2OpenGroupRoom(room);
+    cachedRooms = cachedRooms || new Array();
+    cachedRooms?.push(room);
     return;
   }
 
   // because isEqual is funky with pointer being changed, we have to do this for now
   if (JSON.stringify(room) !== JSON.stringify(found)) {
     await channels.saveV2OpenGroupRoom(room);
+    const foundIndex =
+      room.conversationId && cachedRooms?.findIndex(m => m.conversationId === room.conversationId);
+    if (isNumber(foundIndex) && foundIndex > -1 && cachedRooms) {
+      cachedRooms[foundIndex] = room;
+    }
     return;
   }
 }
 
 export async function removeV2OpenGroupRoom(conversationId: string): Promise<void> {
-  throwIfNotLoaded();
-  if (cachedRooms?.find(m => m.conversationId === conversationId)) {
-    await channels.removeV2OpenGroupRoom(conversationId);
+  await channels.removeV2OpenGroupRoom(conversationId);
+  const foundIndex =
+    conversationId && cachedRooms?.findIndex(m => m.conversationId === conversationId);
+  if (isNumber(foundIndex) && foundIndex > -1 && cachedRooms) {
+    cachedRooms.splice(foundIndex, 1);
   }
 }
 

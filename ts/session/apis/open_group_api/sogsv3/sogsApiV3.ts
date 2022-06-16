@@ -12,6 +12,8 @@ import { handleCapabilities } from './sogsCapabilities';
 import { getConversationController } from '../../../conversations';
 import { ConversationModel } from '../../../../models/conversation';
 import { filterDuplicatesFromDbAndIncomingV4 } from '../opengroupV2/SogsFilterDuplicate';
+import { capabilitiesListHasBlindEnabled } from './sogsV3Capabilities';
+import { callUtilsWorker } from '../../../../webworker/workers/util_worker_interface';
 
 /**
  * Get the convo matching those criteria and make sure it is an opengroup convo, or return null.

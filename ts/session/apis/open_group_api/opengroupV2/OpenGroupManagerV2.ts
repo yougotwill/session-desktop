@@ -180,7 +180,7 @@ export class OpenGroupManagerV2 {
       // save the pubkey to the db right now, the request for room Info
       // will need it and access it from the db
       await saveV2OpenGroupRoom(room);
-      const roomInfos = await openGroupV2GetRoomInfo({ roomId, serverUrl });
+      const roomInfos = await openGroupV2GetRoomInfo({ serverPublicKey, serverUrl, roomId });
       if (!roomInfos) {
         throw new Error('Invalid open group roomInfo result');
       }
