@@ -55,7 +55,7 @@ import { encryptProfile } from '../util/crypto/profileEncrypter';
 export const getCompleteUrlForV2ConvoId = async (convoId: string) => {
   if (convoId.match(openGroupV2ConversationIdRegex)) {
     // this is a v2 group, just build the url
-    const roomInfos = await getV2OpenGroupRoom(convoId);
+    const roomInfos = getV2OpenGroupRoom(convoId);
     if (roomInfos) {
       const fullUrl = getCompleteUrlFromRoom(roomInfos);
 

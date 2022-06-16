@@ -82,7 +82,6 @@ export async function getOpenGroupHeaders(data: {
     'X-SOGS-Nonce': fromUInt8ArrayToBase64(nonce),
     'X-SOGS-Signature': fromUInt8ArrayToBase64(signature),
   };
-  console.warn('headers', headers);
 
   return headers;
 }

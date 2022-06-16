@@ -1,3 +1,4 @@
+import { isEqual } from 'lodash';
 import { ConversationCollection } from '../models/conversation';
 import { OpenGroupRequestCommonType } from '../session/apis/open_group_api/opengroupV2/ApiUtil';
 import { isOpenGroupV2 } from '../session/apis/open_group_api/utils/OpenGroupUtils';
@@ -19,6 +20,7 @@ export type OpenGroupV2Room = {
   /** the linked ConversationModel.id */
   conversationId?: string;
   lastMessageFetchedServerID?: number;
+  maxMessageFetchedSeqNo?: number;
   /**
    * This value represents the rowId of the last message deleted. Not the id of the last message ID
    */
@@ -34,16 +36,15 @@ export type OpenGroupV2Room = {
   capabilities?: Array<string>;
 };
 
-export async function getAllV2OpenGroupRooms(): Promise<Map<string, OpenGroupV2Room> | undefined> {
-  const opengroupsv2Rooms = (await channels.getAllV2OpenGroupRooms()) as Array<OpenGroupV2Room>;
-
-  if (!opengroupsv2Rooms) {
+export function getAllV2OpenGroupRooms(): Map<string, OpenGroupV2Room> | undefined {
+  throwIfNotLoaded();
+  if (!cachedRooms) {
     return undefined;
   }
 
   const results = new Map<string, OpenGroupV2Room>();
 
-  opengroupsv2Rooms.forEach(o => {
+  cachedRooms.forEach(o => {
     if (o.conversationId) {
       results.set(o.conversationId, o);
     }
@@ -52,60 +53,93 @@ export async function getAllV2OpenGroupRooms(): Promise<Map<string, OpenGroupV2R
   return results;
 }
 
-export async function getV2OpenGroupRoom(
-  conversationId: string
-): Promise<OpenGroupV2Room | undefined> {
+// avoid doing fetches and write too often from the db by using a cache on the renderer side.
+let cachedRooms: Array<OpenGroupV2Room> | null = null;
+
+export async function opengroupRoomsLoad() {
+  if (cachedRooms !== null) {
+    return;
+  }
+  const loadedFromDB = (await channels.getAllV2OpenGroupRooms()) as
+    | Array<OpenGroupV2Room>
+    | undefined;
+
+  if (loadedFromDB) {
+    cachedRooms = new Array();
+    loadedFromDB.forEach(r => {
+      try {
+        cachedRooms?.push(JSON.parse((r as any).json));
+      } catch (e) {
+        window.log.warn(e.message);
+      }
+    });
+    return;
+  }
+  cachedRooms = [];
+}
+
+function throwIfNotLoaded() {
+  if (cachedRooms === null) {
+    throw new Error('opengroupRoomsLoad must be called first');
+  }
+}
+
+export function getV2OpenGroupRoom(conversationId: string): OpenGroupV2Room | undefined {
+  throwIfNotLoaded();
   if (!isOpenGroupV2(conversationId)) {
     throw new Error(`getV2OpenGroupRoom: this is not a valid v2 id: ${conversationId}`);
   }
-  const opengroupv2Rooms = await channels.getV2OpenGroupRoom(conversationId);
 
-  if (!opengroupv2Rooms) {
-    return undefined;
-  }
-
-  return opengroupv2Rooms;
+  const found = cachedRooms?.find(m => m.conversationId === conversationId);
+  return found || undefined;
 }
-
-export async function getV2OpenGroupRoomsByServerUrl(
+export function getV2OpenGroupRoomsByServerUrl(
   serverUrl: string
-): Promise<Array<OpenGroupV2Room> | undefined> {
-  // do validation check for serverUrl
-  const opengroupv2Rooms = channels.getV2OpenGroupRoomsByServerUrl(serverUrl);
-  if (!opengroupv2Rooms) {
-    return undefined;
-  }
+): Array<OpenGroupV2Room> | undefined {
+  throwIfNotLoaded();
+  const found = cachedRooms?.filter(m => m.serverUrl === serverUrl);
 
-  return opengroupv2Rooms;
+  return found || undefined;
 }
 
-export async function getV2OpenGroupRoomByRoomId(
+export function getV2OpenGroupRoomByRoomId(
   roomInfos: OpenGroupRequestCommonType
-): Promise<OpenGroupV2Room | undefined> {
-  const room = await channels.getV2OpenGroupRoomByRoomId(roomInfos.serverUrl, roomInfos.roomId);
+): OpenGroupV2Room | undefined {
+  throwIfNotLoaded();
+  const found = cachedRooms?.find(
+    m => m.roomId === roomInfos.roomId && m.serverUrl === roomInfos.serverUrl
+  );
 
-  if (!room) {
-    return undefined;
-  }
-
-  return room;
+  return found || undefined;
 }
 
-export async function saveV2OpenGroupRoom(opengroupsv2Room: OpenGroupV2Room): Promise<void> {
-  if (
-    !opengroupsv2Room.conversationId ||
-    !opengroupsv2Room.roomId ||
-    !opengroupsv2Room.serverUrl ||
-    !opengroupsv2Room.serverPublicKey
-  ) {
+export async function saveV2OpenGroupRoom(room: OpenGroupV2Room): Promise<void> {
+  throwIfNotLoaded();
+  if (!room.conversationId || !room.roomId || !room.serverUrl || !room.serverPublicKey) {
     throw new Error('Cannot save v2 room, invalid data');
   }
 
-  await channels.saveV2OpenGroupRoom(opengroupsv2Room);
+  const found =
+    (room.conversationId && cachedRooms?.find(m => m.conversationId === room.conversationId)) ||
+    undefined;
+
+  if (!found) {
+    await channels.saveV2OpenGroupRoom(room);
+    return;
+  }
+
+  if (!isEqual(room, found)) {
+    await channels.saveV2OpenGroupRoom(room);
+  } else {
+    window.log.info('skipping saveV2OpenGroupRoom, values are the same');
+  }
 }
 
 export async function removeV2OpenGroupRoom(conversationId: string): Promise<void> {
-  await channels.removeV2OpenGroupRoom(conversationId);
+  throwIfNotLoaded();
+  if (cachedRooms?.find(m => m.conversationId === conversationId)) {
+    await channels.removeV2OpenGroupRoom(conversationId);
+  }
 }
 
 export async function getAllOpenGroupV2Conversations(): Promise<ConversationCollection> {

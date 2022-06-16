@@ -52,8 +52,7 @@ export const handleCapabilities = async (
   // get all v2OpenGroup rooms with the matching serverUrl and set the capabilities.
   // TODO: implement - update capabilities. Unsure whether to store in DB or save to instance of this obj.
 
-  // FIXME to cache and avoid writing if no changes
-  const rooms = await getV2OpenGroupRoomsByServerUrl(serverUrl);
+  const rooms = getV2OpenGroupRoomsByServerUrl(serverUrl);
 
   if (!rooms || !rooms.length) {
     window?.log?.error('handleCapabilities - Found no groups with matching server url');
@@ -72,10 +71,6 @@ export const handleCapabilities = async (
       // updating the db values for the open group room
       const roomUpdate = { ...room, capabilities };
       await saveV2OpenGroupRoom(roomUpdate);
-
-      window?.log?.info(
-        `batchPoll handleCapabilities for ${room.serverUrl}:${room.roomId}: ${capabilities}`
-      );
 
       // updating values in the conversation
       // generate blindedPK for
@@ -105,7 +100,7 @@ export const handleCapabilities = async (
           return;
         }
 
-        throw new Error('yo todo');
+        console.error('yo todo');
         // await conversationToAddBlindedKey?.set({
         //   blindedPubKey,
         // });

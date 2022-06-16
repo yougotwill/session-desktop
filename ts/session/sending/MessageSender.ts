@@ -23,6 +23,7 @@ import { EmptySwarmError } from '../utils/errors';
 import ByteBuffer from 'bytebuffer';
 import { getHasSeenHF190, getHasSeenHF191 } from '../apis/snode_api/hfHandling';
 import { sendMessageOnionV4 } from '../apis/open_group_api/sogsv3/sogsV3SendMessage';
+import { AbortController } from 'abort-controller';
 
 const DEFAULT_CONNECTIONS = 1;
 

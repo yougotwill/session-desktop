@@ -118,7 +118,8 @@ export class OpenGroupManagerV2 {
       return;
     }
     const allConvos = await getAllOpenGroupV2Conversations();
-    let allRoomInfos = await getAllV2OpenGroupRooms();
+
+    let allRoomInfos = getAllV2OpenGroupRooms();
 
     // this is time for some cleanup!
     // We consider the conversations are our source-of-truth,
@@ -141,7 +142,7 @@ export class OpenGroupManagerV2 {
       );
     }
     // refresh our roomInfos list
-    allRoomInfos = await getAllV2OpenGroupRooms();
+    allRoomInfos = getAllV2OpenGroupRooms();
     if (allRoomInfos) {
       this.addRoomToPolledRooms([...allRoomInfos.values()]);
     }

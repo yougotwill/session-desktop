@@ -177,7 +177,7 @@ export class ConversationController {
       // open group v2
     } else if (conversation.isOpenGroupV2()) {
       window?.log?.info('leaving open group v2', conversation.id);
-      const roomInfos = await getV2OpenGroupRoom(conversation.id);
+      const roomInfos = getV2OpenGroupRoom(conversation.id);
       if (roomInfos) {
         getOpenGroupManager().removeRoomFromPolledRooms(roomInfos);
 

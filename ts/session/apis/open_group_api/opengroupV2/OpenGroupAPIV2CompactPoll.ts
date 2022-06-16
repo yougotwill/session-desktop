@@ -6,6 +6,7 @@ import { sendViaOnionToNonSnode } from '../../../onions/onionSend';
 import { OpenGroupMessageV2 } from './OpenGroupMessageV2';
 import { downloadPreviewOpenGroupV2 } from './OpenGroupAPIV2';
 import { DURATION } from '../../../constants';
+import { AbortSignal } from 'abort-controller';
 
 const COMPACT_POLL_ENDPOINT = 'compact_poll';
 
@@ -85,7 +86,7 @@ const getAllValidRoomInfos = async (
     await Promise.all(
       [...rooms].map(async roomId => {
         try {
-          const fetchedInfo = await getV2OpenGroupRoomByRoomId({
+          const fetchedInfo = getV2OpenGroupRoomByRoomId({
             serverUrl,
             roomId,
           });

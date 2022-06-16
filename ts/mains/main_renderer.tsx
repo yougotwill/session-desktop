@@ -17,6 +17,7 @@ import { SessionInboxView } from '../components/SessionInboxView';
 import { deleteAllLogs } from '../node/logs';
 import ReactDOM from 'react-dom';
 import React from 'react';
+import { opengroupRoomsLoad } from '../data/opengroups';
 // tslint:disable: max-classes-per-file
 
 // Globally disable drag and drop
@@ -169,7 +170,11 @@ Storage.onready(async () => {
   try {
     await AttachmentDownloads.initAttachmentPaths();
 
-    await Promise.all([getConversationController().load(), BlockedNumberController.load()]);
+    await Promise.all([
+      getConversationController().load(),
+      BlockedNumberController.load(),
+      opengroupRoomsLoad(),
+    ]);
   } catch (error) {
     window.log.error(
       'main_start.js: ConversationController failed to load:',

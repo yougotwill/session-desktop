@@ -29,7 +29,7 @@ export async function initiateOpenGroupUpdate(
     const blobAvatarAlreadyScaled = await urlToBlob(avatar.objectUrl);
 
     const dataResized = await blobAvatarAlreadyScaled.arrayBuffer();
-    const roomInfos = await getV2OpenGroupRoom(convo.id);
+    const roomInfos = getV2OpenGroupRoom(convo.id);
     if (!roomInfos || !dataResized.byteLength) {
       return false;
     }

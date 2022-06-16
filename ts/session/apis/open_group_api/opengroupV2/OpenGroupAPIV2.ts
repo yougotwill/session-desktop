@@ -17,6 +17,7 @@ import {
   capabilitiesListHasBlindEnabled,
 } from '../sogsv3/sogsV3Capabilities';
 import { uniq } from 'lodash';
+import { AbortController } from 'abort-controller';
 
 // used to be overwritten by testing
 export const getMinTimeout = () => 1000;
@@ -46,7 +47,7 @@ const getDestinationPubKey = async (
 ): Promise<string> => {
   if (FSv2.isOpenGroupV2Request(request)) {
     if (!request.serverPublicKey) {
-      const roomDetails = await getV2OpenGroupRoomByRoomId({
+      const roomDetails = getV2OpenGroupRoomByRoomId({
         serverUrl: request.server,
         roomId: request.room,
       });
@@ -120,7 +121,7 @@ export async function sendApiV2Request(
     // Note that a 403 has a different meaning; it means that
     // we provided a valid token but it doesn't have a high enough permission level for the route in question.
     if (statusCode === 401) {
-      const roomDetails = await getV2OpenGroupRoomByRoomId({
+      const roomDetails = getV2OpenGroupRoomByRoomId({
         serverUrl: request.server,
         roomId: request.room,
       });

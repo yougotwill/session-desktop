@@ -107,7 +107,7 @@ const getActiveOpenGroupV2CompleteUrls = async (
 
   const urls = await Promise.all(
     openGroupsV2ConvoIds.map(async opengroup => {
-      const roomInfos = await getV2OpenGroupRoom(opengroup);
+      const roomInfos = getV2OpenGroupRoom(opengroup);
       if (roomInfos) {
         return getCompleteUrlFromRoom(roomInfos);
       }

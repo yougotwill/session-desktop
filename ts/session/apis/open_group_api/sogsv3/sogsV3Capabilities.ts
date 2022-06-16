@@ -3,6 +3,7 @@ import { sendJsonViaOnionV4ToNonSnode } from '../../../onions/onionSend';
 import { getAllValidRoomInfos, getOurOpenGroupHeaders } from '../opengroupV2/OpenGroupPollingUtils';
 import { parseStatusCodeFromOnionRequestV4 } from '../opengroupV2/OpenGroupAPIV2Parser';
 import { OpenGroupV2Room } from '../../../../data/opengroups';
+import { AbortSignal } from 'abort-controller';
 
 export const capabilitiesFetchAllForRooms = async (
   serverUrl: string,

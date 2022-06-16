@@ -288,17 +288,21 @@ export class OpenGroupServerPoller {
         },
       });
 
+      const convoId = getOpenGroupV2ConversationId(this.serverUrl, roomId);
+      const roomInfos = getV2OpenGroupRoom(convoId);
+
       // messages
       subrequestOptions.push({
         type: 'messages',
         messages: {
           roomId,
+          sinceSeqNo: roomInfos?.maxMessageFetchedSeqNo,
         },
       });
     });
 
     // if (this.serverUrl) {
-    //   const rooms = await getV2OpenGroupRoomsByServerUrl(this.serverUrl);
+    //   const rooms = getV2OpenGroupRoomsByServerUrl(this.serverUrl);
     //   if (rooms?.length) {
     //     if (roomHasBlindEnabled(rooms[0])) {
     //       // This only works for servers with blinding capabilities
@@ -396,7 +400,7 @@ const handleDeletions = async (
     window?.log?.warn('handleDeletions failed:', e);
   } finally {
     try {
-      const roomInfos = await getV2OpenGroupRoom(conversationId);
+      const roomInfos = getV2OpenGroupRoom(conversationId);
 
       if (roomInfos && roomInfos.lastMessageDeletedServerID !== maxDeletedId) {
         roomInfos.lastMessageDeletedServerID = maxDeletedId;
@@ -412,7 +416,7 @@ export const getRoomAndUpdateLastFetchTimestamp = async (
   conversationId: string,
   newMessages: Array<OpenGroupMessageV2 | OpenGroupMessageV4>
 ) => {
-  const roomInfos = await getV2OpenGroupRoom(conversationId);
+  const roomInfos = getV2OpenGroupRoom(conversationId);
   if (!roomInfos || !roomInfos.serverUrl || !roomInfos.roomId) {
     throw new Error(`No room for convo ${conversationId}`);
   }

@@ -15,6 +15,7 @@ import { Snode } from '../../data/data';
 import { decodeV4Response } from './onionv4';
 import { getOurOpenGroupHeaders } from '../apis/open_group_api/opengroupV2/OpenGroupPollingUtils';
 import { addJsonContentTypeToHeaders } from '../apis/open_group_api/sogsv3/sogsV3SendMessage';
+import { AbortSignal } from 'abort-controller';
 
 export type OnionFetchOptions = {
   method: string;

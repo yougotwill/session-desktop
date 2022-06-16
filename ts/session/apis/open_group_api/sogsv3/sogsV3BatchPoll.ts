@@ -60,7 +60,7 @@ export const sogsBatchPoll = async (
   // getting server pk for room
   const [roomId] = roomInfos;
   // FIXME we should cache those and replace all of those calls with the cached calls
-  const fetchedRoomInfo = await getV2OpenGroupRoomByRoomId({
+  const fetchedRoomInfo = getV2OpenGroupRoomByRoomId({
     serverUrl,
     roomId,
   });
@@ -93,6 +93,7 @@ export type OpenGroupBatchRow = {
   type: SubrequestOptionType;
   messages?: {
     roomId: string;
+    sinceSeqNo?: number;
   };
   pollInfo?: {
     roomId: string;
@@ -115,10 +116,13 @@ const makeBatchRequestPayload = (options: OpenGroupBatchRow): BatchSubRequest | 
 
   if (options.type === 'messages' && options.messages) {
     // TODO: allow more options for path building
+
     return {
       method: GET_METHOD,
-      // path: `/room/${options.messages.roomId}/messages/recent?limit=25`,
-      path: `/room/${options.messages.roomId}/messages/recent`,
+      path:
+        options.messages.sinceSeqNo === undefined
+          ? `/room/${options.messages.roomId}/messages/recent?limit=250`
+          : `/room/${options.messages.roomId}/messages/since/${options.messages.sinceSeqNo}`,
     };
   }
 

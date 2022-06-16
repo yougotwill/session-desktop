@@ -107,6 +107,7 @@ const handleNewMessagesResponseV4 = async (
       return;
     }
     const convoId = getOpenGroupV2ConversationId(serverUrl, roomId);
+
     const roomInfos = await getRoomAndUpdateLastFetchTimestamp(convoId, messages);
     if (!roomInfos) {
       return;
@@ -116,8 +117,8 @@ const handleNewMessagesResponseV4 = async (
 
     const incomingMessageIds = compact(newMessages.map(n => n.id));
     const maxNewMessageId = Math.max(...incomingMessageIds);
-    // TODO filter out duplicates ?
-
+    const incomingMessageSeqNo = compact(newMessages.map(n => n.seqno));
+    const maxNewMessageSeqNo = Math.max(...incomingMessageSeqNo);
     const roomDetails: OpenGroupRequestCommonType = pick(roomInfos, 'serverUrl', 'roomId');
 
     // tslint:disable-next-line: prefer-for-of
@@ -131,7 +132,12 @@ const handleNewMessagesResponseV4 = async (
     }
 
     // we need to update the timestamp even if we don't have a new MaxMessageServerId
-    roomInfos.lastMessageFetchedServerID = maxNewMessageId;
+    if (!isNaN(maxNewMessageId)) {
+      roomInfos.lastMessageFetchedServerID = maxNewMessageId;
+    }
+    if (!isNaN(maxNewMessageSeqNo)) {
+      roomInfos.maxMessageFetchedSeqNo = maxNewMessageSeqNo;
+    }
     roomInfos.lastFetchTimestamp = Date.now();
     // TODO: save capabilities to the room in database. (or in cache if possible)
     await saveV2OpenGroupRoom(roomInfos);
@@ -165,7 +171,6 @@ export const handleBatchPollResults = async (
   );
 
   if (batchPollResults && isArray(batchPollResults.body)) {
-    // TODO: typing for subrequest result, but may be annoying to do.
     await Promise.all(
       batchPollResults.body.map(async (subResponse: any, index: number) => {
         // using subreqOptions as request type lookup,

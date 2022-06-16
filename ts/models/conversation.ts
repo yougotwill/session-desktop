@@ -594,8 +594,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
           throw new Error('Could not find this room in db');
         }
 
-        const openGroup = await getV2OpenGroupRoom(this.id);
-        console.warn({ openGroup });
+        const openGroup = getV2OpenGroupRoom(this.id);
 
         // send with blinding if we need to
         await getMessageQueue().sendToOpenGroupV2(
@@ -731,7 +730,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
 
     console.warn({ groupUrl });
 
-    const roomInfo = await getV2OpenGroupRoom(groupUrl);
+    const roomInfo = getV2OpenGroupRoom(groupUrl);
 
     if (!roomInfo) {
       window?.log?.error('Could not find room with matching server url');

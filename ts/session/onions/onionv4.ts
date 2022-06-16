@@ -3,24 +3,6 @@ import { toNumber } from 'lodash';
 import { concatUInt8Array } from '../crypto';
 
 export const encodeV4Request = (requestInfo: { body?: any }): Uint8Array => {
-  // for reference
-  //   {
-  //     "method": "POST",
-  //     "body": "[{\"method\":\"GET\",\"path\":\"/capabilities\"},{\"method\":\"GET\",\"path\":\"/room/omg/messages/recent?limit=25\"}]",
-  //     "endpoint": "/batch",
-  //     "headers": {
-  //         "X-SOGS-Pubkey": "0020be78d4c4755e6595cb240f404bc245138e27d6f06b9f6d47e7328af3d6d95d",
-  //         "X-SOGS-Timestamp": "1649595222",
-  //         "X-SOGS-Nonce": "5AJvZK87oSoPoiuFQKy7xA==",
-  //         "X-SOGS-Signature": "z6DEbF83e3VrYk+gozizZT6Wb2Lp2QPscUq2V2MdFO+ZV8dsdM5wCeAxNCHgpqdTs160Boj9ygYjxhQLe6ERAA==",
-  //         "Content-Type": "application/json"
-  //     }
-  // }
-
-  // TODO: we need to remove the leading forward slash for non-legacy endpoints.
-  // legacy needs the leading slash.
-  // requestInfo.endpoint =
-  //   requestInfo.endpoint.charAt(0) === '/' ? requestInfo.endpoint.substr(1) : requestInfo.endpoint;
   const { body } = requestInfo;
   const requestInfoData = from_string(JSON.stringify(requestInfo));
   const prefixData = from_string(`l${requestInfoData.length}:`);

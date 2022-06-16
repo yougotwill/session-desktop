@@ -41,9 +41,7 @@ export const handleOpenGroupV4Message = async (
     // seqno,
     session_id,
   } = message;
-  console.warn({ message, capabilities });
 
-  // TODO: check that these are the correct equivalent fields
   await handleOpenGroupMessage(roomInfos, data, posted, session_id, id);
 };
 

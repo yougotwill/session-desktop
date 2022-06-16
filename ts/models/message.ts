@@ -816,13 +816,13 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
           lokiProfile: UserUtils.getOurProfile(),
           ...uploaded,
         };
-        const roomInfos = await getV2OpenGroupRoom(conversation.id);
+        const roomInfos = getV2OpenGroupRoom(conversation.id);
         if (!roomInfos) {
           throw new Error('Could not find roomInfos for this conversation');
         }
 
         const openGroupMessage = new OpenGroupVisibleMessage(openGroupParams);
-        const openGroup = await getV2OpenGroupRoom(this.id);
+        const openGroup = getV2OpenGroupRoom(this.id);
 
         return getMessageQueue().sendToOpenGroupV2(
           openGroupMessage,

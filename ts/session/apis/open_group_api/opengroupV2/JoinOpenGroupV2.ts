@@ -66,7 +66,7 @@ async function joinOpenGroupV2(room: OpenGroupV2Room, fromConfigMessage: boolean
   const publicKey = room.serverPublicKey.toLowerCase();
   const prefixedServer = prefixify(serverUrl);
 
-  const alreadyExist = await getV2OpenGroupRoomByRoomId({ serverUrl, roomId });
+  const alreadyExist = getV2OpenGroupRoomByRoomId({ serverUrl, roomId });
   const conversationId = getOpenGroupV2ConversationId(serverUrl, roomId);
   const existingConvo = getConversationController().get(conversationId);
 

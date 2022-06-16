@@ -1,3 +1,4 @@
+import { AbortSignal } from 'abort-controller';
 import { APPLICATION_JSON } from '../../../../types/MIME';
 import { sendJsonViaOnionV4ToNonSnode } from '../../../onions/onionSend';
 import { UserUtils } from '../../../utils';
@@ -25,11 +26,11 @@ export const sendMessageOnionV4 = async (
   abortSignal: AbortSignal,
   message: OpenGroupMessageV2,
   blinded: boolean
-): Promise<OpenGroupMessageV2 | null> => {
+): Promise<OpenGroupMessageV2> => {
   const allValidRoomInfos = await getAllValidRoomInfos(serverUrl, new Set([room]));
   if (!allValidRoomInfos?.length) {
     window?.log?.info('getSendMessageRequest: no valid roominfos got.');
-    return null;
+    throw new Error(`Could not find sogs pubkey of url:${serverUrl}`);
   }
   const endpoint = `/room/${room}/message`;
   const method = 'POST';
@@ -51,7 +52,7 @@ export const sendMessageOnionV4 = async (
   const statusCode = parseStatusCodeFromOnionRequestV4(res);
   if (!statusCode) {
     window?.log?.warn('sendSogsMessageWithOnionV4 Got unknown status code; res:', res);
-    return null;
+    throw new Error(`sendMessageOnionV4: invalid status code: ${statusCode}`);
   }
 
   if (statusCode !== 201) {
