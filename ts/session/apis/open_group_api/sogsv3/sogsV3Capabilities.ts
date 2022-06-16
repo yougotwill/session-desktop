@@ -17,12 +17,12 @@ export const capabilitiesFetchAllForRooms = async (
   const endpoint = '/capabilities';
   const method = 'GET';
   const serverPubkey = allValidRoomInfos[0].serverPublicKey;
-
+  const blinded = true; // for capabilities, blinding is always enabled as the request will fail if the server requires blinding
   const capabilityHeaders = await getOurOpenGroupHeaders(
     serverPubkey,
     endpoint,
     method,
-    true,
+    blinded,
     null
   );
   if (!capabilityHeaders) {
@@ -31,7 +31,7 @@ export const capabilitiesFetchAllForRooms = async (
 
   const result = await sendJsonViaOnionV4ToNonSnode({
     abortSignal,
-    blinded: false,
+    blinded,
     endpoint,
     method,
     serverPubkey,
@@ -71,5 +71,9 @@ export type ParsedMemberCount = {
 };
 
 export function roomHasBlindEnabled(openGroup?: OpenGroupV2Room) {
-  return Boolean(openGroup?.capabilities?.includes('blind'));
+  return capabilitiesListHasBlindEnabled(openGroup?.capabilities);
+}
+
+export function capabilitiesListHasBlindEnabled(caps?: Array<string> | null) {
+  return Boolean(caps?.includes('blind'));
 }

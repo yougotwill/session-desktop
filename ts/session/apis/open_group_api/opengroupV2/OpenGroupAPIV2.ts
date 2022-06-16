@@ -12,7 +12,10 @@ import { parseRooms, parseStatusCodeFromOnionRequest } from './OpenGroupAPIV2Par
 import { isOpenGroupV2Request } from '../../file_server_api/FileServerApiV2';
 import pRetry from 'p-retry';
 import { callUtilsWorker } from '../../../../webworker/workers/util_worker_interface';
-import { capabilitiesFetchAllForRooms } from '../sogsv3/sogsV3Capabilities';
+import {
+  capabilitiesFetchAllForRooms,
+  capabilitiesListHasBlindEnabled,
+} from '../sogsv3/sogsV3Capabilities';
 import { uniq } from 'lodash';
 
 // used to be overwritten by testing
@@ -152,8 +155,18 @@ export async function openGroupV2GetRoomInfo({
   serverUrl: string;
 }): Promise<OpenGroupV2Info | null> {
   const abortSignal = new AbortController().signal;
+  const caps = await capabilitiesFetchAllForRooms(serverUrl, new Set([roomId]), abortSignal);
+
+  if (!caps || caps.length === 0) {
+    window?.log?.warn('getInfo failed because capabilities failed');
+    return null;
+  }
+
+  const hasBlindingEnabled = capabilitiesListHasBlindEnabled(caps);
+  window?.log?.info(`openGroupV2GetRoomInfo capabilities for  ${serverUrl}:${roomId}: ${caps}`);
+
   const result = await sendJsonViaOnionV4ToNonSnode({
-    blinded: false,
+    blinded: hasBlindingEnabled,
     method: 'GET',
     serverUrl,
     endpoint: `/legacy/rooms/${roomId}`,
@@ -170,7 +183,6 @@ export async function openGroupV2GetRoomInfo({
       return null;
     }
 
-    const caps = await capabilitiesFetchAllForRooms(serverUrl, new Set([roomId]), abortSignal);
     const info: OpenGroupV2Info = {
       id,
       name,

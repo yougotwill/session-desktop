@@ -6,6 +6,7 @@ import {
   OpenGroupRequestHeaders,
 } from '../opengroupV2/OpenGroupPollingUtils';
 import { addJsonContentTypeToHeaders } from './sogsV3SendMessage';
+import { AbortSignal } from 'abort-controller';
 
 type BatchFetchRequestOptions = {
   method: 'GET';

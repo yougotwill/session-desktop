@@ -42,8 +42,8 @@ describe('FetchCapabilities', () => {
     });
 
     it('return valid if given two caps ', () => {
-      expect(parseCapabilities({ capabilities: ['blinded', 'sogs'] })).to.be.deep.eq([
-        'blinded',
+      expect(parseCapabilities({ capabilities: ['blind', 'sogs'] })).to.be.deep.eq([
+        'blind',
         'sogs',
       ]);
     });
@@ -51,9 +51,9 @@ describe('FetchCapabilities', () => {
     it('return valid if given two caps, sorted ', () => {
       expect(
         parseCapabilities({
-          capabilities: ['sogs', 'blinded'],
+          capabilities: ['sogs', 'blind'],
         })
-      ).to.be.deep.eq(['blinded', 'sogs']);
+      ).to.be.deep.eq(['blind', 'sogs']);
     });
   });
 

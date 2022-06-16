@@ -10,7 +10,7 @@ import { DecodedResponseBodiesV4 } from '../../../onions/onionv4';
 import { UserUtils } from '../../../utils';
 import { getBlindedPubKey } from './sogsBlinding';
 import { BatchSogsReponse, OpenGroupBatchRow } from './sogsV3BatchPoll';
-import { parseCapabilities } from './sogsV3Capabilities';
+import { capabilitiesListHasBlindEnabled, parseCapabilities } from './sogsV3Capabilities';
 
 /**
  * @param subrequestOptionsLookup list of subrequests used for the batch request (order sensitive)
@@ -73,9 +73,13 @@ export const handleCapabilities = async (
       const roomUpdate = { ...room, capabilities };
       await saveV2OpenGroupRoom(roomUpdate);
 
+      window?.log?.info(
+        `batchPoll handleCapabilities for ${room.serverUrl}:${room.roomId}: ${capabilities}`
+      );
+
       // updating values in the conversation
       // generate blindedPK for
-      if (capabilities.includes('blind') && room.conversationId) {
+      if (capabilitiesListHasBlindEnabled(capabilities) && room.conversationId) {
         // generate blinded PK for the room and save it to the conversation.
         const conversationToAddBlindedKey = await getConversationById(room.conversationId);
 
