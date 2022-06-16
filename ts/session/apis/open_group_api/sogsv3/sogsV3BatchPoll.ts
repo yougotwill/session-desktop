@@ -1,5 +1,5 @@
 import { getV2OpenGroupRoomByRoomId } from '../../../../data/opengroups';
-import _, { isEmpty, isObject } from 'lodash';
+import _, { isEmpty, isNumber, isObject } from 'lodash';
 import { sendViaOnionV4ToNonSnode } from '../../../onions/onionSend';
 import {
   getOurOpenGroupHeaders,
@@ -119,10 +119,9 @@ const makeBatchRequestPayload = (options: OpenGroupBatchRow): BatchSubRequest | 
 
     return {
       method: GET_METHOD,
-      path:
-        options.messages.sinceSeqNo === undefined
-          ? `/room/${options.messages.roomId}/messages/recent?limit=250`
-          : `/room/${options.messages.roomId}/messages/since/${options.messages.sinceSeqNo}`,
+      path: isNumber(options.messages.sinceSeqNo)
+        ? `/room/${options.messages.roomId}/messages/since/${options.messages.sinceSeqNo}`
+        : `/room/${options.messages.roomId}/messages/recent`,
     };
   }
 

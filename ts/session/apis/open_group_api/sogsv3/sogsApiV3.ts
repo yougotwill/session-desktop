@@ -1,4 +1,4 @@
-import _, { compact, isArray, isObject, pick } from 'lodash';
+import _, { compact, isArray, isNumber, isObject, pick } from 'lodash';
 import { saveV2OpenGroupRoom } from '../../../../data/opengroups';
 import { handleOpenGroupV4Message } from '../../../../receiver/opengroup';
 import { OpenGroupRequestCommonType } from '../opengroupV2/ApiUtil';
@@ -132,10 +132,10 @@ const handleNewMessagesResponseV4 = async (
     }
 
     // we need to update the timestamp even if we don't have a new MaxMessageServerId
-    if (!isNaN(maxNewMessageId)) {
+    if (isNumber(maxNewMessageId)) {
       roomInfos.lastMessageFetchedServerID = maxNewMessageId;
     }
-    if (!isNaN(maxNewMessageSeqNo)) {
+    if (isNumber(maxNewMessageSeqNo)) {
       roomInfos.maxMessageFetchedSeqNo = maxNewMessageSeqNo;
     }
     roomInfos.lastFetchTimestamp = Date.now();

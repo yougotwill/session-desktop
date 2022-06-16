@@ -60,12 +60,11 @@ export const filterDuplicatesFromDbAndIncomingV4 = async (
       return { sender: m.session_id as string, serverTimestamp: m.posted };
     })
   );
-  // console.warn('filteredInDb', filteredInDb);
 
   window.log.debug(
     `[perf] filterDuplicatesFromDbAndIncomingV4 took ${Date.now() - start}ms for ${
       newMessages.length
-    } messages;   already duplicates:${filtered.length} `
+    } messages;   after deduplication:${filteredInDb.length} `
   );
   const opengroupMessagesV4Filtered = filteredInDb?.map(f => {
     return newMessages.find(m => m.session_id === f.sender && m.posted === f.serverTimestamp);

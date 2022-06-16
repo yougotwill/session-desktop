@@ -128,10 +128,10 @@ export async function saveV2OpenGroupRoom(room: OpenGroupV2Room): Promise<void> 
     return;
   }
 
-  if (!isEqual(room, found)) {
+  // because isEqual is funky with pointer being changed, we have to do this for now
+  if (JSON.stringify(room) !== JSON.stringify(found)) {
     await channels.saveV2OpenGroupRoom(room);
-  } else {
-    window.log.info('skipping saveV2OpenGroupRoom, values are the same');
+    return;
   }
 }
 
