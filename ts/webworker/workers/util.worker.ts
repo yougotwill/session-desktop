@@ -74,6 +74,10 @@ function fromBase64ToArrayBuffer(base64Str: string) {
   return ByteBuffer.wrap(base64Str, 'base64').toArrayBuffer();
 }
 
+function fromBase64ToUint8Array(base64Str: string) {
+  return new Uint8Array(ByteBuffer.wrap(base64Str, 'base64').toArrayBuffer());
+}
+
 function fromHexToArray(hexStr: string) {
   return new Uint8Array(ByteBuffer.wrap(hexStr, 'hex').toArrayBuffer());
 }

@@ -134,14 +134,15 @@ const handleNewMessagesResponseV4 = async (
     }
 
     // we need to update the timestamp even if we don't have a new MaxMessageServerId
-    if (isNumber(maxNewMessageId)) {
+    if (isNumber(maxNewMessageId) && isFinite(maxNewMessageId)) {
       roomInfos.lastMessageFetchedServerID = maxNewMessageId;
     }
-    if (isNumber(maxNewMessageSeqNo)) {
+    if (isNumber(maxNewMessageSeqNo) && isFinite(maxNewMessageSeqNo)) {
       roomInfos.maxMessageFetchedSeqNo = maxNewMessageSeqNo;
     }
     roomInfos.lastFetchTimestamp = Date.now();
     // TODO: save capabilities to the room in database. (or in cache if possible)
+
     await saveV2OpenGroupRoom(roomInfos);
   } catch (e) {
     window?.log?.warn('handleNewMessages failed:', e);

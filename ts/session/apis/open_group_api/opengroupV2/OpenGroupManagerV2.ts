@@ -1,6 +1,6 @@
 import {
   getAllOpenGroupV2Conversations,
-  getAllV2OpenGroupRooms,
+  getAllV2OpenGroupRoomsMap,
   OpenGroupV2Room,
   removeV2OpenGroupRoom,
   saveV2OpenGroupRoom,
@@ -119,7 +119,7 @@ export class OpenGroupManagerV2 {
     }
     const allConvos = await getAllOpenGroupV2Conversations();
 
-    let allRoomInfos = getAllV2OpenGroupRooms();
+    let allRoomInfos = getAllV2OpenGroupRoomsMap();
 
     // this is time for some cleanup!
     // We consider the conversations are our source-of-truth,
@@ -142,7 +142,7 @@ export class OpenGroupManagerV2 {
       );
     }
     // refresh our roomInfos list
-    allRoomInfos = getAllV2OpenGroupRooms();
+    allRoomInfos = getAllV2OpenGroupRoomsMap();
     if (allRoomInfos) {
       this.addRoomToPolledRooms([...allRoomInfos.values()]);
     }

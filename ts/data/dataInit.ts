@@ -5,10 +5,8 @@ import { channels } from './channels';
 const channelsToMakeForOpengroupV2 = [
   'getAllV2OpenGroupRooms',
   'getV2OpenGroupRoom',
-  'getV2OpenGroupRoomByRoomId',
   'saveV2OpenGroupRoom',
   'removeV2OpenGroupRoom',
-  'getV2OpenGroupRoomsByServerUrl',
   'getAllOpenGroupV2Conversations',
 ];
 

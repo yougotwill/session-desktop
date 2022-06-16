@@ -3438,10 +3438,14 @@ function removeAllClosedGroupEncryptionKeyPairs(groupPublicKey: string) {
  */
 function getAllV2OpenGroupRooms() {
   const rows = assertGlobalInstance()
-    .prepare(`SELECT * FROM ${OPEN_GROUP_ROOMS_V2_TABLE};`)
+    .prepare(`SELECT json FROM ${OPEN_GROUP_ROOMS_V2_TABLE};`)
     .all();
 
-  return rows;
+  if (!rows) {
+    return [];
+  }
+
+  return rows.map(r => jsonToObject(r.json));
 }
 
 function getV2OpenGroupRoom(conversationId: string) {
@@ -3458,38 +3462,6 @@ function getV2OpenGroupRoom(conversationId: string) {
   }
 
   return jsonToObject(row.json);
-}
-
-function getV2OpenGroupRoomByRoomId(serverUrl: string, roomId: string) {
-  const row = assertGlobalInstance()
-    .prepare(
-      `SELECT * FROM ${OPEN_GROUP_ROOMS_V2_TABLE} WHERE serverUrl = $serverUrl AND roomId = $roomId;`
-    )
-    .get({
-      serverUrl,
-      roomId,
-    });
-
-  if (!row) {
-    return null;
-  }
-
-  return jsonToObject(row.json);
-}
-
-function getV2OpenGroupRoomsByServerUrl(serverUrl: string) {
-  const rows = assertGlobalInstance()
-    .prepare(`SELECT json FROM ${OPEN_GROUP_ROOMS_V2_TABLE} WHERE serverUrl = $serverUrl;`)
-    .all({
-      serverUrl,
-    });
-
-  if (!rows) {
-    return null;
-  }
-
-  // return rows;
-  return rows.map(r => jsonToObject(r.json));
 }
 
 function saveV2OpenGroupRoom(opengroupsv2Room: any) {
@@ -3986,9 +3958,7 @@ export const sqlNode = {
 
   // open group v2
   getV2OpenGroupRoom,
-  getV2OpenGroupRoomsByServerUrl,
   saveV2OpenGroupRoom,
   getAllV2OpenGroupRooms,
-  getV2OpenGroupRoomByRoomId,
   removeV2OpenGroupRoom,
 };

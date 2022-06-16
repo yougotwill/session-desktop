@@ -1,4 +1,4 @@
-import { isNumber } from 'lodash';
+import { cloneDeep, isNumber } from 'lodash';
 import { ConversationCollection } from '../models/conversation';
 import { OpenGroupRequestCommonType } from '../session/apis/open_group_api/opengroupV2/ApiUtil';
 import { isOpenGroupV2 } from '../session/apis/open_group_api/utils/OpenGroupUtils';
@@ -36,17 +36,17 @@ export type OpenGroupV2Room = {
   capabilities?: Array<string>;
 };
 
-export function getAllV2OpenGroupRooms(): Map<string, OpenGroupV2Room> | undefined {
-  throwIfNotLoaded();
-  if (!cachedRooms) {
+export function getAllV2OpenGroupRoomsMap(): Map<string, OpenGroupV2Room> | undefined {
+  const localCached = throwIfNotLoaded();
+  if (!localCached) {
     return undefined;
   }
 
   const results = new Map<string, OpenGroupV2Room>();
 
-  cachedRooms.forEach(o => {
+  localCached.forEach(o => {
     if (o.conversationId) {
-      results.set(o.conversationId, o);
+      results.set(o.conversationId, cloneDeep(o));
     }
   });
 
@@ -68,7 +68,7 @@ export async function opengroupRoomsLoad() {
     cachedRooms = new Array();
     loadedFromDB.forEach(r => {
       try {
-        cachedRooms?.push(JSON.parse((r as any).json));
+        cachedRooms?.push(r as any);
       } catch (e) {
         window.log.warn(e.message);
       }
@@ -82,51 +82,51 @@ function throwIfNotLoaded() {
   if (cachedRooms === null) {
     throw new Error('opengroupRoomsLoad must be called first');
   }
+  return cachedRooms;
 }
 
 export function getV2OpenGroupRoom(conversationId: string): OpenGroupV2Room | undefined {
-  throwIfNotLoaded();
+  const localCached = throwIfNotLoaded();
   if (!isOpenGroupV2(conversationId)) {
     throw new Error(`getV2OpenGroupRoom: this is not a valid v2 id: ${conversationId}`);
   }
 
-  const found = cachedRooms?.find(m => m.conversationId === conversationId);
-  return found || undefined;
+  const found = localCached.find(m => m.conversationId === conversationId);
+  return (found && cloneDeep(found)) || undefined;
 }
 export function getV2OpenGroupRoomsByServerUrl(
   serverUrl: string
 ): Array<OpenGroupV2Room> | undefined {
-  throwIfNotLoaded();
-  const found = cachedRooms?.filter(m => m.serverUrl === serverUrl);
+  const localCached = throwIfNotLoaded();
+  const found = localCached.filter(m => m.serverUrl === serverUrl);
 
-  return found || undefined;
+  return (found && cloneDeep(found)) || undefined;
 }
 
 export function getV2OpenGroupRoomByRoomId(
   roomInfos: OpenGroupRequestCommonType
 ): OpenGroupV2Room | undefined {
-  throwIfNotLoaded();
-  const found = cachedRooms?.find(
+  const localCached = throwIfNotLoaded();
+  const found = localCached.find(
     m => m.roomId === roomInfos.roomId && m.serverUrl === roomInfos.serverUrl
   );
 
-  return found || undefined;
+  return (found && cloneDeep(found)) || undefined;
 }
 
 export async function saveV2OpenGroupRoom(room: OpenGroupV2Room): Promise<void> {
-  throwIfNotLoaded();
+  const localCached = throwIfNotLoaded();
   if (!room.conversationId || !room.roomId || !room.serverUrl || !room.serverPublicKey) {
     throw new Error('Cannot save v2 room, invalid data');
   }
 
   const found =
-    (room.conversationId && cachedRooms?.find(m => m.conversationId === room.conversationId)) ||
+    (room.conversationId && localCached.find(m => m.conversationId === room.conversationId)) ||
     undefined;
 
   if (!found) {
     await channels.saveV2OpenGroupRoom(room);
-    cachedRooms = cachedRooms || new Array();
-    cachedRooms?.push(room);
+    localCached.push(cloneDeep(room));
     return;
   }
 
@@ -134,20 +134,21 @@ export async function saveV2OpenGroupRoom(room: OpenGroupV2Room): Promise<void> 
   if (JSON.stringify(room) !== JSON.stringify(found)) {
     await channels.saveV2OpenGroupRoom(room);
     const foundIndex =
-      room.conversationId && cachedRooms?.findIndex(m => m.conversationId === room.conversationId);
-    if (isNumber(foundIndex) && foundIndex > -1 && cachedRooms) {
-      cachedRooms[foundIndex] = room;
+      room.conversationId && localCached.findIndex(m => m.conversationId === room.conversationId);
+    if (isNumber(foundIndex) && foundIndex > -1) {
+      localCached[foundIndex] = cloneDeep(room);
     }
     return;
   }
 }
 
 export async function removeV2OpenGroupRoom(conversationId: string): Promise<void> {
+  const localCached = throwIfNotLoaded();
   await channels.removeV2OpenGroupRoom(conversationId);
   const foundIndex =
-    conversationId && cachedRooms?.findIndex(m => m.conversationId === conversationId);
-  if (isNumber(foundIndex) && foundIndex > -1 && cachedRooms) {
-    cachedRooms.splice(foundIndex, 1);
+    conversationId && localCached.findIndex(m => m.conversationId === conversationId);
+  if (isNumber(foundIndex) && foundIndex > -1) {
+    localCached.splice(foundIndex, 1);
   }
 }
 
