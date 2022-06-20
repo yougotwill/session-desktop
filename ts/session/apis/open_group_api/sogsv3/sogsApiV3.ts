@@ -12,8 +12,8 @@ import { handleCapabilities } from './sogsCapabilities';
 import { getConversationController } from '../../../conversations';
 import { ConversationModel } from '../../../../models/conversation';
 import { filterDuplicatesFromDbAndIncomingV4 } from '../opengroupV2/SogsFilterDuplicate';
-import { capabilitiesListHasBlindEnabled } from './sogsV3Capabilities';
 import { callUtilsWorker } from '../../../../webworker/workers/util_worker_interface';
+import { PubKey } from '../../../types';
 
 /**
  * Get the convo matching those criteria and make sure it is an opengroup convo, or return null.
@@ -116,6 +116,23 @@ const handleNewMessagesResponseV4 = async (
     }
 
     const newMessages = await filterDuplicatesFromDbAndIncomingV4(messages);
+    console.warn('newMessages', newMessages);
+    const sentToWorker = newMessages.map(m => {
+      return {
+        sender: PubKey.cast(m.session_id).key, // we need to keep the prefix if this is a blinded or not pubkey
+        base64EncodedSignature: m.signature,
+        base64EncodedData: m.data,
+      };
+    });
+    const startVerify = Date.now();
+    const signatureValidEncodedData = (await callUtilsWorker(
+      'verifyAllSignatures',
+      sentToWorker
+    )) as Array<string>;
+    const signaturesValidMessages = (signatureValidEncodedData || []).map(validSig =>
+      newMessages.find(m => m.signature === validSig)
+    );
+    window.log.info(`[perf] verifyAllSignatures took ${Date.now() - startVerify}ms.`);
 
     const incomingMessageIds = compact(newMessages.map(n => n.id));
     const maxNewMessageId = Math.max(...incomingMessageIds);

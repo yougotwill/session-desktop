@@ -367,6 +367,7 @@ export async function sendJsonViaOnionV4ToNonSnode(sendOptions: {
     blinded,
     stringifiedBody
   );
+  console.warn('headers', headers);
   if (!headers) {
     return null;
   }

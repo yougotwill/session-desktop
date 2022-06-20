@@ -36,10 +36,16 @@ export const sendMessageOnionV4 = async (
   const method = 'POST';
   const serverPubkey = allValidRoomInfos[0].serverPublicKey;
   const ourKeyPair = await UserUtils.getIdentityKeyPair();
-  const signedMessage = await message.sign(ourKeyPair);
+
+  // if we are sending a blinded message, we have to sign it with the derived keypair
+  // otherwise, we just sign it with our real keypair
+  const signedMessage = blinded
+    ? await message.signWithBlinding(serverPubkey)
+    : await message.sign(ourKeyPair);
   const json = signedMessage.toJson();
   const stringifiedBody = JSON.stringify(json);
-  // blinded and unblinded are exactly the same at this level. blinded is handled inside sendJsonViaOnionV4ToNonSnode for both cases
+  console.warn('json', json);
+
   const res = await sendJsonViaOnionV4ToNonSnode({
     serverUrl,
     endpoint,

@@ -75,7 +75,7 @@ export const parseMessages = async (
           window?.log?.warn('invalid open group message received');
           return null;
         }
-        const sender = PubKey.cast(opengroupv2Message.sender).withoutPrefix();
+        const sender = PubKey.cast(opengroupv2Message.sender); // we need to keep the prefix if this is a blinded or not pubkey
         return { opengroupv2Message, sender };
       } catch (e) {
         window.log.warn('an error happened with opengroup message', e);

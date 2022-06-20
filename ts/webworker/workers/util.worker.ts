@@ -98,25 +98,26 @@ async function verifyAllSignatures(
     sender: string;
   }>
 ) {
-  const checked = await Promise.all(
-    uncheckedSignatureMessages.map(async unchecked => {
-      try {
-        const valid = await verifySignature(
-          unchecked.sender,
-          unchecked.base64EncodedData,
-          unchecked.base64EncodedSignature
-        );
-        if (valid) {
-          return unchecked.base64EncodedData;
-        }
-        // tslint:disable: no-console
-        console.info('got an opengroup message with an invalid signature');
-        return null;
-      } catch (e) {
-        return null;
+  const checked = [];
+  // keep this out of a racing (i.e. no Promise.all) for easier debugging for now
+  for (let index = 0; index < uncheckedSignatureMessages.length; index++) {
+    const unchecked = uncheckedSignatureMessages[index];
+    try {
+      const valid = await verifySignature(
+        unchecked.sender,
+        unchecked.base64EncodedData,
+        unchecked.base64EncodedSignature
+      );
+      if (valid) {
+        checked.push(unchecked.base64EncodedData);
+        continue;
       }
-    })
-  );
+      // tslint:disable: no-console
+      console.info('got an opengroup message with an invalid signature');
+    } catch (e) {
+      console.warn(e);
+    }
+  }
 
   return _.compact(checked) || [];
 }
@@ -137,16 +138,41 @@ async function verifySignature(
     if (typeof signatureBase64 !== 'string') {
       throw new Error('signatureBase64 type not correct');
     }
-    const messageData = new Uint8Array(fromBase64ToArrayBuffer(messageBase64));
-    const signature = new Uint8Array(fromBase64ToArrayBuffer(signatureBase64));
+    const messageData = fromBase64ToUint8Array(messageBase64);
+    const signature = fromBase64ToUint8Array(signatureBase64);
+    const isBlindedSender = senderPubKey.startsWith('15');
+
+    const pubkeyWithoutPrefix = senderPubKey.slice(2);
+    const pubkeyBytes = fromHexToArray(pubkeyWithoutPrefix);
+
+    if (isBlindedSender) {
+      console.log('blinded senderPubKey', senderPubKey);
+      console.log('blinded pubkeyWithoutPrefix', pubkeyWithoutPrefix);
+      console.log('blinded signatureBase64 to verify ', signatureBase64);
+      console.log('blinded messageData ', messageBase64);
+      const sodium = await getSodiumWorker();
+      const blindedVerifySig = sodium.crypto_sign_verify_detached(
+        signature,
+        messageData,
+        pubkeyBytes
+      );
+      if (!blindedVerifySig) {
+        console.error('Invalid signature sodium');
+        return false;
+      }
+      console.error('valid signature sodium');
+
+      return true;
+    }
     // verify returns true if the signature is not correct
 
-    const verifyRet = verify(fromHexToArray(senderPubKey), messageData, signature);
+    const verifyRet = verify(pubkeyBytes, messageData, signature);
 
     if (!verifyRet) {
-      console.error('Invalid signature');
+      console.error('Invalid signature curvejs');
       return false;
     }
+    console.error('valid signature curvejs');
 
     return true;
   } catch (e) {

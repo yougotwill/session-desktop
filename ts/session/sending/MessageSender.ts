@@ -5,7 +5,6 @@ import { SignalService } from '../../protobuf';
 import { MessageEncrypter } from '../crypto';
 import pRetry from 'p-retry';
 import { PubKey } from '../types';
-import { UserUtils } from '../utils';
 import { OpenGroupRequestCommonType } from '../apis/open_group_api/opengroupV2/ApiUtil';
 import { OpenGroupMessageV2 } from '../apis/open_group_api/opengroupV2/OpenGroupMessageV2';
 import { fromUInt8ArrayToBase64 } from '../utils/String';
@@ -280,9 +279,8 @@ export async function sendToOpenGroupV2(
   const paddedBody = addMessagePadding(rawMessage.plainTextBuffer());
   const v2Message = new OpenGroupMessageV2({
     sentTimestamp: getNowWithNetworkOffset(),
-    sender: UserUtils.getOurPubKeyStrFromCache(),
+    // sender: await getBlindedPubKey(),
     base64EncodedData: fromUInt8ArrayToBase64(paddedBody),
-    // the signature is added in the postMessage())
   });
 
   // Warning: postMessage throws

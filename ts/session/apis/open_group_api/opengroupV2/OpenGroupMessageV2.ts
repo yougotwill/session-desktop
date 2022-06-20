@@ -1,7 +1,9 @@
 import { sign } from 'curve25519-js';
 import { SessionKeyPair } from '../../../../receiver/keypairs';
 import { callUtilsWorker } from '../../../../webworker/workers/util_worker_interface';
-import { fromBase64ToArray } from '../../../utils/String';
+import { UserUtils } from '../../../utils';
+import { fromBase64ToArray, fromHexToArray } from '../../../utils/String';
+import { getBlindingValues, getSogsSignature } from '../sogsv3/sogsBlinding';
 
 export class OpenGroupMessageV2 {
   public serverId?: number;
@@ -53,6 +55,7 @@ export class OpenGroupMessageV2 {
       sender,
     });
   }
+
   public async sign(ourKeyPair: SessionKeyPair | undefined): Promise<OpenGroupMessageV2> {
     if (!ourKeyPair) {
       window?.log?.warn("Couldn't find user X25519 key pair.");
@@ -70,6 +73,42 @@ export class OpenGroupMessageV2 {
       sentTimestamp: this.sentTimestamp,
       base64EncodedSignature: base64Sig,
       sender: this.sender,
+      serverId: this.serverId,
+    });
+  }
+
+  public async signWithBlinding(serverPubKey: string): Promise<OpenGroupMessageV2> {
+    const signingKeys = await UserUtils.getUserED25519KeyPairBytes();
+
+    if (!signingKeys) {
+      throw new Error('signWithBlinding: getUserED25519KeyPairBytes returned nothing');
+    }
+
+    const blindedKeyPair = await getBlindingValues(fromHexToArray(serverPubKey), signingKeys);
+
+    if (!blindedKeyPair) {
+      throw new Error('signWithBlinding: getBlindedPubKey returned nothing');
+    }
+    const data = fromBase64ToArray(this.base64EncodedData);
+
+    // const signature = sign(new Uint8Array(blindedKeyPair.secretKey), data, null);
+    const signature = await getSogsSignature({
+      blinded: true,
+      ka: blindedKeyPair.secretKey,
+      kA: blindedKeyPair.publicKey,
+      toSign: data,
+      signingKeys,
+    });
+    if (!signature || signature.length === 0) {
+      throw new Error("Couldn't sign message");
+    }
+    const base64Sig = await callUtilsWorker('arrayBufferToStringBase64', signature);
+
+    return new OpenGroupMessageV2({
+      base64EncodedData: this.base64EncodedData,
+      sentTimestamp: this.sentTimestamp,
+      base64EncodedSignature: base64Sig,
+      sender: this.sender, // might need to be blindedPubkey
       serverId: this.serverId,
     });
   }
