@@ -146,10 +146,6 @@ async function verifySignature(
     const pubkeyBytes = fromHexToArray(pubkeyWithoutPrefix);
 
     if (isBlindedSender) {
-      console.log('blinded senderPubKey', senderPubKey);
-      console.log('blinded pubkeyWithoutPrefix', pubkeyWithoutPrefix);
-      console.log('blinded signatureBase64 to verify ', signatureBase64);
-      console.log('blinded messageData ', messageBase64);
       const sodium = await getSodiumWorker();
       const blindedVerifySig = sodium.crypto_sign_verify_detached(
         signature,
@@ -157,10 +153,10 @@ async function verifySignature(
         pubkeyBytes
       );
       if (!blindedVerifySig) {
-        console.error('Invalid signature sodium');
+        console.info('Invalid signature blinded');
         return false;
       }
-      console.error('valid signature sodium');
+      console.error('valid signature blinded');
 
       return true;
     }
@@ -169,10 +165,9 @@ async function verifySignature(
     const verifyRet = verify(pubkeyBytes, messageData, signature);
 
     if (!verifyRet) {
-      console.error('Invalid signature curvejs');
+      console.error('Invalid signature not blinded');
       return false;
     }
-    console.error('valid signature curvejs');
 
     return true;
   } catch (e) {

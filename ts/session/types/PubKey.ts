@@ -217,4 +217,8 @@ export class PubKey {
   public withoutPrefixToArray(): Uint8Array {
     return fromHexToArray(PubKey.removePrefixIfNeeded(this.key));
   }
+
+  public static hasBlindedPrefix(key: string) {
+    return key.startsWith(KeyPrefixType.blinded);
+  }
 }

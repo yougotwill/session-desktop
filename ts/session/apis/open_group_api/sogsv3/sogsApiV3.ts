@@ -14,6 +14,7 @@ import { ConversationModel } from '../../../../models/conversation';
 import { filterDuplicatesFromDbAndIncomingV4 } from '../opengroupV2/SogsFilterDuplicate';
 import { callUtilsWorker } from '../../../../webworker/workers/util_worker_interface';
 import { PubKey } from '../../../types';
+import { getSodiumRenderer } from '../../../crypto';
 
 /**
  * Get the convo matching those criteria and make sure it is an opengroup convo, or return null.
@@ -91,7 +92,6 @@ const handleNewMessagesResponseV4 = async (
   messages: Array<OpenGroupMessageV4>,
   serverUrl: string,
   subrequestOption: OpenGroupBatchRow,
-  capabilities: Array<string> | null,
   roomIdsStillPolled: Set<string>
 ) => {
   if (!subrequestOption || !subrequestOption.messages) {
@@ -114,6 +114,7 @@ const handleNewMessagesResponseV4 = async (
     if (!roomInfos) {
       return;
     }
+    const serverPk = roomInfos.serverPublicKey;
 
     const newMessages = await filterDuplicatesFromDbAndIncomingV4(messages);
     console.warn('newMessages', newMessages);
@@ -129,22 +130,25 @@ const handleNewMessagesResponseV4 = async (
       'verifyAllSignatures',
       sentToWorker
     )) as Array<string>;
-    const signaturesValidMessages = (signatureValidEncodedData || []).map(validSig =>
-      newMessages.find(m => m.signature === validSig)
+    const signaturesValidMessages = compact(
+      (signatureValidEncodedData || []).map(validData =>
+        newMessages.find(m => m.data === validData)
+      )
     );
     window.log.info(`[perf] verifyAllSignatures took ${Date.now() - startVerify}ms.`);
 
+    // we use the unverified newMessages seqno and id as last polled because we actually did poll up to those ids.
     const incomingMessageIds = compact(newMessages.map(n => n.id));
     const maxNewMessageId = Math.max(...incomingMessageIds);
     const incomingMessageSeqNo = compact(newMessages.map(n => n.seqno));
     const maxNewMessageSeqNo = Math.max(...incomingMessageSeqNo);
     const roomDetails: OpenGroupRequestCommonType = pick(roomInfos, 'serverUrl', 'roomId');
-
+    const sodium = await getSodiumRenderer();
     // tslint:disable-next-line: prefer-for-of
-    for (let index = 0; index < newMessages.length; index++) {
-      const newMessage = newMessages[index];
+    for (let index = 0; index < signaturesValidMessages.length; index++) {
+      const newMessage = signaturesValidMessages[index];
       try {
-        await handleOpenGroupV4Message(newMessage, roomDetails, capabilities);
+        await handleOpenGroupV4Message(newMessage, roomDetails, serverPk, sodium);
       } catch (e) {
         window?.log?.warn('handleOpenGroupV4Message', e);
       }
@@ -184,11 +188,7 @@ export const handleBatchPollResults = async (
 
   // note: handling capabilities first before handling anything else as it affects how things are handled.
 
-  const capabilities = await handleCapabilities(
-    subrequestOptionsLookup,
-    batchPollResults,
-    serverUrl
-  );
+  await handleCapabilities(subrequestOptionsLookup, batchPollResults, serverUrl);
 
   if (batchPollResults && isArray(batchPollResults.body)) {
     await Promise.all(
@@ -207,7 +207,6 @@ export const handleBatchPollResults = async (
               subResponse.body,
               serverUrl,
               subrequestOption,
-              capabilities,
               roomIdsStillPolled
             );
 
