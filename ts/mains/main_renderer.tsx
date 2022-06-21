@@ -18,6 +18,7 @@ import { deleteAllLogs } from '../node/logs';
 import ReactDOM from 'react-dom';
 import React from 'react';
 import { opengroupRoomsLoad } from '../data/opengroups';
+import { loadKnownBlindedKeys } from '../session/apis/open_group_api/sogsv3/knownBlindedkeys';
 // tslint:disable: max-classes-per-file
 
 // Globally disable drag and drop
@@ -174,6 +175,7 @@ Storage.onready(async () => {
       getConversationController().load(),
       BlockedNumberController.load(),
       opengroupRoomsLoad(),
+      loadKnownBlindedKeys(),
     ]);
   } catch (error) {
     window.log.error(

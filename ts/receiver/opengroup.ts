@@ -38,7 +38,7 @@ export const handleOpenGroupV4Message = async (
 ) => {
   const { data, id, posted, session_id } = message;
 
-  const unblindedIdFound = findCachedBlindedMatchOrItLookup(session_id, serverPk, sodium);
+  const unblindedIdFound = await findCachedBlindedMatchOrItLookup(session_id, serverPk, sodium);
   // this is where we override the blindedId with the real one in case we already know that user real sessionId
   await handleOpenGroupMessage(roomInfos, data, posted, unblindedIdFound || session_id, id);
 };

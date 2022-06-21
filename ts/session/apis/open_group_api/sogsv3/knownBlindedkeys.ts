@@ -1,9 +1,10 @@
 import { from_hex, to_hex } from 'libsodium-wrappers-sumo';
-import { cloneDeep, isEqual } from 'lodash';
+import { cloneDeep, isEmpty, isEqual } from 'lodash';
 import { getConversationController } from '../../../conversations';
 import { LibSodiumWrappers } from '../../../crypto';
 import { KeyPrefixType, PubKey } from '../../../types';
 import { crypto_sign_curve25519_pk_to_ed25519 } from 'curve25519-js';
+import { createOrUpdateItem, getItemById } from '../../../../data/channelsItem';
 
 export type BlindedIdMapping = {
   blindedId: string;
@@ -11,7 +12,49 @@ export type BlindedIdMapping = {
   realSessionId: string;
 };
 
-const cachedKnownMapping: Array<BlindedIdMapping> = [];
+const KNOWN_BLINDED_KEYS_ITEM = 'KNOWN_BLINDED_KEYS_ITEM';
+
+// for now, we assume we won't find a lot of blinded keys.
+// So we can store all of those in a single JSON string in the db.
+let cachedKnownMapping: Array<BlindedIdMapping> | null = null;
+
+export async function loadKnownBlindedKeys() {
+  if (cachedKnownMapping !== null) {
+    throw new Error('loadKnownBlindedKeys must only be called once');
+  }
+  const fromDb = await getItemById(KNOWN_BLINDED_KEYS_ITEM);
+  if (fromDb && fromDb.value && !isEmpty(fromDb.value)) {
+    try {
+      const read = JSON.parse(fromDb.value);
+      cachedKnownMapping = cachedKnownMapping || [];
+      read.forEach((elem: any) => {
+        cachedKnownMapping?.push(elem);
+      });
+    } catch (e) {
+      window.log.error(e.message);
+      cachedKnownMapping = [];
+    }
+  } else {
+    cachedKnownMapping = [];
+  }
+  console.warn('loadKnownBlindedKeys afterload:', cachedKnownMapping);
+}
+
+async function writeKnownBlindedKeys() {
+  if (cachedKnownMapping && cachedKnownMapping.length) {
+    await createOrUpdateItem({
+      id: KNOWN_BLINDED_KEYS_ITEM,
+      value: JSON.stringify(cachedKnownMapping),
+    });
+  }
+}
+
+function assertLoaded(): Array<BlindedIdMapping> {
+  if (cachedKnownMapping === null) {
+    throw new Error('loadKnownBlindedKeys must be called on app start');
+  }
+  return cachedKnownMapping;
+}
 
 export function isNonBlindedKey(blindedId: string) {
   if (
@@ -29,13 +72,13 @@ export function getCachedBlindedKeyMapping(
   if (isNonBlindedKey(blindedId)) {
     return blindedId;
   }
-  const found = cachedKnownMapping.find(
+  const found = assertLoaded().find(
     m => m.serverPublicKey === serverPublicKey && m.blindedId === blindedId
   );
   return found?.realSessionId || undefined;
 }
 
-export function addCachedBlindedKey({
+export async function addCachedBlindedKey({
   blindedId,
   serverPublicKey,
   realSessionId,
@@ -46,22 +89,26 @@ export function addCachedBlindedKey({
   if (isNonBlindedKey(realSessionId)) {
     throw new Error('realSessionId must not be blinded');
   }
-  const foundIndex = cachedKnownMapping.findIndex(
+  const assertLoadedCache = assertLoaded();
+  const foundIndex = assertLoadedCache.findIndex(
     m => m.blindedId === blindedId && serverPublicKey === m.serverPublicKey
   );
   if (foundIndex > 0) {
-    if (cachedKnownMapping[foundIndex].realSessionId !== realSessionId) {
+    if (assertLoadedCache[foundIndex].realSessionId !== realSessionId) {
       window.log.warn(
-        `overriding cached blinded mapping for ${cachedKnownMapping[foundIndex].realSessionId} with ${realSessionId} on ${serverPublicKey}`
+        `overriding cached blinded mapping for ${assertLoadedCache[foundIndex].realSessionId} with ${realSessionId} on ${serverPublicKey}`
       );
-      cachedKnownMapping[foundIndex].realSessionId = realSessionId;
+      assertLoadedCache[foundIndex].realSessionId = realSessionId;
+      await writeKnownBlindedKeys();
     }
+
     return;
   }
   console.warn(
     `found matching real id ${realSessionId} for server ${serverPublicKey} and blindedId: ${blindedId}`
   );
-  cachedKnownMapping.push({ blindedId, serverPublicKey, realSessionId });
+  assertLoadedCache.push({ blindedId, serverPublicKey, realSessionId });
+  await writeKnownBlindedKeys();
 }
 
 function generateBlindingFactor(serverPk: string, sodium: LibSodiumWrappers) {
@@ -150,11 +197,11 @@ function findNotCachedBlindingMatch(
   return foundConvoMatchingBlindedPubkey?.get('id') || undefined;
 }
 
-export function findCachedBlindedMatchOrItLookup(
+export async function findCachedBlindedMatchOrItLookup(
   blindedId: string,
   serverPubKey: string,
   sodium: LibSodiumWrappers
-): string | undefined {
+): Promise<string | undefined> {
   if (!PubKey.hasBlindedPrefix(blindedId)) {
     return blindedId;
   }
@@ -167,7 +214,7 @@ export function findCachedBlindedMatchOrItLookup(
   const realSessionIdFound = findNotCachedBlindingMatch(blindedId, serverPubKey, sodium);
 
   if (realSessionIdFound) {
-    addCachedBlindedKey({
+    await addCachedBlindedKey({
       blindedId,
       realSessionId: realSessionIdFound,
       serverPublicKey: serverPubKey,
