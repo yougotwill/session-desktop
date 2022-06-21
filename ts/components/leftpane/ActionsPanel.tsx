@@ -192,7 +192,10 @@ const setupTheme = () => {
 const triggerSyncIfNeeded = async () => {
   await getConversationController()
     .get(UserUtils.getOurPubKeyStrFromCache())
-    .setDidApproveMe(true, true);
+    .setDidApproveMe(true, false);
+  await getConversationController()
+    .get(UserUtils.getOurPubKeyStrFromCache())
+    .setIsApproved(true, true);
   const didWeHandleAConfigurationMessageAlready =
     (await getItemById(hasSyncedInitialConfigurationItem))?.value || false;
   if (didWeHandleAConfigurationMessageAlready) {

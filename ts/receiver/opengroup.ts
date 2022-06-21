@@ -7,10 +7,8 @@ import { SignalService } from '../protobuf';
 import { OpenGroupRequestCommonType } from '../session/apis/open_group_api/opengroupV2/ApiUtil';
 import { OpenGroupMessageV2 } from '../session/apis/open_group_api/opengroupV2/OpenGroupMessageV2';
 import { OpenGroupMessageV4 } from '../session/apis/open_group_api/opengroupV2/OpenGroupServerPoller';
-import { findCachedBlindedMatchOrItLookup } from '../session/apis/open_group_api/sogsv3/knownBlindedkeys';
 import { getOpenGroupV2ConversationId } from '../session/apis/open_group_api/utils/OpenGroupUtils';
 import { getConversationController } from '../session/conversations';
-import { LibSodiumWrappers } from '../session/crypto';
 import { removeMessagePadding } from '../session/crypto/BufferPadding';
 import { UserUtils } from '../session/utils';
 import { perfEnd, perfStart } from '../session/utils/Performance';
@@ -32,15 +30,11 @@ export async function handleOpenGroupV2Message(
 
 export const handleOpenGroupV4Message = async (
   message: OpenGroupMessageV4,
-  roomInfos: OpenGroupRequestCommonType,
-  serverPk: string,
-  sodium: LibSodiumWrappers
+  roomInfos: OpenGroupRequestCommonType
 ) => {
   const { data, id, posted, session_id } = message;
 
-  const unblindedIdFound = await findCachedBlindedMatchOrItLookup(session_id, serverPk, sodium);
-  // this is where we override the blindedId with the real one in case we already know that user real sessionId
-  await handleOpenGroupMessage(roomInfos, data, posted, unblindedIdFound || session_id, id);
+  await handleOpenGroupMessage(roomInfos, data, posted, session_id, id);
 };
 
 /**
