@@ -265,7 +265,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     const displayNameInProfile = this.get('displayNameInProfile');
     const nickname = this.get('nickname');
     const origin = this.get('origin');
-    const blindedPubKey = this.get('blindedPubKey');
+    // const blindedPubKey = this.get('blindedPubKey');
 
     // To reduce the redux store size, only set fields which cannot be undefined.
     // For instance, a boolean can usually be not set if false, etc
@@ -365,9 +365,9 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       toRet.origin = origin;
     }
 
-    if (blindedPubKey) {
-      toRet.blindedPublicKey = blindedPubKey;
-    }
+    // if (blindedPubKey) {
+    //   toRet.blindedPublicKey = blindedPubKey;
+    // }
 
     if (
       currentNotificationSetting &&

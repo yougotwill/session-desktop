@@ -65,7 +65,7 @@ export interface ConversationAttributes {
   /** The open group chat this conversation originated from (if from closed group) */
   origin?: string;
 
-  blindedPubKey?: string;
+  // blindedPubKey?: string;
 }
 
 /**
