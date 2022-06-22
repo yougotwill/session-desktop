@@ -77,7 +77,7 @@ export const UserDetailsDialog = (props: UserDetailsModalState) => {
       </div>
 
       <SpacerLG />
-      <SessionIdEditable editable={false} text={convo.id} />
+      <SessionIdEditable editable={false} text={props.conversationId} />
 
       <div className="session-modal__button-group__center">
         <SessionButton
@@ -85,7 +85,7 @@ export const UserDetailsDialog = (props: UserDetailsModalState) => {
           buttonType={SessionButtonType.Default}
           buttonColor={SessionButtonColor.Primary}
           onClick={() => {
-            copyToClipboard(props.senderSessionId);
+            copyToClipboard(props.conversationId);
             ToastUtils.pushCopiedToClipBoard();
           }}
         />

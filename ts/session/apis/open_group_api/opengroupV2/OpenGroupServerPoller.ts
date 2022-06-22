@@ -11,7 +11,11 @@ import {
 import _, { now } from 'lodash';
 import { ConversationModel } from '../../../../models/conversation';
 import { getMessageIdsFromServerIds, removeMessage } from '../../../../data/data';
-import { getV2OpenGroupRoom, saveV2OpenGroupRoom } from '../../../../data/opengroups';
+import {
+  getV2OpenGroupRoom,
+  getV2OpenGroupRoomsByServerUrl,
+  saveV2OpenGroupRoom,
+} from '../../../../data/opengroups';
 import { OpenGroupMessageV2 } from './OpenGroupMessageV2';
 import autoBind from 'auto-bind';
 import { sha256 } from '../../../crypto';
@@ -23,6 +27,7 @@ import { callUtilsWorker } from '../../../../webworker/workers/util_worker_inter
 import { filterDuplicatesFromDbAndIncoming } from './SogsFilterDuplicate';
 import { OpenGroupBatchRow, sogsBatchPoll } from '../sogsv3/sogsV3BatchPoll';
 import { handleBatchPollResults } from '../sogsv3/sogsApiV3';
+import { roomHasBlindEnabled } from '../sogsv3/sogsV3Capabilities';
 
 export type OpenGroupMessageV4 = {
   /** AFAIK: indicates the number of the message in the group. e.g. 2nd message will be 1 or 2 */
@@ -301,18 +306,18 @@ export class OpenGroupServerPoller {
       });
     });
 
-    // if (this.serverUrl) {
-    //   const rooms = getV2OpenGroupRoomsByServerUrl(this.serverUrl);
-    //   if (rooms?.length) {
-    //     if (roomHasBlindEnabled(rooms[0])) {
-    //       // This only works for servers with blinding capabilities
-    //       // adding inbox subrequest info
-    //       subrequestOptions.push({
-    //         type: 'inbox',
-    //       });
-    //     }
-    //   }
-    // }
+    if (this.serverUrl) {
+      const rooms = getV2OpenGroupRoomsByServerUrl(this.serverUrl);
+      if (rooms?.length) {
+        if (roomHasBlindEnabled(rooms[0])) {
+          // This only works for servers with blinding capabilities
+          // adding inbox subrequest info
+          subrequestOptions.push({
+            type: 'inbox',
+          });
+        }
+      }
+    }
 
     return subrequestOptions;
   }

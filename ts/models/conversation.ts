@@ -565,10 +565,8 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       const incomingMessageCount = await getMessageCountByType(this.id, MessageDirection.incoming);
       const hasIncomingMessages = incomingMessageCount > 0;
 
-      // TODO: just 15 use blinding. allowing 05 for debugging.
-      // if (this.id.startsWith('15')) {
       // TODO: retroactively add prefix for existing IDs to prevent false positives
-      if (this.id.startsWith('15') || this.id.startsWith('05')) {
+      if (this.id.startsWith('15')) {
         console.warn('Sending a blinded message to this user');
         await this.sendBlindedMessageRequest(chatMessageParams);
         return;

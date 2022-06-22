@@ -192,7 +192,7 @@ const setupTheme = () => {
 const triggerSyncIfNeeded = async () => {
   await getConversationController()
     .get(UserUtils.getOurPubKeyStrFromCache())
-    .setDidApproveMe(true, false);
+    .setDidApproveMe(true, true);
   await getConversationController()
     .get(UserUtils.getOurPubKeyStrFromCache())
     .setIsApproved(true, true);
