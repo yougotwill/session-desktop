@@ -63,7 +63,7 @@ export interface ConversationAttributes {
   didApproveMe: boolean;
 
   /** The open group chat this conversation originated from (if from closed group) */
-  origin?: string;
+  conversationIdOrigin?: string;
 
   // blindedPubKey?: string;
 }

@@ -200,8 +200,6 @@ export const encryptBlindedMessage = async (options: {
   } = options;
   const sodium = await getSodiumRenderer();
 
-  console.warn({ options });
-
   const aBlindingValues = await getBlindingValues(serverPubKey, senderSigningKey);
 
   let kB;

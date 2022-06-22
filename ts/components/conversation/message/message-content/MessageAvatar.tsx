@@ -85,9 +85,14 @@ export const MessageAvatar = (props: Props) => {
 
         privateConvoToOpen = foundRealSessionId || privateConvoToOpen;
       }
+
+      await getConversationController()
+        .get(privateConvoToOpen)
+        .setOriginConversationID(selectedConvoKey);
+
       // public and blinded key for that message, we should open the convo as is and see if the user wants
       // to send a sogs blinded message request.
-      void openConversationWithMessages({ conversationKey: privateConvoToOpen, messageId: null });
+      await openConversationWithMessages({ conversationKey: privateConvoToOpen, messageId: null });
 
       return;
     }

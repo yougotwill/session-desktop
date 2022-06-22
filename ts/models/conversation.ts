@@ -131,7 +131,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
   }
 
   /**
-   * Method to evalute if a convo contains the right values
+   * Method to evaluate if a convo contains the right values
    * @param values Required properties to evaluate if this is a message request
    */
   public static hasValidIncomingRequestValues({
@@ -145,7 +145,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     isBlocked?: boolean;
     isPrivate?: boolean;
   }): boolean {
-    return Boolean(!isMe && !isApproved && isPrivate && !isBlocked);
+    return Boolean(isPrivate && !isMe && !isApproved && !isBlocked);
   }
 
   public static hasValidOutgoingRequestValues({
@@ -264,7 +264,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     const currentNotificationSetting = this.get('triggerNotificationsFor');
     const displayNameInProfile = this.get('displayNameInProfile');
     const nickname = this.get('nickname');
-    const origin = this.get('origin');
+    const conversationIdOrigin = this.get('conversationIdOrigin');
     // const blindedPubKey = this.get('blindedPubKey');
 
     // To reduce the redux store size, only set fields which cannot be undefined.
@@ -361,8 +361,8 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       toRet.expireTimer = expireTimer;
     }
 
-    if (origin) {
-      toRet.origin = origin;
+    if (conversationIdOrigin) {
+      toRet.conversationIdOrigin = conversationIdOrigin;
     }
 
     // if (blindedPubKey) {
@@ -716,7 +716,17 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
   public async sendBlindedMessageRequest(messageParams: VisibleMessageParams) {
     // TODO: add early cancellation conditions
     const ourSignKeyBytes = await UserUtils.getUserED25519KeyPairBytes();
-    const groupUrl = this.getOrigin();
+    const groupUrl = this.getSogsOriginMessage();
+
+    if (!PubKey.hasBlindedPrefix(this.id)) {
+      window?.log?.warn('sendBlindedMessageRequest - convo is not a blinded one');
+      return;
+    }
+
+    if (!messageParams.body) {
+      window?.log?.warn('sendBlindedMessageRequest - needs a body');
+      return;
+    }
 
     if (!ourSignKeyBytes || !groupUrl) {
       window?.log?.error(
@@ -725,31 +735,24 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       return;
     }
 
-    console.warn({ groupUrl });
-
     const roomInfo = getV2OpenGroupRoom(groupUrl);
 
-    if (!roomInfo) {
+    if (!roomInfo || !roomInfo.serverPublicKey) {
       window?.log?.error('Could not find room with matching server url');
       return;
     }
 
     const serverPubKey = roomInfo.serverPublicKey;
-    console.warn({ serverPubKey });
 
     const encryptedMsg = await encryptBlindedMessage({
-      body: messageParams.body || '',
+      body: messageParams.body,
       senderSigningKey: ourSignKeyBytes,
       serverPubKey: from_hex(serverPubKey),
-      // recipientBlindedPublicKey: from_hex(this.id.slice(2)),
-      recipientBlindedPublicKey: from_hex(
-        // using one grabbed from Jason's test server
-        '154f3ff16c7c57e47a74d462d80101dce5f4602fd45bc8e4b6e4cd794411dedd52'.slice(2)
-      ),
+      recipientBlindedPublicKey: from_hex(this.id.slice(2)),
     });
 
     console.warn({ encryptedMsg });
-    // await getMessageQueue().sendToOpenGroupV2();
+    await getMessageQueue().sendToOpenGroupV2();
   }
 
   public async sendMessageRequestResponse(isApproved: boolean) {
@@ -1288,12 +1291,12 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     }
   }
 
-  public async setOrigin(value: string) {
-    if (value === this.get('origin')) {
+  public async setOriginConversationID(conversationIdOrigin: string) {
+    if (conversationIdOrigin === this.get('conversationIdOrigin')) {
       return;
     }
     this.set({
-      origin: value,
+      conversationIdOrigin,
     });
     await this.commit();
   }
@@ -1408,14 +1411,6 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
 
   public getTitle() {
     return this.getNicknameOrRealUsernameOrPlaceholder();
-  }
-
-  /**
-   *
-   * @returns The open group this contact/conversation originated from
-   */
-  public getOrigin() {
-    return this.get('origin');
   }
 
   /**
@@ -1614,6 +1609,14 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     this.typingTimer = isTyping
       ? global.setTimeout(this.clearContactTypingTimer.bind(this, sender), 15 * 1000)
       : null;
+  }
+
+  /**
+   *
+   * @returns The open group conversationId this conversation originated from
+   */
+  private getSogsOriginMessage() {
+    return this.get('conversationIdOrigin');
   }
 
   private async addSingleMessage(messageAttributes: MessageAttributesOptionals) {

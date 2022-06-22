@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { useSelector } from 'react-redux';
 // tslint:disable no-submodule-imports
 
 import useCopyToClipboard from 'react-use/lib/useCopyToClipboard';
@@ -10,7 +9,6 @@ import { getConversationController } from '../../session/conversations';
 import { ToastUtils } from '../../session/utils';
 import { openConversationWithMessages } from '../../state/ducks/conversations';
 import { updateUserDetailsModal, UserDetailsModalState } from '../../state/ducks/modalDialog';
-import { getSelectedConversationKey } from '../../state/selectors/conversations';
 import { Avatar, AvatarSize } from '../avatar/Avatar';
 import { SessionButton, SessionButtonColor, SessionButtonType } from '../basic/SessionButton';
 import { SessionIdEditable } from '../basic/SessionIdEditable';
@@ -19,7 +17,6 @@ import { SessionWrapperModal } from '../SessionWrapperModal';
 
 export const UserDetailsDialog = (props: UserDetailsModalState) => {
   const [isEnlargedImageShown, setIsEnlargedImageShown] = useState(false);
-  const convoOrigin = useSelector(getSelectedConversationKey);
 
   const size = isEnlargedImageShown ? AvatarSize.HUGE : AvatarSize.XL;
 
@@ -39,10 +36,6 @@ export const UserDetailsDialog = (props: UserDetailsModalState) => {
       convo.id,
       ConversationTypeEnum.PRIVATE
     );
-
-    if (convoOrigin) {
-      await conversation.setOrigin(convoOrigin);
-    }
 
     await openConversationWithMessages({ conversationKey: conversation.id, messageId: null });
 

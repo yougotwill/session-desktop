@@ -57,6 +57,7 @@ const allowedKeysFormatRowOfConversation = [
   'profileKey',
   'avatarInProfile',
   'displayNameInProfile',
+  'conversationIdOrigin',
 ];
 
 export function formatRowOfConversation(row?: Record<string, any>): ConversationAttributes | null {
@@ -104,6 +105,10 @@ export function formatRowOfConversation(row?: Record<string, any>): Conversation
   convo.readCapability = Boolean(convo.readCapability);
   convo.writeCapability = Boolean(convo.writeCapability);
   convo.uploadCapability = Boolean(convo.uploadCapability);
+
+  if (!convo.conversationIdOrigin) {
+    convo.conversationIdOrigin = undefined;
+  }
 
   if (!convo.lastMessage) {
     convo.lastMessage = null;
@@ -171,6 +176,7 @@ const allowedKeysOfConversationAttributes = [
   'profileKey',
   'avatarInProfile',
   'displayNameInProfile',
+  'conversationIdOrigin',
 ];
 
 /**
@@ -187,6 +193,7 @@ export function assertValidConversationAttributes(
   );
 
   if (foundInAttributesButNotInAllowed?.length) {
+    // tslint:disable-next-line: no-console
     console.error(
       `assertValidConversationAttributes: an invalid key was given in the record: ${foundInAttributesButNotInAllowed}`
     );

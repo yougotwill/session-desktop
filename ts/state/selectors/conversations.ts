@@ -161,6 +161,16 @@ export const getSortedMessagesOfSelectedConversation = createSelector(
   }
 );
 
+export const hasSelectedConversationIncomingMessages = createSelector(
+  getSortedMessagesOfSelectedConversation,
+  (messages: Array<MessageModelPropsWithoutConvoProps>): boolean => {
+    if (messages.length === 0) {
+      return false;
+    }
+    return Boolean(messages.filter(m => m.propsForMessage.direction === 'incoming').length);
+  }
+);
+
 const getFirstUnreadMessageId = createSelector(getConversations, (state: ConversationsStateType):
   | string
   | undefined => {

@@ -68,8 +68,7 @@ export class MessageQueue {
     roomInfos: OpenGroupRequestCommonType,
     blinded: boolean
   ) {
-    // No queue needed for Open Groups v2; send directly
-    const error = new Error('Failed to send message to open group.');
+    // Skipping the queue for Open Groups v2; the message is sent directly
 
     try {
       const { sentTimestamp, serverId } = await MessageSender.sendToOpenGroupV2(
@@ -80,7 +79,7 @@ export class MessageQueue {
       if (!serverId || serverId === -1) {
         throw new Error(`Invalid serverId returned by server: ${serverId}`);
       }
-      void MessageSentHandler.handlePublicMessageSentSuccess(message, {
+      await MessageSentHandler.handlePublicMessageSentSuccess(message, {
         serverId: serverId,
         serverTimestamp: sentTimestamp,
       });
@@ -89,7 +88,10 @@ export class MessageQueue {
         `Failed to send message to open group: ${roomInfos.serverUrl}:${roomInfos.roomId}`,
         e.message
       );
-      void MessageSentHandler.handleMessageSentFailure(message, e || error);
+      await MessageSentHandler.handleMessageSentFailure(
+        message,
+        e || new Error('Failed to send message to open group.')
+      );
     }
   }
 
