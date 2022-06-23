@@ -1,5 +1,9 @@
 import _, { compact, isArray, isNumber, isObject, pick } from 'lodash';
-import { getV2OpenGroupRoom, saveV2OpenGroupRoom } from '../../../../data/opengroups';
+import {
+  getV2OpenGroupRoom,
+  getV2OpenGroupRoomsByServerUrl,
+  saveV2OpenGroupRoom,
+} from '../../../../data/opengroups';
 import { handleOpenGroupV4Message } from '../../../../receiver/opengroup';
 import { OpenGroupRequestCommonType } from '../opengroupV2/ApiUtil';
 import { BatchSogsReponse, OpenGroupBatchRow } from './sogsV3BatchPoll';
@@ -16,6 +20,9 @@ import { callUtilsWorker } from '../../../../webworker/workers/util_worker_inter
 import { PubKey } from '../../../types';
 import { getSodiumRenderer } from '../../../crypto';
 import { findCachedBlindedMatchOrItLookup } from './knownBlindedkeys';
+import { decryptWithSessionBlindingProtocol } from './sogsBlinding';
+import { base64_variants, from_base64 } from 'libsodium-wrappers-sumo';
+import { UserUtils } from '../../../utils';
 
 /**
  * Get the convo matching those criteria and make sure it is an opengroup convo, or return null.
@@ -211,9 +218,52 @@ const handleNewMessagesResponseV4 = async (
   }
 };
 
-async function handleInboxMessages(_inboxResponse: any, _serverUrl: string) {
+type InboxResponseObject = {
+  id: number; // that specific inbox message id
+  sender: string; // blindedPubkey of the sender, the unblinded one is inside message content, encrypted only for our blinded pubkey
+  posted_at: number; // timestamp as seconds.microsec
+  message: string; // base64 data
+};
+
+async function handleInboxMessages(inboxResponse: Array<InboxResponseObject>, serverUrl: string) {
   // inbox messages are blinded so decrypt them using the blinding logic.
   // handle them as a message request after that.
+  if (!inboxResponse || !isArray(inboxResponse) || inboxResponse.length === 0) {
+    //nothing to do
+    return;
+  }
+
+  const roomInfos = getV2OpenGroupRoomsByServerUrl(serverUrl);
+  if (!roomInfos || !roomInfos.length || !roomInfos[0].serverPublicKey) {
+    return;
+  }
+  const ourKeypairBytes = await UserUtils.getUserED25519KeyPairBytes();
+  if (!ourKeypairBytes) {
+    throw new Error('handleInboxMessages needs current user keypair');
+  }
+  const serverPubkey = roomInfos[0].serverPublicKey;
+
+  const decryptedInboxMessages = await Promise.all(
+    inboxResponse.map(async inboxItem => {
+      const isOutgoing = false;
+      try {
+        const data = from_base64(inboxItem.message, base64_variants.ORIGINAL);
+
+        const otherBlindedPubkey = inboxItem.sender;
+        const result = await decryptWithSessionBlindingProtocol(
+          data,
+          isOutgoing,
+          otherBlindedPubkey,
+          serverPubkey,
+          ourKeypairBytes
+        );
+        console.warn('result', result);
+      } catch (e) {
+        console.warn(e);
+      }
+    })
+  );
+  console.warn({ decryptedInboxMessages });
 }
 
 export const handleBatchPollResults = async (
@@ -263,8 +313,6 @@ export const handleBatchPollResults = async (
             break;
 
           case 'inbox':
-            // TODO: handle inbox
-            console.error(' STUB - handle inbox');
             await handleInboxMessages(subResponse.body, serverUrl);
 
             break;

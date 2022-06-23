@@ -1,10 +1,17 @@
 import { fromUInt8ArrayToBase64, stringToUint8Array, toHex } from '../../../utils/String';
 import { concatUInt8Array, getSodiumRenderer } from '../../../crypto';
-import { crypto_hash_sha512, to_hex } from 'libsodium-wrappers-sumo';
+import { crypto_hash_sha512, from_hex, to_hex, to_string } from 'libsodium-wrappers-sumo';
 import { ByteKeyPair } from '../../../utils/User';
 import { StringUtils } from '../../../utils';
-import { KeyPrefixType } from '../../../types';
+import { KeyPrefixType, PubKey } from '../../../types';
 import { OpenGroupRequestHeaders } from '../opengroupV2/OpenGroupPollingUtils';
+import {
+  combineKeys,
+  generateBlindingFactor,
+  sharedBlindedEncryptionKey,
+  toX25519,
+} from '../../../utils/SodiumUtils';
+import { isEqual } from 'lodash';
 
 export async function getSogsSignature({
   blinded,
@@ -159,7 +166,7 @@ export const getBlindingValues = async (
   const k = sodium.crypto_core_ed25519_scalar_reduce(sodium.crypto_generichash(64, serverPK));
 
   // use curve key i.e. s.privKey
-  let a = sodium.crypto_sign_ed25519_sk_to_curve25519(signingKeys.privKeyBytes);
+  let a = sodium.crypto_sign_ed25519_sk_to_curve25519(signingKeys.privKeyBytes); // this is the equivalent of ios generatePrivateKeyScalar
 
   if (a.length > 32) {
     console.warn('length of signing key is too long, cutting to 32: oldlength', length);
@@ -184,7 +191,7 @@ export const getBlindingValues = async (
  * @param serverPK the server public key being sent to. Cannot be b64 encoded. Use fromHex and be sure to exclude the blinded 00/15/05 prefixes
  */
 export const encryptBlindedMessage = async (options: {
-  body: any;
+  body: string;
   senderSigningKey: ByteKeyPair;
   /** Pubkey that corresponds to the recipients blinded PubKey */
   serverPubKey: Uint8Array;
@@ -239,12 +246,92 @@ export const encryptBlindedMessage = async (options: {
     encryptKey
   );
 
-  // not sure what this part is for but it's in the example
-  // after looking at the decrypt - it might be to denote the encryption version
+  // add our "version" info which will be checked by the recipient side
   const prefixData = new Uint8Array(StringUtils.encode('\x00', 'utf8'));
   const data = concatUInt8Array(prefixData, ciphertext, nonce);
   return data;
 };
+
+export async function decryptWithSessionBlindingProtocol(
+  data: Uint8Array,
+  isOutgoing: boolean,
+  otherBlindedPublicKey: string,
+  serverPubkey: string,
+  userEd25519KeyPair: ByteKeyPair
+) {
+  const sodium = await getSodiumRenderer();
+  if (data.length <= sodium.crypto_aead_xchacha20poly1305_ietf_NPUBBYTES) {
+    throw new Error(
+      `data is too short. should be at least ${sodium.crypto_aead_xchacha20poly1305_ietf_NPUBBYTES} but is ${data.length}`
+    );
+  }
+
+  const blindedKeyPair = await getBlindingValues(from_hex(serverPubkey), userEd25519KeyPair);
+  if (!blindedKeyPair) {
+    throw new Error('Decryption failed');
+  }
+  /// Step one: calculate the shared encryption key, receiving from A to B
+  const otherKeyBytes = from_hex(PubKey.removePrefixIfNeeded(otherBlindedPublicKey));
+  const kA = isOutgoing ? blindedKeyPair.publicKey : otherKeyBytes;
+  const decKey = sharedBlindedEncryptionKey({
+    secretKey: userEd25519KeyPair.privKeyBytes,
+    otherBlindedPublicKey: otherKeyBytes,
+    fromBlindedPublicKey: kA,
+    toBlindedPublicKey: isOutgoing ? otherKeyBytes : blindedKeyPair.publicKey,
+    sodium,
+  });
+  if (!decKey) {
+    throw new Error('Decryption failed');
+  }
+
+  // v, ct, nc = data[0], data[1:-24], data[-24:]
+  const version = data[0];
+  const ciphertext = data.slice(
+    1,
+    data.length - sodium.crypto_aead_xchacha20poly1305_ietf_NPUBBYTES
+  );
+  const nonce = data.slice(data.length - sodium.crypto_aead_xchacha20poly1305_ietf_NPUBBYTES);
+
+  // Make sure our encryption version is okay
+
+  if (version !== 0) {
+    throw new Error('Decryption failed');
+  }
+
+  // Decrypt
+  const innerBytes = sodium.crypto_aead_xchacha20poly1305_ietf_decrypt(
+    null,
+    ciphertext,
+    null,
+    nonce,
+    decKey
+  );
+  if (!innerBytes) {
+    throw new Error('Decryption failed');
+  }
+  const numBytesPubkey = PubKey.PUBKEY_LEN_NO_PREFIX / 2;
+  // Ensure the length is correct
+  if (innerBytes.length <= numBytesPubkey) {
+    throw new Error('Decryption failed');
+  }
+
+  // Split up: the last 32 bytes are the sender's *unblinded* ed25519 key
+  const plainText = innerBytes.slice(0, innerBytes.length - numBytesPubkey);
+  console.warn('plaintext:', to_string(plainText));
+  const senderEdpk = innerBytes.slice(innerBytes.length - numBytesPubkey);
+
+  // Verify that the inner sender_edpk (A) yields the same outer kA we got with the message
+  const blindingFactor = generateBlindingFactor(serverPubkey, sodium);
+  const sharedSecret = combineKeys(blindingFactor, senderEdpk, sodium);
+
+  if (!isEqual(kA, sharedSecret)) {
+    throw new Error('Invalid Signature');
+  }
+  // Get the sender's X25519 public key
+  const senderSessionIdBytes = toX25519(senderEdpk, sodium);
+
+  return { plainText, senderUnblinded: `${KeyPrefixType.standard}${to_hex(senderSessionIdBytes)}` };
+}
 
 /**
  *

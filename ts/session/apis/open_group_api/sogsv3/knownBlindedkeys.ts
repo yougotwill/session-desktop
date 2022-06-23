@@ -5,6 +5,7 @@ import { LibSodiumWrappers } from '../../../crypto';
 import { KeyPrefixType, PubKey } from '../../../types';
 import { crypto_sign_curve25519_pk_to_ed25519 } from 'curve25519-js';
 import { createOrUpdateItem, getItemById } from '../../../../data/channelsItem';
+import { combineKeys, generateBlindingFactor } from '../../../utils/SodiumUtils';
 
 export type BlindedIdMapping = {
   blindedId: string;
@@ -109,23 +110,6 @@ export async function addCachedBlindedKey({
   );
   assertLoadedCache.push({ blindedId, serverPublicKey, realSessionId });
   await writeKnownBlindedKeys();
-}
-
-function generateBlindingFactor(serverPk: string, sodium: LibSodiumWrappers) {
-  const hexServerPk = from_hex(serverPk);
-  const serverPkHash = sodium.crypto_generichash(64, hexServerPk);
-  if (!serverPkHash.length) {
-    throw new Error('generateBlindingFactor: crypto_generichash failed');
-  }
-
-  // Reduce the server public key into an ed25519 scalar (`k`)
-  const k = sodium.crypto_core_ed25519_scalar_reduce(serverPkHash);
-
-  return k;
-}
-
-function combineKeys(lhsKeyBytes: Uint8Array, rhsKeyBytes: Uint8Array, sodium: LibSodiumWrappers) {
-  return sodium.crypto_scalarmult_ed25519_noclamp(lhsKeyBytes, rhsKeyBytes);
 }
 
 function tryMatchBlindWithStandardKey(

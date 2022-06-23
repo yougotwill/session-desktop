@@ -9,13 +9,15 @@ import { UserUtils } from '../utils';
 // tslint:disable-next-line: no-unnecessary-class
 export class MessageSentHandler {
   public static async handlePublicMessageSentSuccess(
-    sentMessage: OpenGroupVisibleMessage,
+    sentMessageIdentifier: string,
     result: { serverId: number; serverTimestamp: number }
   ) {
     const { serverId, serverTimestamp } = result;
 
     try {
-      const foundMessage = await MessageSentHandler.fetchHandleMessageSentData(sentMessage);
+      const foundMessage = await MessageSentHandler.fetchHandleMessageSentData(
+        sentMessageIdentifier
+      );
 
       if (!foundMessage) {
         throw new Error(
@@ -49,7 +51,9 @@ export class MessageSentHandler {
     wrappedEnvelope?: Uint8Array
   ) {
     // The wrappedEnvelope will be set only if the message is not one of OpenGroupV2Message type.
-    let fetchedMessage = await MessageSentHandler.fetchHandleMessageSentData(sentMessage);
+    let fetchedMessage = await MessageSentHandler.fetchHandleMessageSentData(
+      sentMessage.identifier
+    );
     if (!fetchedMessage) {
       return;
     }
@@ -109,7 +113,9 @@ export class MessageSentHandler {
             dataMessage as SignalService.DataMessage,
             effectiveTimestamp
           );
-          const tempFetchMessage = await MessageSentHandler.fetchHandleMessageSentData(sentMessage);
+          const tempFetchMessage = await MessageSentHandler.fetchHandleMessageSentData(
+            sentMessage.identifier
+          );
           if (!tempFetchMessage) {
             window?.log?.warn(
               'Got an error while trying to sendSyncMessage(): fetchedMessage is null'
@@ -142,7 +148,9 @@ export class MessageSentHandler {
     sentMessage: RawMessage | OpenGroupVisibleMessage,
     error: any
   ) {
-    const fetchedMessage = await MessageSentHandler.fetchHandleMessageSentData(sentMessage);
+    const fetchedMessage = await MessageSentHandler.fetchHandleMessageSentData(
+      sentMessage.identifier
+    );
     if (!fetchedMessage) {
       return;
     }
@@ -184,8 +192,8 @@ export class MessageSentHandler {
    * In this case, this function will look for it in the database and return it.
    * If the message is found on the db, it will also register it to the MessageController so our subsequent calls are quicker.
    */
-  private static async fetchHandleMessageSentData(m: RawMessage | OpenGroupVisibleMessage) {
-    const dbMessage = await getMessageById(m.identifier);
+  private static async fetchHandleMessageSentData(messageIdentifier: string) {
+    const dbMessage = await getMessageById(messageIdentifier);
 
     if (!dbMessage) {
       return null;

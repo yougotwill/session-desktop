@@ -85,3 +85,62 @@ export const sendMessageOnionV4 = async (
   const parsed = OpenGroupMessageV2.fromJson(toParse);
   return parsed;
 };
+
+export const sendMessageOnionV4BlindedRequest = async (
+  serverUrl: string,
+  room: string,
+  abortSignal: AbortSignal,
+  message: OpenGroupMessageV2,
+  recipientBlindedId: string
+): Promise<{ serverId: number; serverTimestamp: number }> => {
+  const allValidRoomInfos = await getAllValidRoomInfos(serverUrl, new Set([room]));
+  if (!allValidRoomInfos?.length) {
+    window?.log?.info('getSendMessageRequest: no valid roominfos got.');
+    throw new Error(`Could not find sogs pubkey of url:${serverUrl}`);
+  }
+  const endpoint = `/inbox/${recipientBlindedId}`;
+  const method = 'POST';
+  const serverPubkey = allValidRoomInfos[0].serverPublicKey;
+
+  // if we are sending a blinded message, we have to sign it with the derived keypair
+  // otherwise, we just sign it with our real keypair
+  const signedMessage = await message.signWithBlinding(serverPubkey);
+  const json = signedMessage.toBLindedMessageRequestJson();
+  const stringifiedBody = JSON.stringify(json);
+
+  const res = await sendJsonViaOnionV4ToNonSnode({
+    serverUrl,
+    endpoint,
+    serverPubkey,
+    method,
+    abortSignal,
+    blinded: true,
+    stringifiedBody,
+  });
+  const statusCode = parseStatusCodeFromOnionRequestV4(res);
+  if (!statusCode) {
+    window?.log?.warn('sendMessageOnionV4BlindedRequest Got unknown status code; res:', res);
+    throw new Error(`sendMessageOnionV4: invalid status code: ${statusCode}`);
+  }
+
+  if (statusCode !== 201) {
+    throw new Error(`Could not postMessage, status code: ${statusCode}`);
+  }
+
+  if (!res) {
+    throw new Error('Could not postMessage, res is invalid');
+  }
+  const rawMessage = res.body as Record<string, any>;
+  if (!rawMessage) {
+    throw new Error('postMessage parsing failed');
+  }
+
+  const serverId = rawMessage.id as number | undefined;
+  const serverTimestamp = rawMessage.posted_at as number | undefined;
+  if (!serverTimestamp || serverId === undefined) {
+    window.log.warn('Could not blinded message request, server returned invalid data:', rawMessage);
+    throw new Error('Could not blinded message request, server returned invalid data');
+  }
+
+  return { serverId, serverTimestamp: serverTimestamp * 1000 }; //timestamp are now returned with a seconds.ms syntax
+};

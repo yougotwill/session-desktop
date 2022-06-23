@@ -79,9 +79,43 @@ export class MessageQueue {
       if (!serverId || serverId === -1) {
         throw new Error(`Invalid serverId returned by server: ${serverId}`);
       }
-      await MessageSentHandler.handlePublicMessageSentSuccess(message, {
+      await MessageSentHandler.handlePublicMessageSentSuccess(message.identifier, {
         serverId: serverId,
         serverTimestamp: sentTimestamp,
+      });
+    } catch (e) {
+      window?.log?.warn(
+        `Failed to send message to open group: ${roomInfos.serverUrl}:${roomInfos.roomId}`,
+        e.message
+      );
+      await MessageSentHandler.handleMessageSentFailure(
+        message,
+        e || new Error('Failed to send message to open group.')
+      );
+    }
+  }
+
+  public async sendToOpenGroupV2BlindedRequest(
+    encryptedContent: Uint8Array,
+    roomInfos: OpenGroupRequestCommonType,
+    messageId: string,
+    recipientBlindedId: string
+  ) {
+    try {
+      if (!PubKey.hasBlindedPrefix(recipientBlindedId)) {
+        throw new Error('sendToOpenGroupV2BlindedRequest needs a blindedId');
+      }
+      const { serverTimestamp, serverId } = await MessageSender.sendToOpenGroupV2BlindedRequest(
+        encryptedContent,
+        roomInfos,
+        recipientBlindedId
+      );
+      if (!serverId || serverId === -1) {
+        throw new Error(`Invalid serverId returned by server: ${serverId}`);
+      }
+      await MessageSentHandler.handlePublicMessageSentSuccess(messageId, {
+        serverId,
+        serverTimestamp,
       });
     } catch (e) {
       window?.log?.warn(

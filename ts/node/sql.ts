@@ -1572,6 +1572,7 @@ function updateToLokiSchemaVersion25(currentVersion: number, db: BetterSqlite3.D
         ALTER TABLE ${CONVERSATIONS_TABLE} ADD COLUMN readCapability INTEGER DEFAULT 1;
         ALTER TABLE ${CONVERSATIONS_TABLE} ADD COLUMN writeCapability INTEGER DEFAULT 1;
         ALTER TABLE ${CONVERSATIONS_TABLE} ADD COLUMN uploadCapability INTEGER DEFAULT 1;
+        ALTER TABLE ${CONVERSATIONS_TABLE} ADD COLUMN conversationIdOrigin TEXT;
        `);
 
     writeLokiSchemaVersion(targetVersion, db);
@@ -2005,6 +2006,7 @@ function saveConversation(data: ConversationAttributes, instance?: BetterSqlite3
     didApproveMe,
     avatarInProfile,
     displayNameInProfile,
+    conversationIdOrigin,
   } = formatted;
 
   // shorten the last message as we never need more than 60 chars (and it bloats the redux/ipc calls uselessly
@@ -2043,7 +2045,8 @@ function saveConversation(data: ConversationAttributes, instance?: BetterSqlite3
   isApproved,
   didApproveMe,
   avatarInProfile,
-  displayNameInProfile
+  displayNameInProfile,
+  conversationIdOrigin
 	) values (
 	    $id,
 	    $active_at,
@@ -2074,7 +2077,8 @@ function saveConversation(data: ConversationAttributes, instance?: BetterSqlite3
       $isApproved,
       $didApproveMe,
       $avatarInProfile,
-      $displayNameInProfile
+      $displayNameInProfile,
+      $conversationIdOrigin
       )`
     )
     .run({
@@ -2110,6 +2114,7 @@ function saveConversation(data: ConversationAttributes, instance?: BetterSqlite3
       didApproveMe: toSqliteBoolean(didApproveMe),
       avatarInProfile,
       displayNameInProfile,
+      conversationIdOrigin,
     });
 }
 

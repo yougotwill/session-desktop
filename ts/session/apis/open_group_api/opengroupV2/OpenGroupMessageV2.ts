@@ -129,4 +129,21 @@ export class OpenGroupMessageV2 {
     }
     return json;
   }
+
+  public toBLindedMessageRequestJson() {
+    const json = {
+      message: this.base64EncodedData,
+      timestamp: this.sentTimestamp,
+    } as Record<string, any>;
+    if (this.serverId) {
+      json.server_id = this.serverId;
+    }
+    if (this.sender) {
+      json.public_key = this.sender;
+    }
+    if (this.base64EncodedSignature) {
+      json.signature = this.base64EncodedSignature;
+    }
+    return json;
+  }
 }

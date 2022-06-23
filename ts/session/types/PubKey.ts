@@ -20,13 +20,14 @@ export enum KeyPrefixType {
 
 export class PubKey {
   public static readonly PUBKEY_LEN = 66;
+  public static readonly PUBKEY_LEN_NO_PREFIX = PubKey.PUBKEY_LEN - 2;
   public static readonly HEX = '[0-9a-fA-F]';
 
   // This is a temporary fix to allow groupPubkeys created from mobile to be handled correctly
   // They have a different regex to match
   // FIXME move this to a new class which validates group ids and use it in all places where we have group ids (message sending included)
   // tslint:disable: member-ordering
-  public static readonly regexForPubkeys = `((05)?${PubKey.HEX}{64})`;
+  public static readonly regexForPubkeys = `((05)?${PubKey.HEX}{${this.PUBKEY_LEN_NO_PREFIX}})`;
   public static readonly PREFIX_GROUP_TEXTSECURE = '__textsecure_group__!';
   // prettier-ignore
   private static readonly regex: RegExp = new RegExp(

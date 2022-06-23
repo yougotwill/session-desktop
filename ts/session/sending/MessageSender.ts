@@ -21,7 +21,10 @@ import { ed25519Str } from '../onions/onionPath';
 import { EmptySwarmError } from '../utils/errors';
 import ByteBuffer from 'bytebuffer';
 import { getHasSeenHF190, getHasSeenHF191 } from '../apis/snode_api/hfHandling';
-import { sendMessageOnionV4 } from '../apis/open_group_api/sogsv3/sogsV3SendMessage';
+import {
+  sendMessageOnionV4,
+  sendMessageOnionV4BlindedRequest,
+} from '../apis/open_group_api/sogsv3/sogsV3SendMessage';
 import { AbortController } from 'abort-controller';
 
 const DEFAULT_CONNECTIONS = 1;
@@ -290,6 +293,33 @@ export async function sendToOpenGroupV2(
     new AbortController().signal,
     v2Message,
     blinded
+  );
+  return msg;
+}
+
+/**
+ * Send a message to an open group v2.
+ * @param message The open group message.
+ */
+export async function sendToOpenGroupV2BlindedRequest(
+  encryptedContent: Uint8Array,
+  roomInfos: OpenGroupRequestCommonType,
+  recipientBlindedId: string
+): Promise<{ serverId: number; serverTimestamp: number }> {
+  // we agreed to pad message for opengroupv2
+  const v2Message = new OpenGroupMessageV2({
+    sentTimestamp: getNowWithNetworkOffset(),
+    // sender: await getBlindedPubKey(),
+    base64EncodedData: fromUInt8ArrayToBase64(encryptedContent),
+  });
+
+  // Warning: postMessage throws
+  const msg = await sendMessageOnionV4BlindedRequest(
+    roomInfos.serverUrl,
+    roomInfos.roomId,
+    new AbortController().signal,
+    v2Message,
+    recipientBlindedId
   );
   return msg;
 }

@@ -714,7 +714,6 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
   }
 
   public async sendBlindedMessageRequest(messageParams: VisibleMessageParams) {
-    // TODO: add early cancellation conditions
     const ourSignKeyBytes = await UserUtils.getUserED25519KeyPairBytes();
     const groupUrl = this.getSogsOriginMessage();
 
@@ -751,8 +750,21 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       recipientBlindedPublicKey: from_hex(this.id.slice(2)),
     });
 
-    console.warn({ encryptedMsg });
-    await getMessageQueue().sendToOpenGroupV2();
+    if (!encryptedMsg) {
+      throw new Error('encryptBlindedMessage failed');
+    }
+    if (!messageParams.identifier) {
+      throw new Error('encryptBlindedMessage messageParams needs an identifier');
+    }
+
+    this.set({ active_at: Date.now(), isApproved: true });
+
+    await getMessageQueue().sendToOpenGroupV2BlindedRequest(
+      encryptedMsg,
+      roomInfo,
+      messageParams.identifier,
+      this.id
+    );
   }
 
   public async sendMessageRequestResponse(isApproved: boolean) {
