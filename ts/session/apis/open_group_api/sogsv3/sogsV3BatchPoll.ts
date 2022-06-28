@@ -7,6 +7,7 @@ import {
 } from '../opengroupV2/OpenGroupPollingUtils';
 import { addJsonContentTypeToHeaders } from './sogsV3SendMessage';
 import { AbortSignal } from 'abort-controller';
+import { roomHasBlindEnabled } from './sogsV3Capabilities';
 
 type BatchFetchRequestOptions = {
   method: 'GET';
@@ -59,7 +60,6 @@ export const sogsBatchPoll = async (
 ): Promise<BatchSogsReponse | null> => {
   // getting server pk for room
   const [roomId] = roomInfos;
-  // FIXME we should cache those and replace all of those calls with the cached calls
   const fetchedRoomInfo = getV2OpenGroupRoomByRoomId({
     serverUrl,
     roomId,
@@ -69,10 +69,11 @@ export const sogsBatchPoll = async (
     return null;
   }
   const { serverPublicKey } = fetchedRoomInfo;
+  // send with blinding if we need to
 
+  const requireBlinding = Boolean(roomHasBlindEnabled(fetchedRoomInfo));
   // creating batch request
-  const batchRequest = await getBatchRequest(serverPublicKey, batchRequestOptions);
-  // console.warn('batchRequest: ', batchRequest);
+  const batchRequest = await getBatchRequest(serverPublicKey, batchRequestOptions, requireBlinding);
   if (!batchRequest) {
     window?.log?.error('Could not generate batch request. Aborting request');
     return null;
@@ -148,7 +149,8 @@ const makeBatchRequestPayload = (options: OpenGroupBatchRow): BatchSubRequest | 
  */
 const getBatchRequest = async (
   serverPublicKey: string,
-  batchOptions: Array<OpenGroupBatchRow>
+  batchOptions: Array<OpenGroupBatchRow>,
+  requireBlinding: boolean
 ): Promise<BatchRequest | undefined> => {
   const batchEndpoint = '/batch';
   const batchMethod = 'POST';
@@ -167,7 +169,7 @@ const getBatchRequest = async (
     serverPublicKey,
     batchEndpoint,
     batchMethod,
-    true,
+    requireBlinding,
     stringBody
   );
 
@@ -192,6 +194,11 @@ const sendSogsBatchRequest = async (
 ): Promise<null | any> => {
   const { endpoint, headers, method, body } = request;
   const builtUrl = new URL(`${serverUrl}/${endpoint}`);
+  console.warn(
+    `sendSogsBatchRequest including ${
+      headers['X-SOGS-Pubkey']?.startsWith('15') ? 'blinded' : 'unblinded'
+    } headers`
+  );
 
   // this function extracts the body and status_code and JSON.parse it already
   const batchResponse = await sendViaOnionV4ToNonSnode(
@@ -216,8 +223,6 @@ const sendSogsBatchRequest = async (
     return;
   }
   if (isObject(batchResponse.body)) {
-    // console.warn('batchResponse:', batchResponse);
-
     return batchResponse;
   }
   window?.log?.warn('sogsbatch: batch response decoded body is not object. Reutrning null');

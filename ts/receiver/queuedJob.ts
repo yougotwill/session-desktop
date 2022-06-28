@@ -371,6 +371,9 @@ export async function handleMessageJob(
 
     const unreadCount = await conversation.getUnreadCount();
     conversation.set({ unreadCount });
+    conversation.set({
+      active_at: Math.max(conversation.attributes.active_at, messageModel.get('sent_at') || 0),
+    });
     // this is a throttled call and will only run once every 1 sec at most
     conversation.updateLastMessage();
     await conversation.commit();

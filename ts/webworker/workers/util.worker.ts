@@ -100,6 +100,7 @@ async function verifyAllSignatures(
 ) {
   const checked = [];
   // keep this out of a racing (i.e. no Promise.all) for easier debugging for now
+  // tslint:disable-next-line: prefer-for-of
   for (let index = 0; index < uncheckedSignatureMessages.length; index++) {
     const unchecked = uncheckedSignatureMessages[index];
     try {

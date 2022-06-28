@@ -8,7 +8,7 @@ import {
   ParsedDeletions,
   ParsedRoomCompactPollResults,
 } from './OpenGroupAPIV2CompactPoll';
-import _, { now } from 'lodash';
+import _, { isObject, now } from 'lodash';
 import { ConversationModel } from '../../../../models/conversation';
 import { getMessageIdsFromServerIds, removeMessage } from '../../../../data/data';
 import {
@@ -27,7 +27,10 @@ import { callUtilsWorker } from '../../../../webworker/workers/util_worker_inter
 import { filterDuplicatesFromDbAndIncoming } from './SogsFilterDuplicate';
 import { OpenGroupBatchRow, sogsBatchPoll } from '../sogsv3/sogsV3BatchPoll';
 import { handleBatchPollResults } from '../sogsv3/sogsApiV3';
-import { roomHasBlindEnabled } from '../sogsv3/sogsV3Capabilities';
+import {
+  fetchCapabilitiesAndUpdateRelatedRoomsOfServerUrl,
+  roomHasBlindEnabled,
+} from '../sogsv3/sogsV3Capabilities';
 
 export type OpenGroupMessageV4 = {
   /** AFAIK: indicates the number of the message in the group. e.g. 2nd message will be 1 or 2 */
@@ -356,6 +359,23 @@ export class OpenGroupServerPoller {
       // check that we are still not aborted
       if (this.abortController.signal.aborted) {
         throw new Error('Abort controller was cancelled. dropping request');
+      }
+
+      // if we get a plaintext response from the sogs, it is stored under plainText field
+      // see decodeV4Response()
+      if (
+        batchPollResults.status_code === 400 &&
+        batchPollResults.body &&
+        isObject(batchPollResults.body)
+      ) {
+        const bodyPlainText = (batchPollResults.body as any).plainText;
+        // this is temporary (as of 27/06/2022) as we want to not support unblinded sogs after some time
+        if (
+          bodyPlainText === 'Invalid authentication: this server requires the use of blinded ids'
+        ) {
+          await fetchCapabilitiesAndUpdateRelatedRoomsOfServerUrl(this.serverUrl);
+          throw new Error('batchPollResults just detected switch to blinded enforced.');
+        }
       }
 
       if (batchPollResults.status_code !== 200) {

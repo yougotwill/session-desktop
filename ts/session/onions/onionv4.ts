@@ -67,6 +67,9 @@ export const decodeV4Response = (response: string): DecodedResponseV4 | undefine
       case 'application/json':
         bodyParsed = JSON.parse(bodyText);
         break;
+      case 'text/plain; charset=utf-8':
+        bodyParsed = { plainText: bodyText };
+        break;
       default:
         window?.log?.warn(
           'decodeV4Response - No or unknown content-type information for response: ',

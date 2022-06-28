@@ -42,7 +42,7 @@
     "@types/react": "17.0.2"
   },
   "scripts": {
-    "postinstall": "yarn patch-package && yarn electron-builder install-app-deps && rebuild-curve25519-js",
+    "postinstall": "yarn patch-package && yarn electron-builder install-app-deps && yarn rebuild-curve25519-js",
     "start-prod": "cross-env NODE_ENV=production NODE_APP_INSTANCE=devprod$MULTI electron .",
     "grunt": "yarn clean-transpile  && yarn sass && grunt",
     "generate": "yarn grunt --force",

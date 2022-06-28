@@ -1,11 +1,13 @@
 import { from_hex, to_hex } from 'libsodium-wrappers-sumo';
-import { cloneDeep, isEmpty, isEqual } from 'lodash';
+import { cloneDeep, flatten, isEmpty, isEqual, uniqBy } from 'lodash';
 import { getConversationController } from '../../../conversations';
 import { LibSodiumWrappers } from '../../../crypto';
 import { KeyPrefixType, PubKey } from '../../../types';
 import { crypto_sign_curve25519_pk_to_ed25519 } from 'curve25519-js';
 import { createOrUpdateItem, getItemById } from '../../../../data/channelsItem';
 import { combineKeys, generateBlindingFactor } from '../../../utils/SodiumUtils';
+import { getAllOpengroupsServerPubkeys } from '../../../../data/opengroups';
+import { ConversationModel } from '../../../../models/conversation';
 
 export type BlindedIdMapping = {
   blindedId: string;
@@ -181,6 +183,36 @@ function findNotCachedBlindingMatch(
   return foundConvoMatchingBlindedPubkey?.get('id') || undefined;
 }
 
+/**
+ * This function can be called to find all blinded conversations we have with a user given its real sessionID.
+ * It should be used when we get a message request response, to merge all convos into one
+ */
+function findNotCachedBlindedConvoFromUnblindedKey(
+  unblindedID: string,
+  serverPublicKey: string,
+  sodium: LibSodiumWrappers
+): Array<ConversationModel> {
+  if (PubKey.hasBlindedPrefix(unblindedID)) {
+    throw new Error(
+      'findNotCachedBlindedConvoFromUnblindedKey unblindedID is supposed to be unblinded!'
+    );
+  }
+
+  // we iterate only over the convos private, with a blindedId, and active,
+  // so the one to which we sent a message already or received one from outside sogs.
+  const foundConvosForThisServerPk =
+    getConversationController()
+      .getConversations()
+      .filter(m => m.isPrivate() && PubKey.hasBlindedPrefix(m.id) && m.isActive())
+      .filter(m => {
+        return tryMatchBlindWithStandardKey(unblindedID, m.id, serverPublicKey, sodium);
+      }) || [];
+
+  // we should have only one per server, as we gave the serverpubkey and a blindedId is uniq for a serverPk
+
+  return foundConvosForThisServerPk;
+}
+
 export async function findCachedBlindedMatchOrItLookup(
   blindedId: string,
   serverPubKey: string,
@@ -206,4 +238,29 @@ export async function findCachedBlindedMatchOrItLookup(
     return realSessionIdFound;
   }
   return undefined;
+}
+
+/**
+ * Can be used when we get an unblinded message to check if this is actually a reply to any of the conversation we were having with a blinded id, on any sogs
+ * @param unblindedId the blindedId of that user
+ * @param sodium passed so we can make this function not async
+ */
+export function findCachedBlindedMatchOrItLookupAllServers(
+  unblindedId: string,
+  sodium: LibSodiumWrappers
+): Array<ConversationModel> {
+  if (PubKey.hasBlindedPrefix(unblindedId)) {
+    throw new Error('findCachedBlindedMatchOrItLookupAllServers needs an unblindedId');
+  }
+
+  const allServerPubkeys = getAllOpengroupsServerPubkeys();
+  let matchingServerPubkeyWithThatBlindedId = flatten(
+    allServerPubkeys.map(serverPk => {
+      return findNotCachedBlindedConvoFromUnblindedKey(unblindedId, serverPk, sodium);
+    })
+  );
+  matchingServerPubkeyWithThatBlindedId =
+    uniqBy(matchingServerPubkeyWithThatBlindedId, m => m.id) || [];
+
+  return matchingServerPubkeyWithThatBlindedId;
 }

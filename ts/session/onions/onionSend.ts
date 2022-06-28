@@ -349,6 +349,7 @@ export async function sendJsonViaOnionV4ToNonSnode(sendOptions: {
   method: string;
   stringifiedBody: string | null;
   abortSignal: AbortSignal;
+  doNotIncludeOurSogsHeaders?: boolean;
 }): Promise<OnionV4JSONSnodeResponse | null> {
   const {
     serverUrl,
@@ -358,25 +359,27 @@ export async function sendJsonViaOnionV4ToNonSnode(sendOptions: {
     blinded,
     stringifiedBody,
     abortSignal,
+    doNotIncludeOurSogsHeaders,
   } = sendOptions;
   const builtUrl = new URL(`${serverUrl}/${endpoint}`);
-  const headers = await getOurOpenGroupHeaders(
-    serverPubkey,
-    endpoint,
-    method,
-    blinded,
-    stringifiedBody
-  );
-  console.warn('headers', headers);
+  const headers = doNotIncludeOurSogsHeaders
+    ? {}
+    : await getOurOpenGroupHeaders(serverPubkey, endpoint, method, blinded, stringifiedBody);
+
   if (!headers) {
     return null;
   }
+  console.warn(
+    `sendMessage including ${
+      (headers as any)['X-SOGS-Pubkey']?.startsWith('15') ? 'blinded' : 'unblinded'
+    } headers`
+  );
   const res = await sendViaOnionV4ToNonSnode(
     serverPubkey,
     builtUrl,
     {
       method,
-      headers: addJsonContentTypeToHeaders(headers),
+      headers: addJsonContentTypeToHeaders(headers as any),
       body: stringifiedBody || undefined,
       useV4: true,
     },

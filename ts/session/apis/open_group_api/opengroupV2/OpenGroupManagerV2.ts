@@ -180,7 +180,11 @@ export class OpenGroupManagerV2 {
       // save the pubkey to the db right now, the request for room Info
       // will need it and access it from the db
       await saveV2OpenGroupRoom(room);
-      const roomInfos = await openGroupV2GetRoomInfo({ serverPublicKey, serverUrl, roomId });
+      const roomInfos = await openGroupV2GetRoomInfo({
+        serverPubkey: serverPublicKey,
+        serverUrl,
+        roomId,
+      });
       if (!roomInfos) {
         throw new Error('Invalid open group roomInfo result');
       }
@@ -190,7 +194,7 @@ export class OpenGroupManagerV2 {
       );
       room.imageID = roomInfos.imageId || undefined;
       room.roomName = roomInfos.name || undefined;
-      roomInfos.capabilities = roomInfos.capabilities;
+      room.capabilities = roomInfos.capabilities;
       await saveV2OpenGroupRoom(room);
 
       // mark active so it's not in the contacts list but in the conversation list

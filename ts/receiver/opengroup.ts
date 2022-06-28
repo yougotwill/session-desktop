@@ -24,7 +24,6 @@ export async function handleOpenGroupV2Message(
     window?.log?.error('handleOpenGroupV2Message - No sender or server information to add message');
     return;
   }
-  console.warn({ v2message: message });
   await handleOpenGroupMessage(roomInfos, base64EncodedData, sentTimestamp, sender, serverId);
 }
 

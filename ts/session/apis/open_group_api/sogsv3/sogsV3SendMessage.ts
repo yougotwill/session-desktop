@@ -44,7 +44,6 @@ export const sendMessageOnionV4 = async (
     : await message.sign(ourKeyPair);
   const json = signedMessage.toJson();
   const stringifiedBody = JSON.stringify(json);
-  console.warn('json', json);
 
   const res = await sendJsonViaOnionV4ToNonSnode({
     serverUrl,

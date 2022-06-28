@@ -23,6 +23,11 @@ import { findCachedBlindedMatchOrItLookup } from './knownBlindedkeys';
 import { decryptWithSessionBlindingProtocol } from './sogsBlinding';
 import { base64_variants, from_base64 } from 'libsodium-wrappers-sumo';
 import { UserUtils } from '../../../utils';
+import { innerHandleSwarmContentMessage } from '../../../../receiver/contentMessage';
+import { EnvelopePlus } from '../../../../receiver/types';
+import { SignalService } from '../../../../protobuf';
+import { v4 } from 'uuid';
+import { removeMessagePadding } from '../../../crypto/BufferPadding';
 
 /**
  * Get the convo matching those criteria and make sure it is an opengroup convo, or return null.
@@ -243,27 +248,50 @@ async function handleInboxMessages(inboxResponse: Array<InboxResponseObject>, se
   }
   const serverPubkey = roomInfos[0].serverPublicKey;
 
-  const decryptedInboxMessages = await Promise.all(
+  const decryptedInboxMessagesSettled = await Promise.allSettled(
     inboxResponse.map(async inboxItem => {
       const isOutgoing = false;
       try {
         const data = from_base64(inboxItem.message, base64_variants.ORIGINAL);
+        const postedAtInMs = inboxItem.posted_at * 1000;
 
         const otherBlindedPubkey = inboxItem.sender;
-        const result = await decryptWithSessionBlindingProtocol(
+        const decrypted = await decryptWithSessionBlindingProtocol(
           data,
           isOutgoing,
           otherBlindedPubkey,
           serverPubkey,
           ourKeypairBytes
         );
-        console.warn('result', result);
+
+        // decrypt message from result
+
+        const builtEnvelope: EnvelopePlus = {
+          content: new Uint8Array(removeMessagePadding(decrypted.plainText)),
+          source: decrypted.senderUnblinded,
+          senderIdentity: decrypted.senderUnblinded,
+          receivedAt: Date.now(),
+          timestamp: postedAtInMs,
+          id: v4(),
+          type: SignalService.Envelope.Type.SESSION_MESSAGE, // this is not right, but we forward an already decrypted envelope so we don't care
+        };
+        await innerHandleSwarmContentMessage(
+          builtEnvelope,
+          postedAtInMs,
+          builtEnvelope.content,
+          ''
+        );
+        console.warn('decryptedInboxMessagesSettled: decrypted', decrypted);
       } catch (e) {
         console.warn(e);
       }
     })
   );
-  console.warn({ decryptedInboxMessages });
+
+  const decryptedInboxMessagesFullfilled = decryptedInboxMessagesSettled.filter(
+    m => m.status === 'fulfilled'
+  );
+  console.warn({ decryptedInboxMessagesFullfilled });
 }
 
 export const handleBatchPollResults = async (
@@ -318,7 +346,7 @@ export const handleBatchPollResults = async (
             break;
 
           default:
-            console.error('No matching subrequest response body for type: ', responseType);
+            window.log.error('No matching subrequest response body for type: ', responseType);
         }
       })
     );

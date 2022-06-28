@@ -60,7 +60,7 @@ import {
   getAbsoluteAttachmentPath,
   loadAttachmentData,
 } from '../types/MessageAttachment';
-import { getOurPubKeyStrFromCache } from '../session/utils/User';
+import { getOurProfile, getOurPubKeyStrFromCache } from '../session/utils/User';
 import { MessageRequestResponse } from '../session/messages/outgoing/controlMessage/MessageRequestResponse';
 import { Notifications } from '../util/notifications';
 import { Storage } from '../util/storage';
@@ -75,6 +75,7 @@ import { encryptBlindedMessage } from '../session/apis/open_group_api/sogsv3/sog
 import { from_hex } from 'libsodium-wrappers-sumo';
 import { getV2OpenGroupRoom } from '../data/opengroups';
 import { roomHasBlindEnabled } from '../session/apis/open_group_api/sogsv3/sogsV3Capabilities';
+import { addMessagePadding } from '../session/crypto/BufferPadding';
 
 export class ConversationModel extends Backbone.Model<ConversationAttributes> {
   public updateLastMessage: () => any;
@@ -265,7 +266,6 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     const displayNameInProfile = this.get('displayNameInProfile');
     const nickname = this.get('nickname');
     const conversationIdOrigin = this.get('conversationIdOrigin');
-    // const blindedPubKey = this.get('blindedPubKey');
 
     // To reduce the redux store size, only set fields which cannot be undefined.
     // For instance, a boolean can usually be not set if false, etc
@@ -364,10 +364,6 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     if (conversationIdOrigin) {
       toRet.conversationIdOrigin = conversationIdOrigin;
     }
-
-    // if (blindedPubKey) {
-    //   toRet.blindedPublicKey = blindedPubKey;
-    // }
 
     if (
       currentNotificationSetting &&
@@ -567,7 +563,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
 
       // TODO: retroactively add prefix for existing IDs to prevent false positives
       if (this.id.startsWith('15')) {
-        console.warn('Sending a blinded message to this user');
+        window.log.info('Sending a blinded message to this user: ', this.id);
         await this.sendBlindedMessageRequest(chatMessageParams);
         return;
       }
@@ -580,7 +576,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
             await this.setDidApproveMe(true);
           }
           // should only send once
-          await this.sendMessageRequestResponse(true);
+          await this.sendMessageRequestResponse();
           void forceSyncConfigurationNowIfNeeded();
         }
       }
@@ -727,6 +723,9 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       return;
     }
 
+    // include our profile (displayName + avatar url + key for the recipient)
+    messageParams.lokiProfile = getOurProfile();
+
     if (!ourSignKeyBytes || !groupUrl) {
       window?.log?.error(
         'sendBlindedMessageRequest - Cannot get required information for encrypting blinded message.'
@@ -741,10 +740,13 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       return;
     }
 
+    const sogsVisibleMessage = new OpenGroupVisibleMessage(messageParams);
+    const paddedBody = addMessagePadding(sogsVisibleMessage.plainTextBuffer());
+
     const serverPubKey = roomInfo.serverPublicKey;
 
     const encryptedMsg = await encryptBlindedMessage({
-      body: messageParams.body,
+      rawData: paddedBody,
       senderSigningKey: ourSignKeyBytes,
       serverPubKey: from_hex(serverPubKey),
       recipientBlindedPublicKey: from_hex(this.id.slice(2)),
@@ -767,7 +769,11 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     );
   }
 
-  public async sendMessageRequestResponse(isApproved: boolean) {
+  /**
+   * Sends an accepted message request response.
+   * Currently, we never send anything for denied message requests.
+   */
+  public async sendMessageRequestResponse() {
     if (!this.isPrivate()) {
       return;
     }
@@ -778,7 +784,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     const messageRequestResponseParams = {
       timestamp,
       publicKey,
-      isApproved,
+      isApproved: true,
     };
 
     const messageRequestResponse = new MessageRequestResponse(messageRequestResponseParams);

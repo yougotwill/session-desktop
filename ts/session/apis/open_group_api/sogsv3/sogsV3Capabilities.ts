@@ -1,9 +1,13 @@
-import _, { isArray, isEmpty, isObject } from 'lodash';
+import _, { isArray, isEmpty, isEqual, isObject } from 'lodash';
 import { sendJsonViaOnionV4ToNonSnode } from '../../../onions/onionSend';
 import { getOurOpenGroupHeaders } from '../opengroupV2/OpenGroupPollingUtils';
 import { parseStatusCodeFromOnionRequestV4 } from '../opengroupV2/OpenGroupAPIV2Parser';
-import { OpenGroupV2Room } from '../../../../data/opengroups';
-import { AbortSignal } from 'abort-controller';
+import {
+  getV2OpenGroupRoomsByServerUrl,
+  OpenGroupV2Room,
+  saveV2OpenGroupRoom,
+} from '../../../../data/opengroups';
+import AbortController, { AbortSignal } from 'abort-controller';
 
 export const capabilitiesFetchForServer = async (
   serverUrl: string,
@@ -13,7 +17,7 @@ export const capabilitiesFetchForServer = async (
   const endpoint = '/capabilities';
   const method = 'GET';
   const serverPubkey = serverPubKey;
-  const blinded = true; // for capabilities, blinding is always enabled as the request will fail if the server requires blinding
+  const blinded = false; // for capabilities, blinding is always false as the request will fail if the server requires blinding
   const capabilityHeaders = await getOurOpenGroupHeaders(
     serverPubkey,
     endpoint,
@@ -33,6 +37,7 @@ export const capabilitiesFetchForServer = async (
     serverPubkey,
     serverUrl,
     stringifiedBody: null,
+    doNotIncludeOurSogsHeaders: true, // the first capabilities needs to not have any authentification to pass on a blinding-required sogs
   });
 
   const statusCode = parseStatusCodeFromOnionRequestV4(result);
@@ -72,4 +77,36 @@ export function roomHasBlindEnabled(openGroup?: OpenGroupV2Room) {
 
 export function capabilitiesListHasBlindEnabled(caps?: Array<string> | null) {
   return Boolean(caps?.includes('blind'));
+}
+
+export async function fetchCapabilitiesAndUpdateRelatedRoomsOfServerUrl(serverUrl: string) {
+  let relatedRooms = getV2OpenGroupRoomsByServerUrl(serverUrl);
+  if (!relatedRooms || relatedRooms.length === 0) {
+    return;
+  }
+
+  const capabilities = await capabilitiesFetchForServer(
+    serverUrl,
+    relatedRooms[0].serverPublicKey,
+    new AbortController().signal
+  );
+  if (!capabilities) {
+    return;
+  }
+  // just fetch updated data from the DB, just in case
+  relatedRooms = getV2OpenGroupRoomsByServerUrl(serverUrl);
+  if (!relatedRooms || relatedRooms.length === 0) {
+    return;
+  }
+  const newSortedCaps = capabilities.sort();
+
+  await Promise.all(
+    relatedRooms.map(async room => {
+      if (!isEqual(newSortedCaps, room.capabilities?.sort() || '')) {
+        room.capabilities = newSortedCaps;
+        await saveV2OpenGroupRoom(room);
+      }
+    })
+  );
+  return newSortedCaps;
 }

@@ -1,6 +1,6 @@
 import { fromUInt8ArrayToBase64, stringToUint8Array, toHex } from '../../../utils/String';
 import { concatUInt8Array, getSodiumRenderer } from '../../../crypto';
-import { crypto_hash_sha512, from_hex, to_hex, to_string } from 'libsodium-wrappers-sumo';
+import { crypto_hash_sha512, from_hex, to_hex } from 'libsodium-wrappers-sumo';
 import { ByteKeyPair } from '../../../utils/User';
 import { StringUtils } from '../../../utils';
 import { KeyPrefixType, PubKey } from '../../../types';
@@ -191,7 +191,7 @@ export const getBlindingValues = async (
  * @param serverPK the server public key being sent to. Cannot be b64 encoded. Use fromHex and be sure to exclude the blinded 00/15/05 prefixes
  */
 export const encryptBlindedMessage = async (options: {
-  body: string;
+  rawData: Uint8Array;
   senderSigningKey: ByteKeyPair;
   /** Pubkey that corresponds to the recipients blinded PubKey */
   serverPubKey: Uint8Array;
@@ -199,7 +199,7 @@ export const encryptBlindedMessage = async (options: {
   recipientBlindedPublicKey?: Uint8Array;
 }): Promise<Uint8Array | null> => {
   const {
-    body,
+    rawData,
     senderSigningKey,
     serverPubKey,
     recipientSigningKey,
@@ -231,10 +231,7 @@ export const encryptBlindedMessage = async (options: {
   );
 
   // inner data: msg || A (i.e. the sender's ed25519 master pubkey, *not* the kA blinded pubkey)
-  const plaintext = concatUInt8Array(
-    new Uint8Array(StringUtils.encode(body, 'utf8')),
-    senderSigningKey.pubKeyBytes
-  );
+  const plaintext = concatUInt8Array(rawData, senderSigningKey.pubKeyBytes);
 
   const nonce = sodium.randombytes_buf(sodium.crypto_aead_xchacha20poly1305_ietf_NPUBBYTES);
 
@@ -317,7 +314,6 @@ export async function decryptWithSessionBlindingProtocol(
 
   // Split up: the last 32 bytes are the sender's *unblinded* ed25519 key
   const plainText = innerBytes.slice(0, innerBytes.length - numBytesPubkey);
-  console.warn('plaintext:', to_string(plainText));
   const senderEdpk = innerBytes.slice(innerBytes.length - numBytesPubkey);
 
   // Verify that the inner sender_edpk (A) yields the same outer kA we got with the message
@@ -334,7 +330,10 @@ export async function decryptWithSessionBlindingProtocol(
 }
 
 /**
+ * This function is actually just used for testing and is useless IRL.
+ * We should probably move it somewhere else.
  *
+ * The function you are looking for is `decryptWithSessionBlindingProtocol`
  * @param data The data to be decrypted from the sender
  * @param aSignKeyBytes the sender's keypair bytes
  * @param bSignKeyBytes the receivers keypair bytes
@@ -385,7 +384,6 @@ export const decryptBlindedMessage = async (
     decryptKey
   );
 
-  console.warn({ plaintextIncoming });
   if (plaintextIncoming.length <= 32) {
     // throw Error;
     window?.log?.error('decryptBlindedMessage: plaintext unsufficient length');
@@ -400,13 +398,11 @@ export const decryptBlindedMessage = async (
   }
 
   const messageText = StringUtils.decode(msg, 'utf8');
-  console.warn({ messageText });
 
   const senderSessionId = `${KeyPrefixType.standard}${to_hex(
     sodium.crypto_sign_ed25519_pk_to_curve25519(senderEdpk)
   )}`;
   const senderED25519PubKey = to_hex(senderEdpk);
-  console.warn({ senderED25519PubKey });
 
   return {
     messageText,

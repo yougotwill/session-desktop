@@ -1,16 +1,12 @@
-import { from_hex } from 'libsodium-wrappers-sumo';
 import { findIndex } from 'lodash';
-import { getConversationById } from '../../../../data/data';
 import {
   getV2OpenGroupRoomsByServerUrl,
   OpenGroupV2Room,
   saveV2OpenGroupRoom,
 } from '../../../../data/opengroups';
 import { DecodedResponseBodiesV4 } from '../../../onions/onionv4';
-import { UserUtils } from '../../../utils';
-import { getBlindedPubKey } from './sogsBlinding';
 import { BatchSogsReponse, OpenGroupBatchRow } from './sogsV3BatchPoll';
-import { capabilitiesListHasBlindEnabled, parseCapabilities } from './sogsV3Capabilities';
+import { parseCapabilities } from './sogsV3Capabilities';
 
 /**
  * @param subrequestOptionsLookup list of subrequests used for the batch request (order sensitive)
@@ -42,6 +38,7 @@ export const handleCapabilities = async (
     return null;
   }
   const capabilities = getCapabilitiesFromBatch(subrequestOptionsLookup, batchPollResults.body);
+
   if (!capabilities) {
     window?.log?.error(
       'Failed capabilities subrequest - cancelling capabilities response handling'
@@ -71,40 +68,6 @@ export const handleCapabilities = async (
       // updating the db values for the open group room
       const roomUpdate = { ...room, capabilities };
       await saveV2OpenGroupRoom(roomUpdate);
-
-      // updating values in the conversation
-      // generate blindedPK for
-      if (capabilitiesListHasBlindEnabled(capabilities) && room.conversationId) {
-        // generate blinded PK for the room and save it to the conversation.
-        const conversationToAddBlindedKey = await getConversationById(room.conversationId);
-
-        if (!conversationToAddBlindedKey) {
-          window?.log?.error('No conversation to add blinded pubkey to');
-        }
-
-        const ourSignKeyBytes = await UserUtils.getUserED25519KeyPairBytes();
-        if (!room.serverPublicKey || !ourSignKeyBytes) {
-          window?.log?.error(
-            'handleCapabilities - missing required signing keys or server public key for blinded key generation'
-          );
-          return;
-        }
-
-        const blindedPubKey = await getBlindedPubKey(
-          from_hex(room.serverPublicKey),
-          ourSignKeyBytes
-        );
-
-        if (!blindedPubKey) {
-          window?.log?.error('Failed to generate blinded pubkey');
-          return;
-        }
-
-        console.error('yo todo');
-        // await conversationToAddBlindedKey?.set({
-        //   blindedPubKey,
-        // });
-      }
     })
   );
   return capabilities;

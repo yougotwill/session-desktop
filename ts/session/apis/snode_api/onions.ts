@@ -18,6 +18,7 @@ import { hrefPnServerDev, hrefPnServerProd } from '../push_notification_api/PnSe
 import { callUtilsWorker } from '../../../webworker/workers/util_worker_interface';
 import { to_string } from 'libsodium-wrappers-sumo';
 import { encodeV4Request } from '../../onions/onionv4';
+import { AbortSignal } from 'abort-controller';
 
 export const resetSnodeFailureCount = () => {
   snodeFailureCount = {};

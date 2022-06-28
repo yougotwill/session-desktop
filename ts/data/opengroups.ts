@@ -1,4 +1,4 @@
-import { cloneDeep, isNumber } from 'lodash';
+import { cloneDeep, isNumber, uniq } from 'lodash';
 import { ConversationCollection } from '../models/conversation';
 import { OpenGroupRequestCommonType } from '../session/apis/open_group_api/opengroupV2/ApiUtil';
 import { isOpenGroupV2 } from '../session/apis/open_group_api/utils/OpenGroupUtils';
@@ -36,6 +36,10 @@ export type OpenGroupV2Room = {
   capabilities?: Array<string>;
 };
 
+/**
+ *
+ * @returns a map containing as key the conversationId of the opengroup room and as value the OpenGroupV2Room details
+ */
 export function getAllV2OpenGroupRoomsMap(): Map<string, OpenGroupV2Room> | undefined {
   const localCached = throwIfNotLoaded();
   if (!localCached) {
@@ -158,4 +162,9 @@ export async function getAllOpenGroupV2Conversations(): Promise<ConversationColl
   const collection = new ConversationCollection();
   collection.add(conversations);
   return collection;
+}
+
+export function getAllOpengroupsServerPubkeys(): Array<string> {
+  const localCached = throwIfNotLoaded();
+  return uniq(localCached.map(room => room.serverPublicKey)) || [];
 }

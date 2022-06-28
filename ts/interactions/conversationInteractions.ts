@@ -147,7 +147,7 @@ export const approveConvoAndSendResponse = async (
   await convoToApprove.setIsApproved(true, false);
 
   await convoToApprove.commit();
-  await convoToApprove.sendMessageRequestResponse(true);
+  await convoToApprove.sendMessageRequestResponse();
 
   // Conversation was not approved before so a sync is needed
   if (syncToDevices) {

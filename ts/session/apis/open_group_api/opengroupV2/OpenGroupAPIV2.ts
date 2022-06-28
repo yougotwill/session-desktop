@@ -13,8 +13,8 @@ import { isOpenGroupV2Request } from '../../file_server_api/FileServerApiV2';
 import pRetry from 'p-retry';
 import { callUtilsWorker } from '../../../../webworker/workers/util_worker_interface';
 import {
-  capabilitiesFetchForServer,
   capabilitiesListHasBlindEnabled,
+  fetchCapabilitiesAndUpdateRelatedRoomsOfServerUrl,
 } from '../sogsv3/sogsV3Capabilities';
 import { uniq } from 'lodash';
 import { AbortController } from 'abort-controller';
@@ -150,15 +150,16 @@ export async function sendApiV2Request(
  */
 export async function openGroupV2GetRoomInfo({
   serverUrl,
-  serverPublicKey,
+  serverPubkey,
   roomId,
 }: {
-  serverPublicKey: string;
+  serverPubkey: string;
   serverUrl: string;
   roomId: string;
 }): Promise<OpenGroupV2Info | null> {
   const abortSignal = new AbortController().signal;
-  const caps = await capabilitiesFetchForServer(serverUrl, serverPublicKey, abortSignal);
+
+  const caps = await fetchCapabilitiesAndUpdateRelatedRoomsOfServerUrl(serverUrl);
 
   if (!caps || caps.length === 0) {
     window?.log?.warn('getInfo failed because capabilities failed');
@@ -175,7 +176,7 @@ export async function openGroupV2GetRoomInfo({
     endpoint: `/legacy/rooms/${roomId}`,
     abortSignal,
     stringifiedBody: null,
-    serverPubkey: 'a37f6ac417b9bc33ae8b4b6a4c7a4330070a171a9317be100e961262af203e4d',
+    serverPubkey,
   });
   const room = (result?.body as any)?.room as Record<string, any> | undefined;
   if (room) {

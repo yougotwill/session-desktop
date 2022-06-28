@@ -274,7 +274,6 @@ export async function isSwarmMessageDuplicate({
   }
 }
 
-// tslint:disable:cyclomatic-complexity max-func-body-length */
 async function handleSwarmMessage(
   msgModel: MessageModel,
   messageHash: string,

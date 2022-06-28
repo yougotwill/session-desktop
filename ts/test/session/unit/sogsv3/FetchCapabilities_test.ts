@@ -6,8 +6,6 @@ import { parseCapabilities } from '../../../../session/apis/open_group_api/sogsv
 // tslint:disable: chai-vague-errors
 
 describe('FetchCapabilities', () => {
-  beforeEach(() => {});
-
   afterEach(() => {
     Sinon.restore();
   });

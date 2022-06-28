@@ -8,6 +8,7 @@ import {
 import { ByteKeyPair } from '../../../../session/utils/User';
 import { to_hex } from 'libsodium-wrappers-sumo';
 import { fromBase64, fromHex } from 'bytebuffer';
+import { StringUtils } from '../../../../session/utils';
 
 chai.use(chaiBytes);
 
@@ -376,8 +377,9 @@ describe('OpenGroupAuthentication', () => {
 
   describe('Blinded Message Encryption', () => {
     it('Should encrypt blinded message correctly', async () => {
+      const dataUint = new Uint8Array(StringUtils.encode(body, 'utf8'));
       const data = await encryptBlindedMessage({
-        body,
+        rawData: dataUint,
         senderSigningKey: signingKeysA,
         serverPubKey,
         recipientSigningKey: signingKeysB,
