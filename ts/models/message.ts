@@ -64,7 +64,6 @@ import { ExpirationTimerOptions } from '../util/expiringMessages';
 import { Notifications } from '../util/notifications';
 import { Storage } from '../util/storage';
 import { LinkPreviews } from '../util/linkPreviews';
-import { ConversationTypeEnum } from './conversationAttributes';
 import { roomHasBlindEnabled } from '../session/apis/open_group_api/sogsv3/sogsV3Capabilities';
 // tslint:disable: cyclomatic-complexity
 
@@ -915,16 +914,6 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
     }
 
     return UserUtils.getOurPubKeyStrFromCache();
-  }
-
-  public getContact() {
-    const source = this.getSource();
-
-    if (!source) {
-      return null;
-    }
-
-    return getConversationController().getOrCreate(source, ConversationTypeEnum.PRIVATE);
   }
 
   public isOutgoing() {

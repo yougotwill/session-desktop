@@ -22,8 +22,8 @@ import { EmptySwarmError } from '../utils/errors';
 import ByteBuffer from 'bytebuffer';
 import { getHasSeenHF190, getHasSeenHF191 } from '../apis/snode_api/hfHandling';
 import {
-  sendMessageOnionV4,
   sendMessageOnionV4BlindedRequest,
+  sendSogsMessageOnionV4,
 } from '../apis/open_group_api/sogsv3/sogsV3SendMessage';
 import { AbortController } from 'abort-controller';
 
@@ -287,7 +287,7 @@ export async function sendToOpenGroupV2(
   });
 
   // Warning: postMessage throws
-  const msg = await sendMessageOnionV4(
+  const msg = await sendSogsMessageOnionV4(
     roomInfos.serverUrl,
     roomInfos.roomId,
     new AbortController().signal,

@@ -59,10 +59,13 @@ export const MessageAvatar = (props: Props) => {
 
   const onMessageAvatarClick = useCallback(async () => {
     if (isPublic && !PubKey.hasBlindedPrefix(sender)) {
-      // public chat but session id not blinded. disable showing user details if we do not have an active convo with that user
+      // public chat but session id not blinded. disable showing user details if we do not have an active convo with that user.
+      // an unactive convo with that user means that we never chatted with that id directyly, but only through a sogs
       const convoWithSender = getConversationController().get(sender);
       if (!convoWithSender || !convoWithSender.get('active_at')) {
-        // for some time, we might still get some unblinded messages,  as in message sent unblinded.
+        // for some time, we might still get some unblinded messages, as in message sent unblinded because
+        //    * older clients still send unblinded message and those are allowed by sogs if they doesn't enforce blinding
+        //    * new clients still send unblinded message and those are allowed by sogs if it doesn't enforce blinding
         // we want to not allow users to open user details dialog when that's the case.
         // to handle this case, we can drop the click on avatar if the conversation with that user is not active.
         window.log.info(

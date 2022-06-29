@@ -1,5 +1,5 @@
 import { fromUInt8ArrayToBase64, stringToUint8Array, toHex } from '../../../utils/String';
-import { concatUInt8Array, getSodiumRenderer } from '../../../crypto';
+import { concatUInt8Array, getSodiumRenderer, LibSodiumWrappers } from '../../../crypto';
 import { crypto_hash_sha512, from_hex, to_hex } from 'libsodium-wrappers-sumo';
 import { ByteKeyPair } from '../../../utils/User';
 import { StringUtils } from '../../../utils';
@@ -59,7 +59,7 @@ export async function getOpenGroupHeaders(data: {
   let ka;
   let kA;
   if (blinded) {
-    const blindingValues = await getBlindingValues(serverPK, signingKeys);
+    const blindingValues = getBlindingValues(serverPK, signingKeys, sodium);
     ka = blindingValues.secretKey;
     kA = blindingValues.publicKey;
     pubkey = `${KeyPrefixType.blinded}${toHex(kA)}`;
@@ -140,27 +140,24 @@ export const sha512Multipart = (parts: Array<Uint8Array>) => {
  * @param signingKeys Our signing keys (ED25519)
  * @returns Prefixed blinded pubkey for the open group
  */
-export const getBlindedPubKey = async (
+export const getBlindedPubKey = (
   serverPK: Uint8Array,
-  signingKeys: ByteKeyPair
-): Promise<string | null> => {
-  const blindedPubKeyBytes = await getBlindingValues(serverPK, signingKeys);
-  if (blindedPubKeyBytes) {
-    return `${KeyPrefixType.blinded}${to_hex(blindedPubKeyBytes.publicKey)}`;
-  }
-  return null;
+  signingKeys: ByteKeyPair,
+  sodium: LibSodiumWrappers
+): string => {
+  const blindedPubKeyBytes = getBlindingValues(serverPK, signingKeys, sodium);
+  return `${KeyPrefixType.blinded}${to_hex(blindedPubKeyBytes.publicKey)}`;
 };
 
-export const getBlindingValues = async (
+export const getBlindingValues = (
   serverPK: Uint8Array,
-  signingKeys: ByteKeyPair
-): Promise<{
+  signingKeys: ByteKeyPair,
+  sodium: LibSodiumWrappers
+): {
   a: Uint8Array;
   secretKey: Uint8Array;
   publicKey: Uint8Array;
-}> => {
-  const sodium = await getSodiumRenderer();
-
+} => {
   let ka;
   let kA;
   const k = sodium.crypto_core_ed25519_scalar_reduce(sodium.crypto_generichash(64, serverPK));
@@ -207,11 +204,11 @@ export const encryptBlindedMessage = async (options: {
   } = options;
   const sodium = await getSodiumRenderer();
 
-  const aBlindingValues = await getBlindingValues(serverPubKey, senderSigningKey);
+  const aBlindingValues = getBlindingValues(serverPubKey, senderSigningKey, sodium);
 
   let kB;
   if (!recipientBlindedPublicKey && recipientSigningKey) {
-    const bBlindingValues = await getBlindingValues(serverPubKey, recipientSigningKey);
+    const bBlindingValues = getBlindingValues(serverPubKey, recipientSigningKey, sodium);
     kB = bBlindingValues.publicKey;
   }
   if (recipientBlindedPublicKey) {
@@ -263,7 +260,7 @@ export async function decryptWithSessionBlindingProtocol(
     );
   }
 
-  const blindedKeyPair = await getBlindingValues(from_hex(serverPubkey), userEd25519KeyPair);
+  const blindedKeyPair = getBlindingValues(from_hex(serverPubkey), userEd25519KeyPair, sodium);
   if (!blindedKeyPair) {
     throw new Error('Decryption failed');
   }
@@ -352,8 +349,8 @@ export const decryptBlindedMessage = async (
 | undefined> => {
   const sodium = await getSodiumRenderer();
 
-  const aBlindingValues = await getBlindingValues(serverPubKey, aSignKeyBytes);
-  const bBlindingValues = await getBlindingValues(serverPubKey, bSignKeyBytes);
+  const aBlindingValues = getBlindingValues(serverPubKey, aSignKeyBytes, sodium);
+  const bBlindingValues = getBlindingValues(serverPubKey, bSignKeyBytes, sodium);
   const { publicKey: kA } = aBlindingValues;
   const { a: b, publicKey: kB } = bBlindingValues;
 

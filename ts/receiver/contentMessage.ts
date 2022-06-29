@@ -624,8 +624,10 @@ async function handleMessageRequestResponse(
     conversationToApprove.set({
       profileKey: convosToMerge[0].get('profileKey'),
       displayNameInProfile: convosToMerge[0].get('displayNameInProfile'),
+
       avatarInProfile: convosToMerge[0].get('avatarInProfile'),
       avatarPointer: convosToMerge[0].get('avatarPointer'), // don't set the avatar pointer
+      // nickname might be set already in conversationToApprove, so don't overwrite it
     });
 
     // we have to merge all of those to a single conversation under the unblinded. including the messages
@@ -656,7 +658,7 @@ async function handleMessageRequestResponse(
     // tslint:disable-next-line: prefer-for-of
     for (let index = 0; index < convosToMerge.length; index++) {
       const element = convosToMerge[index];
-      await getConversationController().deleteBlindedContactCompletely(element.id);
+      await getConversationController().deleteBlindedContact(element.id);
     }
   }
 

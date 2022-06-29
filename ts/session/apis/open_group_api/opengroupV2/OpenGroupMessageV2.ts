@@ -1,6 +1,7 @@
 import { sign } from 'curve25519-js';
 import { SessionKeyPair } from '../../../../receiver/keypairs';
 import { callUtilsWorker } from '../../../../webworker/workers/util_worker_interface';
+import { getSodiumRenderer } from '../../../crypto';
 import { UserUtils } from '../../../utils';
 import { fromBase64ToArray, fromHexToArray } from '../../../utils/String';
 import { getBlindingValues, getSogsSignature } from '../sogsv3/sogsBlinding';
@@ -84,7 +85,8 @@ export class OpenGroupMessageV2 {
       throw new Error('signWithBlinding: getUserED25519KeyPairBytes returned nothing');
     }
 
-    const blindedKeyPair = await getBlindingValues(fromHexToArray(serverPubKey), signingKeys);
+    const sodium = await getSodiumRenderer();
+    const blindedKeyPair = getBlindingValues(fromHexToArray(serverPubKey), signingKeys, sodium);
 
     if (!blindedKeyPair) {
       throw new Error('signWithBlinding: getBlindedPubKey returned nothing');

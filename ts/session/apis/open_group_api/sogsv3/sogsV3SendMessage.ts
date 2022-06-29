@@ -20,7 +20,7 @@ export type OpenGroupSendMessageRequest = OpenGroupCapabilityRequest & {
   blinded: boolean;
 };
 
-export const sendMessageOnionV4 = async (
+export const sendSogsMessageOnionV4 = async (
   serverUrl: string,
   room: string,
   abortSignal: AbortSignal,
@@ -57,7 +57,7 @@ export const sendMessageOnionV4 = async (
   const statusCode = parseStatusCodeFromOnionRequestV4(res);
   if (!statusCode) {
     window?.log?.warn('sendSogsMessageWithOnionV4 Got unknown status code; res:', res);
-    throw new Error(`sendMessageOnionV4: invalid status code: ${statusCode}`);
+    throw new Error(`sendSogsMessageOnionV4: invalid status code: ${statusCode}`);
   }
 
   if (statusCode !== 201) {
@@ -119,7 +119,7 @@ export const sendMessageOnionV4BlindedRequest = async (
   const statusCode = parseStatusCodeFromOnionRequestV4(res);
   if (!statusCode) {
     window?.log?.warn('sendMessageOnionV4BlindedRequest Got unknown status code; res:', res);
-    throw new Error(`sendMessageOnionV4: invalid status code: ${statusCode}`);
+    throw new Error(`sendMessageOnionV4BlindedRequest: invalid status code: ${statusCode}`);
   }
 
   if (statusCode !== 201) {

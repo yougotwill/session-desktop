@@ -8,6 +8,9 @@ import { createOrUpdateItem, getItemById } from '../../../../data/channelsItem';
 import { combineKeys, generateBlindingFactor } from '../../../utils/SodiumUtils';
 import { getAllOpengroupsServerPubkeys } from '../../../../data/opengroups';
 import { ConversationModel } from '../../../../models/conversation';
+import { UserUtils } from '../../../utils';
+import { getBlindedPubKey } from './sogsBlinding';
+import { fromHexToArray } from '../../../utils/String';
 
 export type BlindedIdMapping = {
   blindedId: string;
@@ -78,6 +81,27 @@ export function getCachedBlindedKeyMapping(
   const found = assertLoaded().find(
     m => m.serverPublicKey === serverPublicKey && m.blindedId === blindedId
   );
+  return found?.realSessionId || undefined;
+}
+
+function getCachedUnblindedKeyMapping(
+  unblindedId: string,
+  serverPublicKey: string
+): string | undefined {
+  if (PubKey.hasBlindedPrefix(unblindedId)) {
+    throw new Error('getCachedUnblindedKeyMapping needs an unblindedID');
+  }
+  const found = assertLoaded().find(
+    m => m.serverPublicKey === serverPublicKey && m.realSessionId === unblindedId
+  );
+  return found?.blindedId || undefined;
+}
+
+function getCachedBlindedKeyMappingNoServerPubkey(blindedId: string): string | undefined {
+  if (isNonBlindedKey(blindedId)) {
+    return blindedId;
+  }
+  const found = assertLoaded().find(m => m.blindedId === blindedId);
   return found?.realSessionId || undefined;
 }
 
@@ -238,6 +262,76 @@ export async function findCachedBlindedMatchOrItLookup(
     return realSessionIdFound;
   }
   return undefined;
+}
+
+/**
+ * When we sent a message to a sogs with blinded enable, we need to store the message with the sender being our blinded pubkey.
+ * We store that mapping <ourKey, serverPk, blindedKey> in the same cache, so we can map our own messages synced easily.
+ * This function just find if there is such a mapping already cached, but won't try to update the cache to find one.
+ */
+function findCachedBlindedIdFromUnblinded(
+  unblindedId: string,
+  serverPubKey: string
+): string | undefined {
+  if (PubKey.hasBlindedPrefix(unblindedId)) {
+    throw new Error('findCachedBlindedIdFromUnblinded needs a unblindedID');
+  }
+  return getCachedUnblindedKeyMapping(unblindedId, serverPubKey);
+}
+
+/**
+ * This function can be used to generate our blindedId for a sogs requiring it, and cache it.
+ *
+ *
+ */
+export async function findCachedOurBlindedPubkeyOrLookItUp(
+  serverPubKey: string,
+  sodium: LibSodiumWrappers
+): Promise<string> {
+  const ourNakedSessionID = UserUtils.getOurPubKeyStrFromCache();
+
+  if (PubKey.hasBlindedPrefix(ourNakedSessionID)) {
+    throw new Error('findCachedBlindedIdFromUnblindedOrLookItUp needs a unblindedID');
+  }
+  let found = findCachedBlindedIdFromUnblinded(ourNakedSessionID, serverPubKey);
+
+  if (found) {
+    return found;
+  }
+  const signingKeys = await UserUtils.getUserED25519KeyPairBytes();
+
+  // just to make sure the mapping was not added during last line call
+
+  if (!signingKeys) {
+    throw new Error('addSingleOutgoingMessage: getUserED25519KeyPairBytes returned nothing');
+  }
+
+  const blindedPubkeyForThisSogs = getBlindedPubKey(
+    fromHexToArray(serverPubKey),
+    signingKeys,
+    sodium
+  );
+  found = findCachedBlindedIdFromUnblinded(ourNakedSessionID, serverPubKey);
+
+  if (found) {
+    return found;
+  }
+
+  await addCachedBlindedKey({
+    blindedId: blindedPubkeyForThisSogs,
+    serverPublicKey: serverPubKey,
+    realSessionId: ourNakedSessionID,
+  });
+  return blindedPubkeyForThisSogs;
+}
+
+export function findCachedBlindedMatchNoLookup(blindedId: string): string | undefined {
+  if (!PubKey.hasBlindedPrefix(blindedId)) {
+    return blindedId;
+  }
+  const found = getCachedBlindedKeyMappingNoServerPubkey(blindedId);
+
+  return found || undefined;
 }
 
 /**

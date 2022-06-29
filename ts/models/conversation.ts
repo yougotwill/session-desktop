@@ -76,6 +76,8 @@ import { from_hex } from 'libsodium-wrappers-sumo';
 import { getV2OpenGroupRoom } from '../data/opengroups';
 import { roomHasBlindEnabled } from '../session/apis/open_group_api/sogsv3/sogsV3Capabilities';
 import { addMessagePadding } from '../session/crypto/BufferPadding';
+import { getSodiumRenderer } from '../session/crypto';
+import { findCachedOurBlindedPubkeyOrLookItUp } from '../session/apis/open_group_api/sogsv3/knownBlindedkeys';
 
 export class ConversationModel extends Backbone.Model<ConversationAttributes> {
   public updateLastMessage: () => any;
@@ -1010,10 +1012,32 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       'conversationId' | 'source' | 'type' | 'direction' | 'received_at' | 'unread'
     >
   ) {
+    let sender = UserUtils.getOurPubKeyStrFromCache();
+    if (this.isPublic()) {
+      const openGroup = getV2OpenGroupRoom(this.id);
+      if (openGroup && openGroup.serverPublicKey && roomHasBlindEnabled(openGroup)) {
+        const signingKeys = await UserUtils.getUserED25519KeyPairBytes();
+
+        if (!signingKeys) {
+          throw new Error('addSingleOutgoingMessage: getUserED25519KeyPairBytes returned nothing');
+        }
+
+        const sodium = await getSodiumRenderer();
+
+        const ourBlindedPubkeyForCurrentSogs = await findCachedOurBlindedPubkeyOrLookItUp(
+          openGroup.serverPublicKey,
+          sodium
+        );
+
+        if (ourBlindedPubkeyForCurrentSogs) {
+          sender = ourBlindedPubkeyForCurrentSogs;
+        }
+      }
+    }
     return this.addSingleMessage({
       ...messageAttributes,
       conversationId: this.id,
-      source: UserUtils.getOurPubKeyStrFromCache(),
+      source: sender,
       type: 'outgoing',
       direction: 'outgoing',
       unread: 0, // an outgoing message must be read right?

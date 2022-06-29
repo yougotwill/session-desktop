@@ -18,8 +18,7 @@ import { ConversationModel } from '../../../../models/conversation';
 import { filterDuplicatesFromDbAndIncomingV4 } from '../opengroupV2/SogsFilterDuplicate';
 import { callUtilsWorker } from '../../../../webworker/workers/util_worker_interface';
 import { PubKey } from '../../../types';
-import { getSodiumRenderer } from '../../../crypto';
-import { findCachedBlindedMatchOrItLookup } from './knownBlindedkeys';
+import { findCachedBlindedMatchNoLookup } from './knownBlindedkeys';
 import { decryptWithSessionBlindingProtocol } from './sogsBlinding';
 import { base64_variants, from_base64 } from 'libsodium-wrappers-sumo';
 import { UserUtils } from '../../../utils';
@@ -152,7 +151,6 @@ const handleNewMessagesResponseV4 = async (
     if (!roomInfos || !roomInfos.conversationId) {
       return;
     }
-    const serverPk = roomInfos.serverPublicKey;
     const messagesWithValidSignature = await filterOutMessagesInvalidSignature(messages);
     // we do a first check with blinded ids. Looking to filter out messages we already received from that blinded id.
     const messagesFilteredBlindedIds = await filterDuplicatesFromDbAndIncomingV4(
@@ -160,7 +158,6 @@ const handleNewMessagesResponseV4 = async (
     );
     console.warn('messagesFilteredBlindedIds', messagesFilteredBlindedIds);
 
-    const sodium = await getSodiumRenderer();
     const roomDetails: OpenGroupRequestCommonType = pick(roomInfos, 'serverUrl', 'roomId');
     // then we try to find matching real session ids with the blinded ids we have.
     // this is where we override the blindedId with the real one in case we already know that user real sessionId
@@ -169,14 +166,10 @@ const handleNewMessagesResponseV4 = async (
     const messagesWithResolvedBlindedIdsIfFound = [];
     for (let index = 0; index < messagesFilteredBlindedIds.length; index++) {
       const newMessage = messagesFilteredBlindedIds[index];
-      const unblindedIdFound = await findCachedBlindedMatchOrItLookup(
-        newMessage.session_id,
-        serverPk,
-        sodium
-      );
+      const unblindedIdFound = findCachedBlindedMatchNoLookup(newMessage.session_id);
 
-      // override the sender in the message itself
-      if (unblindedIdFound) {
+      // override the sender in the message itself if we are the sender
+      if (unblindedIdFound && UserUtils.isUsFromCache(unblindedIdFound)) {
         newMessage.session_id = unblindedIdFound;
       }
       messagesWithResolvedBlindedIdsIfFound.push(newMessage);

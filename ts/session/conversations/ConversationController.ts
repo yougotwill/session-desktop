@@ -162,7 +162,7 @@ export class ConversationController {
    * That way we can still have the username and avatar for them, but they won't appear in search results etc.
    * For the blinded contact deletion though, we want to delete it completely because we merged it to an unblinded convo.
    */
-  public async deleteBlindedContactCompletely(blindedId: string) {
+  public async deleteBlindedContact(blindedId: string) {
     if (!this._initialFetchComplete) {
       throw new Error(
         'getConversationController().deleteBlindedContact() needs complete initial fetch'
@@ -181,19 +181,8 @@ export class ConversationController {
     // we remove the messages left in this convo. The caller has to merge them if needed
     await deleteAllMessagesByConvoIdNoConfirmation(conversation.id);
 
-    await removeConversation(blindedId);
-    window.log.info(`deleteBlindedContact !isPrivate, convo removed from DB: ${blindedId}`);
-
-    this.conversations.remove(conversation);
-    if (window?.inboxStore) {
-      window.inboxStore?.dispatch(
-        conversationActions.conversationChanged({
-          id: blindedId,
-          data: conversation.getConversationModelProps(),
-        })
-      );
-      window.inboxStore?.dispatch(conversationActions.conversationRemoved(blindedId));
-    }
+    conversation.set({ didApproveMe: false, isApproved: false });
+    await conversation.commit();
   }
 
   public async deleteContact(id: string) {
