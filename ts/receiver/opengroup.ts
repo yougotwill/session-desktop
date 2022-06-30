@@ -1,4 +1,4 @@
-import _, { noop } from 'lodash';
+import { noop } from 'lodash';
 import {
   createPublicMessageSentFromNotUs,
   createPublicMessageSentFromUs,

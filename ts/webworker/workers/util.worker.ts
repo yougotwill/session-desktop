@@ -157,7 +157,6 @@ async function verifySignature(
         console.info('Invalid signature blinded');
         return false;
       }
-      console.error('valid signature blinded');
 
       return true;
     }

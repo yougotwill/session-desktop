@@ -228,11 +228,11 @@ const sendSogsBatchRequest = async (
 ): Promise<null | any> => {
   const { endpoint, headers, method, body } = request;
   const builtUrl = new URL(`${serverUrl}/${endpoint}`);
-  console.warn(
-    `sendSogsBatchRequest including ${
-      headers['X-SOGS-Pubkey']?.startsWith('15') ? 'blinded' : 'unblinded'
-    } headers`
-  );
+  // console.warn(
+  //   `sendSogsBatchRequest including ${
+  //     headers['X-SOGS-Pubkey']?.startsWith('15') ? 'blinded' : 'unblinded'
+  //   } headers`
+  // );
 
   // this function extracts the body and status_code and JSON.parse it already
   const batchResponse = await sendViaOnionV4ToNonSnode(

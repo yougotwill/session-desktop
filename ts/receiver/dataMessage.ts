@@ -5,7 +5,7 @@ import { getEnvelopeId } from './common';
 
 import { PubKey } from '../session/types';
 import { handleMessageJob, toRegularMessage } from './queuedJob';
-import _ from 'lodash';
+import { isEmpty, isFinite, noop, omit, toNumber } from 'lodash';
 import { StringUtils, UserUtils } from '../session/utils';
 import { getConversationController } from '../session/conversations';
 import { handleClosedGroupControlMessage } from './closedGroups';
@@ -24,7 +24,7 @@ import { ConversationTypeEnum } from '../models/conversationAttributes';
 
 function cleanAttachment(attachment: any) {
   return {
-    ..._.omit(attachment, 'thumbnail'),
+    ...omit(attachment, 'thumbnail'),
     id: attachment.id.toString(),
     key: attachment.key ? StringUtils.decode(attachment.key, 'base64') : null,
     digest:
@@ -60,7 +60,7 @@ function cleanAttachments(decrypted: SignalService.DataMessage) {
 
   if (quote) {
     if (quote.id) {
-      quote.id = _.toNumber(quote.id);
+      quote.id = toNumber(quote.id);
     }
 
     quote.attachments = (quote.attachments || []).map((item: any) => {
@@ -85,16 +85,16 @@ export function isMessageEmpty(message: SignalService.DataMessage) {
     !flags &&
     // FIXME remove this hack to drop auto friend requests messages in a few weeks 15/07/2020
     isBodyEmpty(body) &&
-    _.isEmpty(attachments) &&
-    _.isEmpty(group) &&
-    _.isEmpty(quote) &&
-    _.isEmpty(preview) &&
-    _.isEmpty(openGroupInvitation)
+    isEmpty(attachments) &&
+    isEmpty(group) &&
+    isEmpty(quote) &&
+    isEmpty(preview) &&
+    isEmpty(openGroupInvitation)
   );
 }
 
 function isBodyEmpty(body: string) {
-  return _.isEmpty(body);
+  return isEmpty(body);
 }
 
 async function cleanIncomingDataMessage(
@@ -133,7 +133,7 @@ async function cleanIncomingDataMessage(
   cleanAttachments(rawDataMessage);
 
   // if the decrypted dataMessage timestamp is not set, copy the one from the envelope
-  if (!_.isFinite(rawDataMessage?.timestamp)) {
+  if (!isFinite(rawDataMessage?.timestamp)) {
     rawDataMessage.timestamp = envelope.timestamp;
   }
 
@@ -272,6 +272,23 @@ export async function isSwarmMessageDuplicate({
     window?.log?.error('isSwarmMessageDuplicate error:', toLogFormat(error));
     return false;
   }
+}
+
+export async function handleOutboxMessageModel(
+  msgModel: MessageModel,
+  messageHash: string,
+  sentAt: number,
+  rawDataMessage: SignalService.DataMessage,
+  convoToAddMessageTo: ConversationModel
+) {
+  return handleSwarmMessage(
+    msgModel,
+    messageHash,
+    sentAt,
+    rawDataMessage,
+    convoToAddMessageTo,
+    noop
+  );
 }
 
 async function handleSwarmMessage(

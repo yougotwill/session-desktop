@@ -19,7 +19,10 @@ import { ConversationModel } from '../../../../models/conversation';
 import { filterDuplicatesFromDbAndIncomingV4 } from '../opengroupV2/SogsFilterDuplicate';
 import { callUtilsWorker } from '../../../../webworker/workers/util_worker_interface';
 import { PubKey } from '../../../types';
-import { findCachedBlindedMatchNoLookup } from './knownBlindedkeys';
+import {
+  findCachedBlindedMatchNoLookup,
+  findCachedOurBlindedPubkeyOrLookItUp,
+} from './knownBlindedkeys';
 import { decryptWithSessionBlindingProtocol } from './sogsBlinding';
 import { base64_variants, from_base64 } from 'libsodium-wrappers-sumo';
 import { UserUtils } from '../../../utils';
@@ -28,6 +31,10 @@ import { EnvelopePlus } from '../../../../receiver/types';
 import { SignalService } from '../../../../protobuf';
 import { v4 } from 'uuid';
 import { removeMessagePadding } from '../../../crypto/BufferPadding';
+import { getSodiumRenderer } from '../../../crypto';
+import { handleOutboxMessageModel } from '../../../../receiver/dataMessage';
+import { ConversationTypeEnum } from '../../../../models/conversationAttributes';
+import { createSwarmMessageSentFromUs } from '../../../../models/messageFactory';
 
 /**
  * Get the convo matching those criteria and make sure it is an opengroup convo, or return null.
@@ -157,7 +164,6 @@ const handleNewMessagesResponseV4 = async (
     const messagesFilteredBlindedIds = await filterDuplicatesFromDbAndIncomingV4(
       messagesWithValidSignature
     );
-    console.warn('messagesFilteredBlindedIds', messagesFilteredBlindedIds);
 
     const roomDetails: OpenGroupRequestCommonType = pick(roomInfos, 'serverUrl', 'roomId');
     // then we try to find matching real session ids with the blinded ids we have.
@@ -241,6 +247,10 @@ async function handleInboxOutboxMessages(
   }
   const serverPubkey = roomInfos[0].serverPublicKey;
 
+  const sodium = await getSodiumRenderer();
+  // make sure to add our blindedpubkey to this server in the cache, if it's not already there
+  await findCachedOurBlindedPubkeyOrLookItUp(serverPubkey, sodium);
+
   for (let index = 0; index < inboxOutboxResponse.length; index++) {
     const inboxOutboxItem = inboxOutboxResponse[index];
     const isOutgoing = isOutbox;
@@ -259,16 +269,60 @@ async function handleInboxOutboxMessages(
 
       // decrypt message from result
 
+      const content = new Uint8Array(removeMessagePadding(decrypted.plainText));
       const builtEnvelope: EnvelopePlus = {
-        content: new Uint8Array(removeMessagePadding(decrypted.plainText)),
-        source: decrypted.senderUnblinded,
+        content,
+        source: decrypted.senderUnblinded, // this is us for an outbox message, and the sender for an inbox message
         senderIdentity: decrypted.senderUnblinded,
         receivedAt: Date.now(),
         timestamp: postedAtInMs,
         id: v4(),
         type: SignalService.Envelope.Type.SESSION_MESSAGE, // this is not right, but we forward an already decrypted envelope so we don't care
       };
-      await innerHandleSwarmContentMessage(builtEnvelope, postedAtInMs, builtEnvelope.content, '');
+
+      if (isOutbox) {
+        /**
+         * Handling outbox messages needs to skip some of the pipeline.
+         * It is a kind of synced message, but without the field syncTarget set.
+         * We also need to do some custom sogs stuff like setting from which sogs conversationID this message comes from.
+         * We will need this to send new message to that user from our second device.
+         *
+         */
+        const contentDecoded = SignalService.Content.decode(content);
+
+        if (contentDecoded.dataMessage) {
+          const outboxConversationModel = await getConversationController().getOrCreateAndWait(
+            inboxOutboxItem.recipient,
+            ConversationTypeEnum.PRIVATE
+          );
+          const serverConversationId = getV2OpenGroupRoomsByServerUrl(serverUrl)?.[0]
+            .conversationId;
+          if (!serverConversationId) {
+            throw new Error('serverConversationId needs to exist');
+          }
+          const msgModel = createSwarmMessageSentFromUs({
+            conversationId: inboxOutboxItem.recipient,
+            messageHash: '',
+            sentAt: postedAtInMs,
+          });
+          await outboxConversationModel.setOriginConversationID(serverConversationId);
+
+          await handleOutboxMessageModel(
+            msgModel,
+            '',
+            postedAtInMs,
+            contentDecoded.dataMessage as SignalService.DataMessage,
+            outboxConversationModel
+          );
+        }
+      } else {
+        await innerHandleSwarmContentMessage(
+          builtEnvelope,
+          postedAtInMs,
+          builtEnvelope.content,
+          ''
+        );
+      }
     } catch (e) {
       window.log.warn('handleOutboxMessages failed with:', e.message);
     }
@@ -288,8 +342,8 @@ async function handleInboxOutboxMessages(
   // we should probably extract the inboxId & outboxId fetched to another table, as it is server wide and not room specific
   if (isNumber(maxInboxOutboxId)) {
     const updatedRooms = isOutbox
-      ? rooms.map(r => ({ ...r, lastInboxIdFetched: maxInboxOutboxId }))
-      : rooms.map(r => ({ ...r, lastOutboxIdFetched: maxInboxOutboxId }));
+      ? rooms.map(r => ({ ...r, lastOutboxIdFetched: maxInboxOutboxId }))
+      : rooms.map(r => ({ ...r, lastInboxIdFetched: maxInboxOutboxId }));
     // this won't write if no changes are detected
     await saveV2OpenGroupRooms(updatedRooms);
   }

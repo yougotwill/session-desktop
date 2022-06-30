@@ -385,6 +385,7 @@ export async function innerHandleSwarmContentMessage(
     }
 
     if (content.dataMessage) {
+      // because typescript is funky with incoming protobufs
       if (content.dataMessage.profileKey && content.dataMessage.profileKey.length === 0) {
         content.dataMessage.profileKey = null;
       }

@@ -268,9 +268,6 @@ export interface ReduxConversationType {
   isApproved?: boolean;
   didApproveMe?: boolean;
 
-  /** The original group this conversation was created from (e.g. if DMing someone from an open group) */
-  conversationIdOrigin?: string;
-
   /** Should only be present on open groups - the key (stored as hex) that should be used when sending messages to an open group */
   blindedPublicKey?: string;
 }

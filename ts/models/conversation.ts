@@ -267,7 +267,6 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     const currentNotificationSetting = this.get('triggerNotificationsFor');
     const displayNameInProfile = this.get('displayNameInProfile');
     const nickname = this.get('nickname');
-    const conversationIdOrigin = this.get('conversationIdOrigin');
 
     // To reduce the redux store size, only set fields which cannot be undefined.
     // For instance, a boolean can usually be not set if false, etc
@@ -361,10 +360,6 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
 
     if (expireTimer) {
       toRet.expireTimer = expireTimer;
-    }
-
-    if (conversationIdOrigin) {
-      toRet.conversationIdOrigin = conversationIdOrigin;
     }
 
     if (

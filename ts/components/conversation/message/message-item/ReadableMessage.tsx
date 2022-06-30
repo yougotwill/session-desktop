@@ -1,4 +1,4 @@
-import _, { noop } from 'lodash';
+import { debounce, noop } from 'lodash';
 import React, { useCallback, useContext, useLayoutEffect, useState } from 'react';
 import { InView } from 'react-intersection-observer';
 import { useDispatch, useSelector } from 'react-redux';
@@ -33,7 +33,7 @@ type ReadableMessageProps = {
   onContextMenu?: (e: React.MouseEvent<HTMLElement>) => void;
 };
 
-const debouncedTriggerLoadMoreTop = _.debounce(
+const debouncedTriggerLoadMoreTop = debounce(
   (selectedConversationKey: string, oldestMessageId: string) => {
     (window.inboxStore?.dispatch as any)(
       fetchTopMessagesForConversation({
@@ -45,7 +45,7 @@ const debouncedTriggerLoadMoreTop = _.debounce(
   100
 );
 
-const debouncedTriggerLoadMoreBottom = _.debounce(
+const debouncedTriggerLoadMoreBottom = debounce(
   (selectedConversationKey: string, youngestMessageId: string) => {
     (window.inboxStore?.dispatch as any)(
       fetchBottomMessagesForConversation({
