@@ -1,9 +1,5 @@
 import { findIndex } from 'lodash';
-import {
-  getV2OpenGroupRoomsByServerUrl,
-  OpenGroupV2Room,
-  saveV2OpenGroupRoom,
-} from '../../../../data/opengroups';
+import { getV2OpenGroupRoomsByServerUrl, saveV2OpenGroupRooms } from '../../../../data/opengroups';
 import { DecodedResponseBodiesV4 } from '../../../onions/onionv4';
 import { BatchSogsReponse, OpenGroupBatchRow } from './sogsV3BatchPoll';
 import { parseCapabilities } from './sogsV3Capabilities';
@@ -56,19 +52,8 @@ export const handleCapabilities = async (
     return null;
   }
 
-  await Promise.all(
-    rooms.map(async (room: OpenGroupV2Room) => {
-      // doing this to get the roomId? and conversationId? Optionally could include
+  const updatedRooms = rooms.map(r => ({ ...r, capabilities }));
+  await saveV2OpenGroupRooms(updatedRooms);
 
-      // TODO: uncomment once complete
-      // if (_.isEqual(room.capabilities, capabilities)) {
-      //   return;
-      // }
-
-      // updating the db values for the open group room
-      const roomUpdate = { ...room, capabilities };
-      await saveV2OpenGroupRoom(roomUpdate);
-    })
-  );
   return capabilities;
 };

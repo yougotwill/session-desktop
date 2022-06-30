@@ -19,8 +19,10 @@ export type OpenGroupV2Room = {
 
   /** the linked ConversationModel.id */
   conversationId?: string;
-  lastMessageFetchedServerID?: number;
   maxMessageFetchedSeqNo?: number;
+  lastInboxIdFetched?: number;
+  lastOutboxIdFetched?: number;
+
   /**
    * This value represents the rowId of the last message deleted. Not the id of the last message ID
    */
@@ -116,6 +118,10 @@ export function getV2OpenGroupRoomByRoomId(
   );
 
   return (found && cloneDeep(found)) || undefined;
+}
+
+export async function saveV2OpenGroupRooms(rooms: Array<OpenGroupV2Room>): Promise<void> {
+  await Promise.all(rooms.map(saveV2OpenGroupRoom));
 }
 
 export async function saveV2OpenGroupRoom(room: OpenGroupV2Room): Promise<void> {

@@ -8,7 +8,7 @@ import {
   ParsedDeletions,
   ParsedRoomCompactPollResults,
 } from './OpenGroupAPIV2CompactPoll';
-import _, { isObject, now } from 'lodash';
+import _, { isNumber, isObject } from 'lodash';
 import { ConversationModel } from '../../../../models/conversation';
 import { getMessageIdsFromServerIds, removeMessage } from '../../../../data/data';
 import {
@@ -22,9 +22,7 @@ import { sha256 } from '../../../crypto';
 import { DURATION } from '../../../constants';
 import { processNewAttachment } from '../../../../types/MessageAttachment';
 import { MIME } from '../../../../types';
-import { handleOpenGroupV2Message } from '../../../../receiver/opengroup';
 import { callUtilsWorker } from '../../../../webworker/workers/util_worker_interface';
-import { filterDuplicatesFromDbAndIncoming } from './SogsFilterDuplicate';
 import { OpenGroupBatchRow, sogsBatchPoll } from '../sogsv3/sogsV3BatchPoll';
 import { handleBatchPollResults } from '../sogsv3/sogsApiV3';
 import {
@@ -313,10 +311,22 @@ export class OpenGroupServerPoller {
       const rooms = getV2OpenGroupRoomsByServerUrl(this.serverUrl);
       if (rooms?.length) {
         if (roomHasBlindEnabled(rooms[0])) {
+          const maxInboxId = Math.max(...rooms.map(r => r.lastInboxIdFetched || 0));
+
           // This only works for servers with blinding capabilities
           // adding inbox subrequest info
           subrequestOptions.push({
             type: 'inbox',
+            inboxSince: { id: isNumber(maxInboxId) && maxInboxId > 0 ? maxInboxId : undefined },
+          });
+
+          const maxOutboxId = Math.max(...rooms.map(r => r.lastOutboxIdFetched || 0));
+
+          // This only works for servers with blinding capabilities
+          // adding outbox subrequest info
+          subrequestOptions.push({
+            type: 'outbox',
+            outboxSince: { id: isNumber(maxOutboxId) && maxOutboxId > 0 ? maxOutboxId : undefined },
           });
         }
       }
@@ -381,10 +391,6 @@ export class OpenGroupServerPoller {
       if (batchPollResults.status_code !== 200) {
         throw new Error('batchPollResults general status code is not 200');
       }
-      // we were not aborted, make sure to filter out roomIds we are not polling for anymore
-      // compactFetchResults = compactFetchResults.filter(result =>
-      //   this.roomIdsToPoll.has(result.roomId)
-      // );
 
       // ==> At this point all those results need to trigger conversation updates, so update what we have to update
       await handleBatchPollResults(
@@ -458,50 +464,6 @@ export const getRoomAndUpdateLastFetchTimestamp = async (
   return roomInfos;
 };
 
-const handleNewMessages = async (
-  newMessages: Array<OpenGroupMessageV2>,
-  conversationId: string,
-  _convo?: ConversationModel
-) => {
-  try {
-    const roomInfos = await getRoomAndUpdateLastFetchTimestamp(conversationId, newMessages);
-    if (!roomInfos) {
-      return;
-    }
-
-    const incomingMessageIds = _.compact(newMessages.map(n => n.serverId));
-    const maxNewMessageId = Math.max(...incomingMessageIds);
-
-    const roomDetails: OpenGroupRequestCommonType = _.pick(roomInfos, 'serverUrl', 'roomId');
-
-    // this call filters duplicates based on the sender & senttimestamp from the incoming messages array and the database
-    const filteredDuplicates = await filterDuplicatesFromDbAndIncoming(newMessages);
-
-    const startHandleOpengroupMessage = now();
-    // tslint:disable-next-line: prefer-for-of
-    for (let index = 0; index < filteredDuplicates.length; index++) {
-      const newMessage = filteredDuplicates[index];
-      try {
-        await handleOpenGroupV2Message(newMessage, roomDetails);
-      } catch (e) {
-        window?.log?.warn('handleOpenGroupV2Message', e);
-      }
-    }
-
-    window.log.debug(
-      `[perf] handle ${filteredDuplicates.length} opengroupMessages took ${now() -
-        startHandleOpengroupMessage}ms.`
-    );
-
-    // we need to update the timestamp even if we don't have a new MaxMessageServerId
-    roomInfos.lastMessageFetchedServerID = maxNewMessageId;
-    roomInfos.lastFetchTimestamp = Date.now();
-    await saveV2OpenGroupRoom(roomInfos);
-  } catch (e) {
-    window?.log?.warn('handleNewMessages failed:', e);
-  }
-};
-
 // to remove once we mapped all the logic to the new batch poll call
 const handleCompactPollResults = async (
   serverUrl: string,
@@ -517,9 +479,6 @@ const handleCompactPollResults = async (
         // new deletions
         await handleDeletions(res.deletions, convoId, convo);
       }
-
-      // new messages. call this even if we don't have new messages
-      await handleNewMessages(res.messages, convoId, convo);
 
       if (!convo) {
         window?.log?.warn('Could not find convo for compactPoll', convoId);

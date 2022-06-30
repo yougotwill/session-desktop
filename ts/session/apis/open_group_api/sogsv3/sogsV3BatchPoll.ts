@@ -90,17 +90,40 @@ export const sogsBatchPoll = async (
 
 export type SubrequestOptionType = 'capabilities' | 'messages' | 'pollInfo' | 'inbox';
 
-export type OpenGroupBatchRow = {
-  type: SubrequestOptionType;
+export type SubRequestCapabilitiesType = { type: 'capabilities' };
+export type SubRequestMessagesType = {
+  type: 'messages';
   messages?: {
     roomId: string;
     sinceSeqNo?: number;
   };
+};
+export type SubRequestPollInfoType = {
+  type: 'pollInfo';
   pollInfo?: {
     roomId: string;
     infoUpdated?: number;
   };
 };
+export type SubRequestInboxType = {
+  type: 'inbox';
+  inboxSince?: {
+    id?: number;
+  };
+};
+export type SubRequestOutboxType = {
+  type: 'outbox';
+  outboxSince?: {
+    id?: number;
+  };
+};
+
+export type OpenGroupBatchRow =
+  | SubRequestCapabilitiesType
+  | SubRequestMessagesType
+  | SubRequestPollInfoType
+  | SubRequestInboxType
+  | SubRequestOutboxType;
 
 /**
  *
@@ -116,8 +139,6 @@ const makeBatchRequestPayload = (options: OpenGroupBatchRow): BatchSubRequest | 
   }
 
   if (options.type === 'messages' && options.messages) {
-    // TODO: allow more options for path building
-
     return {
       method: GET_METHOD,
       path: isNumber(options.messages.sinceSeqNo)
@@ -129,7 +150,20 @@ const makeBatchRequestPayload = (options: OpenGroupBatchRow): BatchSubRequest | 
   if (options.type === 'inbox') {
     return {
       method: GET_METHOD,
-      path: '/inbox',
+      path:
+        options?.inboxSince?.id && isNumber(options.inboxSince.id)
+          ? `/inbox/since/${options.inboxSince.id}`
+          : '/inbox',
+    };
+  }
+
+  if (options.type === 'outbox') {
+    return {
+      method: GET_METHOD,
+      path:
+        options?.outboxSince?.id && isNumber(options.outboxSince.id)
+          ? `/outbox/since/${options.outboxSince.id}`
+          : '/outbox',
     };
   }
 

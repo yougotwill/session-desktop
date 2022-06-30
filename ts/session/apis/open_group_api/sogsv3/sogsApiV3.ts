@@ -3,10 +3,11 @@ import {
   getV2OpenGroupRoom,
   getV2OpenGroupRoomsByServerUrl,
   saveV2OpenGroupRoom,
+  saveV2OpenGroupRooms,
 } from '../../../../data/opengroups';
 import { handleOpenGroupV4Message } from '../../../../receiver/opengroup';
 import { OpenGroupRequestCommonType } from '../opengroupV2/ApiUtil';
-import { BatchSogsReponse, OpenGroupBatchRow } from './sogsV3BatchPoll';
+import { BatchSogsReponse, OpenGroupBatchRow, SubRequestMessagesType } from './sogsV3BatchPoll';
 import {
   getRoomAndUpdateLastFetchTimestamp,
   OpenGroupMessageV4,
@@ -128,7 +129,7 @@ async function filterOutMessagesInvalidSignature(
 const handleNewMessagesResponseV4 = async (
   messages: Array<OpenGroupMessageV4>,
   serverUrl: string,
-  subrequestOption: OpenGroupBatchRow,
+  subrequestOption: SubRequestMessagesType,
   roomIdsStillPolled: Set<string>
 ) => {
   if (!subrequestOption || !subrequestOption.messages) {
@@ -177,11 +178,8 @@ const handleNewMessagesResponseV4 = async (
     const dedupedUnblindedMessages = await filterDuplicatesFromDbAndIncomingV4(
       messagesWithResolvedBlindedIdsIfFound
     );
-    console.warn('dedupedUnblindedMessages', dedupedUnblindedMessages);
 
     // we use the unverified newMessages seqno and id as last polled because we actually did poll up to those ids.
-    const incomingMessageIds = compact(messages.map(n => n.id));
-    const maxNewMessageId = Math.max(...incomingMessageIds);
     const incomingMessageSeqNo = compact(messages.map(n => n.seqno));
     const maxNewMessageSeqNo = Math.max(...incomingMessageSeqNo);
     for (let index = 0; index < dedupedUnblindedMessages.length; index++) {
@@ -202,9 +200,6 @@ const handleNewMessagesResponseV4 = async (
     }
 
     // we need to update the timestamp even if we don't have a new MaxMessageServerId
-    if (isNumber(maxNewMessageId) && isFinite(maxNewMessageId)) {
-      roomInfosRefreshed.lastMessageFetchedServerID = maxNewMessageId;
-    }
     if (isNumber(maxNewMessageSeqNo) && isFinite(maxNewMessageSeqNo)) {
       roomInfosRefreshed.maxMessageFetchedSeqNo = maxNewMessageSeqNo;
     }
@@ -216,17 +211,22 @@ const handleNewMessagesResponseV4 = async (
   }
 };
 
-type InboxResponseObject = {
+type InboxOutboxResponseObject = {
   id: number; // that specific inbox message id
   sender: string; // blindedPubkey of the sender, the unblinded one is inside message content, encrypted only for our blinded pubkey
+  recipient: string; // blindedPubkey of the recipient, used for outbox messages only
   posted_at: number; // timestamp as seconds.microsec
   message: string; // base64 data
 };
 
-async function handleInboxMessages(inboxResponse: Array<InboxResponseObject>, serverUrl: string) {
-  // inbox messages are blinded so decrypt them using the blinding logic.
+async function handleInboxOutboxMessages(
+  inboxOutboxResponse: Array<InboxOutboxResponseObject>,
+  serverUrl: string,
+  isOutbox: boolean
+) {
+  // inbox/outbox messages are blinded so decrypt them using the blinding logic.
   // handle them as a message request after that.
-  if (!inboxResponse || !isArray(inboxResponse) || inboxResponse.length === 0) {
+  if (!inboxOutboxResponse || !isArray(inboxOutboxResponse) || inboxOutboxResponse.length === 0) {
     //nothing to do
     return;
   }
@@ -237,54 +237,62 @@ async function handleInboxMessages(inboxResponse: Array<InboxResponseObject>, se
   }
   const ourKeypairBytes = await UserUtils.getUserED25519KeyPairBytes();
   if (!ourKeypairBytes) {
-    throw new Error('handleInboxMessages needs current user keypair');
+    throw new Error('handleInboxOutboxMessages needs current user keypair');
   }
   const serverPubkey = roomInfos[0].serverPublicKey;
 
-  const decryptedInboxMessagesSettled = await Promise.allSettled(
-    inboxResponse.map(async inboxItem => {
-      const isOutgoing = false;
-      try {
-        const data = from_base64(inboxItem.message, base64_variants.ORIGINAL);
-        const postedAtInMs = inboxItem.posted_at * 1000;
+  for (let index = 0; index < inboxOutboxResponse.length; index++) {
+    const inboxOutboxItem = inboxOutboxResponse[index];
+    const isOutgoing = isOutbox;
+    try {
+      const data = from_base64(inboxOutboxItem.message, base64_variants.ORIGINAL);
+      const postedAtInMs = inboxOutboxItem.posted_at * 1000;
 
-        const otherBlindedPubkey = inboxItem.sender;
-        const decrypted = await decryptWithSessionBlindingProtocol(
-          data,
-          isOutgoing,
-          otherBlindedPubkey,
-          serverPubkey,
-          ourKeypairBytes
-        );
+      const otherBlindedPubkey = isOutbox ? inboxOutboxItem.recipient : inboxOutboxItem.sender;
+      const decrypted = await decryptWithSessionBlindingProtocol(
+        data,
+        isOutgoing,
+        otherBlindedPubkey,
+        serverPubkey,
+        ourKeypairBytes
+      );
 
-        // decrypt message from result
+      // decrypt message from result
 
-        const builtEnvelope: EnvelopePlus = {
-          content: new Uint8Array(removeMessagePadding(decrypted.plainText)),
-          source: decrypted.senderUnblinded,
-          senderIdentity: decrypted.senderUnblinded,
-          receivedAt: Date.now(),
-          timestamp: postedAtInMs,
-          id: v4(),
-          type: SignalService.Envelope.Type.SESSION_MESSAGE, // this is not right, but we forward an already decrypted envelope so we don't care
-        };
-        await innerHandleSwarmContentMessage(
-          builtEnvelope,
-          postedAtInMs,
-          builtEnvelope.content,
-          ''
-        );
-        console.warn('decryptedInboxMessagesSettled: decrypted', decrypted);
-      } catch (e) {
-        console.warn(e);
-      }
-    })
-  );
+      const builtEnvelope: EnvelopePlus = {
+        content: new Uint8Array(removeMessagePadding(decrypted.plainText)),
+        source: decrypted.senderUnblinded,
+        senderIdentity: decrypted.senderUnblinded,
+        receivedAt: Date.now(),
+        timestamp: postedAtInMs,
+        id: v4(),
+        type: SignalService.Envelope.Type.SESSION_MESSAGE, // this is not right, but we forward an already decrypted envelope so we don't care
+      };
+      await innerHandleSwarmContentMessage(builtEnvelope, postedAtInMs, builtEnvelope.content, '');
+    } catch (e) {
+      window.log.warn('handleOutboxMessages failed with:', e.message);
+    }
+  }
 
-  const decryptedInboxMessagesFullfilled = decryptedInboxMessagesSettled.filter(
-    m => m.status === 'fulfilled'
-  );
-  console.warn({ decryptedInboxMessagesFullfilled });
+  const rooms = getV2OpenGroupRoomsByServerUrl(serverUrl);
+
+  if (!rooms || !rooms.length) {
+    window?.log?.error('handleInboxOutboxMessages - Found no rooms with matching server url');
+    return;
+  }
+
+  const maxInboxOutboxId = inboxOutboxResponse.length
+    ? Math.max(...inboxOutboxResponse.map(inboxOutboxItem => inboxOutboxItem.id))
+    : undefined || undefined;
+
+  // we should probably extract the inboxId & outboxId fetched to another table, as it is server wide and not room specific
+  if (isNumber(maxInboxOutboxId)) {
+    const updatedRooms = isOutbox
+      ? rooms.map(r => ({ ...r, lastInboxIdFetched: maxInboxOutboxId }))
+      : rooms.map(r => ({ ...r, lastOutboxIdFetched: maxInboxOutboxId }));
+    // this won't write if no changes are detected
+    await saveV2OpenGroupRooms(updatedRooms);
+  }
 }
 
 export const handleBatchPollResults = async (
@@ -322,9 +330,7 @@ export const handleBatchPollResults = async (
               roomIdsStillPolled
             );
 
-          // redundant - Probably already getting handled first due to the early search before this loop
           case 'pollInfo':
-            // TODO: handle handle pollInfo
             await handlePollInfoResponse(
               subResponse.code,
               subResponse.body,
@@ -334,7 +340,12 @@ export const handleBatchPollResults = async (
             break;
 
           case 'inbox':
-            await handleInboxMessages(subResponse.body, serverUrl);
+            await handleInboxOutboxMessages(subResponse.body, serverUrl, false);
+
+            break;
+
+          case 'outbox':
+            await handleInboxOutboxMessages(subResponse.body, serverUrl, true);
 
             break;
 

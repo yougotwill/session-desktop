@@ -5,7 +5,6 @@ import _ from 'lodash';
 import { sendViaOnionToNonSnode } from '../../../onions/onionSend';
 import { OpenGroupMessageV2 } from './OpenGroupMessageV2';
 import { downloadPreviewOpenGroupV2 } from './OpenGroupAPIV2';
-import { DURATION } from '../../../constants';
 import { AbortSignal } from 'abort-controller';
 
 const COMPACT_POLL_ENDPOINT = 'compact_poll';
@@ -139,23 +138,15 @@ const getCompactPollRequest = async (
   const roomsRequestInfos = _.compact(
     allValidRoomInfos.map(validRoomInfos => {
       try {
-        const {
-          lastMessageFetchedServerID,
-          lastFetchTimestamp,
-          lastMessageDeletedServerID,
-          roomId,
-        } = validRoomInfos;
+        const { lastMessageDeletedServerID, roomId } = validRoomInfos;
         const roomRequestContent: Record<string, any> = {
           room_id: roomId,
         };
         roomRequestContent.from_deletion_server_id = lastMessageDeletedServerID;
-        if (Date.now() - (lastFetchTimestamp || 0) <= DURATION.DAYS * 7) {
-          roomRequestContent.from_message_server_id = lastMessageFetchedServerID;
-        } else {
-          window?.log?.info(
-            `We've been away for a long time... Only fetching last messages of room '${roomId}'`
-          );
-        }
+
+        window?.log?.info(
+          `We've been away for a long time... Only fetching last messages of room '${roomId}'`
+        );
 
         return roomRequestContent;
       } catch (e) {
