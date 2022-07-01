@@ -4,7 +4,7 @@ import { getMessageQueue } from '../session';
 import { getConversationController } from '../session/conversations';
 import { ClosedGroupVisibleMessage } from '../session/messages/outgoing/visibleMessage/ClosedGroupVisibleMessage';
 import { PubKey } from '../session/types';
-import { UserUtils } from '../session/utils';
+import { ToastUtils, UserUtils } from '../session/utils';
 import { BlockedNumberController } from '../util';
 import { leaveClosedGroup } from '../session/group/closed-group';
 import { SignalService } from '../protobuf';
@@ -733,8 +733,9 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     const roomInfo = getV2OpenGroupRoom(groupUrl);
 
     if (!roomInfo || !roomInfo.serverPublicKey) {
-      window?.log?.error('Could not find room with matching server url');
-      return;
+      ToastUtils.pushToastError('no-sogs-matching', window.i18n('couldntFindServerMatching'));
+      window?.log?.error('Could not find room with matching server url', groupUrl);
+      throw new Error(`Could not find room with matching server url: ${groupUrl}`);
     }
 
     const sogsVisibleMessage = new OpenGroupVisibleMessage(messageParams);

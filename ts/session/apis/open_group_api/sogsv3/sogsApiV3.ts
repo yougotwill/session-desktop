@@ -21,6 +21,7 @@ import { callUtilsWorker } from '../../../../webworker/workers/util_worker_inter
 import { PubKey } from '../../../types';
 import {
   findCachedBlindedMatchNoLookup,
+  findCachedBlindedMatchOrItLookup,
   findCachedOurBlindedPubkeyOrLookItUp,
 } from './knownBlindedkeys';
 import { decryptWithSessionBlindingProtocol } from './sogsBlinding';
@@ -225,6 +226,7 @@ type InboxOutboxResponseObject = {
   message: string; // base64 data
 };
 
+// tslint:disable-next-line: cyclomatic-complexity
 async function handleInboxOutboxMessages(
   inboxOutboxResponse: Array<InboxOutboxResponseObject>,
   serverUrl: string,
@@ -286,13 +288,18 @@ async function handleInboxOutboxMessages(
          * It is a kind of synced message, but without the field syncTarget set.
          * We also need to do some custom sogs stuff like setting from which sogs conversationID this message comes from.
          * We will need this to send new message to that user from our second device.
-         *
          */
+        const recipient = inboxOutboxItem.recipient;
         const contentDecoded = SignalService.Content.decode(content);
+
+        // if we already know this user's unblinded pubkey, store the blinded message we sent to that blinded recipient under
+        // the unblinded conversation instead (as we would have merge the blinded one with the )
+        const unblindedIDOrBlinded =
+          (await findCachedBlindedMatchOrItLookup(recipient, serverPubkey, sodium)) || recipient;
 
         if (contentDecoded.dataMessage) {
           const outboxConversationModel = await getConversationController().getOrCreateAndWait(
-            inboxOutboxItem.recipient,
+            unblindedIDOrBlinded,
             ConversationTypeEnum.PRIVATE
           );
           const serverConversationId = getV2OpenGroupRoomsByServerUrl(serverUrl)?.[0]
@@ -301,7 +308,7 @@ async function handleInboxOutboxMessages(
             throw new Error('serverConversationId needs to exist');
           }
           const msgModel = createSwarmMessageSentFromUs({
-            conversationId: inboxOutboxItem.recipient,
+            conversationId: unblindedIDOrBlinded,
             messageHash: '',
             sentAt: postedAtInMs,
           });

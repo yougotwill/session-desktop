@@ -123,6 +123,7 @@ export type LocalizerKeys =
   | 'displayNameEmpty'
   | 'inviteContacts'
   | 'callMediaPermissionsTitle'
+  | 'couldntFindServerMatching'
   | 'blocked'
   | 'hideRequestBannerDescription'
   | 'noBlockedContacts'

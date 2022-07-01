@@ -31,6 +31,7 @@
   "openGroupInvitation": "Open group invitation",
   "joinOpenGroupAfterInvitationConfirmationTitle": "Join $roomName$?",
   "joinOpenGroupAfterInvitationConfirmationDesc": "Are you sure you want to join the $roomName$ open group?",
+  "couldntFindServerMatching": "Couldn't find the corresponding opengroup server",
   "enterSessionIDOrONSName": "Enter Session ID or ONS name",
   "loading": "Loading...",
   "done": "Done",
