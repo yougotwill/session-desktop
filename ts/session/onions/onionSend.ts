@@ -250,7 +250,6 @@ export const sendViaOnionV4ToNonSnode = async (
     typeof destinationX25519Key !== 'string' ? toHex(destinationX25519Key) : destinationX25519Key;
 
   const defaultedOptions = initOptionsWithDefaults(options);
-
   const payloadObj = buildSendViaOnionPayload(url, fetchOptions);
   // if protocol is forced to 'http:' => just use http (without the ':').
   // otherwise use https as protocol (this is the default)
@@ -350,6 +349,7 @@ export async function sendJsonViaOnionV4ToNonSnode(sendOptions: {
   stringifiedBody: string | null;
   abortSignal: AbortSignal;
   doNotIncludeOurSogsHeaders?: boolean;
+  headers: Record<string, any> | null;
 }): Promise<OnionV4JSONSnodeResponse | null> {
   const {
     serverUrl,
@@ -359,27 +359,31 @@ export async function sendJsonViaOnionV4ToNonSnode(sendOptions: {
     blinded,
     stringifiedBody,
     abortSignal,
+    headers: includedHeaders,
     doNotIncludeOurSogsHeaders,
   } = sendOptions;
   const builtUrl = new URL(`${serverUrl}/${endpoint}`);
-  const headers = doNotIncludeOurSogsHeaders
+  let headersWithSogsHeadersIfNeeded = doNotIncludeOurSogsHeaders
     ? {}
     : await getOurOpenGroupHeaders(serverPubkey, endpoint, method, blinded, stringifiedBody);
 
-  if (!headers) {
+  if (!headersWithSogsHeadersIfNeeded) {
     return null;
   }
-  console.warn(
-    `sendMessage including ${
-      (headers as any)['X-SOGS-Pubkey']?.startsWith('15') ? 'blinded' : 'unblinded'
-    } headers`
-  );
+  headersWithSogsHeadersIfNeeded = { ...includedHeaders, ...headersWithSogsHeadersIfNeeded };
+  // console.warn(
+  //   `sendMessage including ${
+  //     (headersWithSogsHeadersIfNeeded as any)['X-SOGS-Pubkey']?.startsWith('15')
+  //       ? 'blinded'
+  //       : 'unblinded'
+  //   } headers`
+  // );
   const res = await sendViaOnionV4ToNonSnode(
     serverPubkey,
     builtUrl,
     {
       method,
-      headers: addJsonContentTypeToHeaders(headers as any),
+      headers: addJsonContentTypeToHeaders(headersWithSogsHeadersIfNeeded as any),
       body: stringifiedBody || undefined,
       useV4: true,
     },

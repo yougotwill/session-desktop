@@ -32,11 +32,7 @@ import {
   lastAvatarUploadTimestamp,
   removeAllMessagesInConversation,
 } from '../data/data';
-import {
-  conversationReset,
-  quoteMessage,
-  resetConversationExternal,
-} from '../state/ducks/conversations';
+import { quoteMessage, resetConversationExternal } from '../state/ducks/conversations';
 import { getDecryptedMediaUrl } from '../session/crypto/DecryptedAttachmentsManager';
 import { IMAGE_JPEG } from '../types/MIME';
 import { FSv2 } from '../session/apis/file_server_api';
@@ -323,7 +319,6 @@ export function showChangeNickNameByConvoId(conversationId: string) {
 export async function deleteAllMessagesByConvoIdNoConfirmation(conversationId: string) {
   const conversation = getConversationController().get(conversationId);
   await removeAllMessagesInConversation(conversationId);
-  window.inboxStore?.dispatch(conversationReset(conversationId));
 
   // destroy message keeps the active timestamp set so the
   // conversation still appears on the conversation list but is empty
@@ -331,7 +326,6 @@ export async function deleteAllMessagesByConvoIdNoConfirmation(conversationId: s
     lastMessage: null,
     unreadCount: 0,
     mentionedUs: false,
-    isApproved: false,
   });
 
   await conversation.commit();

@@ -10,7 +10,7 @@ import { AbortSignal } from 'abort-controller';
 import { roomHasBlindEnabled } from './sogsV3Capabilities';
 
 type BatchFetchRequestOptions = {
-  method: 'GET';
+  method: 'GET' | 'DELETE';
   path: string;
   headers?: any;
 };
@@ -19,7 +19,7 @@ type BatchFetchRequestOptions = {
  * Should only have this or the json field but not both at the same time
  */
 type BatchBodyRequestSharedOptions = {
-  method: 'POST' | 'PUT';
+  method: 'POST' | 'PUT' | 'DELETE';
   path: string;
   headers?: any;
 };
@@ -28,11 +28,7 @@ interface BatchJsonSubrequestOptions extends BatchBodyRequestSharedOptions {
   json: string;
 }
 
-interface Batch64SubrequestOptions extends BatchBodyRequestSharedOptions {
-  b64: string;
-}
-
-type BatchBodyRequest = BatchJsonSubrequestOptions | Batch64SubrequestOptions;
+type BatchBodyRequest = BatchJsonSubrequestOptions;
 
 type BatchSubRequest = BatchBodyRequest | BatchFetchRequestOptions;
 
@@ -52,7 +48,7 @@ export type BatchSogsReponse = {
   body?: Array<{ body: object; code: number; headers?: Record<string, string> }>;
 };
 
-export const sogsBatchPoll = async (
+export const sogsBatchSend = async (
   serverUrl: string,
   roomInfos: Set<string>,
   abortSignal: AbortSignal,
@@ -79,9 +75,14 @@ export const sogsBatchPoll = async (
     return null;
   }
 
-  const result = await sendSogsBatchRequest(serverUrl, serverPublicKey, batchRequest, abortSignal);
+  const result = await sendSogsBatchRequestOnionV4(
+    serverUrl,
+    serverPublicKey,
+    batchRequest,
+    abortSignal
+  );
   if (abortSignal.aborted) {
-    window.log.info('sendSogsBatchRequest aborted.');
+    window.log.info('sendSogsBatchRequestOnionV4 aborted.');
     return null;
   }
 
@@ -91,6 +92,7 @@ export const sogsBatchPoll = async (
 export type SubrequestOptionType = 'capabilities' | 'messages' | 'pollInfo' | 'inbox';
 
 export type SubRequestCapabilitiesType = { type: 'capabilities' };
+
 export type SubRequestMessagesType = {
   type: 'messages';
   messages?: {
@@ -98,23 +100,34 @@ export type SubRequestMessagesType = {
     sinceSeqNo?: number;
   };
 };
+
 export type SubRequestPollInfoType = {
   type: 'pollInfo';
-  pollInfo?: {
+  pollInfo: {
     roomId: string;
     infoUpdated?: number;
   };
 };
+
 export type SubRequestInboxType = {
   type: 'inbox';
   inboxSince?: {
     id?: number;
   };
 };
+
 export type SubRequestOutboxType = {
   type: 'outbox';
   outboxSince?: {
     id?: number;
+  };
+};
+
+export type SubRequestDeleteMessageType = {
+  type: 'deleteMessage';
+  deleteMessage: {
+    messageId: number;
+    roomId: string;
   };
 };
 
@@ -123,7 +136,8 @@ export type OpenGroupBatchRow =
   | SubRequestMessagesType
   | SubRequestPollInfoType
   | SubRequestInboxType
-  | SubRequestOutboxType;
+  | SubRequestOutboxType
+  | SubRequestDeleteMessageType;
 
 /**
  *
@@ -131,47 +145,58 @@ export type OpenGroupBatchRow =
  */
 const makeBatchRequestPayload = (options: OpenGroupBatchRow): BatchSubRequest | null => {
   const GET_METHOD = 'GET';
-  if (options.type === 'capabilities') {
-    return {
-      method: GET_METHOD,
-      path: '/capabilities',
-    };
-  }
+  const DELETE_METHOD = 'DELETE';
 
-  if (options.type === 'messages' && options.messages) {
-    return {
-      method: GET_METHOD,
-      path: isNumber(options.messages.sinceSeqNo)
-        ? `/room/${options.messages.roomId}/messages/since/${options.messages.sinceSeqNo}`
-        : `/room/${options.messages.roomId}/messages/recent`,
-    };
-  }
+  switch (options.type) {
+    case 'capabilities':
+      return {
+        method: GET_METHOD,
+        path: '/capabilities',
+      };
 
-  if (options.type === 'inbox') {
-    return {
-      method: GET_METHOD,
-      path:
-        options?.inboxSince?.id && isNumber(options.inboxSince.id)
-          ? `/inbox/since/${options.inboxSince.id}`
-          : '/inbox',
-    };
-  }
+    case 'messages':
+      if (options.messages) {
+        return {
+          method: GET_METHOD,
+          path: isNumber(options.messages.sinceSeqNo)
+            ? `/room/${options.messages.roomId}/messages/since/${options.messages.sinceSeqNo}`
+            : `/room/${options.messages.roomId}/messages/recent`,
+        };
+      }
+      break;
 
-  if (options.type === 'outbox') {
-    return {
-      method: GET_METHOD,
-      path:
-        options?.outboxSince?.id && isNumber(options.outboxSince.id)
-          ? `/outbox/since/${options.outboxSince.id}`
-          : '/outbox',
-    };
-  }
+    case 'inbox':
+      return {
+        method: GET_METHOD,
+        path:
+          options?.inboxSince?.id && isNumber(options.inboxSince.id)
+            ? `/inbox/since/${options.inboxSince.id}`
+            : '/inbox',
+      };
 
-  if (options.type === 'pollInfo' && options.pollInfo) {
-    return {
-      method: GET_METHOD,
-      path: `/room/${options.pollInfo.roomId}/pollInfo/${options.pollInfo.infoUpdated}`,
-    };
+    case 'outbox':
+      return {
+        method: GET_METHOD,
+        path:
+          options?.outboxSince?.id && isNumber(options.outboxSince.id)
+            ? `/outbox/since/${options.outboxSince.id}`
+            : '/outbox',
+      };
+
+    case 'pollInfo':
+      return {
+        method: GET_METHOD,
+        path: `/room/${options.pollInfo.roomId}/pollInfo/${options.pollInfo.infoUpdated}`,
+      };
+
+    case 'deleteMessage':
+      return {
+        method: DELETE_METHOD,
+        path: `/room/${options.deleteMessage.roomId}/message/${options.deleteMessage.messageId}`,
+      };
+
+    default:
+      throw new Error('Invalid batch request row');
   }
 
   return null;
@@ -220,7 +245,7 @@ const getBatchRequest = async (
   };
 };
 
-const sendSogsBatchRequest = async (
+const sendSogsBatchRequestOnionV4 = async (
   serverUrl: string,
   serverPubkey: string,
   request: BatchRequest,
@@ -229,7 +254,7 @@ const sendSogsBatchRequest = async (
   const { endpoint, headers, method, body } = request;
   const builtUrl = new URL(`${serverUrl}/${endpoint}`);
   // console.warn(
-  //   `sendSogsBatchRequest including ${
+  //   `sendSogsBatchRequestOnionV4 including ${
   //     headers['X-SOGS-Pubkey']?.startsWith('15') ? 'blinded' : 'unblinded'
   //   } headers`
   // );

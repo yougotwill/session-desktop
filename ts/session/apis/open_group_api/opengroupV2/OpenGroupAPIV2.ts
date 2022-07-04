@@ -18,6 +18,7 @@ import {
 } from '../sogsv3/sogsV3Capabilities';
 import { uniq } from 'lodash';
 import { AbortController } from 'abort-controller';
+import { OpenGroupBatchRow, sogsBatchSend } from '../sogsv3/sogsV3BatchPoll';
 
 // used to be overwritten by testing
 export const getMinTimeout = () => 1000;
@@ -177,6 +178,7 @@ export async function openGroupV2GetRoomInfo({
     abortSignal,
     stringifiedBody: null,
     serverPubkey,
+    headers: null,
   });
   const room = (result?.body as any)?.room as Record<string, any> | undefined;
   if (room) {
@@ -230,7 +232,7 @@ export const unbanUser = async (
     endpoint: `block_list/${userToBan.key}`,
     useV4: false,
   };
-  const unbanResult = await exports.sendApiV2Request(request);
+  const unbanResult = await sendApiV2Request(request);
   const isOk = parseStatusCodeFromOnionRequest(unbanResult) === 200;
   return isOk;
 };
@@ -242,17 +244,23 @@ export const deleteMessageByServerIds = async (
   idsToRemove: Array<number>,
   roomInfos: OpenGroupRequestCommonType
 ): Promise<boolean> => {
-  const request: OpenGroupV2Request = {
-    method: 'POST',
-    room: roomInfos.roomId,
-    server: roomInfos.serverUrl,
-    endpoint: 'delete_messages',
-    queryParams: { ids: idsToRemove },
-    useV4: false,
-  };
-  const messageDeletedResult = await exports.sendApiV2Request(request);
-  const isOk = parseStatusCodeFromOnionRequest(messageDeletedResult) === 200;
-  return isOk;
+  const options: Array<OpenGroupBatchRow> = idsToRemove.map(idToRemove => ({
+    type: 'deleteMessage',
+    deleteMessage: { roomId: roomInfos.roomId, messageId: idToRemove },
+  }));
+  const messagesDeletedResult = await sogsBatchSend(
+    roomInfos.serverUrl,
+    new Set([roomInfos.roomId]),
+    new AbortController().signal,
+    options
+  );
+
+  try {
+    return messagesDeletedResult?.status_code === 200;
+  } catch (e) {
+    window?.log?.error("deleteMessageByServerIds Can't decode JSON body");
+  }
+  return false;
 };
 
 export const getAllRoomInfos = async (roomInfos: OpenGroupV2Room) => {
@@ -264,6 +272,7 @@ export const getAllRoomInfos = async (roomInfos: OpenGroupV2Room) => {
     stringifiedBody: null,
     abortSignal: new AbortController().signal,
     serverUrl: roomInfos.serverUrl,
+    headers: null,
   });
 
   if (res?.status_code === 200) {

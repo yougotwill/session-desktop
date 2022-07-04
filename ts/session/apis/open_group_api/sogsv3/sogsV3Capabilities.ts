@@ -37,7 +37,8 @@ export const capabilitiesFetchForServer = async (
     serverPubkey,
     serverUrl,
     stringifiedBody: null,
-    doNotIncludeOurSogsHeaders: true, // the first capabilities needs to not have any authentification to pass on a blinding-required sogs
+    doNotIncludeOurSogsHeaders: true, // the first capabilities needs to not have any authentification to pass on a blinding-required sogs,
+    headers: null,
   });
 
   const statusCode = parseStatusCodeFromOnionRequestV4(result);

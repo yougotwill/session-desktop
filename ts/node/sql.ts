@@ -2495,7 +2495,7 @@ function getMessageIdsFromServerIds(serverIds: Array<string | number>, conversat
   }
 
   // Sanitize the input as we're going to use it directly in the query
-  const validIds = serverIds.map(Number).filter(n => !Number.isNaN(n));
+  const validServerIds = serverIds.map(Number).filter(n => !Number.isNaN(n));
 
   /*
     Sqlite3 doesn't have a good way to have `IN` query with another query.
@@ -2506,7 +2506,7 @@ function getMessageIdsFromServerIds(serverIds: Array<string | number>, conversat
   const rows = assertGlobalInstance()
     .prepare(
       `SELECT id FROM ${MESSAGES_TABLE} WHERE
-    serverId IN (${validIds.join(',')}) AND
+    serverId IN (${validServerIds.join(',')}) AND
     conversationId = $conversationId;`
     )
     .all({

@@ -36,6 +36,7 @@ import { getSodiumRenderer } from '../../../crypto';
 import { handleOutboxMessageModel } from '../../../../receiver/dataMessage';
 import { ConversationTypeEnum } from '../../../../models/conversationAttributes';
 import { createSwarmMessageSentFromUs } from '../../../../models/messageFactory';
+import { getMessageIdsFromServerIds, removeMessage } from '../../../../data/data';
 
 /**
  * Get the convo matching those criteria and make sure it is an opengroup convo, or return null.
@@ -134,7 +135,38 @@ async function filterOutMessagesInvalidSignature(
   return signaturesValidMessages;
 }
 
-const handleNewMessagesResponseV4 = async (
+const handleSogsV3DeletedMessages = async (
+  messages: Array<OpenGroupMessageV4>,
+  serverUrl: string,
+  roomId: string
+) => {
+  const deletions = messages.filter(m => m.data === null);
+  const exceptDeletion = messages.filter(m => m.data !== null);
+  if (!deletions.length) {
+    return messages;
+  }
+  const allIdsRemoved = deletions.map(m => m.id);
+  try {
+    const convoId = getOpenGroupV2ConversationId(serverUrl, roomId);
+    const convo = getConversationController().get(convoId);
+    const messageIds = await getMessageIdsFromServerIds(allIdsRemoved, convo.id);
+
+    await Promise.all(
+      (messageIds || []).map(async id => {
+        if (convo) {
+          await convo.removeMessage(id);
+        }
+        await removeMessage(id);
+      })
+    );
+    //
+  } catch (e) {
+    window?.log?.warn('handleDeletions failed:', e);
+  }
+  return exceptDeletion;
+};
+
+const handleMessagesResponseV4 = async (
   messages: Array<OpenGroupMessageV4>,
   serverUrl: string,
   subrequestOption: SubRequestMessagesType,
@@ -149,9 +181,7 @@ const handleNewMessagesResponseV4 = async (
     const { roomId } = subrequestOption.messages;
 
     if (!roomIdsStillPolled.has(roomId)) {
-      window.log.info(
-        `handleNewMessagesResponseV4: we are no longer polling for ${roomId}: skipping`
-      );
+      window.log.info(`handleMessagesResponseV4: we are no longer polling for ${roomId}: skipping`);
       return;
     }
     const convoId = getOpenGroupV2ConversationId(serverUrl, roomId);
@@ -160,7 +190,16 @@ const handleNewMessagesResponseV4 = async (
     if (!roomInfos || !roomInfos.conversationId) {
       return;
     }
-    const messagesWithValidSignature = await filterOutMessagesInvalidSignature(messages);
+
+    const messagesWithoutDeleted = await handleSogsV3DeletedMessages(
+      messages,
+      serverUrl,
+      subrequestOption.messages.roomId
+    );
+
+    const messagesWithValidSignature = await filterOutMessagesInvalidSignature(
+      messagesWithoutDeleted
+    );
     // we do a first check with blinded ids. Looking to filter out messages we already received from that blinded id.
     const messagesFilteredBlindedIds = await filterDuplicatesFromDbAndIncomingV4(
       messagesWithValidSignature
@@ -198,7 +237,7 @@ const handleNewMessagesResponseV4 = async (
       }
     }
 
-    // handling all messages might be slow, so instead refersh the data here before updating the fields we care about
+    // handling all messages might be slow, so instead refresh the data here before updating the fields we care about
     // and writing it again
     const roomInfosRefreshed = getV2OpenGroupRoom(roomInfos.conversationId);
     if (!roomInfosRefreshed || !roomInfosRefreshed.serverUrl || !roomInfosRefreshed.roomId) {
@@ -384,7 +423,8 @@ export const handleBatchPollResults = async (
             // capabilities are handled in handleCapabilities and are skipped here just to avoid the default case below
             break;
           case 'messages':
-            return handleNewMessagesResponseV4(
+            // this will also include deleted messages explicitely with `data: null` & edited messages with a new data field & react changes with data not existing
+            return handleMessagesResponseV4(
               subResponse.body,
               serverUrl,
               subrequestOption,

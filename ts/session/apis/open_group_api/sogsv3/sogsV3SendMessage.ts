@@ -53,6 +53,7 @@ export const sendSogsMessageOnionV4 = async (
     abortSignal,
     blinded,
     stringifiedBody,
+    headers: null,
   });
   const statusCode = parseStatusCodeFromOnionRequestV4(res);
   if (!statusCode) {
@@ -115,6 +116,7 @@ export const sendMessageOnionV4BlindedRequest = async (
     abortSignal,
     blinded: true,
     stringifiedBody,
+    headers: null,
   });
   const statusCode = parseStatusCodeFromOnionRequestV4(res);
   if (!statusCode) {

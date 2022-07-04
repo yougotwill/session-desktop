@@ -2,15 +2,9 @@ import { AbortController } from 'abort-controller';
 import { getConversationController } from '../../../conversations';
 import { getOpenGroupV2ConversationId } from '../utils/OpenGroupUtils';
 import { OpenGroupRequestCommonType } from './ApiUtil';
-import {
-  getAllBase64AvatarForRooms,
-  ParsedBase64Avatar,
-  ParsedDeletions,
-  ParsedRoomCompactPollResults,
-} from './OpenGroupAPIV2CompactPoll';
+import { getAllBase64AvatarForRooms, ParsedBase64Avatar } from './OpenGroupAPIV2CompactPoll';
 import _, { isNumber, isObject } from 'lodash';
-import { ConversationModel } from '../../../../models/conversation';
-import { getMessageIdsFromServerIds, removeMessage } from '../../../../data/data';
+
 import {
   getV2OpenGroupRoom,
   getV2OpenGroupRoomsByServerUrl,
@@ -23,7 +17,7 @@ import { DURATION } from '../../../constants';
 import { processNewAttachment } from '../../../../types/MessageAttachment';
 import { MIME } from '../../../../types';
 import { callUtilsWorker } from '../../../../webworker/workers/util_worker_interface';
-import { OpenGroupBatchRow, sogsBatchPoll } from '../sogsv3/sogsV3BatchPoll';
+import { OpenGroupBatchRow, sogsBatchSend } from '../sogsv3/sogsV3BatchPoll';
 import { handleBatchPollResults } from '../sogsv3/sogsApiV3';
 import {
   fetchCapabilitiesAndUpdateRelatedRoomsOfServerUrl,
@@ -355,7 +349,7 @@ export class OpenGroupServerPoller {
         throw new Error('compactFetch: no subrequestOptions');
       }
 
-      const batchPollResults = await sogsBatchPoll(
+      const batchPollResults = await sogsBatchSend(
         this.serverUrl,
         this.roomIdsToPoll,
         this.abortController.signal,
@@ -407,42 +401,6 @@ export class OpenGroupServerPoller {
   }
 }
 
-const handleDeletions = async (
-  deleted: ParsedDeletions,
-  conversationId: string,
-  convo?: ConversationModel
-) => {
-  const allIdsRemoved = (deleted || []).map(d => d.deleted_message_id);
-  const allRowIds = (deleted || []).map(d => d.id);
-  const maxDeletedId = Math.max(...allRowIds);
-  try {
-    const messageIds = await getMessageIdsFromServerIds(allIdsRemoved, conversationId);
-
-    await Promise.all(
-      (messageIds || []).map(async id => {
-        if (convo) {
-          await convo.removeMessage(id);
-        }
-        await removeMessage(id);
-      })
-    );
-    //
-  } catch (e) {
-    window?.log?.warn('handleDeletions failed:', e);
-  } finally {
-    try {
-      const roomInfos = getV2OpenGroupRoom(conversationId);
-
-      if (roomInfos && roomInfos.lastMessageDeletedServerID !== maxDeletedId) {
-        roomInfos.lastMessageDeletedServerID = maxDeletedId;
-        await saveV2OpenGroupRoom(roomInfos);
-      }
-    } catch (e) {
-      window?.log?.warn('handleDeletions updating roomInfos failed:', e);
-    }
-  }
-};
-
 export const getRoomAndUpdateLastFetchTimestamp = async (
   conversationId: string,
   newMessages: Array<OpenGroupMessageV2 | OpenGroupMessageV4>
@@ -462,33 +420,6 @@ export const getRoomAndUpdateLastFetchTimestamp = async (
     return null;
   }
   return roomInfos;
-};
-
-// to remove once we mapped all the logic to the new batch poll call
-const handleCompactPollResults = async (
-  serverUrl: string,
-  results: Array<ParsedRoomCompactPollResults>
-) => {
-  await Promise.all(
-    results.map(async res => {
-      const convoId = getOpenGroupV2ConversationId(serverUrl, res.roomId);
-      const convo = getConversationController().get(convoId);
-
-      // we want to do deletions even if we somehow lost the convo.
-      if (res.deletions.length) {
-        // new deletions
-        await handleDeletions(res.deletions, convoId, convo);
-      }
-
-      if (!convo) {
-        window?.log?.warn('Could not find convo for compactPoll', convoId);
-        return;
-      }
-
-      // this already do the commit
-      await convo.updateGroupAdmins(res.moderators, true);
-    })
-  );
 };
 
 const handleBase64AvatarUpdate = async (
