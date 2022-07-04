@@ -10,7 +10,7 @@ import { getConversationController } from '../../../conversations';
 import { allowOnlyOneAtATime } from '../../../utils/Promise';
 import { getOpenGroupV2ConversationId } from '../utils/OpenGroupUtils';
 import { OpenGroupRequestCommonType } from './ApiUtil';
-import { openGroupV2GetRoomInfo } from './OpenGroupAPIV2';
+import { openGroupV2GetRoomInfoViaOnionV4 } from './OpenGroupAPIV2';
 import { OpenGroupServerPoller } from './OpenGroupServerPoller';
 
 import _ from 'lodash';
@@ -180,7 +180,7 @@ export class OpenGroupManagerV2 {
       // save the pubkey to the db right now, the request for room Info
       // will need it and access it from the db
       await saveV2OpenGroupRoom(room);
-      const roomInfos = await openGroupV2GetRoomInfo({
+      const roomInfos = await openGroupV2GetRoomInfoViaOnionV4({
         serverPubkey: serverPublicKey,
         serverUrl,
         roomId,

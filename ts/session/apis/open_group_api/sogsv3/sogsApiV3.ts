@@ -76,6 +76,7 @@ async function handlePollInfoResponse(
     token: string;
     upload: boolean;
     write: boolean;
+    details: { admins?: Array<string> };
   },
   serverUrl: string,
   roomIdsStillPolled: Set<string>
@@ -90,7 +91,7 @@ async function handlePollInfoResponse(
     return;
   }
 
-  const { active_users, read, upload, write, token } = pollInfoResponseBody;
+  const { active_users, read, upload, write, token, details } = pollInfoResponseBody;
 
   if (!token || !serverUrl) {
     window.log.info('handlePollInfoResponse token and serverUrl must be set');
@@ -106,8 +107,13 @@ async function handlePollInfoResponse(
   if (!foundConvo) {
     return; // we already print something in getSogsConvoOrReturnEarly
   }
-
-  await foundConvo.setPollInfo({ read, write, upload, subscriberCount: active_users });
+  await foundConvo.setPollInfo({
+    read,
+    write,
+    upload,
+    subscriberCount: active_users,
+    details: pick(details, 'admins'),
+  });
 }
 
 async function filterOutMessagesInvalidSignature(

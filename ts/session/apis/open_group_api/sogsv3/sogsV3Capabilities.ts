@@ -86,6 +86,9 @@ export async function fetchCapabilitiesAndUpdateRelatedRoomsOfServerUrl(serverUr
     return;
   }
 
+  // we actually don't do that call using batch send for now to avoid having to deal with the headers in batch poll.
+  // thoses 2 requests below needs to not have sogs header at all and are unauthenticated
+
   const capabilities = await capabilitiesFetchForServer(
     serverUrl,
     relatedRooms[0].serverPublicKey,

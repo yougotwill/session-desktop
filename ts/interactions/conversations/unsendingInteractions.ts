@@ -2,7 +2,6 @@ import { compact } from 'lodash';
 import { getMessageById } from '../../data/data';
 import { ConversationModel } from '../../models/conversation';
 import { MessageModel } from '../../models/message';
-import { ApiV2 } from '../../session/apis/open_group_api/opengroupV2';
 import { getMessageQueue } from '../../session';
 import { getConversationController } from '../../session/conversations';
 import { UnsendMessage } from '../../session/messages/outgoing/controlMessage/UnsendMessage';
@@ -13,6 +12,7 @@ import { ToastUtils, UserUtils } from '../../session/utils';
 import { resetSelectedMessageIds } from '../../state/ducks/conversations';
 import { updateConfirmModal } from '../../state/ducks/modalDialog';
 import { SessionButtonColor } from '../../components/basic/SessionButton';
+import { deleteSogsMessageByServerIds } from '../../session/apis/open_group_api/sogsv3/sogsV3DeleteMessages';
 
 /**
  * Deletes messages for everyone in a 1-1 or everyone in a closed group conversation.
@@ -427,7 +427,7 @@ async function deleteOpenGroupMessages(
 
   let allMessagesAreDeleted: boolean = false;
   if (validServerIdsToRemove.length) {
-    allMessagesAreDeleted = await ApiV2.deleteMessageByServerIds(validServerIdsToRemove, roomInfos);
+    allMessagesAreDeleted = await deleteSogsMessageByServerIds(validServerIdsToRemove, roomInfos);
   }
   // remove only the messages we managed to remove on the server
   if (allMessagesAreDeleted) {

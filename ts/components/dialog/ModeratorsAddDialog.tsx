@@ -2,13 +2,13 @@ import React, { useState } from 'react';
 import { PubKey } from '../../session/types';
 import { ToastUtils } from '../../session/utils';
 import { Flex } from '../basic/Flex';
-import { ApiV2 } from '../../session/apis/open_group_api/opengroupV2';
 import { getConversationController } from '../../session/conversations';
 import { useDispatch } from 'react-redux';
 import { updateAddModeratorsModal } from '../../state/ducks/modalDialog';
 import { SessionButton, SessionButtonColor, SessionButtonType } from '../basic/SessionButton';
 import { SessionSpinner } from '../basic/SessionSpinner';
 import { SessionWrapperModal } from '../SessionWrapperModal';
+import { sogsV3AddAdmin } from '../../session/apis/open_group_api/sogsv3/sogsV3AddRemoveMods';
 
 type Props = {
   conversationId: string;
@@ -39,7 +39,7 @@ export const AddModeratorsDialog = (props: Props) => {
       let isAdded: any;
       // this is a v2 opengroup
       const roomInfos = convo.toOpenGroupV2();
-      isAdded = await ApiV2.addModerator(pubkey, roomInfos);
+      isAdded = await sogsV3AddAdmin([pubkey], roomInfos);
 
       if (!isAdded) {
         window?.log?.warn('failed to add moderators:', isAdded);

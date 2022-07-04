@@ -255,7 +255,6 @@ async function EncryptAESGCM(symmetricKey: ArrayBuffer, plaintext: ArrayBuffer) 
 // uint8array, uint8array
 async function DecryptAESGCM(symmetricKey: Uint8Array, ivAndCiphertext: Uint8Array) {
   assertArrayBufferView(symmetricKey);
-
   assertArrayBufferView(ivAndCiphertext);
 
   const nonce = ivAndCiphertext.buffer.slice(0, NONCE_LENGTH);

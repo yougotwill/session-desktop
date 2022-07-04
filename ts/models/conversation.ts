@@ -1,5 +1,5 @@
 import Backbone from 'backbone';
-import _, { isEmpty, isNumber, isString } from 'lodash';
+import _, { isArray, isEmpty, isNumber, isString } from 'lodash';
 import { getMessageQueue } from '../session';
 import { getConversationController } from '../session/conversations';
 import { ClosedGroupVisibleMessage } from '../session/messages/outgoing/visibleMessage/ClosedGroupVisibleMessage';
@@ -386,12 +386,13 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     const newAdmins = _.uniq(_.sortBy(groupAdmins));
 
     if (_.isEqual(existingAdmins, newAdmins)) {
-      return;
+      return false;
     }
     this.set({ groupAdmins });
     if (shouldCommit) {
       await this.commit();
     }
+    return true;
   }
 
   public async onReadMessage(message: MessageModel, readAt: number) {
@@ -1356,12 +1357,15 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     read: boolean;
     write: boolean;
     upload: boolean;
+    details: {
+      admins?: Array<string>;
+    };
   }) {
     if (!infos || isEmpty(infos)) {
       return;
     }
     let hasChange = false;
-    const { read, write, upload, subscriberCount } = infos;
+    const { read, write, upload, subscriberCount, details } = infos;
     if (
       isNumber(infos.subscriberCount) &&
       infos.subscriberCount !== 0 &&
@@ -1384,6 +1388,13 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     if (Boolean(this.get('uploadCapability')) !== Boolean(upload)) {
       hasChange = true;
       this.set('uploadCapability', Boolean(upload));
+    }
+
+    if (details.admins && isArray(details.admins)) {
+      const adminChanged = await this.updateGroupAdmins(details.admins, false);
+      if (adminChanged) {
+        hasChange = adminChanged;
+      }
     }
 
     // only trigger a write to the db if a change is detected

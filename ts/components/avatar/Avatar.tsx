@@ -12,6 +12,8 @@ import { ClosedGroupAvatar } from './AvatarPlaceHolder/ClosedGroupAvatar';
 import { useDisableDrag } from '../../hooks/useDisableDrag';
 import styled from 'styled-components';
 import { SessionIcon } from '../icon';
+import { useSelector } from 'react-redux';
+import { isMessageSelectionMode } from '../../state/selectors/conversations';
 
 export enum AvatarSize {
   XS = 28,
@@ -113,8 +115,9 @@ const AvatarInner = (props: Props) => {
   const { base64Data, size, pubkey, forcedAvatarPath, forcedName, dataTestId } = props;
   const [imageBroken, setImageBroken] = useState(false);
 
-  const isClosedGroupAvatar = useIsClosedGroup(pubkey);
+  const isSelectingMessages = useSelector(isMessageSelectionMode);
 
+  const isClosedGroupAvatar = useIsClosedGroup(pubkey);
   const avatarPath = useAvatarPath(pubkey);
   const name = useConversationUsername(pubkey);
 
@@ -140,7 +143,11 @@ const AvatarInner = (props: Props) => {
         hasImage ? 'module-avatar--with-image' : 'module-avatar--no-image',
         isClickable && 'module-avatar-clickable'
       )}
-      onMouseDown={e => {
+      onClick={e => {
+        if (isSelectingMessages) {
+          //TODO we should toggle the selection of this message, but we need its id
+          return;
+        }
         if (props.onAvatarClick) {
           e.stopPropagation();
           e.preventDefault();

@@ -18,7 +18,6 @@ import {
 } from '../sogsv3/sogsV3Capabilities';
 import { uniq } from 'lodash';
 import { AbortController } from 'abort-controller';
-import { OpenGroupBatchRow, sogsBatchSend } from '../sogsv3/sogsV3BatchPoll';
 
 // used to be overwritten by testing
 export const getMinTimeout = () => 1000;
@@ -147,9 +146,9 @@ export async function sendApiV2Request(
 }
 
 /**
- *
+ * Fetch the required room infos before joining a room (caps, name, imageId, etc)
  */
-export async function openGroupV2GetRoomInfo({
+export async function openGroupV2GetRoomInfoViaOnionV4({
   serverUrl,
   serverPubkey,
   roomId,
@@ -168,7 +167,7 @@ export async function openGroupV2GetRoomInfo({
   }
 
   const hasBlindingEnabled = capabilitiesListHasBlindEnabled(caps);
-  window?.log?.info(`openGroupV2GetRoomInfo capabilities for  ${serverUrl}: ${caps}`);
+  window?.log?.info(`openGroupV2GetRoomInfoViaOnionV4 capabilities for  ${serverUrl}: ${caps}`);
 
   const result = await sendJsonViaOnionV4ToNonSnode({
     blinded: hasBlindingEnabled,
@@ -235,32 +234,6 @@ export const unbanUser = async (
   const unbanResult = await sendApiV2Request(request);
   const isOk = parseStatusCodeFromOnionRequest(unbanResult) === 200;
   return isOk;
-};
-
-/**
- * Deletes messages on open group server
- */
-export const deleteMessageByServerIds = async (
-  idsToRemove: Array<number>,
-  roomInfos: OpenGroupRequestCommonType
-): Promise<boolean> => {
-  const options: Array<OpenGroupBatchRow> = idsToRemove.map(idToRemove => ({
-    type: 'deleteMessage',
-    deleteMessage: { roomId: roomInfos.roomId, messageId: idToRemove },
-  }));
-  const messagesDeletedResult = await sogsBatchSend(
-    roomInfos.serverUrl,
-    new Set([roomInfos.roomId]),
-    new AbortController().signal,
-    options
-  );
-
-  try {
-    return messagesDeletedResult?.status_code === 200;
-  } catch (e) {
-    window?.log?.error("deleteMessageByServerIds Can't decode JSON body");
-  }
-  return false;
 };
 
 export const getAllRoomInfos = async (roomInfos: OpenGroupV2Room) => {
@@ -450,39 +423,4 @@ export const uploadImageForRoomOpenGroupV2 = async (
   return {
     fileUrl,
   };
-};
-
-/** MODERATORS ADD/REMOVE */
-
-export const addModerator = async (
-  userToAddAsMods: PubKey,
-  roomInfos: OpenGroupRequestCommonType
-): Promise<boolean> => {
-  const request: OpenGroupV2Request = {
-    method: 'POST',
-    room: roomInfos.roomId,
-    server: roomInfos.serverUrl,
-    queryParams: { public_key: userToAddAsMods.key, room_id: roomInfos.roomId },
-    endpoint: 'moderators',
-    useV4: false,
-  };
-  const addModResult = await exports.sendApiV2Request(request);
-  const isOk = parseStatusCodeFromOnionRequest(addModResult) === 200;
-  return isOk;
-};
-
-export const removeModerator = async (
-  userToRemoveFromMods: PubKey,
-  roomInfos: OpenGroupRequestCommonType
-): Promise<boolean> => {
-  const request: OpenGroupV2Request = {
-    method: 'DELETE',
-    room: roomInfos.roomId,
-    server: roomInfos.serverUrl,
-    endpoint: `moderators/${userToRemoveFromMods.key}`,
-    useV4: false,
-  };
-  const removeModResult = await exports.sendApiV2Request(request);
-  const isOk = parseStatusCodeFromOnionRequest(removeModResult) === 200;
-  return isOk;
 };

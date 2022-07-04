@@ -1,5 +1,5 @@
 import { getV2OpenGroupRoomByRoomId } from '../../../../data/opengroups';
-import _, { isEmpty, isNumber, isObject } from 'lodash';
+import _, { flatten, isEmpty, isNumber, isObject } from 'lodash';
 import { sendViaOnionV4ToNonSnode } from '../../../onions/onionSend';
 import {
   getOurOpenGroupHeaders,
@@ -10,7 +10,7 @@ import { AbortSignal } from 'abort-controller';
 import { roomHasBlindEnabled } from './sogsV3Capabilities';
 
 type BatchFetchRequestOptions = {
-  method: 'GET' | 'DELETE';
+  method: 'POST' | 'GET' | 'DELETE';
   path: string;
   headers?: any;
 };
@@ -25,7 +25,7 @@ type BatchBodyRequestSharedOptions = {
 };
 
 interface BatchJsonSubrequestOptions extends BatchBodyRequestSharedOptions {
-  json: string;
+  json: object;
 }
 
 type BatchBodyRequest = BatchJsonSubrequestOptions;
@@ -131,33 +131,41 @@ export type SubRequestDeleteMessageType = {
   };
 };
 
+export type SubRequestAddRemoveModerator = {
+  type: 'addRemoveModerators';
+  addRemoveModerators: {
+    type: 'add_mods' | 'remove_mods';
+    sessionIds: Array<string>; // can be blinded id or not
+    roomId: string; // for now we support only granting/removing mods to single rooms from session
+  };
+};
+
 export type OpenGroupBatchRow =
   | SubRequestCapabilitiesType
   | SubRequestMessagesType
   | SubRequestPollInfoType
   | SubRequestInboxType
   | SubRequestOutboxType
-  | SubRequestDeleteMessageType;
-
+  | SubRequestDeleteMessageType
+  | SubRequestAddRemoveModerator;
 /**
  *
  * @param options Array of subrequest options to be made.
  */
-const makeBatchRequestPayload = (options: OpenGroupBatchRow): BatchSubRequest | null => {
-  const GET_METHOD = 'GET';
-  const DELETE_METHOD = 'DELETE';
-
+const makeBatchRequestPayload = (
+  options: OpenGroupBatchRow
+): BatchSubRequest | Array<BatchSubRequest> | null => {
   switch (options.type) {
     case 'capabilities':
       return {
-        method: GET_METHOD,
+        method: 'GET',
         path: '/capabilities',
       };
 
     case 'messages':
       if (options.messages) {
         return {
-          method: GET_METHOD,
+          method: 'GET',
           path: isNumber(options.messages.sinceSeqNo)
             ? `/room/${options.messages.roomId}/messages/since/${options.messages.sinceSeqNo}`
             : `/room/${options.messages.roomId}/messages/recent`,
@@ -167,7 +175,7 @@ const makeBatchRequestPayload = (options: OpenGroupBatchRow): BatchSubRequest | 
 
     case 'inbox':
       return {
-        method: GET_METHOD,
+        method: 'GET',
         path:
           options?.inboxSince?.id && isNumber(options.inboxSince.id)
             ? `/inbox/since/${options.inboxSince.id}`
@@ -176,7 +184,7 @@ const makeBatchRequestPayload = (options: OpenGroupBatchRow): BatchSubRequest | 
 
     case 'outbox':
       return {
-        method: GET_METHOD,
+        method: 'GET',
         path:
           options?.outboxSince?.id && isNumber(options.outboxSince.id)
             ? `/outbox/since/${options.outboxSince.id}`
@@ -185,15 +193,30 @@ const makeBatchRequestPayload = (options: OpenGroupBatchRow): BatchSubRequest | 
 
     case 'pollInfo':
       return {
-        method: GET_METHOD,
+        method: 'GET',
         path: `/room/${options.pollInfo.roomId}/pollInfo/${options.pollInfo.infoUpdated}`,
       };
 
     case 'deleteMessage':
       return {
-        method: DELETE_METHOD,
+        method: 'DELETE',
         path: `/room/${options.deleteMessage.roomId}/message/${options.deleteMessage.messageId}`,
       };
+
+    case 'addRemoveModerators':
+      const isAddMod = Boolean(options.addRemoveModerators.type === 'add_mods');
+      return options.addRemoveModerators.sessionIds.map(sessionId => ({
+        method: 'POST',
+        path: `/user/${sessionId}/moderator`,
+
+        json: {
+          rooms: [options.addRemoveModerators.roomId],
+          global: false,
+          // moderator: isAddMod, // currently we only support adding/removing visible admins
+          visible: true,
+          admin: isAddMod,
+        },
+      }));
 
     default:
       throw new Error('Invalid batch request row');
@@ -217,13 +240,14 @@ const getBatchRequest = async (
     return undefined;
   }
 
-  const batchBody = batchOptions.map(options => {
-    return makeBatchRequestPayload(options);
-  });
+  const batchBody = flatten(
+    batchOptions.map(options => {
+      return makeBatchRequestPayload(options);
+    })
+  );
 
   const stringBody = JSON.stringify(batchBody);
 
-  // TODO: swap out batchCommands for body fn parameter
   const headers = await getOurOpenGroupHeaders(
     serverPublicKey,
     batchEndpoint,
@@ -253,11 +277,6 @@ const sendSogsBatchRequestOnionV4 = async (
 ): Promise<null | any> => {
   const { endpoint, headers, method, body } = request;
   const builtUrl = new URL(`${serverUrl}/${endpoint}`);
-  // console.warn(
-  //   `sendSogsBatchRequestOnionV4 including ${
-  //     headers['X-SOGS-Pubkey']?.startsWith('15') ? 'blinded' : 'unblinded'
-  //   } headers`
-  // );
 
   // this function extracts the body and status_code and JSON.parse it already
   const batchResponse = await sendViaOnionV4ToNonSnode(
