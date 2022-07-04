@@ -17,7 +17,8 @@ export const deleteSogsMessageByServerIds = async (
     roomInfos.serverUrl,
     new Set([roomInfos.roomId]),
     new AbortController().signal,
-    options
+    options,
+    'batch'
   );
 
   try {

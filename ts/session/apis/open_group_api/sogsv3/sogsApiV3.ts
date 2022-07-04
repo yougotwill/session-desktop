@@ -197,6 +197,11 @@ const handleMessagesResponseV4 = async (
       return;
     }
 
+    if (!isArray(messages)) {
+      window.log.warn("handleMessagesResponseV4: didn't get an object from batch poll");
+      return;
+    }
+
     const messagesWithoutDeleted = await handleSogsV3DeletedMessages(
       messages,
       serverUrl,

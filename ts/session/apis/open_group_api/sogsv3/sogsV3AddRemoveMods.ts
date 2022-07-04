@@ -26,7 +26,8 @@ export const sogsV3AddAdmin = async (
           type: 'add_mods',
         },
       },
-    ]
+    ],
+    'batch'
   );
   return batchSendResponse?.body?.[0]?.code === 200;
 };
@@ -52,7 +53,8 @@ export const sogsV3RemoveAdmins = async (
           type: 'remove_mods',
         },
       },
-    ]
+    ],
+    'batch'
   );
   return batchSendResponse?.body?.every(m => m?.code === 200) || false;
 };

@@ -5,7 +5,6 @@ import {
 } from '../../../../data/opengroups';
 import { FSv2 } from '../../file_server_api';
 import { sendJsonViaOnionV4ToNonSnode, sendViaOnionToNonSnode } from '../../../onions/onionSend';
-import { PubKey } from '../../../types';
 import { OpenGroupRequestCommonType, OpenGroupV2Info, OpenGroupV2Request } from './ApiUtil';
 import { parseRooms, parseStatusCodeFromOnionRequest } from './OpenGroupAPIV2Parser';
 
@@ -199,42 +198,6 @@ export async function openGroupV2GetRoomInfoViaOnionV4({
   window?.log?.warn('getInfo failed');
   return null;
 }
-
-export const banUser = async (
-  userToBan: PubKey,
-  roomInfos: OpenGroupRequestCommonType,
-  deleteAllMessages: boolean
-): Promise<boolean> => {
-  const queryParams = { public_key: userToBan.key };
-  const endpoint = deleteAllMessages ? 'ban_and_delete_all' : 'block_list';
-  const request: OpenGroupV2Request = {
-    method: 'POST',
-    room: roomInfos.roomId,
-    server: roomInfos.serverUrl,
-    queryParams,
-    endpoint,
-    useV4: false,
-  };
-  const banResult = await exports.sendApiV2Request(request);
-  const isOk = parseStatusCodeFromOnionRequest(banResult) === 200;
-  return isOk;
-};
-
-export const unbanUser = async (
-  userToBan: PubKey,
-  roomInfos: OpenGroupRequestCommonType
-): Promise<boolean> => {
-  const request: OpenGroupV2Request = {
-    method: 'DELETE',
-    room: roomInfos.roomId,
-    server: roomInfos.serverUrl,
-    endpoint: `block_list/${userToBan.key}`,
-    useV4: false,
-  };
-  const unbanResult = await sendApiV2Request(request);
-  const isOk = parseStatusCodeFromOnionRequest(unbanResult) === 200;
-  return isOk;
-};
 
 export const getAllRoomInfos = async (roomInfos: OpenGroupV2Room) => {
   const res = await sendJsonViaOnionV4ToNonSnode({

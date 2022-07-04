@@ -52,7 +52,8 @@ export const sogsBatchSend = async (
   serverUrl: string,
   roomInfos: Set<string>,
   abortSignal: AbortSignal,
-  batchRequestOptions: Array<OpenGroupBatchRow>
+  batchRequestOptions: Array<OpenGroupBatchRow>,
+  batchType: 'batch' | 'sequence'
 ): Promise<BatchSogsReponse | null> => {
   // getting server pk for room
   const [roomId] = roomInfos;
@@ -69,7 +70,12 @@ export const sogsBatchSend = async (
 
   const requireBlinding = Boolean(roomHasBlindEnabled(fetchedRoomInfo));
   // creating batch request
-  const batchRequest = await getBatchRequest(serverPublicKey, batchRequestOptions, requireBlinding);
+  const batchRequest = await getBatchRequest(
+    serverPublicKey,
+    batchRequestOptions,
+    requireBlinding,
+    batchType
+  );
   if (!batchRequest) {
     window?.log?.error('Could not generate batch request. Aborting request');
     return null;
@@ -131,12 +137,29 @@ export type SubRequestDeleteMessageType = {
   };
 };
 
-export type SubRequestAddRemoveModerator = {
+export type SubRequestAddRemoveModeratorType = {
   type: 'addRemoveModerators';
   addRemoveModerators: {
     type: 'add_mods' | 'remove_mods';
     sessionIds: Array<string>; // can be blinded id or not
     roomId: string; // for now we support only granting/removing mods to single rooms from session
+  };
+};
+
+export type SubRequestBanUnbanUserType = {
+  type: 'banUnbanUser';
+  banUnbanUser: {
+    type: 'ban' | 'unban';
+    sessionId: string; // can be blinded id or not
+    roomId: string;
+  };
+};
+
+export type SubRequestDeleteAllUserPostsType = {
+  type: 'deleteAllPosts';
+  deleteAllPosts: {
+    sessionId: string; // can be blinded id or not
+    roomId: string;
   };
 };
 
@@ -147,7 +170,9 @@ export type OpenGroupBatchRow =
   | SubRequestInboxType
   | SubRequestOutboxType
   | SubRequestDeleteMessageType
-  | SubRequestAddRemoveModerator;
+  | SubRequestAddRemoveModeratorType
+  | SubRequestBanUnbanUserType
+  | SubRequestDeleteAllUserPostsType;
 /**
  *
  * @param options Array of subrequest options to be made.
@@ -217,7 +242,24 @@ const makeBatchRequestPayload = (
           admin: isAddMod,
         },
       }));
+    case 'banUnbanUser':
+      const isBan = Boolean(options.banUnbanUser.type === 'ban');
+      return {
+        method: 'POST',
+        path: `/user/${options.banUnbanUser.sessionId}/${isBan ? 'ban' : 'unban'}`,
+        json: {
+          rooms: [options.banUnbanUser.roomId],
 
+          // watch out ban and unban user do not allow the same args
+          // global: false, // for now we do not support the global argument, rooms cannot be set if we use it
+          // timeout: null, // for now we do not support the timeout argument
+        },
+      };
+    case 'deleteAllPosts':
+      return {
+        method: 'DELETE',
+        path: `/room/${options.deleteAllPosts.roomId}/all/${options.deleteAllPosts.sessionId}`,
+      };
     default:
       throw new Error('Invalid batch request row');
   }
@@ -228,13 +270,16 @@ const makeBatchRequestPayload = (
 /**
  * Get the request to get all of the details we care from an opengroup, accross all rooms.
  * Only compatible with v4 onion requests.
+ *
+ * if isSequence is set to true, each rows will be run in order until the first one fails
  */
 const getBatchRequest = async (
   serverPublicKey: string,
   batchOptions: Array<OpenGroupBatchRow>,
-  requireBlinding: boolean
+  requireBlinding: boolean,
+  batchType: 'batch' | 'sequence'
 ): Promise<BatchRequest | undefined> => {
-  const batchEndpoint = '/batch';
+  const batchEndpoint = batchType === 'sequence' ? '/sequence' : '/batch';
   const batchMethod = 'POST';
   if (!batchOptions || isEmpty(batchOptions)) {
     return undefined;
