@@ -763,7 +763,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     await getMessageQueue().sendToOpenGroupV2BlindedRequest(
       encryptedMsg,
       roomInfo,
-      messageParams.identifier,
+      sogsVisibleMessage,
       this.id
     );
   }

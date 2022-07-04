@@ -98,7 +98,7 @@ export class MessageQueue {
   public async sendToOpenGroupV2BlindedRequest(
     encryptedContent: Uint8Array,
     roomInfos: OpenGroupRequestCommonType,
-    messageId: string,
+    message: OpenGroupVisibleMessage,
     recipientBlindedId: string
   ) {
     try {
@@ -113,7 +113,7 @@ export class MessageQueue {
       if (!serverId || serverId === -1) {
         throw new Error(`Invalid serverId returned by server: ${serverId}`);
       }
-      await MessageSentHandler.handlePublicMessageSentSuccess(messageId, {
+      await MessageSentHandler.handlePublicMessageSentSuccess(message.identifier, {
         serverId,
         serverTimestamp,
       });
