@@ -80,6 +80,7 @@ export class VisibleMessage extends DataMessage {
   private readonly displayName?: string;
   private readonly avatarPointer?: string;
   private readonly preview?: Array<PreviewWithAttachmentUrl>;
+  private readonly reaction?: ReactionType;
 
   /// In the case of a sync message, the public key of the person the message was targeted at.
   /// - Note: `null or undefined` if this isn't a sync message.
@@ -107,6 +108,7 @@ export class VisibleMessage extends DataMessage {
     this.displayName = params.lokiProfile && params.lokiProfile.displayName;
     this.avatarPointer = params.lokiProfile && params.lokiProfile.avatarPointer;
     this.preview = params.preview;
+    this.reaction = params.reaction;
     this.syncTarget = params.syncTarget;
   }
 
@@ -125,6 +127,9 @@ export class VisibleMessage extends DataMessage {
 
     if (this.preview) {
       dataMessage.preview = this.preview;
+    }
+    if (this.reaction) {
+      dataMessage.reaction = this.reaction;
     }
     if (this.syncTarget) {
       dataMessage.syncTarget = this.syncTarget;

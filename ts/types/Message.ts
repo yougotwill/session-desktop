@@ -54,3 +54,8 @@ export interface ReactionType {
   emoji: string;
   action: Action;
 }
+
+export type ReactionList = Record<string, {
+  senders: string[],
+  synced: boolean;
+}>;
