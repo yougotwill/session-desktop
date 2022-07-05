@@ -4,15 +4,14 @@ import { MessageModel } from '../models/message';
 import { saveMessage } from '../../ts/data/data';
 import { AttachmentDownloads } from '../session/utils';
 import { ConversationModel } from '../models/conversation';
-import {
-  downloadFileOpenGroupV2,
-  downloadFileOpenGroupV2ByUrl,
-} from '../session/apis/open_group_api/opengroupV2/OpenGroupAPIV2';
+import { downloadFileOpenGroupV2ByUrl } from '../session/apis/open_group_api/opengroupV2/OpenGroupAPIV2';
 import { OpenGroupRequestCommonType } from '../session/apis/open_group_api/opengroupV2/ApiUtil';
 import { FSv2 } from '../session/apis/file_server_api';
 import { getUnpaddedAttachment } from '../session/crypto/BufferPadding';
 import { decryptAttachment } from '../util/crypto/attachmentsEncrypter';
 import { callUtilsWorker } from '../webworker/workers/util_worker_interface';
+import { sogsV3FetchFileByFileID } from '../session/apis/open_group_api/sogsv3/sogsV3FetchFile';
+import { getV2OpenGroupRoomByRoomId } from '../data/opengroups';
 
 export async function downloadAttachment(attachment: {
   url: string;
@@ -106,7 +105,7 @@ export async function downloadDataFromOpenGroupV2(
  *
  * @param attachment Either the details of the attachment to download (on a per room basis), or the pathName to the file you want to get
  */
-export async function downloadAttachmentOpenGroupV2(
+export async function downloadAttachmentOpenGroupV3(
   attachment: {
     id: number;
     url: string;
@@ -114,7 +113,11 @@ export async function downloadAttachmentOpenGroupV2(
   },
   roomInfos: OpenGroupRequestCommonType
 ) {
-  const dataUint = await downloadFileOpenGroupV2(attachment.id, roomInfos);
+  const roomDetails = getV2OpenGroupRoomByRoomId(roomInfos);
+  if (!roomDetails) {
+    throw new Error(`Didn't find such a room ${roomInfos.serverUrl}: ${roomInfos.roomId}`);
+  }
+  const dataUint = await sogsV3FetchFileByFileID(roomDetails, `${attachment.id}`);
 
   if (!dataUint?.length) {
     window?.log?.error('Failed to download attachment. Length is 0');

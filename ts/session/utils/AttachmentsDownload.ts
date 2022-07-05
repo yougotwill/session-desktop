@@ -12,7 +12,7 @@ import {
   setAttachmentDownloadJobPending,
 } from '../../../ts/data/data';
 import { MessageModel } from '../../models/message';
-import { downloadAttachment, downloadAttachmentOpenGroupV2 } from '../../receiver/attachments';
+import { downloadAttachment, downloadAttachmentOpenGroupV3 } from '../../receiver/attachments';
 import { initializeAttachmentLogic, processNewAttachment } from '../../types/MessageAttachment';
 import { getAttachmentMetadata } from '../../types/message/initializeAttachmentMetadata';
 
@@ -182,7 +182,7 @@ async function _runJob(job: any) {
 
     try {
       if (isOpenGroupV2) {
-        downloaded = await downloadAttachmentOpenGroupV2(attachment, openGroupV2Details);
+        downloaded = await downloadAttachmentOpenGroupV3(attachment, openGroupV2Details);
       } else {
         downloaded = await downloadAttachment(attachment);
       }

@@ -93,12 +93,11 @@ export const sogsV3FetchPreview = async (roomInfos: OpenGroupV2Room): Promise<st
 export const sogsV3FetchFileByFileID = async (
   roomInfos: OpenGroupV2Room,
   fileId: string
-): Promise<string | null> => {
+): Promise<Uint8Array | null> => {
   if (!roomInfos || !roomInfos.imageID) {
     return null;
   }
 
-  console.warn('should we turn this blinded ON?');
   const fetched = await fetchBinaryFromSogsWithOnionV4({
     abortSignal: new AbortController().signal,
     blinded: roomHasBlindEnabled(roomInfos),
@@ -109,8 +108,5 @@ export const sogsV3FetchFileByFileID = async (
     roomId: roomInfos.roomId,
     fileId,
   });
-  if (fetched && fetched.byteLength) {
-    return callUtilsWorker('arrayBufferToStringBase64', fetched.buffer);
-  }
-  return null;
+  return fetched && fetched.byteLength ? fetched : null;
 };
