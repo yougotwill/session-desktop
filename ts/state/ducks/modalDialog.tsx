@@ -29,6 +29,10 @@ export type UserDetailsModalState = {
   userName: string;
 } | null;
 
+export type ReactListModalState = {
+  messageId: string;
+} | null;
+
 export type ModalState = {
   confirmModal: ConfirmModalState;
   inviteContactModal: InviteContactModalState;
@@ -45,6 +49,7 @@ export type ModalState = {
   adminLeaveClosedGroup: AdminLeaveClosedGroupModalState;
   sessionPasswordModal: SessionPasswordModalState;
   deleteAccountModal: DeleteAccountModalState;
+  reactListModalState: ReactListModalState;
 };
 
 export const initialModalState: ModalState = {
@@ -63,6 +68,7 @@ export const initialModalState: ModalState = {
   adminLeaveClosedGroup: null,
   sessionPasswordModal: null,
   deleteAccountModal: null,
+  reactListModalState: null,
 };
 
 const ModalSlice = createSlice({
@@ -114,6 +120,9 @@ const ModalSlice = createSlice({
     updateDeleteAccountModal(state, action: PayloadAction<DeleteAccountModalState>) {
       return { ...state, deleteAccountModal: action.payload };
     },
+    updateReactListModal(state, action: PayloadAction<ReactListModalState>) {
+      return { ...state, reactListModalState: action.payload };
+    },
   },
 });
 
@@ -134,5 +143,6 @@ export const {
   sessionPassword,
   updateDeleteAccountModal,
   updateBanOrUnbanUserModal,
+  updateReactListModal,
 } = actions;
 export const modalReducer = reducer;
