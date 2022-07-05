@@ -1,4 +1,4 @@
-import React, { ReactElement, useEffect, useState } from 'react';
+import React, { ReactElement, useEffect, useRef, useState } from 'react';
 import { useSelector } from 'react-redux';
 import styled from 'styled-components';
 import { MessageRenderingProps } from '../../../../models/messageType';
@@ -8,9 +8,10 @@ import { isEqual } from 'lodash';
 import { ReactionList } from '../../../../types/Message';
 import { UserUtils } from '../../../../session/utils';
 import { sendMessageReaction } from '../../../../util/reactions';
-import { MessageReactionPopup, StyledPopupContainer } from './MessageReactionPopup';
+import { MessageReactionPopup, StyledPopupContainer, TipPosition } from './MessageReactionPopup';
+import { useMouse } from 'react-use';
 
-const StyledMessageReactionsContainer = styled.div`
+const StyledMessageReactionsContainer = styled.div<{ x: number; y: number }>`
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -18,9 +19,8 @@ const StyledMessageReactionsContainer = styled.div`
 
   ${StyledPopupContainer} {
     position: absolute;
-    top: -90px;
-    left: -101px;
-    z-index: 101;
+    top: ${props => `${props.y}px;`};
+    left: ${props => `${props.x}px;`};
   }
 `;
 
@@ -38,7 +38,7 @@ const StyledReaction = styled.button<{ includesMe: boolean }>`
   justify-content: flex-start;
   align-items: center;
 
-  background-color: var(--color-compose-view-button-background);
+  background-color: var(--color-received-message-background);
   border-width: 1px;
   border-style: solid;
   border-color: ${props => (props.includesMe ? 'var(--color-accent)' : 'transparent')};
@@ -67,7 +67,7 @@ const StyledReactionOverflow = styled.button`
   margin-bottom: var(--margins-sm);
 
   span {
-    background-color: var(--color-compose-view-button-background);
+    background-color: var(--color-received-message-background);
     border: 1px solid var(--color-inbox-background);
     border-radius: 50%;
     overflow: hidden;
@@ -123,6 +123,16 @@ export const MessageReactions = (props: Props): ReactElement => {
     setIsExpanded(!isExpanded);
   };
 
+  const reactionRef = useRef(null);
+  const { docX } = useMouse(reactionRef);
+  const popupXDefault = -101;
+  const popupYDefault = -90;
+  const [popupX, setPopupX] = useState(popupXDefault);
+  const [popupY, setPopupY] = useState(popupYDefault);
+  const gutterWidth = 380;
+  const tooltipMidPoint = 108; // width is 216px;
+  const [tooltipPosition, setTooltipPosition] = useState<TipPosition>('center');
+
   const reactLimit = 6;
 
   // TODO change to generic selected function
@@ -137,13 +147,17 @@ export const MessageReactions = (props: Props): ReactElement => {
   };
 
   const renderReaction = (emoji: string) => (
-    <StyledReactionContainer>
+    <StyledReactionContainer ref={reactionRef}>
       {popupReaction && popupReaction === emoji && (
         <MessageReactionPopup
           emoji={popupReaction}
           senders={reactions[popupReaction].senders}
+          tooltipPosition={tooltipPosition}
           onClick={() => {
             setPopupReaction('');
+            setPopupX(popupXDefault);
+            setPopupY(popupYDefault);
+            setTooltipPosition('center');
           }}
         />
       )}
@@ -154,8 +168,23 @@ export const MessageReactions = (props: Props): ReactElement => {
           await handleReactionClick(emoji);
         }}
         onMouseEnter={() => {
+          const { innerWidth: windowWidth } = window;
+
+          // overflow on far right means we shift left
+          if (docX + tooltipMidPoint > windowWidth) {
+            setPopupX(Math.abs(popupXDefault) * 1.5 * -1);
+            setTooltipPosition('right');
+            // overflow onto conversations means we lock to the right
+          } else if (docX <= gutterWidth + tooltipMidPoint) {
+            const offset = -12.5;
+            setPopupX(offset);
+            setTooltipPosition('left');
+          } else {
+            setPopupX(popupXDefault);
+            setTooltipPosition('center');
+          }
+
           setPopupReaction(emoji);
-          console.log('opening popup at');
         }}
       >
         <span>{emoji}</span>
@@ -233,7 +262,7 @@ export const MessageReactions = (props: Props): ReactElement => {
   }, [reacts, reactions]);
 
   return (
-    <StyledMessageReactionsContainer>
+    <StyledMessageReactionsContainer x={popupX} y={popupY}>
       {reactions !== {} ? render() : <></>}
     </StyledMessageReactionsContainer>
   );
