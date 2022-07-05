@@ -305,7 +305,7 @@ export const MessageContextMenu = (props: Props) => {
           x={mouseX}
           y={mouseY}
         >
-          <SessionEmojiPanel onEmojiClicked={onEmojiClick} show={showEmojiPanel} />
+          <SessionEmojiPanel onEmojiClicked={onEmojiClick} show={showEmojiPanel} isModal={true} />
         </StyledEmojiPanelContainer>
       )}
       <Menu
