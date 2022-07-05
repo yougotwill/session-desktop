@@ -112,6 +112,11 @@ export const MessageReactions = (props: Props): ReactElement => {
 
   const reactLimit = 6;
 
+  const includesMe = (emoji: string) =>
+    reactions[emoji].senders &&
+    reactions[emoji].senders.length > 0 &&
+    reactions[emoji].senders.includes(me);
+
   const handleReactionClick = async (emoji: string) => {
     await sendMessageReaction(messageId, emoji);
   };
@@ -120,7 +125,7 @@ export const MessageReactions = (props: Props): ReactElement => {
     <>
       <StyledReaction
         key={emoji}
-        includesMe={reactions[emoji].senders.includes(me)}
+        includesMe={includesMe(emoji)}
         onClick={async () => {
           await handleReactionClick(emoji);
         }}
