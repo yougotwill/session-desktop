@@ -67,6 +67,7 @@ import { MessageRequestResponse } from '../session/messages/outgoing/controlMess
 import { Notifications } from '../util/notifications';
 import { Storage } from '../util/storage';
 import { ReactionType } from '../types/Message';
+import { MessageSentHandler } from '../session/sending/MessageSentHandler';
 
 export enum ConversationTypeEnum {
   GROUP = 'group',
@@ -639,12 +640,11 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     return getOpenGroupV2FromConversationId(this.id);
   }
 
-  public async sendReactionJob(message: MessageModel, reaction: ReactionType) {
+  public async sendReactionJob(sourceMessage: MessageModel, reaction: ReactionType) {
     try {
-      const { id } = message;
       const destination = this.id;
 
-      const sentAt = message.get('sent_at');
+      const sentAt = sourceMessage.get('sent_at');
 
       if (!sentAt) {
         throw new Error('sendReactMessageJob() sent_at must be set.');
@@ -654,12 +654,21 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
         throw new Error('Only opengroupv2 are supported now');
       }
 
+      // TODO move function elsewhere as it is updating the local client before updating the timestamp for the receiving client
+      await MessageSentHandler.handleMessageReaction(reaction);
+
+      if (sourceMessage.get('reacts')?.timestamp) {
+        console.log(
+          'reaction: we updated the timestamp in sendReactionJob for the receiving client'
+        );
+        reaction.id = Number(sourceMessage.get('reacts')!.timestamp);
+      }
+
       // an OpenGroupV2 message is just a visible message
       const chatMessageParams: VisibleMessageParams = {
         // TODO handle notification on client side
         // Text: `Reacted ${reaction.emoji} to: "${message.get('body')}"`,
         body: '',
-        identifier: id,
         timestamp: sentAt,
         reaction,
         lokiProfile: UserUtils.getOurProfile(),
@@ -700,7 +709,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
 
       throw new TypeError(`Invalid conversation type: '${this.get('type')}'`);
     } catch (e) {
-      await message.saveErrors(e);
+      window.log.error(`Reaction job failed id:${reaction.id} error:`, e);
       return null;
     }
   }
@@ -940,16 +949,16 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     });
   }
 
-  public async sendReaction(messageId: string, reaction: ReactionType) {
-    const messageModel = await getMessageById(messageId);
+  public async sendReaction(sourceId: string, reaction: ReactionType) {
+    const sourceMessage = await getMessageById(sourceId);
 
-    if (!messageModel) {
+    if (!sourceMessage) {
       // TODO handle better
       return;
     }
 
     await this.queueJob(async () => {
-      await this.sendReactionJob(messageModel, reaction);
+      await this.sendReactionJob(sourceMessage, reaction);
     });
   }
 

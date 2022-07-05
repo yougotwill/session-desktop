@@ -334,26 +334,18 @@ export async function handleMessageJob(
     ) || messageModel.get('timestamp')} in conversation ${conversation.idForLogging()}`
   );
 
-  // TODO remove
   console.log('reaction: message received', messageModel);
+  if (regularDataMessage.reaction) {
+    await MessageSentHandler.handleMessageReaction(regularDataMessage.reaction);
+    confirm?.();
+  } else {
+    const sendingDeviceConversation = await getConversationController().getOrCreateAndWait(
+      source,
+      ConversationTypeEnum.PRIVATE
+    );
 
-  const sendingDeviceConversation = await getConversationController().getOrCreateAndWait(
-    source,
-    ConversationTypeEnum.PRIVATE
-  );
-
-  try {
-    messageModel.set({ flags: regularDataMessage.flags });
-
-    if (regularDataMessage.reaction && regularDataMessage.reaction.id) {
-      const originalMessage = await MessageSentHandler.handleMessageReaction(
-        regularDataMessage.reaction,
-        Number(regularDataMessage.reaction.id)
-      );
-      if (originalMessage) {
-        originalMessage.commit();
-      }
-    } else {
+    try {
+      messageModel.set({ flags: regularDataMessage.flags });
       if (messageModel.isExpirationTimerUpdate()) {
         const { expireTimer } = regularDataMessage;
         const oldValue = conversation.get('expireTimer');
@@ -439,11 +431,10 @@ export async function handleMessageJob(
       if (messageModel.get('unread')) {
         conversation.throttledNotify(messageModel);
       }
+      confirm?.();
+    } catch (error) {
+      const errorForLog = error && error.stack ? error.stack : error;
+      window?.log?.error('handleMessageJob', messageModel.idForLogging(), 'error:', errorForLog);
     }
-
-    confirm?.();
-  } catch (error) {
-    const errorForLog = error && error.stack ? error.stack : error;
-    window?.log?.error('handleMessageJob', messageModel.idForLogging(), 'error:', errorForLog);
   }
 }
