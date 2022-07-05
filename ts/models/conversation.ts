@@ -66,7 +66,7 @@ import { getOurPubKeyStrFromCache } from '../session/utils/User';
 import { MessageRequestResponse } from '../session/messages/outgoing/controlMessage/MessageRequestResponse';
 import { Notifications } from '../util/notifications';
 import { Storage } from '../util/storage';
-import { ReactionType } from '../types/Message';
+import { Reaction } from '../types/Message';
 import { handleMessageReaction } from '../util/reactions';
 
 export enum ConversationTypeEnum {
@@ -641,7 +641,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
   }
 
   // TODO refactor with sendMessageJob to minimize code
-  public async sendReactionJob(sourceMessage: MessageModel, reaction: ReactionType) {
+  public async sendReactionJob(sourceMessage: MessageModel, reaction: Reaction) {
     try {
       const destination = this.id;
 
@@ -966,7 +966,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     });
   }
 
-  public async sendReaction(sourceId: string, reaction: ReactionType) {
+  public async sendReaction(sourceId: string, reaction: Reaction) {
     const sourceMessage = await getMessageById(sourceId);
 
     if (!sourceMessage) {

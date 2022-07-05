@@ -22,7 +22,11 @@ export const sendMessageReaction = async (messageId: string, emoji: string) => {
     let action = 0;
 
     const reacts = found.get('reacts');
-    if (reacts && Object.keys(reacts).includes(emoji) && reacts[emoji].senders.includes(author)) {
+    if (
+      reacts &&
+      Object.keys(reacts).includes(emoji) &&
+      Object.keys(reacts[emoji]).includes(author)
+    ) {
       window.log.info('found matching reaction removing it');
       action = 1;
     } else {
@@ -78,34 +82,33 @@ export const handleMessageReaction = async (
 
   const reacts: ReactionList = originalMessage.get('reacts') ?? {};
   reacts[reaction.emoji] = reacts[reaction.emoji] || {};
-  const senders = reacts[reaction.emoji].senders ?? [];
+  const details = reacts[reaction.emoji] ?? {};
+  const senders = Object.keys(details);
 
   switch (reaction.action) {
     // Add reaction
     case 0:
-      if (!reacts[reaction.emoji].id && messageId && messageId !== '') {
-        window?.log?.info('Setting reactions id to', messageId);
-        reacts[reaction.emoji].id = messageId;
-      }
-      if (senders.includes(reaction.author)) {
-        window?.log?.info('Received duplicate message reaction. Dropping it.');
+      if (senders.includes(reaction.author) && details[reaction.author] !== '') {
+        window?.log?.info(
+          'Received duplicate message reaction. Dropping it. id:',
+          details[reaction.author]
+        );
         return;
       }
-      senders.push(reaction.author);
+      details[reaction.author] = messageId ?? '';
       break;
     // Remove reaction
     case 1:
     default:
       if (senders.length > 0) {
-        const deleteIndex = senders.indexOf(reaction.author);
-        if (deleteIndex >= 0) {
-          senders.splice(deleteIndex, 1);
+        if (senders.indexOf(reaction.author) >= 0) {
+          delete details[reaction.author];
         }
       }
   }
 
-  if (senders.length > 0) {
-    reacts[reaction.emoji].senders = senders;
+  if (Object.keys(details).length > 0) {
+    reacts[reaction.emoji] = details;
   } else {
     // tslint:disable-next-line: no-dynamic-delete
     delete reacts[reaction.emoji];
