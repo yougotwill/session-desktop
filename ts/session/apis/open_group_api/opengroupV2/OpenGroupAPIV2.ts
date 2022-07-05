@@ -4,19 +4,13 @@ import {
   saveV2OpenGroupRoom,
 } from '../../../../data/opengroups';
 import { FSv2 } from '../../file_server_api';
-import { sendJsonViaOnionV4ToNonSnode, sendViaOnionToNonSnode } from '../../../onions/onionSend';
-import { OpenGroupRequestCommonType, OpenGroupV2Info, OpenGroupV2Request } from './ApiUtil';
+import { sendViaOnionToNonSnode } from '../../../onions/onionSend';
+import { OpenGroupRequestCommonType, OpenGroupV2Request } from './ApiUtil';
 import { parseStatusCodeFromOnionRequest } from './OpenGroupAPIV2Parser';
 
 import { isOpenGroupV2Request } from '../../file_server_api/FileServerApiV2';
 import pRetry from 'p-retry';
 import { callUtilsWorker } from '../../../../webworker/workers/util_worker_interface';
-import {
-  capabilitiesListHasBlindEnabled,
-  fetchCapabilitiesAndUpdateRelatedRoomsOfServerUrl,
-} from '../sogsv3/sogsV3Capabilities';
-import { uniq } from 'lodash';
-import { AbortController } from 'abort-controller';
 
 // used to be overwritten by testing
 export const getMinTimeout = () => 1000;
@@ -142,61 +136,6 @@ export async function sendApiV2Request(
     });
     return res as object;
   }
-}
-
-/**
- * Fetch the required room infos before joining a room (caps, name, imageId, etc)
- */
-export async function openGroupV2GetRoomInfoViaOnionV4({
-  serverUrl,
-  serverPubkey,
-  roomId,
-}: {
-  serverPubkey: string;
-  serverUrl: string;
-  roomId: string;
-}): Promise<OpenGroupV2Info | null> {
-  const abortSignal = new AbortController().signal;
-
-  const caps = await fetchCapabilitiesAndUpdateRelatedRoomsOfServerUrl(serverUrl);
-
-  if (!caps || caps.length === 0) {
-    window?.log?.warn('getInfo failed because capabilities failed');
-    return null;
-  }
-
-  const hasBlindingEnabled = capabilitiesListHasBlindEnabled(caps);
-  window?.log?.info(`openGroupV2GetRoomInfoViaOnionV4 capabilities for  ${serverUrl}: ${caps}`);
-
-  const result = await sendJsonViaOnionV4ToNonSnode({
-    blinded: hasBlindingEnabled,
-    method: 'GET',
-    serverUrl,
-    endpoint: `/legacy/rooms/${roomId}`,
-    abortSignal,
-    stringifiedBody: null,
-    serverPubkey,
-    headers: null,
-  });
-  const room = (result?.body as any)?.room as Record<string, any> | undefined;
-  if (room) {
-    const { id, name, image_id: imageId } = room;
-
-    if (!id || !name) {
-      window?.log?.warn('getRoominfo Parsing failed');
-      return null;
-    }
-
-    const info: OpenGroupV2Info = {
-      id,
-      name,
-      imageId,
-      capabilities: caps ? uniq(caps) : undefined,
-    };
-    return info;
-  }
-  window?.log?.warn('getInfo failed');
-  return null;
 }
 
 /**

@@ -10,12 +10,12 @@ import { getConversationController } from '../../../conversations';
 import { allowOnlyOneAtATime } from '../../../utils/Promise';
 import { getOpenGroupV2ConversationId } from '../utils/OpenGroupUtils';
 import { OpenGroupRequestCommonType } from './ApiUtil';
-import { openGroupV2GetRoomInfoViaOnionV4 } from './OpenGroupAPIV2';
 import { OpenGroupServerPoller } from './OpenGroupServerPoller';
 
 import _ from 'lodash';
 import autoBind from 'auto-bind';
 import { ConversationTypeEnum } from '../../../../models/conversationAttributes';
+import { openGroupV2GetRoomInfoViaOnionV4 } from '../sogsv3/sogsV3RoomInfos';
 
 let instance: OpenGroupManagerV2 | undefined;
 
