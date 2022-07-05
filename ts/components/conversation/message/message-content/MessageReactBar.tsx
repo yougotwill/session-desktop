@@ -3,8 +3,8 @@ import styled from 'styled-components';
 import { SessionIconButton } from '../../../icon';
 
 type Props = {
-  action: (...args: any[]) => void;
-  additionalAction: (...args: any[]) => void;
+  action: (...args: Array<any>) => void;
+  additionalAction: (...args: Array<any>) => void;
 };
 
 const StyledMessageReactBar = styled.div`
@@ -44,12 +44,48 @@ export const MessageReactBar = (props: Props): ReactElement => {
 
   return (
     <StyledMessageReactBar>
-      <ReactButton onClick={() => action('🙈')}>🙈</ReactButton>
-      <ReactButton onClick={() => action('🙉')}>🙉</ReactButton>
-      <ReactButton onClick={() => action('🙊')}>🙊</ReactButton>
-      <ReactButton onClick={() => action('😈')}>😈</ReactButton>
-      <ReactButton onClick={() => action('🥸')}>🥸</ReactButton>
-      <ReactButton onClick={() => action('🐀')}>🐀</ReactButton>
+      <ReactButton
+        onClick={() => {
+          action('🙈');
+        }}
+      >
+        🙈
+      </ReactButton>
+      <ReactButton
+        onClick={() => {
+          action('🙉');
+        }}
+      >
+        🙉
+      </ReactButton>
+      <ReactButton
+        onClick={() => {
+          action('🙊');
+        }}
+      >
+        🙊
+      </ReactButton>
+      <ReactButton
+        onClick={() => {
+          action('😈');
+        }}
+      >
+        😈
+      </ReactButton>
+      <ReactButton
+        onClick={() => {
+          action('🥸');
+        }}
+      >
+        🥸
+      </ReactButton>
+      <ReactButton
+        onClick={() => {
+          action('🐀');
+        }}
+      >
+        🐀
+      </ReactButton>
       <SessionIconButton
         iconColor={'var(--color-text)'}
         iconPadding={'12px'}
