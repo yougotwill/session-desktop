@@ -102,6 +102,7 @@ export const handleMessageReaction = async (
     default:
       if (senders.length > 0) {
         if (senders.indexOf(reaction.author) >= 0) {
+          // tslint:disable-next-line: no-dynamic-delete
           delete details[reaction.author];
         }
       }
