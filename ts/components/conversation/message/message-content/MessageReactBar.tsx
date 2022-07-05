@@ -21,8 +21,8 @@ const StyledMessageReactBar = styled.div`
   align-items: center;
 
   .session-icon-button {
-    border-color: transparent;
-    box-shadow: none;
+    border-color: transparent !important;
+    box-shadow: none !important;
     margin: 0 4px;
   }
 `;
