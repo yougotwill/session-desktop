@@ -6,7 +6,7 @@ import {
 import { FSv2 } from '../../file_server_api';
 import { sendJsonViaOnionV4ToNonSnode, sendViaOnionToNonSnode } from '../../../onions/onionSend';
 import { OpenGroupRequestCommonType, OpenGroupV2Info, OpenGroupV2Request } from './ApiUtil';
-import { parseRooms, parseStatusCodeFromOnionRequest } from './OpenGroupAPIV2Parser';
+import { parseStatusCodeFromOnionRequest } from './OpenGroupAPIV2Parser';
 
 import { isOpenGroupV2Request } from '../../file_server_api/FileServerApiV2';
 import pRetry from 'p-retry';
@@ -198,26 +198,6 @@ export async function openGroupV2GetRoomInfoViaOnionV4({
   window?.log?.warn('getInfo failed');
   return null;
 }
-
-export const getAllRoomInfos = async (roomInfos: OpenGroupV2Room) => {
-  const res = await sendJsonViaOnionV4ToNonSnode({
-    blinded: false,
-    endpoint: '/legacy/rooms',
-    method: 'GET',
-    serverPubkey: roomInfos.serverPublicKey,
-    stringifiedBody: null,
-    abortSignal: new AbortController().signal,
-    serverUrl: roomInfos.serverUrl,
-    headers: null,
-  });
-
-  if (res?.status_code === 200) {
-    return parseRooms(res);
-  }
-
-  window?.log?.warn('getAllRoomInfos failed invalid status code:', res?.status_code);
-  return;
-};
 
 /**
  * File upload and download

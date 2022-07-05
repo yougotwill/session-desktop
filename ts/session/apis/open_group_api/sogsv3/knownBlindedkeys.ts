@@ -43,7 +43,6 @@ export async function loadKnownBlindedKeys() {
   } else {
     cachedKnownMapping = [];
   }
-  console.warn('loadKnownBlindedKeys afterload:', cachedKnownMapping);
 }
 
 async function writeKnownBlindedKeys() {
