@@ -4,8 +4,8 @@ import { parseStatusCodeFromOnionRequest } from './OpenGroupAPIV2Parser';
 import _ from 'lodash';
 import { sendViaOnionToNonSnode } from '../../../onions/onionSend';
 import { OpenGroupMessageV2 } from './OpenGroupMessageV2';
-import { downloadPreviewOpenGroupV2 } from './OpenGroupAPIV2';
 import { AbortSignal } from 'abort-controller';
+import { sogsV3FetchPreview } from '../sogsv3/sogsV3FetchFile';
 
 const COMPACT_POLL_ENDPOINT = 'compact_poll';
 
@@ -46,7 +46,7 @@ export const getAllBase64AvatarForRooms = async (
     await Promise.all(
       allValidRoomInfos.map(async room => {
         try {
-          const base64 = await downloadPreviewOpenGroupV2(room);
+          const base64 = await sogsV3FetchPreview(room);
           if (base64) {
             return {
               roomId: room.roomId,
@@ -192,7 +192,6 @@ async function sendOpenGroupV2RequestCompactPoll(
       body,
       useV4: true,
     },
-    {},
     abortSignal
   );
 

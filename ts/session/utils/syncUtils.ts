@@ -29,6 +29,7 @@ import { getCompleteUrlFromRoom } from '../apis/open_group_api/utils/OpenGroupUt
 import { DURATION } from '../constants';
 import { UnsendMessage } from '../messages/outgoing/controlMessage/UnsendMessage';
 import { MessageRequestResponse } from '../messages/outgoing/controlMessage/MessageRequestResponse';
+import { PubKey } from '../types';
 
 const ITEM_ID_LAST_SYNC_TIMESTAMP = 'lastSyncedTimestamp';
 
@@ -159,8 +160,14 @@ const getValidClosedGroups = async (convos: Array<ConversationModel>) => {
 
 const getValidContacts = (convos: Array<ConversationModel>) => {
   // Filter contacts
+  // blindedId are synced with the outbox logic.
   const contactsModels = convos.filter(
-    c => !!c.get('active_at') && c.getRealSessionUsername() && c.isPrivate()
+    c =>
+      !!c.get('active_at') &&
+      c.getRealSessionUsername() &&
+      c.isPrivate() &&
+      c.isApproved() &&
+      !PubKey.hasBlindedPrefix(c.get('id'))
   );
 
   const contacts = contactsModels.map(c => {

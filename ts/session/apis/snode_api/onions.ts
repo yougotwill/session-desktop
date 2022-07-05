@@ -16,7 +16,6 @@ import { ERROR_CODE_NO_CONNECT } from './SNodeAPI';
 import { Onions } from '.';
 import { hrefPnServerDev, hrefPnServerProd } from '../push_notification_api/PnServer';
 import { callUtilsWorker } from '../../../webworker/workers/util_worker_interface';
-import { to_string } from 'libsodium-wrappers-sumo';
 import { encodeV4Request } from '../../onions/onionv4';
 import { AbortSignal } from 'abort-controller';
 
@@ -36,7 +35,14 @@ export const OXEN_SERVER_ERROR = 'Oxen Server error';
  * But if the request reaches the destination node and it fails to process the request (bad node for this pubkey), you will get a 200 on the request itself, but the json you get will contain the real status.
  */
 export interface SnodeResponse {
+  bodyBinary: Uint8Array | null;
   body: string;
+  status?: number;
+}
+
+// v4 onion request have a weird string and binary content, so better get it as binary to extract just the string part
+export interface SnodeResponseV4 {
+  bodyBinary: Uint8Array | null;
   status?: number;
 }
 
@@ -541,14 +547,13 @@ export async function processOnionResponseV4({
   lsrpcEd25519Key?: string;
   abortSignal?: AbortSignal;
   associatedWith?: string;
-}): Promise<SnodeResponse | undefined> {
+}): Promise<SnodeResponseV4 | undefined> {
   processAbortedRequest(abortSignal);
 
   if (!symmetricKey) {
     window?.log?.error('No symmetric key to decode response.');
     return undefined;
   }
-
   const cipherText = (await response?.arrayBuffer()) || [];
 
   const plaintextBuffer = await callUtilsWorker(
@@ -556,9 +561,11 @@ export async function processOnionResponseV4({
     new Uint8Array(symmetricKey),
     new Uint8Array(cipherText)
   );
-  const plainText = to_string(plaintextBuffer);
+
+  const bodyBinary: Uint8Array = new Uint8Array(plaintextBuffer);
+
   return {
-    body: plainText,
+    bodyBinary,
   };
 }
 
@@ -704,7 +711,7 @@ export const sendOnionRequestHandlingSnodeEject = async ({
   abortSignal?: AbortSignal;
   associatedWith?: string;
   useV4: boolean;
-}): Promise<SnodeResponse | undefined> => {
+}): Promise<SnodeResponse | SnodeResponseV4 | undefined> => {
   // this sendOnionRequest() call has to be the only one like this.
   // If you need to call it, call it through sendOnionRequestHandlingSnodeEject because this is the one handling path rebuilding and known errors
   let response;
@@ -725,7 +732,7 @@ export const sendOnionRequestHandlingSnodeEject = async ({
       response.status === 502 &&
       response.statusText === 'Bad Gateway'
     ) {
-      // it's an opengroup server and his is not responding. Consider this as a ENETUNREACH
+      // it's an opengroup server and it is not responding. Consider this as a ENETUNREACH
       throw new pRetry.AbortError('ENETUNREACH');
     }
     decodingSymmetricKey = result.decodingSymmetricKey;
@@ -952,7 +959,7 @@ export async function lokiOnionFetch({
       }
     );
 
-    return retriedResult;
+    return retriedResult as SnodeResponse | undefined;
   } catch (e) {
     window?.log?.warn('onionFetchRetryable failed ', e.message);
     if (e?.errno === 'ENETUNREACH') {

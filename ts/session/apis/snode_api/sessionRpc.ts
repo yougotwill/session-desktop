@@ -86,6 +86,7 @@ async function lokiFetch({
     return {
       body: result,
       status: response.status,
+      bodyBinary: null,
     };
   } catch (e) {
     if (e.code === 'ENOTFOUND') {

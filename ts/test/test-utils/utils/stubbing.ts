@@ -28,7 +28,7 @@ export function stubDataItem<K extends keyof DataFunction>(fn: K): sinon.SinonSt
 
 export function stubUtilWorker(fnName: string, returnedValue: any): sinon.SinonStub {
   return Sinon.stub(utilWorker, 'callUtilsWorker')
-    .withArgs(fnName)
+    .withArgs(fnName as any)
     .resolves(returnedValue);
 }
 export function stubCreateObjectUrl() {

@@ -120,7 +120,6 @@ const AvatarInner = (props: Props) => {
   const isClosedGroupAvatar = useIsClosedGroup(pubkey);
   const avatarPath = useAvatarPath(pubkey);
   const name = useConversationUsername(pubkey);
-
   // contentType is not important
   const { urlToLoad } = useEncryptedFileFetch(forcedAvatarPath || avatarPath || '', '', true);
   const handleImageError = () => {

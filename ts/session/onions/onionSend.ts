@@ -5,6 +5,7 @@ import {
   FinalRelayOptions,
   sendOnionRequestHandlingSnodeEject,
   SnodeResponse,
+  SnodeResponseV4,
   STATUS_NO_STATUS,
 } from '../apis/snode_api/onions';
 import _, { toNumber } from 'lodash';
@@ -16,17 +17,13 @@ import { decodeV4Response } from './onionv4';
 import { getOurOpenGroupHeaders } from '../apis/open_group_api/opengroupV2/OpenGroupPollingUtils';
 import { addJsonContentTypeToHeaders } from '../apis/open_group_api/sogsv3/sogsV3SendMessage';
 import { AbortSignal } from 'abort-controller';
+import { to_string } from 'libsodium-wrappers-sumo';
 
 export type OnionFetchOptions = {
   method: string;
   body?: string;
   headers?: Record<string, string | number>;
   useV4: boolean;
-};
-
-type OnionFetchBasicOptions = {
-  retry?: number;
-  noJson?: boolean;
 };
 
 type OnionPayloadObj = {
@@ -90,14 +87,6 @@ export const getOnionPathForSending = async () => {
   return pathNodes;
 };
 
-const initOptionsWithDefaults = (options: OnionFetchBasicOptions) => {
-  const defaultFetchBasicOptions = {
-    retry: 0,
-    noJson: false,
-  };
-  return _.defaults(options, defaultFetchBasicOptions);
-};
-
 export type OnionSnodeResponse = {
   result: SnodeResponse;
   txtResponse: string;
@@ -105,12 +94,18 @@ export type OnionSnodeResponse = {
 };
 
 export type OnionV4SnodeResponse = {
-  body: string | object | null;
+  body: string | object | null; // if the content can be decoded as string
+  bodyBinary: Uint8Array | null; // otherwise we return the raw content (could be an image data or file from sogs/fileserver)
   status_code: number;
 };
 
 export type OnionV4JSONSnodeResponse = {
   body: object | null;
+  status_code: number;
+};
+
+export type OnionV4BinarySnodeResponse = {
+  bodyBinary: Uint8Array | null;
   status_code: number;
 };
 
@@ -131,7 +126,6 @@ export const sendViaOnionToNonSnode = async (
   destinationX25519Key: string,
   url: URL,
   fetchOptions: OnionFetchOptions,
-  options: OnionFetchBasicOptions = {},
   abortSignal?: AbortSignal
 ): Promise<OnionSnodeResponse | null> => {
   const castedDestinationX25519Key =
@@ -142,8 +136,6 @@ export const sendViaOnionToNonSnode = async (
 
     throw new Error('sendViaOnion - called without a server public key or not a string key');
   }
-
-  const defaultedOptions = initOptionsWithDefaults(options);
 
   const payloadObj = buildSendViaOnionPayload(url, fetchOptions);
   // if protocol is forced to 'http:' => just use http (without the ':').
@@ -160,7 +152,7 @@ export const sendViaOnionToNonSnode = async (
     finalRelayOptions.port = url.port ? toNumber(url.port) : 80;
   }
 
-  let result: SnodeResponse | undefined;
+  let result: SnodeResponse | SnodeResponseV4 | undefined;
   try {
     result = await pRetry(
       async () => {
@@ -170,6 +162,9 @@ export const sendViaOnionToNonSnode = async (
           throw new Error('getOnionPathForSending is emtpy');
         }
 
+        if (fetchOptions.useV4) {
+          throw new Error('fetchOptions.useV4 is true. Use the onionv4 for it then');
+        }
         /**
          * This call handles ejecting a snode or a path if needed. If that happens, it throws a retryable error and the pRetry
          * call above will call us again with the same params but a different path.
@@ -206,50 +201,38 @@ export const sendViaOnionToNonSnode = async (
     return null;
   }
 
-  // If we expect something which is not json, just return the body we got.
-  if (defaultedOptions.noJson) {
-    return {
-      result,
-      txtResponse: result.body,
-      response: result.body,
-    };
-  }
-
   // get the return variables we need
   let txtResponse = '';
 
-  let { body } = result;
-  if (typeof body === 'string') {
-    txtResponse = result.body;
-
-    try {
-      if (fetchOptions.useV4) {
-        throw new Error('use the other sendv4 for sending v4');
-      } else {
-        body = JSON.parse(result.body);
-      }
-    } catch (e) {
-      window?.log?.error("sendViaOnion Can't decode JSON body", typeof result.body, result.body);
+  const { bodyBinary } = result;
+  txtResponse = bodyBinary ? to_string(bodyBinary) : '';
+  let body = (result as any).body;
+  try {
+    if (fetchOptions.useV4) {
+      throw new Error('use the other sendv4 for sending v4');
+    } else {
+      body = JSON.parse(txtResponse);
     }
+  } catch (e) {
+    window?.log?.error("sendViaOnion Can't decode JSON body", typeof result.bodyBinary);
   }
+
   // result.status has the http response code
   if (!txtResponse) {
     txtResponse = JSON.stringify(body);
   }
-  return { result, txtResponse, response: body };
+  return { result: result as SnodeResponse, txtResponse, response: body };
 };
 
 export const sendViaOnionV4ToNonSnode = async (
   destinationX25519Key: string,
   url: URL,
   fetchOptions: OnionFetchOptions,
-  options: OnionFetchBasicOptions = {},
   abortSignal?: AbortSignal
 ): Promise<OnionV4SnodeResponse | null> => {
   const castedDestinationX25519Key =
     typeof destinationX25519Key !== 'string' ? toHex(destinationX25519Key) : destinationX25519Key;
 
-  const defaultedOptions = initOptionsWithDefaults(options);
   const payloadObj = buildSendViaOnionPayload(url, fetchOptions);
   // if protocol is forced to 'http:' => just use http (without the ':').
   // otherwise use https as protocol (this is the default)
@@ -265,7 +248,7 @@ export const sendViaOnionV4ToNonSnode = async (
     finalRelayOptions.port = url.port ? toNumber(url.port) : 80;
   }
 
-  let result: SnodeResponse | undefined;
+  let result: SnodeResponseV4 | undefined;
   try {
     result = await pRetry(
       async () => {
@@ -317,26 +300,17 @@ export const sendViaOnionV4ToNonSnode = async (
     return null;
   }
 
-  // If we expect something which is not json, just return the body we got.
-  if (defaultedOptions.noJson) {
-    return {
-      status_code: result.status || STATUS_NO_STATUS,
-      body: result.body,
-    };
-  }
-
   try {
-    // this only decodes single entries, and not
-    const decodedV4 = decodeV4Response(result.body);
-
-    return { status_code: decodedV4?.metadata?.code || STATUS_NO_STATUS, body: decodedV4?.body };
+    // this only decodes single entries
+    const decodedV4 = decodeV4Response(result);
+    return {
+      status_code: decodedV4?.metadata?.code || STATUS_NO_STATUS,
+      body: decodedV4?.body || null,
+      bodyBinary: decodedV4?.bodyBinary || null,
+    };
   } catch (e) {
-    window?.log?.error(
-      "sendViaOnionV4ToNonSnode Can't decode JSON body",
-      typeof result.body,
-      result.body
-    );
-    return { status_code: STATUS_NO_STATUS, body: null };
+    window?.log?.error("sendViaOnionV4ToNonSnode Can't decode JSON body");
+    return { status_code: STATUS_NO_STATUS, body: null, bodyBinary: null };
   }
 };
 
@@ -371,13 +345,6 @@ export async function sendJsonViaOnionV4ToNonSnode(sendOptions: {
     return null;
   }
   headersWithSogsHeadersIfNeeded = { ...includedHeaders, ...headersWithSogsHeadersIfNeeded };
-  // console.warn(
-  //   `sendMessage including ${
-  //     (headersWithSogsHeadersIfNeeded as any)['X-SOGS-Pubkey']?.startsWith('15')
-  //       ? 'blinded'
-  //       : 'unblinded'
-  //   } headers`
-  // );
   const res = await sendViaOnionV4ToNonSnode(
     serverPubkey,
     builtUrl,
@@ -387,7 +354,6 @@ export async function sendJsonViaOnionV4ToNonSnode(sendOptions: {
       body: stringifiedBody || undefined,
       useV4: true,
     },
-    {},
     abortSignal
   );
 

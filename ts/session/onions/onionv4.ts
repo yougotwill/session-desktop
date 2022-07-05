@@ -1,5 +1,6 @@
-import { from_string } from 'libsodium-wrappers-sumo';
+import { from_string, to_string } from 'libsodium-wrappers-sumo';
 import { toNumber } from 'lodash';
+import { SnodeResponseV4 } from '../apis/snode_api/onions';
 import { concatUInt8Array } from '../crypto';
 
 export const encodeV4Request = (requestInfo: { body?: any }): Uint8Array => {
@@ -21,7 +22,8 @@ export type DecodedResponseV4 = {
     code: number;
     headers?: Record<string, string>;
   };
-  body: any; // might be object, or binary or maybe some other stuff..
+  body: object | null; // might be object, or binary or maybe some other stuff..
+  bodyBinary: Uint8Array;
   bodyContentType: string;
 };
 
@@ -36,40 +38,55 @@ export type DecodedResponseBodiesV4 = Array<any>;
  * 1. First part contains response metadata
  * 2. Second part contains the request body.
  */
-export const decodeV4Response = (response: string): DecodedResponseV4 | undefined => {
+export const decodeV4Response = (snodeResponse: SnodeResponseV4): DecodedResponseV4 | undefined => {
+  const eAscii = 'e'.charCodeAt(0);
+  const lAscii = 'l'.charCodeAt(0);
+  const colonAscii = ':'.charCodeAt(0);
+
   // json part will have code: containing response code and headers for http headers (always lower case)
   // 1. read first bit till colon to get the length. Substring the next X amount trailing the colon and that's the metadata.
   // 2. grab the number before the next colon. That's the expected length of the body.
   // 3. Use the content type from the metadata header to handle the body.
-  // console.error('decodeV4Response', response);
-  if (!(response.startsWith('l') && response.endsWith('e'))) {
+
+  const binary = snodeResponse.bodyBinary;
+
+  if (
+    !(
+      binary &&
+      binary.byteLength &&
+      binary[0] === lAscii &&
+      binary[binary.byteLength - 1] === eAscii
+    )
+  ) {
     window?.log?.error(
-      'Batch response is missing prefix and suffix characters - Dropping response'
+      'decodeV4Response: response is missing prefix and suffix characters - Dropping response'
     );
     return;
   }
 
   try {
-    const firstDelimitIdx = response.indexOf(':');
-    const metaLength = toNumber(response.slice(1, firstDelimitIdx));
+    const firstDelimitIdx = binary.indexOf(colonAscii);
 
-    const metaStartIndex = firstDelimitIdx + 1;
-    const metaEndIndex = metaStartIndex + metaLength;
-    const metadata = JSON.parse(response.slice(metaStartIndex, metaEndIndex));
+    const infoLength = toNumber(to_string(binary.slice(1, firstDelimitIdx)));
 
-    const beforeBodyIndex = response.indexOf(':', metaEndIndex);
-    const bodyLength = toNumber(response.slice(metaEndIndex, beforeBodyIndex));
-    const bodyText = response.slice(beforeBodyIndex + 1, beforeBodyIndex + (bodyLength + 1));
+    const infoStringStartIndex = firstDelimitIdx + 1;
+    const infoStringEndIndex = infoStringStartIndex + infoLength;
+    const infoJson = JSON.parse(to_string(binary.slice(infoStringStartIndex, infoStringEndIndex)));
 
-    const bodyContentType: string = metadata?.headers['content-type'];
+    const beforeBodyIndex = binary.indexOf(colonAscii, infoStringEndIndex);
+    const bodyLength = toNumber(to_string(binary.slice(infoStringEndIndex, beforeBodyIndex)));
+    const bodyBinary = binary.slice(beforeBodyIndex + 1, beforeBodyIndex + (bodyLength + 1));
+
+    const bodyContentType: string = infoJson?.headers['content-type'];
     let bodyParsed: object | null = null;
     switch (bodyContentType) {
-      // TODO; add cases for other data types
       case 'application/json':
-        bodyParsed = JSON.parse(bodyText);
+        bodyParsed = JSON.parse(to_string(bodyBinary));
         break;
       case 'text/plain; charset=utf-8':
-        bodyParsed = { plainText: bodyText };
+        bodyParsed = { plainText: to_string(bodyBinary) };
+        break;
+      case 'application/octet-stream':
         break;
       default:
         window?.log?.warn(
@@ -79,9 +96,10 @@ export const decodeV4Response = (response: string): DecodedResponseV4 | undefine
     }
 
     return {
-      metadata,
+      metadata: infoJson,
       body: bodyParsed,
       bodyContentType,
+      bodyBinary,
     };
   } catch (e) {
     window.log.warn('failed to decodeV4Response:', e.message);

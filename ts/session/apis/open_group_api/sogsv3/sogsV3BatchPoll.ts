@@ -333,7 +333,6 @@ const sendSogsBatchRequestOnionV4 = async (
       body,
       useV4: true,
     },
-    {},
     abortSignal
   );
 

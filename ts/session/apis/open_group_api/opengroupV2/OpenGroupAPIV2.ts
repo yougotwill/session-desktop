@@ -1,8 +1,4 @@
-import {
-  getV2OpenGroupRoomByRoomId,
-  OpenGroupV2Room,
-  saveV2OpenGroupRoom,
-} from '../../../../data/opengroups';
+import { getV2OpenGroupRoomByRoomId, saveV2OpenGroupRoom } from '../../../../data/opengroups';
 import { FSv2 } from '../../file_server_api';
 import { sendViaOnionToNonSnode } from '../../../onions/onionSend';
 import { OpenGroupRequestCommonType, OpenGroupV2Request } from './ApiUtil';
@@ -92,17 +88,12 @@ export async function sendApiV2Request(
 
   // Because auth happens on a per-room basis, we need both to make an authenticated request
   if (isOpenGroupV2Request(request) && request.room) {
-    const res = await sendViaOnionToNonSnode(
-      destinationX25519Key,
-      builtUrl,
-      {
-        method: request.method,
-        headers,
-        body,
-        useV4: request.useV4,
-      },
-      { noJson: true }
-    );
+    const res = await sendViaOnionToNonSnode(destinationX25519Key, builtUrl, {
+      method: request.method,
+      headers,
+      body,
+      useV4: request.useV4,
+    });
 
     const statusCode = parseStatusCodeFromOnionRequest(res);
     if (!statusCode) {
@@ -198,38 +189,6 @@ export const downloadFileOpenGroupV2ByUrl = async (
     return null;
   }
   return new Uint8Array(await callUtilsWorker('fromBase64ToArrayBuffer', base64Data));
-};
-
-/**
- * Download the preview image for that opengroup room.
- * The returned value is a base64 string.
- * It can be used directly, or saved on the attachments directory if needed, but this function does not handle it
- */
-export const downloadPreviewOpenGroupV2 = async (
-  roomInfos: OpenGroupV2Room
-): Promise<string | null> => {
-  const request: OpenGroupV2Request = {
-    method: 'GET',
-    room: roomInfos.roomId,
-    server: roomInfos.serverUrl,
-    endpoint: `rooms/${roomInfos.roomId}/image`,
-    serverPublicKey: roomInfos.serverPublicKey,
-    useV4: false,
-  };
-
-  const result = await exports.sendApiV2Request(request);
-  const statusCode = parseStatusCodeFromOnionRequest(result);
-  if (statusCode !== 200) {
-    return null;
-  }
-
-  // we should probably change the logic of sendOnionRequest to not have all those levels
-  const base64Data = result?.result?.result as string | undefined;
-
-  if (!base64Data) {
-    return null;
-  }
-  return base64Data;
 };
 
 /**
