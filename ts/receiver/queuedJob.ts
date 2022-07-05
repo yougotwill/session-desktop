@@ -335,7 +335,8 @@ export async function handleMessageJob(
   );
 
   if (regularDataMessage.reaction) {
-    await handleMessageReaction(regularDataMessage.reaction);
+    const messageId = messageModel.get('isPublic') ? String(messageModel.get('serverId')) : messageHash;
+    await handleMessageReaction(regularDataMessage.reaction, messageId);
     confirm?.();
   } else {
     const sendingDeviceConversation = await getConversationController().getOrCreateAndWait(
