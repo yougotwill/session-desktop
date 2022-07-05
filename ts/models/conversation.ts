@@ -685,17 +685,12 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
 
       const destinationPubkey = new PubKey(destination);
       if (this.isPrivate()) {
-        if (this.isMe()) {
-          chatMessageParams.syncTarget = this.id;
-          const chatMessageMe = new VisibleMessage(chatMessageParams);
-
-          await getMessageQueue().sendSyncMessage(chatMessageMe);
-          return;
-        }
+        const chatMessageMe = new VisibleMessage({ ...chatMessageParams, syncTarget: this.id });
+        await getMessageQueue().sendSyncMessage(chatMessageMe);
 
         const chatMessagePrivate = new VisibleMessage(chatMessageParams);
-
         await getMessageQueue().sendToPubKey(destinationPubkey, chatMessagePrivate);
+
         return;
       }
 
