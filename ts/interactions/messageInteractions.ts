@@ -189,7 +189,7 @@ export const handleMessageReaction = async (reaction: SignalService.DataMessage.
     return;
   }
 
-  const reacts: ReactionList = originalMessage.get('reacts') ?? {};
+  let reacts: ReactionList = originalMessage.get('reacts') ?? {};
   reacts[reaction.emoji] = reacts[reaction.emoji] || {};
   const senders = reacts[reaction.emoji].senders ?? [];
 
@@ -215,7 +215,9 @@ export const handleMessageReaction = async (reaction: SignalService.DataMessage.
   if (senders.length > 0) {
     reacts[reaction.emoji].senders = senders;
   } else {
-    delete reacts[reaction.emoji];
+    // avoids ts-lint no-dynamic-delete
+    const { emoji: removed, ...newReacts } = reacts;
+    reacts = newReacts;
   }
 
   originalMessage.set({
