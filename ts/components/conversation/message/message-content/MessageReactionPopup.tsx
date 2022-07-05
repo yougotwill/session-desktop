@@ -8,7 +8,7 @@ export const StyledPopupContainer = styled.div<{ tooltipPosition: TipPosition }>
   align-items: center;
   width: 216px;
   height: 72px;
-  z-index: 150;
+  z-index: 5;
 
   background-color: var(--color-received-message-background);
   color: var(--color-pill-divider-text);
