@@ -90,7 +90,7 @@ export const ReactListModal = (props: Props): ReactElement => {
   const dispatch = useDispatch();
 
   const me = UserUtils.getOurPubKeyStrFromCache();
-  const { isPublic, reacts } = msgProps;
+  const { isPublic, reacts, weAreAdmin } = msgProps;
   const [reactions, setReactions] = useState<ReactionList>({});
   const [currentReact, setCurrentReact] = useState('');
   const [senders, setSenders] = useState<Array<string>>([]);
@@ -233,7 +233,7 @@ export const ReactListModal = (props: Props): ReactElement => {
                 <span>&#8226;</span>
                 <span>{senders.length}</span>
               </p>
-              {isPublic && (
+              {isPublic && weAreAdmin && (
                 <StyledClearButton onClick={handleClearReactions}>
                   {window.i18n('clearAll')}
                 </StyledClearButton>

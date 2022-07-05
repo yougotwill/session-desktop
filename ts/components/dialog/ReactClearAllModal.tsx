@@ -14,21 +14,19 @@ type Props = {
   messageId: string;
 };
 
-const StyledReactClearAllContainer = styled(Flex)`
+const StyledReactClearAllContainer = styled(Flex)<{ darkMode: boolean }>`
   margin: var(--margins-lg);
 
   p {
     font-size: 18px;
     font-weight: bold;
+    padding-bottom: var(--margins-lg);
+    margin: var(--margins-md) auto;
+    border-bottom: 1.5px solid ${props => (props.darkMode ? '#2D2D2D' : '#EEEEEE')};
 
     span {
       margin-left: 4px;
     }
-  }
-
-  hr {
-    width: 90%;
-    margin: var(--margins-xs) auto var(--margins-md);
   }
 
   .session-button {
@@ -65,11 +63,10 @@ export const ReactClearAllModal = (props: Props): ReactElement => {
       showHeader={false}
       onClose={handleClose}
     >
-      <StyledReactClearAllContainer container={true} flexDirection={'column'}>
+      <StyledReactClearAllContainer container={true} flexDirection={'column'} darkMode={darkMode}>
         <p>
           Are you sure you want to clear all <span>{reaction}</span>?
         </p>
-        <hr />
         <div className="session-modal__button-group">
           <SessionButton
             text={'Clear'}
