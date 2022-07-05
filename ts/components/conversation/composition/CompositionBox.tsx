@@ -3,7 +3,7 @@ import _, { debounce, isEmpty } from 'lodash';
 
 import * as MIME from '../../../types/MIME';
 
-import { SessionEmojiPanel } from '../SessionEmojiPanel';
+import { SessionEmojiPanel, StyledEmojiPanel } from '../SessionEmojiPanel';
 import { SessionRecording } from '../SessionRecording';
 
 import {
@@ -55,6 +55,7 @@ import {
 } from './UserMentions';
 import { renderEmojiQuickResultRow, searchEmojiForQuery } from './EmojiQuickResult';
 import { LinkPreviews } from '../../../util/linkPreviews';
+import styled from 'styled-components';
 
 export interface ReplyingToMessageProps {
   convoId: string;
@@ -202,6 +203,14 @@ const getSelectionBasedOnMentions = (draft: string, index: number) => {
   // for now, just append it to the end
   return Number.MAX_SAFE_INTEGER;
 };
+
+const StyledEmojiPanelContainer = styled.div`
+  ${StyledEmojiPanel} {
+    position: absolute;
+    bottom: 68px;
+    right: 0px;
+  }
+`;
 
 class CompositionBoxInner extends React.Component<Props, State> {
   private readonly textarea: React.RefObject<any>;
@@ -387,11 +396,11 @@ class CompositionBoxInner extends React.Component<Props, State> {
         <SendMessageButton onClick={this.onSendMessage} />
 
         {typingEnabled && (
-          <div ref={this.emojiPanel} onKeyDown={this.onKeyDown} role="button">
+          <StyledEmojiPanelContainer ref={this.emojiPanel} onKeyDown={this.onKeyDown} role="button">
             {showEmojiPanel && (
               <SessionEmojiPanel onEmojiClicked={this.onEmojiClick} show={showEmojiPanel} />
             )}
-          </div>
+          </StyledEmojiPanelContainer>
         )}
       </>
     );
