@@ -74,6 +74,7 @@ type Props = {
   messageId: string;
 };
 
+// tslint:disable-next-line: max-func-body-length
 export const ReactListModal = (props: Props): ReactElement => {
   const { reaction, messageId } = props;
   const msgProps = useSelector((state: StateType) => getMessageReactsProps(state, messageId));
