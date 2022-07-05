@@ -10,6 +10,7 @@ import { UserUtils } from '../../../../session/utils';
 import { MessageReactionPopup, StyledPopupContainer, TipPosition } from './MessageReactionPopup';
 import { useMouse } from 'react-use';
 import { Flex } from '../../../basic/Flex';
+import { abbreviateNumber } from '../../../../util/abbreviateNumber';
 
 const StyledMessageReactionsContainer = styled(Flex)<{ x: number; y: number }>`
   ${StyledPopupContainer} {
@@ -96,7 +97,10 @@ const UpArrowSVG = (): ReactElement => (
   </svg>
 );
 
-export type MessageReactsSelectorProps = Pick<MessageRenderingProps, 'conversationType' | 'isPublic' | 'reacts'>;
+export type MessageReactsSelectorProps = Pick<
+  MessageRenderingProps,
+  'conversationType' | 'isPublic' | 'reacts'
+>;
 
 type Props = {
   messageId: string;
@@ -201,7 +205,7 @@ export const MessageReactions = (props: Props): ReactElement => {
           }}
         >
           <span>{emoji}</span>
-          {showCount && <span>{reactions[emoji].senders.length}</span>}
+          {showCount && <span>{abbreviateNumber(reactions[emoji].senders.length)}</span>}
         </StyledReaction>
         {conversationType === 'group' && popupReaction && popupReaction === emoji && (
           <MessageReactionPopup
