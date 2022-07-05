@@ -76,6 +76,20 @@ message DataMessage {
     EXPIRATION_TIMER_UPDATE   = 2;
   }
 
+  message Reaction {
+    enum Action {
+        REACT = 0;
+        REMOVE = 1;
+    }
+		// @required
+    required uint64 id        = 1; // Message timestamp
+		// @required
+    required string author    = 2;
+    optional string emoji     = 3;
+		// @required
+    required Action action    = 4;
+}
+
   message Quote {
 
     message QuotedAttachment {
