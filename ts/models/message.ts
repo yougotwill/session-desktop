@@ -1327,6 +1327,12 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
         return window.i18n('answeredACall', [displayName]);
       }
     }
+    if (this.get('reaction')) {
+      const reaction = this.get('reaction');
+      if (reaction && reaction.emoji && reaction.emoji !== '') {
+        return `Reacts to a message with ${reaction.emoji}`;
+      }
+    }
     return this.get('body');
   }
 }
