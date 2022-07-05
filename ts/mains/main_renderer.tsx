@@ -49,6 +49,7 @@ function preload(list: Array<string>) {
 }
 preload([
   'alert-outline.svg',
+  'angel-up.svg',
   'check.svg',
   'error.svg',
   'file-gradient.svg',
