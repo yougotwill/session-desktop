@@ -3,6 +3,7 @@ import React, { ReactElement, useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import styled from 'styled-components';
 import { getMessageById } from '../../data/data';
+import { UserUtils } from '../../session/utils';
 import { updateReactListModal, updateUserDetailsModal } from '../../state/ducks/modalDialog';
 import { StateType } from '../../state/reducer';
 import { getMessageReactsProps } from '../../state/selectors/conversations';
@@ -67,9 +68,11 @@ export const ReactListModal = (props: Props): ReactElement => {
 
   const dispatch = useDispatch();
 
+  const me = UserUtils.getOurPubKeyStrFromCache();
   const { reacts } = msgProps;
   const [reactions, setReactions] = useState<ReactionList>({});
   const [currentReact, setCurrentReact] = useState('');
+  const [senders, setSenders] = useState<Array<string>>([]);
 
   const handleSelectedReaction = (emoji: string): boolean => {
     return currentReact === emoji;
@@ -122,7 +125,26 @@ export const ReactListModal = (props: Props): ReactElement => {
     if (Object.keys(reactions).length > 0 && (reacts === {} || reacts === undefined)) {
       setReactions({});
     }
-  }, [reacts, reactions]);
+
+    if (currentReact && senders && !isEqual(senders, reactions[currentReact].senders)) {
+      let _senders = [...reactions[currentReact].senders];
+      if (_senders.length > 1) {
+        const meIndex = _senders.indexOf(me);
+        if (meIndex >= 0) {
+          _senders.splice(meIndex, 1);
+          _senders = [me, ..._senders];
+        }
+      }
+      setSenders(_senders);
+    }
+
+    if (
+      senders.length > 0 &&
+      (reactions[currentReact].senders === [] || reactions[currentReact].senders === undefined)
+    ) {
+      setSenders([]);
+    }
+  }, [currentReact, reacts, reactions, senders]);
 
   return (
     <SessionWrapperModal
@@ -149,11 +171,9 @@ export const ReactListModal = (props: Props): ReactElement => {
             <StyledReactionSummary>
               {currentReact}
               <span>&#8226;</span>
-              <span>{reactions[currentReact].senders.length}</span>
+              <span>{senders.length}</span>
             </StyledReactionSummary>
-            {reactions[currentReact].senders &&
-              reactions[currentReact].senders.length > 0 &&
-              renderReactionSenders(reactions[currentReact].senders)}
+            {senders && senders.length > 0 && renderReactionSenders(senders)}
           </StyledSendersContainer>
         )}
       </StyledReactListContainer>
