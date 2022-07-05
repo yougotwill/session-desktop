@@ -50,7 +50,7 @@ const StyledMessageContextMenu = styled.div`
   position: relative;
 
   .react-contexify {
-    margin-left: -80px;
+    margin-left: -104px;
   }
 `;
 
