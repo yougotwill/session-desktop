@@ -219,7 +219,9 @@ export async function handleSwarmDataMessage(
       cleanDataMessage.profileKey
     );
   }
-  if (isMessageEmpty(cleanDataMessage)) {
+
+  // Reactions are empty DataMessages
+  if (!cleanDataMessage.reaction && isMessageEmpty(cleanDataMessage)) {
     window?.log?.warn(`Message ${getEnvelopeId(envelope)} ignored; it was empty`);
     return removeFromCache(envelope);
   }

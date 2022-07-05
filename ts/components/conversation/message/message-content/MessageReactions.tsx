@@ -96,7 +96,14 @@ export const MessageReactions = (props: Props): ReactElement => {
   }
 
   const { reacts } = msgProps;
-  const [reactions, setReactions] = useState(reacts || {});
+  const [reactions, setReactions] = useState<
+    Record<
+      string,
+      {
+        senders: Array<string>;
+      }
+    >
+  >({});
 
   const [isExpanded, setIsExpanded] = useState(false);
   const handleExpand = () => {
@@ -171,10 +178,10 @@ export const MessageReactions = (props: Props): ReactElement => {
   };
 
   useEffect(() => {
-    if (reacts && !isEqual(reactions, reacts)) {
-      setReactions(reacts);
+    if (reacts && reacts.items && !isEqual(reactions, reacts.items)) {
+      setReactions(reacts.items);
     }
-  }, [reacts, reactions]);
+  }, [reacts?.items, reactions]);
 
   return (
     <StyledMessageReactionsContainer>
