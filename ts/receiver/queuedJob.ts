@@ -334,7 +334,6 @@ export async function handleMessageJob(
     ) || messageModel.get('timestamp')} in conversation ${conversation.idForLogging()}`
   );
 
-  console.log('reaction: message received', messageModel);
   if (regularDataMessage.reaction) {
     await MessageSentHandler.handleMessageReaction(regularDataMessage.reaction);
     confirm?.();

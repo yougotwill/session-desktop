@@ -11,23 +11,16 @@ import { UserUtils } from '../utils';
 // tslint:disable-next-line: no-unnecessary-class
 export class MessageSentHandler {
   public static async handleMessageReaction(reaction: SignalService.DataMessage.IReaction) {
-    // We always look for the quote by sentAt timestamp, for opengroups, closed groups and session chats
-    // this will return an array of sent message by id we have locally.
-
-    let timestamp = Number(reaction.id);
-    console.log('reaction: reaction id', timestamp);
+    const timestamp = Number(reaction.id);
 
     if (!reaction.emoji) {
       window?.log?.warn(`There is no emoji for the reaction ${timestamp}.`);
       return;
     }
 
-    let collection = await getMessagesBySentAt(timestamp);
-    console.log('reaction: collection', collection);
-
-    let originalMessage = collection.find((item: MessageModel) => {
+    const collection = await getMessagesBySentAt(timestamp);
+    const originalMessage = collection.find((item: MessageModel) => {
       const messageTimestamp = item.get('sent_at');
-
       return Boolean(messageTimestamp && messageTimestamp === timestamp);
     });
 
@@ -37,10 +30,9 @@ export class MessageSentHandler {
     }
 
     const reacts: ReactionList = originalMessage.get('reacts') ?? {};
-
     reacts[reaction.emoji] = reacts[reaction.emoji] || {};
-
     const senders = reacts[reaction.emoji].senders ?? [];
+
     switch (reaction.action) {
       // Add reaction
       case 0:
@@ -55,10 +47,8 @@ export class MessageSentHandler {
           senders.splice(deleteIndex, 1);
         }
     }
+
     reacts[reaction.emoji].senders = senders;
-
-    console.log('reaction: reaction list', reacts);
-
     originalMessage.set({
       reacts,
     });
@@ -112,92 +102,88 @@ export class MessageSentHandler {
     const contentDecoded = SignalService.Content.decode(sentMessage.plainTextBuffer);
     const { dataMessage } = contentDecoded;
 
-    console.log('reaction: sent message', fetchedMessage);
-
+    // We handle reaction messages separately
     if (dataMessage && dataMessage.reaction) {
-      console.log('reaction: handling sending reaction message separately');
-    } else {
-      let sentTo = fetchedMessage.get('sent_to') || [];
-
-      const isOurDevice = UserUtils.isUsFromCache(sentMessage.device);
-
-      // FIXME this is not correct and will cause issues with syncing
-      // At this point the only way to check for medium
-      // group is by comparing the encryption type
-      const isClosedGroupMessage =
-        sentMessage.encryption === SignalService.Envelope.Type.CLOSED_GROUP_MESSAGE;
-
-      // We trigger a sync message only when the message is not to one of our devices, AND
-      // the message is not for an open group (there is no sync for opengroups, each device pulls all messages), AND
-      // if we did not sync or trigger a sync message for this specific message already
-      const shouldTriggerSyncMessage =
-        !isOurDevice &&
-        !isClosedGroupMessage &&
-        !fetchedMessage.get('synced') &&
-        !fetchedMessage.get('sentSync');
-
-      // A message is synced if we triggered a sync message (sentSync)
-      // and the current message was sent to our device (so a sync message)
-      const shouldMarkMessageAsSynced = isOurDevice && fetchedMessage.get('sentSync');
-
-      /**
-       * We should hit the notify endpoint for push notification only if:
-       *  • It's a one-to-one chat or a closed group
-       *  • The message has either text or attachments
-       */
-      const hasBodyOrAttachments = Boolean(
-        dataMessage &&
-          (dataMessage.body || (dataMessage.attachments && dataMessage.attachments.length))
-      );
-      const shouldNotifyPushServer = hasBodyOrAttachments && !isOurDevice;
-
-      if (shouldNotifyPushServer) {
-        // notify the push notification server if needed
-        if (!wrappedEnvelope) {
-          window?.log?.warn('Should send PN notify but no wrapped envelope set.');
-        } else {
-          // we do not really care about the result, neither of waiting for it
-          void PnServer.notifyPnServer(wrappedEnvelope, sentMessage.device);
-        }
-      }
-
-      // Handle the sync logic here
-      if (shouldTriggerSyncMessage) {
-        if (dataMessage) {
-          try {
-            await fetchedMessage.sendSyncMessage(
-              dataMessage as SignalService.DataMessage,
-              effectiveTimestamp
-            );
-            const tempFetchMessage = await MessageSentHandler.fetchHandleMessageSentData(
-              sentMessage
-            );
-            if (!tempFetchMessage) {
-              window?.log?.warn(
-                'Got an error while trying to sendSyncMessage(): fetchedMessage is null'
-              );
-              return;
-            }
-            fetchedMessage = tempFetchMessage;
-          } catch (e) {
-            window?.log?.warn('Got an error while trying to sendSyncMessage():', e);
-          }
-        }
-      } else if (shouldMarkMessageAsSynced) {
-        fetchedMessage.set({ synced: true });
-      }
-
-      sentTo = _.union(sentTo, [sentMessage.device]);
-
-      fetchedMessage.set({
-        sent_to: sentTo,
-        sent: true,
-        expirationStartTimestamp: Date.now(),
-        sent_at: effectiveTimestamp,
-      });
-      await fetchedMessage.commit();
+      return;
     }
 
+    let sentTo = fetchedMessage.get('sent_to') || [];
+
+    const isOurDevice = UserUtils.isUsFromCache(sentMessage.device);
+
+    // FIXME this is not correct and will cause issues with syncing
+    // At this point the only way to check for medium
+    // group is by comparing the encryption type
+    const isClosedGroupMessage =
+      sentMessage.encryption === SignalService.Envelope.Type.CLOSED_GROUP_MESSAGE;
+
+    // We trigger a sync message only when the message is not to one of our devices, AND
+    // the message is not for an open group (there is no sync for opengroups, each device pulls all messages), AND
+    // if we did not sync or trigger a sync message for this specific message already
+    const shouldTriggerSyncMessage =
+      !isOurDevice &&
+      !isClosedGroupMessage &&
+      !fetchedMessage.get('synced') &&
+      !fetchedMessage.get('sentSync');
+
+    // A message is synced if we triggered a sync message (sentSync)
+    // and the current message was sent to our device (so a sync message)
+    const shouldMarkMessageAsSynced = isOurDevice && fetchedMessage.get('sentSync');
+
+    /**
+     * We should hit the notify endpoint for push notification only if:
+     *  • It's a one-to-one chat or a closed group
+     *  • The message has either text or attachments
+     */
+    const hasBodyOrAttachments = Boolean(
+      dataMessage &&
+        (dataMessage.body || (dataMessage.attachments && dataMessage.attachments.length))
+    );
+    const shouldNotifyPushServer = hasBodyOrAttachments && !isOurDevice;
+
+    if (shouldNotifyPushServer) {
+      // notify the push notification server if needed
+      if (!wrappedEnvelope) {
+        window?.log?.warn('Should send PN notify but no wrapped envelope set.');
+      } else {
+        // we do not really care about the result, neither of waiting for it
+        void PnServer.notifyPnServer(wrappedEnvelope, sentMessage.device);
+      }
+    }
+
+    // Handle the sync logic here
+    if (shouldTriggerSyncMessage) {
+      if (dataMessage) {
+        try {
+          await fetchedMessage.sendSyncMessage(
+            dataMessage as SignalService.DataMessage,
+            effectiveTimestamp
+          );
+          const tempFetchMessage = await MessageSentHandler.fetchHandleMessageSentData(sentMessage);
+          if (!tempFetchMessage) {
+            window?.log?.warn(
+              'Got an error while trying to sendSyncMessage(): fetchedMessage is null'
+            );
+            return;
+          }
+          fetchedMessage = tempFetchMessage;
+        } catch (e) {
+          window?.log?.warn('Got an error while trying to sendSyncMessage():', e);
+        }
+      }
+    } else if (shouldMarkMessageAsSynced) {
+      fetchedMessage.set({ synced: true });
+    }
+
+    sentTo = _.union(sentTo, [sentMessage.device]);
+
+    fetchedMessage.set({
+      sent_to: sentTo,
+      sent: true,
+      expirationStartTimestamp: Date.now(),
+      sent_at: effectiveTimestamp,
+    });
+    await fetchedMessage.commit();
     fetchedMessage.getConversation()?.updateLastMessage();
   }
 
