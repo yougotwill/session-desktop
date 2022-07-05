@@ -42,3 +42,15 @@ export type LokiProfile = {
   avatarPointer?: string;
   profileKey: Uint8Array | null;
 };
+
+enum Action {
+  REACT = 0,
+  REMOVE = 1,
+}
+
+export interface ReactionType {
+  id: number; // this is in fact a uint64 so we will have an issue
+  author: string;
+  emoji: string;
+  action: Action;
+}

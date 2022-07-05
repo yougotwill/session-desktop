@@ -21,6 +21,7 @@ import { omit } from 'lodash';
 import { ReplyingToMessageProps } from '../../components/conversation/composition/CompositionBox';
 import { QuotedAttachmentType } from '../../components/conversation/message/message-content/Quote';
 import { LightBoxOptions } from '../../components/conversation/SessionConversation';
+import { ReactionType } from '../../types/Message';
 
 export type CallNotificationType = 'missed-call' | 'started-call' | 'answered-a-call';
 export type PropsForCallNotification = {
@@ -181,6 +182,7 @@ export type PropsForMessageWithoutConvoProps = {
   serverId?: number;
   status?: LastMessageStatusType;
   attachments?: Array<PropsForAttachment>;
+  reactions?: Array<ReactionType>;
   previews?: Array<any>;
   quote?: {
     text?: string;
