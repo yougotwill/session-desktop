@@ -2,7 +2,8 @@ import { isEqual } from 'lodash';
 import React, { ReactElement, useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import styled from 'styled-components';
-import { updateReactListModal } from '../../state/ducks/modalDialog';
+import { getMessageById } from '../../data/data';
+import { updateReactListModal, updateUserDetailsModal } from '../../state/ducks/modalDialog';
 import { StateType } from '../../state/reducer';
 import { getMessageReactsProps } from '../../state/selectors/conversations';
 import { ReactionList } from '../../types/Message';
@@ -78,10 +79,35 @@ export const ReactListModal = (props: Props): ReactElement => {
     setCurrentReact(emoji);
   };
 
+  const handleClose = () => {
+    dispatch(updateReactListModal(null));
+  };
+
+  const handleAvatarClick = async (sender: string) => {
+    const message = await getMessageById(messageId);
+    if (message) {
+      handleClose();
+      const contact = message.findAndFormatContact(sender);
+      dispatch(
+        updateUserDetailsModal({
+          conversationId: sender,
+          userName: contact.name || contact.profileName || sender,
+          authorAvatarPath: contact.avatarPath,
+        })
+      );
+    }
+  };
+
   const renderReactionSenders = (senders: Array<string>) => {
     return senders.map((sender: string) => (
       <StyledReactionSender alignItems={'center'}>
-        <Avatar size={AvatarSize.XS} pubkey={sender} />
+        <Avatar
+          size={AvatarSize.XS}
+          pubkey={sender}
+          onAvatarClick={async () => {
+            await handleAvatarClick(sender);
+          }}
+        />
         <ContactName pubkey={sender} module="module-conversation__user" shouldShowPubkey={false} />
       </StyledReactionSender>
     ));
@@ -102,9 +128,7 @@ export const ReactListModal = (props: Props): ReactElement => {
     <SessionWrapperModal
       additionalClassName={'reaction-list-modal'}
       showHeader={false}
-      onClose={() => {
-        dispatch(updateReactListModal(null));
-      }}
+      onClose={handleClose}
     >
       <StyledReactListContainer container={true} flexDirection={'column'} alignItems={'flex-start'}>
         <StyledReactionsContainer>
