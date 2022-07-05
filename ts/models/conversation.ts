@@ -67,7 +67,7 @@ import { MessageRequestResponse } from '../session/messages/outgoing/controlMess
 import { Notifications } from '../util/notifications';
 import { Storage } from '../util/storage';
 import { ReactionType } from '../types/Message';
-import { MessageSentHandler } from '../session/sending/MessageSentHandler';
+import { handleMessageReaction } from '../interactions/messageInteractions';
 
 export enum ConversationTypeEnum {
   GROUP = 'group',
@@ -654,8 +654,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
         throw new Error('Only opengroupv2 are supported now');
       }
 
-      // TODO move function elsewhere as it is updating the local client before updating the timestamp for the receiving client
-      await MessageSentHandler.handleMessageReaction(reaction);
+      await handleMessageReaction(reaction);
 
       // an OpenGroupV2 message is just a visible message
       const chatMessageParams: VisibleMessageParams = {

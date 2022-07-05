@@ -15,7 +15,7 @@ import { MessageDirection } from '../models/messageType';
 import { LinkPreviews } from '../util/linkPreviews';
 import { GoogleChrome } from '../util';
 import { appendFetchAvatarAndProfileJob } from './userProfileImageUpdates';
-import { MessageSentHandler } from '../session/sending/MessageSentHandler';
+import { handleMessageReaction } from '../interactions/messageInteractions';
 
 function contentTypeSupported(type: string): boolean {
   const Chrome = GoogleChrome;
@@ -335,7 +335,7 @@ export async function handleMessageJob(
   );
 
   if (regularDataMessage.reaction) {
-    await MessageSentHandler.handleMessageReaction(regularDataMessage.reaction);
+    await handleMessageReaction(regularDataMessage.reaction);
     confirm?.();
   } else {
     const sendingDeviceConversation = await getConversationController().getOrCreateAndWait(
