@@ -19,6 +19,7 @@ import { ExpireTimer } from '../../ExpireTimer';
 import { MessageAvatar } from '../message-content/MessageAvatar';
 import { MessageContentWithStatuses } from '../message-content/MessageContentWithStatus';
 import { ReadableMessage } from './ReadableMessage';
+import styled, { keyframes } from 'styled-components';
 
 export type GenericReadableMessageSelectorProps = Pick<
   MessageRenderingProps,
@@ -99,6 +100,45 @@ type Props = {
 };
 // tslint:disable: use-simple-attributes
 
+const highlightedMessageAnimation = keyframes`
+  1% {
+      background-color: #00f782;
+  }
+`;
+
+const StyledReadableMessage = styled(ReadableMessage)<{
+  selected: boolean;
+  isRightClicked: boolean;
+}>`
+  display: flex;
+  align-items: center;
+  width: 100%;
+  letter-spacing: 0.03em;
+  margin-top: 3px;
+
+  &.message-highlighted {
+    animation: ${highlightedMessageAnimation} 1s ease-in-out;
+  }
+
+  ${props =>
+    props.isRightClicked &&
+    `
+    background-color: var(--color-compose-view-button-background);
+  `}
+
+  ${props =>
+    props.selected &&
+    `
+    &.message-selected {
+      .module-message {
+        &__container {
+          box-shadow: var(--color-session-shadow);
+        }
+      }
+    }
+    `}
+`;
+
 export const GenericReadableMessage = (props: Props) => {
   const msgProps = useSelector(state =>
     getGenericReadableMessageSelectorProps(state as any, props.messageId)
@@ -118,6 +158,13 @@ export const GenericReadableMessage = (props: Props) => {
   );
   const multiSelectMode = useSelector(isMessageSelectionMode);
 
+  const [isRightClicked, setIsRightClicked] = useState(false);
+  const onMessageLoseFocus = useCallback(() => {
+    if (isRightClicked) {
+      setIsRightClicked(false);
+    }
+  }, [isRightClicked]);
+
   const handleContextMenu = useCallback(
     (e: React.MouseEvent<HTMLElement>) => {
       const enableContextMenu = !multiSelectMode && !msgProps?.isKickedFromGroup;
@@ -129,6 +176,7 @@ export const GenericReadableMessage = (props: Props) => {
           event: e,
         });
       }
+      setIsRightClicked(enableContextMenu);
     },
     [props.ctxMenuID, multiSelectMode, msgProps?.isKickedFromGroup]
   );
@@ -155,11 +203,20 @@ export const GenericReadableMessage = (props: Props) => {
   const isGroup = conversationType === 'group';
   const isIncoming = direction === 'incoming';
 
+  useEffect(() => {
+    document.addEventListener('click', onMessageLoseFocus);
+
+    return () => {
+      document.removeEventListener('click', onMessageLoseFocus);
+    };
+  }, [onMessageLoseFocus]);
+
   return (
-    <ReadableMessage
+    <StyledReadableMessage
       messageId={messageId}
+      selected={selected}
+      isRightClicked={isRightClicked}
       className={classNames(
-        'session-message-wrapper',
         selected && 'message-selected',
         isGroup && 'public-chat-message-wrapper',
         isIncoming ? 'session-message-wrapper-incoming' : 'session-message-wrapper-outgoing'
@@ -190,6 +247,6 @@ export const GenericReadableMessage = (props: Props) => {
           expirationTimestamp={expirationTimestamp}
         />
       )}
-    </ReadableMessage>
+    </StyledReadableMessage>
   );
 };
