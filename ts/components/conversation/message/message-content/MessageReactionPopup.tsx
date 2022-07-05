@@ -53,13 +53,13 @@ const StyledEmoji = styled.span`
   margin-left: 8px;
 `;
 
-interface Props {
+type Props = {
   messageId: string;
   emoji: string;
   senders: Array<string>;
   tooltipPosition?: TipPosition;
-  onClick: (...args: any[]) => void;
-}
+  onClick: (...args: Array<any>) => void;
+};
 
 export const MessageReactionPopup = (props: Props): ReactElement => {
   const { messageId, emoji, senders, tooltipPosition = 'center', onClick } = props;
@@ -67,10 +67,10 @@ export const MessageReactionPopup = (props: Props): ReactElement => {
   const [contacts, setContacts] = useState('');
 
   const generateContacts = useCallback(async () => {
-    let contacts = null;
+    let results = null;
     const message = await getMessageById(messageId);
     if (message) {
-      contacts = senders.map(sender => {
+      results = senders.map(sender => {
         const contact = message.findAndFormatContact(sender);
         if (contact.isMe) {
           // remove pubkey
@@ -79,7 +79,7 @@ export const MessageReactionPopup = (props: Props): ReactElement => {
         return contact.profileName ?? sender;
       });
     }
-    return contacts;
+    return results;
   }, [messageId]);
 
   const renderContacts = (_contacts: string) => {
@@ -97,17 +97,17 @@ export const MessageReactionPopup = (props: Props): ReactElement => {
     }
 
     return <span>{_contacts} reacted with</span>;
-  }
+  };
 
   useEffect(() => {
     let isCancelled = false;
     generateContacts()
-      .then(async result => {
+      .then(async results => {
         if (isCancelled) {
           return;
         }
-        if (result && result.length > 0) {
-          setContacts(readableList(result));
+        if (results && results.length > 0) {
+          setContacts(readableList(results));
         }
       })
       .catch(() => {
@@ -115,6 +115,10 @@ export const MessageReactionPopup = (props: Props): ReactElement => {
           return;
         }
       });
+
+    return () => {
+      isCancelled = true;
+    };
   }, [generateContacts]);
 
   return (
