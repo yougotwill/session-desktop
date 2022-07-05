@@ -1,5 +1,5 @@
 import classNames from 'classnames';
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import styled from 'styled-components';
 import { replyToMessage } from '../../../../interactions/conversationInteractions';
@@ -86,8 +86,15 @@ export const MessageContentWithStatuses = (props: Props) => {
   const { direction, isDeleted, hasAttachments, isTrustedForAttachmentDownload } = contentProps;
   const isIncoming = direction === 'incoming';
 
+  const [popupReaction, setPopupReaction] = useState('');
+
   return (
-    <StyledMessageContentContainer direction={isIncoming ? 'left' : 'right'}>
+    <StyledMessageContentContainer
+      direction={isIncoming ? 'left' : 'right'}
+      onMouseLeave={() => {
+        setPopupReaction('');
+      }}
+    >
       <StyledMessageContentWithStatuses
         className={classNames('module-message', `module-message--${direction}`)}
         role="button"
@@ -113,7 +120,11 @@ export const MessageContentWithStatuses = (props: Props) => {
         />
         {!isDeleted && <MessageContextMenu messageId={messageId} contextMenuId={ctxMenuID} />}
       </StyledMessageContentWithStatuses>
-      <MessageReactions messageId={messageId} />
+      <MessageReactions
+        messageId={messageId}
+        popupReaction={popupReaction}
+        setPopupReaction={setPopupReaction}
+      />
     </StyledMessageContentContainer>
   );
 };

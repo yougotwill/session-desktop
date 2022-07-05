@@ -8,26 +8,36 @@ import { isEqual } from 'lodash';
 import { ReactionList } from '../../../../types/Message';
 import { UserUtils } from '../../../../session/utils';
 import { sendMessageReaction } from '../../../../util/reactions';
+import { MessageReactionPopup, StyledPopupContainer } from './MessageReactionPopup';
 
 const StyledMessageReactionsContainer = styled.div`
-  position: relative;
-  height: 100%;
-
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
+
+  ${StyledPopupContainer} {
+    position: absolute;
+    top: -90px;
+    left: -101px;
+    z-index: 101;
+  }
 `;
 
-export const StyledMessageReactions = styled.div<{}>`
+export const StyledMessageReactions = styled.div`
   display: flex;
   justify-content: flex-start;
   flex-wrap: wrap;
   align-items: center;
   max-width: 320px;
+  /* overflow-x: auto; */ // NOTE breaks positioning of tooltips
 `;
 
 const StyledReaction = styled.button<{ includesMe: boolean }>`
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+
   background-color: var(--color-compose-view-button-background);
   border-width: 1px;
   border-style: solid;
@@ -37,24 +47,24 @@ const StyledReaction = styled.button<{ includesMe: boolean }>`
   padding: 0px 7px;
   margin: 0 4px var(--margins-sm);
 
-  display: flex;
-  justify-content: flex-start;
-  align-items: center;
-
   span:last-child {
     font-size: var(--font-size-xs);
     margin-left: 8px;
   }
 `;
 
-const StyledReactionOverflow = styled.button`
-  border: none;
-  margin-right: 4px;
-  margin-bottom: var(--margins-sm);
+const StyledReactionContainer = styled.div`
+  position: relative;
+`;
 
+const StyledReactionOverflow = styled.button`
   display: flex;
   justify-content: flex-start;
   align-items: center;
+
+  border: none;
+  margin-right: 4px;
+  margin-bottom: var(--margins-sm);
 
   span {
     background-color: var(--color-compose-view-button-background);
@@ -90,10 +100,13 @@ export type MessageReactsSelectorProps = Pick<MessageRenderingProps, 'reacts'>;
 
 type Props = {
   messageId: string;
+  hasReactLimit?: string;
+  popupReaction: string;
+  setPopupReaction: (...args: any[]) => void;
 };
 
 export const MessageReactions = (props: Props): ReactElement => {
-  const { messageId } = props;
+  const { messageId, hasReactLimit = true, popupReaction, setPopupReaction } = props;
   const me = UserUtils.getOurPubKeyStrFromCache();
 
   const msgProps = useSelector((state: StateType) => getMessageReactsProps(state, messageId));
@@ -112,29 +125,43 @@ export const MessageReactions = (props: Props): ReactElement => {
 
   const reactLimit = 6;
 
+  // TODO change to generic selected function
   const includesMe = (emoji: string) =>
     reactions[emoji].senders &&
     reactions[emoji].senders.length > 0 &&
     reactions[emoji].senders.includes(me);
 
   const handleReactionClick = async (emoji: string) => {
+    // TODO change to generic click method
     await sendMessageReaction(messageId, emoji);
   };
 
   const renderReaction = (emoji: string) => (
-    <>
+    <StyledReactionContainer>
+      {popupReaction && popupReaction === emoji && (
+        <MessageReactionPopup
+          emoji={popupReaction}
+          senders={reactions[popupReaction].senders}
+          onClick={() => {
+            setPopupReaction('');
+          }}
+        />
+      )}
       <StyledReaction
         key={emoji}
         includesMe={includesMe(emoji)}
         onClick={async () => {
           await handleReactionClick(emoji);
         }}
+        onMouseEnter={() => {
+          setPopupReaction(emoji);
+          console.log('opening popup at');
+        }}
       >
-        {/* TODO Popup with senders here in closed groups */}
         <span>{emoji}</span>
         {reactions[emoji].senders && <span>{reactions[emoji].senders.length}</span>}
       </StyledReaction>
-    </>
+    </StyledReactionContainer>
   );
 
   const renderReactionList = () => (
@@ -184,7 +211,7 @@ export const MessageReactions = (props: Props): ReactElement => {
   );
 
   const render = () => {
-    if (Object.keys(reactions).length <= reactLimit) {
+    if (!hasReactLimit || Object.keys(reactions).length <= reactLimit) {
       return renderReactionList();
     } else {
       if (isExpanded) {

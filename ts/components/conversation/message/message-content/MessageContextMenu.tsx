@@ -65,6 +65,7 @@ const StyledEmojiPanelContainer = styled.div<{ x: number; y: number }>`
   bottom: 0;
   left: 0;
   z-index: 101;
+
   ${StyledEmojiPanel} {
     position: absolute;
     left: ${props => `${props.x}px`};
