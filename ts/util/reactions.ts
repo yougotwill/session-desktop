@@ -110,7 +110,7 @@ export const handleMessageReaction = async (reaction: SignalService.DataMessage.
 };
 
 export const updateRecentReactions = async (reactions: Array<string>, newReaction: string) => {
-  window?.log?.info('reaction: updating recent reactions', newReaction);
+  window?.log?.info('updating recent reactions with', newReaction);
   const recentReactions = new RecentReactions(reactions);
   const foundIndex = recentReactions.items.indexOf(newReaction);
   if (foundIndex >= 0) {

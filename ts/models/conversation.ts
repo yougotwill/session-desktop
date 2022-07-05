@@ -684,6 +684,18 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
         }
       }
 
+      if (this.isOpenGroupV2()) {
+        const chatMessageOpenGroupV2 = new OpenGroupVisibleMessage(chatMessageParams);
+        const roomInfos = this.toOpenGroupV2();
+        if (!roomInfos) {
+          throw new Error('Could not find this room in db');
+        }
+
+        // we need the return await so that errors are caught in the catch {}
+        await getMessageQueue().sendToOpenGroupV2(chatMessageOpenGroupV2, roomInfos);
+        return;
+      }
+
       const destinationPubkey = new PubKey(destination);
 
       if (this.isPrivate()) {
