@@ -64,6 +64,7 @@ import { ExpirationTimerOptions } from '../util/expiringMessages';
 import { Notifications } from '../util/notifications';
 import { Storage } from '../util/storage';
 import { LinkPreviews } from '../util/linkPreviews';
+import { ReactionList } from '../types/Message';
 // tslint:disable: cyclomatic-complexity
 
 /**
@@ -502,6 +503,10 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
     if (previews && previews.length) {
       props.previews = previews;
     }
+    const reacts = this.getPropsForReacts();
+    if (reacts && Object.keys(reacts).length) {
+      props.reacts = reacts;
+    }
     const quote = this.getPropsForQuote(options);
     if (quote) {
       props.quote = quote;
@@ -572,6 +577,16 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
         image,
       };
     });
+  }
+
+  public getPropsForReacts(): ReactionList | null {
+    const reacts = this.get('reacts') || null;
+
+    if (!reacts) {
+      return null;
+    }
+
+    return reacts;
   }
 
   public getPropsForQuote(_options: any = {}) {
@@ -805,6 +820,7 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
       hasVisualMediaAttachments: 0,
       attachments: undefined,
       preview: undefined,
+      reacts: undefined,
     });
     await this.markRead(Date.now());
     await this.commit();
@@ -858,6 +874,7 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
         expireTimer: this.get('expireTimer'),
         attachments,
         preview,
+        reacts: this.get('reacts'), // TODO Should this be here?
         quote,
         lokiProfile: UserUtils.getOurProfile(),
       };
