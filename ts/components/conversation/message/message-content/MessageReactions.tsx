@@ -6,8 +6,8 @@ import { StateType } from '../../../../state/reducer';
 import { getMessageReactsProps } from '../../../../state/selectors/conversations';
 import { isEqual } from 'lodash';
 import { ReactionList } from '../../../../types/Message';
-import { sendMessageReaction } from '../../../../interactions/messageInteractions';
 import { UserUtils } from '../../../../session/utils';
+import { sendMessageReaction } from '../../../../util/reactions';
 
 const StyledMessageReactionsContainer = styled.div`
   position: relative;

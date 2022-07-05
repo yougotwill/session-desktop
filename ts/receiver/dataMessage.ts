@@ -20,7 +20,7 @@ import { MessageModel } from '../models/message';
 import { isUsFromCache } from '../session/utils/User';
 import { appendFetchAvatarAndProfileJob } from './userProfileImageUpdates';
 import { toLogFormat } from '../types/attachments/Errors';
-import { handleMessageReaction } from '../interactions/messageInteractions';
+import { handleMessageReaction } from '../util/reactions';
 
 function cleanAttachment(attachment: any) {
   return {

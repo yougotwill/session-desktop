@@ -67,7 +67,7 @@ import { MessageRequestResponse } from '../session/messages/outgoing/controlMess
 import { Notifications } from '../util/notifications';
 import { Storage } from '../util/storage';
 import { ReactionType } from '../types/Message';
-import { handleMessageReaction } from '../interactions/messageInteractions';
+import { handleMessageReaction } from '../util/reactions';
 
 export enum ConversationTypeEnum {
   GROUP = 'group',
