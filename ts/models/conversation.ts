@@ -656,7 +656,9 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
 
       // an OpenGroupV2 message is just a visible message
       const chatMessageParams: VisibleMessageParams = {
-        body: `Reacted ${reaction.emoji} to: "${message.get('body')}"`,
+        // TODO handle notification on client side
+        // Text: `Reacted ${reaction.emoji} to: "${message.get('body')}"`,
+        body: '',
         identifier: id,
         timestamp: sentAt,
         reaction,
