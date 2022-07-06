@@ -8,6 +8,7 @@ import {
   getAllValidRoomInfos,
   OpenGroupRequestHeaders,
 } from '../opengroupV2/OpenGroupPollingUtils';
+import { batchGlobalIsSuccess, parseBatchGlobalStatusCode } from './sogsV3BatchPoll';
 
 export function addJsonContentTypeToHeaders(
   headers: OpenGroupRequestHeaders
@@ -61,14 +62,12 @@ export const sendSogsMessageOnionV4 = async (
     stringifiedBody,
     headers: null,
   });
-  const statusCode = result?.status_code;
-  if (!statusCode) {
-    window?.log?.warn('sendSogsMessageWithOnionV4 Got unknown status code; res:', result);
-    throw new Error(`sendSogsMessageOnionV4: invalid status code: ${statusCode}`);
-  }
 
-  if (statusCode !== 201) {
-    throw new Error(`Could not postMessage, status code: ${statusCode}`);
+  if (!batchGlobalIsSuccess(result)) {
+    window?.log?.warn('sendSogsMessageWithOnionV4 Got unknown status code; res:', result);
+    throw new Error(
+      `sendSogsMessageOnionV4: invalid status code: ${parseBatchGlobalStatusCode(result)}`
+    );
   }
 
   if (!result) {
@@ -124,14 +123,12 @@ export const sendMessageOnionV4BlindedRequest = async (
     stringifiedBody,
     headers: null,
   });
-  const statusCode = result?.status_code;
-  if (!statusCode) {
-    window?.log?.warn('sendMessageOnionV4BlindedRequest Got unknown status code; res:', result);
-    throw new Error(`sendMessageOnionV4BlindedRequest: invalid status code: ${statusCode}`);
-  }
 
-  if (statusCode !== 201) {
-    throw new Error(`Could not postMessage, status code: ${statusCode}`);
+  if (!batchGlobalIsSuccess(result)) {
+    window?.log?.warn('sendMessageOnionV4BlindedRequest Got unknown status code; res:', result);
+    throw new Error(
+      `sendMessageOnionV4BlindedRequest: invalid status code: ${parseBatchGlobalStatusCode(result)}`
+    );
   }
 
   if (!result) {

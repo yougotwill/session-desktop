@@ -1573,6 +1573,13 @@ function updateToLokiSchemaVersion25(currentVersion: number, db: BetterSqlite3.D
         ALTER TABLE ${CONVERSATIONS_TABLE} ADD COLUMN writeCapability INTEGER DEFAULT 1;
         ALTER TABLE ${CONVERSATIONS_TABLE} ADD COLUMN uploadCapability INTEGER DEFAULT 1;
         ALTER TABLE ${CONVERSATIONS_TABLE} ADD COLUMN conversationIdOrigin TEXT;
+        ALTER TABLE ${CONVERSATIONS_TABLE} DROP COLUMN avatarHash;
+        ALTER TABLE ${CONVERSATIONS_TABLE} ADD COLUMN avatarImageId INTEGER;
+
+        CREATE INDEX messages_convo_serverID ON ${MESSAGES_TABLE} (
+          serverId,
+          conversationId
+        );
        `);
 
     writeLokiSchemaVersion(targetVersion, db);
@@ -1998,7 +2005,7 @@ function saveConversation(data: ConversationAttributes, instance?: BetterSqlite3
     uploadCapability,
     is_medium_group,
     avatarPointer,
-    avatarHash,
+    avatarImageId,
     triggerNotificationsFor,
     isTrustedForAttachmentDownload,
     isPinned,
@@ -2038,7 +2045,7 @@ function saveConversation(data: ConversationAttributes, instance?: BetterSqlite3
   uploadCapability,
   is_medium_group,
   avatarPointer,
-  avatarHash,
+  avatarImageId,
   triggerNotificationsFor,
   isTrustedForAttachmentDownload,
   isPinned,
@@ -2070,7 +2077,7 @@ function saveConversation(data: ConversationAttributes, instance?: BetterSqlite3
       $uploadCapability,
       $is_medium_group,
       $avatarPointer,
-      $avatarHash,
+      $avatarImageId,
       $triggerNotificationsFor,
       $isTrustedForAttachmentDownload,
       $isPinned,
@@ -2106,7 +2113,7 @@ function saveConversation(data: ConversationAttributes, instance?: BetterSqlite3
 
       is_medium_group: toSqliteBoolean(is_medium_group),
       avatarPointer,
-      avatarHash,
+      avatarImageId,
       triggerNotificationsFor,
       isTrustedForAttachmentDownload: toSqliteBoolean(isTrustedForAttachmentDownload),
       isPinned: toSqliteBoolean(isPinned),

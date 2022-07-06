@@ -289,7 +289,7 @@ describe('formatRowOfConversation', () => {
           profileKey: '',
           avatarPointer: 'avatarPointer',
           avatarInProfile: 'avatarInProfile',
-          avatarHash: '',
+          avatarImageId: 1234,
         } as ConversationAttributes)
       )
     ).have.deep.property('displayNameInProfile', 'displayNameInProfile');

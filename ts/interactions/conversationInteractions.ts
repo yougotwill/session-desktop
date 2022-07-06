@@ -454,6 +454,7 @@ export async function uploadOurAvatar(newAvatarDecrypted?: ArrayBuffer) {
   await ourConvo.setSessionProfile({
     avatarPath: upgraded.path,
     displayName,
+    imageID,
   });
   const newTimestampReupload = Date.now();
   await createOrUpdateItem({ id: lastAvatarUploadTimestamp, value: newTimestampReupload });

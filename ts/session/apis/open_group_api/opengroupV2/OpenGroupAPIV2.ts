@@ -6,9 +6,9 @@ import { parseStatusCodeFromOnionRequest } from './OpenGroupAPIV2Parser';
 
 import { isOpenGroupV2Request } from '../../file_server_api/FileServerApiV2';
 import pRetry from 'p-retry';
-import { callUtilsWorker } from '../../../../webworker/workers/util_worker_interface';
 import AbortController from 'abort-controller';
 import { roomHasBlindEnabled } from '../sogsv3/sogsV3Capabilities';
+import { batchGlobalIsSuccess } from '../sogsv3/sogsV3BatchPoll';
 
 // used to be overwritten by testing
 export const getMinTimeout = () => 1000;
@@ -131,37 +131,10 @@ export async function sendApiV2Request(
   }
 }
 
-export const downloadFileOpenGroupV2ByUrl = async (
-  pathName: string,
-  roomInfos: OpenGroupRequestCommonType
-): Promise<Uint8Array | null> => {
-  const request: OpenGroupV2Request = {
-    method: 'GET',
-    room: roomInfos.roomId,
-    server: roomInfos.serverUrl,
-    endpoint: pathName,
-    useV4: false,
-  };
-
-  const result = await exports.sendApiV2Request(request);
-  const statusCode = parseStatusCodeFromOnionRequest(result);
-  if (statusCode !== 200) {
-    return null;
-  }
-
-  // we should probably change the logic of sendOnionRequest to not have all those levels
-  const base64Data = result?.result?.result as string | undefined;
-
-  if (!base64Data) {
-    return null;
-  }
-  return new Uint8Array(await callUtilsWorker('fromBase64ToArrayBuffer', base64Data));
-};
-
 /**
  * Returns the id on which the file is saved, or null
  */
-export const uploadFileOpenGroupV3 = async (
+export const uploadFileToRoomSogs3 = async (
   fileContent: Uint8Array,
   roomInfos: OpenGroupRequestCommonType
 ): Promise<{ fileId: number; fileUrl: string } | null> => {
@@ -186,11 +159,10 @@ export const uploadFileOpenGroupV3 = async (
     serverUrl: roomDetails.serverUrl,
   });
 
-  if (result?.status_code !== 201) {
+  if (!batchGlobalIsSuccess(result)) {
     return null;
   }
 
-  // we should probably change the logic of sendOnionRequest to not have all those levels
   const fileId = (result?.body as any | undefined)?.id as number | undefined;
   if (!fileId) {
     return null;
@@ -202,39 +174,6 @@ export const uploadFileOpenGroupV3 = async (
   );
   return {
     fileId,
-    fileUrl,
-  };
-};
-
-export const uploadImageForRoomOpenGroupV3 = async (
-  fileContent: Uint8Array,
-  roomInfos: OpenGroupRequestCommonType
-): Promise<{ fileUrl: string } | null> => {
-  if (!fileContent || !fileContent.length) {
-    return null;
-  }
-
-  const queryParams = {
-    file: await callUtilsWorker('arrayBufferToStringBase64', fileContent),
-  };
-
-  const imageEndpoint = `room/${roomInfos.roomId}/file`;
-  const request: OpenGroupV2Request = {
-    method: 'POST',
-    room: roomInfos.roomId,
-    server: roomInfos.serverUrl,
-    endpoint: imageEndpoint,
-    queryParams,
-    useV4: false,
-  };
-
-  const result = await exports.sendApiV2Request(request);
-  const statusCode = parseStatusCodeFromOnionRequest(result);
-  if (statusCode !== 200) {
-    return null;
-  }
-  const fileUrl = getCompleteEndpointUrl(roomInfos, `${imageEndpoint}`, true);
-  return {
     fileUrl,
   };
 };

@@ -571,6 +571,10 @@ export async function processOnionResponseV4({
 
   const bodyBinary: Uint8Array = new Uint8Array(plaintextBuffer);
 
+  console.warn(
+    '    plaintext: new TextDecoder().decode(plaintextBuffer)  ',
+    new TextDecoder().decode(plaintextBuffer)
+  );
   return {
     bodyBinary,
   };
@@ -921,7 +925,7 @@ async function sendOnionRequestSnodeDest(
       headers,
     },
     associatedWith,
-    useV4: false,
+    useV4: true,
   });
 }
 

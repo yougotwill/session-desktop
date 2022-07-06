@@ -6,7 +6,7 @@ import {
   joinOpenGroupV2WithUIEvents,
   parseOpenGroupV2,
 } from '../../../session/apis/open_group_api/opengroupV2/JoinOpenGroupV2';
-import { sogsV3FetchPreview } from '../../../session/apis/open_group_api/sogsv3/sogsV3FetchFile';
+import { sogsV3FetchPreviewBase64 } from '../../../session/apis/open_group_api/sogsv3/sogsV3FetchFile';
 import { updateDefaultBase64RoomData } from '../../../state/ducks/defaultRooms';
 import { StateType } from '../../../state/reducer';
 import { Avatar, AvatarSize } from '../../avatar/Avatar';
@@ -40,7 +40,7 @@ const SessionJoinableRoomAvatar = (props: JoinableRoomProps) => {
         if (isCancelled) {
           return;
         }
-        sogsV3FetchPreview({ ...parsedInfos, imageID })
+        sogsV3FetchPreviewBase64({ ...parsedInfos, imageID })
           .then(base64 => {
             if (isCancelled) {
               return;

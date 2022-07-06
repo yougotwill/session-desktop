@@ -8,10 +8,10 @@ import {
   Quote,
   QuotedAttachment,
 } from '../messages/outgoing/visibleMessage/VisibleMessage';
-import { uploadFileOpenGroupV3 } from '../apis/open_group_api/opengroupV2/OpenGroupAPIV2';
 import { addAttachmentPadding } from '../crypto/BufferPadding';
 import { RawPreview, RawQuote } from './Attachments';
 import _ from 'lodash';
+import { uploadFileToRoomSogs3 } from '../apis/open_group_api/opengroupV2/OpenGroupAPIV2';
 
 interface UploadParamsV2 {
   attachment: Attachment;
@@ -42,7 +42,7 @@ async function uploadV3(params: UploadParamsV2): Promise<AttachmentPointerWithUr
     ? addAttachmentPadding(attachment.data)
     : attachment.data;
 
-  const fileDetails = await uploadFileOpenGroupV3(new Uint8Array(paddedAttachment), openGroup);
+  const fileDetails = await uploadFileToRoomSogs3(new Uint8Array(paddedAttachment), openGroup);
 
   if (!fileDetails) {
     throw new Error(`upload to fileopengroupv3 of ${attachment.fileName} failed`);

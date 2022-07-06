@@ -3,13 +3,14 @@ import { compact, uniq } from 'lodash';
 import { OpenGroupV2Room } from '../../../../data/opengroups';
 import { sendJsonViaOnionV4ToNonSnode } from '../../../onions/onionSend';
 import { OpenGroupV2Info } from '../opengroupV2/ApiUtil';
+import { batchGlobalIsSuccess, parseBatchGlobalStatusCode } from './sogsV3BatchPoll';
 import {
   capabilitiesListHasBlindEnabled,
   fetchCapabilitiesAndUpdateRelatedRoomsOfServerUrl,
 } from './sogsV3Capabilities';
 
 export const getAllRoomInfos = async (roomInfos: OpenGroupV2Room) => {
-  const res = await sendJsonViaOnionV4ToNonSnode({
+  const result = await sendJsonViaOnionV4ToNonSnode({
     blinded: false,
     endpoint: '/rooms',
     method: 'GET',
@@ -21,11 +22,14 @@ export const getAllRoomInfos = async (roomInfos: OpenGroupV2Room) => {
     doNotIncludeOurSogsHeaders: true,
   });
 
-  if (res?.status_code === 200) {
-    return parseRooms(res);
+  // not a batch call yet as we need to exclude headers for this call for now
+  if (result && batchGlobalIsSuccess(result)) {
+    return parseRooms(result);
   }
 
-  window?.log?.warn('getAllRoomInfos failed invalid status code:', res?.status_code);
+  const statusCode = parseBatchGlobalStatusCode(result);
+
+  window?.log?.warn('getAllRoomInfos failed invalid status code:', statusCode);
   return;
 };
 

@@ -7,6 +7,7 @@ import {
   saveV2OpenGroupRoom,
 } from '../../../../data/opengroups';
 import AbortController, { AbortSignal } from 'abort-controller';
+import { batchGlobalIsSuccess } from './sogsV3BatchPoll';
 
 export const capabilitiesFetchForServer = async (
   serverUrl: string,
@@ -39,9 +40,8 @@ export const capabilitiesFetchForServer = async (
     doNotIncludeOurSogsHeaders: true, // the first capabilities needs to not have any authentification to pass on a blinding-required sogs,
     headers: null,
   });
-
-  const statusCode = result?.status_code;
-  if (!statusCode) {
+  // not a batch call yet as we need to exclude headers for this call for now
+  if (!batchGlobalIsSuccess(result)) {
     window?.log?.warn('Capabilities Request Got unknown status code; res:', result);
     return null;
   }

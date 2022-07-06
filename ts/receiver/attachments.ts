@@ -4,7 +4,6 @@ import { MessageModel } from '../models/message';
 import { saveMessage } from '../../ts/data/data';
 import { AttachmentDownloads } from '../session/utils';
 import { ConversationModel } from '../models/conversation';
-import { downloadFileOpenGroupV2ByUrl } from '../session/apis/open_group_api/opengroupV2/OpenGroupAPIV2';
 import { OpenGroupRequestCommonType } from '../session/apis/open_group_api/opengroupV2/ApiUtil';
 import { FSv2 } from '../session/apis/file_server_api';
 import { getUnpaddedAttachment } from '../session/crypto/BufferPadding';
@@ -86,22 +85,9 @@ export async function downloadAttachment(attachment: {
 }
 
 /**
- * This method should only be used when you know
- */
-export async function downloadDataFromOpenGroupV2(
-  fileUrl: string,
-  roomInfos: OpenGroupRequestCommonType
-) {
-  const dataUintFromUrl = await downloadFileOpenGroupV2ByUrl(fileUrl, roomInfos);
-
-  if (!dataUintFromUrl?.length) {
-    window?.log?.error('Failed to download attachment. Length is 0');
-    throw new Error(`Failed to download attachment. Length is 0 for ${fileUrl}`);
-  }
-  return dataUintFromUrl;
-}
-
-/**
+ *
+ * Download the attachment based on the url.
+ * The only time where the size should be set to null, is when downloading the image for a sogs room (as we do not have the size for it).
  *
  * @param attachment Either the details of the attachment to download (on a per room basis), or the pathName to the file you want to get
  */
@@ -109,7 +95,7 @@ export async function downloadAttachmentSogsV3(
   attachment: {
     id: number;
     url: string;
-    size: number;
+    size: number | null;
   },
   roomInfos: OpenGroupRequestCommonType
 ) {
@@ -122,6 +108,13 @@ export async function downloadAttachmentSogsV3(
   if (!dataUint?.length) {
     window?.log?.error('Failed to download attachment. Length is 0');
     throw new Error(`Failed to download attachment. Length is 0 for ${attachment.url}`);
+  }
+
+  if (attachment.size === null) {
+    return {
+      ..._.omit(attachment, 'digest', 'key'),
+      data: dataUint.buffer,
+    };
   }
 
   let data = dataUint;

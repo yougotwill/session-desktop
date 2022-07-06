@@ -56,21 +56,21 @@ const buildSendViaOnionPayload = (url: URL, fetchOptions: OnionFetchOptions): On
     payloadObj.endpoint += url.search;
   }
 
-  // from https://github.com/sindresorhus/is-stream/blob/master/index.js
-  if (
-    payloadObj.body &&
-    typeof payloadObj.body === 'object' &&
-    typeof payloadObj.body.pipe === 'function'
-  ) {
-    const fData = payloadObj.body.getBuffer();
-    const fHeaders = payloadObj.body.getHeaders();
-    tempHeaders = { ...tempHeaders, ...fHeaders };
-    // update headers for boundary
-    // update body with base64 chunk
-    payloadObj.body = {
-      fileUpload: fData.toString('base64'),
-    };
-  }
+  // // from https://github.com/sindresorhus/is-stream/blob/master/index.js
+  // if (
+  //   payloadObj.body &&
+  //   typeof payloadObj.body === 'object' &&
+  //   typeof payloadObj.body.pipe === 'function'
+  // ) {
+  //   const fData = payloadObj.body.getBuffer();
+  //   const fHeaders = payloadObj.body.getHeaders();
+  //   tempHeaders = { ...tempHeaders, ...fHeaders };
+  //   // update headers for boundary
+  //   // update body with base64 chunk
+  //   payloadObj.body = {
+  //     fileUpload: fData.toString('base64'),
+  //   };
+  // }
   payloadObj.headers = tempHeaders;
   return payloadObj;
 };
@@ -141,6 +141,7 @@ export const sendViaOnionToNonSnode = async (
   }
 
   const payloadObj = buildSendViaOnionPayload(url, fetchOptions);
+  console.warn('payloadObj,', payloadObj);
   // if protocol is forced to 'http:' => just use http (without the ':').
   // otherwise use https as protocol (this is the default)
   const forcedHttp = url.protocol === PROTOCOLS.HTTP;

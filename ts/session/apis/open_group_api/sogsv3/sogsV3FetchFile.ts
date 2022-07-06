@@ -1,8 +1,14 @@
 import AbortController, { AbortSignal } from 'abort-controller';
-import { OpenGroupV2Room } from '../../../../data/opengroups';
+import { toNumber } from 'lodash';
+import { OpenGroupV2Room, OpenGroupV2RoomWithImageID } from '../../../../data/opengroups';
+import { MIME } from '../../../../types';
+import { processNewAttachment } from '../../../../types/MessageAttachment';
 import { callUtilsWorker } from '../../../../webworker/workers/util_worker_interface';
+import { getConversationController } from '../../../conversations';
 import { sendViaOnionV4ToNonSnode } from '../../../onions/onionSend';
+import { allowOnlyOneAtATime } from '../../../utils/Promise';
 import { getOurOpenGroupHeaders } from '../opengroupV2/OpenGroupPollingUtils';
+import { getOpenGroupV2ConversationId } from '../utils/OpenGroupUtils';
 import { roomHasBlindEnabled } from './sogsV3Capabilities';
 
 export async function fetchBinaryFromSogsWithOnionV4(sendOptions: {
@@ -58,17 +64,96 @@ export async function fetchBinaryFromSogsWithOnionV4(sendOptions: {
 }
 
 /**
+ * This function fetches the avatar on an opengroup room based on the imageID, save it to the attachment folder and update the conversation avatar with the new path.
+ */
+export async function sogsV3FetchPreviewAndSaveIt(roomInfos: OpenGroupV2RoomWithImageID) {
+  const { roomId, serverUrl, imageID } = roomInfos;
+
+  if (!imageID || Number.isNaN(Number(imageID))) {
+    window.log.warn(`imageId of room ${roomId} is not valid ${imageID}`);
+    return;
+  }
+  const imageIdNumber = toNumber(imageID);
+
+  const convoId = getOpenGroupV2ConversationId(roomInfos.serverUrl, roomInfos.roomId);
+  let convo = getConversationController().get(convoId);
+  if (!convo) {
+    return;
+  }
+  let existingImageId = convo.get('avatarImageId');
+  if (existingImageId === imageIdNumber) {
+    // return early as the imageID about to be downloaded the one already set as avatar is the same.
+    return;
+  }
+
+  // make sure this runs only once for each rooms.
+  // we don't want to trigger one of those on each setPollInfo resultsas it happens on each batch poll.
+  const oneAtAtimeResult = (await allowOnlyOneAtATime(
+    `sogsV3FetchPreview-${serverUrl}-${roomId}`,
+    () => sogsV3FetchPreview(roomInfos)
+  )) as Uint8Array | null; // force the return type as allowOnlyOneAtATime does not keep it
+
+  if (!oneAtAtimeResult || !oneAtAtimeResult?.byteLength) {
+    window?.log?.warn('sogsV3FetchPreviewAndSaveIt failed for room: ', roomId);
+    return;
+  }
+  // refresh to make sure the convo was not deleted during the fetch above
+  convo = getConversationController().get(convoId);
+  if (!convo) {
+    return;
+  }
+  existingImageId = convo.get('avatarImageId');
+  if (existingImageId !== imageIdNumber && imageIdNumber) {
+    // we have to trigger an update
+    // write the file to the disk (automatically encrypted),
+
+    const upgradedAttachment = await processNewAttachment({
+      isRaw: true,
+      data: oneAtAtimeResult.buffer,
+      contentType: MIME.IMAGE_UNKNOWN, // contentType is mostly used to generate previews and screenshot. We do not care for those in this case.          // url: `${serverUrl}/${res.roomId}`,
+    });
+
+    // update the hash on the conversationModel
+    // this does commit to DB and UI
+    await convo.setSessionProfile({
+      avatarPath: upgradedAttachment.path,
+      avatarImageId: imageIdNumber,
+    });
+  }
+}
+
+/**
+ * This function can be used to fetch the default rooms (leftpane) images when the app starts.
+ * @returns the fetchedData in base64
+ */
+export async function sogsV3FetchPreviewBase64(roomInfos: OpenGroupV2RoomWithImageID) {
+  const fetched = await sogsV3FetchPreview(roomInfos);
+  if (fetched && fetched.byteLength) {
+    return callUtilsWorker('arrayBufferToStringBase64', fetched);
+  }
+  return null;
+}
+
+/**
  * Download the preview image for that opengroup room.
- * The returned value is a base64 string.
- * It can be used directly, or saved on the attachments directory if needed, but this function does not handle it.
+ * The returned value is a Uin8Array.
+ * It can be used directly, or saved on the attachments directory if needed (processNewAttachment), but this function does not handle it.
  * Be sure to give the imageID field here, otherwise the request is dropped.
  */
-export const sogsV3FetchPreview = async (roomInfos: OpenGroupV2Room): Promise<string | null> => {
+const sogsV3FetchPreview = async (
+  roomInfos: OpenGroupV2RoomWithImageID
+): Promise<Uint8Array | null> => {
   if (!roomInfos || !roomInfos.imageID) {
     return null;
   }
-
+  const convoId = getOpenGroupV2ConversationId(roomInfos.serverUrl, roomInfos.roomId);
+  const convo = getConversationController().get(convoId);
+  if (!convo) {
+    window?.log?.warn('Could not find convo for compactPoll', convoId);
+    return null;
+  }
   console.warn('should we turn this blinded ON?');
+  // not a batch call yet as we need to exclude headers for this call for now
   const fetched = await fetchBinaryFromSogsWithOnionV4({
     abortSignal: new AbortController().signal,
     blinded: false,
@@ -80,7 +165,13 @@ export const sogsV3FetchPreview = async (roomInfos: OpenGroupV2Room): Promise<st
     fileId: roomInfos.imageID,
   });
   if (fetched && fetched.byteLength) {
-    return callUtilsWorker('arrayBufferToStringBase64', fetched.buffer);
+    const convoStillThere = getConversationController().get(convoId);
+    if (!convoStillThere) {
+      // just to make sure the convo did not get deleted while fetching the avatar
+      window?.log?.warn('Could not find convo for compactPoll', convoId);
+      return null;
+    }
+    return fetched;
   }
   return null;
 };
@@ -97,7 +188,7 @@ export const sogsV3FetchFileByFileID = async (
   if (!roomInfos || !roomInfos.imageID) {
     return null;
   }
-
+  // not a batch call yet as we need to exclude headers for this call for now
   const fetched = await fetchBinaryFromSogsWithOnionV4({
     abortSignal: new AbortController().signal,
     blinded: roomHasBlindEnabled(roomInfos),

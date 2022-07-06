@@ -1,8 +1,6 @@
 import { AbortController } from 'abort-controller';
-import { getConversationController } from '../../../conversations';
 import { getOpenGroupV2ConversationId } from '../utils/OpenGroupUtils';
 import { OpenGroupRequestCommonType } from './ApiUtil';
-import { getAllBase64AvatarForRooms, ParsedBase64Avatar } from './OpenGroupAPIV2CompactPoll';
 import _, { isNumber, isObject } from 'lodash';
 
 import {
@@ -12,12 +10,13 @@ import {
 } from '../../../../data/opengroups';
 import { OpenGroupMessageV2 } from './OpenGroupMessageV2';
 import autoBind from 'auto-bind';
-import { sha256 } from '../../../crypto';
 import { DURATION } from '../../../constants';
-import { processNewAttachment } from '../../../../types/MessageAttachment';
-import { MIME } from '../../../../types';
-import { callUtilsWorker } from '../../../../webworker/workers/util_worker_interface';
-import { OpenGroupBatchRow, sogsBatchSend } from '../sogsv3/sogsV3BatchPoll';
+import {
+  batchGlobalIsSuccess,
+  OpenGroupBatchRow,
+  parseBatchGlobalStatusCode,
+  sogsBatchSend,
+} from '../sogsv3/sogsV3BatchPoll';
 import { handleBatchPollResults } from '../sogsv3/sogsApiV3';
 import {
   fetchCapabilitiesAndUpdateRelatedRoomsOfServerUrl,
@@ -37,7 +36,6 @@ export type OpenGroupMessageV4 = {
 };
 
 const pollForEverythingInterval = DURATION.SECONDS * 10;
-const pollForRoomAvatarInterval = DURATION.DAYS * 1;
 
 /**
  * An OpenGroupServerPollerV2 polls for everything for a particular server. We should
@@ -65,8 +63,6 @@ export class OpenGroupServerPoller {
    * If the last run is still in progress, the new one won't start and just return.
    */
   private pollForEverythingTimer?: NodeJS.Timeout;
-  private pollForRoomAvatarTimer?: NodeJS.Timeout;
-  private pollForMemberCountTimer?: NodeJS.Timeout;
   private readonly abortController: AbortController;
 
   /**
@@ -76,7 +72,6 @@ export class OpenGroupServerPoller {
    * This is to ensure that we don't trigger too many request at the same time
    */
   private isPolling = false;
-  private isPreviewPolling = false;
   private wasStopped = false;
 
   constructor(roomInfos: Array<OpenGroupRequestCommonType>) {
@@ -104,10 +99,6 @@ export class OpenGroupServerPoller {
 
     this.abortController = new AbortController();
     this.pollForEverythingTimer = global.setInterval(this.compactPoll, pollForEverythingInterval);
-    this.pollForRoomAvatarTimer = global.setInterval(
-      this.previewPerRoomPoll,
-      pollForRoomAvatarInterval
-    );
 
     if (this.roomIdsToPoll.size) {
       void this.triggerPollAfterAdd();
@@ -157,16 +148,9 @@ export class OpenGroupServerPoller {
    * Stop polling.
    * Requests currently being made will we canceled.
    * You can NOT restart for now a stopped serverPoller.
-   * This has to be used only for quiting the app.
+   * This has to be used only for quitting the app.
    */
   public stop() {
-    if (this.pollForRoomAvatarTimer) {
-      global.clearInterval(this.pollForRoomAvatarTimer);
-    }
-
-    if (this.pollForMemberCountTimer) {
-      global.clearInterval(this.pollForMemberCountTimer);
-    }
     if (this.pollForEverythingTimer) {
       // cancel next ticks for each timer
       global.clearInterval(this.pollForEverythingTimer);
@@ -174,15 +158,12 @@ export class OpenGroupServerPoller {
       // abort current requests
       this.abortController?.abort();
       this.pollForEverythingTimer = undefined;
-      this.pollForRoomAvatarTimer = undefined;
-      this.pollForMemberCountTimer = undefined;
       this.wasStopped = true;
     }
   }
 
   private async triggerPollAfterAdd(_room?: OpenGroupRequestCommonType) {
     await this.compactPoll();
-    await this.previewPerRoomPoll();
   }
 
   private shouldPoll() {
@@ -203,64 +184,6 @@ export class OpenGroupServerPoller {
       return false;
     }
     return true;
-  }
-
-  private shouldPollPreview() {
-    if (this.wasStopped) {
-      window?.log?.error('Serverpoller was stopped. PollPreview should not happen');
-      return false;
-    }
-    if (!this.roomIdsToPoll.size) {
-      return false;
-    }
-    // return early if a poll is already in progress
-    if (this.isPreviewPolling) {
-      return false;
-    }
-    if (!window.getGlobalOnlineStatus()) {
-      window?.log?.info('OpenGroupServerPoller: offline');
-      return false;
-    }
-    return true;
-  }
-
-  private async previewPerRoomPoll() {
-    if (!this.shouldPollPreview()) {
-      return;
-    }
-
-    // do everything with throwing so we can check only at one place
-    // what we have to clean
-    try {
-      this.isPreviewPolling = true;
-      // don't try to make the request if we are aborted
-      if (this.abortController.signal.aborted) {
-        throw new Error('Poller aborted');
-      }
-
-      let previewGotResults = await getAllBase64AvatarForRooms(
-        this.serverUrl,
-        this.roomIdsToPoll,
-        this.abortController.signal
-      );
-
-      // check that we are still not aborted
-      if (this.abortController.signal.aborted) {
-        throw new Error('Abort controller was canceled. Dropping preview request');
-      }
-      if (!previewGotResults) {
-        throw new Error('getPreview: no results');
-      }
-      // we were not aborted, make sure to filter out roomIds we are not polling for anymore
-      previewGotResults = previewGotResults.filter(result => this.roomIdsToPoll.has(result.roomId));
-
-      // ==> At this point all those results need to trigger conversation updates, so update what we have to update
-      await handleBase64AvatarUpdate(this.serverUrl, previewGotResults);
-    } catch (e) {
-      window?.log?.warn('Got error while preview fetch:', e);
-    } finally {
-      this.isPreviewPolling = false;
-    }
   }
 
   /**
@@ -369,7 +292,7 @@ export class OpenGroupServerPoller {
       // if we get a plaintext response from the sogs, it is stored under plainText field
       // see decodeV4Response()
       if (
-        batchPollResults.status_code === 400 &&
+        parseBatchGlobalStatusCode(batchPollResults) === 400 &&
         batchPollResults.body &&
         isObject(batchPollResults.body)
       ) {
@@ -383,7 +306,7 @@ export class OpenGroupServerPoller {
         }
       }
 
-      if (batchPollResults.status_code !== 200) {
+      if (!batchGlobalIsSuccess(batchPollResults)) {
         throw new Error('batchPollResults general status code is not 200');
       }
 
@@ -421,43 +344,4 @@ export const getRoomAndUpdateLastFetchTimestamp = async (
     return null;
   }
   return roomInfos;
-};
-
-const handleBase64AvatarUpdate = async (
-  serverUrl: string,
-  avatarResults: Array<ParsedBase64Avatar>
-) => {
-  await Promise.all(
-    avatarResults.map(async res => {
-      const convoId = getOpenGroupV2ConversationId(serverUrl, res.roomId);
-      const convo = getConversationController().get(convoId);
-      if (!convo) {
-        window?.log?.warn('Could not find convo for compactPoll', convoId);
-        return;
-      }
-      if (!res.base64) {
-        window?.log?.info('getPreview: no base64 data. skipping');
-        return;
-      }
-      const existingHash = convo.get('avatarHash');
-      const newHash = sha256(res.base64);
-      if (newHash !== existingHash) {
-        // write the file to the disk (automatically encrypted),
-        // ArrayBuffer
-
-        const upgradedAttachment = await processNewAttachment({
-          isRaw: true,
-          data: await callUtilsWorker('fromBase64ToArrayBuffer', res.base64),
-          contentType: MIME.IMAGE_UNKNOWN, // contentType is mostly used to generate previews and screenshot. We do not care for those in this case.          // url: `${serverUrl}/${res.roomId}`,
-        });
-        // update the hash on the conversationModel
-        // this does commit to DB and UI
-        await convo.setSessionProfile({
-          displayName: convo.getRealSessionUsername() || window.i18n('unknown'),
-          avatarPath: upgradedAttachment.path,
-          avatarHash: newHash,
-        });
-      }
-    })
-  );
 };

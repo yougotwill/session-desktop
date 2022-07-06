@@ -54,7 +54,7 @@ export interface ConversationAttributes {
 
   avatarPointer?: string; // this is the url of the avatar on the file server v2. we use this to detect if we need to redownload the avatar from someone (not used for opengroups)
   avatarInProfile?: string; // this is the avatar path locally once downloaded and stored in the application attachments folder
-  avatarHash?: string; //Avatar hash is currently used for opengroupv2. it's sha256 hash of the base64 avatar data.
+  avatarImageId?: number; //Avatar imageID is currently used only for opengroupv2. It's the fileID of the image uploaded and set as the sogs avatar
 
   triggerNotificationsFor: ConversationNotificationSettingType;
   isTrustedForAttachmentDownload: boolean;

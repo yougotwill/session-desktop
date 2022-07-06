@@ -1,6 +1,6 @@
 import { getV2OpenGroupRoomByRoomId } from '../../../../data/opengroups';
 import _, { flatten, isEmpty, isNumber, isObject } from 'lodash';
-import { sendViaOnionV4ToNonSnode } from '../../../onions/onionSend';
+import { OnionV4JSONSnodeResponse, sendViaOnionV4ToNonSnode } from '../../../onions/onionSend';
 import {
   getOurOpenGroupHeaders,
   OpenGroupRequestHeaders,
@@ -10,7 +10,7 @@ import { AbortSignal } from 'abort-controller';
 import { roomHasBlindEnabled } from './sogsV3Capabilities';
 
 type BatchFetchRequestOptions = {
-  method: 'POST' | 'GET' | 'DELETE';
+  method: 'POST' | 'PUT' | 'GET' | 'DELETE';
   path: string;
   headers?: any;
 };
@@ -19,7 +19,7 @@ type BatchFetchRequestOptions = {
  * Should only have this or the json field but not both at the same time
  */
 type BatchBodyRequestSharedOptions = {
-  method: 'POST' | 'PUT' | 'DELETE';
+  method: 'POST' | 'PUT' | 'GET' | 'DELETE';
   path: string;
   headers?: any;
 };
@@ -95,6 +95,41 @@ export const sogsBatchSend = async (
   return result || null;
 };
 
+export function parseBatchGlobalStatusCode(
+  response?: BatchSogsReponse | OnionV4JSONSnodeResponse | null
+): number | undefined {
+  return response?.status_code;
+}
+
+export function batchGlobalIsSuccess(
+  response?: BatchSogsReponse | OnionV4JSONSnodeResponse | null
+): boolean {
+  const status = parseBatchGlobalStatusCode(response);
+  return Boolean(status && status >= 200 && status <= 300);
+}
+
+export function parseBatchFirstSubStatusCode(
+  response?: BatchSogsReponse | null
+): number | undefined {
+  return response?.body?.[0].code;
+}
+
+export function parseBatchSecondSubStatusCode(
+  response?: BatchSogsReponse | null
+): number | undefined {
+  return response?.body?.[1].code;
+}
+
+export function batchFirstSubIsSuccess(response?: BatchSogsReponse | null): boolean {
+  const status = parseBatchFirstSubStatusCode(response);
+  return Boolean(status && status >= 200 && status <= 300);
+}
+
+export function batchSecondSubIsSuccess(response?: BatchSogsReponse | null): boolean {
+  const status = parseBatchSecondSubStatusCode(response);
+  return Boolean(status && status >= 200 && status <= 300);
+}
+
 export type SubrequestOptionType = 'capabilities' | 'messages' | 'pollInfo' | 'inbox';
 
 export type SubRequestCapabilitiesType = { type: 'capabilities' };
@@ -163,6 +198,15 @@ export type SubRequestDeleteAllUserPostsType = {
   };
 };
 
+export type SubRequestUpdateRoomType = {
+  type: 'updateRoom';
+  updateRoom: {
+    roomId: string;
+    imageId: number; // the fileId uploaded to this sogs and to be referenced as preview/room image
+    // name and other options are unsupported for now
+  };
+};
+
 export type OpenGroupBatchRow =
   | SubRequestCapabilitiesType
   | SubRequestMessagesType
@@ -172,7 +216,8 @@ export type OpenGroupBatchRow =
   | SubRequestDeleteMessageType
   | SubRequestAddRemoveModeratorType
   | SubRequestBanUnbanUserType
-  | SubRequestDeleteAllUserPostsType;
+  | SubRequestDeleteAllUserPostsType
+  | SubRequestUpdateRoomType;
 /**
  *
  * @param options Array of subrequest options to be made.
@@ -259,6 +304,12 @@ const makeBatchRequestPayload = (
       return {
         method: 'DELETE',
         path: `/room/${options.deleteAllPosts.roomId}/all/${options.deleteAllPosts.sessionId}`,
+      };
+    case 'updateRoom':
+      return {
+        method: 'PUT',
+        path: `/room/${options.updateRoom.roomId}`,
+        json: { image: options.updateRoom.imageId },
       };
     default:
       throw new Error('Invalid batch request row');

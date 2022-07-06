@@ -4,6 +4,17 @@ import { OpenGroupRequestCommonType } from '../session/apis/open_group_api/openg
 import { isOpenGroupV2 } from '../session/apis/open_group_api/utils/OpenGroupUtils';
 import { channels } from './channels';
 
+export type OpenGroupV2RoomWithImageID = {
+  serverUrl: string;
+
+  /** this is actually shared for all this server's room */
+  serverPublicKey: string;
+  roomId: string;
+
+  /** the fileId to the group room's image */
+  imageID?: string;
+};
+
 export type OpenGroupV2Room = {
   serverUrl: string;
 
@@ -14,7 +25,7 @@ export type OpenGroupV2Room = {
   /** a user displayed name */
   roomName?: string;
 
-  /** the url to the group's image */
+  /** the fileId of the group room's image */
   imageID?: string;
 
   /** the linked ConversationModel.id */

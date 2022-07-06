@@ -76,7 +76,7 @@ async function handlePollInfoResponse(
     token: string;
     upload: boolean;
     write: boolean;
-    details: { admins?: Array<string> };
+    details: { admins?: Array<string>; image_id: number };
   },
   serverUrl: string,
   roomIdsStillPolled: Set<string>
@@ -112,7 +112,7 @@ async function handlePollInfoResponse(
     write,
     upload,
     subscriberCount: active_users,
-    details: pick(details, 'admins'),
+    details: pick(details, 'admins', 'image_id'),
   });
 }
 

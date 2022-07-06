@@ -78,6 +78,7 @@ import { roomHasBlindEnabled } from '../session/apis/open_group_api/sogsv3/sogsV
 import { addMessagePadding } from '../session/crypto/BufferPadding';
 import { getSodiumRenderer } from '../session/crypto';
 import { findCachedOurBlindedPubkeyOrLookItUp } from '../session/apis/open_group_api/sogsv3/knownBlindedkeys';
+import { sogsV3FetchPreviewAndSaveIt } from '../session/apis/open_group_api/sogsv3/sogsV3FetchFile';
 
 export class ConversationModel extends Backbone.Model<ConversationAttributes> {
   public updateLastMessage: () => any;
@@ -1207,7 +1208,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
   public async setSessionProfile(newProfile: {
     displayName?: string | null;
     avatarPath?: string | null;
-    avatarHash?: string;
+    avatarImageId?: number;
   }) {
     let changes = false;
 
@@ -1227,10 +1228,10 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
         this.set({ avatarInProfile: newProfile.avatarPath });
         changes = true;
       }
-      const existingHash = this.get('avatarHash');
+      const existingImageId = this.get('avatarImageId');
 
-      if (existingHash !== newProfile.avatarHash) {
-        this.set({ avatarHash: newProfile.avatarHash });
+      if (existingImageId !== newProfile.avatarImageId) {
+        this.set({ avatarImageId: newProfile.avatarImageId });
         changes = true;
       }
     }
@@ -1360,6 +1361,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     upload: boolean;
     details: {
       admins?: Array<string>;
+      image_id?: number;
     };
   }) {
     if (!infos || isEmpty(infos)) {
@@ -1395,6 +1397,13 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       const adminChanged = await this.updateGroupAdmins(details.admins, false);
       if (adminChanged) {
         hasChange = adminChanged;
+      }
+    }
+
+    if (this.isOpenGroupV2() && details.image_id && isNumber(details.image_id)) {
+      const roomInfos = getV2OpenGroupRoom(this.id);
+      if (roomInfos) {
+        void sogsV3FetchPreviewAndSaveIt({ ...roomInfos, imageID: `${details.image_id}` });
       }
     }
 
