@@ -3,7 +3,6 @@ import { downloadDataFromOpenGroupV2 } from '../../receiver/attachments';
 import { MIME } from '../../types';
 import { urlToBlob } from '../../types/attachments/VisualAttachment';
 import { processNewAttachment } from '../../types/MessageAttachment';
-import { ApiV2 } from '../apis/open_group_api/opengroupV2';
 import { getConversationController } from '../conversations';
 import { sha256 } from '../crypto';
 import { fromArrayBufferToBase64 } from '../utils/String';
@@ -33,7 +32,7 @@ export async function initiateOpenGroupUpdate(
     if (!roomInfos || !dataResized.byteLength) {
       return false;
     }
-    const uploadedFileDetails = await ApiV2.uploadImageForRoomOpenGroupV2(
+    const uploadedFileDetails = await uploadImageForRoomOpenGroupV(
       new Uint8Array(dataResized),
       roomInfos
     );

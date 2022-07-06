@@ -2,12 +2,17 @@ import Backbone from 'backbone';
 // tslint:disable-next-line: match-default-export-name
 import filesize from 'filesize';
 import { SignalService } from '../../ts/protobuf';
-import { getMessageQueue, Utils } from '../../ts/session';
+import { getMessageQueue } from '../../ts/session';
 import { getConversationController } from '../../ts/session/conversations';
 import { DataMessage } from '../../ts/session/messages/outgoing';
 import { ClosedGroupVisibleMessage } from '../session/messages/outgoing/visibleMessage/ClosedGroupVisibleMessage';
 import { PubKey } from '../../ts/session/types';
-import { UserUtils } from '../../ts/session/utils';
+import {
+  uploadAttachmentsToFsV2,
+  uploadLinkPreviewToFsV2,
+  uploadQuoteThumbnailsToFsV2,
+  UserUtils,
+} from '../../ts/session/utils';
 import {
   DataExtractionNotificationMsg,
   fillMessageAttributesWithDefaults,
@@ -39,19 +44,22 @@ import {
   PropsForGroupUpdateName,
   PropsForMessageWithoutConvoProps,
 } from '../state/ducks/conversations';
-import { VisibleMessage } from '../session/messages/outgoing/visibleMessage/VisibleMessage';
+import {
+  VisibleMessage,
+  VisibleMessageParams,
+} from '../session/messages/outgoing/visibleMessage/VisibleMessage';
 import { buildSyncMessage } from '../session/utils/syncUtils';
 import {
-  uploadAttachmentsV2,
-  uploadLinkPreviewsV2,
-  uploadQuoteThumbnailsV2,
+  uploadAttachmentsV3,
+  uploadLinkPreviewsV3,
+  uploadQuoteThumbnailsV3,
 } from '../session/utils/AttachmentsV2';
 import { OpenGroupVisibleMessage } from '../session/messages/outgoing/visibleMessage/OpenGroupVisibleMessage';
 import { getV2OpenGroupRoom } from '../data/opengroups';
 import { isUsFromCache } from '../session/utils/User';
 import { perfEnd, perfStart } from '../session/utils/Performance';
 import { AttachmentTypeWithPath, isVoiceMessage } from '../types/Attachment';
-import _, { isEmpty } from 'lodash';
+import _, { isEmpty, uniq } from 'lodash';
 import { SettingsKey } from '../data/settings-key';
 import {
   deleteExternalMessageFiles,
@@ -715,11 +723,9 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
    * Uploads attachments, previews and quotes.
    *
    * @returns The uploaded data which includes: body, attachments, preview and quote.
+   * Also returns the uploaded ids to include in the message post so that those attachments are linked to that message.
    */
   public async uploadData() {
-    // TODO: In the future it might be best if we cache the upload results if possible.
-    // This way we don't upload duplicated data.
-
     const finalAttachments = await Promise.all(
       (this.get('attachments') || []).map(loadAttachmentData)
     );
@@ -733,20 +739,23 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
     let attachmentPromise;
     let linkPreviewPromise;
     let quotePromise;
-    const { AttachmentFsV2Utils } = Utils;
+    const fileIdsToLink: Array<number> = [];
+
+    // we can only send a single preview
+    const firstPreviewWithData = previewWithData?.[0] || null;
 
     // we want to go for the v1, if this is an OpenGroupV1 or not an open group at all
     if (conversation?.isOpenGroupV2()) {
       const openGroupV2 = conversation.toOpenGroupV2();
-      attachmentPromise = uploadAttachmentsV2(finalAttachments, openGroupV2);
-      linkPreviewPromise = uploadLinkPreviewsV2(previewWithData, openGroupV2);
-      quotePromise = uploadQuoteThumbnailsV2(openGroupV2, quoteWithData);
+      attachmentPromise = uploadAttachmentsV3(finalAttachments, openGroupV2);
+      linkPreviewPromise = uploadLinkPreviewsV3(firstPreviewWithData, openGroupV2);
+      quotePromise = uploadQuoteThumbnailsV3(openGroupV2, quoteWithData);
     } else {
       // NOTE: we want to go for the v1 if this is an OpenGroupV1 or not an open group at all
       // because there is a fallback invoked on uploadV1() for attachments for not open groups attachments
-      attachmentPromise = AttachmentFsV2Utils.uploadAttachmentsToFsV2(finalAttachments);
-      linkPreviewPromise = AttachmentFsV2Utils.uploadLinkPreviewsToFsV2(previewWithData);
-      quotePromise = AttachmentFsV2Utils.uploadQuoteThumbnailsToFsV2(quoteWithData);
+      attachmentPromise = uploadAttachmentsToFsV2(finalAttachments);
+      linkPreviewPromise = uploadLinkPreviewToFsV2(firstPreviewWithData);
+      quotePromise = uploadQuoteThumbnailsToFsV2(quoteWithData);
     }
 
     const [attachments, preview, quote] = await Promise.all([
@@ -754,13 +763,26 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
       linkPreviewPromise,
       quotePromise,
     ]);
-    window.log.info(`Upload of message data for message ${this.idForLogging()} is finished.`);
+    fileIdsToLink.push(...attachments.map(m => m.id));
+    if (preview) {
+      fileIdsToLink.push(preview.id);
+    }
 
+    if (quote && quote.attachments?.length) {
+      // typing for all of this Attachment + quote + preview + send or unsend is pretty bad
+      const firstQuoteAttachmentId = (quote.attachments[0].thumbnail as any)?.id;
+      if (firstQuoteAttachmentId) {
+        fileIdsToLink.push(firstQuoteAttachmentId);
+      }
+    }
+    window.log.info(`Upload of message data for message ${this.idForLogging()} is finished.`);
+    debugger;
     return {
       body,
       attachments,
       preview,
       quote,
+      fileIdsToLink: uniq(fileIdsToLink),
     };
   }
 
@@ -802,18 +824,17 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
         );
         return;
       }
+      const { body, attachments, preview, quote, fileIdsToLink } = await this.uploadData();
 
       if (conversation.isPublic()) {
-        if (!conversation.isOpenGroupV2()) {
-          throw new Error('Only opengroupv2 are supported now');
-        }
-        const uploaded = await this.uploadData();
-
-        const openGroupParams = {
+        const openGroupParams: VisibleMessageParams = {
           identifier: this.id,
           timestamp: Date.now(),
           lokiProfile: UserUtils.getOurProfile(),
-          ...uploaded,
+          body,
+          attachments,
+          preview: preview ? [preview] : [],
+          quote,
         };
         const roomInfos = getV2OpenGroupRoom(conversation.id);
         if (!roomInfos) {
@@ -821,16 +842,15 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
         }
 
         const openGroupMessage = new OpenGroupVisibleMessage(openGroupParams);
-        const openGroup = getV2OpenGroupRoom(this.id);
+        const openGroup = getV2OpenGroupRoom(conversation.id);
 
         return getMessageQueue().sendToOpenGroupV2(
           openGroupMessage,
           roomInfos,
-          roomHasBlindEnabled(openGroup)
+          roomHasBlindEnabled(openGroup),
+          fileIdsToLink
         );
       }
-
-      const { body, attachments, preview, quote } = await this.uploadData();
 
       const chatParams = {
         identifier: this.id,
@@ -838,7 +858,7 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
         timestamp: Date.now(), // force a new timestamp to handle user fixed his clock
         expireTimer: this.get('expireTimer'),
         attachments,
-        preview,
+        preview: preview ? [preview] : [],
         quote,
         lokiProfile: UserUtils.getOurProfile(),
       };

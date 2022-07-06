@@ -530,7 +530,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
 
   public async sendMessageJob(message: MessageModel, expireTimer: number | undefined) {
     try {
-      const uploads = await message.uploadData();
+      const { body, attachments, preview, quote, fileIdsToLink } = await message.uploadData();
       const { id } = message;
       const destination = this.id;
 
@@ -545,13 +545,13 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       }
       // an OpenGroupV2 message is just a visible message
       const chatMessageParams: VisibleMessageParams = {
-        body: uploads.body,
+        body,
         identifier: id,
         timestamp: sentAt,
-        attachments: uploads.attachments,
+        attachments,
         expireTimer,
-        preview: uploads.preview,
-        quote: uploads.quote,
+        preview: preview ? [preview] : [],
+        quote,
         lokiProfile: UserUtils.getOurProfile(),
       };
 
@@ -591,7 +591,8 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
         await getMessageQueue().sendToOpenGroupV2(
           chatMessageOpenGroupV2,
           roomInfos,
-          Boolean(roomHasBlindEnabled(openGroup))
+          Boolean(roomHasBlindEnabled(openGroup)),
+          fileIdsToLink
         );
         return;
       }

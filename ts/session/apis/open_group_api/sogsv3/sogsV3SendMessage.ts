@@ -1,9 +1,8 @@
 import { AbortSignal } from 'abort-controller';
-import { APPLICATION_JSON } from '../../../../types/MIME';
+import { APPLICATION_JSON, APPLICATION_OCTET_STREAM } from '../../../../types/MIME';
 import { sendJsonViaOnionV4ToNonSnode } from '../../../onions/onionSend';
 import { UserUtils } from '../../../utils';
 import { OpenGroupCapabilityRequest } from '../opengroupV2/ApiUtil';
-import { parseStatusCodeFromOnionRequestV4 } from '../opengroupV2/OpenGroupAPIV2Parser';
 import { OpenGroupMessageV2 } from '../opengroupV2/OpenGroupMessageV2';
 import {
   getAllValidRoomInfos,
@@ -14,6 +13,11 @@ export function addJsonContentTypeToHeaders(
   headers: OpenGroupRequestHeaders
 ): OpenGroupRequestHeaders {
   return { ...headers, 'Content-Type': APPLICATION_JSON };
+}
+export function addBinaryContentTypeToHeaders(
+  headers: OpenGroupRequestHeaders
+): OpenGroupRequestHeaders {
+  return { ...headers, 'Content-Type': APPLICATION_OCTET_STREAM };
 }
 
 export type OpenGroupSendMessageRequest = OpenGroupCapabilityRequest & {
@@ -43,9 +47,11 @@ export const sendSogsMessageOnionV4 = async (
     ? await message.signWithBlinding(serverPubkey)
     : await message.sign(ourKeyPair);
   const json = signedMessage.toJson();
+  console.warn('sendSogsMessageOnionV4: ', json);
+
   const stringifiedBody = JSON.stringify(json);
 
-  const res = await sendJsonViaOnionV4ToNonSnode({
+  const result = await sendJsonViaOnionV4ToNonSnode({
     serverUrl,
     endpoint,
     serverPubkey,
@@ -55,9 +61,9 @@ export const sendSogsMessageOnionV4 = async (
     stringifiedBody,
     headers: null,
   });
-  const statusCode = parseStatusCodeFromOnionRequestV4(res);
+  const statusCode = result?.status_code;
   if (!statusCode) {
-    window?.log?.warn('sendSogsMessageWithOnionV4 Got unknown status code; res:', res);
+    window?.log?.warn('sendSogsMessageWithOnionV4 Got unknown status code; res:', result);
     throw new Error(`sendSogsMessageOnionV4: invalid status code: ${statusCode}`);
   }
 
@@ -65,10 +71,10 @@ export const sendSogsMessageOnionV4 = async (
     throw new Error(`Could not postMessage, status code: ${statusCode}`);
   }
 
-  if (!res) {
+  if (!result) {
     throw new Error('Could not postMessage, res is invalid');
   }
-  const rawMessage = res.body as Record<string, any>;
+  const rawMessage = result.body as Record<string, any>;
   if (!rawMessage) {
     throw new Error('postMessage parsing failed');
   }
@@ -108,7 +114,7 @@ export const sendMessageOnionV4BlindedRequest = async (
   const json = signedMessage.toBLindedMessageRequestJson();
   const stringifiedBody = JSON.stringify(json);
 
-  const res = await sendJsonViaOnionV4ToNonSnode({
+  const result = await sendJsonViaOnionV4ToNonSnode({
     serverUrl,
     endpoint,
     serverPubkey,
@@ -118,9 +124,9 @@ export const sendMessageOnionV4BlindedRequest = async (
     stringifiedBody,
     headers: null,
   });
-  const statusCode = parseStatusCodeFromOnionRequestV4(res);
+  const statusCode = result?.status_code;
   if (!statusCode) {
-    window?.log?.warn('sendMessageOnionV4BlindedRequest Got unknown status code; res:', res);
+    window?.log?.warn('sendMessageOnionV4BlindedRequest Got unknown status code; res:', result);
     throw new Error(`sendMessageOnionV4BlindedRequest: invalid status code: ${statusCode}`);
   }
 
@@ -128,10 +134,10 @@ export const sendMessageOnionV4BlindedRequest = async (
     throw new Error(`Could not postMessage, status code: ${statusCode}`);
   }
 
-  if (!res) {
+  if (!result) {
     throw new Error('Could not postMessage, res is invalid');
   }
-  const rawMessage = res.body as Record<string, any>;
+  const rawMessage = result.body as Record<string, any>;
   if (!rawMessage) {
     throw new Error('postMessage parsing failed');
   }

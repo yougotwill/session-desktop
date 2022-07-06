@@ -12,6 +12,7 @@ export class OpenGroupMessageV2 {
   public sentTimestamp: number;
   public base64EncodedData: string;
   public base64EncodedSignature?: string;
+  public filesToLink?: Array<number>;
 
   constructor(messageData: {
     serverId?: number;
@@ -19,6 +20,7 @@ export class OpenGroupMessageV2 {
     sentTimestamp: number;
     base64EncodedData: string;
     base64EncodedSignature?: string;
+    filesToLink?: Array<number>;
   }) {
     const {
       base64EncodedData,
@@ -26,6 +28,7 @@ export class OpenGroupMessageV2 {
       base64EncodedSignature,
       sender,
       serverId,
+      filesToLink,
     } = messageData;
 
     this.base64EncodedData = base64EncodedData;
@@ -33,6 +36,7 @@ export class OpenGroupMessageV2 {
     this.base64EncodedSignature = base64EncodedSignature;
     this.sender = sender;
     this.serverId = serverId;
+    this.filesToLink = filesToLink;
   }
 
   public static fromJson(json: Record<string, any>) {
@@ -42,6 +46,7 @@ export class OpenGroupMessageV2 {
       server_id: serverId,
       public_key: sender,
       signature: base64EncodedSignature,
+      files: filesToLink,
     } = json;
 
     if (!base64EncodedData || !sentTimestamp) {
@@ -54,6 +59,7 @@ export class OpenGroupMessageV2 {
       sentTimestamp,
       serverId,
       sender,
+      filesToLink,
     });
   }
 
@@ -75,6 +81,7 @@ export class OpenGroupMessageV2 {
       base64EncodedSignature: base64Sig,
       sender: this.sender,
       serverId: this.serverId,
+      filesToLink: this.filesToLink,
     });
   }
 
@@ -112,6 +119,7 @@ export class OpenGroupMessageV2 {
       base64EncodedSignature: base64Sig,
       sender: this.sender, // might need to be blindedPubkey
       serverId: this.serverId,
+      filesToLink: this.filesToLink,
     });
   }
 
@@ -129,6 +137,10 @@ export class OpenGroupMessageV2 {
     if (this.base64EncodedSignature) {
       json.signature = this.base64EncodedSignature;
     }
+
+    if (this.filesToLink) {
+      json.files = this.filesToLink;
+    }
     return json;
   }
 
@@ -145,6 +157,9 @@ export class OpenGroupMessageV2 {
     }
     if (this.base64EncodedSignature) {
       json.signature = this.base64EncodedSignature;
+    }
+    if (this.filesToLink) {
+      json.files = this.filesToLink;
     }
     return json;
   }

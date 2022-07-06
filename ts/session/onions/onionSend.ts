@@ -15,13 +15,16 @@ import pRetry from 'p-retry';
 import { Snode } from '../../data/data';
 import { decodeV4Response } from './onionv4';
 import { getOurOpenGroupHeaders } from '../apis/open_group_api/opengroupV2/OpenGroupPollingUtils';
-import { addJsonContentTypeToHeaders } from '../apis/open_group_api/sogsv3/sogsV3SendMessage';
+import {
+  addBinaryContentTypeToHeaders,
+  addJsonContentTypeToHeaders,
+} from '../apis/open_group_api/sogsv3/sogsV3SendMessage';
 import { AbortSignal } from 'abort-controller';
 import { to_string } from 'libsodium-wrappers-sumo';
 
 export type OnionFetchOptions = {
   method: string;
-  body?: string;
+  body?: string | Uint8Array;
   headers?: Record<string, string | number>;
   useV4: boolean;
 };
@@ -29,7 +32,7 @@ export type OnionFetchOptions = {
 type OnionPayloadObj = {
   method: string;
   endpoint: string;
-  body: any;
+  body: string | Uint8Array | undefined | null;
   headers: Record<string, any>;
 };
 
@@ -40,7 +43,7 @@ export type FinalDestinationOptions = {
 };
 
 const buildSendViaOnionPayload = (url: URL, fetchOptions: OnionFetchOptions): OnionPayloadObj => {
-  let tempHeaders = fetchOptions.headers || {};
+  const tempHeaders = fetchOptions.headers || {};
   const payloadObj = {
     method: fetchOptions.method || 'GET',
     body: fetchOptions.body || (undefined as any),
@@ -352,6 +355,58 @@ export async function sendJsonViaOnionV4ToNonSnode(sendOptions: {
       method,
       headers: addJsonContentTypeToHeaders(headersWithSogsHeadersIfNeeded as any),
       body: stringifiedBody || undefined,
+      useV4: true,
+    },
+    abortSignal
+  );
+
+  return res as OnionV4JSONSnodeResponse;
+}
+
+export async function sendBinaryViaOnionV4ToNonSnode(sendOptions: {
+  serverUrl: string;
+  endpoint: string;
+  serverPubkey: string;
+  blinded: boolean;
+  method: string;
+  bodyBinary: Uint8Array;
+  abortSignal: AbortSignal;
+  headers: Record<string, any> | null;
+}): Promise<OnionV4JSONSnodeResponse | null> {
+  const {
+    serverUrl,
+    endpoint,
+    serverPubkey,
+    method,
+    blinded,
+    bodyBinary,
+    abortSignal,
+    headers: includedHeaders,
+  } = sendOptions;
+
+  if (!bodyBinary) {
+    return null;
+  }
+  const builtUrl = new URL(`${serverUrl}/${endpoint}`);
+  let headersWithSogsHeadersIfNeeded = await getOurOpenGroupHeaders(
+    serverPubkey,
+    endpoint,
+    method,
+    blinded,
+    bodyBinary
+  );
+
+  if (!headersWithSogsHeadersIfNeeded) {
+    return null;
+  }
+  headersWithSogsHeadersIfNeeded = { ...includedHeaders, ...headersWithSogsHeadersIfNeeded };
+  const res = await sendViaOnionV4ToNonSnode(
+    serverPubkey,
+    builtUrl,
+    {
+      method,
+      headers: addBinaryContentTypeToHeaders(headersWithSogsHeadersIfNeeded as any),
+      body: bodyBinary || undefined,
       useV4: true,
     },
     abortSignal

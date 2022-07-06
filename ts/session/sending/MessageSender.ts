@@ -276,14 +276,15 @@ function wrapEnvelope(envelope: SignalService.Envelope): Uint8Array {
 export async function sendToOpenGroupV2(
   rawMessage: OpenGroupVisibleMessage,
   roomInfos: OpenGroupRequestCommonType,
-  blinded: boolean
+  blinded: boolean,
+  filesToLink: Array<number>
 ): Promise<OpenGroupMessageV2> {
   // we agreed to pad message for opengroupv2
   const paddedBody = addMessagePadding(rawMessage.plainTextBuffer());
   const v2Message = new OpenGroupMessageV2({
     sentTimestamp: getNowWithNetworkOffset(),
-    // sender: await getBlindedPubKey(),
     base64EncodedData: fromUInt8ArrayToBase64(paddedBody),
+    filesToLink,
   });
 
   // Warning: postMessage throws

@@ -1,15 +1,17 @@
 import { from_string, to_string } from 'libsodium-wrappers-sumo';
-import { toNumber } from 'lodash';
+import { isString, toNumber } from 'lodash';
 import { SnodeResponseV4 } from '../apis/snode_api/onions';
 import { concatUInt8Array } from '../crypto';
 
-export const encodeV4Request = (requestInfo: { body?: any }): Uint8Array => {
+export const encodeV4Request = (requestInfo: {
+  body?: string | Uint8Array | null | undefined;
+}): Uint8Array => {
   const { body } = requestInfo;
   const requestInfoData = from_string(JSON.stringify(requestInfo));
   const prefixData = from_string(`l${requestInfoData.length}:`);
   const suffixData = from_string('e');
   if (body) {
-    const bodyData = from_string(body);
+    const bodyData = body && isString(body) ? from_string(body) : (body as Uint8Array);
 
     const bodyCountdata = from_string(`${bodyData.length}:`);
     return concatUInt8Array(prefixData, requestInfoData, bodyCountdata, bodyData, suffixData);

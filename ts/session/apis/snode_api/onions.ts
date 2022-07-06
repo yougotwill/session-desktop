@@ -7,7 +7,7 @@ import { OnionPaths } from '../../onions';
 import { toHex } from '../../utils/String';
 import pRetry from 'p-retry';
 import { ed25519Str, incrementBadPathCountOrDrop } from '../../onions/onionPath';
-import _ from 'lodash';
+import _, { isString } from 'lodash';
 // hold the ed25519 key of a snode against the time it fails. Used to remove a snode only after a few failures (snodeFailureThreshold failures)
 let snodeFailureCount: Record<string, number> = {};
 
@@ -53,7 +53,14 @@ export const ERROR_421_HANDLED_RETRY_REQUEST =
 export const CLOCK_OUT_OF_SYNC_MESSAGE_ERROR =
   'Your clock is out of sync with the network. Check your clock.';
 
-async function encryptOnionV4RequestForPubkey(pubKeyX25519hex: string, requestInfo: any) {
+async function encryptOnionV4RequestForPubkey(
+  pubKeyX25519hex: string,
+  requestInfo: {
+    destination_ed25519_hex?: string | undefined;
+    headers?: Record<string, string> | undefined;
+    body?: string | Uint8Array | null | undefined;
+  }
+) {
   const plaintext = encodeV4Request(requestInfo);
 
   return callUtilsWorker('encryptForPubkey', pubKeyX25519hex, plaintext) as Promise<
@@ -705,7 +712,7 @@ export const sendOnionRequestHandlingSnodeEject = async ({
   finalDestOptions: {
     destination_ed25519_hex?: string;
     headers?: Record<string, string>;
-    body?: string;
+    body?: string | null | Uint8Array;
   };
   finalRelayOptions?: FinalRelayOptions;
   abortSignal?: AbortSignal;
@@ -789,7 +796,7 @@ const sendOnionRequest = async ({
   finalDestOptions: {
     destination_ed25519_hex?: string;
     headers?: Record<string, string>;
-    body?: string;
+    body?: string | null | Uint8Array;
   };
   finalRelayOptions?: FinalRelayOptions; // use only when the target is not a snode
   abortSignal?: AbortSignal;
@@ -827,13 +834,16 @@ const sendOnionRequest = async ({
 
   let destCtx: DestinationContext;
   try {
+    const bodyString = isString(options.body) ? options.body : null;
+    const bodyBinary = !isString(options.body) && options.body ? options.body : null;
     if (isRequestToSnode) {
-      const body = options.body || '';
       delete options.body;
 
       const textEncoder = new TextEncoder();
-      const bodyEncoded = textEncoder.encode(body);
-
+      const bodyEncoded = bodyString ? textEncoder.encode(bodyString) : bodyBinary;
+      if (!bodyEncoded) {
+        throw new Error('bodyEncoded is empty after encoding');
+      }
       const plaintext = encodeCiphertextPlusJson(bodyEncoded, options);
       destCtx = (await callUtilsWorker(
         'encryptForPubkey',

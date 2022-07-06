@@ -1,12 +1,14 @@
 import { getV2OpenGroupRoomByRoomId, saveV2OpenGroupRoom } from '../../../../data/opengroups';
 import { FSv2 } from '../../file_server_api';
-import { sendViaOnionToNonSnode } from '../../../onions/onionSend';
+import { sendBinaryViaOnionV4ToNonSnode, sendViaOnionToNonSnode } from '../../../onions/onionSend';
 import { OpenGroupRequestCommonType, OpenGroupV2Request } from './ApiUtil';
 import { parseStatusCodeFromOnionRequest } from './OpenGroupAPIV2Parser';
 
 import { isOpenGroupV2Request } from '../../file_server_api/FileServerApiV2';
 import pRetry from 'p-retry';
 import { callUtilsWorker } from '../../../../webworker/workers/util_worker_interface';
+import AbortController from 'abort-controller';
+import { roomHasBlindEnabled } from '../sogsv3/sogsV3Capabilities';
 
 // used to be overwritten by testing
 export const getMinTimeout = () => 1000;
@@ -159,46 +161,52 @@ export const downloadFileOpenGroupV2ByUrl = async (
 /**
  * Returns the id on which the file is saved, or null
  */
-export const uploadFileOpenGroupV2 = async (
+export const uploadFileOpenGroupV3 = async (
   fileContent: Uint8Array,
   roomInfos: OpenGroupRequestCommonType
 ): Promise<{ fileId: number; fileUrl: string } | null> => {
   if (!fileContent || !fileContent.length) {
     return null;
   }
-  const queryParams = {
-    file: await callUtilsWorker('arrayBufferToStringBase64', fileContent),
-  };
 
-  const filesEndpoint = 'files';
-  const request: OpenGroupV2Request = {
+  const roomDetails = getV2OpenGroupRoomByRoomId(roomInfos);
+  if (!roomDetails || !roomDetails.serverPublicKey) {
+    window.log.warn('uploadFileOpenGroupV3: roomDetails is invalid');
+    return null;
+  }
+
+  const result = await sendBinaryViaOnionV4ToNonSnode({
+    abortSignal: new AbortController().signal,
+    blinded: roomHasBlindEnabled(roomDetails),
+    bodyBinary: fileContent,
+    headers: null,
+    serverPubkey: roomDetails.serverPublicKey,
+    endpoint: `/room/${roomDetails.roomId}/file`,
     method: 'POST',
-    room: roomInfos.roomId,
-    server: roomInfos.serverUrl,
-    endpoint: filesEndpoint,
-    queryParams,
-    useV4: false,
-  };
+    serverUrl: roomDetails.serverUrl,
+  });
 
-  const result = await exports.sendApiV2Request(request);
-  const statusCode = parseStatusCodeFromOnionRequest(result);
-  if (statusCode !== 200) {
+  if (result?.status_code !== 201) {
     return null;
   }
 
   // we should probably change the logic of sendOnionRequest to not have all those levels
-  const fileId = result?.result?.result as number | undefined;
+  const fileId = (result?.body as any | undefined)?.id as number | undefined;
   if (!fileId) {
     return null;
   }
-  const fileUrl = getCompleteEndpointUrl(roomInfos, `${filesEndpoint}/${fileId}`, false);
+  const fileUrl = getCompleteEndpointUrl(
+    roomInfos,
+    `/room/${roomDetails.roomId}/file/${fileId}`,
+    false
+  );
   return {
-    fileId: fileId,
+    fileId,
     fileUrl,
   };
 };
 
-export const uploadImageForRoomOpenGroupV2 = async (
+export const uploadImageForRoomOpenGroupV3 = async (
   fileContent: Uint8Array,
   roomInfos: OpenGroupRequestCommonType
 ): Promise<{ fileUrl: string } | null> => {
@@ -210,7 +218,7 @@ export const uploadImageForRoomOpenGroupV2 = async (
     file: await callUtilsWorker('arrayBufferToStringBase64', fileContent),
   };
 
-  const imageEndpoint = `rooms/${roomInfos.roomId}/image`;
+  const imageEndpoint = `room/${roomInfos.roomId}/file`;
   const request: OpenGroupV2Request = {
     method: 'POST',
     room: roomInfos.roomId,

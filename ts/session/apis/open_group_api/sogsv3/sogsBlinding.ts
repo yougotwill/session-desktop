@@ -50,7 +50,7 @@ export async function getOpenGroupHeaders(data: {
   timestamp: number;
   /** Apply blinding modifications or not */
   blinded: boolean;
-  body: string | null;
+  body: string | null | Uint8Array;
 }): Promise<OpenGroupRequestHeaders> {
   const { signingKeys, serverPK, nonce, method, path, timestamp, blinded, body } = data;
   const sodium = await getSodiumRenderer();
@@ -75,12 +75,12 @@ export async function getOpenGroupHeaders(data: {
     stringToUint8Array(method),
     stringToUint8Array(path)
   );
-
   if (body) {
     const bodyHashed = sodium.crypto_generichash(64, body);
 
     toSign = concatUInt8Array(toSign, bodyHashed);
   }
+
   const signature = await getSogsSignature({ blinded, kA, ka, signingKeys, toSign });
 
   const headers: OpenGroupRequestHeaders = {

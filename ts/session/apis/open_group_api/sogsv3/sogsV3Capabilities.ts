@@ -1,7 +1,6 @@
 import _, { isArray, isEmpty, isEqual, isObject } from 'lodash';
 import { sendJsonViaOnionV4ToNonSnode } from '../../../onions/onionSend';
 import { getOurOpenGroupHeaders } from '../opengroupV2/OpenGroupPollingUtils';
-import { parseStatusCodeFromOnionRequestV4 } from '../opengroupV2/OpenGroupAPIV2Parser';
 import {
   getV2OpenGroupRoomsByServerUrl,
   OpenGroupV2Room,
@@ -41,7 +40,7 @@ export const capabilitiesFetchForServer = async (
     headers: null,
   });
 
-  const statusCode = parseStatusCodeFromOnionRequestV4(result);
+  const statusCode = result?.status_code;
   if (!statusCode) {
     window?.log?.warn('Capabilities Request Got unknown status code; res:', result);
     return null;

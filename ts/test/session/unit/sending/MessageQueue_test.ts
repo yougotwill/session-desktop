@@ -223,7 +223,7 @@ describe('MessageQueue', () => {
           const message = TestUtils.generateOpenGroupVisibleMessage();
           const roomInfos = TestUtils.generateOpenGroupV2RoomInfos();
 
-          await messageQueueStub.sendToOpenGroupV2(message, roomInfos, false);
+          await messageQueueStub.sendToOpenGroupV2(message, roomInfos, false, []);
           expect(sendToOpenGroupV2Stub.callCount).to.equal(1);
         });
 
@@ -235,7 +235,7 @@ describe('MessageQueue', () => {
 
           const message = TestUtils.generateOpenGroupVisibleMessage();
           const roomInfos = TestUtils.generateOpenGroupV2RoomInfos();
-          await messageQueueStub.sendToOpenGroupV2(message, roomInfos, false);
+          await messageQueueStub.sendToOpenGroupV2(message, roomInfos, false, []);
           expect(messageSentPublicHandlerSuccessStub.callCount).to.equal(1);
           expect(messageSentPublicHandlerSuccessStub.lastCall.args[0].identifier).to.equal(
             message.identifier
@@ -251,7 +251,7 @@ describe('MessageQueue', () => {
           const message = TestUtils.generateOpenGroupVisibleMessage();
           const roomInfos = TestUtils.generateOpenGroupV2RoomInfos();
 
-          await messageQueueStub.sendToOpenGroupV2(message, roomInfos, false);
+          await messageQueueStub.sendToOpenGroupV2(message, roomInfos, false, []);
           expect(messageSentHandlerFailedStub.callCount).to.equal(1);
           expect(messageSentHandlerFailedStub.lastCall.args[0].identifier).to.equal(
             message.identifier

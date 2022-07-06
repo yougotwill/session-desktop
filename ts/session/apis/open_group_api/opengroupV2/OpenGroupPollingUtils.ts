@@ -30,7 +30,7 @@ export const getOurOpenGroupHeaders = async (
   endpoint: string,
   method: string,
   blinded: boolean,
-  body: string | null
+  body: string | null | Uint8Array
 ): Promise<OpenGroupRequestHeaders | undefined> => {
   // this value is cached
   const signingKeys = await UserUtils.getUserED25519KeyPairBytes();

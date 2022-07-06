@@ -15,7 +15,3 @@ export const parseStatusCodeFromOnionRequest = (onionResult: any): number | unde
   }
   return undefined;
 };
-
-export function parseStatusCodeFromOnionRequestV4(onionResult: any) {
-  return onionResult?.status_code || undefined;
-}

@@ -105,7 +105,7 @@ export async function downloadDataFromOpenGroupV2(
  *
  * @param attachment Either the details of the attachment to download (on a per room basis), or the pathName to the file you want to get
  */
-export async function downloadAttachmentOpenGroupV3(
+export async function downloadAttachmentSogsV3(
   attachment: {
     id: number;
     url: string;

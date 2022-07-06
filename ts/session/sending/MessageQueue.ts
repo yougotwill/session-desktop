@@ -62,11 +62,14 @@ export class MessageQueue {
    * group to return.
    * So there is no need for a sendCb callback
    *
+   *
+   * fileIds is the array of ids this message is linked to. If we upload files as part of a message but do not link them with this, the files will be deleted much sooner
    */
   public async sendToOpenGroupV2(
     message: OpenGroupVisibleMessage,
     roomInfos: OpenGroupRequestCommonType,
-    blinded: boolean
+    blinded: boolean,
+    filesToLink: Array<number>
   ) {
     // Skipping the queue for Open Groups v2; the message is sent directly
 
@@ -74,7 +77,8 @@ export class MessageQueue {
       const { sentTimestamp, serverId } = await MessageSender.sendToOpenGroupV2(
         message,
         roomInfos,
-        blinded
+        blinded,
+        filesToLink
       );
       if (!serverId || serverId === -1) {
         throw new Error(`Invalid serverId returned by server: ${serverId}`);
