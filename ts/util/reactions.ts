@@ -75,7 +75,7 @@ export const handleMessageReaction = async (
       messageTimestamp &&
         messageTimestamp === originalMessageTimestamp &&
         author &&
-        author == originalMessageAuthor
+        author === originalMessageAuthor
     );
   });
 
