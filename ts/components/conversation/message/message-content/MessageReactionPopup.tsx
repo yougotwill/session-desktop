@@ -1,6 +1,7 @@
 import React, { ReactElement, useCallback, useEffect, useState } from 'react';
 import styled from 'styled-components';
 import { getMessageById } from '../../../../data/data';
+import { PubKey } from '../../../../session/types/PubKey';
 import { readableList } from '../../../../util/readableList';
 
 export type TipPosition = 'center' | 'left' | 'right';
@@ -72,11 +73,7 @@ export const MessageReactionPopup = (props: Props): ReactElement => {
     if (message) {
       results = senders.map(sender => {
         const contact = message.findAndFormatContact(sender);
-        if (contact.isMe) {
-          // remove pubkey
-          return contact.title ? contact.title.slice(0, -14) : contact.profileName ?? sender;
-        }
-        return contact.profileName ?? sender;
+        return contact?.profileName || contact?.name || PubKey.shorten(sender);
       });
     }
     return results;
