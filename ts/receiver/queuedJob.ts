@@ -339,7 +339,7 @@ export async function handleMessageJob(
     const messageId = messageModel.get('isPublic')
       ? String(messageModel.get('serverId'))
       : messageHash;
-    await handleMessageReaction(regularDataMessage.reaction, messageId);
+    await handleMessageReaction(regularDataMessage.reaction, source, messageId);
     if (
       regularDataMessage.reaction.action === 0 &&
       conversation.isPrivate() &&

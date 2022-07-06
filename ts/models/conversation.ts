@@ -655,7 +655,8 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
         throw new Error('Only opengroupv2 are supported now');
       }
 
-      await handleMessageReaction(reaction);
+      const sender = UserUtils.getOurPubKeyStrFromCache();
+      await handleMessageReaction(reaction, sender);
 
       // an OpenGroupV2 message is just a visible message
       const chatMessageParams: VisibleMessageParams = {
