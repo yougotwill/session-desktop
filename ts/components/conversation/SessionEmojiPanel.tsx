@@ -94,6 +94,7 @@ export const SessionEmojiPanel = (props: Props) => {
     showPreview: true,
     onEmojiSelect: onEmojiClicked,
     autoFocus: true,
+    skinTonePosition: 'preview',
   };
 
   useEffect(() => {
