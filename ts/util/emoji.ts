@@ -1,4 +1,5 @@
-import { BaseEmoji } from 'emoji-mart';
+import { isEmpty } from 'lodash';
+import { FixedBaseEmoji } from '../types/Util';
 
 export type SizeClassType = 'default' | 'small' | 'medium' | 'large' | 'jumbo';
 
@@ -41,7 +42,7 @@ export function getEmojiSizeClass(str: string): SizeClassType {
 
 export let nativeEmojiData: any = {};
 
-export function generateEmojiSearchIndexes(data: any) {
+export function initialiseEmojiData(data: any) {
   Object.entries(data.emojis).forEach(([key, value]: [string, any]) => {
     value.search = `,${[
       [value.id, false],
@@ -94,7 +95,7 @@ export function searchSync(query: string, args?: any): Array<any> {
   }
 
   let pool: any = Object.values(nativeEmojiData.emojis);
-  let results: Array<BaseEmoji> = [];
+  let results: Array<FixedBaseEmoji> = [];
   let scores: Record<string, number> = {};
 
   for (const value of values) {
@@ -125,7 +126,7 @@ export function searchSync(query: string, args?: any): Array<any> {
     return results;
   }
 
-  results.sort((a: BaseEmoji, b: BaseEmoji) => {
+  results.sort((a: FixedBaseEmoji, b: FixedBaseEmoji) => {
     const aScore = scores[a.id];
     const bScore = scores[b.id];
 
@@ -140,4 +141,23 @@ export function searchSync(query: string, args?: any): Array<any> {
     results = results.slice(0, maxResults);
   }
   return results;
+}
+
+export function getEmojiDataFromNative(nativeString: string): FixedBaseEmoji | null {
+  if (isEmpty(nativeEmojiData)) {
+    return null;
+  }
+
+  const matches = Object.values(nativeEmojiData.emojis).filter((emoji: any) => {
+    const skinMatches = (emoji as FixedBaseEmoji).skins.filter((skin: any) => {
+      return skin.native === nativeString;
+    });
+    return skinMatches.length > 0;
+  });
+
+  if (matches.length === 0) {
+    return null;
+  }
+
+  return matches[0] as FixedBaseEmoji;
 }

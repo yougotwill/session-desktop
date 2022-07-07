@@ -11,6 +11,7 @@ import { MessageReactionPopup, StyledPopupContainer, TipPosition } from './Messa
 import { useMouse } from 'react-use';
 import { Flex } from '../../../basic/Flex';
 import { abbreviateNumber } from '../../../../util/abbreviateNumber';
+import { getEmojiDataFromNative } from '../../../../util/emoji';
 
 const StyledMessageReactionsContainer = styled(Flex)<{ x: number; y: number }>`
   ${StyledPopupContainer} {
@@ -165,6 +166,8 @@ export const MessageReactions = (props: Props): ReactElement => {
   const renderReaction = (emoji: string) => {
     const senders = Object.keys(reactions[emoji]);
     const showCount = senders && (senders.length > 1 || conversationType === 'group');
+    const emojiData = getEmojiDataFromNative(emoji);
+
     return (
       <StyledReactionContainer ref={reactionRef}>
         <StyledReaction
@@ -198,7 +201,9 @@ export const MessageReactions = (props: Props): ReactElement => {
             }
           }}
         >
-          <span>{emoji}</span>
+          <span role={'img'} aria-label={emojiData?.name}>
+            {emoji}
+          </span>
           {showCount && <span>{abbreviateNumber(senders.length)}</span>}
         </StyledReaction>
         {conversationType === 'group' && popupReaction && popupReaction === emoji && (
@@ -252,9 +257,14 @@ export const MessageReactions = (props: Props): ReactElement => {
       <StyledReactionOverflow onClick={handleExpand}>
         {Object.keys(reactions)
           .slice(4, 7)
-          .map(emoji => (
-            <span key={emoji}>{emoji}</span>
-          ))}
+          .map(emoji => {
+            const emojiData = getEmojiDataFromNative(emoji);
+            return (
+              <span key={emoji} role={'img'} aria-label={emojiData?.name}>
+                {emoji}
+              </span>
+            );
+          })}
       </StyledReactionOverflow>
     </StyledMessageReactions>
   );

@@ -86,3 +86,13 @@ export interface FixedPickerProps {
   // enableFrequentEmojiSort?: boolean | undefined;
   // useButton?: boolean | undefined;
 }
+
+type BaseEmojiSkin = { unified: string; native: string };
+
+export interface FixedBaseEmoji {
+  id: string;
+  name: string;
+  keywords: Array<string>;
+  skins: Array<BaseEmojiSkin>;
+  version: number;
+}
