@@ -57,7 +57,6 @@ import { renderEmojiQuickResultRow, searchEmojiForQuery } from './EmojiQuickResu
 import { LinkPreviews } from '../../../util/linkPreviews';
 import styled from 'styled-components';
 import { BaseEmoji } from 'emoji-mart';
-import { nativeEmojiData } from '../../../util/emoji';
 
 export interface ReplyingToMessageProps {
   convoId: string;
@@ -463,16 +462,14 @@ class CompositionBoxInner extends React.Component<Props, State> {
           data={this.fetchUsersForGroup}
           renderSuggestion={renderUserMentionRow}
         />
-        {nativeEmojiData && !_.isEmpty(nativeEmojiData) && (
-          <Mention
-            trigger=":"
-            markup="__id__"
-            appendSpaceOnAdd={true}
-            regex={neverMatchingRegex}
-            data={searchEmojiForQuery}
-            renderSuggestion={renderEmojiQuickResultRow}
-          />
-        )}
+        <Mention
+          trigger=":"
+          markup="__id__"
+          appendSpaceOnAdd={true}
+          regex={neverMatchingRegex}
+          data={searchEmojiForQuery}
+          renderSuggestion={renderEmojiQuickResultRow}
+        />
       </MentionsInput>
     );
   }

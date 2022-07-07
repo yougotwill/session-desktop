@@ -2,7 +2,7 @@ import React, { ReactElement, useCallback, useEffect, useState } from 'react';
 import styled from 'styled-components';
 import { getMessageById } from '../../../../data/data';
 import { PubKey } from '../../../../session/types/PubKey';
-import { getEmojiDataFromNative } from '../../../../util/emoji';
+import { nativeEmojiData } from '../../../../util/emoji';
 import { readableList } from '../../../../util/readableList';
 
 export type TipPosition = 'center' | 'left' | 'right';
@@ -84,8 +84,6 @@ export const MessageReactionPopup = (props: Props): ReactElement => {
   const { messageId, emoji, senders, tooltipPosition = 'center', onClick } = props;
 
   const [contacts, setContacts] = useState('');
-  const emojiData = getEmojiDataFromNative(emoji);
-
   const generateContacts = useCallback(async () => {
     let results = null;
     const message = await getMessageById(messageId);
@@ -128,7 +126,10 @@ export const MessageReactionPopup = (props: Props): ReactElement => {
       }}
     >
       {renderContacts(contacts)}
-      <StyledEmoji role={'img'} aria-label={emojiData?.name}>
+      <StyledEmoji
+        role={'img'}
+        aria-label={nativeEmojiData?.ariaLabels ? nativeEmojiData.ariaLabels[emoji] : undefined}
+      >
         {emoji}
       </StyledEmoji>
     </StyledPopupContainer>

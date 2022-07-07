@@ -12,8 +12,7 @@ import {
 import { StateType } from '../../state/reducer';
 import { getMessageReactsProps } from '../../state/selectors/conversations';
 import { ReactionList } from '../../types/Message';
-import { FixedBaseEmoji } from '../../types/Util';
-import { getEmojiDataFromNative } from '../../util/emoji';
+import { nativeEmojiData } from '../../util/emoji';
 import { sendMessageReaction } from '../../util/reactions';
 import { Avatar, AvatarSize } from '../avatar/Avatar';
 import { Flex } from '../basic/Flex';
@@ -97,7 +96,7 @@ export const ReactListModal = (props: Props): ReactElement => {
   const { isPublic, reacts, weAreAdmin } = msgProps;
   const [reactions, setReactions] = useState<ReactionList>({});
   const [currentReact, setCurrentReact] = useState('');
-  const [emojiData, setEmojiData] = useState<FixedBaseEmoji>();
+  const [reactAriaLabel, setReactAriaLabel] = useState<string | undefined>();
   const [senders, setSenders] = useState<Array<string>>([]);
 
   const handleSelectedReaction = (emoji: string): boolean => {
@@ -105,10 +104,7 @@ export const ReactListModal = (props: Props): ReactElement => {
   };
 
   const handleReactionClick = (emoji: string) => {
-    const _emojiData = getEmojiDataFromNative(emoji);
-    if (_emojiData) {
-      setEmojiData(_emojiData);
-    }
+    setReactAriaLabel(nativeEmojiData?.ariaLabels ? nativeEmojiData.ariaLabels[emoji] : undefined);
     setCurrentReact(emoji);
   };
 
@@ -173,11 +169,10 @@ export const ReactListModal = (props: Props): ReactElement => {
 
   useEffect(() => {
     if (currentReact === '' && currentReact !== reaction) {
+      setReactAriaLabel(
+        nativeEmojiData?.ariaLabels ? nativeEmojiData.ariaLabels[reaction] : undefined
+      );
       setCurrentReact(reaction);
-      const _emojiData = getEmojiDataFromNative(reaction);
-      if (_emojiData) {
-        setEmojiData(_emojiData);
-      }
     }
 
     if (reacts && !isEqual(reactions, reacts)) {
@@ -234,7 +229,7 @@ export const ReactListModal = (props: Props): ReactElement => {
               alignItems={'center'}
             >
               <p>
-                <span role={'img'} aria-label={emojiData?.name}>
+                <span role={'img'} aria-label={reactAriaLabel}>
                   {currentReact}
                 </span>
                 <span>&#8226;</span>

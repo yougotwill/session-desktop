@@ -3,7 +3,7 @@ import styled from 'styled-components';
 import { RecentReactions } from '../../../../types/Util';
 import { getRecentReactions } from '../../../../util/storage';
 import { SessionIconButton } from '../../../icon';
-import { getEmojiDataFromNative } from '../../../../util/emoji';
+import { nativeEmojiData } from '../../../../util/emoji';
 import { isEqual } from 'lodash';
 
 type Props = {
@@ -44,12 +44,11 @@ const ReactButton = styled.span`
 `;
 
 const renderReactButton = (emoji: string, action: (...args: Array<any>) => void) => {
-  const emojiData = getEmojiDataFromNative(emoji);
   return (
     <ReactButton
       key={emoji}
       role={'img'}
-      aria-label={emojiData?.name}
+      aria-label={nativeEmojiData?.ariaLabels ? nativeEmojiData.ariaLabels[emoji] : undefined}
       onClick={() => {
         action(emoji);
       }}

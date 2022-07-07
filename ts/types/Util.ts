@@ -38,6 +38,25 @@ export class RecentReactions {
   }
 }
 
+type BaseEmojiSkin = { unified: string; native: string };
+
+export interface FixedBaseEmoji {
+  id: string;
+  name: string;
+  keywords: Array<string>;
+  skins: Array<BaseEmojiSkin>;
+  version: number;
+  search?: string;
+}
+
+export interface NativeEmojiData {
+  categories: Array<{ id: string; emojis: Array<string> }>;
+  emojis: Record<string, FixedBaseEmoji>;
+  aliases: Record<string, string>;
+  sheet: { cols: number; rows: number };
+  ariaLabels?: Record<string, string>;
+}
+
 // Types for EmojiMart 5 are currently broken these are a temporary fixes
 export interface FixedPickerProps {
   autoFocus?: boolean | undefined;
@@ -85,14 +104,4 @@ export interface FixedPickerProps {
   // notFoundEmoji?: string | undefined;
   // enableFrequentEmojiSort?: boolean | undefined;
   // useButton?: boolean | undefined;
-}
-
-type BaseEmojiSkin = { unified: string; native: string };
-
-export interface FixedBaseEmoji {
-  id: string;
-  name: string;
-  keywords: Array<string>;
-  skins: Array<BaseEmojiSkin>;
-  version: number;
 }
