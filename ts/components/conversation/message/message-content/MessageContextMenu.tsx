@@ -232,6 +232,7 @@ export const MessageContextMenu = (props: Props) => {
 
   const onCloseEmoji = () => {
     setShowEmojiPanel(false);
+    hideAll();
   };
 
   const onEmojiLoseFocus = useCallback(
