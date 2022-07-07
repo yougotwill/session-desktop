@@ -1,4 +1,4 @@
-import { BaseEmoji, EmojiSet } from 'emoji-mart';
+import { EmojiSet } from 'emoji-mart';
 import { LocalizerKeys } from './LocalizerKeys';
 
 export type RenderTextCallbackType = (options: {
@@ -47,6 +47,11 @@ export interface FixedBaseEmoji {
   skins: Array<BaseEmojiSkin>;
   version: number;
   search?: string;
+  // props from emoji panel click event
+  native?: string;
+  aliases?: Array<string>;
+  shortcodes?: string;
+  unified?: string;
 }
 
 export interface NativeEmojiData {
@@ -78,7 +83,7 @@ export interface FixedPickerProps {
   noResultsEmoji?: string | undefined;
   previewPosition?: 'bottom' | 'top' | 'none' | undefined;
   skinTonePosition?: 'preview' | 'search' | 'none';
-  onEmojiSelect?: (emoji: BaseEmoji) => void;
+  onEmojiSelect?: (emoji: FixedBaseEmoji) => void;
   onClickOutside?: (...args: Array<any>) => void;
   onAddCustomEmoji?: (...args: Array<any>) => void;
   getImageURL?: () => void;
