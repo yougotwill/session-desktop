@@ -1,8 +1,9 @@
 // tslint:disable: no-implicit-dependencies max-func-body-length no-unused-expression
 import { expect } from 'chai';
 import Sinon from 'sinon';
-import * as _ from 'lodash';
+import { noop } from 'lodash';
 import { parseCapabilities } from '../../../../session/apis/open_group_api/sogsv3/sogsV3Capabilities';
+
 // tslint:disable: chai-vague-errors
 
 describe('FetchCapabilities', () => {
@@ -55,5 +56,7 @@ describe('FetchCapabilities', () => {
     });
   });
 
-  it.skip('getCapabilitiesFromBatch', () => {});
+  it.skip('getCapabilitiesFromBatch', () => {
+    noop();
+  });
 });

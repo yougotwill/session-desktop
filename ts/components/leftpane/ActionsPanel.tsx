@@ -52,12 +52,12 @@ import { IncomingCallDialog } from '../calling/IncomingCallDialog';
 import { SessionIconButton } from '../icon';
 import { SessionToastContainer } from '../SessionToastContainer';
 import { LeftPaneSectionContainer } from './LeftPaneSectionContainer';
-import { getLatestDesktopReleaseFileToFsV2 } from '../../session/apis/file_server_api/FileServerApiV2';
 import { ipcRenderer } from 'electron';
 import { UserUtils } from '../../session/utils';
 
 import { Storage } from '../../util/storage';
 import { SettingsKey } from '../../data/settings-key';
+import { getLatestReleaseFromFileServer } from '../../session/apis/file_server_api/FileServerApi';
 
 const Section = (props: { type: SectionType }) => {
   const ourNumber = useSelector(getOurNumber);
@@ -171,7 +171,7 @@ const Section = (props: { type: SectionType }) => {
 
 const cleanUpMediasInterval = DURATION.MINUTES * 60;
 
-// every 10 minutes we fetch from the fileserver to check for a new release
+// every 1 minute we fetch from the fileserver to check for a new release
 // * if there is none, no request to github are made.
 // * if there is a version on the fileserver more recent than our current, we fetch github to get the UpdateInfos and trigger an update as usual (asking user via dialog)
 const fetchReleaseFromFileServerInterval = 1000 * 60; // try to fetch the latest release from the fileserver every minute
@@ -251,8 +251,8 @@ async function fetchReleaseFromFSAndUpdateMain() {
   try {
     window.log.info('[updater] about to fetchReleaseFromFSAndUpdateMain');
 
-    const latest = await getLatestDesktopReleaseFileToFsV2();
-    window.log.info('[updater] fetched latest release from fsv2: ', latest);
+    const latest = await getLatestReleaseFromFileServer();
+    window.log.info('[updater] fetched latest release from fileserver: ', latest);
 
     if (isString(latest) && !isEmpty(latest)) {
       ipcRenderer.send('set-release-from-file-server', latest);

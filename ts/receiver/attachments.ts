@@ -1,16 +1,19 @@
-import _ from 'lodash';
+import { omit, startsWith } from 'lodash';
 
 import { MessageModel } from '../models/message';
 import { saveMessage } from '../../ts/data/data';
 import { AttachmentDownloads } from '../session/utils';
 import { ConversationModel } from '../models/conversation';
 import { OpenGroupRequestCommonType } from '../session/apis/open_group_api/opengroupV2/ApiUtil';
-import { FSv2 } from '../session/apis/file_server_api';
 import { getUnpaddedAttachment } from '../session/crypto/BufferPadding';
 import { decryptAttachment } from '../util/crypto/attachmentsEncrypter';
 import { callUtilsWorker } from '../webworker/workers/util_worker_interface';
 import { sogsV3FetchFileByFileID } from '../session/apis/open_group_api/sogsv3/sogsV3FetchFile';
 import { getV2OpenGroupRoomByRoomId } from '../data/opengroups';
+import {
+  downloadFileFromFileServer,
+  fileServerURL,
+} from '../session/apis/file_server_api/FileServerApi';
 
 export async function downloadAttachment(attachment: {
   url: string;
@@ -23,24 +26,24 @@ export async function downloadAttachment(attachment: {
   const asURL = new URL(attachment.url);
   const serverUrl = asURL.origin;
 
-  // is it an attachment hosted on the file server v2 ?
-  const defaultFsV2 = _.startsWith(serverUrl, FSv2.fileServerV2URL);
+  // is it an attachment hosted on the file server
+  const defaultFileServer = startsWith(serverUrl, fileServerURL);
 
   let res: ArrayBuffer | null = null;
 
-  if (defaultFsV2) {
+  if (defaultFileServer) {
     let attachmentId = attachment.id;
     if (!attachmentId) {
       // try to get the fileId from the end of the URL
       attachmentId = attachment.url;
     }
     window?.log?.info('Download v2 file server attachment', attachmentId);
-    res = await FSv2.downloadFileFromFSv2(attachmentId);
+    res = await downloadFileFromFileServer(attachmentId);
   } else {
     window.log.warn(
-      `downloadAttachment attachment is neither opengroup attachment nor fsv2... Dropping it ${asURL.href}`
+      `downloadAttachment attachment is neither opengroup attachment nor fileserver... Dropping it ${asURL.href}`
     );
-    throw new Error('Attachment url is not opengroupv2 nor fileserver v2. Unsupported');
+    throw new Error('Attachment url is not opengroupv2 nor fileserver. Unsupported');
   }
 
   if (!res?.byteLength) {
@@ -79,7 +82,7 @@ export async function downloadAttachment(attachment: {
   }
 
   return {
-    ..._.omit(attachment, 'digest', 'key'),
+    ...omit(attachment, 'digest', 'key'),
     data,
   };
 }
@@ -112,7 +115,7 @@ export async function downloadAttachmentSogsV3(
 
   if (attachment.size === null) {
     return {
-      ..._.omit(attachment, 'digest', 'key'),
+      ...omit(attachment, 'digest', 'key'),
       data: dataUint.buffer,
     };
   }
@@ -135,7 +138,7 @@ export async function downloadAttachmentSogsV3(
   }
 
   return {
-    ..._.omit(attachment, 'digest', 'key'),
+    ...omit(attachment, 'digest', 'key'),
     data: data.buffer,
   };
 }

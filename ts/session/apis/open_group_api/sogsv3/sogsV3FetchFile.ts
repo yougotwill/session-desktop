@@ -35,8 +35,10 @@ export async function fetchBinaryFromSogsWithOnionV4(sendOptions: {
   const stringifiedBody = null;
   const method = 'GET';
   const endpoint = `/room/${roomId}/file/${fileId}`;
-
-  const builtUrl = new URL(`${serverUrl}/${endpoint}`);
+  if (!endpoint.startsWith('/')) {
+    throw new Error('endpoint needs a leading /');
+  }
+  const builtUrl = new URL(`${serverUrl}${endpoint}`);
   let headersWithSogsHeadersIfNeeded = doNotIncludeOurSogsHeaders
     ? {}
     : await getOurOpenGroupHeaders(serverPubkey, endpoint, method, blinded, stringifiedBody);

@@ -1,7 +1,7 @@
 import AbortController from 'abort-controller';
 import { compact, uniq } from 'lodash';
 import { OpenGroupV2Room } from '../../../../data/opengroups';
-import { sendJsonViaOnionV4ToNonSnode } from '../../../onions/onionSend';
+import { sendJsonViaOnionV4ToSogs } from '../../../onions/onionSend';
 import { OpenGroupV2Info } from '../opengroupV2/ApiUtil';
 import { batchGlobalIsSuccess, parseBatchGlobalStatusCode } from './sogsV3BatchPoll';
 import {
@@ -10,7 +10,7 @@ import {
 } from './sogsV3Capabilities';
 
 export const getAllRoomInfos = async (roomInfos: OpenGroupV2Room) => {
-  const result = await sendJsonViaOnionV4ToNonSnode({
+  const result = await sendJsonViaOnionV4ToSogs({
     blinded: false,
     endpoint: '/rooms',
     method: 'GET',
@@ -81,7 +81,7 @@ export async function openGroupV2GetRoomInfoViaOnionV4({
   const hasBlindingEnabled = capabilitiesListHasBlindEnabled(caps);
   window?.log?.info(`openGroupV2GetRoomInfoViaOnionV4 capabilities for  ${serverUrl}: ${caps}`);
 
-  const result = await sendJsonViaOnionV4ToNonSnode({
+  const result = await sendJsonViaOnionV4ToSogs({
     blinded: hasBlindingEnabled,
     method: 'GET',
     serverUrl,

@@ -1,12 +1,8 @@
 import AbortController from 'abort-controller';
 import { isNumber } from 'lodash';
 import { OpenGroupRequestCommonType } from '../opengroupV2/ApiUtil';
-import { uploadFileToRoomSogs3 } from '../opengroupV2/OpenGroupAPIV2';
-import {
-  parseBatchFirstSubStatusCode,
-  parseBatchGlobalStatusCode,
-  sogsBatchSend,
-} from './sogsV3BatchPoll';
+import { batchFirstSubIsSuccess, batchGlobalIsSuccess, sogsBatchSend } from './sogsV3BatchPoll';
+import { uploadFileToRoomSogs3 } from './sogsV3SendFile';
 
 /**
  * This function does a double request to the sogs.
@@ -42,10 +38,7 @@ export const uploadImageForRoomSogsV3 = async (
     'batch'
   );
 
-  const batchStatusCode = parseBatchGlobalStatusCode(batchResult);
-  const firstStatusCode = parseBatchFirstSubStatusCode(batchResult);
-
-  if (batchStatusCode !== 200 || firstStatusCode !== 200) {
+  if (!batchGlobalIsSuccess(batchResult) || !batchFirstSubIsSuccess(batchResult)) {
     return null;
   }
   return {

@@ -105,29 +105,16 @@ export function batchGlobalIsSuccess(
   response?: BatchSogsReponse | OnionV4JSONSnodeResponse | null
 ): boolean {
   const status = parseBatchGlobalStatusCode(response);
-  return Boolean(status && status >= 200 && status <= 300);
+  return Boolean(status && isNumber(status) && status >= 200 && status <= 300);
 }
 
-export function parseBatchFirstSubStatusCode(
-  response?: BatchSogsReponse | null
-): number | undefined {
+function parseBatchFirstSubStatusCode(response?: BatchSogsReponse | null): number | undefined {
   return response?.body?.[0].code;
-}
-
-export function parseBatchSecondSubStatusCode(
-  response?: BatchSogsReponse | null
-): number | undefined {
-  return response?.body?.[1].code;
 }
 
 export function batchFirstSubIsSuccess(response?: BatchSogsReponse | null): boolean {
   const status = parseBatchFirstSubStatusCode(response);
-  return Boolean(status && status >= 200 && status <= 300);
-}
-
-export function batchSecondSubIsSuccess(response?: BatchSogsReponse | null): boolean {
-  const status = parseBatchSecondSubStatusCode(response);
-  return Boolean(status && status >= 200 && status <= 300);
+  return Boolean(status && isNumber(status) && status >= 200 && status <= 300);
 }
 
 export type SubrequestOptionType = 'capabilities' | 'messages' | 'pollInfo' | 'inbox';
@@ -372,7 +359,10 @@ const sendSogsBatchRequestOnionV4 = async (
   abortSignal: AbortSignal
 ): Promise<null | any> => {
   const { endpoint, headers, method, body } = request;
-  const builtUrl = new URL(`${serverUrl}/${endpoint}`);
+  if (!endpoint.startsWith('/')) {
+    throw new Error('endpoint needs a leading /');
+  }
+  const builtUrl = new URL(`${serverUrl}${endpoint}`);
 
   // this function extracts the body and status_code and JSON.parse it already
   const batchResponse = await sendViaOnionV4ToNonSnode(

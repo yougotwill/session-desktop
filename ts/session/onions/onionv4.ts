@@ -1,13 +1,15 @@
 import { from_string, to_string } from 'libsodium-wrappers-sumo';
-import { isString, toNumber } from 'lodash';
-import { SnodeResponseV4 } from '../apis/snode_api/onions';
+import { isString, omit, toNumber } from 'lodash';
+import { EncodeV4OnionRequestInfos, SnodeResponseV4 } from '../apis/snode_api/onions';
 import { concatUInt8Array } from '../crypto';
 
-export const encodeV4Request = (requestInfo: {
-  body?: string | Uint8Array | null | undefined;
-}): Uint8Array => {
+export const encodeV4Request = (requestInfo: EncodeV4OnionRequestInfos): Uint8Array => {
   const { body } = requestInfo;
-  const requestInfoData = from_string(JSON.stringify(requestInfo));
+
+  // the body is appended separately to the request (see below)
+  const infoWithoutBody = omit(requestInfo, 'body');
+
+  const requestInfoData = from_string(JSON.stringify(infoWithoutBody));
   const prefixData = from_string(`l${requestInfoData.length}:`);
   const suffixData = from_string('e');
   if (body) {

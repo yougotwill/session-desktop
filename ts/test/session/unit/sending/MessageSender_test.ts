@@ -7,7 +7,6 @@ import { MessageEncrypter } from '../../../../session/crypto';
 import { SignalService } from '../../../../protobuf';
 import { PubKey, RawMessage } from '../../../../session/types';
 import { MessageUtils, UserUtils } from '../../../../session/utils';
-import { ApiV2 } from '../../../../session/apis/open_group_api/opengroupV2';
 import * as Data from '../../../../../ts/data/data';
 import { SNodeAPI } from '../../../../session/apis/snode_api';
 import _ from 'lodash';
@@ -184,7 +183,7 @@ describe('MessageSender', () => {
   });
 
   describe('sendToOpenGroupV2', () => {
-    let postMessageRetryableStub: sinon.SinonStub;
+    const postMessageRetryableStub: sinon.SinonStub = Sinon.stub().resolves(); // FIXME
     beforeEach(() => {
       Sinon.stub(UserUtils, 'getOurPubKeyStrFromCache').resolves(
         TestUtils.generateFakePubKey().key
@@ -212,7 +211,6 @@ describe('MessageSender', () => {
       const roomInfos = TestUtils.generateOpenGroupV2RoomInfos();
 
       postMessageRetryableStub.throws('whate');
-      Sinon.stub(ApiV2, 'getMinTimeout').returns(2);
 
       postMessageRetryableStub.onThirdCall().resolves();
       await MessageSender.sendToOpenGroupV2(message, roomInfos, false, []);
@@ -222,7 +220,6 @@ describe('MessageSender', () => {
     it('should not retry more than 3 postMessageRetryableStub ', async () => {
       const message = TestUtils.generateOpenGroupVisibleMessage();
       const roomInfos = TestUtils.generateOpenGroupV2RoomInfos();
-      Sinon.stub(ApiV2, 'getMinTimeout').returns(2);
       postMessageRetryableStub.throws('fake error');
       postMessageRetryableStub.onCall(4).resolves();
       try {

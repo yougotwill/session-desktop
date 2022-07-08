@@ -8,9 +8,9 @@ import { DataMessage } from '../../ts/session/messages/outgoing';
 import { ClosedGroupVisibleMessage } from '../session/messages/outgoing/visibleMessage/ClosedGroupVisibleMessage';
 import { PubKey } from '../../ts/session/types';
 import {
-  uploadAttachmentsToFsV2,
-  uploadLinkPreviewToFsV2,
-  uploadQuoteThumbnailsToFsV2,
+  uploadAttachmentsToFileServer,
+  uploadLinkPreviewToFileServer,
+  uploadQuoteThumbnailsToFileServer,
   UserUtils,
 } from '../../ts/session/utils';
 import {
@@ -745,17 +745,19 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
     const firstPreviewWithData = previewWithData?.[0] || null;
 
     // we want to go for the v1, if this is an OpenGroupV1 or not an open group at all
-    if (conversation?.isOpenGroupV2()) {
+    if (conversation?.isPublic()) {
+      if (!conversation?.isOpenGroupV2()) {
+        throw new Error('Only opengroupv2 are supported now');
+      }
       const openGroupV2 = conversation.toOpenGroupV2();
       attachmentPromise = uploadAttachmentsV3(finalAttachments, openGroupV2);
       linkPreviewPromise = uploadLinkPreviewsV3(firstPreviewWithData, openGroupV2);
       quotePromise = uploadQuoteThumbnailsV3(openGroupV2, quoteWithData);
     } else {
-      // NOTE: we want to go for the v1 if this is an OpenGroupV1 or not an open group at all
-      // because there is a fallback invoked on uploadV1() for attachments for not open groups attachments
-      attachmentPromise = uploadAttachmentsToFsV2(finalAttachments);
-      linkPreviewPromise = uploadLinkPreviewToFsV2(firstPreviewWithData);
-      quotePromise = uploadQuoteThumbnailsToFsV2(quoteWithData);
+      // if that's not an sogs, the file is uploaded to the fileserver instead
+      attachmentPromise = uploadAttachmentsToFileServer(finalAttachments);
+      linkPreviewPromise = uploadLinkPreviewToFileServer(firstPreviewWithData);
+      quotePromise = uploadQuoteThumbnailsToFileServer(quoteWithData);
     }
 
     const [attachments, preview, quote] = await Promise.all([

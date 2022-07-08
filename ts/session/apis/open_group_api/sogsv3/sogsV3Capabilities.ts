@@ -1,5 +1,5 @@
 import _, { isArray, isEmpty, isEqual, isObject } from 'lodash';
-import { sendJsonViaOnionV4ToNonSnode } from '../../../onions/onionSend';
+import { sendJsonViaOnionV4ToSogs } from '../../../onions/onionSend';
 import { getOurOpenGroupHeaders } from '../opengroupV2/OpenGroupPollingUtils';
 import {
   getV2OpenGroupRoomsByServerUrl,
@@ -29,7 +29,7 @@ export const capabilitiesFetchForServer = async (
     return null;
   }
 
-  const result = await sendJsonViaOnionV4ToNonSnode({
+  const result = await sendJsonViaOnionV4ToSogs({
     abortSignal,
     blinded,
     endpoint,

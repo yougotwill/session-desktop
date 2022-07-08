@@ -8,10 +8,10 @@ import {
   Quote,
   QuotedAttachmentWithUrl,
 } from '../messages/outgoing/visibleMessage/VisibleMessage';
-import { FSv2 } from '../apis/file_server_api';
 import { addAttachmentPadding } from '../crypto/BufferPadding';
 import _ from 'lodash';
 import { encryptAttachment } from '../../util/crypto/attachmentsEncrypter';
+import { uploadFileToFsWithOnionV4 } from '../apis/file_server_api/FileServerApi';
 
 interface UploadParams {
   attachment: Attachment;
@@ -39,7 +39,7 @@ export interface RawQuote {
   attachments?: Array<RawQuoteAttachment>;
 }
 
-async function uploadToFsV2(params: UploadParams): Promise<AttachmentPointerWithUrl> {
+async function uploadToFileServer(params: UploadParams): Promise<AttachmentPointerWithUrl> {
   const { attachment, isRaw = false, shouldPad = false } = params;
   if (typeof attachment !== 'object' || attachment == null) {
     throw new Error('Invalid attachment passed.');
@@ -73,27 +73,24 @@ async function uploadToFsV2(params: UploadParams): Promise<AttachmentPointerWith
   }
 
   // use file server v2
-  if (FSv2.useFileServerAPIV2Sending) {
-    const uploadToV2Result = await FSv2.uploadFileToFsV2(attachmentData);
-    if (uploadToV2Result) {
-      const pointerWithUrl: AttachmentPointerWithUrl = {
-        ...pointer,
-        id: uploadToV2Result.fileId,
-        url: uploadToV2Result.fileUrl,
-      };
-      return pointerWithUrl;
-    }
-    window?.log?.warn('upload to file server v2 failed');
-    throw new Error(`upload to file server v2 of ${attachment.fileName} failed`);
+  const uploadToV2Result = await uploadFileToFsWithOnionV4(attachmentData);
+  if (uploadToV2Result) {
+    const pointerWithUrl: AttachmentPointerWithUrl = {
+      ...pointer,
+      id: uploadToV2Result.fileId,
+      url: uploadToV2Result.fileUrl,
+    };
+    return pointerWithUrl;
   }
-  throw new Error('Only v2 fileserver upload is supported');
+  window?.log?.warn('upload to file server v2 failed');
+  throw new Error(`upload to file server v2 of ${attachment.fileName} failed`);
 }
 
-export async function uploadAttachmentsToFsV2(
+export async function uploadAttachmentsToFileServer(
   attachments: Array<Attachment>
 ): Promise<Array<AttachmentPointerWithUrl>> {
   const promises = (attachments || []).map(async attachment =>
-    uploadToFsV2({
+    uploadToFileServer({
       attachment,
       shouldPad: true,
     })
@@ -102,15 +99,15 @@ export async function uploadAttachmentsToFsV2(
   return Promise.all(promises);
 }
 
-export async function uploadLinkPreviewToFsV2(
+export async function uploadLinkPreviewToFileServer(
   preview: RawPreview | null
 ): Promise<PreviewWithAttachmentUrl | undefined> {
   // some links do not have an image associated, and it makes the whole message fail to send
   if (!preview?.image) {
-    window.log.warn('tried to upload file to fsv2 without image.. skipping');
+    window.log.warn('tried to upload file to FileServer without image.. skipping');
     return preview as any;
   }
-  const image = await uploadToFsV2({
+  const image = await uploadToFileServer({
     attachment: preview.image,
   });
   return {
@@ -120,7 +117,9 @@ export async function uploadLinkPreviewToFsV2(
   };
 }
 
-export async function uploadQuoteThumbnailsToFsV2(quote?: RawQuote): Promise<Quote | undefined> {
+export async function uploadQuoteThumbnailsToFileServer(
+  quote?: RawQuote
+): Promise<Quote | undefined> {
   if (!quote) {
     return undefined;
   }
@@ -128,7 +127,7 @@ export async function uploadQuoteThumbnailsToFsV2(quote?: RawQuote): Promise<Quo
   const promises = (quote.attachments ?? []).map(async attachment => {
     let thumbnail: AttachmentPointer | undefined;
     if (attachment.thumbnail) {
-      thumbnail = await uploadToFsV2({
+      thumbnail = await uploadToFileServer({
         attachment: attachment.thumbnail,
       });
     }

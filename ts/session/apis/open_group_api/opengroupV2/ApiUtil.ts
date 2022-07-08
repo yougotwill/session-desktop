@@ -1,5 +1,4 @@
 import _ from 'lodash';
-import { FileServerV2Request } from '../../file_server_api/FileServerApiV2';
 import { PubKey } from '../../../types';
 import { allowOnlyOneAtATime } from '../../../utils/Promise';
 import {
@@ -12,13 +11,14 @@ import { parseOpenGroupV2 } from './JoinOpenGroupV2';
 import { OpenGroupMessageV2 } from './OpenGroupMessageV2';
 import { callUtilsWorker } from '../../../../webworker/workers/util_worker_interface';
 import { getAllRoomInfos } from '../sogsv3/sogsV3RoomInfos';
+import { FileServerRequest } from '../../file_server_api/FileServerApi';
 
 export type OpenGroupRequestCommonType = {
   serverUrl: string;
   roomId: string;
 };
 
-export type OpenGroupV2Request = FileServerV2Request & {
+export type OpenGroupV2Request = FileServerRequest & {
   room: string;
   server: string;
   serverPublicKey?: string; // if not provided, a db called will be made to try to get it.

@@ -528,7 +528,6 @@ export async function retrieveNextMessages(
     associatedWith,
     timeout: 4000,
   });
-  debugger;
 
   if (!result) {
     window?.log?.warn(

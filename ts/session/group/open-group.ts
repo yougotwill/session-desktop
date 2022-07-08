@@ -49,7 +49,6 @@ export async function initiateOpenGroupUpdate(
         { id: fileId, size: null, url: fileUrl },
         roomInfos
       );
-      debugger;
 
       if (!downloaded || !(downloaded.data instanceof ArrayBuffer)) {
         const typeFound = typeof downloaded;

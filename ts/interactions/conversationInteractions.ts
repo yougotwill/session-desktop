@@ -35,7 +35,6 @@ import {
 import { quoteMessage, resetConversationExternal } from '../state/ducks/conversations';
 import { getDecryptedMediaUrl } from '../session/crypto/DecryptedAttachmentsManager';
 import { IMAGE_JPEG } from '../types/MIME';
-import { FSv2 } from '../session/apis/file_server_api';
 import { fromHexToArray, toHex } from '../session/utils/String';
 import { forceSyncConfigurationNowIfNeeded } from '../session/utils/syncUtils';
 import { SessionButtonColor } from '../components/basic/SessionButton';
@@ -47,6 +46,7 @@ import { MIME } from '../types';
 import { setLastProfileUpdateTimestamp } from '../util/storage';
 import { getSodiumRenderer } from '../session/crypto';
 import { encryptProfile } from '../util/crypto/profileEncrypter';
+import { uploadFileToFsWithOnionV4 } from '../session/apis/file_server_api/FileServerApi';
 
 export const getCompleteUrlForV2ConvoId = async (convoId: string) => {
   if (convoId.match(openGroupV2ConversationIdRegex)) {
@@ -373,7 +373,7 @@ export async function setDisappearingMessagesByConvoId(
 }
 
 /**
- * This function can be used for reupload our avatar to the fsv2 or upload a new avatar.
+ * This function can be used for reupload our avatar to the fileserver or upload a new avatar.
  *
  * If this is a reupload, the old profileKey is used, otherwise a new one is generated
  */
@@ -427,13 +427,12 @@ export async function uploadOurAvatar(newAvatarDecrypted?: ArrayBuffer) {
 
   const encryptedData = await encryptProfile(decryptedAvatarData, profileKey);
 
-  const avatarPointer = await FSv2.uploadFileToFsV2(encryptedData);
-  let fileUrl;
+  const avatarPointer = await uploadFileToFsWithOnionV4(encryptedData);
   if (!avatarPointer) {
-    window.log.warn('failed to upload avatar to fsv2');
+    window.log.warn('failed to upload avatar to fileserver');
     return;
   }
-  ({ fileUrl } = avatarPointer);
+  const { fileUrl, fileId } = avatarPointer;
 
   ourConvo.set('avatarPointer', fileUrl);
 
@@ -454,7 +453,7 @@ export async function uploadOurAvatar(newAvatarDecrypted?: ArrayBuffer) {
   await ourConvo.setSessionProfile({
     avatarPath: upgraded.path,
     displayName,
-    imageID,
+    avatarImageId: fileId,
   });
   const newTimestampReupload = Date.now();
   await createOrUpdateItem({ id: lastAvatarUploadTimestamp, value: newTimestampReupload });

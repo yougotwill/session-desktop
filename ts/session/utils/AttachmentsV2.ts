@@ -11,7 +11,7 @@ import {
 import { addAttachmentPadding } from '../crypto/BufferPadding';
 import { RawPreview, RawQuote } from './Attachments';
 import _ from 'lodash';
-import { uploadFileToRoomSogs3 } from '../apis/open_group_api/opengroupV2/OpenGroupAPIV2';
+import { uploadFileToRoomSogs3 } from '../apis/open_group_api/sogsv3/sogsV3SendFile';
 
 interface UploadParamsV2 {
   attachment: Attachment;

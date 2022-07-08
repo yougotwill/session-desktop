@@ -20,7 +20,8 @@ import {
   addJsonContentTypeToHeaders,
 } from '../apis/open_group_api/sogsv3/sogsV3SendMessage';
 import { AbortSignal } from 'abort-controller';
-import { to_string } from 'libsodium-wrappers-sumo';
+import { pnServerPubkeyHex, pnServerUrl } from '../apis/push_notification_api/PnServer';
+import { fileServerPubKey, fileServerURL } from '../apis/file_server_api/FileServerApi';
 
 export type OnionFetchOptions = {
   method: string;
@@ -49,28 +50,13 @@ const buildSendViaOnionPayload = (url: URL, fetchOptions: OnionFetchOptions): On
     body: fetchOptions.body || (undefined as any),
     // safety issue with file server, just safer to have this
     // no initial /
-    endpoint: url.pathname.replace(/^\//, ''),
+    endpoint: url.pathname,
     headers: fetchOptions.headers || {},
   };
   if (url.search) {
     payloadObj.endpoint += url.search;
   }
 
-  // // from https://github.com/sindresorhus/is-stream/blob/master/index.js
-  // if (
-  //   payloadObj.body &&
-  //   typeof payloadObj.body === 'object' &&
-  //   typeof payloadObj.body.pipe === 'function'
-  // ) {
-  //   const fData = payloadObj.body.getBuffer();
-  //   const fHeaders = payloadObj.body.getHeaders();
-  //   tempHeaders = { ...tempHeaders, ...fHeaders };
-  //   // update headers for boundary
-  //   // update body with base64 chunk
-  //   payloadObj.body = {
-  //     fileUpload: fData.toString('base64'),
-  //   };
-  // }
   payloadObj.headers = tempHeaders;
   return payloadObj;
 };
@@ -103,7 +89,7 @@ export type OnionV4SnodeResponse = {
 };
 
 export type OnionV4JSONSnodeResponse = {
-  body: object | null;
+  body: Record<string, any> | null;
   status_code: number;
 };
 
@@ -112,128 +98,15 @@ export type OnionV4BinarySnodeResponse = {
   status_code: number;
 };
 
-/**
- * @param destinationX25519Key The destination key
- * @param URL the URL
- * @param fetchOptions options to be used for fetching
- * @param options optional onion fetch options
- * @param abortSignal the abort signal
- * This function can be used to make a request via onion to a non snode server.
- *
- * A non Snode server is for instance the Push Notification server or an OpengroupV2 server.
- *
- * FIXME the type for this is not correct for open group api v2 returned values
- * result is status_code and whatever the body should be
- */
-export const sendViaOnionToNonSnode = async (
-  destinationX25519Key: string,
-  url: URL,
-  fetchOptions: OnionFetchOptions,
-  abortSignal?: AbortSignal
-): Promise<OnionSnodeResponse | null> => {
-  const castedDestinationX25519Key =
-    typeof destinationX25519Key !== 'string' ? toHex(destinationX25519Key) : destinationX25519Key;
-  // Note looks like this might happen for opengroupv1 which should be removed by now
-  if (!destinationX25519Key || typeof destinationX25519Key !== 'string') {
-    window?.log?.error('sendViaOnion - called without a server public key or not a string key');
-
-    throw new Error('sendViaOnion - called without a server public key or not a string key');
-  }
-
-  const payloadObj = buildSendViaOnionPayload(url, fetchOptions);
-  console.warn('payloadObj,', payloadObj);
-  // if protocol is forced to 'http:' => just use http (without the ':').
-  // otherwise use https as protocol (this is the default)
-  const forcedHttp = url.protocol === PROTOCOLS.HTTP;
-  const finalRelayOptions: FinalRelayOptions = {
-    host: url.hostname,
-  };
-
-  if (forcedHttp) {
-    finalRelayOptions.protocol = 'http';
-  }
-  if (forcedHttp) {
-    finalRelayOptions.port = url.port ? toNumber(url.port) : 80;
-  }
-
-  let result: SnodeResponse | SnodeResponseV4 | undefined;
-  try {
-    result = await pRetry(
-      async () => {
-        const pathNodes = await getOnionPathForSending();
-
-        if (!pathNodes) {
-          throw new Error('getOnionPathForSending is emtpy');
-        }
-
-        if (fetchOptions.useV4) {
-          throw new Error('fetchOptions.useV4 is true. Use the onionv4 for it then');
-        }
-        /**
-         * This call handles ejecting a snode or a path if needed. If that happens, it throws a retryable error and the pRetry
-         * call above will call us again with the same params but a different path.
-         * If the error is not recoverable, it throws a pRetry.AbortError.
-         */
-        return sendOnionRequestHandlingSnodeEject({
-          nodePath: pathNodes,
-          destX25519Any: castedDestinationX25519Key,
-          finalDestOptions: payloadObj,
-          finalRelayOptions,
-          abortSignal,
-          useV4: fetchOptions.useV4,
-        });
-      },
-      {
-        // retries: 2, // retry 3 (2+1) times at most
-        retries: 0, // FIXME audric rollback retry 3 (2+1) times at most
-        minTimeout: 500,
-        onFailedAttempt: e => {
-          window?.log?.warn(
-            `sendViaOnionToNonSnodeRetryable attempt #${e.attemptNumber} failed. ${e.retriesLeft} retries left...`
-          );
-        },
-      }
-    );
-  } catch (e) {
-    window?.log?.warn('sendViaOnionToNonSnodeRetryable failed ', e.message);
-    return null;
-  }
-
-  if (!result) {
-    // v4 failed responses result is undefined
-    window?.log?.warn('sendViaOnionToSnodeRetryable failed during V4 request');
-    return null;
-  }
-
-  // get the return variables we need
-  let txtResponse = '';
-
-  const { bodyBinary } = result;
-  txtResponse = bodyBinary ? to_string(bodyBinary) : '';
-  let body = (result as any).body;
-  try {
-    if (fetchOptions.useV4) {
-      throw new Error('use the other sendv4 for sending v4');
-    } else {
-      body = JSON.parse(txtResponse);
-    }
-  } catch (e) {
-    window?.log?.error("sendViaOnion Can't decode JSON body", typeof result.bodyBinary);
-  }
-
-  // result.status has the http response code
-  if (!txtResponse) {
-    txtResponse = JSON.stringify(body);
-  }
-  return { result: result as SnodeResponse, txtResponse, response: body };
-};
-
 export const sendViaOnionV4ToNonSnode = async (
   destinationX25519Key: string,
   url: URL,
   fetchOptions: OnionFetchOptions,
   abortSignal?: AbortSignal
 ): Promise<OnionV4SnodeResponse | null> => {
+  if (!fetchOptions.useV4) {
+    throw new Error('sendViaOnionV4ToNonSnode is only to be used for onion v4 calls');
+  }
   const castedDestinationX25519Key =
     typeof destinationX25519Key !== 'string' ? toHex(destinationX25519Key) : destinationX25519Key;
 
@@ -318,7 +191,7 @@ export const sendViaOnionV4ToNonSnode = async (
   }
 };
 
-export async function sendJsonViaOnionV4ToNonSnode(sendOptions: {
+export async function sendJsonViaOnionV4ToSogs(sendOptions: {
   serverUrl: string;
   endpoint: string;
   serverPubkey: string;
@@ -340,7 +213,10 @@ export async function sendJsonViaOnionV4ToNonSnode(sendOptions: {
     headers: includedHeaders,
     doNotIncludeOurSogsHeaders,
   } = sendOptions;
-  const builtUrl = new URL(`${serverUrl}/${endpoint}`);
+  if (!endpoint.startsWith('/')) {
+    throw new Error('endpoint needs a leading /');
+  }
+  const builtUrl = new URL(`${serverUrl}${endpoint}`);
   let headersWithSogsHeadersIfNeeded = doNotIncludeOurSogsHeaders
     ? {}
     : await getOurOpenGroupHeaders(serverPubkey, endpoint, method, blinded, stringifiedBody);
@@ -364,7 +240,40 @@ export async function sendJsonViaOnionV4ToNonSnode(sendOptions: {
   return res as OnionV4JSONSnodeResponse;
 }
 
-export async function sendBinaryViaOnionV4ToNonSnode(sendOptions: {
+/**
+ * Send some json to the PushNotification server.
+ * Desktop only send `/notify` requests.
+ *
+ * You should probably not use this function directly but instead rely on the PnServer.notifyPnServer() function
+ */
+export async function sendJsonViaOnionV4ToPnServer(sendOptions: {
+  endpoint: string;
+  method: string;
+  stringifiedBody: string | null;
+  abortSignal: AbortSignal;
+}): Promise<OnionV4JSONSnodeResponse | null> {
+  const { endpoint, method, stringifiedBody, abortSignal } = sendOptions;
+  if (!endpoint.startsWith('/')) {
+    throw new Error('endpoint needs a leading /');
+  }
+  const builtUrl = new URL(`${pnServerUrl}${endpoint}`);
+
+  const res = await sendViaOnionV4ToNonSnode(
+    pnServerPubkeyHex,
+    builtUrl,
+    {
+      method,
+      headers: undefined,
+      body: stringifiedBody || undefined,
+      useV4: true,
+    },
+    abortSignal
+  );
+
+  return res as OnionV4JSONSnodeResponse;
+}
+
+export async function sendBinaryViaOnionV4ToSogs(sendOptions: {
   serverUrl: string;
   endpoint: string;
   serverPubkey: string;
@@ -388,7 +297,10 @@ export async function sendBinaryViaOnionV4ToNonSnode(sendOptions: {
   if (!bodyBinary) {
     return null;
   }
-  const builtUrl = new URL(`${serverUrl}/${endpoint}`);
+  if (!endpoint.startsWith('/')) {
+    throw new Error('endpoint needs a leading /');
+  }
+  const builtUrl = new URL(`${serverUrl}${endpoint}`);
   let headersWithSogsHeadersIfNeeded = await getOurOpenGroupHeaders(
     serverPubkey,
     endpoint,
@@ -408,6 +320,104 @@ export async function sendBinaryViaOnionV4ToNonSnode(sendOptions: {
       method,
       headers: addBinaryContentTypeToHeaders(headersWithSogsHeadersIfNeeded as any),
       body: bodyBinary || undefined,
+      useV4: true,
+    },
+    abortSignal
+  );
+
+  return res as OnionV4JSONSnodeResponse;
+}
+
+/**
+ *
+ * FILE SERVER REQUESTS
+ *
+ */
+
+/**
+ * Upload binary to the file server.
+ * You should probably not use this function directly, but instead rely on the FileServerAPI.uploadFileToFsWithOnionV4()
+ */
+export async function sendBinaryViaOnionV4ToFileServer(sendOptions: {
+  endpoint: string;
+  method: string;
+  bodyBinary: Uint8Array;
+  abortSignal: AbortSignal;
+}): Promise<OnionV4JSONSnodeResponse | null> {
+  const { endpoint, method, bodyBinary, abortSignal } = sendOptions;
+  if (!endpoint.startsWith('/')) {
+    throw new Error('endpoint needs a leading /');
+  }
+  const builtUrl = new URL(`${fileServerURL}${endpoint}`);
+
+  const res = await sendViaOnionV4ToNonSnode(
+    fileServerPubKey,
+    builtUrl,
+    {
+      method,
+      headers: undefined,
+      body: bodyBinary,
+      useV4: true,
+    },
+    abortSignal
+  );
+
+  return res as OnionV4JSONSnodeResponse;
+}
+
+/**
+ * Download binary from the file server.
+ * You should probably not use this function directly, but instead rely on the FileServerAPI.downloadFileFromFileServer()
+ */
+export async function getBinaryViaOnionV4FromFileServer(sendOptions: {
+  endpoint: string;
+  method: string;
+  abortSignal: AbortSignal;
+}): Promise<OnionV4BinarySnodeResponse | null> {
+  const { endpoint, method, abortSignal } = sendOptions;
+  if (!endpoint.startsWith('/')) {
+    throw new Error('endpoint needs a leading /');
+  }
+  const builtUrl = new URL(`${fileServerURL}${endpoint}`);
+
+  const res = await sendViaOnionV4ToNonSnode(
+    fileServerPubKey,
+    builtUrl,
+    {
+      method,
+      headers: undefined,
+      body: undefined,
+      useV4: true,
+    },
+    abortSignal
+  );
+
+  return res as OnionV4BinarySnodeResponse;
+}
+
+/**
+ * Send some generic json to the fileserver.
+ * This function should probably not used directly as we only need it for the FileServerApi.getLatestReleaseFromFileServer() function
+ */
+export async function sendJsonViaOnionV4ToFileServer(sendOptions: {
+  endpoint: string;
+  method: string;
+  stringifiedBody: string | null;
+  abortSignal: AbortSignal;
+}): Promise<OnionV4JSONSnodeResponse | null> {
+  const { endpoint, method, stringifiedBody, abortSignal } = sendOptions;
+  if (!endpoint.startsWith('/')) {
+    throw new Error('endpoint needs a leading /');
+  }
+  const builtUrl = new URL(`${fileServerURL}${endpoint}`);
+
+  const res = await sendViaOnionV4ToNonSnode(
+    fileServerPubKey,
+    builtUrl,
+    {
+      method,
+      headers: undefined,
+      body: stringifiedBody || undefined,
       useV4: true,
     },
     abortSignal

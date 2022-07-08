@@ -1,6 +1,6 @@
 import { AbortSignal } from 'abort-controller';
 import { APPLICATION_JSON, APPLICATION_OCTET_STREAM } from '../../../../types/MIME';
-import { sendJsonViaOnionV4ToNonSnode } from '../../../onions/onionSend';
+import { sendJsonViaOnionV4ToSogs } from '../../../onions/onionSend';
 import { UserUtils } from '../../../utils';
 import { OpenGroupCapabilityRequest } from '../opengroupV2/ApiUtil';
 import { OpenGroupMessageV2 } from '../opengroupV2/OpenGroupMessageV2';
@@ -52,7 +52,7 @@ export const sendSogsMessageOnionV4 = async (
 
   const stringifiedBody = JSON.stringify(json);
 
-  const result = await sendJsonViaOnionV4ToNonSnode({
+  const result = await sendJsonViaOnionV4ToSogs({
     serverUrl,
     endpoint,
     serverPubkey,
@@ -113,7 +113,7 @@ export const sendMessageOnionV4BlindedRequest = async (
   const json = signedMessage.toBLindedMessageRequestJson();
   const stringifiedBody = JSON.stringify(json);
 
-  const result = await sendJsonViaOnionV4ToNonSnode({
+  const result = await sendJsonViaOnionV4ToSogs({
     serverUrl,
     endpoint,
     serverPubkey,

@@ -1,3 +1,5 @@
+import { OnionV4JSONSnodeResponse } from '../../../onions/onionSend';
+
 /**
  * An onion request to the open group api returns something like
  * {result: {status_code:number; whatever: somerandomtype}; }
@@ -14,4 +16,13 @@ export const parseStatusCodeFromOnionRequest = (onionResult: any): number | unde
     return statusCode;
   }
   return undefined;
+};
+
+export const parseStatusCodeFromOnionRequestV4 = (
+  onionV4Result: OnionV4JSONSnodeResponse | null
+): number | undefined => {
+  if (!onionV4Result) {
+    return undefined;
+  }
+  return onionV4Result?.body?.status_code || undefined;
 };

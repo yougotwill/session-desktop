@@ -7,14 +7,14 @@ import { OnionPaths } from '../../onions';
 import { toHex } from '../../utils/String';
 import pRetry from 'p-retry';
 import { ed25519Str, incrementBadPathCountOrDrop } from '../../onions/onionPath';
-import _, { isString } from 'lodash';
+import _, { cloneDeep, isString, omit } from 'lodash';
 // hold the ed25519 key of a snode against the time it fails. Used to remove a snode only after a few failures (snodeFailureThreshold failures)
 let snodeFailureCount: Record<string, number> = {};
 
 import { Snode } from '../../../data/data';
 import { ERROR_CODE_NO_CONNECT } from './SNodeAPI';
 import { Onions } from '.';
-import { hrefPnServerDev, hrefPnServerProd } from '../push_notification_api/PnServer';
+import { hrefPnServerProd } from '../push_notification_api/PnServer';
 import { callUtilsWorker } from '../../../webworker/workers/util_worker_interface';
 import { encodeV4Request } from '../../onions/onionv4';
 import { AbortSignal } from 'abort-controller';
@@ -53,13 +53,16 @@ export const ERROR_421_HANDLED_RETRY_REQUEST =
 export const CLOCK_OUT_OF_SYNC_MESSAGE_ERROR =
   'Your clock is out of sync with the network. Check your clock.';
 
+export type EncodeV4OnionRequestInfos = {
+  headers: Record<string, any> | null | undefined;
+  body?: string | Uint8Array | null;
+  method: string;
+  endpoint: string;
+};
+
 async function encryptOnionV4RequestForPubkey(
   pubKeyX25519hex: string,
-  requestInfo: {
-    destination_ed25519_hex?: string | undefined;
-    headers?: Record<string, string> | undefined;
-    body?: string | Uint8Array | null | undefined;
-  }
+  requestInfo: EncodeV4OnionRequestInfos
 ) {
   const plaintext = encodeV4Request(requestInfo);
 
@@ -148,17 +151,8 @@ async function buildOnionCtxs(
     const relayingToFinalDestination = i === firstPos; // if last position
 
     if (relayingToFinalDestination && finalRelayOptions) {
-      let target = '/loki/v2/lsrpc';
-
-      const isCallToPn =
-        finalRelayOptions?.host === hrefPnServerDev || finalRelayOptions?.host === hrefPnServerProd;
-      if (!isCallToPn) {
-        target = '/loki/v3/lsrpc';
-      }
-
-      if (useV4 === true) {
-        target = '/oxen/v4/lsrpc';
-      }
+      const isCallToPn = finalRelayOptions?.host === hrefPnServerProd;
+      const target = !isCallToPn && !useV4 ? '/loki/v3/lsrpc' : '/oxen/v4/lsrpc';
 
       dest = {
         host: finalRelayOptions.host,
@@ -709,11 +703,7 @@ export const sendOnionRequestHandlingSnodeEject = async ({
 }: {
   nodePath: Array<Snode>;
   destX25519Any: string;
-  finalDestOptions: {
-    destination_ed25519_hex?: string;
-    headers?: Record<string, string>;
-    body?: string | null | Uint8Array;
-  };
+  finalDestOptions: FinalDestOptions;
   finalRelayOptions?: FinalRelayOptions;
   abortSignal?: AbortSignal;
   associatedWith?: string;
@@ -772,6 +762,30 @@ export const sendOnionRequestHandlingSnodeEject = async ({
   });
 };
 
+function throwIfInvalidV4RequestInfos(request: FinalDestOptions): EncodeV4OnionRequestInfos {
+  const { body, endpoint, headers, method } = request;
+  if (!endpoint || !method) {
+    throw new Error('v4onion request needs endpoijt pubkey and method at least');
+  }
+
+  const requestInfos: EncodeV4OnionRequestInfos = {
+    endpoint,
+    headers,
+    method,
+    body,
+  };
+
+  return requestInfos;
+}
+
+export type FinalDestOptions = {
+  destination_ed25519_hex?: string;
+  headers?: Record<string, string>;
+  body?: string | null | Uint8Array;
+  method?: string | null;
+  endpoint?: string | null;
+};
+
 /**
  *
  * Onion requests looks like this
@@ -785,47 +799,31 @@ export const sendOnionRequestHandlingSnodeEject = async ({
  */
 const sendOnionRequest = async ({
   nodePath,
-  destX25519Any,
-  finalDestOptions,
+  destX25519Any: destX25519hex,
+  finalDestOptions: finalDestOptionsOri,
   finalRelayOptions,
   abortSignal,
   useV4,
 }: {
   nodePath: Array<Snode>;
   destX25519Any: string;
-  finalDestOptions: {
-    destination_ed25519_hex?: string;
-    headers?: Record<string, string>;
-    body?: string | null | Uint8Array;
-  };
+  finalDestOptions: FinalDestOptions;
   finalRelayOptions?: FinalRelayOptions; // use only when the target is not a snode
   abortSignal?: AbortSignal;
   useV4: boolean;
 }) => {
-  // get destination pubkey in array buffer format
-  let destX25519hex = destX25519Any;
-
   // Warning: be sure to do a copy otherwise the delete below creates issue with retries
-  const copyFinalDestOptions = _.cloneDeep(finalDestOptions);
+  // we want to forward the destination_ed25519_hex explicitely so remove it from the copy directly
+  const finalDestOptions = cloneDeep(omit(finalDestOptionsOri, ['destination_ed25519_hex']));
   if (typeof destX25519hex !== 'string') {
-    // convert AB to hex
     window?.log?.warn('destX25519hex was not a string');
-    destX25519hex = toHex(destX25519Any as any);
+    throw new Error('sendOnionRequest: destX25519hex was not a string');
   }
 
-  // safely build destination
-  let targetEd25519hex;
+  // if a snode destination is set, use it
+  const targetEd25519hex = finalDestOptionsOri.destination_ed25519_hex || undefined;
 
-  if (copyFinalDestOptions.destination_ed25519_hex) {
-    // snode destination
-    targetEd25519hex = copyFinalDestOptions.destination_ed25519_hex;
-    // eslint-disable-next-line no-param-reassign
-    delete copyFinalDestOptions.destination_ed25519_hex;
-  }
-
-  const options = copyFinalDestOptions; // lint
-  // do we need this?
-  options.headers = options.headers || {};
+  finalDestOptions.headers = finalDestOptions.headers || {};
 
   // finalRelayOptions is set only if we try to communicate with something else than a service node as end target of the request.
   // so if that field is set, we are trying to communicate with a file server or an opengroup or whatever,
@@ -834,26 +832,37 @@ const sendOnionRequest = async ({
 
   let destCtx: DestinationContext;
   try {
-    const bodyString = isString(options.body) ? options.body : null;
-    const bodyBinary = !isString(options.body) && options.body ? options.body : null;
+    const bodyString = isString(finalDestOptions.body) ? finalDestOptions.body : null;
+    const bodyBinary =
+      !isString(finalDestOptions.body) && finalDestOptions.body ? finalDestOptions.body : null;
     if (isRequestToSnode) {
-      delete options.body;
+      delete finalDestOptions.body;
 
       const textEncoder = new TextEncoder();
       const bodyEncoded = bodyString ? textEncoder.encode(bodyString) : bodyBinary;
       if (!bodyEncoded) {
         throw new Error('bodyEncoded is empty after encoding');
       }
-      const plaintext = encodeCiphertextPlusJson(bodyEncoded, options);
-      destCtx = (await callUtilsWorker(
-        'encryptForPubkey',
-        destX25519hex,
-        plaintext
-      )) as DestinationContext;
+      if (useV4) {
+        destCtx = await encryptOnionV4RequestForPubkey(
+          destX25519hex,
+          throwIfInvalidV4RequestInfos(finalDestOptions)
+        );
+      } else {
+        // we shouldn't do any non v4 request to snode very soon
+        destCtx = (await callUtilsWorker(
+          'encryptForPubkey',
+          destX25519hex,
+          encodeCiphertextPlusJson(bodyEncoded, finalDestOptions)
+        )) as DestinationContext;
+      }
     } else {
       destCtx = useV4
-        ? await encryptOnionV4RequestForPubkey(destX25519hex, options)
-        : await encryptForPubKey(destX25519hex, options);
+        ? await encryptOnionV4RequestForPubkey(
+            destX25519hex,
+            throwIfInvalidV4RequestInfos(finalDestOptions)
+          )
+        : await encryptForPubKey(destX25519hex, finalDestOptions);
     }
   } catch (e) {
     window?.log?.error(
@@ -863,9 +872,7 @@ const sendOnionRequest = async ({
       '] destination X25519',
       destX25519hex.substr(0, 32),
       '...',
-      destX25519hex.substr(32),
-      'options',
-      options
+      destX25519hex.substr(32)
     );
     throw e;
   }
