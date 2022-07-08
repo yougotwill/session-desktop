@@ -543,7 +543,7 @@ export async function processOnionResponse({
   }
 }
 
-export async function processOnionResponseV4({
+async function processOnionResponseV4({
   response,
   symmetricKey,
   abortSignal,
@@ -571,10 +571,6 @@ export async function processOnionResponseV4({
 
   const bodyBinary: Uint8Array = new Uint8Array(plaintextBuffer);
 
-  console.warn(
-    '    plaintext: new TextDecoder().decode(plaintextBuffer)  ',
-    new TextDecoder().decode(plaintextBuffer)
-  );
   return {
     bodyBinary,
   };
@@ -755,7 +751,7 @@ export const sendOnionRequestHandlingSnodeEject = async ({
   }
   // this call will handle the common onion failure logic.
   // if an error is not retryable a AbortError is triggered, which is handled by pRetry and retries are stopped
-  if (useV4 && response) {
+  if (useV4) {
     return processOnionResponseV4({
       response,
       symmetricKey: decodingSymmetricKey,
@@ -925,7 +921,7 @@ async function sendOnionRequestSnodeDest(
       headers,
     },
     associatedWith,
-    useV4: true,
+    useV4: false,
   });
 }
 

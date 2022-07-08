@@ -6,8 +6,8 @@ import * as GoogleChrome from '../util/GoogleChrome';
 import { AttachmentType } from '../types/Attachment';
 
 import autoBind from 'auto-bind';
-import { SessionButton, SessionButtonColor, SessionButtonType } from './basic/SessionButton';
-import { SessionInput } from './basic/SessionInput';
+// import { SessionButton, SessionButtonColor, SessionButtonType } from './basic/SessionButton';
+// import { SessionInput } from './basic/SessionInput';
 
 interface Props {
   attachment: AttachmentType;
@@ -22,7 +22,7 @@ interface State {
 }
 
 export class CaptionEditor extends React.Component<Props, State> {
-  private readonly inputRef: React.RefObject<any>;
+  // private readonly inputRef: React.RefObject<any>;
 
   constructor(props: Props) {
     super(props);
@@ -32,23 +32,56 @@ export class CaptionEditor extends React.Component<Props, State> {
       caption: caption || '',
     };
     autoBind(this);
-    this.inputRef = React.createRef();
+    // this.inputRef = React.createRef();
   }
 
-  public onSave() {
-    const { onSave } = this.props;
-    const { caption } = this.state;
+  public render() {
+    const { onClose } = this.props;
 
-    onSave(caption);
+    return (
+      <div role="dialog" className="module-caption-editor">
+        <div role="button" onClick={onClose} className="module-caption-editor__close-button" />
+        <div className="module-caption-editor__media-container">{this.renderObject()}</div>
+        {/* <div className="module-caption-editor__bottom-bar">
+          <div className="module-caption-editor__input-container">
+            <SessionInput
+              type="text"
+              autoFocus={true}
+              maxLength={200}
+              ref={this.inputRef}
+              placeholder={window.i18n('addACaption')}
+              enableShowHide={false}
+              onValueChanged={this.onChange}
+              onEnterPressed={this.onSave}
+              value={caption}
+            />
+            <SessionButton
+              text={window.i18n('save')}
+              onClick={this.onSave}
+              buttonType={SessionButtonType.Brand}
+              buttonColor={SessionButtonColor.Green}
+              disabled={!caption}
+            />
+          </div>
+         </div> */}
+      </div>
+    );
   }
 
-  public onChange(value: string) {
-    this.setState({
-      caption: value,
-    });
-  }
+  // private onSave() {
+  //   const { onSave } = this.props;
+  //   const { caption } = this.state;
 
-  public renderObject() {
+  //   onSave(caption);
+  // }
+
+  // private onChange(value: string) {
+  //   this.setState({
+  //     caption: value,
+  //   });
+  // }
+
+  private renderObject() {
     const { url, onClose, attachment } = this.props;
     const { contentType } = attachment || { contentType: null };
 
@@ -74,39 +107,5 @@ export class CaptionEditor extends React.Component<Props, State> {
     }
 
     return <div className="module-caption-editor__placeholder" />;
-  }
-
-  public render() {
-    const { onClose } = this.props;
-    const { caption } = this.state;
-
-    return (
-      <div role="dialog" className="module-caption-editor">
-        <div role="button" onClick={onClose} className="module-caption-editor__close-button" />
-        <div className="module-caption-editor__media-container">{this.renderObject()}</div>
-        <div className="module-caption-editor__bottom-bar">
-          <div className="module-caption-editor__input-container">
-            <SessionInput
-              type="text"
-              autoFocus={true}
-              maxLength={200}
-              ref={this.inputRef}
-              placeholder={window.i18n('addACaption')}
-              enableShowHide={false}
-              onValueChanged={this.onChange}
-              onEnterPressed={this.onSave}
-              value={caption}
-            />
-            <SessionButton
-              text={window.i18n('save')}
-              onClick={this.onSave}
-              buttonType={SessionButtonType.Brand}
-              buttonColor={SessionButtonColor.Green}
-              disabled={!caption}
-            />
-          </div>
-        </div>
-      </div>
-    );
   }
 }
