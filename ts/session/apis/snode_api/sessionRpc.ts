@@ -11,12 +11,13 @@ import {
   SnodeResponse,
 } from './onions';
 import { APPLICATION_JSON } from '../../../types/MIME';
+import https from 'https';
 
 export interface LokiFetchOptions {
-  method: string;
-  body?: string;
-  agent?: any;
-  headers: Record<string, any>;
+  method: 'GET' | 'POST';
+  body: string | null;
+  agent: https.Agent | null;
+  headers: Record<string, string>;
 }
 
 /**
@@ -69,7 +70,7 @@ async function lokiFetch({
       fetchOptions.agent = snodeHttpsAgent;
     }
 
-    (fetchOptions as any).headers = {
+    fetchOptions.headers = {
       'User-Agent': 'WhatsApp',
       'Accept-Language': 'en-us',
       'Content-Type': APPLICATION_JSON,
@@ -77,7 +78,11 @@ async function lokiFetch({
 
     window?.log?.warn(`insecureNodeFetch => lokiFetch of ${url}`);
 
-    const response = await insecureNodeFetch(url, fetchOptions);
+    const response = await insecureNodeFetch(url, {
+      ...fetchOptions,
+      body: fetchOptions.body || undefined,
+      agent: fetchOptions.agent || undefined,
+    });
     if (!response.ok) {
       throw new HTTPError('Loki_rpc error', response);
     }
@@ -143,6 +148,7 @@ export async function snodeRpc(
     method: 'POST',
     body: JSON.stringify(body),
     headers: { 'Content-Type': APPLICATION_JSON },
+    agent: null,
   };
 
   return lokiFetch({

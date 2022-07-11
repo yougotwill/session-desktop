@@ -2,6 +2,7 @@
 
 import { OnionPaths } from '.';
 import {
+  FinalDestNonSnodeOptions,
   FinalRelayOptions,
   sendOnionRequestHandlingSnodeEject,
   SnodeResponse,
@@ -10,7 +11,6 @@ import {
 } from '../apis/snode_api/onions';
 import _, { toNumber } from 'lodash';
 import { PROTOCOLS } from '../constants';
-import { toHex } from '../utils/String';
 import pRetry from 'p-retry';
 import { Snode } from '../../data/data';
 import { decodeV4Response } from './onionv4';
@@ -25,39 +25,23 @@ import { fileServerPubKey, fileServerURL } from '../apis/file_server_api/FileSer
 
 export type OnionFetchOptions = {
   method: string;
-  body?: string | Uint8Array;
-  headers?: Record<string, string | number>;
+  body: string | Uint8Array | null;
+  headers: Record<string, string | number>;
   useV4: boolean;
 };
 
-type OnionPayloadObj = {
-  method: string;
-  endpoint: string;
-  body: string | Uint8Array | undefined | null;
-  headers: Record<string, any>;
-};
-
-export type FinalDestinationOptions = {
-  destination_ed25519_hex?: string;
-  headers?: Record<string, string>;
-  body?: string;
-};
-
-const buildSendViaOnionPayload = (url: URL, fetchOptions: OnionFetchOptions): OnionPayloadObj => {
-  const tempHeaders = fetchOptions.headers || {};
-  const payloadObj = {
+const buildSendViaOnionPayload = (
+  url: URL,
+  fetchOptions: OnionFetchOptions
+): FinalDestNonSnodeOptions => {
+  const payloadObj: FinalDestNonSnodeOptions = {
     method: fetchOptions.method || 'GET',
-    body: fetchOptions.body || (undefined as any),
-    // safety issue with file server, just safer to have this
-    // no initial /
-    endpoint: url.pathname,
+    body: fetchOptions.body,
+    endpoint: url.search ? `${url.pathname}${url.search}` : url.pathname,
     headers: fetchOptions.headers || {},
   };
-  if (url.search) {
-    payloadObj.endpoint += url.search;
-  }
 
-  payloadObj.headers = tempHeaders;
+  // the usev4 field is skipped here, as the snode doing the request won't care about it
   return payloadObj;
 };
 
@@ -107,8 +91,10 @@ export const sendViaOnionV4ToNonSnode = async (
   if (!fetchOptions.useV4) {
     throw new Error('sendViaOnionV4ToNonSnode is only to be used for onion v4 calls');
   }
-  const castedDestinationX25519Key =
-    typeof destinationX25519Key !== 'string' ? toHex(destinationX25519Key) : destinationX25519Key;
+
+  if (typeof destinationX25519Key !== 'string') {
+    throw new Error(`destinationX25519Key is not a string ${typeof destinationX25519Key})a`);
+  }
 
   const payloadObj = buildSendViaOnionPayload(url, fetchOptions);
   // if protocol is forced to 'http:' => just use http (without the ':').
@@ -142,7 +128,7 @@ export const sendViaOnionV4ToNonSnode = async (
          */
         return sendOnionRequestHandlingSnodeEject({
           nodePath: pathNodes,
-          destX25519Any: castedDestinationX25519Key,
+          destX25519Any: destinationX25519Key,
           finalDestOptions: payloadObj,
           finalRelayOptions,
           abortSignal,
@@ -150,8 +136,7 @@ export const sendViaOnionV4ToNonSnode = async (
         });
       },
       {
-        // retries: 2, // retry 3 (2+1) times at most
-        retries: 0, // FIXME audric rollback retry 3 (2+1) times at most
+        retries: 2, // retry 3 (2+1) times at most
         minTimeout: 500,
         onFailedAttempt: e => {
           window?.log?.warn(
@@ -231,7 +216,7 @@ export async function sendJsonViaOnionV4ToSogs(sendOptions: {
     {
       method,
       headers: addJsonContentTypeToHeaders(headersWithSogsHeadersIfNeeded as any),
-      body: stringifiedBody || undefined,
+      body: stringifiedBody,
       useV4: true,
     },
     abortSignal
@@ -263,8 +248,8 @@ export async function sendJsonViaOnionV4ToPnServer(sendOptions: {
     builtUrl,
     {
       method,
-      headers: undefined,
-      body: stringifiedBody || undefined,
+      headers: {},
+      body: stringifiedBody,
       useV4: true,
     },
     abortSignal
@@ -355,7 +340,7 @@ export async function sendBinaryViaOnionV4ToFileServer(sendOptions: {
     builtUrl,
     {
       method,
-      headers: undefined,
+      headers: {},
       body: bodyBinary,
       useV4: true,
     },
@@ -385,8 +370,8 @@ export async function getBinaryViaOnionV4FromFileServer(sendOptions: {
     builtUrl,
     {
       method,
-      headers: undefined,
-      body: undefined,
+      headers: {},
+      body: null,
       useV4: true,
     },
     abortSignal
@@ -416,8 +401,8 @@ export async function sendJsonViaOnionV4ToFileServer(sendOptions: {
     builtUrl,
     {
       method,
-      headers: undefined,
-      body: stringifiedBody || undefined,
+      headers: {},
+      body: stringifiedBody,
       useV4: true,
     },
     abortSignal

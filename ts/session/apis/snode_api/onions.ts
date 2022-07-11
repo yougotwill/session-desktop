@@ -713,8 +713,9 @@ export const sendOnionRequestHandlingSnodeEject = async ({
   // If you need to call it, call it through sendOnionRequestHandlingSnodeEject because this is the one handling path rebuilding and known errors
   let response;
   let decodingSymmetricKey;
+
   try {
-    // this might throw a timeout error
+    // this might throw
     const result = await sendOnionRequest({
       nodePath,
       destX25519Any,
@@ -739,6 +740,10 @@ export const sendOnionRequestHandlingSnodeEject = async ({
       throw e;
     }
   }
+
+  const lsrpcEd25519Key =
+    (isFinalDestinationSnode(finalDestOptions) && finalDestOptions?.destination_ed25519_hex) ||
+    undefined;
   // this call will handle the common onion failure logic.
   // if an error is not retryable a AbortError is triggered, which is handled by pRetry and retries are stopped
   if (useV4) {
@@ -746,7 +751,7 @@ export const sendOnionRequestHandlingSnodeEject = async ({
       response,
       symmetricKey: decodingSymmetricKey,
       guardNode: nodePath[0],
-      lsrpcEd25519Key: finalDestOptions?.destination_ed25519_hex,
+      lsrpcEd25519Key,
       abortSignal,
       associatedWith,
     });
@@ -756,16 +761,22 @@ export const sendOnionRequestHandlingSnodeEject = async ({
     response,
     symmetricKey: decodingSymmetricKey,
     guardNode: nodePath[0],
-    lsrpcEd25519Key: finalDestOptions?.destination_ed25519_hex,
+    lsrpcEd25519Key,
     abortSignal,
     associatedWith,
   });
 };
 
 function throwIfInvalidV4RequestInfos(request: FinalDestOptions): EncodeV4OnionRequestInfos {
+  if (isFinalDestinationSnode(request)) {
+    // a snode request cannot be v4 currently as they do not support it
+    throw new Error('v4onion request needs endpoint pubkey and method at least');
+  }
+
   const { body, endpoint, headers, method } = request;
+
   if (!endpoint || !method) {
-    throw new Error('v4onion request needs endpoijt pubkey and method at least');
+    throw new Error('v4onion request needs endpoint pubkey and method at least');
   }
 
   const requestInfos: EncodeV4OnionRequestInfos = {
@@ -778,13 +789,48 @@ function throwIfInvalidV4RequestInfos(request: FinalDestOptions): EncodeV4OnionR
   return requestInfos;
 }
 
-export type FinalDestOptions = {
-  destination_ed25519_hex?: string;
+/**
+ * For a snode request, the body already contains the method and the args with our custom formatting in json
+ */
+export type FinalDestSnodeOptions = {
+  destination_ed25519_hex: string;
   headers?: Record<string, string>;
-  body?: string | null | Uint8Array;
-  method?: string | null;
-  endpoint?: string | null;
+  body: string | null;
 };
+
+/**
+ * For a non snode request (so fileserver or sogs), the body can be binary (for an upload of a file or a string) but we also need a method, endpoint and headers
+ */
+export type FinalDestNonSnodeOptions = {
+  headers: Record<string, string | number>;
+  body: string | null | Uint8Array;
+  method: string;
+  endpoint: string;
+};
+
+export type FinalDestOptions = FinalDestSnodeOptions | FinalDestNonSnodeOptions;
+
+/**
+ * Typescript guard to be used to separate between a snode destination options and a non snode one.
+ *
+ * A non snode destination needs a `.method` to be set
+ */
+export function isFinalDestinationNonSnode(
+  options: FinalDestOptions
+): options is FinalDestNonSnodeOptions {
+  return (options as any).method !== undefined;
+}
+
+/**
+ * Typescript guard to be used to separate between a snode destination options and a non snode one.
+ *
+ * A snode destination request needs a `.destination_ed25519_hex` to be set
+ */
+export function isFinalDestinationSnode(
+  options: FinalDestOptions
+): options is FinalDestSnodeOptions {
+  return (options as any).destination_ed25519_hex !== undefined;
+}
 
 /**
  *
@@ -820,9 +866,6 @@ const sendOnionRequest = async ({
     throw new Error('sendOnionRequest: destX25519hex was not a string');
   }
 
-  // if a snode destination is set, use it
-  const targetEd25519hex = finalDestOptionsOri.destination_ed25519_hex || undefined;
-
   finalDestOptions.headers = finalDestOptions.headers || {};
 
   // finalRelayOptions is set only if we try to communicate with something else than a service node as end target of the request.
@@ -836,27 +879,34 @@ const sendOnionRequest = async ({
     const bodyBinary =
       !isString(finalDestOptions.body) && finalDestOptions.body ? finalDestOptions.body : null;
     if (isRequestToSnode) {
-      delete finalDestOptions.body;
+      if (useV4) {
+        throw new Error('snoderpc calls cannot be v4 for now.');
+      }
+      if (!isString(finalDestOptions.body)) {
+        window.log.warn(
+          'snoderpc calls should only take body as string: ',
+          typeof finalDestOptions.body
+        );
+        throw new Error('snoderpc calls should only take body as string.');
+      }
+      // delete finalDestOptions.body;
+      // not sure if that's strictly the same thing in this context
+      finalDestOptions.body = null;
 
       const textEncoder = new TextEncoder();
       const bodyEncoded = bodyString ? textEncoder.encode(bodyString) : bodyBinary;
       if (!bodyEncoded) {
         throw new Error('bodyEncoded is empty after encoding');
       }
-      if (useV4) {
-        destCtx = await encryptOnionV4RequestForPubkey(
-          destX25519hex,
-          throwIfInvalidV4RequestInfos(finalDestOptions)
-        );
-      } else {
-        // we shouldn't do any non v4 request to snode very soon
-        destCtx = (await callUtilsWorker(
-          'encryptForPubkey',
-          destX25519hex,
-          encodeCiphertextPlusJson(bodyEncoded, finalDestOptions)
-        )) as DestinationContext;
-      }
+
+      // snode requests do not support v4 onion requests, sadly
+      destCtx = (await callUtilsWorker(
+        'encryptForPubkey',
+        destX25519hex,
+        encodeCiphertextPlusJson(bodyEncoded, finalDestOptions)
+      )) as DestinationContext;
     } else {
+      // request to something else than a snode, fileserver or a sogs, we do support v4 for those (and actually only for those for now)
       destCtx = useV4
         ? await encryptOnionV4RequestForPubkey(
             destX25519hex,
@@ -870,12 +920,17 @@ const sendOnionRequest = async ({
       e.code,
       e.message,
       '] destination X25519',
-      destX25519hex.substr(0, 32),
+      destX25519hex.substring(0, 32),
       '...',
-      destX25519hex.substr(32)
+      destX25519hex.substring(32)
     );
     throw e;
   }
+
+  // if a snode destination is set, use it
+  const targetEd25519hex =
+    (isFinalDestinationSnode(finalDestOptionsOri) && finalDestOptionsOri.destination_ed25519_hex) ||
+    undefined;
 
   const payload = await buildOnionGuardNodePayload(
     nodePath,
@@ -900,7 +955,7 @@ const sendOnionRequest = async ({
   };
 
   if (abortSignal) {
-    guardFetchOptions.signal = abortSignal as any;
+    guardFetchOptions.signal = abortSignal;
   }
 
   const guardUrl = `https://${guardNode.ip}:${guardNode.port}/onion_req/v2`;
@@ -916,7 +971,7 @@ async function sendOnionRequestSnodeDest(
   targetNode: Snode,
   headers: Record<string, any>,
 
-  plaintext?: string,
+  plaintext: string | null,
   associatedWith?: string
 ) {
   return sendOnionRequestHandlingSnodeEject({
@@ -928,7 +983,7 @@ async function sendOnionRequestSnodeDest(
       headers,
     },
     associatedWith,
-    useV4: false,
+    useV4: false, // sadly, request to snode do not support v4 yet
   });
 }
 
@@ -947,7 +1002,7 @@ export async function lokiOnionFetch({
 }: {
   targetNode: Snode;
   headers: Record<string, any>;
-  body?: string;
+  body: string | null;
   associatedWith?: string;
 }): Promise<SnodeResponse | undefined> {
   try {

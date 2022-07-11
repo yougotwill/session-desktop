@@ -1,10 +1,10 @@
 import AbortController from 'abort-controller';
 import {
   getBinaryViaOnionV4FromFileServer,
+  OnionV4JSONSnodeResponse,
   sendBinaryViaOnionV4ToFileServer,
   sendJsonViaOnionV4ToFileServer,
 } from '../../onions/onionSend';
-import { parseStatusCodeFromOnionRequestV4 } from '../open_group_api/opengroupV2/OpenGroupAPIV2Parser';
 import {
   batchGlobalIsSuccess,
   parseBatchGlobalStatusCode,
@@ -114,6 +114,15 @@ export const downloadFileFromFileServer = async (
   }
 
   return bodyBinary.buffer;
+};
+
+const parseStatusCodeFromOnionRequestV4 = (
+  onionV4Result: OnionV4JSONSnodeResponse | null
+): number | undefined => {
+  if (!onionV4Result) {
+    return undefined;
+  }
+  return onionV4Result?.body?.status_code || undefined;
 };
 
 /**

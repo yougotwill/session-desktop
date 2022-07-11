@@ -53,7 +53,7 @@ export async function fetchBinaryFromSogsWithOnionV4(sendOptions: {
     {
       method,
       headers: headersWithSogsHeadersIfNeeded,
-      body: stringifiedBody || undefined,
+      body: stringifiedBody,
       useV4: true,
     },
     abortSignal

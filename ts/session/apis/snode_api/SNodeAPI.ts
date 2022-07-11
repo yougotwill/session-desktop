@@ -539,7 +539,7 @@ export async function retrieveNextMessages(
   }
 
   if (result.status !== 200) {
-    window?.log?.warn('retrieve result is not 200');
+    window?.log?.warn('retrieveNextMessages result is not 200');
     throw new Error(
       `_retrieveNextMessages - retrieve result is not 200 with ${targetNode.ip}:${targetNode.port}`
     );
