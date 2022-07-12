@@ -82,7 +82,7 @@ export const sendSogsMessageOnionV4 = async (
     data: rawMessage.data,
     server_id: rawMessage.id,
     public_key: rawMessage.session_id,
-    timestamp: rawMessage.posted,
+    timestamp: Math.floor(rawMessage.posted * 1000),
     signature: rawMessage.signature,
   };
 
@@ -146,5 +146,5 @@ export const sendMessageOnionV4BlindedRequest = async (
     throw new Error('Could not blinded message request, server returned invalid data');
   }
 
-  return { serverId, serverTimestamp: serverTimestamp * 1000 }; //timestamp are now returned with a seconds.ms syntax
+  return { serverId, serverTimestamp: Math.floor(serverTimestamp * 1000) }; //timestamp are now returned with a seconds.ms syntax
 };

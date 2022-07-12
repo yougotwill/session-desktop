@@ -60,8 +60,11 @@ import {
   getAbsoluteAttachmentPath,
   loadAttachmentData,
 } from '../types/MessageAttachment';
-import { getOurProfile, getOurPubKeyStrFromCache } from '../session/utils/User';
-import { MessageRequestResponse } from '../session/messages/outgoing/controlMessage/MessageRequestResponse';
+import { getOurProfile } from '../session/utils/User';
+import {
+  MessageRequestResponse,
+  MessageRequestResponseParams,
+} from '../session/messages/outgoing/controlMessage/MessageRequestResponse';
 import { Notifications } from '../util/notifications';
 import { Storage } from '../util/storage';
 import {
@@ -536,7 +539,6 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       const destination = this.id;
 
       const sentAt = message.get('sent_at');
-
       if (!sentAt) {
         throw new Error('sendMessageJob() sent_at must be set.');
       }
@@ -586,7 +588,6 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
         if (!roomInfos) {
           throw new Error('Could not find this room in db');
         }
-
         const openGroup = getV2OpenGroupRoom(this.id);
         // send with blinding if we need to
         await getMessageQueue().sendToOpenGroupV2(
@@ -813,7 +814,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       attachments,
       sent_at: networkTimestamp,
       expireTimer,
-      serverTimestamp: this.isPublic() ? Date.now() / 1000 : undefined,
+      serverTimestamp: this.isPublic() ? networkTimestamp : undefined,
       groupInvitation,
     });
 

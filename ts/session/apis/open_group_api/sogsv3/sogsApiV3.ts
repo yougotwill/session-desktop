@@ -202,8 +202,16 @@ const handleMessagesResponseV4 = async (
       return;
     }
 
+    // Incoming messages for sogs v3 have a timestamp in seconds and not ms.
+    // Session works with timestamp in ms, for a lot of things, so first, lets fix this.
+
+    const messagesWithMsTimestamp = messages.map(m => ({
+      ...m,
+      posted: Math.floor(m.posted * 1000),
+    }));
+
     const messagesWithoutDeleted = await handleSogsV3DeletedMessages(
-      messages,
+      messagesWithMsTimestamp,
       serverUrl,
       subrequestOption.messages.roomId
     );
@@ -308,7 +316,7 @@ async function handleInboxOutboxMessages(
     const isOutgoing = isOutbox;
     try {
       const data = from_base64(inboxOutboxItem.message, base64_variants.ORIGINAL);
-      const postedAtInMs = inboxOutboxItem.posted_at * 1000;
+      const postedAtInMs = Math.floor(inboxOutboxItem.posted_at * 1000);
 
       const otherBlindedPubkey = isOutbox ? inboxOutboxItem.recipient : inboxOutboxItem.sender;
       const decrypted = await decryptWithSessionBlindingProtocol(

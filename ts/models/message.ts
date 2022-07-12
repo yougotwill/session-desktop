@@ -73,6 +73,7 @@ import { Notifications } from '../util/notifications';
 import { Storage } from '../util/storage';
 import { LinkPreviews } from '../util/linkPreviews';
 import { roomHasBlindEnabled } from '../session/apis/open_group_api/sogsv3/sogsV3Capabilities';
+import { getNowWithNetworkOffset } from '../session/apis/snode_api/SNodeAPI';
 // tslint:disable: cyclomatic-complexity
 
 /**
@@ -706,6 +707,7 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
       finalContacts,
       contact => `${contact.isPrimaryDevice ? '0' : '1'}${contact.pubkey}`
     );
+
     const toRet: MessagePropsDetails = {
       sentAt: this.get('sent_at') || 0,
       receivedAt: this.get('received_at') || 0,
@@ -830,7 +832,7 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
       if (conversation.isPublic()) {
         const openGroupParams: VisibleMessageParams = {
           identifier: this.id,
-          timestamp: Date.now(),
+          timestamp: getNowWithNetworkOffset(),
           lokiProfile: UserUtils.getOurProfile(),
           body,
           attachments,
