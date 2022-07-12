@@ -779,13 +779,11 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       return;
     }
 
-    const publicKey = getOurPubKeyStrFromCache();
     const timestamp = Date.now();
 
-    const messageRequestResponseParams = {
+    const messageRequestResponseParams: MessageRequestResponseParams = {
       timestamp,
-      publicKey,
-      isApproved: true,
+      // lokiProfile: UserUtils.getOurProfile(), // we can't curently include our profile in that response
     };
 
     const messageRequestResponse = new MessageRequestResponse(messageRequestResponseParams);

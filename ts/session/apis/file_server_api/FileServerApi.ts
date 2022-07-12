@@ -25,6 +25,7 @@ export type FileServerRequest = {
 };
 
 const POST_GET_FILE_ENDPOINT = '/file';
+const POST_GET_FILE_ENDPOINT_OLD = '/files';
 
 /**
  * Upload a file to the file server v2 using the onion v4 encoding
@@ -73,11 +74,13 @@ export const downloadFileFromFileServer = async (
     window?.log?.warn('Empty url to download for fileserver');
     return null;
   }
-
   const newCompleteUrlPrefix = `${fileServerURL}${POST_GET_FILE_ENDPOINT}/`;
+  const oldCompleteUrlPrefix = `${fileServerURL}${POST_GET_FILE_ENDPOINT_OLD}/`;
 
   if (fileIdOrCompleteUrl.startsWith(newCompleteUrlPrefix)) {
     fileId = fileId.substring(newCompleteUrlPrefix.length);
+  } else if (fileIdOrCompleteUrl.startsWith(oldCompleteUrlPrefix)) {
+    fileId = fileId.substring(oldCompleteUrlPrefix.length);
   }
 
   if (fileId.startsWith('/')) {
