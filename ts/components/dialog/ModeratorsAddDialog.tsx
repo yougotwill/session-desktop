@@ -87,6 +87,7 @@ export const AddModeratorsDialog = (props: Props) => {
           onChange={onPubkeyBoxChanges}
           disabled={addingInProgress}
           value={inputBoxValue}
+          autoFocus={true}
         />
         <SessionButton
           buttonType={SessionButtonType.Brand}
