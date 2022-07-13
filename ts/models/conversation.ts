@@ -514,8 +514,18 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       window.log.warn('tried to make a quote without a sent_at timestamp');
       return null;
     }
+    let msgSource = quotedMessage.getSource();
+    if (this.isPublic()) {
+      const room = getV2OpenGroupRoom(this.id);
+      if (room && roomHasBlindEnabled(room) && msgSource === UserUtils.getOurPubKeyStrFromCache()) {
+        // this room should send message with blinded pubkey, so we need to make the quote with them too.
+        // when we make a quote to ourself on a blind sogs, that message has a sender being our naked pubkey
+        const sodium = await getSodiumRenderer();
+        msgSource = await findCachedOurBlindedPubkeyOrLookItUp(room.serverPublicKey, sodium);
+      }
+    }
     return {
-      author: quotedMessage.getSource(),
+      author: msgSource,
       id: `${quotedMessage.get('sent_at')}` || '',
       // no need to quote the full message length.
       text: body?.slice(0, 100),

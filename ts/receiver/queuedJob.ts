@@ -54,11 +54,11 @@ async function copyFromQuotedMessage(
   const collection = await getMessagesBySentAt(id);
   // we now must make sure this is the sender we expect
   const found = collection.find(message => {
-    return Boolean(author === message.getSource());
+    return Boolean(author === message.get('source'));
   });
 
   if (!found) {
-    window?.log?.warn(`We did not found quoted message ${id}.`);
+    window?.log?.warn(`We did not found quoted message ${id} with author ${author}.`);
     quoteLocal.referencedMessageNotFound = true;
     msg.set({ quote: quoteLocal });
     return;
@@ -66,7 +66,6 @@ async function copyFromQuotedMessage(
 
   window?.log?.info(`Found quoted message id: ${id}`);
   quoteLocal.referencedMessageNotFound = false;
-
   quoteLocal.text = sliceQuoteText(found.get('body') || '');
 
   // no attachments, just save the quote with the body
@@ -222,7 +221,7 @@ async function handleRegularMessage(
 
   message.set({
     flags: rawDataMessage.flags,
-    quote: rawDataMessage.quote,
+    // quote: rawDataMessage.quote, // do not do this copy here, it must be done only in copyFromQuotedMessage()
     attachments: rawDataMessage.attachments,
     body: rawDataMessage.body,
     conversationId: conversation.id,

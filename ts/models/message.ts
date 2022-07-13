@@ -74,6 +74,7 @@ import { Storage } from '../util/storage';
 import { LinkPreviews } from '../util/linkPreviews';
 import { roomHasBlindEnabled } from '../session/apis/open_group_api/sogsv3/sogsV3Capabilities';
 import { getNowWithNetworkOffset } from '../session/apis/snode_api/SNodeAPI';
+import { findCachedBlindedIdFromUnblinded } from '../session/apis/open_group_api/sogsv3/knownBlindedkeys';
 // tslint:disable: cyclomatic-complexity
 
 /**
@@ -570,7 +571,20 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
 
     const authorName = contact ? contact.getContactProfileNameOrShortenedPubKey() : null;
 
-    const isFromMe = contact ? contact.id === UserUtils.getOurPubKeyStrFromCache() : false;
+    let isFromMe = contact ? contact.id === UserUtils.getOurPubKeyStrFromCache() : false;
+
+    if (this.getConversation()?.isPublic() && PubKey.hasBlindedPrefix(author)) {
+      const room = getV2OpenGroupRoom(this.get('conversationId'));
+      if (room && roomHasBlindEnabled(room)) {
+        const usFromCache = findCachedBlindedIdFromUnblinded(
+          UserUtils.getOurPubKeyStrFromCache(),
+          room.serverPublicKey
+        );
+        if (usFromCache && usFromCache === author) {
+          isFromMe = true;
+        }
+      }
+    }
 
     const firstAttachment = quote.attachments && quote.attachments[0];
     const quoteProps: {

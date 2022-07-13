@@ -59,7 +59,7 @@ export const MessageQuote = (props: Props) => {
 
       const collection = await getMessagesBySentAt(_.toNumber(quotedMessageSentAt));
       const foundInDb = collection.find((item: MessageModel) => {
-        const messageAuthor = item.getSource();
+        const messageAuthor = item.get('source');
 
         return Boolean(messageAuthor && quoteAuthor === messageAuthor);
       });
