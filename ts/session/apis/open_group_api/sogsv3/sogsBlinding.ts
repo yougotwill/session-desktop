@@ -137,7 +137,7 @@ export const sha512Multipart = (parts: Array<Uint8Array>) => {
 /**
  * Creates a blinded pubkey for specific use with a certain open group
  * @param serverPK The server we're blinding against
- * @param signingKeys Our signing keys (ED25519)
+ * @param signingKeys The signing keys (ED25519)
  * @returns Prefixed blinded pubkey for the open group
  */
 export const getBlindedPubKey = (

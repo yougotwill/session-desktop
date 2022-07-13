@@ -48,7 +48,6 @@ export const sendSogsMessageOnionV4 = async (
     ? await message.signWithBlinding(serverPubkey)
     : await message.sign(ourKeyPair);
   const json = signedMessage.toJson();
-  console.warn('sendSogsMessageOnionV4: ', json);
 
   const stringifiedBody = JSON.stringify(json);
 

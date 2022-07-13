@@ -130,9 +130,6 @@ export async function addCachedBlindedKey({
 
     return;
   }
-  console.warn(
-    `found matching real id ${realSessionId} for server ${serverPublicKey} and blindedId: ${blindedId}`
-  );
   assertLoadedCache.push({ blindedId, serverPublicKey, realSessionId });
   await writeKnownBlindedKeys();
 }
@@ -172,7 +169,6 @@ function tryMatchBlindWithStandardKey(
   pk2[31] = pk1[31] ^ 0b1000_0000;
 
   const match = isEqual(blindedIdNoPrefix, to_hex(pk1)) || isEqual(blindedIdNoPrefix, to_hex(pk2));
-  console.warn(`Got a match? ${match} `);
 
   if (!match) {
     return null;
@@ -208,7 +204,9 @@ function findNotCachedBlindingMatch(
 
 /**
  * This function can be called to find all blinded conversations we have with a user given its real sessionID.
- * It should be used when we get a message request response, to merge all convos into one
+ * It should be used when we get a message request response, to merge all convos into one.
+ *
+ * This function is quite resource intensive, so do not call it everywhere
  */
 function findNotCachedBlindedConvoFromUnblindedKey(
   unblindedID: string,
@@ -268,7 +266,7 @@ export async function findCachedBlindedMatchOrItLookup(
  * We store that mapping <ourKey, serverPk, blindedKey> in the same cache, so we can map our own messages synced easily.
  * This function just find if there is such a mapping already cached, but won't try to update the cache to find one.
  */
-function findCachedBlindedIdFromUnblinded(
+export function findCachedBlindedIdFromUnblinded(
   unblindedId: string,
   serverPubKey: string
 ): string | undefined {
@@ -280,8 +278,6 @@ function findCachedBlindedIdFromUnblinded(
 
 /**
  * This function can be used to generate our blindedId for a sogs requiring it, and cache it.
- *
- *
  */
 export async function findCachedOurBlindedPubkeyOrLookItUp(
   serverPubKey: string,

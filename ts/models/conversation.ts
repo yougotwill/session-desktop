@@ -1393,7 +1393,19 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     }
 
     if (details.admins && isArray(details.admins)) {
-      const adminChanged = await this.updateGroupAdmins(details.admins, false);
+      const roomInfos = getV2OpenGroupRoom(this.id);
+      const ourBlindedPubkeyForThisSogs =
+        roomInfos && roomHasBlindEnabled(roomInfos)
+          ? await findCachedOurBlindedPubkeyOrLookItUp(
+              roomInfos?.serverPublicKey,
+              await getSodiumRenderer()
+            )
+          : UserUtils.getOurPubKeyStrFromCache();
+      const replacedWithOurRealSessionId = details.admins.map(m =>
+        m === ourBlindedPubkeyForThisSogs ? UserUtils.getOurPubKeyStrFromCache() : m
+      );
+
+      const adminChanged = await this.updateGroupAdmins(replacedWithOurRealSessionId, false);
       if (adminChanged) {
         hasChange = adminChanged;
       }

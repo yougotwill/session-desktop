@@ -3,7 +3,7 @@
 import AbortController from 'abort-controller';
 import { PubKey } from '../../../types';
 import { OpenGroupRequestCommonType } from '../opengroupV2/ApiUtil';
-import { sogsBatchSend } from './sogsV3BatchPoll';
+import { batchFirstSubIsSuccess, sogsBatchSend } from './sogsV3BatchPoll';
 
 /**
  * Add those pubkeys as admins.
@@ -29,7 +29,11 @@ export const sogsV3AddAdmin = async (
     ],
     'batch'
   );
-  return batchSendResponse?.body?.[0]?.code === 200;
+  const isSuccess = batchFirstSubIsSuccess(batchSendResponse);
+  if (!isSuccess) {
+    window.log.warn('add as mod failed with body', batchSendResponse?.body);
+  }
+  return isSuccess;
 };
 
 /**
@@ -56,5 +60,9 @@ export const sogsV3RemoveAdmins = async (
     ],
     'batch'
   );
-  return batchSendResponse?.body?.every(m => m?.code === 200) || false;
+  const isSuccess = batchSendResponse?.body?.every(m => m?.code === 200) || false;
+  if (!isSuccess) {
+    window.log.warn('remove mods failed with body', batchSendResponse?.body);
+  }
+  return isSuccess;
 };
