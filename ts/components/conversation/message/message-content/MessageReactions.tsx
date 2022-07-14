@@ -52,6 +52,7 @@ const StyledReactionContainer = styled.div`
 
 const StyledReactionOverflow = styled.button`
   display: flex;
+  flex-direction: row-reverse;
   justify-content: flex-start;
   align-items: center;
 
@@ -66,18 +67,6 @@ const StyledReactionOverflow = styled.button`
     overflow: hidden;
     margin-right: -9px;
     padding: 1px 4.5px;
-  }
-
-  span:nth-child(1) {
-    z-index: 3;
-  }
-
-  span:nth-child(2) {
-    z-index: 2;
-  }
-
-  span:nth-child(3) {
-    z-index: 1;
   }
 `;
 
@@ -259,6 +248,7 @@ export const MessageReactions = (props: Props): ReactElement => {
       <StyledReactionOverflow onClick={handleExpand}>
         {Object.keys(reactions)
           .slice(4, 7)
+          .reverse()
           .map(emoji => {
             return (
               <span

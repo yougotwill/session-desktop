@@ -213,6 +213,51 @@ const StyledEmojiPanelContainer = styled.div`
   }
 `;
 
+const StyledSendMessageInput = styled.div`
+  cursor: text;
+  display: flex;
+  align-items: center;
+  flex-grow: 1;
+  min-height: var(--compositionContainerHeight);
+  padding: var(--margins-xs) 0;
+  z-index: 1;
+  background-color: inherit;
+
+  ul {
+    max-height: 70vh;
+    overflow: auto;
+  }
+
+  textarea {
+    font-family: var(--font-default);
+    min-height: calc(var(--compositionContainerHeight) / 3);
+    max-height: 3 * var(--compositionContainerHeight);
+    margin-right: var(--margins-md);
+    color: var(--color-text);
+
+    background: transparent;
+    resize: none;
+    display: flex;
+    flex-grow: 1;
+    outline: none;
+    border: none;
+    font-size: 14px;
+    line-height: var(--font-size-h2);
+    letter-spacing: 0.5px;
+  }
+
+  &__emoji-overlay {
+    // Should have identical properties to the textarea above to line up perfectly.
+    position: absolute;
+    font-size: 14px;
+    font-family: var(--font-default);
+    margin-left: 2px;
+    line-height: var(--font-size-h2);
+    letter-spacing: 0.5px;
+    color: rgba(0, 0, 0, 0);
+  }
+`;
+
 class CompositionBoxInner extends React.Component<Props, State> {
   private readonly textarea: React.RefObject<any>;
   private readonly fileInput: React.RefObject<HTMLInputElement>;
@@ -379,7 +424,7 @@ class CompositionBoxInner extends React.Component<Props, State> {
 
         {typingEnabled && <StartRecordingButton onClick={this.onLoadVoiceNoteView} />}
 
-        <div
+        <StyledSendMessageInput
           className="send-message-input"
           role="main"
           onClick={this.focusCompositionBox} // used to focus on the textarea when clicking in its container
@@ -389,7 +434,7 @@ class CompositionBoxInner extends React.Component<Props, State> {
           data-testid="message-input"
         >
           {this.renderTextArea()}
-        </div>
+        </StyledSendMessageInput>
 
         {typingEnabled && (
           <ToggleEmojiButton ref={this.emojiPanelButton} onClick={this.toggleEmojiPanel} />
