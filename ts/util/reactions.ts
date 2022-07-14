@@ -111,16 +111,14 @@ export const handleMessageReaction = async (
   const senders = Object.keys(details);
 
   switch (reaction.action) {
-    // Add reaction
-    case 0:
+    case SignalService.DataMessage.Reaction.Action.REACT:
       if (senders.includes(sender) && details[sender] !== '') {
         window?.log?.info('Received duplicate message reaction. Dropping it. id:', details[sender]);
         return;
       }
       details[sender] = messageId ?? '';
       break;
-    // Remove reaction
-    case 1:
+    case SignalService.DataMessage.Reaction.Action.REMOVE:
     default:
       if (senders.length > 0) {
         if (senders.indexOf(sender) >= 0) {

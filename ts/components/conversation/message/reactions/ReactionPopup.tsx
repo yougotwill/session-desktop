@@ -1,4 +1,4 @@
-import React, { ReactElement, useCallback, useEffect, useState } from 'react';
+import React, { ReactElement, useEffect, useState } from 'react';
 import styled from 'styled-components';
 import { getMessageById } from '../../../../data/data';
 import { PubKey } from '../../../../session/types/PubKey';
