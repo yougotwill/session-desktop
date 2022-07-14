@@ -58,7 +58,6 @@ export const handleMessageReaction = async (
   reaction: SignalService.DataMessage.IReaction,
   messageId?: string
 ) => {
-  window?.log?.warn(`reaction: DataMessage ID: ${messageId}.`);
   const originalMessageTimestamp = Number(reaction.id);
 
   if (!reaction.emoji) {

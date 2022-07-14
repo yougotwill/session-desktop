@@ -99,7 +99,7 @@ const UpArrowSVG = (): ReactElement => (
 
 export type MessageReactsSelectorProps = Pick<
   MessageRenderingProps,
-  'conversationType' | 'isPublic' | 'reacts'
+  'conversationType' | 'isPublic' | 'reacts' | 'weAreAdmin'
 >;
 
 type Props = {
