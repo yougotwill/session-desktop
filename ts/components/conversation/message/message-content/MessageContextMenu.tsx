@@ -248,20 +248,15 @@ export const MessageContextMenu = (props: Props) => {
   const onEmojiClick = async (args: any) => {
     const found = await getMessageById(messageId);
     if (found && found.get('sent_at')) {
-      let reactionId = Number(found.get('sent_at'));
-      if (found.get('reacts')?.timestamp) {
-        reactionId = Number(found.get('reacts')!.timestamp);
-      }
-
       const emoji = args.native ?? args;
       const author = UserUtils.getOurPubKeyStrFromCache();
       await conversationModel.sendReaction(messageId, {
-        id: reactionId,
+        id: Number(found.get('sent_at')),
         author,
         emoji,
         action: 0,
       });
-      window.log.info(author, 'reacted with a ', emoji, 'at', reactionId);
+      window.log.info(author, 'reacted with a ', emoji, 'at', found.get('sent_at'));
     } else {
       window.log.warn(`Message ${messageId} not found in db`);
     }
