@@ -148,19 +148,6 @@ export const MessageReactions = (props: Props): ReactElement => {
 
   const renderReaction = (emoji: string) => (
     <StyledReactionContainer ref={reactionRef}>
-      {popupReaction && popupReaction === emoji && (
-        <MessageReactionPopup
-          emoji={popupReaction}
-          senders={reactions[popupReaction].senders}
-          tooltipPosition={tooltipPosition}
-          onClick={() => {
-            setPopupReaction('');
-            setPopupX(popupXDefault);
-            setPopupY(popupYDefault);
-            setTooltipPosition('center');
-          }}
-        />
-      )}
       <StyledReaction
         key={emoji}
         includesMe={includesMe(emoji)}
@@ -190,6 +177,19 @@ export const MessageReactions = (props: Props): ReactElement => {
         <span>{emoji}</span>
         {reactions[emoji].senders && <span>{reactions[emoji].senders.length}</span>}
       </StyledReaction>
+      {popupReaction && popupReaction === emoji && (
+        <MessageReactionPopup
+          emoji={popupReaction}
+          senders={reactions[popupReaction].senders}
+          tooltipPosition={tooltipPosition}
+          onClick={() => {
+            setPopupReaction('');
+            setPopupX(popupXDefault);
+            setPopupY(popupYDefault);
+            setTooltipPosition('center');
+          }}
+        />
+      )}
     </StyledReactionContainer>
   );
 
