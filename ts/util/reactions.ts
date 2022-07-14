@@ -8,7 +8,24 @@ import { ReactionList } from '../types/Message';
 import { RecentReactions } from '../types/Util';
 import { getRecentReactions, saveRecentReations } from '../util/storage';
 
+const rateCountLimit = 20;
+const rateTimeLimit = 60 * 1000;
+const latestReactionTimestamps: Array<number> = [];
+
 export const sendMessageReaction = async (messageId: string, emoji: string) => {
+  const timestamp = Date.now();
+  latestReactionTimestamps.push(timestamp);
+
+  if (latestReactionTimestamps.length > rateCountLimit) {
+    const firstTimestamp = latestReactionTimestamps[0];
+    if (timestamp - firstTimestamp < rateTimeLimit) {
+      latestReactionTimestamps.pop();
+      return;
+    } else {
+      latestReactionTimestamps.shift();
+    }
+  }
+
   const found = await getMessageById(messageId);
   if (found && found.get('sent_at')) {
     const conversationModel = found?.getConversation();
