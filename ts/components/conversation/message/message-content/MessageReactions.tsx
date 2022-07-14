@@ -179,6 +179,7 @@ export const MessageReactions = (props: Props): ReactElement => {
       </StyledReaction>
       {popupReaction && popupReaction === emoji && (
         <MessageReactionPopup
+          messageId={messageId}
           emoji={popupReaction}
           senders={reactions[popupReaction].senders}
           tooltipPosition={tooltipPosition}

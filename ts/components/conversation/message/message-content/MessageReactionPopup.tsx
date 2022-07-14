@@ -1,10 +1,13 @@
-import React, { ReactElement } from 'react';
+import React, { ReactElement, useCallback, useEffect, useState } from 'react';
 import styled from 'styled-components';
+import { getMessageById } from '../../../../data/data';
+import { readableList } from '../../../../util/readableList';
 
 export type TipPosition = 'center' | 'left' | 'right';
 
 export const StyledPopupContainer = styled.div<{ tooltipPosition: TipPosition }>`
   display: flex;
+  justify-content: space-between;
   align-items: center;
   width: 216px;
   height: 72px;
@@ -15,6 +18,7 @@ export const StyledPopupContainer = styled.div<{ tooltipPosition: TipPosition }>
   box-shadow: 0px 0px 13px rgba(0, 0, 0, 0.51);
   font-size: 12px;
   font-weight: 600;
+  overflow-wrap: break-word;
   padding: 16px;
   border-radius: 12px;
   cursor: pointer;
@@ -50,6 +54,7 @@ const StyledEmoji = styled.span`
 `;
 
 interface Props {
+  messageId: string;
   emoji: string;
   senders: Array<string>;
   tooltipPosition?: TipPosition;
@@ -57,7 +62,60 @@ interface Props {
 }
 
 export const MessageReactionPopup = (props: Props): ReactElement => {
-  const { emoji, senders, tooltipPosition = 'center', onClick } = props;
+  const { messageId, emoji, senders, tooltipPosition = 'center', onClick } = props;
+
+  const [contacts, setContacts] = useState('');
+
+  const generateContacts = useCallback(async () => {
+    let contacts = null;
+    const message = await getMessageById(messageId);
+    if (message) {
+      contacts = senders.map(sender => {
+        const contact = message.findAndFormatContact(sender);
+        if (contact.isMe) {
+          // remove pubkey
+          return contact.title ? contact.title.slice(0, -14) : contact.profileName ?? sender;
+        }
+        return contact.profileName ?? sender;
+      });
+    }
+    return contacts;
+  }, [messageId]);
+
+  const renderContacts = (_contacts: string) => {
+    if (!_contacts) {
+      return <></>;
+    }
+
+    if (_contacts.indexOf('&') !== -1 && _contacts.indexOf('other') !== -1) {
+      const [names, others] = _contacts.split('&');
+      return (
+        <span>
+          {names} & <span style={{ color: 'var(--color-accent' }}>{others}</span> reacted with
+        </span>
+      );
+    }
+
+    return <span>{_contacts} reacted with</span>;
+  }
+
+  useEffect(() => {
+    let isCancelled = false;
+    generateContacts()
+      .then(async result => {
+        if (isCancelled) {
+          return;
+        }
+        if (result && result.length > 0) {
+          setContacts(readableList(result));
+        }
+      })
+      .catch(() => {
+        if (isCancelled) {
+          return;
+        }
+      });
+  }, [generateContacts]);
 
   return (
     <StyledPopupContainer
@@ -66,7 +124,7 @@ export const MessageReactionPopup = (props: Props): ReactElement => {
         onClick();
       }}
     >
-      <span>Josh, Alex, cornkdog & 3 others reacted with </span>
+      {renderContacts(contacts)}
       <StyledEmoji>{emoji}</StyledEmoji>
     </StyledPopupContainer>
   );
