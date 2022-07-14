@@ -1,8 +1,9 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 
-import { animation, Item, Menu } from 'react-contexify';
+import { animation, Item, Menu, useContextMenu } from 'react-contexify';
 
 import { useDispatch, useSelector } from 'react-redux';
+import { useMouse } from 'react-use';
 import styled from 'styled-components';
 import { getMessageById } from '../../../../data/data';
 import { MessageInteraction } from '../../../../interactions';
@@ -55,16 +56,17 @@ const StyledMessageContextMenu = styled.div`
   }
 `;
 
-const StyledEmojiPanelContainer = styled.div<{}>`
+const StyledEmojiPanelContainer = styled.div<{ x: number; y: number }>`
   position: fixed;
   top: 0;
   right: 0;
   bottom: 0;
   left: 0;
+  z-index: 101;
   ${StyledEmojiPanel} {
     position: absolute;
-    left: 0;
-    top: 0;
+    left: ${props => `${props.x}px`};
+    top: ${props => `${props.y}px`};
   }
 `;
 
@@ -72,6 +74,7 @@ const StyledEmojiPanelContainer = styled.div<{}>`
 export const MessageContextMenu = (props: Props) => {
   const selected = useSelector(state => getMessageContextMenuProps(state as any, props.messageId));
   const dispatch = useDispatch();
+  const { hideAll } = useContextMenu();
 
   if (!selected) {
     return null;
@@ -99,11 +102,22 @@ export const MessageContextMenu = (props: Props) => {
   const isSent = status === 'sent' || status === 'read'; // a read message should be replyable
 
   const emojiPanelId = `${contextMenuId}-styled-emoji-panel-container`;
+  const emojiPanelRef = useRef(null);
   const [showEmojiPanel, setShowEmojiPanel] = useState(false);
+  const [emojiPanelWidth, setEmojiPanelWidth] = useState(-1);
+  const [emojiPanelHeight, setEmojiPanelHeight] = useState(-1);
 
-  const onContextMenuShown = useCallback(() => {
+  const contextMenuRef = useRef(null);
+  const { docX, docY } = useMouse(contextMenuRef);
+  const [mouseX, setMouseX] = useState(0);
+  const [mouseY, setMouseY] = useState(0);
+
+  const onContextMenuShown = () => {
+    if (showEmojiPanel) {
+      setShowEmojiPanel(false);
+    }
     window.contextMenuShown = true;
-  }, []);
+  };
 
   const onContextMenuHidden = useCallback(() => {
     // This function will called before the click event
@@ -202,35 +216,85 @@ export const MessageContextMenu = (props: Props) => {
     void deleteMessagesByIdForEveryone([messageId], convoId);
   }, [convoId, messageId]);
 
-  const onEmojiClick = ({ native }: any) => {
-    console.log('this is the emoji', native);
+  const onShowEmoji = () => {
+    hideAll();
+    setMouseX(docX);
+    setMouseY(docY);
+    setShowEmojiPanel(true);
+  };
+
+  const onCloseEmoji = () => {
     setShowEmojiPanel(false);
   };
 
-  const onEmojiOffClick = (event: any) => {
-    if (event.target.id === emojiPanelId && showEmojiPanel) {
-      console.log('closing');
-      setShowEmojiPanel(false);
-    }
+  const onEmojiLoseFocus = useCallback(
+    (event: any) => {
+      if (event.target.id === emojiPanelId && showEmojiPanel) {
+        console.log('closed due to lost focus');
+        onCloseEmoji();
+      }
+    },
+    [emojiPanelId, showEmojiPanel]
+  );
+
+  const onEmojiClick = ({ native }: any) => {
+    console.log('this is the emoji', native);
+    onCloseEmoji();
   };
 
-  const onKeyDown = (event: any) => {
+  const onEmojiKeyDown = (event: any) => {
     if (event.key === 'Escape' && showEmojiPanel) {
-      setShowEmojiPanel(false);
+      onCloseEmoji();
     }
   };
 
   useEffect(() => {
-    document.addEventListener('click', onEmojiOffClick);
+    if (emojiPanelRef.current !== null) {
+      if (emojiPanelWidth == -1 && emojiPanelHeight == -1) {
+        const { offsetWidth, offsetHeight } = (emojiPanelRef.current as HTMLDivElement)
+          .firstChild as HTMLDivElement;
+        setEmojiPanelWidth(offsetWidth);
+        setEmojiPanelHeight(offsetHeight);
+      } else {
+        const { innerWidth: windowWidth, innerHeight: windowHeight } = window;
+
+        if (mouseX + emojiPanelWidth > windowWidth) {
+          let x = mouseX;
+          x = (mouseX + emojiPanelWidth - windowWidth) * 2;
+
+          if (x === mouseX) return;
+          setMouseX(mouseX - x);
+        }
+
+        if (mouseY + emojiPanelHeight > windowHeight) {
+          const y = mouseY + emojiPanelHeight - windowHeight;
+
+          if (y === mouseY) return;
+          setMouseY(mouseY - y);
+        }
+      }
+    }
+  }, [emojiPanelRef.current, emojiPanelWidth, emojiPanelHeight, mouseX, mouseY]);
+
+  useEffect(() => {
+    document.addEventListener('click', onEmojiLoseFocus);
+
     return () => {
-      document.removeEventListener('click', onEmojiOffClick);
+      document.removeEventListener('click', onEmojiLoseFocus);
     };
-  });
+  }, [contextMenuId, onEmojiLoseFocus, window.contextMenuShown]);
 
   return (
-    <StyledMessageContextMenu>
+    <StyledMessageContextMenu ref={contextMenuRef}>
       {showEmojiPanel && (
-        <StyledEmojiPanelContainer id={emojiPanelId} onKeyDown={onKeyDown} role="button">
+        <StyledEmojiPanelContainer
+          id={emojiPanelId}
+          ref={emojiPanelRef}
+          onKeyDown={onEmojiKeyDown}
+          role="button"
+          x={mouseX}
+          y={mouseY}
+        >
           <SessionEmojiPanel onEmojiClicked={onEmojiClick} show={showEmojiPanel} />
         </StyledEmojiPanelContainer>
       )}
@@ -240,7 +304,7 @@ export const MessageContextMenu = (props: Props) => {
         onHidden={onContextMenuHidden}
         animation={animation.fade}
       >
-        <MessageReactBar action={() => setShowEmojiPanel(true)} />
+        <MessageReactBar action={onShowEmoji} />
         {attachments?.length ? (
           <Item onClick={saveAttachment}>{window.i18n('downloadAttachment')}</Item>
         ) : null}
