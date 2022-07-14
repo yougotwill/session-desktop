@@ -245,16 +245,21 @@ export const MessageContextMenu = (props: Props) => {
     [emojiPanelId, showEmojiPanel]
   );
 
-  const onEmojiClick = (args: any) => {
-    const emoji = args.native ?? args;
-    const author = UserUtils.getOurPubKeyStrFromCache();
-    conversationModel.sendReaction(messageId, {
-      id: timestamp,
-      author,
-      emoji,
-      action: 1,
-    });
-    console.log(author, ' reacted with a ', emoji);
+  const onEmojiClick = async (args: any) => {
+    const found = await getMessageById(messageId);
+    if (found && found.get('sent_at')) {
+      const emoji = args.native ?? args;
+      const author = UserUtils.getOurPubKeyStrFromCache();
+      conversationModel.sendReaction(messageId, {
+        id: found.get('sent_at')!,
+        author,
+        emoji,
+        action: 0,
+      });
+      console.log(author, ' reacted with a ', emoji);
+    } else {
+      window.log.warn(`Message ${messageId} not found in db`);
+    }
     onCloseEmoji();
   };
 
