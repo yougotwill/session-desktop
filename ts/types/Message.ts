@@ -55,10 +55,12 @@ export interface ReactionType {
   action: Action;
 }
 
-export type ReactionList = Record<
-  string,
-  {
-    senders: Array<string>;
-    synced: boolean;
-  }
->;
+export type ReactionList = {
+  items: Record<
+    string,
+    {
+      senders: Array<string>;
+    }
+  >;
+  timestamp: Number;
+};

@@ -1,5 +1,5 @@
 import _ from 'lodash';
-import { getMessageById, getMessageBySenderAndTimestamp } from '../../data/data';
+import { getMessageById, getMessagesBySentAt } from '../../data/data';
 import { MessageModel } from '../../models/message';
 import { SignalService } from '../../protobuf';
 import { ReactionList } from '../../types/Message';
@@ -11,46 +11,74 @@ import { UserUtils } from '../utils';
 // tslint:disable-next-line: no-unnecessary-class
 export class MessageSentHandler {
   public static async handleMessageReaction(
-    m: MessageModel,
-    reaction: SignalService.DataMessage.IReaction
+    reaction: SignalService.DataMessage.IReaction,
+    timestamp: number
   ) {
-    const originalMessage = await getMessageBySenderAndTimestamp({
-      source: m.get('source'),
-      timestamp: Number(reaction.id),
+    // We always look for the quote by sentAt timestamp, for opengroups, closed groups and session chats
+    // this will return an array of sent message by id we have locally.
+
+    console.log('reaction: reaction id', reaction.id);
+    console.log('reaction: timestamp', timestamp);
+
+    if (!reaction.emoji) {
+      window?.log?.warn(`There is no emoji for the reaction ${reaction.id}.`);
+      return;
+    }
+
+    let collection = await getMessagesBySentAt(timestamp);
+    console.log('reaction: collection', collection);
+
+    let originalMessage = collection.find((item: MessageModel) => {
+      const messageTimestamp = item.get('sent_at');
+
+      return Boolean(messageTimestamp && messageTimestamp === timestamp);
     });
 
-    if (originalMessage) {
-      if (!reaction.emoji) {
+    if (!originalMessage) {
+      collection = await getMessagesBySentAt(Number(reaction.id));
+      console.log('reaction: collection 2nd pass', collection);
+
+      originalMessage = collection.find((item: MessageModel) => {
+        const messageTimestamp = item.get('sent_at');
+
+        return Boolean(messageTimestamp && messageTimestamp === Number(reaction.id));
+      });
+
+      if (!originalMessage) {
+        window?.log?.warn(`We did not find reacted message ${reaction.id}.`);
         return;
       }
-
-      const reacts: ReactionList = originalMessage.get('reacts') ?? {};
-      reacts[reaction.emoji] = reacts[reaction.emoji] || {};
-
-      const senders = reacts[reaction.emoji].senders ?? [];
-      switch (reaction.action) {
-        // Add reaction
-        case 0:
-          senders.push(reaction.author);
-          break;
-        // Remove reaction
-        case 1:
-        default:
-          if (senders.length > 0) {
-            const deleteIndex = senders.indexOf(reaction.author);
-            // TODO better edge cases
-            senders.splice(deleteIndex, 1);
-          }
-      }
-      reacts[reaction.emoji].senders = senders;
-
-      originalMessage.set({
-        reacts,
-      });
-      await originalMessage.commit();
-    } else {
-      window?.log?.error('Original message reacted to not found');
     }
+
+    const reacts: ReactionList = originalMessage.get('reacts') ?? {
+      items: {},
+      timestamp: Number(reaction.id),
+    };
+
+    reacts.items[reaction.emoji] = reacts.items[reaction.emoji] || {};
+
+    const senders = reacts.items[reaction.emoji].senders ?? [];
+    switch (reaction.action) {
+      // Add reaction
+      case 0:
+        senders.push(reaction.author);
+        break;
+      // Remove reaction
+      case 1:
+      default:
+        if (senders.length > 0) {
+          const deleteIndex = senders.indexOf(reaction.author);
+          // TODO better edge cases
+          senders.splice(deleteIndex, 1);
+        }
+    }
+    reacts.items[reaction.emoji].senders = senders;
+
+    originalMessage.set({
+      reacts,
+    });
+
+    return originalMessage;
   }
 
   public static async handlePublicMessageSentSuccess(
@@ -170,8 +198,24 @@ export class MessageSentHandler {
 
     sentTo = _.union(sentTo, [sentMessage.device]);
 
-    if (fetchedMessage.get('source') && dataMessage && dataMessage.reaction) {
-      await this.handleMessageReaction(fetchedMessage, dataMessage.reaction);
+    if (dataMessage && dataMessage.reaction) {
+      console.log('reaction: handleMessageReaction: handleMessageSentSuccess');
+      console.log(
+        'reaction: available timestamps',
+        effectiveTimestamp,
+        fetchedMessage.get('sent_at')
+      );
+
+      const timestamp = fetchedMessage.isIncoming()
+        ? Number(fetchedMessage.get('sent_at'))
+        : effectiveTimestamp;
+
+      console.log('reaction: handleMessageSentSuccess chosen timestamp is', timestamp);
+
+      const originalMessage = await this.handleMessageReaction(dataMessage.reaction, timestamp);
+      if (originalMessage) {
+        originalMessage.commit();
+      }
     } else {
       fetchedMessage.set({
         sent_to: sentTo,
@@ -179,6 +223,7 @@ export class MessageSentHandler {
         expirationStartTimestamp: Date.now(),
         sent_at: effectiveTimestamp,
       });
+      console.log('reaction: original message sent', fetchedMessage);
       await fetchedMessage.commit();
     }
     fetchedMessage.getConversation()?.updateLastMessage();
