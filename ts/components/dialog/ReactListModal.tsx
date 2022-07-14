@@ -8,10 +8,12 @@ import { updateReactListModal, updateUserDetailsModal } from '../../state/ducks/
 import { StateType } from '../../state/reducer';
 import { getMessageReactsProps } from '../../state/selectors/conversations';
 import { ReactionList } from '../../types/Message';
+import { sendMessageReaction } from '../../util/reactions';
 import { Avatar, AvatarSize } from '../avatar/Avatar';
 import { Flex } from '../basic/Flex';
 import { ContactName } from '../conversation/ContactName';
 import { MessageReactions } from '../conversation/message/message-content/MessageReactions';
+import { SessionIconButton } from '../icon';
 import { SessionWrapperModal } from '../SessionWrapperModal';
 
 const StyledReactListContainer = styled(Flex)`
@@ -48,6 +50,7 @@ const StyledReactionSummary = styled.p`
 `;
 
 const StyledReactionSender = styled(Flex)`
+  width: 100%;
   margin-bottom: 12px;
   .module-avatar {
     margin-right: 12px;
@@ -101,17 +104,36 @@ export const ReactListModal = (props: Props): ReactElement => {
     }
   };
 
+  const handleRemoveReaction = async (emoji: string) => {
+    await sendMessageReaction(messageId, emoji);
+  };
+
   const renderReactionSenders = (senders: Array<string>) => {
     return senders.map((sender: string) => (
-      <StyledReactionSender alignItems={'center'}>
-        <Avatar
-          size={AvatarSize.XS}
-          pubkey={sender}
-          onAvatarClick={async () => {
-            await handleAvatarClick(sender);
-          }}
-        />
-        <ContactName pubkey={sender} module="module-conversation__user" shouldShowPubkey={false} />
+      <StyledReactionSender container={true} justifyContent={'space-between'} alignItems={'center'}>
+        <Flex container={true} alignItems={'center'}>
+          <Avatar
+            size={AvatarSize.XS}
+            pubkey={sender}
+            onAvatarClick={async () => {
+              await handleAvatarClick(sender);
+            }}
+          />
+          <ContactName
+            pubkey={sender}
+            module="module-conversation__user"
+            shouldShowPubkey={false}
+          />
+        </Flex>
+        {sender === me && (
+          <SessionIconButton
+            iconType="exit"
+            iconSize="small"
+            onClick={async () => {
+              await handleRemoveReaction(currentReact);
+            }}
+          />
+        )}
       </StyledReactionSender>
     ));
   };
