@@ -5,10 +5,12 @@ import styled from 'styled-components';
 import { replyToMessage } from '../../../../interactions/conversationInteractions';
 import { MessageRenderingProps } from '../../../../models/messageType';
 import { toggleSelectedMessageId } from '../../../../state/ducks/conversations';
+import { updateReactListModal } from '../../../../state/ducks/modalDialog';
 import {
   getMessageContentWithStatusesSelectorProps,
   isMessageSelectionMode,
 } from '../../../../state/selectors/conversations';
+import { sendMessageReaction } from '../../../../util/reactions';
 
 import { MessageAuthorText } from './MessageAuthorText';
 import { MessageContent } from './MessageContent';
@@ -88,6 +90,14 @@ export const MessageContentWithStatuses = (props: Props) => {
 
   const [popupReaction, setPopupReaction] = useState('');
 
+  const handleMessageReaction = async (emoji: string) => {
+    await sendMessageReaction(messageId, emoji);
+  };
+
+  const handlePopupClick = () => {
+    dispatch(updateReactListModal({ messageId }));
+  };
+
   return (
     <StyledMessageContentContainer
       direction={isIncoming ? 'left' : 'right'}
@@ -122,8 +132,10 @@ export const MessageContentWithStatuses = (props: Props) => {
       </StyledMessageContentWithStatuses>
       <MessageReactions
         messageId={messageId}
+        onClick={handleMessageReaction}
         popupReaction={popupReaction}
         setPopupReaction={setPopupReaction}
+        onPopupClick={handlePopupClick}
       />
     </StyledMessageContentContainer>
   );

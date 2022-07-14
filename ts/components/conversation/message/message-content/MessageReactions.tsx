@@ -7,16 +7,11 @@ import { getMessageReactsProps } from '../../../../state/selectors/conversations
 import { isEqual } from 'lodash';
 import { ReactionList } from '../../../../types/Message';
 import { UserUtils } from '../../../../session/utils';
-import { sendMessageReaction } from '../../../../util/reactions';
 import { MessageReactionPopup, StyledPopupContainer, TipPosition } from './MessageReactionPopup';
 import { useMouse } from 'react-use';
+import { Flex } from '../../../basic/Flex';
 
-const StyledMessageReactionsContainer = styled.div<{ x: number; y: number }>`
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-
+const StyledMessageReactionsContainer = styled(Flex)<{ x: number; y: number }>`
   ${StyledPopupContainer} {
     position: absolute;
     top: ${props => `${props.y}px;`};
@@ -24,11 +19,7 @@ const StyledMessageReactionsContainer = styled.div<{ x: number; y: number }>`
   }
 `;
 
-export const StyledMessageReactions = styled.div`
-  display: flex;
-  justify-content: flex-start;
-  flex-wrap: wrap;
-  align-items: center;
+export const StyledMessageReactions = styled(Flex)`
   max-width: 320px;
   /* overflow-x: auto; */ // NOTE breaks positioning of tooltips
 `;
@@ -98,13 +89,6 @@ const StyledReadLess = styled.span`
 
 export type MessageReactsSelectorProps = Pick<MessageRenderingProps, 'reacts'>;
 
-type Props = {
-  messageId: string;
-  hasReactLimit?: string;
-  popupReaction?: string;
-  setPopupReaction?: (...args: Array<any>) => void;
-};
-
 const UpArrowSVG = (): ReactElement => (
   <svg width="14" height="9" viewBox="0 0 14 9" fill="none" xmlns="https://www.w3.org/2000/svg">
     <path
@@ -114,8 +98,25 @@ const UpArrowSVG = (): ReactElement => (
   </svg>
 );
 
+type Props = {
+  messageId: string;
+  hasReactLimit?: boolean;
+  onClick: (...args: Array<any>) => void;
+  popupReaction?: string;
+  setPopupReaction?: (...args: Array<any>) => void;
+  onPopupClick?: (...args: Array<any>) => void
+};
+
 export const MessageReactions = (props: Props): ReactElement => {
-  const { messageId, hasReactLimit = true, popupReaction, setPopupReaction } = props;
+  const {
+    messageId,
+    hasReactLimit = true,
+    onClick,
+    popupReaction,
+    setPopupReaction,
+    onPopupClick,
+  } = props;
+
   const me = UserUtils.getOurPubKeyStrFromCache();
 
   const msgProps = useSelector((state: StateType) => getMessageReactsProps(state, messageId));
@@ -144,15 +145,13 @@ export const MessageReactions = (props: Props): ReactElement => {
 
   const reactLimit = 6;
 
-  // TODO change to generic selected function
   const includesMe = (emoji: string) =>
     reactions[emoji].senders &&
     reactions[emoji].senders.length > 0 &&
     reactions[emoji].senders.includes(me);
 
   const handleReactionClick = async (emoji: string) => {
-    // TODO change to generic click method
-    await sendMessageReaction(messageId, emoji);
+    onClick(emoji);
   };
 
   const renderReaction = (emoji: string) => (
@@ -200,6 +199,9 @@ export const MessageReactions = (props: Props): ReactElement => {
             setPopupX(popupXDefault);
             setPopupY(popupYDefault);
             setTooltipPosition('center');
+            if (onPopupClick) {
+              onPopupClick();
+            }
           }}
         />
       )}
@@ -207,7 +209,7 @@ export const MessageReactions = (props: Props): ReactElement => {
   );
 
   const renderReactionList = () => (
-    <StyledMessageReactions>
+    <StyledMessageReactions container={true} flexWrap={'wrap'} alignItems={'center'}>
       {Object.keys(reactions).map(emoji => {
         return renderReaction(emoji);
       })}
@@ -215,7 +217,7 @@ export const MessageReactions = (props: Props): ReactElement => {
   );
 
   const renderCompressedReactions = () => (
-    <StyledMessageReactions>
+    <StyledMessageReactions container={true} flexWrap={'wrap'} alignItems={'center'}>
       {Object.keys(reactions)
         .slice(0, 4)
         .map(emoji => {
@@ -260,7 +262,14 @@ export const MessageReactions = (props: Props): ReactElement => {
   }, [reacts, reactions]);
 
   return (
-    <StyledMessageReactionsContainer x={popupX} y={popupY}>
+    <StyledMessageReactionsContainer
+      container={true}
+      flexDirection={'column'}
+      justifyContent={'center'}
+      alignItems={'center'}
+      x={popupX}
+      y={popupY}
+    >
       {reactions !== {} ? render() : <></>}
     </StyledMessageReactionsContainer>
   );
