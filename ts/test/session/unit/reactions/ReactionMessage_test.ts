@@ -9,8 +9,9 @@ import { noop } from 'lodash';
 import { UserUtils } from '../../../../session/utils';
 import { SignalService } from '../../../../protobuf';
 import { MessageCollection } from '../../../../models/message';
+import chaiAsPromised from 'chai-as-promised';
 
-chai.use(require('chai-as-promised'));
+chai.use(chaiAsPromised as any);
 
 describe('ReactionMessage', () => {
   stubWindowLog();
@@ -18,21 +19,23 @@ describe('ReactionMessage', () => {
   let clock: Sinon.SinonFakeTimers;
   const ourNumber = '0123456789abcdef';
   const originalMessage = generateFakeIncomingPrivateMessage();
-
   originalMessage.set('sent_at', Date.now());
-  Sinon.stub(originalMessage, 'getConversation').returns({
-    sendReaction: noop,
-  } as any);
 
-  // sendMessageReaction stubs
-  Sinon.stub(Data, 'getMessageById').resolves(originalMessage);
-  Sinon.stub(Storage, 'getRecentReactions').resolves(RECENT_REACTS);
-  Sinon.stub(Storage, 'saveRecentReations').resolves();
-  Sinon.stub(UserUtils, 'getOurPubKeyStrFromCache').returns(ourNumber);
+  beforeEach(() => {
+    Sinon.stub(originalMessage, 'getConversation').returns({
+      sendReaction: noop,
+    } as any);
 
-  // handleMessageReaction stubs
-  Sinon.stub(Data, 'getMessagesBySentAt').resolves(new MessageCollection([originalMessage]));
-  Sinon.stub(originalMessage, 'commit').resolves();
+    // sendMessageReaction stubs
+    Sinon.stub(Data, 'getMessageById').resolves(originalMessage);
+    Sinon.stub(Storage, 'getRecentReactions').resolves(RECENT_REACTS);
+    Sinon.stub(Storage, 'saveRecentReations').resolves();
+    Sinon.stub(UserUtils, 'getOurPubKeyStrFromCache').returns(ourNumber);
+
+    // handleMessageReaction stubs
+    Sinon.stub(Data, 'getMessagesBySentAt').resolves(new MessageCollection([originalMessage]));
+    Sinon.stub(originalMessage, 'commit').resolves();
+  });
 
   it('can react to a message', async () => {
     // Send reaction
@@ -56,13 +59,13 @@ describe('ReactionMessage', () => {
 
     expect(updatedMessage?.get('reacts'), 'original message should have reacts').to.not.be
       .undefined;
+    // tslint:disable: no-non-null-assertion
     expect(updatedMessage?.get('reacts')!['😄'], 'reacts should have 😄 key').to.not.be.undefined;
+    // tslint:disable: no-non-null-assertion
     expect(
       Object.keys(updatedMessage!.get('reacts')!['😄'])[0],
       'sender pubkey should match'
     ).to.be.equal(ourNumber);
-
-    // TODO The reaction should be added to the most recent reactions [make sync first]
   });
 
   it('can remove a reaction from a message', async () => {
@@ -121,5 +124,9 @@ describe('ReactionMessage', () => {
 
   it('a moderator can batch clear a reaction in an open group', () => {
     // TODO Requires Open Group end point integration
+  });
+
+  afterEach(() => {
+    Sinon.restore();
   });
 });
