@@ -255,11 +255,11 @@ export const ReactListModal = (props: Props): ReactElement => {
                 <span>&#8226;</span>
                 <span>{senders.length}</span>
               </p>
-              {isPublic && weAreAdmin && (
+              {/* {isPublic && weAreAdmin && (
                 <StyledClearButton onClick={handleClearReactions}>
                   {window.i18n('clearAll')}
                 </StyledClearButton>
-              )}
+              )} */}
             </StyledReactionBar>
             {senders && senders.length > 0 && (
               <ReactionSenders

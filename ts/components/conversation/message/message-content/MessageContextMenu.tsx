@@ -3,7 +3,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { animation, Item, Menu, useContextMenu } from 'react-contexify';
 
 import { useDispatch, useSelector } from 'react-redux';
-import { useMouse, useClickAway } from 'react-use';
+import { useClickAway, useMouse } from 'react-use';
 import styled from 'styled-components';
 import { getMessageById } from '../../../../data/data';
 import { MessageInteraction } from '../../../../interactions';
