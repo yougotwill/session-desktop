@@ -7,6 +7,7 @@ import { Picker } from '../../../node_modules/emoji-mart/dist/index.cjs';
 import { useSelector } from 'react-redux';
 import { getTheme } from '../../state/selectors/theme';
 import { FixedBaseEmoji, FixedPickerProps } from '../../types/Util.js';
+import { noop } from 'lodash';
 
 export const StyledEmojiPanel = styled.div<{ isModal: boolean; theme: 'light' | 'dark' }>`
   padding: var(--margins-lg);
@@ -125,11 +126,7 @@ export const SessionEmojiPanel = (props: Props) => {
               ...pickerProps,
             });
           })
-          .catch(() => {
-            if (isCancelled) {
-              return;
-            }
-          });
+          .catch(noop);
       }
     }
 
