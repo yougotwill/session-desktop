@@ -6,8 +6,7 @@ import data from '@emoji-mart/data';
 import { Picker } from '../../../node_modules/emoji-mart/dist/index.cjs';
 import { useSelector } from 'react-redux';
 import { getTheme } from '../../state/selectors/theme';
-import { BaseEmoji } from 'emoji-mart';
-import { FixedPickerProps } from '../../types/Util.js';
+import { FixedBaseEmoji, FixedPickerProps } from '../../types/Util.js';
 
 export const StyledEmojiPanel = styled.div<{ isModal: boolean; theme: 'light' | 'dark' }>`
   padding: var(--margins-lg);
@@ -78,7 +77,7 @@ export const StyledEmojiPanel = styled.div<{ isModal: boolean; theme: 'light' | 
 `;
 
 type Props = {
-  onEmojiClicked: (emoji: BaseEmoji) => void;
+  onEmojiClicked: (emoji: FixedBaseEmoji) => void;
   show: boolean;
   isModal?: boolean;
 };

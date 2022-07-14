@@ -2,6 +2,7 @@ import React, { ReactElement, useCallback, useEffect, useState } from 'react';
 import styled from 'styled-components';
 import { getMessageById } from '../../../../data/data';
 import { PubKey } from '../../../../session/types/PubKey';
+import { nativeEmojiData } from '../../../../util/emoji';
 import { readableList } from '../../../../util/readableList';
 
 export type TipPosition = 'center' | 'left' | 'right';
@@ -62,11 +63,27 @@ type Props = {
   onClick: (...args: Array<any>) => void;
 };
 
+const renderContacts = (_contacts: string) => {
+  if (!_contacts) {
+    return <></>;
+  }
+
+  if (_contacts.indexOf('&') !== -1 && _contacts.indexOf('other') !== -1) {
+    const [names, others] = _contacts.split('&');
+    return (
+      <span>
+        {names} & <span style={{ color: 'var(--color-accent' }}>{others}</span> reacted with
+      </span>
+    );
+  }
+
+  return <span>{_contacts} reacted with</span>;
+};
+
 export const MessageReactionPopup = (props: Props): ReactElement => {
   const { messageId, emoji, senders, tooltipPosition = 'center', onClick } = props;
 
   const [contacts, setContacts] = useState('');
-
   const generateContacts = useCallback(async () => {
     let results = null;
     const message = await getMessageById(messageId);
@@ -78,23 +95,6 @@ export const MessageReactionPopup = (props: Props): ReactElement => {
     }
     return results;
   }, [messageId]);
-
-  const renderContacts = (_contacts: string) => {
-    if (!_contacts) {
-      return <></>;
-    }
-
-    if (_contacts.indexOf('&') !== -1 && _contacts.indexOf('other') !== -1) {
-      const [names, others] = _contacts.split('&');
-      return (
-        <span>
-          {names} & <span style={{ color: 'var(--color-accent' }}>{others}</span> reacted with
-        </span>
-      );
-    }
-
-    return <span>{_contacts} reacted with</span>;
-  };
 
   useEffect(() => {
     let isCancelled = false;
@@ -126,7 +126,12 @@ export const MessageReactionPopup = (props: Props): ReactElement => {
       }}
     >
       {renderContacts(contacts)}
-      <StyledEmoji>{emoji}</StyledEmoji>
+      <StyledEmoji
+        role={'img'}
+        aria-label={nativeEmojiData?.ariaLabels ? nativeEmojiData.ariaLabels[emoji] : undefined}
+      >
+        {emoji}
+      </StyledEmoji>
     </StyledPopupContainer>
   );
 };

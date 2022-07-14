@@ -1,4 +1,4 @@
-import { BaseEmoji, EmojiSet } from 'emoji-mart';
+import { EmojiSet } from 'emoji-mart';
 import { LocalizerKeys } from './LocalizerKeys';
 
 export type RenderTextCallbackType = (options: {
@@ -38,6 +38,30 @@ export class RecentReactions {
   }
 }
 
+type BaseEmojiSkin = { unified: string; native: string };
+
+export interface FixedBaseEmoji {
+  id: string;
+  name: string;
+  keywords: Array<string>;
+  skins: Array<BaseEmojiSkin>;
+  version: number;
+  search?: string;
+  // props from emoji panel click event
+  native?: string;
+  aliases?: Array<string>;
+  shortcodes?: string;
+  unified?: string;
+}
+
+export interface NativeEmojiData {
+  categories: Array<{ id: string; emojis: Array<string> }>;
+  emojis: Record<string, FixedBaseEmoji>;
+  aliases: Record<string, string>;
+  sheet: { cols: number; rows: number };
+  ariaLabels?: Record<string, string>;
+}
+
 // Types for EmojiMart 5 are currently broken these are a temporary fixes
 export interface FixedPickerProps {
   autoFocus?: boolean | undefined;
@@ -59,7 +83,7 @@ export interface FixedPickerProps {
   noResultsEmoji?: string | undefined;
   previewPosition?: 'bottom' | 'top' | 'none' | undefined;
   skinTonePosition?: 'preview' | 'search' | 'none';
-  onEmojiSelect?: (emoji: BaseEmoji) => void;
+  onEmojiSelect?: (emoji: FixedBaseEmoji) => void;
   onClickOutside?: (...args: Array<any>) => void;
   onAddCustomEmoji?: (...args: Array<any>) => void;
   getImageURL?: () => void;

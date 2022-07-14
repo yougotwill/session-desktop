@@ -18,7 +18,7 @@ import { deleteAllLogs } from '../node/logs';
 import ReactDOM from 'react-dom';
 import React from 'react';
 import nativeEmojiData from '@emoji-mart/data';
-import { generateEmojiSearchIndexes } from '../util/emoji';
+import { initialiseEmojiData } from '../util/emoji';
 // tslint:disable: max-classes-per-file
 
 // Globally disable drag and drop
@@ -170,7 +170,7 @@ Storage.onready(async () => {
   window.Events.setThemeSetting(newThemeSetting);
 
   try {
-    generateEmojiSearchIndexes(nativeEmojiData);
+    initialiseEmojiData(nativeEmojiData);
     await AttachmentDownloads.initAttachmentPaths();
     await Promise.all([getConversationController().load(), BlockedNumberController.load()]);
   } catch (error) {

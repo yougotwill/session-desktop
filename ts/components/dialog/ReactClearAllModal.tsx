@@ -5,6 +5,7 @@ import { updateReactClearAllModal } from '../../state/ducks/modalDialog';
 import { StateType } from '../../state/reducer';
 import { getMessageReactsProps } from '../../state/selectors/conversations';
 import { getTheme } from '../../state/selectors/theme';
+import { nativeEmojiData } from '../../util/emoji';
 import { Flex } from '../basic/Flex';
 import { SessionButton, SessionButtonColor, SessionButtonType } from '../basic/SessionButton';
 import { SessionWrapperModal } from '../SessionWrapperModal';
@@ -65,7 +66,16 @@ export const ReactClearAllModal = (props: Props): ReactElement => {
     >
       <StyledReactClearAllContainer container={true} flexDirection={'column'} darkMode={darkMode}>
         <p>
-          Are you sure you want to clear all <span>{reaction}</span>?
+          Are you sure you want to clear all{' '}
+          <span
+            role={'img'}
+            aria-label={
+              nativeEmojiData?.ariaLabels ? nativeEmojiData.ariaLabels[reaction] : undefined
+            }
+          >
+            {reaction}
+          </span>
+          ?
         </p>
         <div className="session-modal__button-group">
           <SessionButton

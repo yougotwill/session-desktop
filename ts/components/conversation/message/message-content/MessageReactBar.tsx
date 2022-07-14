@@ -3,6 +3,8 @@ import styled from 'styled-components';
 import { RecentReactions } from '../../../../types/Util';
 import { getRecentReactions } from '../../../../util/storage';
 import { SessionIconButton } from '../../../icon';
+import { nativeEmojiData } from '../../../../util/emoji';
+import { isEqual } from 'lodash';
 
 type Props = {
   action: (...args: Array<any>) => void;
@@ -41,13 +43,12 @@ const ReactButton = styled.span`
   }
 `;
 
-export const MessageReactBar = (props: Props): ReactElement => {
-  const { action, additionalAction } = props;
-  const [recentReactions, setRecentReactions] = useState<RecentReactions>();
-
-  const renderReactButton = (emoji: string) => (
+const renderReactButton = (emoji: string, action: (...args: Array<any>) => void) => {
+  return (
     <ReactButton
       key={emoji}
+      role={'img'}
+      aria-label={nativeEmojiData?.ariaLabels ? nativeEmojiData.ariaLabels[emoji] : undefined}
       onClick={() => {
         action(emoji);
       }}
@@ -55,19 +56,28 @@ export const MessageReactBar = (props: Props): ReactElement => {
       {emoji}
     </ReactButton>
   );
+};
 
-  const renderReactButtonList = (reactions: Array<string>) => (
-    <>
-      {reactions.map(emoji => {
-        return renderReactButton(emoji);
-      })}
-    </>
+const loadRecentReactions = async () => {
+  const reactions = new RecentReactions(await getRecentReactions());
+  return reactions;
+};
+
+export const MessageReactBar = (props: Props): ReactElement => {
+  const { action, additionalAction } = props;
+  const [recentReactions, setRecentReactions] = useState<RecentReactions>();
+
+  const renderReactButtonList = useCallback(
+    () => (
+      <>
+        {recentReactions &&
+          recentReactions.items.map(emoji => {
+            return renderReactButton(emoji, action);
+          })}
+      </>
+    ),
+    [recentReactions, action]
   );
-
-  const loadRecentReactions = useCallback(async () => {
-    const reactions = new RecentReactions(await getRecentReactions());
-    return reactions;
-  }, []);
 
   useEffect(() => {
     let isCancelled = false;
@@ -76,7 +86,9 @@ export const MessageReactBar = (props: Props): ReactElement => {
         if (isCancelled) {
           return;
         }
-        setRecentReactions(reactions);
+        if (reactions && !isEqual(reactions, recentReactions)) {
+          setRecentReactions(reactions);
+        }
       })
       .catch(() => {
         if (isCancelled) {
@@ -87,7 +99,7 @@ export const MessageReactBar = (props: Props): ReactElement => {
     return () => {
       isCancelled = true;
     };
-  }, [loadRecentReactions]);
+  }, [recentReactions, loadRecentReactions]);
 
   if (!recentReactions) {
     return <></>;
@@ -95,7 +107,7 @@ export const MessageReactBar = (props: Props): ReactElement => {
 
   return (
     <StyledMessageReactBar>
-      {renderReactButtonList(recentReactions.items)}
+      {renderReactButtonList()}
       <SessionIconButton
         iconColor={'var(--color-text)'}
         iconPadding={'12px'}
