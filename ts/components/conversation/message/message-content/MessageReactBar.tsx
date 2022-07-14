@@ -2,7 +2,9 @@ import React, { ReactElement } from 'react';
 import styled from 'styled-components';
 import { SessionIconButton } from '../../../icon';
 
-type Props = {};
+type Props = {
+  action: (...args: any[]) => void;
+};
 
 const StyledMessageReactBar = styled.div`
   background-color: var(--color-received-message-background);
@@ -37,7 +39,7 @@ const ReactButton = styled.span`
 `;
 
 export const MessageReactBar = (props: Props): ReactElement => {
-  const {} = props;
+  const { action } = props;
 
   return (
     <StyledMessageReactBar>
@@ -54,6 +56,7 @@ export const MessageReactBar = (props: Props): ReactElement => {
         iconType="plusThin"
         backgroundColor={'var(--color-compose-view-button-background)'}
         borderRadius="300px"
+        onClick={action}
       />
     </StyledMessageReactBar>
   );
