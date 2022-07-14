@@ -108,7 +108,7 @@ export const MessageContextMenu = (props: Props) => {
   const isSent = status === 'sent' || status === 'read'; // a read message should be replyable
 
   const emojiPanelId = `${contextMenuId}-styled-emoji-panel-container`;
-  const emojiPanelRef = useRef(null);
+  const emojiPanelRef = useRef<HTMLDivElement>(null);
   const [showEmojiPanel, setShowEmojiPanel] = useState(false);
   // emoji-mart v5.1 default dimensions
   const emojiPanelWidth = 354;
@@ -258,7 +258,7 @@ export const MessageContextMenu = (props: Props) => {
   };
 
   useEffect(() => {
-    if (emojiPanelRef.current !== null && emojiPanelRef.current) {
+    if (emojiPanelRef.current && emojiPanelRef.current) {
       const { innerWidth: windowWidth, innerHeight: windowHeight } = window;
 
       if (mouseX + emojiPanelWidth > windowWidth) {
