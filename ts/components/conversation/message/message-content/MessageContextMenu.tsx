@@ -3,7 +3,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { animation, Item, Menu, useContextMenu } from 'react-contexify';
 
 import { useDispatch, useSelector } from 'react-redux';
-import { useMouse } from 'react-use';
+import { useMouse, useClickAway } from 'react-use';
 import styled from 'styled-components';
 import { getMessageById } from '../../../../data/data';
 import { MessageInteraction } from '../../../../interactions';
@@ -107,7 +107,6 @@ export const MessageContextMenu = (props: Props) => {
   const showRetry = status === 'error' && isOutgoing;
   const isSent = status === 'sent' || status === 'read'; // a read message should be replyable
 
-  const emojiPanelId = `${contextMenuId}-styled-emoji-panel-container`;
   const emojiPanelRef = useRef<HTMLDivElement>(null);
   const [showEmojiPanel, setShowEmojiPanel] = useState(false);
   // emoji-mart v5.1 default dimensions
@@ -235,15 +234,10 @@ export const MessageContextMenu = (props: Props) => {
     hideAll();
   };
 
-  const onEmojiLoseFocus = useCallback(
-    (event: any) => {
-      if (event.target.id === emojiPanelId && showEmojiPanel) {
-        window.log.info('closed due to lost focus');
-        onCloseEmoji();
-      }
-    },
-    [emojiPanelId, showEmojiPanel]
-  );
+  const onEmojiLoseFocus = () => {
+    window.log.info('closed due to lost focus');
+    onCloseEmoji();
+  };
 
   const onEmojiClick = async (args: any) => {
     const emoji = args.native ?? args;
@@ -256,6 +250,10 @@ export const MessageContextMenu = (props: Props) => {
       onCloseEmoji();
     }
   };
+
+  useClickAway(emojiPanelRef, () => {
+    onEmojiLoseFocus();
+  });
 
   useEffect(() => {
     if (emojiPanelRef.current && emojiPanelRef.current) {
@@ -282,26 +280,16 @@ export const MessageContextMenu = (props: Props) => {
     }
   }, [emojiPanelRef.current, emojiPanelWidth, emojiPanelHeight, mouseX, mouseY]);
 
-  useEffect(() => {
-    document.addEventListener('click', onEmojiLoseFocus);
-
-    return () => {
-      document.removeEventListener('click', onEmojiLoseFocus);
-    };
-  }, [contextMenuId, onEmojiLoseFocus, window.contextMenuShown]);
-
   return (
     <StyledMessageContextMenu ref={contextMenuRef}>
       {showEmojiPanel && (
-        <StyledEmojiPanelContainer
-          id={emojiPanelId}
-          ref={emojiPanelRef}
-          onKeyDown={onEmojiKeyDown}
-          role="button"
-          x={mouseX}
-          y={mouseY}
-        >
-          <SessionEmojiPanel onEmojiClicked={onEmojiClick} show={showEmojiPanel} isModal={true} />
+        <StyledEmojiPanelContainer onKeyDown={onEmojiKeyDown} role="button" x={mouseX} y={mouseY}>
+          <SessionEmojiPanel
+            ref={emojiPanelRef}
+            onEmojiClicked={onEmojiClick}
+            show={showEmojiPanel}
+            isModal={true}
+          />
         </StyledEmojiPanelContainer>
       )}
       <Menu

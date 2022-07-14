@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { forwardRef, MutableRefObject, useEffect } from 'react';
 import classNames from 'classnames';
 import styled from 'styled-components';
 import data from '@emoji-mart/data';
@@ -91,10 +91,10 @@ const pickerProps: FixedPickerProps = {
   skinTonePosition: 'preview',
 };
 
-export const SessionEmojiPanel = (props: Props) => {
+export const SessionEmojiPanel = forwardRef<HTMLDivElement, Props>((props: Props, ref) => {
   const { onEmojiClicked, show, isModal = false } = props;
   const theme = useSelector(getTheme);
-  const pickerRef = useRef<HTMLDivElement>(null);
+  const pickerRef = ref as MutableRefObject<HTMLDivElement>;
 
   useEffect(() => {
     let isCancelled = false;
@@ -108,7 +108,7 @@ export const SessionEmojiPanel = (props: Props) => {
             // tslint:disable-next-line: no-unused-expression
             new Picker({
               data,
-              ref: pickerRef,
+              ref,
               i18n,
               theme,
               onEmojiSelect: onEmojiClicked,
@@ -129,7 +129,7 @@ export const SessionEmojiPanel = (props: Props) => {
       isModal={isModal}
       theme={theme}
       className={classNames(show && 'show')}
-      ref={pickerRef}
+      ref={ref}
     />
   );
-};
+});
