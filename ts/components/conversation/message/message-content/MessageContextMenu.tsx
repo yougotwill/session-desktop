@@ -17,11 +17,14 @@ import {
   removeSenderFromModerator,
 } from '../../../../interactions/messageInteractions';
 import { MessageRenderingProps } from '../../../../models/messageType';
+import { getConversationController } from '../../../../session/conversations';
+import { UserUtils } from '../../../../session/utils';
 import { pushUnblockToSend } from '../../../../session/utils/Toast';
 import {
   showMessageDetailsView,
   toggleSelectedMessageId,
 } from '../../../../state/ducks/conversations';
+import { StateType } from '../../../../state/reducer';
 import { getMessageContextMenuProps } from '../../../../state/selectors/conversations';
 import { saveAttachmentToDisk } from '../../../../util/attachmentsUtil';
 import { SessionEmojiPanel, StyledEmojiPanel } from '../../SessionEmojiPanel';
@@ -72,13 +75,16 @@ const StyledEmojiPanelContainer = styled.div<{ x: number; y: number }>`
 
 // tslint:disable: max-func-body-length cyclomatic-complexity
 export const MessageContextMenu = (props: Props) => {
-  const selected = useSelector(state => getMessageContextMenuProps(state as any, props.messageId));
+  const { messageId, contextMenuId } = props;
   const dispatch = useDispatch();
   const { hideAll } = useContextMenu();
+
+  const selected = useSelector((state: StateType) => getMessageContextMenuProps(state, messageId));
 
   if (!selected) {
     return null;
   }
+
   const {
     attachments,
     sender,
@@ -96,7 +102,9 @@ export const MessageContextMenu = (props: Props) => {
     timestamp,
     isBlocked,
   } = selected;
-  const { messageId, contextMenuId } = props;
+
+  const conversationModel = getConversationController().get(convoId);
+
   const isOutgoing = direction === 'outgoing';
   const showRetry = status === 'error' && isOutgoing;
   const isSent = status === 'sent' || status === 'read'; // a read message should be replyable
@@ -237,8 +245,16 @@ export const MessageContextMenu = (props: Props) => {
     [emojiPanelId, showEmojiPanel]
   );
 
-  const onEmojiClick = ({ native }: any) => {
-    console.log('this is the emoji', native);
+  const onEmojiClick = (args: any) => {
+    const emoji = args.native ?? args;
+    const author = UserUtils.getOurPubKeyStrFromCache();
+    conversationModel.sendReaction(messageId, {
+      id: timestamp,
+      author,
+      emoji,
+      action: 1,
+    });
+    console.log(author, ' reacted with a ', emoji);
     onCloseEmoji();
   };
 
@@ -304,7 +320,7 @@ export const MessageContextMenu = (props: Props) => {
         onHidden={onContextMenuHidden}
         animation={animation.fade}
       >
-        <MessageReactBar action={onShowEmoji} />
+        <MessageReactBar action={onEmojiClick} additionalAction={onShowEmoji} />
         {attachments?.length ? (
           <Item onClick={saveAttachment}>{window.i18n('downloadAttachment')}</Item>
         ) : null}

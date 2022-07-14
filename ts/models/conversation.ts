@@ -13,6 +13,7 @@ import { MessageAttributesOptionals, MessageDirection } from './messageType';
 import autoBind from 'auto-bind';
 import {
   getLastMessagesByConversation,
+  getMessageById,
   getMessageCountByType,
   getMessagesByConversation,
   getUnreadByConversation,
@@ -65,6 +66,7 @@ import { getOurPubKeyStrFromCache } from '../session/utils/User';
 import { MessageRequestResponse } from '../session/messages/outgoing/controlMessage/MessageRequestResponse';
 import { Notifications } from '../util/notifications';
 import { Storage } from '../util/storage';
+import { ReactionType } from '../types/Message';
 
 export enum ConversationTypeEnum {
   GROUP = 'group',
@@ -637,6 +639,70 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     return getOpenGroupV2FromConversationId(this.id);
   }
 
+  public async sendReactionJob(message: MessageModel, reaction: ReactionType) {
+    try {
+      const { id } = message;
+      const destination = this.id;
+
+      const sentAt = message.get('sent_at');
+
+      if (!sentAt) {
+        throw new Error('sendReactMessageJob() sent_at must be set.');
+      }
+
+      if (this.isPublic() && !this.isOpenGroupV2()) {
+        throw new Error('Only opengroupv2 are supported now');
+      }
+
+      // an OpenGroupV2 message is just a visible message
+      const chatMessageParams: VisibleMessageParams = {
+        body: `Reacted ${reaction.emoji} to: "${message.get('body')}"`,
+        identifier: id,
+        timestamp: sentAt,
+        reaction,
+        lokiProfile: UserUtils.getOurProfile(),
+      };
+
+      const shouldApprove = !this.isApproved() && this.isPrivate();
+      const incomingMessageCount = await getMessageCountByType(this.id, MessageDirection.incoming);
+      const hasIncomingMessages = incomingMessageCount > 0;
+      if (shouldApprove) {
+        await this.setIsApproved(true);
+        if (hasIncomingMessages) {
+          // have to manually add approval for local client here as DB conditional approval check in config msg handling will prevent this from running
+          await this.addOutgoingApprovalMessage(Date.now());
+          if (!this.didApproveMe()) {
+            await this.setDidApproveMe(true);
+          }
+          // should only send once
+          await this.sendMessageRequestResponse(true);
+          void forceSyncConfigurationNowIfNeeded();
+        }
+      }
+
+      const destinationPubkey = new PubKey(destination);
+      if (this.isPrivate()) {
+        if (this.isMe()) {
+          chatMessageParams.syncTarget = this.id;
+          const chatMessageMe = new VisibleMessage(chatMessageParams);
+
+          await getMessageQueue().sendSyncMessage(chatMessageMe);
+          return;
+        }
+
+        const chatMessagePrivate = new VisibleMessage(chatMessageParams);
+
+        await getMessageQueue().sendToPubKey(destinationPubkey, chatMessagePrivate);
+        return;
+      }
+
+      throw new TypeError(`Invalid conversation type: '${this.get('type')}'`);
+    } catch (e) {
+      await message.saveErrors(e);
+      return null;
+    }
+  }
+
   public async sendMessageJob(message: MessageModel, expireTimer: number | undefined) {
     try {
       const uploads = await message.uploadData();
@@ -869,6 +935,19 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
 
     await this.queueJob(async () => {
       await this.sendMessageJob(messageModel, expireTimer);
+    });
+  }
+
+  public async sendReaction(messageId: string, reaction: ReactionType) {
+    const messageModel = await getMessageById(messageId);
+
+    if (!messageModel) {
+      // TODO handle better
+      return;
+    }
+
+    await this.queueJob(async () => {
+      await this.sendReactionJob(messageModel, reaction);
     });
   }
 

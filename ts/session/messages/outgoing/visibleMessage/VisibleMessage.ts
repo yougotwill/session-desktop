@@ -1,7 +1,7 @@
 import ByteBuffer from 'bytebuffer';
 import { DataMessage } from '..';
 import { SignalService } from '../../../../protobuf';
-import { LokiProfile } from '../../../../types/Message';
+import { LokiProfile, ReactionType } from '../../../../types/Message';
 import { MessageParams } from '../Message';
 
 interface AttachmentPointerCommon {
@@ -66,6 +66,7 @@ export interface VisibleMessageParams extends MessageParams {
   expireTimer?: number;
   lokiProfile?: LokiProfile;
   preview?: Array<PreviewWithAttachmentUrl>;
+  reaction?: ReactionType;
   syncTarget?: string; // undefined means it is not a synced message
 }
 

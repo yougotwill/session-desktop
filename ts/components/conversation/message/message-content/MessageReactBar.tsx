@@ -4,6 +4,7 @@ import { SessionIconButton } from '../../../icon';
 
 type Props = {
   action: (...args: any[]) => void;
+  additionalAction: (...args: any[]) => void;
 };
 
 const StyledMessageReactBar = styled.div`
@@ -39,16 +40,16 @@ const ReactButton = styled.span`
 `;
 
 export const MessageReactBar = (props: Props): ReactElement => {
-  const { action } = props;
+  const { action, additionalAction } = props;
 
   return (
     <StyledMessageReactBar>
-      <ReactButton>🙈</ReactButton>
-      <ReactButton>🙉</ReactButton>
-      <ReactButton>🙊</ReactButton>
-      <ReactButton>😈</ReactButton>
-      <ReactButton>🥸</ReactButton>
-      <ReactButton>🐀</ReactButton>
+      <ReactButton onClick={() => action('🙈')}>🙈</ReactButton>
+      <ReactButton onClick={() => action('🙉')}>🙉</ReactButton>
+      <ReactButton onClick={() => action('🙊')}>🙊</ReactButton>
+      <ReactButton onClick={() => action('😈')}>😈</ReactButton>
+      <ReactButton onClick={() => action('🥸')}>🥸</ReactButton>
+      <ReactButton onClick={() => action('🐀')}>🐀</ReactButton>
       <SessionIconButton
         iconColor={'var(--color-text)'}
         iconPadding={'12px'}
@@ -56,7 +57,7 @@ export const MessageReactBar = (props: Props): ReactElement => {
         iconType="plusThin"
         backgroundColor={'var(--color-compose-view-button-background)'}
         borderRadius="300px"
-        onClick={action}
+        onClick={additionalAction}
       />
     </StyledMessageReactBar>
   );
