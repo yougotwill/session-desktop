@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 
 import { animation, Item, Menu } from 'react-contexify';
 
@@ -23,6 +23,7 @@ import {
 } from '../../../../state/ducks/conversations';
 import { getMessageContextMenuProps } from '../../../../state/selectors/conversations';
 import { saveAttachmentToDisk } from '../../../../util/attachmentsUtil';
+import { SessionEmojiPanel, StyledEmojiPanel } from '../../SessionEmojiPanel';
 import { MessageReactBar } from './MessageReactBar';
 
 export type MessageContextMenuSelectorProps = Pick<
@@ -51,6 +52,19 @@ const StyledMessageContextMenu = styled.div`
 
   .react-contexify {
     margin-left: -104px;
+  }
+`;
+
+const StyledEmojiPanelContainer = styled.div<{}>`
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  ${StyledEmojiPanel} {
+    position: absolute;
+    left: 0;
+    top: 0;
   }
 `;
 
@@ -83,6 +97,9 @@ export const MessageContextMenu = (props: Props) => {
   const isOutgoing = direction === 'outgoing';
   const showRetry = status === 'error' && isOutgoing;
   const isSent = status === 'sent' || status === 'read'; // a read message should be replyable
+
+  const emojiPanelId = `${contextMenuId}-styled-emoji-panel-container`;
+  const [showEmojiPanel, setShowEmojiPanel] = useState(false);
 
   const onContextMenuShown = useCallback(() => {
     window.contextMenuShown = true;
@@ -185,19 +202,48 @@ export const MessageContextMenu = (props: Props) => {
     void deleteMessagesByIdForEveryone([messageId], convoId);
   }, [convoId, messageId]);
 
+  const onEmojiClick = ({ native }: any) => {
+    console.log('this is the emoji', native);
+    setShowEmojiPanel(false);
+  };
+
+  const onEmojiOffClick = (event: any) => {
+    if (event.target.id === emojiPanelId && showEmojiPanel) {
+      console.log('closing');
+      setShowEmojiPanel(false);
+    }
+  };
+
+  const onKeyDown = (event: any) => {
+    if (event.key === 'Escape' && showEmojiPanel) {
+      setShowEmojiPanel(false);
+    }
+  };
+
+  useEffect(() => {
+    document.addEventListener('click', onEmojiOffClick);
+    return () => {
+      document.removeEventListener('click', onEmojiOffClick);
+    };
+  });
+
   return (
     <StyledMessageContextMenu>
+      {showEmojiPanel && (
+        <StyledEmojiPanelContainer id={emojiPanelId} onKeyDown={onKeyDown} role="button">
+          <SessionEmojiPanel onEmojiClicked={onEmojiClick} show={showEmojiPanel} />
+        </StyledEmojiPanelContainer>
+      )}
       <Menu
         id={contextMenuId}
         onShown={onContextMenuShown}
         onHidden={onContextMenuHidden}
         animation={animation.fade}
       >
-        <MessageReactBar />
+        <MessageReactBar action={() => setShowEmojiPanel(true)} />
         {attachments?.length ? (
           <Item onClick={saveAttachment}>{window.i18n('downloadAttachment')}</Item>
         ) : null}
-
         <Item onClick={copyText}>{window.i18n('copyMessage')}</Item>
         {(isSent || !isOutgoing) && <Item onClick={onReply}>{window.i18n('replyToMessage')}</Item>}
         {(!isPublic || isOutgoing) && (
