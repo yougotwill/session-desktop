@@ -114,7 +114,7 @@ const StyledReadableMessage = styled(ReadableMessage)<{
   align-items: center;
   width: 100%;
   letter-spacing: 0.03em;
-  margin-top: 3px;
+  padding: 5px var(--margins-lg) 0;
 
   &.message-highlighted {
     animation: ${highlightedMessageAnimation} 1s ease-in-out;
@@ -140,6 +140,7 @@ const StyledReadableMessage = styled(ReadableMessage)<{
 `;
 
 export const GenericReadableMessage = (props: Props) => {
+  const { ctxMenuID, messageId, isDetailView } = props;
   const msgProps = useSelector(state =>
     getGenericReadableMessageSelectorProps(state as any, props.messageId)
   );
@@ -172,16 +173,14 @@ export const GenericReadableMessage = (props: Props) => {
       if (enableContextMenu) {
         contextMenu.hideAll();
         contextMenu.show({
-          id: props.ctxMenuID,
+          id: ctxMenuID,
           event: e,
         });
       }
       setIsRightClicked(enableContextMenu);
     },
-    [props.ctxMenuID, multiSelectMode, msgProps?.isKickedFromGroup]
+    [ctxMenuID, multiSelectMode, msgProps?.isKickedFromGroup]
   );
-
-  const { messageId, isDetailView } = props;
 
   if (!msgProps) {
     return null;
@@ -235,7 +234,7 @@ export const GenericReadableMessage = (props: Props) => {
         />
       )}
       <MessageContentWithStatuses
-        ctxMenuID={props.ctxMenuID}
+        ctxMenuID={ctxMenuID}
         messageId={messageId}
         isDetailView={isDetailView}
         dataTestId={`message-content-${messageId}`}
