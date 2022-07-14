@@ -9,6 +9,8 @@ import { getTheme } from '../../state/selectors/theme';
 import { FixedBaseEmoji, FixedPickerProps } from '../../types/Util.js';
 import { noop } from 'lodash';
 
+let langNotSupportedMessageShown = false;
+
 export const StyledEmojiPanel = styled.div<{ isModal: boolean; theme: 'light' | 'dark' }>`
   padding: var(--margins-lg);
   z-index: 5;
@@ -97,8 +99,17 @@ const loadLocale = async () => {
 
   const lang = (window.i18n as any).getLocale();
   if (lang !== 'en') {
-    const langData = await import(`@emoji-mart/data/i18n/${lang}.json`);
-    return langData;
+    try {
+      const langData = await import(`@emoji-mart/data/i18n/${lang}.json`);
+      return langData;
+    } catch (err) {
+      if (!langNotSupportedMessageShown) {
+        window?.log?.warn(
+          'Language is not supported by emoji-mart package. See https://github.com/missive/emoji-mart/tree/main/packages/emoji-mart-data/i18n'
+        );
+        langNotSupportedMessageShown = true;
+      }
+    }
   }
 };
 
