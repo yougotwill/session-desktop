@@ -15,15 +15,6 @@ export const fileServerURL = 'http://filev2.getsession.org';
 export const fileServerPubKey = 'da21e1d886c6fbaea313f75298bd64aab03a97ce985b46bb2dad9f2089c8ee59';
 const RELEASE_VERSION_ENDPOINT = '/session_version?platform=desktop';
 
-export type FileServerRequest = {
-  method: 'GET' | 'POST' | 'DELETE' | 'PUT';
-  endpoint: string;
-  // queryParams are used for post or get, but not the same way
-  queryParams?: Record<string, any>;
-  headers?: Record<string, string | number>;
-  useV4: boolean;
-};
-
 const POST_GET_FILE_ENDPOINT = '/file';
 
 /**

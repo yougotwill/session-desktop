@@ -80,6 +80,11 @@ const JsxSelectable = (jsx: JSX.Element): JSX.Element => {
         e.stopPropagation();
         return false;
       }}
+      onDragEnd={(e: any) => {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+      }}
     >
       {jsx}
     </span>

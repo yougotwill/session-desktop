@@ -1,16 +1,17 @@
 import { from_hex, to_hex } from 'libsodium-wrappers-sumo';
-import { cloneDeep, flatten, isEmpty, isEqual, uniqBy } from 'lodash';
+import { cloneDeep, flatten, isEmpty, isEqual, isString, uniqBy } from 'lodash';
 import { getConversationController } from '../../../conversations';
 import { LibSodiumWrappers } from '../../../crypto';
 import { KeyPrefixType, PubKey } from '../../../types';
 import { crypto_sign_curve25519_pk_to_ed25519 } from 'curve25519-js';
 import { createOrUpdateItem, getItemById } from '../../../../data/channelsItem';
 import { combineKeys, generateBlindingFactor } from '../../../utils/SodiumUtils';
-import { getAllOpengroupsServerPubkeys } from '../../../../data/opengroups';
+import { getAllOpengroupsServerPubkeys, getV2OpenGroupRoom } from '../../../../data/opengroups';
 import { ConversationModel } from '../../../../models/conversation';
 import { UserUtils } from '../../../utils';
 import { getBlindedPubKey } from './sogsBlinding';
 import { fromHexToArray } from '../../../utils/String';
+import { roomHasBlindEnabled } from './sogsV3Capabilities';
 
 export type BlindedIdMapping = {
   blindedId: string;
@@ -200,6 +201,42 @@ function findNotCachedBlindingMatch(
     });
 
   return foundConvoMatchingBlindedPubkey?.get('id') || undefined;
+}
+
+/**
+ * This function returns true if the given blindedId matches our own blinded id on any pysogs.
+ * If the given pubkey  is not blinded, it returns true if it is our naked SessionID.
+ * It can be used to replace mentions with the @You syntax and for the quotes too
+ */
+export function isUsAnySogsFromCache(blindedOrNakedId: string): boolean {
+  const usUnblinded = UserUtils.getOurPubKeyStrFromCache();
+
+  if (!PubKey.hasBlindedPrefix(blindedOrNakedId)) {
+    return blindedOrNakedId === usUnblinded;
+  }
+  const found = assertLoaded().find(
+    m => m.blindedId === blindedOrNakedId && m.realSessionId === usUnblinded
+  );
+  return Boolean(found);
+}
+
+/**
+ * This function returns the cached blindedId for us, given a public conversation.
+ */
+export function getUsBlindedInThatServer(convo: ConversationModel | string): string | undefined {
+  if (!convo) {
+    return undefined;
+  }
+  const room = getV2OpenGroupRoom(isString(convo) ? convo : convo.id);
+  if (!room || !roomHasBlindEnabled(room) || !room.serverPublicKey) {
+    return undefined;
+  }
+  const usNaked = UserUtils.getOurPubKeyStrFromCache();
+
+  const found = assertLoaded().find(
+    m => m.serverPublicKey === room.serverPublicKey && m.realSessionId === usNaked
+  );
+  return found?.blindedId;
 }
 
 /**

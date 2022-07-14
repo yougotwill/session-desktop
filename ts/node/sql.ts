@@ -2834,12 +2834,12 @@ function getFirstUnreadMessageIdInConversation(conversationId: string) {
 
 function getFirstUnreadMessageWithMention(
   conversationId: string,
-  ourpubkey: string
+  ourPkInThatRoom: string // this might be a blinded id for a sogs
 ): string | undefined {
-  if (!ourpubkey || !ourpubkey.length) {
+  if (!ourPkInThatRoom || !ourPkInThatRoom.length) {
     throw new Error('getFirstUnreadMessageWithMention needs our pubkey but nothing was given');
   }
-  const likeMatch = `%@${ourpubkey}%`;
+  const likeMatch = `%@${ourPkInThatRoom}%`;
 
   const rows = assertGlobalInstance()
     .prepare(

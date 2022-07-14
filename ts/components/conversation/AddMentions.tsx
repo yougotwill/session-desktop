@@ -1,9 +1,9 @@
 import { RenderTextCallbackType } from '../../types/Util';
 import classNames from 'classnames';
 import { PubKey } from '../../session/types';
-import { UserUtils } from '../../session/utils';
 import { getConversationController } from '../../session/conversations';
 import React from 'react';
+import { isUsAnySogsFromCache } from '../../session/apis/open_group_api/sogsv3/knownBlindedkeys';
 
 interface MentionProps {
   key: string;
@@ -11,21 +11,23 @@ interface MentionProps {
 }
 
 const Mention = (props: MentionProps) => {
-  const foundConvo = getConversationController().get(props.text.slice(1));
-  let us = false;
-  if (foundConvo) {
-    us = UserUtils.isUsFromCache(foundConvo.id);
+  const blindedOrNotPubkey = props.text.slice(1);
+  const foundConvo = getConversationController().get(blindedOrNotPubkey);
+
+  // this call takes care of finding if we have a blindedId of ourself on any sogs we have joined.
+  if (isUsAnySogsFromCache(blindedOrNotPubkey)) {
+    return (
+      <span className={classNames('mention-profile-name', 'mention-profile-name-us')}>
+        @{window.i18n('you')}
+      </span>
+    );
   }
 
-  if (foundConvo) {
-    // TODO: We don't have to search the database of message just to know that the message is for us!
-    const className = classNames('mention-profile-name', us && 'mention-profile-name-us');
-
-    const displayedName = foundConvo.getContactProfileNameOrShortenedPubKey();
-    return <span className={className}>@{displayedName}</span>;
-  } else {
-    return <span className="mention-profile-name">{PubKey.shorten(props.text)}</span>;
-  }
+  return (
+    <span className="mention-profile-name">
+      @{foundConvo?.getContactProfileNameOrShortenedPubKey() || PubKey.shorten(props.text)}
+    </span>
+  );
 };
 
 type Props = {
@@ -38,7 +40,6 @@ const defaultRenderOther = ({ text }: { text: string }) => <>{text}</>;
 
 export const AddMentions = (props: Props): JSX.Element => {
   const { text, renderOther, isGroup } = props;
-
   const results: Array<JSX.Element> = [];
   const FIND_MENTIONS = new RegExp(`@${PubKey.regexForPubkeys}`, 'g');
 

@@ -74,7 +74,11 @@ import { Storage } from '../util/storage';
 import { LinkPreviews } from '../util/linkPreviews';
 import { roomHasBlindEnabled } from '../session/apis/open_group_api/sogsv3/sogsV3Capabilities';
 import { getNowWithNetworkOffset } from '../session/apis/snode_api/SNodeAPI';
-import { findCachedBlindedIdFromUnblinded } from '../session/apis/open_group_api/sogsv3/knownBlindedkeys';
+import {
+  findCachedBlindedIdFromUnblinded,
+  getUsBlindedInThatServer,
+  isUsAnySogsFromCache,
+} from '../session/apis/open_group_api/sogsv3/knownBlindedkeys';
 // tslint:disable: cyclomatic-complexity
 
 /**
@@ -212,12 +216,16 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
       // regex with a 'g' to ignore part groups
       const regex = new RegExp(`@${PubKey.regexForPubkeys}`, 'g');
       const pubkeysInDesc = description.match(regex);
-      (pubkeysInDesc || []).forEach((pubkey: string) => {
+      (pubkeysInDesc || []).forEach((pubkeyWithAt: string) => {
+        const pubkey = pubkeyWithAt.slice(1);
+        const isUS = isUsAnySogsFromCache(pubkey);
         const displayName = getConversationController().getContactProfileNameOrShortenedPubKey(
-          pubkey.slice(1)
+          pubkey
         );
-        if (displayName && displayName.length) {
-          description = description?.replace(pubkey, `@${displayName}`);
+        if (isUS) {
+          description = description?.replace(pubkeyWithAt, `@${window.i18n('you')}`);
+        } else if (displayName && displayName.length) {
+          description = description?.replace(pubkeyWithAt, `@${displayName}`);
         }
       });
       return description;
@@ -1077,10 +1085,11 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
     if (convo) {
       const beforeUnread = convo.get('unreadCount');
       const unreadCount = await convo.getUnreadCount();
-
+      const usInThatConversation =
+        getUsBlindedInThatServer(convo) || UserUtils.getOurPubKeyStrFromCache();
       const nextMentionedUs = await getFirstUnreadMessageWithMention(
         convo.id,
-        UserUtils.getOurPubKeyStrFromCache()
+        usInThatConversation
       );
       let mentionedUsChange = false;
       if (convo.get('mentionedUs') && !nextMentionedUs) {

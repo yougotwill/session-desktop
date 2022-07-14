@@ -1,7 +1,6 @@
 import { queueAttachmentDownloads } from './attachments';
 
 import { Quote } from './types';
-import { PubKey } from '../session/types';
 import _ from 'lodash';
 import { getConversationController } from '../session/conversations';
 import { ConversationModel } from '../models/conversation';
@@ -16,6 +15,7 @@ import { LinkPreviews } from '../util/linkPreviews';
 import { GoogleChrome } from '../util';
 import { appendFetchAvatarAndProfileJob } from './userProfileImageUpdates';
 import { ConversationTypeEnum } from '../models/conversationAttributes';
+import { getUsBlindedInThatServer } from '../session/apis/open_group_api/sogsv3/knownBlindedkeys';
 
 function contentTypeSupported(type: string): boolean {
   const Chrome = GoogleChrome;
@@ -142,13 +142,17 @@ async function processProfileKeyNoCommit(
   }
 }
 
+/**
+ * Mark the conversation as mentionedUs, if the content of the message matches our id in this conversation
+ * @param ourIdInThisConversation can be a blinded or our naked id, depending on the case
+ */
 function handleMentions(
   message: MessageModel,
   conversation: ConversationModel,
-  ourPrimaryNumber: PubKey
+  ourIdInThisConversation: string
 ) {
   const body = message.get('body');
-  if (body && body.indexOf(`@${ourPrimaryNumber.key}`) !== -1) {
+  if (body && body.indexOf(`@${ourIdInThisConversation}`) !== -1) {
     conversation.set({ mentionedUs: true });
   }
 }
@@ -236,9 +240,10 @@ async function handleRegularMessage(
   // Expire timer updates are now explicit.
   // We don't handle an expire timer from a incoming message except if it is an ExpireTimerUpdate message.
 
-  const ourPubKey = UserUtils.getOurPubKeyFromCache();
+  const ourIdInThisConversation =
+    getUsBlindedInThatServer(conversation.id) || UserUtils.getOurPubKeyStrFromCache();
 
-  handleMentions(message, conversation, ourPubKey);
+  handleMentions(message, conversation, ourIdInThisConversation);
 
   if (type === 'incoming') {
     if (conversation.isPrivate()) {
