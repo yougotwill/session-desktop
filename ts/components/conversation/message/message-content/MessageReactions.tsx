@@ -140,7 +140,7 @@ export const MessageReactions = (props: Props): ReactElement => {
   };
 
   const reactionRef = useRef(null);
-  const { docX } = useMouse(reactionRef);
+  const { docX, elW } = useMouse(reactionRef);
   const popupXDefault = -101;
   const popupYDefault = -90;
   const [popupX, setPopupX] = useState(popupXDefault);
@@ -184,7 +184,7 @@ export const MessageReactions = (props: Props): ReactElement => {
                   setPopupX(Math.abs(popupXDefault) * 1.5 * -1);
                   setTooltipPosition('right');
                   // overflow onto conversations means we lock to the right
-                } else if (docX <= gutterWidth + tooltipMidPoint) {
+                } else if (docX - elW <= gutterWidth + tooltipMidPoint) {
                   const offset = -12.5;
                   setPopupX(offset);
                   setTooltipPosition('left');
