@@ -74,7 +74,7 @@ const Reactions = (props: ReactionsProps): ReactElement => {
 };
 
 interface ExpandReactionsProps extends ReactionsProps {
-  handleExpand: (...args: Array<any>) => void;
+  handleExpand: () => void;
 }
 
 const CompressedReactions = (props: ExpandReactionsProps): ReactElement => {
@@ -134,12 +134,12 @@ export type MessageReactsSelectorProps = Pick<
 type Props = {
   messageId: string;
   hasReactLimit?: boolean;
-  onClick: (...args: Array<any>) => void;
+  onClick: (emoji: string) => void;
   popupReaction?: string;
-  setPopupReaction?: (...args: Array<any>) => void;
-  onPopupClick?: (...args: Array<any>) => void;
+  setPopupReaction?: (emoji: string) => void;
+  onPopupClick?: () => void;
   inModal?: boolean;
-  onSelected?: (...args: Array<any>) => boolean;
+  onSelected?: (emoji: string) => boolean;
 };
 
 export const MessageReactions = (props: Props): ReactElement => {
@@ -187,16 +187,6 @@ export const MessageReactions = (props: Props): ReactElement => {
     handlePopupClick: onPopupClick,
   };
 
-  const render = () => {
-    if (!hasReactLimit || Object.keys(reactions).length <= reactLimit) {
-      return Reactions({ ...reactionsProps });
-    } else {
-      return isExpanded
-        ? ExpandedReactions({ handleExpand, ...reactionsProps })
-        : CompressedReactions({ handleExpand, ...reactionsProps });
-    }
-  };
-
   useEffect(() => {
     if (reacts && !isEqual(reactions, reacts)) {
       setReactions(reacts);
@@ -216,7 +206,14 @@ export const MessageReactions = (props: Props): ReactElement => {
       x={popupX}
       y={popupY}
     >
-      {reactions !== {} ? render() : <></>}
+      {reactions !== {} &&
+        (!hasReactLimit || Object.keys(reactions).length <= reactLimit ? (
+          <Reactions {...reactionsProps} />
+        ) : isExpanded ? (
+          <ExpandedReactions handleExpand={handleExpand} {...reactionsProps} />
+        ) : (
+          <CompressedReactions handleExpand={handleExpand} {...reactionsProps} />
+        ))}
     </StyledMessageReactionsContainer>
   );
 };
