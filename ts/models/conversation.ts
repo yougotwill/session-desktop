@@ -640,6 +640,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     return getOpenGroupV2FromConversationId(this.id);
   }
 
+  // TODO refactor with sendMessageJob to minimize code
   public async sendReactionJob(sourceMessage: MessageModel, reaction: ReactionType) {
     try {
       const destination = this.id;
@@ -684,6 +685,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       }
 
       const destinationPubkey = new PubKey(destination);
+
       if (this.isPrivate()) {
         const chatMessageMe = new VisibleMessage({ ...chatMessageParams, syncTarget: this.id });
         await getMessageQueue().sendSyncMessage(chatMessageMe);
@@ -692,6 +694,22 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
         await getMessageQueue().sendToPubKey(destinationPubkey, chatMessagePrivate);
 
         return;
+      }
+
+      if (this.isMediumGroup()) {
+        const chatMessageMediumGroup = new VisibleMessage(chatMessageParams);
+        const closedGroupVisibleMessage = new ClosedGroupVisibleMessage({
+          chatMessage: chatMessageMediumGroup,
+          groupId: destination,
+        });
+
+        // we need the return await so that errors are caught in the catch {}
+        await getMessageQueue().sendToGroup(closedGroupVisibleMessage);
+        return;
+      }
+
+      if (this.isClosedGroup()) {
+        throw new Error('Legacy group are not supported anymore. You need to recreate this group.');
       }
 
       throw new TypeError(`Invalid conversation type: '${this.get('type')}'`);
