@@ -23,9 +23,9 @@ export const StyledMessageReactions = styled(Flex)<{ inModal: boolean }>`
   ${props => (props.inModal ? '' : 'max-width: 320px;')}
 `;
 
-const StyledReaction = styled.button<{ selected: boolean; inModal: boolean }>`
+const StyledReaction = styled.button<{ selected: boolean; inModal: boolean; showCount: boolean }>`
   display: flex;
-  justify-content: flex-start;
+  justify-content: ${props => (props.showCount ? 'flex-start' : 'center')};
   align-items: center;
 
   background-color: var(--color-received-message-background);
@@ -34,10 +34,11 @@ const StyledReaction = styled.button<{ selected: boolean; inModal: boolean }>`
   border-color: ${props => (props.selected ? 'var(--color-accent)' : 'transparent')};
   border-radius: 11px;
   box-sizing: border-box;
-  padding: ${props => (props.inModal ? '3px 7px' : '0px 7px')};
+  padding: 0 7px;
+  height: 23px;
   margin: 0 4px var(--margins-sm);
 
-  span:last-child {
+  span:nth-child(2) {
     font-size: var(--font-size-xs);
     margin-left: 8px;
   }
@@ -95,7 +96,7 @@ const UpArrowSVG = (): ReactElement => (
   </svg>
 );
 
-export type MessageReactsSelectorProps = Pick<MessageRenderingProps, 'reacts'>;
+export type MessageReactsSelectorProps = Pick<MessageRenderingProps, 'conversationType' | 'reacts'>;
 
 type Props = {
   messageId: string;
@@ -126,7 +127,7 @@ export const MessageReactions = (props: Props): ReactElement => {
     return <></>;
   }
 
-  const { reacts } = msgProps;
+  const { conversationType, reacts } = msgProps;
   const [reactions, setReactions] = useState<ReactionList>({});
 
   const [isExpanded, setIsExpanded] = useState(false);
@@ -162,60 +163,68 @@ export const MessageReactions = (props: Props): ReactElement => {
     onClick(emoji);
   };
 
-  const renderReaction = (emoji: string) => (
-    <StyledReactionContainer ref={reactionRef}>
-      <StyledReaction
-        key={emoji}
-        selected={selected(emoji)}
-        inModal={inModal}
-        onClick={() => {
-          handleReactionClick(emoji);
-        }}
-        onMouseEnter={() => {
-          const { innerWidth: windowWidth } = window;
-          if (setPopupReaction) {
-            // overflow on far right means we shift left
-            if (docX + tooltipMidPoint > windowWidth) {
-              setPopupX(Math.abs(popupXDefault) * 1.5 * -1);
-              setTooltipPosition('right');
-              // overflow onto conversations means we lock to the right
-            } else if (docX <= gutterWidth + tooltipMidPoint) {
-              const offset = -12.5;
-              setPopupX(offset);
-              setTooltipPosition('left');
-            } else {
-              setPopupX(popupXDefault);
-              setTooltipPosition('center');
-            }
-
-            setPopupReaction(emoji);
-          }
-        }}
-      >
-        <span>{emoji}</span>
-        {reactions[emoji].senders && <span>{reactions[emoji].senders.length}</span>}
-      </StyledReaction>
-      {popupReaction && popupReaction === emoji && (
-        <MessageReactionPopup
-          messageId={messageId}
-          emoji={popupReaction}
-          senders={reactions[popupReaction].senders}
-          tooltipPosition={tooltipPosition}
+  const renderReaction = (emoji: string) => {
+    const showCount =
+      reactions[emoji].senders &&
+      (reactions[emoji].senders.length > 1 || conversationType === 'group');
+    return (
+      <StyledReactionContainer ref={reactionRef}>
+        <StyledReaction
+          key={emoji}
+          showCount={showCount}
+          selected={selected(emoji)}
+          inModal={inModal}
           onClick={() => {
-            if (setPopupReaction) {
-              setPopupReaction('');
-            }
-            setPopupX(popupXDefault);
-            setPopupY(popupYDefault);
-            setTooltipPosition('center');
-            if (onPopupClick) {
-              onPopupClick();
+            handleReactionClick(emoji);
+          }}
+          onMouseEnter={() => {
+            if (conversationType === 'group') {
+              const { innerWidth: windowWidth } = window;
+              if (setPopupReaction) {
+                // overflow on far right means we shift left
+                if (docX + tooltipMidPoint > windowWidth) {
+                  setPopupX(Math.abs(popupXDefault) * 1.5 * -1);
+                  setTooltipPosition('right');
+                  // overflow onto conversations means we lock to the right
+                } else if (docX <= gutterWidth + tooltipMidPoint) {
+                  const offset = -12.5;
+                  setPopupX(offset);
+                  setTooltipPosition('left');
+                } else {
+                  setPopupX(popupXDefault);
+                  setTooltipPosition('center');
+                }
+
+                setPopupReaction(emoji);
+              }
             }
           }}
-        />
-      )}
-    </StyledReactionContainer>
-  );
+        >
+          <span>{emoji}</span>
+          {showCount && <span>{reactions[emoji].senders.length}</span>}
+        </StyledReaction>
+        {conversationType === 'group' && popupReaction && popupReaction === emoji && (
+          <MessageReactionPopup
+            messageId={messageId}
+            emoji={popupReaction}
+            senders={reactions[popupReaction].senders}
+            tooltipPosition={tooltipPosition}
+            onClick={() => {
+              if (setPopupReaction) {
+                setPopupReaction('');
+              }
+              setPopupX(popupXDefault);
+              setPopupY(popupYDefault);
+              setTooltipPosition('center');
+              if (onPopupClick) {
+                onPopupClick();
+              }
+            }}
+          />
+        )}
+      </StyledReactionContainer>
+    );
+  };
 
   const renderReactionList = () => (
     <StyledMessageReactions
