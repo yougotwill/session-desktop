@@ -55,9 +55,21 @@ const StyledEmoji = styled.span`
   margin-left: 8px;
 `;
 
+const generateContacts = async (messageId: string, senders: Array<string>) => {
+  let results = null;
+  const message = await getMessageById(messageId);
+  if (message) {
+    results = senders.map(sender => {
+      const contact = message.findAndFormatContact(sender);
+      return contact?.profileName || contact?.name || PubKey.shorten(sender);
+    });
+  }
+  return results;
+};
+
 const renderContacts = (contacts: string) => {
   if (!contacts) {
-    return <></>;
+    return;
   }
 
   if (contacts.includes('&') && contacts.includes('other')) {
@@ -89,21 +101,10 @@ export const ReactionPopup = (props: Props): ReactElement => {
   const { messageId, emoji, senders, tooltipPosition = 'center', onClick } = props;
 
   const [contacts, setContacts] = useState('');
-  const generateContacts = useCallback(async () => {
-    let results = null;
-    const message = await getMessageById(messageId);
-    if (message) {
-      results = senders.map(sender => {
-        const contact = message.findAndFormatContact(sender);
-        return contact?.profileName || contact?.name || PubKey.shorten(sender);
-      });
-    }
-    return results;
-  }, [messageId]);
 
   useEffect(() => {
     let isCancelled = false;
-    generateContacts()
+    generateContacts(messageId, senders)
       .then(async results => {
         if (isCancelled) {
           return;
