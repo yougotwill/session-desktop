@@ -8,8 +8,7 @@ import { useSelector } from 'react-redux';
 import { getTheme } from '../../state/selectors/theme';
 import { FixedBaseEmoji, FixedPickerProps } from '../../types/Util.js';
 import { noop } from 'lodash';
-
-let langNotSupportedMessageShown = false;
+import { loadEmojiPanelI18n } from '../../util/i18n';
 
 export const StyledEmojiPanel = styled.div<{ isModal: boolean; theme: 'light' | 'dark' }>`
   padding: var(--margins-lg);
@@ -92,27 +91,6 @@ const pickerProps: FixedPickerProps = {
   skinTonePosition: 'preview',
 };
 
-const loadLocale = async () => {
-  if (!window) {
-    return undefined;
-  }
-
-  const lang = (window.i18n as any).getLocale();
-  if (lang !== 'en') {
-    try {
-      const langData = await import(`@emoji-mart/data/i18n/${lang}.json`);
-      return langData;
-    } catch (err) {
-      if (!langNotSupportedMessageShown) {
-        window?.log?.warn(
-          'Language is not supported by emoji-mart package. See https://github.com/missive/emoji-mart/tree/main/packages/emoji-mart-data/i18n'
-        );
-        langNotSupportedMessageShown = true;
-      }
-    }
-  }
-};
-
 export const SessionEmojiPanel = (props: Props) => {
   const { onEmojiClicked, show, isModal = false } = props;
   const theme = useSelector(getTheme);
@@ -122,7 +100,7 @@ export const SessionEmojiPanel = (props: Props) => {
     let isCancelled = false;
     if (pickerRef.current !== null) {
       if (pickerRef.current.children.length === 0) {
-        loadLocale()
+        loadEmojiPanelI18n()
           .then(async i18n => {
             if (isCancelled) {
               return;
@@ -144,7 +122,7 @@ export const SessionEmojiPanel = (props: Props) => {
     return () => {
       isCancelled = true;
     };
-  }, [data, loadLocale, pickerProps]);
+  }, [data, pickerProps]);
 
   return (
     <StyledEmojiPanel

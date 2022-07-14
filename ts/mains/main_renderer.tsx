@@ -19,6 +19,7 @@ import ReactDOM from 'react-dom';
 import React from 'react';
 import nativeEmojiData from '@emoji-mart/data';
 import { initialiseEmojiData } from '../util/emoji';
+import { loadEmojiPanelI18n } from '../util/i18n';
 // tslint:disable: max-classes-per-file
 
 // Globally disable drag and drop
@@ -172,7 +173,11 @@ Storage.onready(async () => {
   try {
     initialiseEmojiData(nativeEmojiData);
     await AttachmentDownloads.initAttachmentPaths();
-    await Promise.all([getConversationController().load(), BlockedNumberController.load()]);
+    await Promise.all([
+      getConversationController().load(),
+      BlockedNumberController.load(),
+      loadEmojiPanelI18n(),
+    ]);
   } catch (error) {
     window.log.error(
       'main_start.js: ConversationController failed to load:',
