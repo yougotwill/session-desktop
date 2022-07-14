@@ -4,7 +4,7 @@ import styled from 'styled-components';
 import { MessageRenderingProps } from '../../../../models/messageType';
 import { StateType } from '../../../../state/reducer';
 import { getMessageReactsProps } from '../../../../state/selectors/conversations';
-import { isEqual } from 'lodash';
+import { isEmpty, isEqual } from 'lodash';
 import { ReactionList } from '../../../../types/Message';
 import { StyledPopupContainer } from '../reactions/ReactionPopup';
 import { Flex } from '../../../basic/Flex';
@@ -153,14 +153,6 @@ export const MessageReactions = (props: Props): ReactElement => {
     inModal = false,
     onSelected,
   } = props;
-  const msgProps = useSelector((state: StateType) => getMessageReactsProps(state, messageId));
-
-  if (!msgProps) {
-    return <></>;
-  }
-
-  const { conversationType, reacts } = msgProps;
-  const inGroup = conversationType === 'group';
   const [reactions, setReactions] = useState<ReactionList>({});
 
   const [isExpanded, setIsExpanded] = useState(false);
@@ -170,6 +162,15 @@ export const MessageReactions = (props: Props): ReactElement => {
 
   const [popupX, setPopupX] = useState(popupXDefault);
   const [popupY, setPopupY] = useState(popupYDefault);
+
+  const msgProps = useSelector((state: StateType) => getMessageReactsProps(state, messageId));
+
+  if (!msgProps) {
+    return <></>;
+  }
+
+  const { conversationType, reacts } = msgProps;
+  const inGroup = conversationType === 'group';
 
   const reactLimit = 6;
 
@@ -192,7 +193,7 @@ export const MessageReactions = (props: Props): ReactElement => {
       setReactions(reacts);
     }
 
-    if (Object.keys(reactions).length > 0 && (reacts === {} || reacts === undefined)) {
+    if (!isEmpty(reactions) && isEmpty(reacts)) {
       setReactions({});
     }
   }, [reacts, reactions]);

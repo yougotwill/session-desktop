@@ -39,14 +39,15 @@ const StyledReactClearAllContainer = styled(Flex)<{ darkMode: boolean }>`
 // tslint:disable-next-line: max-func-body-length
 export const ReactClearAllModal = (props: Props): ReactElement => {
   const { reaction, messageId } = props;
+
+  const dispatch = useDispatch();
+  const darkMode = useSelector(getTheme) === 'dark';
   const msgProps = useSelector((state: StateType) => getMessageReactsProps(state, messageId));
 
   if (!msgProps) {
     return <></>;
   }
 
-  const dispatch = useDispatch();
-  const darkMode = useSelector(getTheme) === 'dark';
   const confirmButtonColor = darkMode ? SessionButtonColor.Green : SessionButtonColor.Secondary;
 
   const handleClose = () => {

@@ -152,6 +152,11 @@ type Props = {
 
 export const ReactListModal = (props: Props): ReactElement => {
   const { reaction, messageId } = props;
+
+  const [reactions, setReactions] = useState<ReactionList>({});
+  const [currentReact, setCurrentReact] = useState('');
+  const [reactAriaLabel, setReactAriaLabel] = useState<string | undefined>();
+  const [senders, setSenders] = useState<Array<string>>([]);
   const msgProps = useSelector((state: StateType) => getMessageReactsProps(state, messageId));
 
   if (!msgProps) {
@@ -162,10 +167,6 @@ export const ReactListModal = (props: Props): ReactElement => {
 
   const me = UserUtils.getOurPubKeyStrFromCache();
   const { isPublic, reacts, weAreAdmin } = msgProps;
-  const [reactions, setReactions] = useState<ReactionList>({});
-  const [currentReact, setCurrentReact] = useState('');
-  const [reactAriaLabel, setReactAriaLabel] = useState<string | undefined>();
-  const [senders, setSenders] = useState<Array<string>>([]);
 
   const handleSelectedReaction = (emoji: string): boolean => {
     return currentReact === emoji;
