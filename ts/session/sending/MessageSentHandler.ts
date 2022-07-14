@@ -1,6 +1,8 @@
 import _ from 'lodash';
-import { getMessageById } from '../../data/data';
+import { getMessageById, getMessageBySenderAndTimestamp } from '../../data/data';
+import { MessageModel } from '../../models/message';
 import { SignalService } from '../../protobuf';
+import { ReactionList } from '../../types/Message';
 import { PnServer } from '../apis/push_notification_api';
 import { OpenGroupVisibleMessage } from '../messages/outgoing/visibleMessage/OpenGroupVisibleMessage';
 import { RawMessage } from '../types';
@@ -8,6 +10,48 @@ import { UserUtils } from '../utils';
 
 // tslint:disable-next-line: no-unnecessary-class
 export class MessageSentHandler {
+  public static async handleMessageReaction(
+    m: MessageModel,
+    reaction: SignalService.DataMessage.IReaction
+  ) {
+    const originalMessage = await getMessageBySenderAndTimestamp({
+      source: m.get('source'),
+      timestamp: Number(reaction.id),
+    });
+
+    if (originalMessage) {
+      if (!reaction.emoji) return;
+
+      let reacts: ReactionList = originalMessage.get('reacts') ?? {};
+      reacts[reaction.emoji] = reacts[reaction.emoji] || {};
+
+      const senders = reacts[reaction.emoji].senders ?? [];
+      switch (reaction.action) {
+        // Add reaction
+        case 0:
+          senders.push(reaction.author);
+          break;
+        // Remove reaction
+        case 1:
+        default:
+          if (senders.length > 0) {
+            const deleteIndex = senders.indexOf(reaction.author);
+            // TODO better edge cases
+            senders.splice(deleteIndex, 1);
+          }
+          break;
+      }
+      reacts[reaction.emoji].senders = senders;
+
+      originalMessage.set({
+        reacts,
+      });
+      await originalMessage.commit();
+    } else {
+      window?.log?.error('Original message reacted to not found');
+    }
+  }
+
   public static async handlePublicMessageSentSuccess(
     sentMessage: OpenGroupVisibleMessage,
     result: { serverId: number; serverTimestamp: number }
@@ -98,6 +142,7 @@ export class MessageSentHandler {
       }
     }
 
+    // TODO handle reaction sync messages differently to body sync messages
     // Handle the sync logic here
     if (shouldTriggerSyncMessage) {
       if (dataMessage) {
@@ -124,14 +169,17 @@ export class MessageSentHandler {
 
     sentTo = _.union(sentTo, [sentMessage.device]);
 
-    fetchedMessage.set({
-      sent_to: sentTo,
-      sent: true,
-      expirationStartTimestamp: Date.now(),
-      sent_at: effectiveTimestamp,
-    });
-
-    await fetchedMessage.commit();
+    if (fetchedMessage.get('source') && dataMessage && dataMessage.reaction) {
+      await this.handleMessageReaction(fetchedMessage, dataMessage.reaction);
+    } else {
+      fetchedMessage.set({
+        sent_to: sentTo,
+        sent: true,
+        expirationStartTimestamp: Date.now(),
+        sent_at: effectiveTimestamp,
+      });
+      await fetchedMessage.commit();
+    }
     fetchedMessage.getConversation()?.updateLastMessage();
   }
 
