@@ -1,5 +1,5 @@
 import _ from 'lodash';
-import { getMessagesBySentAt } from '../data/data';
+import { getMessageById, getMessagesBySentAt } from '../data/data';
 import { MessageModel } from '../models/message';
 import { SignalService } from '../protobuf';
 import { ApiV2 } from '../session/apis/open_group_api/opengroupV2';
@@ -10,7 +10,7 @@ import {
 } from '../session/apis/open_group_api/utils/OpenGroupUtils';
 import { getConversationController } from '../session/conversations';
 import { PubKey } from '../session/types';
-import { ToastUtils } from '../session/utils';
+import { ToastUtils, UserUtils } from '../session/utils';
 
 import { updateBanOrUnbanUserModal, updateConfirmModal } from '../state/ducks/modalDialog';
 import { ReactionList } from '../types/Message';
@@ -136,9 +136,39 @@ export const acceptOpenGroupInvitation = (completeUrl: string, roomName?: string
   }
 };
 
+export const sendMessageReaction = async (messageId: string, emoji: string) => {
+  const found = await getMessageById(messageId);
+  if (found && found.get('sent_at')) {
+    const conversationModel = found?.getConversation();
+    if (!conversationModel) {
+      window.log.warn(`Conversation for ${messageId} not found in db`);
+      return;
+    }
+
+    const author = UserUtils.getOurPubKeyStrFromCache();
+    let action = 0;
+
+    const reacts = found.get('reacts');
+    if (reacts && Object.keys(reacts).includes(emoji) && reacts[emoji].senders.includes(author)) {
+      window.log.info('found matching reaction removing it');
+      action = 1;
+    }
+
+    await conversationModel.sendReaction(messageId, {
+      id: Number(found.get('sent_at')),
+      author,
+      emoji,
+      action,
+    });
+
+    window.log.info(author, 'reacted with a', emoji, 'at', found.get('sent_at'));
+  } else {
+    window.log.warn(`Message ${messageId} not found in db`);
+  }
+};
+
 /**
  * Handle reactions on the client by updating the state of the source message
- *
  */
 export const handleMessageReaction = async (reaction: SignalService.DataMessage.IReaction) => {
   const timestamp = Number(reaction.id);
@@ -182,7 +212,12 @@ export const handleMessageReaction = async (reaction: SignalService.DataMessage.
       }
   }
 
-  reacts[reaction.emoji].senders = senders;
+  if (senders.length > 0) {
+    reacts[reaction.emoji].senders = senders;
+  } else {
+    delete reacts[reaction.emoji];
+  }
+
   originalMessage.set({
     reacts,
   });

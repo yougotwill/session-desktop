@@ -6,12 +6,8 @@ import { StateType } from '../../../../state/reducer';
 import { getMessageReactsProps } from '../../../../state/selectors/conversations';
 import { isEqual } from 'lodash';
 import { ReactionList } from '../../../../types/Message';
-
-type Props = {
-  messageId: string;
-};
-
-export type MessageReactsSelectorProps = Pick<MessageRenderingProps, 'reacts'>;
+import { sendMessageReaction } from '../../../../interactions/messageInteractions';
+import { UserUtils } from '../../../../session/utils';
 
 const StyledMessageReactionsContainer = styled.div`
   position: relative;
@@ -31,11 +27,14 @@ export const StyledMessageReactions = styled.div<{}>`
   max-width: 320px;
 `;
 
-const StyledReaction = styled.button`
+const StyledReaction = styled.button<{ includesMe: boolean }>`
   background-color: var(--color-compose-view-button-background);
-  border: none;
+  border-width: 1px;
+  border-style: solid;
+  border-color: ${props => (props.includesMe ? 'var(--color-accent)' : 'transparent')};
   border-radius: 11px;
-  padding: 1px 8px;
+  box-sizing: border-box;
+  padding: 0px 7px;
   margin: 0 4px var(--margins-sm);
 
   display: flex;
@@ -87,8 +86,15 @@ const StyledReadLess = styled.span`
   }
 `;
 
+export type MessageReactsSelectorProps = Pick<MessageRenderingProps, 'reacts'>;
+
+type Props = {
+  messageId: string;
+};
+
 export const MessageReactions = (props: Props): ReactElement => {
   const { messageId } = props;
+  const me = UserUtils.getOurPubKeyStrFromCache();
 
   const msgProps = useSelector((state: StateType) => getMessageReactsProps(state, messageId));
 
@@ -106,11 +112,24 @@ export const MessageReactions = (props: Props): ReactElement => {
 
   const reactLimit = 6;
 
+  const handleReactionClick = async (emoji: string) => {
+    await sendMessageReaction(messageId, emoji);
+  };
+
   const renderReaction = (emoji: string) => (
-    <StyledReaction key={emoji}>
-      <span>{emoji}</span>
-      {reactions[emoji].senders && <span>{reactions[emoji].senders.length}</span>}
-    </StyledReaction>
+    <>
+      <StyledReaction
+        key={emoji}
+        includesMe={reactions[emoji].senders.includes(me)}
+        onClick={async () => {
+          await handleReactionClick(emoji);
+        }}
+      >
+        {/* TODO Popup with senders here in closed groups */}
+        <span>{emoji}</span>
+        {reactions[emoji].senders && <span>{reactions[emoji].senders.length}</span>}
+      </StyledReaction>
+    </>
   );
 
   const renderReactionList = () => (
