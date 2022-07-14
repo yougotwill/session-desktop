@@ -48,7 +48,7 @@ export const MessageReactBar = (props: Props): ReactElement => {
   const renderReactButton = (emoji: string) => (
     <ReactButton
       key={emoji}
-      onClick={async () => {
+      onClick={() => {
         action(emoji);
       }}
     >
