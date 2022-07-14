@@ -19,12 +19,11 @@ const StyledMessageReactionsContainer = styled(Flex)<{ x: number; y: number }>`
   }
 `;
 
-export const StyledMessageReactions = styled(Flex)`
-  max-width: 320px;
-  /* overflow-x: auto; */ // NOTE breaks positioning of tooltips
+export const StyledMessageReactions = styled(Flex)<{ inModal: boolean }>`
+  ${props => (props.inModal ? '' : 'max-width: 320px;')}
 `;
 
-const StyledReaction = styled.button<{ includesMe: boolean }>`
+const StyledReaction = styled.button<{ selected: boolean; inModal: boolean }>`
   display: flex;
   justify-content: flex-start;
   align-items: center;
@@ -32,10 +31,10 @@ const StyledReaction = styled.button<{ includesMe: boolean }>`
   background-color: var(--color-received-message-background);
   border-width: 1px;
   border-style: solid;
-  border-color: ${props => (props.includesMe ? 'var(--color-accent)' : 'transparent')};
+  border-color: ${props => (props.selected ? 'var(--color-accent)' : 'transparent')};
   border-radius: 11px;
   box-sizing: border-box;
-  padding: 0px 7px;
+  padding: ${props => (props.inModal ? '3px 7px' : '0px 7px')};
   margin: 0 4px var(--margins-sm);
 
   span:last-child {
@@ -104,7 +103,9 @@ type Props = {
   onClick: (...args: Array<any>) => void;
   popupReaction?: string;
   setPopupReaction?: (...args: Array<any>) => void;
-  onPopupClick?: (...args: Array<any>) => void
+  onPopupClick?: (...args: Array<any>) => void;
+  inModal?: boolean;
+  onSelected?: (...args: Array<any>) => boolean;
 };
 
 export const MessageReactions = (props: Props): ReactElement => {
@@ -115,6 +116,8 @@ export const MessageReactions = (props: Props): ReactElement => {
     popupReaction,
     setPopupReaction,
     onPopupClick,
+    inModal = false,
+    onSelected,
   } = props;
 
   const me = UserUtils.getOurPubKeyStrFromCache();
@@ -145,11 +148,17 @@ export const MessageReactions = (props: Props): ReactElement => {
 
   const reactLimit = 6;
 
-  const includesMe = (emoji: string) =>
-    reactions[emoji].senders &&
-    reactions[emoji].senders.length > 0 &&
-    reactions[emoji].senders.includes(me);
+  const selected = (emoji: string) => {
+    if (onSelected) {
+      return onSelected(emoji);
+    }
 
+    return (
+      reactions[emoji].senders &&
+      reactions[emoji].senders.length > 0 &&
+      reactions[emoji].senders.includes(me)
+    );
+  };
   const handleReactionClick = async (emoji: string) => {
     onClick(emoji);
   };
@@ -158,7 +167,8 @@ export const MessageReactions = (props: Props): ReactElement => {
     <StyledReactionContainer ref={reactionRef}>
       <StyledReaction
         key={emoji}
-        includesMe={includesMe(emoji)}
+        selected={selected(emoji)}
+        inModal={inModal}
         onClick={async () => {
           await handleReactionClick(emoji);
         }}
@@ -209,7 +219,12 @@ export const MessageReactions = (props: Props): ReactElement => {
   );
 
   const renderReactionList = () => (
-    <StyledMessageReactions container={true} flexWrap={'wrap'} alignItems={'center'}>
+    <StyledMessageReactions
+      container={true}
+      flexWrap={inModal ? 'nowrap' : 'wrap'}
+      alignItems={'center'}
+      inModal={inModal}
+    >
       {Object.keys(reactions).map(emoji => {
         return renderReaction(emoji);
       })}
@@ -217,7 +232,12 @@ export const MessageReactions = (props: Props): ReactElement => {
   );
 
   const renderCompressedReactions = () => (
-    <StyledMessageReactions container={true} flexWrap={'wrap'} alignItems={'center'}>
+    <StyledMessageReactions
+      container={true}
+      flexWrap={inModal ? 'nowrap' : 'wrap'}
+      alignItems={'center'}
+      inModal={inModal}
+    >
       {Object.keys(reactions)
         .slice(0, 4)
         .map(emoji => {
@@ -266,7 +286,7 @@ export const MessageReactions = (props: Props): ReactElement => {
       container={true}
       flexDirection={'column'}
       justifyContent={'center'}
-      alignItems={'center'}
+      alignItems={inModal ? 'flex-start' : 'center'}
       x={popupX}
       y={popupY}
     >
