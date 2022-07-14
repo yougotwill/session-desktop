@@ -1,6 +1,5 @@
 import { isEqual } from 'lodash';
-import React, { useEffect, useState } from 'react';
-import { ReactElement } from 'react';
+import React, { ReactElement, useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import styled from 'styled-components';
 import { updateReactListModal } from '../../state/ducks/modalDialog';
@@ -12,10 +11,6 @@ import { Flex } from '../basic/Flex';
 import { ContactName } from '../conversation/ContactName';
 import { MessageReactions } from '../conversation/message/message-content/MessageReactions';
 import { SessionWrapperModal } from '../SessionWrapperModal';
-
-interface Props {
-  messageId: string;
-}
 
 const StyledReactListContainer = styled(Flex)`
   width: 376px;
@@ -57,23 +52,26 @@ const StyledReactionSender = styled(Flex)`
   }
 `;
 
+type Props = {
+  messageId: string;
+};
+
 export const ReactListModal = (props: Props): ReactElement => {
-  const { messageId = '' } = props;
-
-  const dispatch = useDispatch();
-
+  const { messageId } = props;
   const msgProps = useSelector((state: StateType) => getMessageReactsProps(state, messageId));
 
   if (!msgProps) {
     return <></>;
   }
 
+  const dispatch = useDispatch();
+
   const { reacts } = msgProps;
   const [reactions, setReactions] = useState<ReactionList>({});
   const [currentReact, setCurrentReact] = useState('');
 
   const handleSelectedReaction = (emoji: string): boolean => {
-    return currentReact == emoji;
+    return currentReact === emoji;
   };
 
   const handleReactionClick = (emoji: string) => {

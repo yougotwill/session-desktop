@@ -86,8 +86,6 @@ const StyledReadLess = styled.span`
   }
 `;
 
-export type MessageReactsSelectorProps = Pick<MessageRenderingProps, 'reacts'>;
-
 const UpArrowSVG = (): ReactElement => (
   <svg width="14" height="9" viewBox="0 0 14 9" fill="none" xmlns="https://www.w3.org/2000/svg">
     <path
@@ -96,6 +94,8 @@ const UpArrowSVG = (): ReactElement => (
     />
   </svg>
 );
+
+export type MessageReactsSelectorProps = Pick<MessageRenderingProps, 'reacts'>;
 
 type Props = {
   messageId: string;
@@ -108,6 +108,7 @@ type Props = {
   onSelected?: (...args: Array<any>) => boolean;
 };
 
+// tslint:disable-next-line max-func-body-length
 export const MessageReactions = (props: Props): ReactElement => {
   const {
     messageId,
@@ -119,9 +120,6 @@ export const MessageReactions = (props: Props): ReactElement => {
     inModal = false,
     onSelected,
   } = props;
-
-  const me = UserUtils.getOurPubKeyStrFromCache();
-
   const msgProps = useSelector((state: StateType) => getMessageReactsProps(state, messageId));
 
   if (!msgProps) {
@@ -148,6 +146,7 @@ export const MessageReactions = (props: Props): ReactElement => {
 
   const reactLimit = 6;
 
+  const me = UserUtils.getOurPubKeyStrFromCache();
   const selected = (emoji: string) => {
     if (onSelected) {
       return onSelected(emoji);
@@ -159,7 +158,7 @@ export const MessageReactions = (props: Props): ReactElement => {
       reactions[emoji].senders.includes(me)
     );
   };
-  const handleReactionClick = async (emoji: string) => {
+  const handleReactionClick = (emoji: string) => {
     onClick(emoji);
   };
 
@@ -169,8 +168,8 @@ export const MessageReactions = (props: Props): ReactElement => {
         key={emoji}
         selected={selected(emoji)}
         inModal={inModal}
-        onClick={async () => {
-          await handleReactionClick(emoji);
+        onClick={() => {
+          handleReactionClick(emoji);
         }}
         onMouseEnter={() => {
           const { innerWidth: windowWidth } = window;
