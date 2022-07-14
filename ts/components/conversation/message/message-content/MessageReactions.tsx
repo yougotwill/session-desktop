@@ -101,8 +101,8 @@ export type MessageReactsSelectorProps = Pick<MessageRenderingProps, 'reacts'>;
 type Props = {
   messageId: string;
   hasReactLimit?: string;
-  popupReaction: string;
-  setPopupReaction: (...args: Array<any>) => void;
+  popupReaction?: string;
+  setPopupReaction?: (...args: Array<any>) => void;
 };
 
 const UpArrowSVG = (): ReactElement => (
@@ -165,22 +165,23 @@ export const MessageReactions = (props: Props): ReactElement => {
         }}
         onMouseEnter={() => {
           const { innerWidth: windowWidth } = window;
+          if (setPopupReaction) {
+            // overflow on far right means we shift left
+            if (docX + tooltipMidPoint > windowWidth) {
+              setPopupX(Math.abs(popupXDefault) * 1.5 * -1);
+              setTooltipPosition('right');
+              // overflow onto conversations means we lock to the right
+            } else if (docX <= gutterWidth + tooltipMidPoint) {
+              const offset = -12.5;
+              setPopupX(offset);
+              setTooltipPosition('left');
+            } else {
+              setPopupX(popupXDefault);
+              setTooltipPosition('center');
+            }
 
-          // overflow on far right means we shift left
-          if (docX + tooltipMidPoint > windowWidth) {
-            setPopupX(Math.abs(popupXDefault) * 1.5 * -1);
-            setTooltipPosition('right');
-            // overflow onto conversations means we lock to the right
-          } else if (docX <= gutterWidth + tooltipMidPoint) {
-            const offset = -12.5;
-            setPopupX(offset);
-            setTooltipPosition('left');
-          } else {
-            setPopupX(popupXDefault);
-            setTooltipPosition('center');
+            setPopupReaction(emoji);
           }
-
-          setPopupReaction(emoji);
         }}
       >
         <span>{emoji}</span>
@@ -193,7 +194,9 @@ export const MessageReactions = (props: Props): ReactElement => {
           senders={reactions[popupReaction].senders}
           tooltipPosition={tooltipPosition}
           onClick={() => {
-            setPopupReaction('');
+            if (setPopupReaction) {
+              setPopupReaction('');
+            }
             setPopupX(popupXDefault);
             setPopupY(popupYDefault);
             setTooltipPosition('center');
