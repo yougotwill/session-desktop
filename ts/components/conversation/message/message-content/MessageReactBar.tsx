@@ -1,7 +1,6 @@
 import React, { ReactElement, useCallback, useEffect, useState } from 'react';
 import styled from 'styled-components';
 import { RecentReactions } from '../../../../types/Util';
-import { updateRecentReactions } from '../../../../util/reactions';
 import { getRecentReactions } from '../../../../util/storage';
 import { SessionIconButton } from '../../../icon';
 
@@ -51,9 +50,6 @@ export const MessageReactBar = (props: Props): ReactElement => {
       key={emoji}
       onClick={async () => {
         action(emoji);
-        if (recentReactions) {
-          await updateRecentReactions(recentReactions.items, emoji);
-        }
       }}
     >
       {emoji}
