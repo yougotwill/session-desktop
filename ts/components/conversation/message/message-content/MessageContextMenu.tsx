@@ -3,6 +3,7 @@ import React, { useCallback } from 'react';
 import { animation, Item, Menu } from 'react-contexify';
 
 import { useDispatch, useSelector } from 'react-redux';
+import styled from 'styled-components';
 import { getMessageById } from '../../../../data/data';
 import { MessageInteraction } from '../../../../interactions';
 import { replyToMessage } from '../../../../interactions/conversationInteractions';
@@ -22,6 +23,7 @@ import {
 } from '../../../../state/ducks/conversations';
 import { getMessageContextMenuProps } from '../../../../state/selectors/conversations';
 import { saveAttachmentToDisk } from '../../../../util/attachmentsUtil';
+import { MessageReactBar } from './MessageReactBar';
 
 export type MessageContextMenuSelectorProps = Pick<
   MessageRenderingProps,
@@ -43,6 +45,14 @@ export type MessageContextMenuSelectorProps = Pick<
 >;
 
 type Props = { messageId: string; contextMenuId: string };
+
+const StyledMessageContextMenu = styled.div`
+  position: relative;
+
+  .react-contexify {
+    margin-left: -80px;
+  }
+`;
 
 // tslint:disable: max-func-body-length cyclomatic-complexity
 export const MessageContextMenu = (props: Props) => {
@@ -176,47 +186,50 @@ export const MessageContextMenu = (props: Props) => {
   }, [convoId, messageId]);
 
   return (
-    <Menu
-      id={contextMenuId}
-      onShown={onContextMenuShown}
-      onHidden={onContextMenuHidden}
-      animation={animation.fade}
-    >
-      {attachments?.length ? (
-        <Item onClick={saveAttachment}>{window.i18n('downloadAttachment')}</Item>
-      ) : null}
+    <StyledMessageContextMenu>
+      <Menu
+        id={contextMenuId}
+        onShown={onContextMenuShown}
+        onHidden={onContextMenuHidden}
+        animation={animation.fade}
+      >
+        <MessageReactBar />
+        {attachments?.length ? (
+          <Item onClick={saveAttachment}>{window.i18n('downloadAttachment')}</Item>
+        ) : null}
 
-      <Item onClick={copyText}>{window.i18n('copyMessage')}</Item>
-      {(isSent || !isOutgoing) && <Item onClick={onReply}>{window.i18n('replyToMessage')}</Item>}
-      {(!isPublic || isOutgoing) && (
-        <Item onClick={onShowDetail}>{window.i18n('moreInformation')}</Item>
-      )}
-      {showRetry ? <Item onClick={onRetry}>{window.i18n('resend')}</Item> : null}
-      {isDeletable ? (
-        <>
-          <Item onClick={onSelect}>{selectMessageText}</Item>
-        </>
-      ) : null}
-      {isDeletable && !isPublic ? (
-        <>
-          <Item onClick={onDelete}>{deleteMessageJustForMeText}</Item>
-        </>
-      ) : null}
-      {isDeletableForEveryone ? (
-        <>
-          <Item onClick={onDeleteForEveryone}>{unsendMessageText}</Item>
-        </>
-      ) : null}
-      {weAreAdmin && isPublic ? <Item onClick={onBan}>{window.i18n('banUser')}</Item> : null}
-      {weAreAdmin && isOpenGroupV2 ? (
-        <Item onClick={onUnban}>{window.i18n('unbanUser')}</Item>
-      ) : null}
-      {weAreAdmin && isPublic && !isSenderAdmin ? (
-        <Item onClick={addModerator}>{window.i18n('addAsModerator')}</Item>
-      ) : null}
-      {weAreAdmin && isPublic && isSenderAdmin ? (
-        <Item onClick={removeModerator}>{window.i18n('removeFromModerators')}</Item>
-      ) : null}
-    </Menu>
+        <Item onClick={copyText}>{window.i18n('copyMessage')}</Item>
+        {(isSent || !isOutgoing) && <Item onClick={onReply}>{window.i18n('replyToMessage')}</Item>}
+        {(!isPublic || isOutgoing) && (
+          <Item onClick={onShowDetail}>{window.i18n('moreInformation')}</Item>
+        )}
+        {showRetry ? <Item onClick={onRetry}>{window.i18n('resend')}</Item> : null}
+        {isDeletable ? (
+          <>
+            <Item onClick={onSelect}>{selectMessageText}</Item>
+          </>
+        ) : null}
+        {isDeletable && !isPublic ? (
+          <>
+            <Item onClick={onDelete}>{deleteMessageJustForMeText}</Item>
+          </>
+        ) : null}
+        {isDeletableForEveryone ? (
+          <>
+            <Item onClick={onDeleteForEveryone}>{unsendMessageText}</Item>
+          </>
+        ) : null}
+        {weAreAdmin && isPublic ? <Item onClick={onBan}>{window.i18n('banUser')}</Item> : null}
+        {weAreAdmin && isOpenGroupV2 ? (
+          <Item onClick={onUnban}>{window.i18n('unbanUser')}</Item>
+        ) : null}
+        {weAreAdmin && isPublic && !isSenderAdmin ? (
+          <Item onClick={addModerator}>{window.i18n('addAsModerator')}</Item>
+        ) : null}
+        {weAreAdmin && isPublic && isSenderAdmin ? (
+          <Item onClick={removeModerator}>{window.i18n('removeFromModerators')}</Item>
+        ) : null}
+      </Menu>
+    </StyledMessageContextMenu>
   );
 };
