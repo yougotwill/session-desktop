@@ -60,7 +60,7 @@ const renderContacts = (contacts: string) => {
     return <></>;
   }
 
-  if (contacts.indexOf('&') !== -1 && contacts.indexOf('other') !== -1) {
+  if (contacts.includes('&') && contacts.includes('other')) {
     const [names, others] = contacts.split('&');
     return (
       <span>
