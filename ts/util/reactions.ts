@@ -2,12 +2,11 @@ import _ from 'lodash';
 import { getMessageById, getMessagesBySentAt } from '../data/data';
 import { MessageModel } from '../models/message';
 import { SignalService } from '../protobuf';
+import { UserUtils } from '../session/utils';
 
 import { ReactionList } from '../types/Message';
 import { RecentReactions } from '../types/Util';
 import { getRecentReactions, saveRecentReations } from '../util/storage';
-
-import { UserUtils } from '../session/utils';
 
 export const sendMessageReaction = async (messageId: string, emoji: string) => {
   const found = await getMessageById(messageId);
@@ -18,15 +17,12 @@ export const sendMessageReaction = async (messageId: string, emoji: string) => {
       return;
     }
 
-    const author = UserUtils.getOurPubKeyStrFromCache();
+    const me = UserUtils.getOurPubKeyStrFromCache();
+    const author = found.get('source');
     let action = 0;
 
     const reacts = found.get('reacts');
-    if (
-      reacts &&
-      Object.keys(reacts).includes(emoji) &&
-      Object.keys(reacts[emoji]).includes(author)
-    ) {
+    if (reacts && Object.keys(reacts).includes(emoji) && Object.keys(reacts[emoji]).includes(me)) {
       window.log.info('found matching reaction removing it');
       action = 1;
     } else {
@@ -44,7 +40,7 @@ export const sendMessageReaction = async (messageId: string, emoji: string) => {
     });
 
     window.log.info(
-      author,
+      me,
       `${action === 0 ? 'added' : 'removed'} a`,
       emoji,
       'reaction at',
@@ -60,9 +56,11 @@ export const sendMessageReaction = async (messageId: string, emoji: string) => {
  */
 export const handleMessageReaction = async (
   reaction: SignalService.DataMessage.IReaction,
+  sender: string,
   messageId?: string
 ) => {
   const originalMessageTimestamp = Number(reaction.id);
+  const originalMessageAuthor = reaction.author;
 
   if (!reaction.emoji) {
     window?.log?.warn(`There is no emoji for the reaction ${messageId}.`);
@@ -72,7 +70,13 @@ export const handleMessageReaction = async (
   const collection = await getMessagesBySentAt(originalMessageTimestamp);
   const originalMessage = collection.find((item: MessageModel) => {
     const messageTimestamp = item.get('sent_at');
-    return Boolean(messageTimestamp && messageTimestamp === originalMessageTimestamp);
+    const author = item.get('source');
+    return Boolean(
+      messageTimestamp &&
+        messageTimestamp === originalMessageTimestamp &&
+        author &&
+        author == originalMessageAuthor
+    );
   });
 
   if (!originalMessage) {
@@ -88,22 +92,19 @@ export const handleMessageReaction = async (
   switch (reaction.action) {
     // Add reaction
     case 0:
-      if (senders.includes(reaction.author) && details[reaction.author] !== '') {
-        window?.log?.info(
-          'Received duplicate message reaction. Dropping it. id:',
-          details[reaction.author]
-        );
+      if (senders.includes(sender) && details[sender] !== '') {
+        window?.log?.info('Received duplicate message reaction. Dropping it. id:', details[sender]);
         return;
       }
-      details[reaction.author] = messageId ?? '';
+      details[sender] = messageId ?? '';
       break;
     // Remove reaction
     case 1:
     default:
       if (senders.length > 0) {
-        if (senders.indexOf(reaction.author) >= 0) {
+        if (senders.indexOf(sender) >= 0) {
           // tslint:disable-next-line: no-dynamic-delete
-          delete details[reaction.author];
+          delete details[sender];
         }
       }
   }
