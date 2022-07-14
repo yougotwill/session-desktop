@@ -2,7 +2,7 @@ import { defaultsDeep } from 'lodash';
 import { v4 as uuidv4 } from 'uuid';
 import { CallNotificationType, PropsForMessageWithConvoProps } from '../state/ducks/conversations';
 import { AttachmentTypeWithPath } from '../types/Attachment';
-import { ReactionType } from '../types/Message';
+import { ReactionList, ReactionType } from '../types/Message';
 
 export type MessageModelType = 'incoming' | 'outgoing';
 export type MessageDeliveryStatus = 'sending' | 'sent' | 'read' | 'error';
@@ -18,6 +18,7 @@ export interface MessageAttributes {
   sent_at?: number;
   preview?: any;
   reaction?: ReactionType;
+  reacts?: ReactionList;
   body?: string;
   expirationStartTimestamp: number;
   read_by: Array<string>; // we actually only care about the length of this. values are not used for anything
@@ -160,6 +161,7 @@ export interface MessageAttributesOptionals {
   sent_at?: number;
   preview?: any;
   reaction?: ReactionType;
+  reacts?: ReactionList;
   body?: string;
   expirationStartTimestamp?: number;
   read_by?: Array<string>; // we actually only care about the length of this. values are not used for anything

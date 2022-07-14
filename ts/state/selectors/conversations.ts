@@ -34,6 +34,7 @@ import { LightBoxOptions } from '../../components/conversation/SessionConversati
 import { getConversationController } from '../../session/conversations';
 import { UserUtils } from '../../session/utils';
 import { Storage } from '../../util/storage';
+import { MessageReactsSelectorProps } from '../../components/conversation/message/message-content/MessageReactions';
 
 export const getConversations = (state: StateType): ConversationsStateType => state.conversations;
 
@@ -876,6 +877,20 @@ export const getMessageAvatarProps = createSelector(getMessagePropsByMessageId, 
   };
 
   return messageAvatarProps;
+});
+
+export const getMessageReactsProps = createSelector(getMessagePropsByMessageId, (props):
+  | MessageReactsSelectorProps
+  | undefined => {
+  if (!props || _.isEmpty(props)) {
+    return undefined;
+  }
+
+  const { reacts } = props.propsForMessage;
+
+  const msgProps: MessageReactsSelectorProps = { reacts };
+
+  return msgProps;
 });
 
 export const getMessagePreviewProps = createSelector(getMessagePropsByMessageId, (props):
