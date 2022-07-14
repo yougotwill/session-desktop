@@ -886,9 +886,9 @@ export const getMessageReactsProps = createSelector(getMessagePropsByMessageId, 
     return undefined;
   }
 
-  const { conversationType, reacts } = props.propsForMessage;
+  const { conversationType, isPublic, reacts } = props.propsForMessage;
 
-  const msgProps: MessageReactsSelectorProps = { conversationType, reacts };
+  const msgProps: MessageReactsSelectorProps = { conversationType, isPublic, reacts };
 
   return msgProps;
 });

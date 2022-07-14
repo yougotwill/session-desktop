@@ -33,19 +33,25 @@ const StyledSendersContainer = styled(Flex)`
   min-height: 350px;
   height: 100%;
   max-height: 496px;
+  overflow-x: hidden;
   overflow-y: auto;
   padding: 0 16px 32px;
 `;
 
-const StyledReactionSummary = styled.p`
+const StyledReactionBar = styled(Flex)`
+  width: 100%;
   margin: 12px 0 20px 4px;
 
-  span {
-    color: var(--color-text-subtle);
-  }
+  p {
+    margin: 0;
 
-  span:nth-child(1) {
-    margin: 0 8px;
+    span {
+      color: var(--color-text-subtle);
+    }
+
+    span:nth-child(1) {
+      margin: 0 8px;
+    }
   }
 `;
 
@@ -55,6 +61,12 @@ const StyledReactionSender = styled(Flex)`
   .module-avatar {
     margin-right: 12px;
   }
+`;
+
+const StyledClearButton = styled.button`
+  font-size: var(--font-size-sm);
+  color: var(--color-destructive);
+  border: none;
 `;
 
 type Props = {
@@ -73,7 +85,7 @@ export const ReactListModal = (props: Props): ReactElement => {
   const dispatch = useDispatch();
 
   const me = UserUtils.getOurPubKeyStrFromCache();
-  const { reacts } = msgProps;
+  const { isPublic, reacts } = msgProps;
   const [reactions, setReactions] = useState<ReactionList>({});
   const [currentReact, setCurrentReact] = useState('');
   const [senders, setSenders] = useState<Array<string>>([]);
@@ -200,11 +212,18 @@ export const ReactListModal = (props: Props): ReactElement => {
             flexDirection={'column'}
             alignItems={'flex-start'}
           >
-            <StyledReactionSummary>
-              {currentReact}
-              <span>&#8226;</span>
-              <span>{senders.length}</span>
-            </StyledReactionSummary>
+            <StyledReactionBar
+              container={true}
+              justifyContent={'space-between'}
+              alignItems={'center'}
+            >
+              <p>
+                {currentReact}
+                <span>&#8226;</span>
+                <span>{senders.length}</span>
+              </p>
+              {isPublic && <StyledClearButton>{window.i18n('clearAll')}</StyledClearButton>}
+            </StyledReactionBar>
             {senders && senders.length > 0 && renderReactionSenders(senders)}
           </StyledSendersContainer>
         )}

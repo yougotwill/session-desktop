@@ -96,7 +96,7 @@ const UpArrowSVG = (): ReactElement => (
   </svg>
 );
 
-export type MessageReactsSelectorProps = Pick<MessageRenderingProps, 'conversationType' | 'reacts'>;
+export type MessageReactsSelectorProps = Pick<MessageRenderingProps, 'conversationType' | 'isPublic' | 'reacts'>;
 
 type Props = {
   messageId: string;
