@@ -161,7 +161,7 @@ export const sendMessageReaction = async (messageId: string, emoji: string) => {
       action,
     });
 
-    window.log.info(author, 'reacted with a', emoji, 'at', found.get('sent_at'));
+    window.log.info(author, `${action === 0 ? 'added' : 'removed'} a`, emoji, 'reaction at', found.get('sent_at'));
   } else {
     window.log.warn(`Message ${messageId} not found in db`);
   }
@@ -207,7 +207,6 @@ export const handleMessageReaction = async (reaction: SignalService.DataMessage.
     default:
       if (senders.length > 0) {
         const deleteIndex = senders.indexOf(reaction.author);
-        // TODO better edge cases
         senders.splice(deleteIndex, 1);
       }
   }
@@ -215,13 +214,12 @@ export const handleMessageReaction = async (reaction: SignalService.DataMessage.
   if (senders.length > 0) {
     reacts[reaction.emoji].senders = senders;
   } else {
-    // avoids ts-lint no-dynamic-delete
-    const { emoji: removed, ...newReacts } = reacts;
-    reacts = newReacts;
+    // tslint:disable-next-line: no-dynamic-delete
+    delete reacts[reaction.emoji];
   }
 
   originalMessage.set({
-    reacts,
+    reacts: !_.isEmpty(reacts) ? reacts: undefined,
   });
 
   await originalMessage.commit();

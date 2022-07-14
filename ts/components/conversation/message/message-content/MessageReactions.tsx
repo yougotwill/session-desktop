@@ -199,6 +199,10 @@ export const MessageReactions = (props: Props): ReactElement => {
     if (reacts && !isEqual(reactions, reacts)) {
       setReactions(reacts);
     }
+
+    if (Object.keys(reactions).length > 0 && (reacts === {} || reacts === undefined)) {
+      setReactions({});
+    }
   }, [reacts, reactions]);
 
   return (
