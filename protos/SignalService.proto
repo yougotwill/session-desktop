@@ -82,7 +82,7 @@ message DataMessage {
         REMOVE = 1;
     }
 		// @required
-    required uint64 id        = 1; // Message timestamp
+    required uint64 id        = 1; // timestamp for selected message
 		// @required
     required string author    = 2;
     optional string emoji     = 3;
