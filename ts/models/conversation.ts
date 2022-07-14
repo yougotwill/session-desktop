@@ -640,96 +640,6 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     return getOpenGroupV2FromConversationId(this.id);
   }
 
-  // TODO refactor with sendMessageJob to minimize code
-  public async sendReactionJob(sourceMessage: MessageModel, reaction: Reaction) {
-    try {
-      const destination = this.id;
-
-      const sentAt = sourceMessage.get('sent_at');
-
-      if (!sentAt) {
-        throw new Error('sendReactMessageJob() sent_at must be set.');
-      }
-
-      if (this.isPublic() && !this.isOpenGroupV2()) {
-        throw new Error('Only opengroupv2 are supported now');
-      }
-
-      const sender = UserUtils.getOurPubKeyStrFromCache();
-      await handleMessageReaction(reaction, sender);
-
-      // an OpenGroupV2 message is just a visible message
-      const chatMessageParams: VisibleMessageParams = {
-        body: '',
-        timestamp: sentAt,
-        reaction,
-        lokiProfile: UserUtils.getOurProfile(),
-      };
-
-      const shouldApprove = !this.isApproved() && this.isPrivate();
-      const incomingMessageCount = await getMessageCountByType(this.id, MessageDirection.incoming);
-      const hasIncomingMessages = incomingMessageCount > 0;
-      if (shouldApprove) {
-        await this.setIsApproved(true);
-        if (hasIncomingMessages) {
-          // have to manually add approval for local client here as DB conditional approval check in config msg handling will prevent this from running
-          await this.addOutgoingApprovalMessage(Date.now());
-          if (!this.didApproveMe()) {
-            await this.setDidApproveMe(true);
-          }
-          // should only send once
-          await this.sendMessageRequestResponse(true);
-          void forceSyncConfigurationNowIfNeeded();
-        }
-      }
-
-      if (this.isOpenGroupV2()) {
-        const chatMessageOpenGroupV2 = new OpenGroupVisibleMessage(chatMessageParams);
-        const roomInfos = this.toOpenGroupV2();
-        if (!roomInfos) {
-          throw new Error('Could not find this room in db');
-        }
-
-        // we need the return await so that errors are caught in the catch {}
-        await getMessageQueue().sendToOpenGroupV2(chatMessageOpenGroupV2, roomInfos);
-        return;
-      }
-
-      const destinationPubkey = new PubKey(destination);
-
-      if (this.isPrivate()) {
-        const chatMessageMe = new VisibleMessage({ ...chatMessageParams, syncTarget: this.id });
-        await getMessageQueue().sendSyncMessage(chatMessageMe);
-
-        const chatMessagePrivate = new VisibleMessage(chatMessageParams);
-        await getMessageQueue().sendToPubKey(destinationPubkey, chatMessagePrivate);
-
-        return;
-      }
-
-      if (this.isMediumGroup()) {
-        const chatMessageMediumGroup = new VisibleMessage(chatMessageParams);
-        const closedGroupVisibleMessage = new ClosedGroupVisibleMessage({
-          chatMessage: chatMessageMediumGroup,
-          groupId: destination,
-        });
-
-        // we need the return await so that errors are caught in the catch {}
-        await getMessageQueue().sendToGroup(closedGroupVisibleMessage);
-        return;
-      }
-
-      if (this.isClosedGroup()) {
-        throw new Error('Legacy group are not supported anymore. You need to recreate this group.');
-      }
-
-      throw new TypeError(`Invalid conversation type: '${this.get('type')}'`);
-    } catch (e) {
-      window.log.error(`Reaction job failed id:${reaction.id} error:`, e);
-      return null;
-    }
-  }
-
   public async sendMessageJob(message: MessageModel, expireTimer: number | undefined) {
     try {
       const uploads = await message.uploadData();
@@ -757,36 +667,15 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
         lokiProfile: UserUtils.getOurProfile(),
       };
 
-      const shouldApprove = !this.isApproved() && this.isPrivate();
-      const incomingMessageCount = await getMessageCountByType(this.id, MessageDirection.incoming);
-      const hasIncomingMessages = incomingMessageCount > 0;
-      if (shouldApprove) {
-        await this.setIsApproved(true);
-        if (hasIncomingMessages) {
-          // have to manually add approval for local client here as DB conditional approval check in config msg handling will prevent this from running
-          await this.addOutgoingApprovalMessage(Date.now());
-          if (!this.didApproveMe()) {
-            await this.setDidApproveMe(true);
-          }
-          // should only send once
-          await this.sendMessageRequestResponse(true);
-          void forceSyncConfigurationNowIfNeeded();
-        }
-      }
+      await this.handleMessageApproval();
 
       if (this.isOpenGroupV2()) {
-        const chatMessageOpenGroupV2 = new OpenGroupVisibleMessage(chatMessageParams);
-        const roomInfos = this.toOpenGroupV2();
-        if (!roomInfos) {
-          throw new Error('Could not find this room in db');
-        }
-
-        // we need the return await so that errors are caught in the catch {}
-        await getMessageQueue().sendToOpenGroupV2(chatMessageOpenGroupV2, roomInfos);
+        await this.handleOpenGroupV2Message(chatMessageParams);
         return;
       }
 
       const destinationPubkey = new PubKey(destination);
+
       if (this.isPrivate()) {
         if (this.isMe()) {
           chatMessageParams.syncTarget = this.id;
@@ -795,18 +684,9 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
           await getMessageQueue().sendSyncMessage(chatMessageMe);
           return;
         }
-        // Handle Group Invitation Message
+
         if (message.get('groupInvitation')) {
-          const groupInvitation = message.get('groupInvitation');
-          const groupInvitMessage = new GroupInvitationMessage({
-            identifier: id,
-            timestamp: sentAt,
-            name: groupInvitation.name,
-            url: groupInvitation.url,
-            expireTimer: this.get('expireTimer'),
-          });
-          // we need the return await so that errors are caught in the catch {}
-          await getMessageQueue().sendToPubKey(destinationPubkey, groupInvitMessage);
+          await this.handleGroupInvitation(message, sentAt, destinationPubkey);
           return;
         }
         const chatMessagePrivate = new VisibleMessage(chatMessageParams);
@@ -816,24 +696,81 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       }
 
       if (this.isMediumGroup()) {
-        const chatMessageMediumGroup = new VisibleMessage(chatMessageParams);
-        const closedGroupVisibleMessage = new ClosedGroupVisibleMessage({
-          chatMessage: chatMessageMediumGroup,
-          groupId: destination,
-        });
-
-        // we need the return await so that errors are caught in the catch {}
-        await getMessageQueue().sendToGroup(closedGroupVisibleMessage);
+        await this.handleMediumGroup(chatMessageParams, destination);
         return;
       }
 
       if (this.isClosedGroup()) {
-        throw new Error('Legacy group are not supported anymore. You need to recreate this group.');
+        // throw new Error('Legacy group are not supported anymore. You need to recreate this group.');
+        this.handleLegacyClosedGroup();
       }
 
       throw new TypeError(`Invalid conversation type: '${this.get('type')}'`);
     } catch (e) {
       await message.saveErrors(e);
+      return null;
+    }
+  }
+
+  public async sendReactionJob(sourceMessage: MessageModel, reaction: Reaction) {
+    try {
+      const destination = this.id;
+
+      const sentAt = sourceMessage.get('sent_at');
+
+      if (!sentAt) {
+        throw new Error('sendReactMessageJob() sent_at must be set.');
+      }
+
+      if (this.isPublic() && !this.isOpenGroupV2()) {
+        throw new Error('Only opengroupv2 are supported now');
+      }
+
+      const sender = UserUtils.getOurPubKeyStrFromCache();
+      await handleMessageReaction(reaction, sender);
+
+      // an OpenGroupV2 message is just a visible message
+      const chatMessageParams: VisibleMessageParams = {
+        body: '',
+        timestamp: sentAt,
+        reaction,
+        lokiProfile: UserUtils.getOurProfile(),
+      };
+
+      await this.handleMessageApproval();
+
+      if (this.isOpenGroupV2()) {
+        await this.handleOpenGroupV2Message(chatMessageParams);
+        return;
+      }
+
+      const destinationPubkey = new PubKey(destination);
+
+      if (this.isPrivate()) {
+        const chatMessageMe = new VisibleMessage({
+          ...chatMessageParams,
+          syncTarget: this.id,
+        });
+        await getMessageQueue().sendSyncMessage(chatMessageMe);
+
+        const chatMessagePrivate = new VisibleMessage(chatMessageParams);
+        await getMessageQueue().sendToPubKey(destinationPubkey, chatMessagePrivate);
+
+        return;
+      }
+
+      if (this.isMediumGroup()) {
+        await this.handleMediumGroup(chatMessageParams, destination);
+        return;
+      }
+
+      if (this.isClosedGroup()) {
+        this.handleLegacyClosedGroup();
+      }
+
+      throw new TypeError(`Invalid conversation type: '${this.get('type')}'`);
+    } catch (e) {
+      window.log.error(`Reaction job failed id:${reaction.id} error:`, e);
       return null;
     }
   }
@@ -969,7 +906,6 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     const sourceMessage = await getMessageById(sourceId);
 
     if (!sourceMessage) {
-      // TODO handle better
       return;
     }
 
@@ -1854,6 +1790,68 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     getMessageQueue()
       .sendToPubKey(device, typingMessage)
       .catch(window?.log?.error);
+  }
+
+  private async handleMessageApproval() {
+    const shouldApprove = !this.isApproved() && this.isPrivate();
+    const incomingMessageCount = await getMessageCountByType(this.id, MessageDirection.incoming);
+    const hasIncomingMessages = incomingMessageCount > 0;
+    if (shouldApprove) {
+      await this.setIsApproved(true);
+      if (hasIncomingMessages) {
+        // have to manually add approval for local client here as DB conditional approval check in config msg handling will prevent this from running
+        await this.addOutgoingApprovalMessage(Date.now());
+        if (!this.didApproveMe()) {
+          await this.setDidApproveMe(true);
+        }
+        // should only send once
+        await this.sendMessageRequestResponse(true);
+        void forceSyncConfigurationNowIfNeeded();
+      }
+    }
+  }
+
+  private async handleOpenGroupV2Message(chatMessageParams: VisibleMessageParams) {
+    const chatMessageOpenGroupV2 = new OpenGroupVisibleMessage(chatMessageParams);
+    const roomInfos = this.toOpenGroupV2();
+    if (!roomInfos) {
+      throw new Error('Could not find this room in db');
+    }
+
+    // we need the return await so that errors are caught in the catch {}
+    await getMessageQueue().sendToOpenGroupV2(chatMessageOpenGroupV2, roomInfos);
+  }
+
+  private async handleGroupInvitation(
+    message: MessageModel,
+    sentAt: number,
+    destinationPubkey: PubKey
+  ) {
+    const groupInvitation = message.get('groupInvitation');
+    const groupInvitMessage = new GroupInvitationMessage({
+      identifier: message.id,
+      timestamp: sentAt,
+      name: groupInvitation.name,
+      url: groupInvitation.url,
+      expireTimer: this.get('expireTimer'),
+    });
+    // we need the return await so that errors are caught in the catch {}
+    await getMessageQueue().sendToPubKey(destinationPubkey, groupInvitMessage);
+  }
+
+  private async handleMediumGroup(chatMessageParams: VisibleMessageParams, destination: any) {
+    const chatMessageMediumGroup = new VisibleMessage(chatMessageParams);
+    const closedGroupVisibleMessage = new ClosedGroupVisibleMessage({
+      chatMessage: chatMessageMediumGroup,
+      groupId: destination,
+    });
+
+    // we need the return await so that errors are caught in the catch {}
+    await getMessageQueue().sendToGroup(closedGroupVisibleMessage);
+  }
+
+  private handleLegacyClosedGroup() {
+    throw new Error('Legacy group are not supported anymore. You need to recreate this group.');
   }
 }
 

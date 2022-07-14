@@ -271,7 +271,7 @@ export const MessageReactions = (props: Props): ReactElement => {
       {renderReactionList()}
       <StyledReadLess onClick={handleExpand}>
         <UpArrowSVG />
-        Show Less
+        {window.i18n('expandedReactionsText')}
       </StyledReadLess>
     </>
   );

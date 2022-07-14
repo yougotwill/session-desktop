@@ -82,31 +82,29 @@ type Props = {
   isModal?: boolean;
 };
 
+const pickerProps: FixedPickerProps = {
+  title: '',
+  showPreview: true,
+  autoFocus: true,
+  skinTonePosition: 'preview',
+};
+
+const loadLocale = async () => {
+  if (!window) {
+    return undefined;
+  }
+
+  const lang = (window.i18n as any).getLocale();
+  if (lang !== 'en') {
+    const langData = await import(`@emoji-mart/data/i18n/${lang}.json`);
+    return langData;
+  }
+};
+
 export const SessionEmojiPanel = (props: Props) => {
   const { onEmojiClicked, show, isModal = false } = props;
   const theme = useSelector(getTheme);
-
   const pickerRef = useRef<HTMLDivElement>(null);
-  const pickerProps: FixedPickerProps = {
-    theme,
-    title: '',
-    showPreview: true,
-    onEmojiSelect: onEmojiClicked,
-    autoFocus: true,
-    skinTonePosition: 'preview',
-  };
-
-  const loadLocale = async () => {
-    if (!window) {
-      return undefined;
-    }
-
-    const lang = (window.i18n as any).getLocale();
-    if (lang !== 'en') {
-      const langData = await import(`@emoji-mart/data/i18n/${lang}.json`);
-      return langData;
-    }
-  };
 
   useEffect(() => {
     let isCancelled = false;
@@ -122,6 +120,8 @@ export const SessionEmojiPanel = (props: Props) => {
               data,
               ref: pickerRef,
               i18n,
+              theme,
+              onEmojiSelect: onEmojiClicked,
               ...pickerProps,
             });
           })

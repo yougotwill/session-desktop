@@ -37,6 +37,7 @@ export const searchEmojiForQuery = (query: string): Array<SuggestionDataItem> =>
   if (!results || !results.length) {
     return [];
   }
+
   const cleanResults = results
     .map(emoji => {
       return {

@@ -42,8 +42,6 @@ const StyledMessageContentContainer = styled.div<{ direction: 'left' | 'right' }
   }
 `;
 
-const StyledMessageContentWithStatuses = styled.div<{}>``;
-
 export const MessageContentWithStatuses = (props: Props) => {
   const contentProps = useSelector(state =>
     getMessageContentWithStatusesSelectorProps(state as any, props.messageId)
@@ -105,7 +103,7 @@ export const MessageContentWithStatuses = (props: Props) => {
         setPopupReaction('');
       }}
     >
-      <StyledMessageContentWithStatuses
+      <div
         className={classNames('module-message', `module-message--${direction}`)}
         role="button"
         onClick={onClickOnMessageOuterContainer}
@@ -129,7 +127,7 @@ export const MessageContentWithStatuses = (props: Props) => {
           isCorrectSide={!isIncoming}
         />
         {!isDeleted && <MessageContextMenu messageId={messageId} contextMenuId={ctxMenuID} />}
-      </StyledMessageContentWithStatuses>
+      </div>
       <MessageReactions
         messageId={messageId}
         onClick={handleMessageReaction}
