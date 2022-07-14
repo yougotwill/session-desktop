@@ -91,7 +91,7 @@ export const handleMessageReaction = async (reaction: SignalService.DataMessage.
     default:
       if (senders.length > 0) {
         const deleteIndex = senders.indexOf(reaction.author);
-        if (deleteIndex >=0) {
+        if (deleteIndex >= 0) {
           senders.splice(deleteIndex, 1);
         }
       }

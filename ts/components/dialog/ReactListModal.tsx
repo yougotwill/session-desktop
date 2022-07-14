@@ -58,11 +58,12 @@ const StyledReactionSender = styled(Flex)`
 `;
 
 type Props = {
+  reaction: string;
   messageId: string;
 };
 
 export const ReactListModal = (props: Props): ReactElement => {
-  const { messageId } = props;
+  const { reaction, messageId } = props;
   const msgProps = useSelector((state: StateType) => getMessageReactsProps(state, messageId));
 
   if (!msgProps) {
@@ -108,8 +109,8 @@ export const ReactListModal = (props: Props): ReactElement => {
     await sendMessageReaction(messageId, emoji);
   };
 
-  const renderReactionSenders = (senders: Array<string>) => {
-    return senders.map((sender: string) => (
+  const renderReactionSenders = (items: Array<string>) => {
+    return items.map((sender: string) => (
       <StyledReactionSender container={true} justifyContent={'space-between'} alignItems={'center'}>
         <Flex container={true} alignItems={'center'}>
           <Avatar
@@ -139,16 +140,23 @@ export const ReactListModal = (props: Props): ReactElement => {
   };
 
   useEffect(() => {
+    if (currentReact === '' && currentReact !== reaction) {
+      setCurrentReact(reaction);
+    }
+
     if (reacts && !isEqual(reactions, reacts)) {
       setReactions(reacts);
-      setCurrentReact(Object.keys(reacts)[0]);
     }
 
     if (Object.keys(reactions).length > 0 && (reacts === {} || reacts === undefined)) {
       setReactions({});
     }
 
-    if (currentReact && senders && !isEqual(senders, reactions[currentReact].senders)) {
+    if (
+      reactions[currentReact] &&
+      reactions[currentReact].senders &&
+      !isEqual(senders, reactions[currentReact].senders)
+    ) {
       let _senders = [...reactions[currentReact].senders];
       if (_senders.length > 1) {
         const meIndex = _senders.indexOf(me);
@@ -162,11 +170,13 @@ export const ReactListModal = (props: Props): ReactElement => {
 
     if (
       senders.length > 0 &&
-      (reactions[currentReact].senders === [] || reactions[currentReact].senders === undefined)
+      (!reactions[currentReact] ||
+        reactions[currentReact].senders === [] ||
+        reactions[currentReact].senders === undefined)
     ) {
       setSenders([]);
     }
-  }, [currentReact, reacts, reactions, senders]);
+  }, [currentReact, reaction, reacts, reactions, senders]);
 
   return (
     <SessionWrapperModal

@@ -30,6 +30,7 @@ export type UserDetailsModalState = {
 } | null;
 
 export type ReactListModalState = {
+  reaction: string;
   messageId: string;
 } | null;
 
