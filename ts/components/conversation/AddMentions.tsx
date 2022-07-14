@@ -1,14 +1,28 @@
 import { RenderTextCallbackType } from '../../types/Util';
-import classNames from 'classnames';
 import { PubKey } from '../../session/types';
 import { getConversationController } from '../../session/conversations';
 import React from 'react';
 import { isUsAnySogsFromCache } from '../../session/apis/open_group_api/sogsv3/knownBlindedkeys';
+import styled from 'styled-components';
 
 interface MentionProps {
   key: string;
   text: string;
 }
+
+const StyledMentionAnother = styled.span`
+  border-radius: 4px;
+  margin: 2px;
+  padding: 2px;
+  user-select: none;
+  font-weight: bold;
+`;
+
+const StyledMentionedUs = styled(StyledMentionAnother)`
+  background-color: var(--color-text-accent);
+  color: black;
+  border-radius: 5px;
+`;
 
 const Mention = (props: MentionProps) => {
   const blindedOrNotPubkey = props.text.slice(1);
@@ -16,17 +30,13 @@ const Mention = (props: MentionProps) => {
 
   // this call takes care of finding if we have a blindedId of ourself on any sogs we have joined.
   if (isUsAnySogsFromCache(blindedOrNotPubkey)) {
-    return (
-      <span className={classNames('mention-profile-name', 'mention-profile-name-us')}>
-        @{window.i18n('you')}
-      </span>
-    );
+    return <StyledMentionedUs>@{window.i18n('you')}</StyledMentionedUs>;
   }
 
   return (
-    <span className="mention-profile-name">
+    <StyledMentionAnother>
       @{foundConvo?.getContactProfileNameOrShortenedPubKey() || PubKey.shorten(props.text)}
-    </span>
+    </StyledMentionAnother>
   );
 };
 
@@ -48,7 +58,6 @@ export const AddMentions = (props: Props): JSX.Element => {
   let match = FIND_MENTIONS.exec(text);
   let last = 0;
   let count = 1000;
-
   if (!match) {
     return renderWith({ text, key: 0, isGroup });
   }
@@ -61,8 +70,8 @@ export const AddMentions = (props: Props): JSX.Element => {
       results.push(renderWith({ text: otherText, key, isGroup }));
     }
 
-    const pubkey = text.slice(match.index, FIND_MENTIONS.lastIndex);
-    results.push(<Mention text={pubkey} key={`${key}`} />);
+    const pubkeyWithAt = text.slice(match.index, FIND_MENTIONS.lastIndex);
+    results.push(<Mention text={pubkeyWithAt} key={`${key}`} />);
 
     last = FIND_MENTIONS.lastIndex;
     match = FIND_MENTIONS.exec(text);

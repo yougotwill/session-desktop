@@ -79,6 +79,7 @@ import {
   getUsBlindedInThatServer,
   isUsAnySogsFromCache,
 } from '../session/apis/open_group_api/sogsv3/knownBlindedkeys';
+import { QUOTED_TEXT_MAX_LENGTH } from '../session/constants';
 // tslint:disable: cyclomatic-complexity
 
 /**
@@ -1360,7 +1361,7 @@ export function sliceQuoteText(quotedText: string | undefined | null) {
   if (!quotedText || isEmpty(quotedText)) {
     return '';
   }
-  return quotedText.slice(0, 60);
+  return quotedText.slice(0, QUOTED_TEXT_MAX_LENGTH);
 }
 
 const throttledAllMessagesDispatch = _.debounce(

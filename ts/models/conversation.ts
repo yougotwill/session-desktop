@@ -8,7 +8,7 @@ import { ToastUtils, UserUtils } from '../session/utils';
 import { BlockedNumberController } from '../util';
 import { leaveClosedGroup } from '../session/group/closed-group';
 import { SignalService } from '../protobuf';
-import { MessageModel } from './message';
+import { MessageModel, sliceQuoteText } from './message';
 import { MessageAttributesOptionals, MessageDirection } from './messageType';
 import autoBind from 'auto-bind';
 import {
@@ -528,7 +528,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       author: msgSource,
       id: `${quotedMessage.get('sent_at')}` || '',
       // no need to quote the full message length.
-      text: body?.slice(0, 100),
+      text: sliceQuoteText(body),
       attachments: quotedAttachments,
       timestamp: quotedMessage.get('sent_at') || 0,
       convoId: this.id,
@@ -1621,11 +1621,6 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     const messageId = message.id;
     const isExpiringMessage = this.isExpiringMessage(messageJSON);
 
-    // window?.log?.info('Add notification', {
-    //   conversationId: this.idForLogging(),
-    //   isExpiringMessage,
-    //   messageSentAt,
-    // });
     Notifications.addNotification({
       conversationId,
       iconUrl,
