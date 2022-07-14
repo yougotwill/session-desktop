@@ -109,9 +109,7 @@ export const MessageReactions = (props: Props): ReactElement => {
   const renderReaction = (emoji: string) => (
     <StyledReaction key={emoji}>
       <span>{emoji}</span>
-      {reactions[emoji].senders && (
-        <span>{reactions[emoji].senders.length}</span>
-      )}
+      {reactions[emoji].senders && <span>{reactions[emoji].senders.length}</span>}
     </StyledReaction>
   );
 
