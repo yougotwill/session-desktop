@@ -1,4 +1,8 @@
-export const readableList = (arr: Array<string>, conjunction: string = '&', limit: number = 3): string => {
+export const readableList = (
+  arr: Array<string>,
+  conjunction: string = '&',
+  limit: number = 3
+): string => {
   if (arr.length === 0) {
     return '';
   }
