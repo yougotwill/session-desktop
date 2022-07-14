@@ -52,7 +52,6 @@ function preload(list: Array<string>) {
 }
 preload([
   'alert-outline.svg',
-  'angel_up.svg',
   'check.svg',
   'error.svg',
   'file-gradient.svg',
