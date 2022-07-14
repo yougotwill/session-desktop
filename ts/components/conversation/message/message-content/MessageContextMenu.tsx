@@ -247,8 +247,8 @@ export const MessageContextMenu = (props: Props) => {
 
   const onEmojiClick = async (args: any) => {
     const emoji = args.native ?? args;
-    await sendMessageReaction(messageId, emoji);
     onCloseEmoji();
+    await sendMessageReaction(messageId, emoji);
   };
 
   const onEmojiKeyDown = (event: any) => {
