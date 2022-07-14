@@ -85,7 +85,7 @@ export const handleMessageReaction = async (
     // Add reaction
     case 0:
       if (!reacts[reaction.emoji].id && messageId && messageId !== '') {
-        console.log('Setting reactions id to', messageId);
+        window?.log?.info('Setting reactions id to', messageId);
         reacts[reaction.emoji].id = messageId;
       }
       if (senders.includes(reaction.author)) {
@@ -111,8 +111,6 @@ export const handleMessageReaction = async (
     // tslint:disable-next-line: no-dynamic-delete
     delete reacts[reaction.emoji];
   }
-
-  console.log('reaction reacts', reacts);
 
   originalMessage.set({
     reacts: !_.isEmpty(reacts) ? reacts : undefined,
