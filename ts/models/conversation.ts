@@ -657,13 +657,6 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       // TODO move function elsewhere as it is updating the local client before updating the timestamp for the receiving client
       await MessageSentHandler.handleMessageReaction(reaction);
 
-      if (sourceMessage.get('reacts')?.timestamp) {
-        console.log(
-          'reaction: we updated the timestamp in sendReactionJob for the receiving client'
-        );
-        reaction.id = Number(sourceMessage.get('reacts')!.timestamp);
-      }
-
       // an OpenGroupV2 message is just a visible message
       const chatMessageParams: VisibleMessageParams = {
         // TODO handle notification on client side

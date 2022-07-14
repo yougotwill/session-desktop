@@ -36,14 +36,11 @@ export class MessageSentHandler {
       return;
     }
 
-    const reacts: ReactionList = originalMessage.get('reacts') ?? {
-      items: {},
-      timestamp,
-    };
+    const reacts: ReactionList = originalMessage.get('reacts') ?? {};
 
-    reacts.items[reaction.emoji] = reacts.items[reaction.emoji] || {};
+    reacts[reaction.emoji] = reacts[reaction.emoji] || {};
 
-    const senders = reacts.items[reaction.emoji].senders ?? [];
+    const senders = reacts[reaction.emoji].senders ?? [];
     switch (reaction.action) {
       // Add reaction
       case 0:
@@ -58,7 +55,7 @@ export class MessageSentHandler {
           senders.splice(deleteIndex, 1);
         }
     }
-    reacts.items[reaction.emoji].senders = senders;
+    reacts[reaction.emoji].senders = senders;
 
     console.log('reaction: reaction list', reacts);
 

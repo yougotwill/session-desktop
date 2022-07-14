@@ -5,6 +5,7 @@ import { MessageRenderingProps } from '../../../../models/messageType';
 import { StateType } from '../../../../state/reducer';
 import { getMessageReactsProps } from '../../../../state/selectors/conversations';
 import { isEqual } from 'lodash';
+import { ReactionList } from '../../../../types/Message';
 
 type Props = {
   messageId: string;
@@ -96,14 +97,7 @@ export const MessageReactions = (props: Props): ReactElement => {
   }
 
   const { reacts } = msgProps;
-  const [reactions, setReactions] = useState<
-    Record<
-      string,
-      {
-        senders: Array<string>;
-      }
-    >
-  >({});
+  const [reactions, setReactions] = useState<ReactionList>({});
 
   const [isExpanded, setIsExpanded] = useState(false);
   const handleExpand = () => {
@@ -115,7 +109,9 @@ export const MessageReactions = (props: Props): ReactElement => {
   const renderReaction = (emoji: string) => (
     <StyledReaction key={emoji}>
       <span>{emoji}</span>
-      <span>{reactions[emoji].senders.length}</span>
+      {reactions[emoji].senders && (
+        <span>{reactions[emoji].senders.length}</span>
+      )}
     </StyledReaction>
   );
 
@@ -178,10 +174,10 @@ export const MessageReactions = (props: Props): ReactElement => {
   };
 
   useEffect(() => {
-    if (reacts && reacts.items && !isEqual(reactions, reacts.items)) {
-      setReactions(reacts.items);
+    if (reacts && !isEqual(reactions, reacts)) {
+      setReactions(reacts);
     }
-  }, [reacts?.items, reactions]);
+  }, [reacts, reactions]);
 
   return (
     <StyledMessageReactionsContainer>
