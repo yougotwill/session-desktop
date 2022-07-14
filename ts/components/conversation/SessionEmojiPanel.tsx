@@ -96,14 +96,47 @@ export const SessionEmojiPanel = (props: Props) => {
     skinTonePosition: 'preview',
   };
 
+  const loadLocale = async () => {
+    if (!window) {
+      return undefined;
+    }
+
+    const lang = (window.i18n as any).getLocale();
+    if (lang !== 'en') {
+      const langData = await import(`@emoji-mart/data/i18n/${lang}.json`);
+      return langData;
+    }
+  };
+
   useEffect(() => {
+    let isCancelled = false;
     if (pickerRef.current !== null) {
       if (pickerRef.current.children.length === 0) {
-        // tslint:disable-next-line: no-unused-expression
-        new Picker({ data, ref: pickerRef, ...pickerProps });
+        loadLocale()
+          .then(async i18n => {
+            if (isCancelled) {
+              return;
+            }
+            // tslint:disable-next-line: no-unused-expression
+            new Picker({
+              data,
+              ref: pickerRef,
+              i18n,
+              ...pickerProps,
+            });
+          })
+          .catch(() => {
+            if (isCancelled) {
+              return;
+            }
+          });
       }
     }
-  }, [data, pickerProps]);
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [data, loadLocale, pickerProps]);
 
   return (
     <StyledEmojiPanel
