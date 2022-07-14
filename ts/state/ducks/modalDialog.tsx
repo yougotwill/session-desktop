@@ -29,7 +29,7 @@ export type UserDetailsModalState = {
   userName: string;
 } | null;
 
-export type ReactListModalState = {
+export type ReactModalsState = {
   reaction: string;
   messageId: string;
 } | null;
@@ -50,7 +50,8 @@ export type ModalState = {
   adminLeaveClosedGroup: AdminLeaveClosedGroupModalState;
   sessionPasswordModal: SessionPasswordModalState;
   deleteAccountModal: DeleteAccountModalState;
-  reactListModalState: ReactListModalState;
+  reactListModalState: ReactModalsState;
+  reactClearAllModalState: ReactModalsState;
 };
 
 export const initialModalState: ModalState = {
@@ -70,6 +71,7 @@ export const initialModalState: ModalState = {
   sessionPasswordModal: null,
   deleteAccountModal: null,
   reactListModalState: null,
+  reactClearAllModalState: null,
 };
 
 const ModalSlice = createSlice({
@@ -121,8 +123,11 @@ const ModalSlice = createSlice({
     updateDeleteAccountModal(state, action: PayloadAction<DeleteAccountModalState>) {
       return { ...state, deleteAccountModal: action.payload };
     },
-    updateReactListModal(state, action: PayloadAction<ReactListModalState>) {
+    updateReactListModal(state, action: PayloadAction<ReactModalsState>) {
       return { ...state, reactListModalState: action.payload };
+    },
+    updateReactClearAllModal(state, action: PayloadAction<ReactModalsState>) {
+      return { ...state, reactClearAllModalState: action.payload };
     },
   },
 });
@@ -145,5 +150,6 @@ export const {
   updateDeleteAccountModal,
   updateBanOrUnbanUserModal,
   updateReactListModal,
+  updateReactClearAllModal,
 } = actions;
 export const modalReducer = reducer;

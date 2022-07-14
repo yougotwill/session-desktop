@@ -10,6 +10,7 @@ import {
   getEditProfileDialog,
   getInviteContactModal,
   getOnionPathDialog,
+  getReactClearAllDialog,
   getReactListDialog,
   getRecoveryPhraseDialog,
   getRemoveModeratorsModal,
@@ -34,6 +35,7 @@ import { UpdateGroupNameDialog } from './UpdateGroupNameDialog';
 import { SessionNicknameDialog } from './SessionNicknameDialog';
 import { BanOrUnBanUserDialog } from './BanOrUnbanUserDialog';
 import { ReactListModal } from './ReactListModal';
+import { ReactClearAllModal } from './ReactClearAllModal';
 
 export const ModalContainer = () => {
   const confirmModalState = useSelector(getConfirmModal);
@@ -52,6 +54,7 @@ export const ModalContainer = () => {
   const deleteAccountModalState = useSelector(getDeleteAccountModalState);
   const banOrUnbanUserModalState = useSelector(getBanOrUnbanUserModalState);
   const reactListModalState = useSelector(getReactListDialog);
+  const reactClearAllModalState = useSelector(getReactClearAllDialog);
 
   return (
     <>
@@ -75,6 +78,7 @@ export const ModalContainer = () => {
       {deleteAccountModalState && <DeleteAccountModal {...deleteAccountModalState} />}
       {confirmModalState && <SessionConfirm {...confirmModalState} />}
       {reactListModalState && <ReactListModal {...reactListModalState} />}
+      {reactClearAllModalState && <ReactClearAllModal {...reactClearAllModalState} />}
     </>
   );
 };

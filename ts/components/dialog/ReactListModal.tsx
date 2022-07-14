@@ -4,7 +4,11 @@ import { useDispatch, useSelector } from 'react-redux';
 import styled from 'styled-components';
 import { getMessageById } from '../../data/data';
 import { UserUtils } from '../../session/utils';
-import { updateReactListModal, updateUserDetailsModal } from '../../state/ducks/modalDialog';
+import {
+  updateReactClearAllModal,
+  updateReactListModal,
+  updateUserDetailsModal,
+} from '../../state/ducks/modalDialog';
 import { StateType } from '../../state/reducer';
 import { getMessageReactsProps } from '../../state/selectors/conversations';
 import { ReactionList } from '../../types/Message';
@@ -124,7 +128,8 @@ export const ReactListModal = (props: Props): ReactElement => {
 
   const handleClearReactions = (event: any) => {
     event.preventDefault();
-    // TODO once we have the new SOGS endpoints
+    handleClose();
+    dispatch(updateReactClearAllModal({ reaction: currentReact, messageId }));
   };
 
   const renderReactionSenders = (items: Array<string>) => {
