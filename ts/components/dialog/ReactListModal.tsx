@@ -4,11 +4,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import styled from 'styled-components';
 import { getMessageById } from '../../data/data';
 import { UserUtils } from '../../session/utils';
-import {
-  updateReactClearAllModal,
-  updateReactListModal,
-  updateUserDetailsModal,
-} from '../../state/ducks/modalDialog';
+import { updateReactListModal, updateUserDetailsModal } from '../../state/ducks/modalDialog';
 import { StateType } from '../../state/reducer';
 import { getMessageReactsProps } from '../../state/selectors/conversations';
 import { ReactionList } from '../../types/Message';
@@ -70,11 +66,11 @@ const StyledReactionSender = styled(Flex)`
   }
 `;
 
-const StyledClearButton = styled.button`
-  font-size: var(--font-size-sm);
-  color: var(--color-destructive);
-  border: none;
-`;
+// const StyledClearButton = styled.button`
+//   font-size: var(--font-size-sm);
+//   color: var(--color-destructive);
+//   border: none;
+// `;
 
 type ReactionSendersProps = {
   messageId: string;
@@ -166,7 +162,7 @@ export const ReactListModal = (props: Props): ReactElement => {
   const dispatch = useDispatch();
 
   const me = UserUtils.getOurPubKeyStrFromCache();
-  const { isPublic, reacts, weAreAdmin } = msgProps;
+  const { reacts } = msgProps;
 
   const handleSelectedReaction = (emoji: string): boolean => {
     return currentReact === emoji;
@@ -181,11 +177,11 @@ export const ReactListModal = (props: Props): ReactElement => {
     dispatch(updateReactListModal(null));
   };
 
-  const handleClearReactions = (event: any) => {
-    event.preventDefault();
-    handleClose();
-    dispatch(updateReactClearAllModal({ reaction: currentReact, messageId }));
-  };
+  // const handleClearReactions = (event: any) => {
+  //   event.preventDefault();
+  //   handleClose();
+  //   dispatch(updateReactClearAllModal({ reaction: currentReact, messageId }));
+  // };
 
   useEffect(() => {
     if (currentReact === '' && currentReact !== reaction) {
