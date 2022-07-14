@@ -1,4 +1,4 @@
-import React, { ReactElement, useCallback, useEffect, useState } from 'react';
+import React, { ReactElement, useEffect, useState } from 'react';
 import styled from 'styled-components';
 import { RecentReactions } from '../../../../types/Util';
 import { getRecentReactions } from '../../../../util/storage';
@@ -43,21 +43,6 @@ const ReactButton = styled.span`
   }
 `;
 
-const renderReactButton = (emoji: string, action: (...args: Array<any>) => void) => {
-  return (
-    <ReactButton
-      key={emoji}
-      role={'img'}
-      aria-label={nativeEmojiData?.ariaLabels ? nativeEmojiData.ariaLabels[emoji] : undefined}
-      onClick={() => {
-        action(emoji);
-      }}
-    >
-      {emoji}
-    </ReactButton>
-  );
-};
-
 const loadRecentReactions = async () => {
   const reactions = new RecentReactions(await getRecentReactions());
   return reactions;
@@ -66,18 +51,6 @@ const loadRecentReactions = async () => {
 export const MessageReactBar = (props: Props): ReactElement => {
   const { action, additionalAction } = props;
   const [recentReactions, setRecentReactions] = useState<RecentReactions>();
-
-  const renderReactButtonList = useCallback(
-    () => (
-      <>
-        {recentReactions &&
-          recentReactions.items.map(emoji => {
-            return renderReactButton(emoji, action);
-          })}
-      </>
-    ),
-    [recentReactions, action]
-  );
 
   useEffect(() => {
     let isCancelled = false;
@@ -107,7 +80,19 @@ export const MessageReactBar = (props: Props): ReactElement => {
 
   return (
     <StyledMessageReactBar>
-      {renderReactButtonList()}
+      {recentReactions &&
+        recentReactions.items.map(emoji => (
+          <ReactButton
+            key={emoji}
+            role={'img'}
+            aria-label={nativeEmojiData?.ariaLabels ? nativeEmojiData.ariaLabels[emoji] : undefined}
+            onClick={() => {
+              action(emoji);
+            }}
+          >
+            {emoji}
+          </ReactButton>
+        ))}
       <SessionIconButton
         iconColor={'var(--color-text)'}
         iconPadding={'12px'}

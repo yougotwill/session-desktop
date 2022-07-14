@@ -55,14 +55,6 @@ const StyledEmoji = styled.span`
   margin-left: 8px;
 `;
 
-type Props = {
-  messageId: string;
-  emoji: string;
-  senders: Array<string>;
-  tooltipPosition?: TipPosition;
-  onClick: (...args: Array<any>) => void;
-};
-
 const renderContacts = (_contacts: string) => {
   if (!_contacts) {
     return <></>;
@@ -85,7 +77,15 @@ const renderContacts = (_contacts: string) => {
   );
 };
 
-export const MessageReactionPopup = (props: Props): ReactElement => {
+type Props = {
+  messageId: string;
+  emoji: string;
+  senders: Array<string>;
+  tooltipPosition?: TipPosition;
+  onClick: (...args: Array<any>) => void;
+};
+
+export const ReactionPopup = (props: Props): ReactElement => {
   const { messageId, emoji, senders, tooltipPosition = 'center', onClick } = props;
 
   const [contacts, setContacts] = useState('');
