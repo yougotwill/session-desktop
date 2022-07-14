@@ -55,3 +55,5 @@ export const UI = {
     GREEN: '#00F782',
   },
 };
+
+export const RECENT_REACTS = ['👍', '👎', '😂', '❤️', '🔥', '😮'];

@@ -1,4 +1,5 @@
 import { createOrUpdateItem, getAllItems, removeItemById } from '../data/channelsItem';
+import { RECENT_REACTS } from '../session/constants';
 
 let ready = false;
 
@@ -133,6 +134,19 @@ export function getCurrentRecoveryPhrase() {
 
 export async function saveRecoveryPhrase(mnemonic: string) {
   return Storage.put('mnemonic', mnemonic);
+}
+
+export async function getRecentReactions(): Promise<Array<string>> {
+  const reactions = Storage.get('recent_reactions') as string;
+  if (reactions) {
+    return reactions.split(' ');
+  } else {
+    return RECENT_REACTS;
+  }
+}
+
+export async function saveRecentReations(reactions: Array<string>) {
+  return Storage.put('recent_reactions', reactions.join(' '));
 }
 
 export const Storage = { fetch, put, get, remove, onready, reset };

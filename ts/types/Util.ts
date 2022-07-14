@@ -9,10 +9,10 @@ export type RenderTextCallbackType = (options: {
 export type LocalizerType = (key: LocalizerKeys, values?: Array<string>) => string;
 
 export class RecentReactions {
-  public items: string[] = [];
+  public items: Array<string> = [];
   public limit: number = 6;
 
-  constructor(items: string[]) {
+  constructor(items: Array<string>) {
     this.items = items;
   }
 
@@ -32,7 +32,7 @@ export class RecentReactions {
   }
 
   public swap(index: number): void {
-    const temp = this.items.splice(index, 1)
+    const temp = this.items.splice(index, 1);
     this.push(temp[0]);
   }
 }

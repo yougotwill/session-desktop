@@ -1,5 +1,8 @@
-import React, { ReactElement } from 'react';
+import React, { ReactElement, useCallback, useEffect, useState } from 'react';
 import styled from 'styled-components';
+import { RecentReactions } from '../../../../types/Util';
+import { updateRecentReactions } from '../../../../util/reactions';
+import { getRecentReactions } from '../../../../util/storage';
 import { SessionIconButton } from '../../../icon';
 
 type Props = {
@@ -41,51 +44,62 @@ const ReactButton = styled.span`
 
 export const MessageReactBar = (props: Props): ReactElement => {
   const { action, additionalAction } = props;
+  const [recentReactions, setRecentReactions] = useState<RecentReactions>();
+
+  const renderReactButton = (emoji: string) => (
+    <ReactButton
+      key={emoji}
+      onClick={async () => {
+        action(emoji);
+        if (recentReactions) {
+          await updateRecentReactions(recentReactions.items, emoji);
+        }
+      }}
+    >
+      {emoji}
+    </ReactButton>
+  );
+
+  const renderReactButtonList = (reactions: Array<string>) => (
+    <>
+      {reactions.map(emoji => {
+        return renderReactButton(emoji);
+      })}
+    </>
+  );
+
+  const loadRecentReactions = useCallback(async () => {
+    const reactions = new RecentReactions(await getRecentReactions());
+    return reactions;
+  }, []);
+
+  useEffect(() => {
+    let isCancelled = false;
+    loadRecentReactions()
+      .then(async reactions => {
+        if (isCancelled) {
+          return;
+        }
+        setRecentReactions(reactions);
+      })
+      .catch(() => {
+        if (isCancelled) {
+          return;
+        }
+      });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [loadRecentReactions]);
+
+  if (!recentReactions) {
+    return <></>;
+  }
 
   return (
     <StyledMessageReactBar>
-      <ReactButton
-        onClick={() => {
-          action('🙈');
-        }}
-      >
-        🙈
-      </ReactButton>
-      <ReactButton
-        onClick={() => {
-          action('🙉');
-        }}
-      >
-        🙉
-      </ReactButton>
-      <ReactButton
-        onClick={() => {
-          action('🙊');
-        }}
-      >
-        🙊
-      </ReactButton>
-      <ReactButton
-        onClick={() => {
-          action('😈');
-        }}
-      >
-        😈
-      </ReactButton>
-      <ReactButton
-        onClick={() => {
-          action('🥸');
-        }}
-      >
-        🥸
-      </ReactButton>
-      <ReactButton
-        onClick={() => {
-          action('🐀');
-        }}
-      >
-        🐀
-      </ReactButton>
+      {renderReactButtonList(recentReactions.items)}
       <SessionIconButton
         iconColor={'var(--color-text)'}
         iconPadding={'12px'}

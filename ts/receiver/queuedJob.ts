@@ -15,7 +15,7 @@ import { MessageDirection } from '../models/messageType';
 import { LinkPreviews } from '../util/linkPreviews';
 import { GoogleChrome } from '../util';
 import { appendFetchAvatarAndProfileJob } from './userProfileImageUpdates';
-import { handleMessageReaction } from '../interactions/messageInteractions';
+import { handleMessageReaction } from '../util/reactions';
 
 function contentTypeSupported(type: string): boolean {
   const Chrome = GoogleChrome;

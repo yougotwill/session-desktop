@@ -15,7 +15,6 @@ import {
 import {
   addSenderAsModerator,
   removeSenderFromModerator,
-  sendMessageReaction,
 } from '../../../../interactions/messageInteractions';
 import { MessageRenderingProps } from '../../../../models/messageType';
 import { pushUnblockToSend } from '../../../../session/utils/Toast';
@@ -26,6 +25,7 @@ import {
 import { StateType } from '../../../../state/reducer';
 import { getMessageContextMenuProps } from '../../../../state/selectors/conversations';
 import { saveAttachmentToDisk } from '../../../../util/attachmentsUtil';
+import { sendMessageReaction } from '../../../../util/reactions';
 import { SessionEmojiPanel, StyledEmojiPanel } from '../../SessionEmojiPanel';
 import { MessageReactBar } from './MessageReactBar';
 
