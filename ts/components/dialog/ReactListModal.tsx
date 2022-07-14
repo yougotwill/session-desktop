@@ -175,12 +175,9 @@ export const ReactListModal = (props: Props): ReactElement => {
       setReactions({});
     }
 
-    if (
-      reactions[currentReact] &&
-      reactions[currentReact].senders &&
-      !isEqual(senders, reactions[currentReact].senders)
-    ) {
-      let _senders = [...reactions[currentReact].senders];
+    let _senders = reactions[currentReact] ? Object.keys(reactions[currentReact]) : null;
+
+    if (_senders && !isEqual(senders, _senders)) {
       if (_senders.length > 1) {
         const meIndex = _senders.indexOf(me);
         if (meIndex >= 0) {
@@ -191,12 +188,7 @@ export const ReactListModal = (props: Props): ReactElement => {
       setSenders(_senders);
     }
 
-    if (
-      senders.length > 0 &&
-      (!reactions[currentReact] ||
-        reactions[currentReact].senders === [] ||
-        reactions[currentReact].senders === undefined)
-    ) {
+    if (senders.length > 0 && (!reactions[currentReact] || _senders === [] || _senders === null)) {
       setSenders([]);
     }
   }, [currentReact, reaction, reacts, reactions, senders]);
