@@ -59,6 +59,5 @@ export type ReactionList = Record<
   string,
   {
     senders: Array<string>;
-    synced: boolean; // not sure if we need this yet
   }
 >;

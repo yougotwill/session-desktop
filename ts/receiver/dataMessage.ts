@@ -20,6 +20,7 @@ import { MessageModel } from '../models/message';
 import { isUsFromCache } from '../session/utils/User';
 import { appendFetchAvatarAndProfileJob } from './userProfileImageUpdates';
 import { toLogFormat } from '../types/attachments/Errors';
+import { handleMessageReaction } from '../interactions/messageInteractions';
 
 function cleanAttachment(attachment: any) {
   return {
@@ -293,15 +294,23 @@ async function handleSwarmMessage(
 
   void convoToAddMessageTo.queueJob(async () => {
     // this call has to be made inside the queueJob!
+    if (rawDataMessage.reaction && rawDataMessage.syncTarget) {
+      await handleMessageReaction(rawDataMessage.reaction);
+      confirm();
+      return;
+    }
+
     const isDuplicate = await isSwarmMessageDuplicate({
       source: msgModel.get('source'),
       sentAt,
     });
+
     if (isDuplicate) {
       window?.log?.info('Received duplicate message. Dropping it.');
       confirm();
       return;
     }
+
     await handleMessageJob(
       msgModel,
       convoToAddMessageTo,

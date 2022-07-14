@@ -166,6 +166,10 @@ export const handleMessageReaction = async (reaction: SignalService.DataMessage.
   switch (reaction.action) {
     // Add reaction
     case 0:
+      if (senders.includes(reaction.author)) {
+        window?.log?.info('Received duplicate message reaction. Dropping it.');
+        return;
+      }
       senders.push(reaction.author);
       break;
     // Remove reaction

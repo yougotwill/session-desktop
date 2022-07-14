@@ -250,13 +250,15 @@ export const MessageContextMenu = (props: Props) => {
     if (found && found.get('sent_at')) {
       const emoji = args.native ?? args;
       const author = UserUtils.getOurPubKeyStrFromCache();
+
       await conversationModel.sendReaction(messageId, {
         id: Number(found.get('sent_at')),
         author,
         emoji,
         action: 0,
       });
-      window.log.info(author, 'reacted with a ', emoji, 'at', found.get('sent_at'));
+
+      window.log.info(author, 'reacted with a', emoji, 'at', found.get('sent_at'));
     } else {
       window.log.warn(`Message ${messageId} not found in db`);
     }
