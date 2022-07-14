@@ -20,9 +20,11 @@ export class MessageSentHandler {
     });
 
     if (originalMessage) {
-      if (!reaction.emoji) return;
+      if (!reaction.emoji) {
+        return;
+      }
 
-      let reacts: ReactionList = originalMessage.get('reacts') ?? {};
+      const reacts: ReactionList = originalMessage.get('reacts') ?? {};
       reacts[reaction.emoji] = reacts[reaction.emoji] || {};
 
       const senders = reacts[reaction.emoji].senders ?? [];
@@ -39,7 +41,6 @@ export class MessageSentHandler {
             // TODO better edge cases
             senders.splice(deleteIndex, 1);
           }
-          break;
       }
       reacts[reaction.emoji].senders = senders;
 

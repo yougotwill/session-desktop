@@ -238,7 +238,7 @@ export const MessageContextMenu = (props: Props) => {
   const onEmojiLoseFocus = useCallback(
     (event: any) => {
       if (event.target.id === emojiPanelId && showEmojiPanel) {
-        console.log('closed due to lost focus');
+        window.log.info('closed due to lost focus');
         onCloseEmoji();
       }
     },
@@ -250,13 +250,13 @@ export const MessageContextMenu = (props: Props) => {
     if (found && found.get('sent_at')) {
       const emoji = args.native ?? args;
       const author = UserUtils.getOurPubKeyStrFromCache();
-      conversationModel.sendReaction(messageId, {
-        id: found.get('sent_at')!,
+      await conversationModel.sendReaction(messageId, {
+        id: Number(found.get('sent_at')),
         author,
         emoji,
         action: 0,
       });
-      console.log(author, ' reacted with a ', emoji);
+      window.log.info(author, ' reacted with a ', emoji);
     } else {
       window.log.warn(`Message ${messageId} not found in db`);
     }
@@ -271,7 +271,7 @@ export const MessageContextMenu = (props: Props) => {
 
   useEffect(() => {
     if (emojiPanelRef.current !== null) {
-      if (emojiPanelWidth == -1 && emojiPanelHeight == -1) {
+      if (emojiPanelWidth === -1 && emojiPanelHeight === -1) {
         const { offsetWidth, offsetHeight } = (emojiPanelRef.current as HTMLDivElement)
           .firstChild as HTMLDivElement;
         setEmojiPanelWidth(offsetWidth);
@@ -283,14 +283,18 @@ export const MessageContextMenu = (props: Props) => {
           let x = mouseX;
           x = (mouseX + emojiPanelWidth - windowWidth) * 2;
 
-          if (x === mouseX) return;
+          if (x === mouseX) {
+            return;
+          }
           setMouseX(mouseX - x);
         }
 
         if (mouseY + emojiPanelHeight > windowHeight) {
           const y = mouseY + emojiPanelHeight - windowHeight;
 
-          if (y === mouseY) return;
+          if (y === mouseY) {
+            return;
+          }
           setMouseY(mouseY - y);
         }
       }

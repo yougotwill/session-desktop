@@ -58,7 +58,7 @@ export interface ReactionType {
 export type ReactionList = Record<
   string,
   {
-    senders: string[];
+    senders: Array<string>;
     synced: boolean;
   }
 >;
