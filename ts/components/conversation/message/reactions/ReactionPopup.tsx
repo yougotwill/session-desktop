@@ -55,13 +55,13 @@ const StyledEmoji = styled.span`
   margin-left: 8px;
 `;
 
-const renderContacts = (_contacts: string) => {
-  if (!_contacts) {
+const renderContacts = (contacts: string) => {
+  if (!contacts) {
     return <></>;
   }
 
-  if (_contacts.indexOf('&') !== -1 && _contacts.indexOf('other') !== -1) {
-    const [names, others] = _contacts.split('&');
+  if (contacts.indexOf('&') !== -1 && contacts.indexOf('other') !== -1) {
+    const [names, others] = contacts.split('&');
     return (
       <span>
         {names} & <span style={{ color: 'var(--color-accent' }}>{others}</span>{' '}
@@ -72,7 +72,7 @@ const renderContacts = (_contacts: string) => {
 
   return (
     <span>
-      {_contacts} {window.i18n('reactionTooltip')}
+      {contacts} {window.i18n('reactionTooltip')}
     </span>
   );
 };

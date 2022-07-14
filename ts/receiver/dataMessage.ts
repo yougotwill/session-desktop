@@ -80,7 +80,16 @@ function cleanAttachments(decrypted: SignalService.DataMessage) {
 }
 
 export function isMessageEmpty(message: SignalService.DataMessage) {
-  const { flags, body, attachments, group, quote, preview, openGroupInvitation } = message;
+  const {
+    flags,
+    body,
+    attachments,
+    group,
+    quote,
+    preview,
+    openGroupInvitation,
+    reaction,
+  } = message;
 
   return (
     !flags &&
@@ -90,7 +99,8 @@ export function isMessageEmpty(message: SignalService.DataMessage) {
     _.isEmpty(group) &&
     _.isEmpty(quote) &&
     _.isEmpty(preview) &&
-    _.isEmpty(openGroupInvitation)
+    _.isEmpty(openGroupInvitation) &&
+    _.isEmpty(reaction)
   );
 }
 
@@ -221,8 +231,7 @@ export async function handleSwarmDataMessage(
     );
   }
 
-  // Reactions are empty DataMessages
-  if (!cleanDataMessage.reaction && isMessageEmpty(cleanDataMessage)) {
+  if (isMessageEmpty(cleanDataMessage)) {
     window?.log?.warn(`Message ${getEnvelopeId(envelope)} ignored; it was empty`);
     return removeFromCache(envelope);
   }

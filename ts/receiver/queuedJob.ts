@@ -340,6 +340,7 @@ export async function handleMessageJob(
       ? String(messageModel.get('serverId'))
       : messageHash;
     await handleMessageReaction(regularDataMessage.reaction, source, messageId);
+
     if (
       regularDataMessage.reaction.action === 0 &&
       conversation.isPrivate() &&
@@ -348,6 +349,7 @@ export async function handleMessageJob(
       messageModel.set('reaction', regularDataMessage.reaction as Reaction);
       conversation.throttledNotify(messageModel);
     }
+
     confirm?.();
   } else {
     const sendingDeviceConversation = await getConversationController().getOrCreateAndWait(

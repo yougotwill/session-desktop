@@ -43,36 +43,16 @@ const ReactButton = styled.span`
   }
 `;
 
-const loadRecentReactions = async () => {
-  const reactions = new RecentReactions(await getRecentReactions());
-  return reactions;
-};
-
 export const MessageReactBar = (props: Props): ReactElement => {
   const { action, additionalAction } = props;
   const [recentReactions, setRecentReactions] = useState<RecentReactions>();
 
   useEffect(() => {
-    let isCancelled = false;
-    loadRecentReactions()
-      .then(async reactions => {
-        if (isCancelled) {
-          return;
-        }
-        if (reactions && !isEqual(reactions, recentReactions)) {
-          setRecentReactions(reactions);
-        }
-      })
-      .catch(() => {
-        if (isCancelled) {
-          return;
-        }
-      });
-
-    return () => {
-      isCancelled = true;
-    };
-  }, [recentReactions, loadRecentReactions]);
+    const reactions = new RecentReactions(getRecentReactions());
+    if (reactions && !isEqual(reactions, recentReactions)) {
+      setRecentReactions(reactions);
+    }
+  }, [recentReactions]);
 
   if (!recentReactions) {
     return <></>;

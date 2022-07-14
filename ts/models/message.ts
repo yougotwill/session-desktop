@@ -874,7 +874,7 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
         expireTimer: this.get('expireTimer'),
         attachments,
         preview,
-        reacts: this.get('reacts'), // TODO Should this be here?
+        reacts: this.get('reacts'),
         quote,
         lokiProfile: UserUtils.getOurProfile(),
       };

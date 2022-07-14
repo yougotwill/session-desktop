@@ -1,4 +1,4 @@
-import _ from 'lodash';
+import { isEmpty } from 'lodash';
 import { getMessageById, getMessagesBySentAt } from '../data/data';
 import { MessageModel } from '../models/message';
 import { SignalService } from '../protobuf';
@@ -43,7 +43,7 @@ export const sendMessageReaction = async (messageId: string, emoji: string) => {
       window.log.info('found matching reaction removing it');
       action = 1;
     } else {
-      const reactions = await getRecentReactions();
+      const reactions = getRecentReactions();
       if (reactions) {
         await updateRecentReactions(reactions, emoji);
       }
@@ -138,7 +138,7 @@ export const handleMessageReaction = async (
   }
 
   originalMessage.set({
-    reacts: !_.isEmpty(reacts) ? reacts : undefined,
+    reacts: !isEmpty(reacts) ? reacts : undefined,
   });
 
   await originalMessage.commit();
