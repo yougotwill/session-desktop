@@ -20,13 +20,9 @@ const StyledReaction = styled.button<{ selected: boolean; inModal: boolean; show
   border-radius: 11px;
   box-sizing: border-box;
   padding: 0 7px;
-  height: 23px;
   margin: 0 4px var(--margins-sm);
-
-  span:nth-child(2) {
-    font-size: var(--font-size-xs);
-    margin-left: 8px;
-  }
+  height: 23px;
+  min-width: ${props => (props.showCount ? '48px' : '24px')};
 `;
 
 const StyledReactionContainer = styled.div`
@@ -121,8 +117,8 @@ export const Reaction = (props: ReactionProps): ReactElement => {
           aria-label={nativeEmojiData?.ariaLabels ? nativeEmojiData.ariaLabels[emoji] : undefined}
         >
           {emoji}
+          {showCount && `\u00A0\u00A0${abbreviateNumber(senders.length)}`}
         </span>
-        {showCount && <span>{abbreviateNumber(senders.length)}</span>}
       </StyledReaction>
       {inGroup && popupReaction && popupReaction === emoji && (
         <ReactionPopup

@@ -33,7 +33,12 @@ const StyledMessageReactBar = styled.div`
 `;
 
 const ReactButton = styled.span`
-  padding: 2px 8px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 40px;
+  height: 40px;
+
   border-radius: 300px;
   cursor: pointer;
   font-size: 24px;
