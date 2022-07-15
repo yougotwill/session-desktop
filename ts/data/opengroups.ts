@@ -54,14 +54,9 @@ export type OpenGroupV2Room = {
  * @returns a map containing as key the conversationId of the opengroup room and as value the OpenGroupV2Room details
  */
 export function getAllV2OpenGroupRoomsMap(): Map<string, OpenGroupV2Room> | undefined {
-  const localCached = throwIfNotLoaded();
-  if (!localCached) {
-    return undefined;
-  }
-
   const results = new Map<string, OpenGroupV2Room>();
 
-  localCached.forEach(o => {
+  throwIfNotLoaded().forEach(o => {
     if (o.conversationId) {
       results.set(o.conversationId, cloneDeep(o));
     }
@@ -103,19 +98,17 @@ function throwIfNotLoaded() {
 }
 
 export function getV2OpenGroupRoom(conversationId: string): OpenGroupV2Room | undefined {
-  const localCached = throwIfNotLoaded();
   if (!isOpenGroupV2(conversationId)) {
     throw new Error(`getV2OpenGroupRoom: this is not a valid v2 id: ${conversationId}`);
   }
 
-  const found = localCached.find(m => m.conversationId === conversationId);
+  const found = throwIfNotLoaded().find(m => m.conversationId === conversationId);
   return (found && cloneDeep(found)) || undefined;
 }
 export function getV2OpenGroupRoomsByServerUrl(
   serverUrl: string
 ): Array<OpenGroupV2Room> | undefined {
-  const localCached = throwIfNotLoaded();
-  const found = localCached.filter(m => m.serverUrl === serverUrl);
+  const found = throwIfNotLoaded().filter(m => m.serverUrl === serverUrl);
 
   return (found && cloneDeep(found)) || undefined;
 }
@@ -123,8 +116,7 @@ export function getV2OpenGroupRoomsByServerUrl(
 export function getV2OpenGroupRoomByRoomId(
   roomInfos: OpenGroupRequestCommonType
 ): OpenGroupV2Room | undefined {
-  const localCached = throwIfNotLoaded();
-  const found = localCached.find(
+  const found = throwIfNotLoaded().find(
     m => m.roomId === roomInfos.roomId && m.serverUrl === roomInfos.serverUrl
   );
 
@@ -136,18 +128,18 @@ export async function saveV2OpenGroupRooms(rooms: Array<OpenGroupV2Room>): Promi
 }
 
 export async function saveV2OpenGroupRoom(room: OpenGroupV2Room): Promise<void> {
-  const localCached = throwIfNotLoaded();
   if (!room.conversationId || !room.roomId || !room.serverUrl || !room.serverPublicKey) {
     throw new Error('Cannot save v2 room, invalid data');
   }
 
   const found =
-    (room.conversationId && localCached.find(m => m.conversationId === room.conversationId)) ||
+    (room.conversationId &&
+      throwIfNotLoaded().find(m => m.conversationId === room.conversationId)) ||
     undefined;
 
   if (!found) {
     await channels.saveV2OpenGroupRoom(room);
-    localCached.push(cloneDeep(room));
+    throwIfNotLoaded().push(cloneDeep(room));
     return;
   }
 
@@ -155,21 +147,21 @@ export async function saveV2OpenGroupRoom(room: OpenGroupV2Room): Promise<void> 
   if (JSON.stringify(room) !== JSON.stringify(found)) {
     await channels.saveV2OpenGroupRoom(room);
     const foundIndex =
-      room.conversationId && localCached.findIndex(m => m.conversationId === room.conversationId);
+      room.conversationId &&
+      throwIfNotLoaded().findIndex(m => m.conversationId === room.conversationId);
     if (isNumber(foundIndex) && foundIndex > -1) {
-      localCached[foundIndex] = cloneDeep(room);
+      throwIfNotLoaded()[foundIndex] = cloneDeep(room);
     }
     return;
   }
 }
 
 export async function removeV2OpenGroupRoom(conversationId: string): Promise<void> {
-  const localCached = throwIfNotLoaded();
   await channels.removeV2OpenGroupRoom(conversationId);
   const foundIndex =
-    conversationId && localCached.findIndex(m => m.conversationId === conversationId);
+    conversationId && throwIfNotLoaded().findIndex(m => m.conversationId === conversationId);
   if (isNumber(foundIndex) && foundIndex > -1) {
-    localCached.splice(foundIndex, 1);
+    throwIfNotLoaded().splice(foundIndex, 1);
   }
 }
 
@@ -182,6 +174,5 @@ export async function getAllOpenGroupV2Conversations(): Promise<ConversationColl
 }
 
 export function getAllOpengroupsServerPubkeys(): Array<string> {
-  const localCached = throwIfNotLoaded();
-  return uniq(localCached.map(room => room.serverPublicKey)) || [];
+  return uniq(throwIfNotLoaded().map(room => room.serverPublicKey)) || [];
 }

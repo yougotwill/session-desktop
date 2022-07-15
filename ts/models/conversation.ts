@@ -1695,7 +1695,10 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
   }
 
   private async addSingleMessage(messageAttributes: MessageAttributesOptionals) {
-    const model = new MessageModel(messageAttributes);
+    const voiceMessageFlags = messageAttributes.attachments?.[0]?.isVoiceMessage
+      ? SignalService.AttachmentPointer.Flags.VOICE_MESSAGE
+      : undefined;
+    const model = new MessageModel({ ...messageAttributes, flags: voiceMessageFlags });
 
     // no need to trigger a UI update now, we trigger a messagesAdded just below
     const messageId = await model.commit(false);

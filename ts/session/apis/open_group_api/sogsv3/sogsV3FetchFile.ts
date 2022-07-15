@@ -151,7 +151,7 @@ const sogsV3FetchPreview = async (
   const convoId = getOpenGroupV2ConversationId(roomInfos.serverUrl, roomInfos.roomId);
   const convo = getConversationController().get(convoId);
   if (!convo) {
-    window?.log?.warn('Could not find convo for compactPoll', convoId);
+    window?.log?.warn('Could not find convo for sogsV3FetchPreview', convoId);
     return null;
   }
   console.warn('should we turn this blinded ON?');
@@ -170,7 +170,7 @@ const sogsV3FetchPreview = async (
     const convoStillThere = getConversationController().get(convoId);
     if (!convoStillThere) {
       // just to make sure the convo did not get deleted while fetching the avatar
-      window?.log?.warn('Could not find convo for compactPoll', convoId);
+      window?.log?.warn('Could not find convo for sogsV3FetchPreview', convoId);
       return null;
     }
     return fetched;

@@ -144,7 +144,8 @@ const AvatarInner = (props: Props) => {
       )}
       onClick={e => {
         if (isSelectingMessages) {
-          //TODO we should toggle the selection of this message, but we need its id
+          // we could toggle the selection of this message,
+          // but this just disable opening the new Conversation dialog with that user while selecting messages
           return;
         }
         if (props.onAvatarClick) {
