@@ -23,10 +23,18 @@ const StyledReaction = styled.button<{ selected: boolean; inModal: boolean; show
   margin: 0 4px var(--margins-sm);
   height: 23px;
   min-width: ${props => (props.showCount ? '48px' : '24px')};
+  ${props => props.inModal && 'width: 100%;'}
+
+  span {
+    width: 100%;
+  }
 `;
 
-const StyledReactionContainer = styled.div`
+const StyledReactionContainer = styled.div<{
+  inModal: boolean;
+}>`
   position: relative;
+  ${props => props.inModal && 'margin-right: 8px;'}
 `;
 
 export type ReactionProps = {
@@ -81,7 +89,7 @@ export const Reaction = (props: ReactionProps): ReactElement => {
   };
 
   return (
-    <StyledReactionContainer ref={reactionRef}>
+    <StyledReactionContainer ref={reactionRef} inModal={inModal}>
       <StyledReaction
         showCount={showCount}
         selected={selected()}
