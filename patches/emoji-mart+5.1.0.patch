@@ -1,9 +1,9 @@
 diff --git a/node_modules/emoji-mart/dist/index.cjs b/node_modules/emoji-mart/dist/index.cjs
 new file mode 100644
-index 0000000..d5ce7b1
+index 0000000..4df8b8d
 --- /dev/null
 +++ b/node_modules/emoji-mart/dist/index.cjs
-@@ -0,0 +1,2768 @@
+@@ -0,0 +1,2773 @@
 +function $parcel$interopDefault(a) {
 +  return a && a.__esModule ? a.default : a;
 +}
@@ -1907,6 +1907,7 @@ index 0000000..d5ce7b1
 +        this.observeRows();
 +        this.shadowRoot = this.base.parentNode;
 +        document.addEventListener('click', this.handleClickOutside);
++        document.addEventListener('keydown', this.handleKeyDown);
 +        if (this.props.autoFocus) {
 +            const { searchInput: searchInput  } = this.refs;
 +            if (searchInput.current) searchInput.current.focus();
@@ -1929,6 +1930,9 @@ index 0000000..d5ce7b1
 +            if (this.state.showSkins) this.closeSkins();
 +            if (this.props.onClickOutside) this.props.onClickOutside();
 +        }
++    };
++    handleKeyDown = (e)=>{
++        if (this.props.onKeyDown) this.props.onKeyDown(e);
 +    };
 +    handleBaseClick = (e)=>{
 +        if (!this.state.showSkins) return;
@@ -2742,12 +2746,13 @@ index 0000000..d5ce7b1
 +    }
 +    async connectedCallback() {
 +        const pickerProps = await $205291deb9107ba0$export$2cd8252107eb640b(this.props, this);
-+        const { onEmojiSelect: onEmojiSelect , onClickOutside: onClickOutside , onAddCustomEmoji: onAddCustomEmoji , getImageURL: getImageURL , getSpritesheetURL: getSpritesheetURL ,  } = this.props;
++        const { onEmojiSelect: onEmojiSelect , onClickOutside: onClickOutside , onKeyDown: onKeyDown , onAddCustomEmoji: onAddCustomEmoji , getImageURL: getImageURL , getSpritesheetURL: getSpritesheetURL ,  } = this.props;
 +        const props = {
 +            ...pickerProps,
 +            element: this,
 +            onEmojiSelect: onEmojiSelect,
 +            onClickOutside: onClickOutside,
++            onKeyDown: onKeyDown,
 +            onAddCustomEmoji: onAddCustomEmoji,
 +            getImageURL: getImageURL,
 +            getSpritesheetURL: getSpritesheetURL
@@ -2772,3 +2777,41 @@ index 0000000..d5ce7b1
 +
 +
 +module.exports = {Picker:$724e43cd4d4265a7$export$2e2bcd8739ae039, Emoji: $8b28a44b07620e42$export$2e2bcd8739ae039, SearchIndex: $e43013e6209d8d65$export$2e2bcd8739ae039, FrequentlyUsed: $2e94d13d43a3b87d$export$2e2bcd8739ae039,  init: $205291deb9107ba0$export$2cd8252107eb640b,  Data: $205291deb9107ba0$export$2d0294657ab35f1b, I18n: $205291deb9107ba0$export$dbe3113d60765c1a};
+diff --git a/node_modules/emoji-mart/dist/index.js b/node_modules/emoji-mart/dist/index.js
+index c70c0af..cf04f38 100644
+--- a/node_modules/emoji-mart/dist/index.js
++++ b/node_modules/emoji-mart/dist/index.js
+@@ -1901,6 +1901,8 @@ class $0ecec806152d3af2$export$2e2bcd8739ae039 extends $11f6c40cee63613b$export$
+         this.observeRows();
+         this.shadowRoot = this.base.parentNode;
+         document.addEventListener('click', this.handleClickOutside);
++        document.addEventListener('keydown', this.handleKeyDown);
++
+         if (this.props.autoFocus) {
+             const { searchInput: searchInput  } = this.refs;
+             if (searchInput.current) searchInput.current.focus();
+@@ -1924,6 +1926,9 @@ class $0ecec806152d3af2$export$2e2bcd8739ae039 extends $11f6c40cee63613b$export$
+             if (this.props.onClickOutside) this.props.onClickOutside();
+         }
+     };
++    handleKeyDown = (e)=>{
++        if (this.props.onKeyDown) this.props.onKeyDown(e);
++    };
+     handleBaseClick = (e)=>{
+         if (!this.state.showSkins) return;
+         if (!e.target.closest('.menu')) {
+@@ -2736,12 +2741,13 @@ class $724e43cd4d4265a7$export$2e2bcd8739ae039 extends $f09270c1f574f0a4$export$
+     }
+     async connectedCallback() {
+         const pickerProps = await $205291deb9107ba0$export$2cd8252107eb640b(this.props, this);
+-        const { onEmojiSelect: onEmojiSelect , onClickOutside: onClickOutside , onAddCustomEmoji: onAddCustomEmoji , getImageURL: getImageURL , getSpritesheetURL: getSpritesheetURL ,  } = this.props;
++        const { onEmojiSelect: onEmojiSelect , onClickOutside: onClickOutside , onKeyDown: onKeyDown , onAddCustomEmoji: onAddCustomEmoji , getImageURL: getImageURL , getSpritesheetURL: getSpritesheetURL ,  } = this.props;
+         const props = {
+             ...pickerProps,
+             element: this,
+             onEmojiSelect: onEmojiSelect,
+             onClickOutside: onClickOutside,
++            onKeyDown: onKeyDown,
+             onAddCustomEmoji: onAddCustomEmoji,
+             getImageURL: getImageURL,
+             getSpritesheetURL: getSpritesheetURL

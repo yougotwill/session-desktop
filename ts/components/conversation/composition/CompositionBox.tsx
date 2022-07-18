@@ -441,11 +441,14 @@ class CompositionBoxInner extends React.Component<Props, State> {
         )}
         <SendMessageButton onClick={this.onSendMessage} />
 
-        {typingEnabled && (
-          <StyledEmojiPanelContainer ref={this.emojiPanel} onKeyDown={this.onKeyDown} role="button">
-            {showEmojiPanel && (
-              <SessionEmojiPanel onEmojiClicked={this.onEmojiClick} show={showEmojiPanel} />
-            )}
+        {typingEnabled && showEmojiPanel && (
+          <StyledEmojiPanelContainer role="button">
+            <SessionEmojiPanel
+              ref={this.emojiPanel}
+              show={showEmojiPanel}
+              onEmojiClicked={this.onEmojiClick}
+              onKeyDown={this.onKeyDown}
+            />
           </StyledEmojiPanelContainer>
         )}
       </>

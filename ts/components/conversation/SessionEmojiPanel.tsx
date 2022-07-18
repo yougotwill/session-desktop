@@ -82,6 +82,7 @@ type Props = {
   onEmojiClicked: (emoji: FixedBaseEmoji) => void;
   show: boolean;
   isModal?: boolean;
+  onKeyDown?: (event: any) => void;
 };
 
 const pickerProps: FixedPickerProps = {
@@ -92,7 +93,7 @@ const pickerProps: FixedPickerProps = {
 };
 
 export const SessionEmojiPanel = forwardRef<HTMLDivElement, Props>((props: Props, ref) => {
-  const { onEmojiClicked, show, isModal = false } = props;
+  const { onEmojiClicked, show, isModal = false, onKeyDown } = props;
   const theme = useSelector(getTheme);
   const pickerRef = ref as MutableRefObject<HTMLDivElement>;
 
@@ -112,6 +113,7 @@ export const SessionEmojiPanel = forwardRef<HTMLDivElement, Props>((props: Props
               i18n,
               theme,
               onEmojiSelect: onEmojiClicked,
+              onKeyDown,
               ...pickerProps,
             });
           })

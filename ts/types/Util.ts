@@ -84,8 +84,9 @@ export interface FixedPickerProps {
   previewPosition?: 'bottom' | 'top' | 'none' | undefined;
   skinTonePosition?: 'preview' | 'search' | 'none';
   onEmojiSelect?: (emoji: FixedBaseEmoji) => void;
-  onClickOutside?: (...args: Array<any>) => void;
-  onAddCustomEmoji?: (...args: Array<any>) => void;
+  onClickOutside?: () => void;
+  onKeyDown?: (event: any) => void;
+  onAddCustomEmoji?: () => void;
   getImageURL?: () => void;
   getSpritesheetURL?: () => void;
   // Below here I'm currently unsure of usage

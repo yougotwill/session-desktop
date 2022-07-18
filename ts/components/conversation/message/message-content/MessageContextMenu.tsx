@@ -283,12 +283,13 @@ export const MessageContextMenu = (props: Props) => {
   return (
     <StyledMessageContextMenu ref={contextMenuRef}>
       {showEmojiPanel && (
-        <StyledEmojiPanelContainer onKeyDown={onEmojiKeyDown} role="button" x={mouseX} y={mouseY}>
+        <StyledEmojiPanelContainer role="button" x={mouseX} y={mouseY}>
           <SessionEmojiPanel
             ref={emojiPanelRef}
             onEmojiClicked={onEmojiClick}
             show={showEmojiPanel}
             isModal={true}
+            onKeyDown={onEmojiKeyDown}
           />
         </StyledEmojiPanelContainer>
       )}
