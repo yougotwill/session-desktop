@@ -12,6 +12,7 @@ import { removeMessagePadding } from '../session/crypto/BufferPadding';
 import { UserUtils } from '../session/utils';
 import { perfEnd, perfStart } from '../session/utils/Performance';
 import { fromBase64ToArray } from '../session/utils/String';
+import { isMessageEmpty } from './dataMessage';
 import { handleMessageJob, toRegularMessage } from './queuedJob';
 
 export const handleOpenGroupV4Message = async (
@@ -56,6 +57,12 @@ const handleOpenGroupMessage = async (
   const idataMessage = decoded?.dataMessage;
   if (!idataMessage) {
     window?.log?.error('Invalid decoded opengroup message: no dataMessage');
+    return;
+  }
+
+  if (isMessageEmpty(idataMessage as SignalService.DataMessage)) {
+    // empty message, drop it
+    window.log.info('received an empty message for sogs');
     return;
   }
 
