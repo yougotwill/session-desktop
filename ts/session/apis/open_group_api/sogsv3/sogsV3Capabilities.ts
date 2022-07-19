@@ -1,6 +1,6 @@
 import _, { isArray, isEmpty, isEqual, isObject } from 'lodash';
-import { sendJsonViaOnionV4ToSogs } from '../../../onions/onionSend';
-import { getOurOpenGroupHeaders } from '../opengroupV2/OpenGroupPollingUtils';
+import { OnionSending } from '../../../onions/onionSend';
+import { OpenGroupPollingUtils } from '../opengroupV2/OpenGroupPollingUtils';
 import {
   getV2OpenGroupRoomsByServerUrl,
   OpenGroupV2Room,
@@ -18,7 +18,7 @@ export const capabilitiesFetchForServer = async (
   const method = 'GET';
   const serverPubkey = serverPubKey;
   const blinded = false; // for capabilities, blinding is always false as the request will fail if the server requires blinding
-  const capabilityHeaders = await getOurOpenGroupHeaders(
+  const capabilityHeaders = await OpenGroupPollingUtils.getOurOpenGroupHeaders(
     serverPubkey,
     endpoint,
     method,
@@ -29,7 +29,7 @@ export const capabilitiesFetchForServer = async (
     return null;
   }
 
-  const result = await sendJsonViaOnionV4ToSogs({
+  const result = await OnionSending.sendJsonViaOnionV4ToSogs({
     abortSignal,
     blinded,
     endpoint,

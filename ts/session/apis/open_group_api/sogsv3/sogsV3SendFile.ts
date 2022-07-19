@@ -1,6 +1,6 @@
 import AbortController from 'abort-controller';
 import { getV2OpenGroupRoomByRoomId } from '../../../../data/opengroups';
-import { sendBinaryViaOnionV4ToSogs } from '../../../onions/onionSend';
+import { OnionSending } from '../../../onions/onionSend';
 import { OpenGroupRequestCommonType } from '../opengroupV2/ApiUtil';
 import { batchGlobalIsSuccess } from './sogsV3BatchPoll';
 import { roomHasBlindEnabled } from './sogsV3Capabilities';
@@ -42,7 +42,7 @@ export const uploadFileToRoomSogs3 = async (
     return null;
   }
 
-  const result = await sendBinaryViaOnionV4ToSogs({
+  const result = await OnionSending.sendBinaryViaOnionV4ToSogs({
     abortSignal: new AbortController().signal,
     blinded: roomHasBlindEnabled(roomDetails),
     bodyBinary: fileContent,

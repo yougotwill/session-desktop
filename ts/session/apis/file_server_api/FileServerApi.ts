@@ -1,10 +1,5 @@
 import AbortController from 'abort-controller';
-import {
-  getBinaryViaOnionV4FromFileServer,
-  OnionV4JSONSnodeResponse,
-  sendBinaryViaOnionV4ToFileServer,
-  sendJsonViaOnionV4ToFileServer,
-} from '../../onions/onionSend';
+import { OnionSending, OnionV4JSONSnodeResponse } from '../../onions/onionSend';
 import {
   batchGlobalIsSuccess,
   parseBatchGlobalStatusCode,
@@ -29,7 +24,7 @@ export const uploadFileToFsWithOnionV4 = async (
     return null;
   }
 
-  const result = await sendBinaryViaOnionV4ToFileServer({
+  const result = await OnionSending.sendBinaryViaOnionV4ToFileServer({
     abortSignal: new AbortController().signal,
     bodyBinary: new Uint8Array(fileContent),
     endpoint: POST_GET_FILE_ENDPOINT,
@@ -78,7 +73,7 @@ export const downloadFileFromFileServer = async (
     return null;
   }
 
-  const result = await getBinaryViaOnionV4FromFileServer({
+  const result = await OnionSending.getBinaryViaOnionV4FromFileServer({
     abortSignal: new AbortController().signal,
     endpoint: `${POST_GET_FILE_ENDPOINT}/${fileId}`,
     method: 'GET',
@@ -119,7 +114,7 @@ const parseStatusCodeFromOnionRequestV4 = (
  * This call is onion routed and so do not expose our ip to github nor the file server.
  */
 export const getLatestReleaseFromFileServer = async (): Promise<string | null> => {
-  const result = await sendJsonViaOnionV4ToFileServer({
+  const result = await OnionSending.sendJsonViaOnionV4ToFileServer({
     abortSignal: new AbortController().signal,
     endpoint: RELEASE_VERSION_ENDPOINT,
     method: 'GET',
@@ -130,7 +125,7 @@ export const getLatestReleaseFromFileServer = async (): Promise<string | null> =
     return null;
   }
 
-  // we should probably change the logic of sendOnionRequest to not have all those levels
+  // we should probably change the logic of sendOnionRequestNoRetries to not have all those levels
   const latestVersionWithV = (result?.body as any)?.result;
   if (!latestVersionWithV) {
     return null;

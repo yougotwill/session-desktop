@@ -263,8 +263,6 @@ export class ConversationController {
   }
 
   public async load() {
-    window?.log?.info('ConversationController: starting initial fetch');
-
     if (this.conversations.length) {
       throw new Error('ConversationController: Already loaded!');
     }

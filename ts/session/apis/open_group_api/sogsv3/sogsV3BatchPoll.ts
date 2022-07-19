@@ -1,8 +1,8 @@
 import { getV2OpenGroupRoomByRoomId } from '../../../../data/opengroups';
 import _, { flatten, isEmpty, isNumber, isObject } from 'lodash';
-import { OnionV4JSONSnodeResponse, sendViaOnionV4ToNonSnode } from '../../../onions/onionSend';
+import { OnionSending, OnionV4JSONSnodeResponse } from '../../../onions/onionSend';
 import {
-  getOurOpenGroupHeaders,
+  OpenGroupPollingUtils,
   OpenGroupRequestHeaders,
 } from '../opengroupV2/OpenGroupPollingUtils';
 import { addJsonContentTypeToHeaders } from './sogsV3SendMessage';
@@ -331,7 +331,7 @@ const getBatchRequest = async (
 
   const stringBody = JSON.stringify(batchBody);
 
-  const headers = await getOurOpenGroupHeaders(
+  const headers = await OpenGroupPollingUtils.getOurOpenGroupHeaders(
     serverPublicKey,
     batchEndpoint,
     batchMethod,
@@ -357,7 +357,7 @@ const sendSogsBatchRequestOnionV4 = async (
   serverPubkey: string,
   request: BatchRequest,
   abortSignal: AbortSignal
-): Promise<null | any> => {
+): Promise<null | BatchSogsReponse> => {
   const { endpoint, headers, method, body } = request;
   if (!endpoint.startsWith('/')) {
     throw new Error('endpoint needs a leading /');
@@ -365,7 +365,7 @@ const sendSogsBatchRequestOnionV4 = async (
   const builtUrl = new URL(`${serverUrl}${endpoint}`);
 
   // this function extracts the body and status_code and JSON.parse it already
-  const batchResponse = await sendViaOnionV4ToNonSnode(
+  const batchResponse = await OnionSending.sendViaOnionV4ToNonSnodeWithRetries(
     serverPubkey,
     builtUrl,
     {
@@ -383,10 +383,10 @@ const sendSogsBatchRequestOnionV4 = async (
 
   if (!batchResponse) {
     window?.log?.error('sogsbatch: Undefined batch response - cancelling batch request');
-    return;
+    return null;
   }
   if (isObject(batchResponse.body)) {
-    return batchResponse;
+    return batchResponse as BatchSogsReponse;
   }
   window?.log?.warn('sogsbatch: batch response decoded body is not object. Reutrning null');
 

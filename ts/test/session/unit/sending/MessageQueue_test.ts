@@ -51,15 +51,15 @@ describe('MessageQueue', () => {
     // Message Sender Stubs
     sendStub = Sinon.stub(MessageSender, 'send');
     messageSentHandlerFailedStub = Sinon.stub(
-      MessageSentHandler as any,
+      MessageSentHandler,
       'handleMessageSentFailure'
     ).resolves();
     messageSentHandlerSuccessStub = Sinon.stub(
-      MessageSentHandler as any,
+      MessageSentHandler,
       'handleMessageSentSuccess'
     ).resolves();
     messageSentPublicHandlerSuccessStub = Sinon.stub(
-      MessageSentHandler as any,
+      MessageSentHandler,
       'handlePublicMessageSentSuccess'
     ).resolves();
 
@@ -230,19 +230,18 @@ describe('MessageQueue', () => {
         it('should emit a success event when send was successful', async () => {
           sendToOpenGroupV2Stub.resolves({
             serverId: 5125,
-            sentTimestamp: 5126,
+            sentTimestamp: 5127,
           });
 
           const message = TestUtils.generateOpenGroupVisibleMessage();
           const roomInfos = TestUtils.generateOpenGroupV2RoomInfos();
           await messageQueueStub.sendToOpenGroupV2(message, roomInfos, false, []);
+
           expect(messageSentPublicHandlerSuccessStub.callCount).to.equal(1);
-          expect(messageSentPublicHandlerSuccessStub.lastCall.args[0].identifier).to.equal(
-            message.identifier
-          );
+          expect(messageSentPublicHandlerSuccessStub.lastCall.args[0]).to.equal(message.identifier);
           expect(messageSentPublicHandlerSuccessStub.lastCall.args[1].serverId).to.equal(5125);
           expect(messageSentPublicHandlerSuccessStub.lastCall.args[1].serverTimestamp).to.equal(
-            5126
+            5127
           );
         });
 

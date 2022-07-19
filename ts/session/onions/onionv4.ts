@@ -42,7 +42,7 @@ export type DecodedResponseBodiesV4 = Array<any>;
  * 1. First part contains response metadata
  * 2. Second part contains the request body.
  */
-export const decodeV4Response = (snodeResponse: SnodeResponseV4): DecodedResponseV4 | undefined => {
+const decodeV4Response = (snodeResponse: SnodeResponseV4): DecodedResponseV4 | undefined => {
   const eAscii = 'e'.charCodeAt(0);
   const lAscii = 'l'.charCodeAt(0);
   const colonAscii = ':'.charCodeAt(0);
@@ -110,3 +110,5 @@ export const decodeV4Response = (snodeResponse: SnodeResponseV4): DecodedRespons
     return undefined;
   }
 };
+
+export const OnionV4 = { decodeV4Response };

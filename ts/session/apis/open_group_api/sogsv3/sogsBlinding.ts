@@ -13,7 +13,7 @@ import {
 } from '../../../utils/SodiumUtils';
 import { isEqual } from 'lodash';
 
-export async function getSogsSignature({
+async function getSogsSignature({
   blinded,
   ka,
   kA,
@@ -34,7 +34,7 @@ export async function getSogsSignature({
   return sodium.crypto_sign_detached(toSign, signingKeys.privKeyBytes);
 }
 
-export async function getOpenGroupHeaders(data: {
+async function getOpenGroupHeaders(data: {
   /**
    * Our ED25519 Key pair
    */
@@ -81,7 +81,7 @@ export async function getOpenGroupHeaders(data: {
     toSign = concatUInt8Array(toSign, bodyHashed);
   }
 
-  const signature = await getSogsSignature({ blinded, kA, ka, signingKeys, toSign });
+  const signature = await SogsBlinding.getSogsSignature({ blinded, kA, ka, signingKeys, toSign });
 
   const headers: OpenGroupRequestHeaders = {
     'X-SOGS-Pubkey': pubkey,
@@ -130,7 +130,7 @@ async function blindedED25519Signature(
   return fullSig;
 }
 
-export const sha512Multipart = (parts: Array<Uint8Array>) => {
+const sha512Multipart = (parts: Array<Uint8Array>) => {
   return crypto_hash_sha512(concatUInt8Array(...parts));
 };
 
@@ -140,7 +140,7 @@ export const sha512Multipart = (parts: Array<Uint8Array>) => {
  * @param signingKeys The signing keys (ED25519)
  * @returns Prefixed blinded pubkey for the open group
  */
-export const getBlindedPubKey = (
+const getBlindedPubKey = (
   serverPK: Uint8Array,
   signingKeys: ByteKeyPair,
   sodium: LibSodiumWrappers
@@ -149,7 +149,7 @@ export const getBlindedPubKey = (
   return `${KeyPrefixType.blinded}${to_hex(blindedPubKeyBytes.publicKey)}`;
 };
 
-export const getBlindingValues = (
+const getBlindingValues = (
   serverPK: Uint8Array,
   signingKeys: ByteKeyPair,
   sodium: LibSodiumWrappers
@@ -166,7 +166,7 @@ export const getBlindingValues = (
   let a = sodium.crypto_sign_ed25519_sk_to_curve25519(signingKeys.privKeyBytes); // this is the equivalent of ios generatePrivateKeyScalar
 
   if (a.length > 32) {
-    console.warn('length of signing key is too long, cutting to 32: oldlength', length);
+    window.log.warn('length of signing key is too long, cutting to 32: oldlength', length);
     a = a.slice(0, 32);
   }
 
@@ -187,7 +187,7 @@ export const getBlindingValues = (
  * @param body body of the message being encrypted
  * @param serverPK the server public key being sent to. Cannot be b64 encoded. Use fromHex and be sure to exclude the blinded 00/15/05 prefixes
  */
-export const encryptBlindedMessage = async (options: {
+const encryptBlindedMessage = async (options: {
   rawData: Uint8Array;
   senderSigningKey: ByteKeyPair;
   /** Pubkey that corresponds to the recipients blinded PubKey */
@@ -204,11 +204,15 @@ export const encryptBlindedMessage = async (options: {
   } = options;
   const sodium = await getSodiumRenderer();
 
-  const aBlindingValues = getBlindingValues(serverPubKey, senderSigningKey, sodium);
+  const aBlindingValues = SogsBlinding.getBlindingValues(serverPubKey, senderSigningKey, sodium);
 
   let kB;
   if (!recipientBlindedPublicKey && recipientSigningKey) {
-    const bBlindingValues = getBlindingValues(serverPubKey, recipientSigningKey, sodium);
+    const bBlindingValues = SogsBlinding.getBlindingValues(
+      serverPubKey,
+      recipientSigningKey,
+      sodium
+    );
     kB = bBlindingValues.publicKey;
   }
   if (recipientBlindedPublicKey) {
@@ -246,7 +250,7 @@ export const encryptBlindedMessage = async (options: {
   return data;
 };
 
-export async function decryptWithSessionBlindingProtocol(
+async function decryptWithSessionBlindingProtocol(
   data: Uint8Array,
   isOutgoing: boolean,
   otherBlindedPublicKey: string,
@@ -260,7 +264,11 @@ export async function decryptWithSessionBlindingProtocol(
     );
   }
 
-  const blindedKeyPair = getBlindingValues(from_hex(serverPubkey), userEd25519KeyPair, sodium);
+  const blindedKeyPair = SogsBlinding.getBlindingValues(
+    from_hex(serverPubkey),
+    userEd25519KeyPair,
+    sodium
+  );
   if (!blindedKeyPair) {
     throw new Error('Decryption failed');
   }
@@ -336,7 +344,7 @@ export async function decryptWithSessionBlindingProtocol(
  * @param bSignKeyBytes the receivers keypair bytes
  * @param serverPubKey the server the message is sent to
  */
-export const decryptBlindedMessage = async (
+const decryptBlindedMessage = async (
   data: Uint8Array,
   aSignKeyBytes: ByteKeyPair,
   bSignKeyBytes: ByteKeyPair,
@@ -349,8 +357,8 @@ export const decryptBlindedMessage = async (
 | undefined> => {
   const sodium = await getSodiumRenderer();
 
-  const aBlindingValues = getBlindingValues(serverPubKey, aSignKeyBytes, sodium);
-  const bBlindingValues = getBlindingValues(serverPubKey, bSignKeyBytes, sodium);
+  const aBlindingValues = SogsBlinding.getBlindingValues(serverPubKey, aSignKeyBytes, sodium);
+  const bBlindingValues = SogsBlinding.getBlindingValues(serverPubKey, bSignKeyBytes, sodium);
   const { publicKey: kA } = aBlindingValues;
   const { a: b, publicKey: kB } = bBlindingValues;
 
@@ -406,4 +414,15 @@ export const decryptBlindedMessage = async (
     senderED25519PubKey,
     senderSessionId,
   };
+};
+
+export const SogsBlinding = {
+  getSogsSignature,
+  getOpenGroupHeaders,
+  sha512Multipart,
+  getBlindedPubKey,
+  getBlindingValues,
+  encryptBlindedMessage,
+  decryptWithSessionBlindingProtocol,
+  decryptBlindedMessage,
 };

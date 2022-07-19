@@ -1,11 +1,11 @@
 import { AbortSignal } from 'abort-controller';
 import { APPLICATION_JSON, APPLICATION_OCTET_STREAM } from '../../../../types/MIME';
-import { sendJsonViaOnionV4ToSogs } from '../../../onions/onionSend';
+import { OnionSending } from '../../../onions/onionSend';
 import { UserUtils } from '../../../utils';
 import { OpenGroupCapabilityRequest } from '../opengroupV2/ApiUtil';
 import { OpenGroupMessageV2 } from '../opengroupV2/OpenGroupMessageV2';
 import {
-  getAllValidRoomInfos,
+  OpenGroupPollingUtils,
   OpenGroupRequestHeaders,
 } from '../opengroupV2/OpenGroupPollingUtils';
 import { batchGlobalIsSuccess, parseBatchGlobalStatusCode } from './sogsV3BatchPoll';
@@ -32,7 +32,7 @@ export const sendSogsMessageOnionV4 = async (
   message: OpenGroupMessageV2,
   blinded: boolean
 ): Promise<OpenGroupMessageV2> => {
-  const allValidRoomInfos = await getAllValidRoomInfos(serverUrl, new Set([room]));
+  const allValidRoomInfos = OpenGroupPollingUtils.getAllValidRoomInfos(serverUrl, new Set([room]));
   if (!allValidRoomInfos?.length) {
     window?.log?.info('getSendMessageRequest: no valid roominfos got.');
     throw new Error(`Could not find sogs pubkey of url:${serverUrl}`);
@@ -51,7 +51,7 @@ export const sendSogsMessageOnionV4 = async (
 
   const stringifiedBody = JSON.stringify(json);
 
-  const result = await sendJsonViaOnionV4ToSogs({
+  const result = await OnionSending.sendJsonViaOnionV4ToSogs({
     serverUrl,
     endpoint,
     serverPubkey,
@@ -97,7 +97,7 @@ export const sendMessageOnionV4BlindedRequest = async (
   message: OpenGroupMessageV2,
   recipientBlindedId: string
 ): Promise<{ serverId: number; serverTimestamp: number }> => {
-  const allValidRoomInfos = await getAllValidRoomInfos(serverUrl, new Set([room]));
+  const allValidRoomInfos = OpenGroupPollingUtils.getAllValidRoomInfos(serverUrl, new Set([room]));
   if (!allValidRoomInfos?.length) {
     window?.log?.info('getSendMessageRequest: no valid roominfos got.');
     throw new Error(`Could not find sogs pubkey of url:${serverUrl}`);
@@ -112,7 +112,7 @@ export const sendMessageOnionV4BlindedRequest = async (
   const json = signedMessage.toBLindedMessageRequestJson();
   const stringifiedBody = JSON.stringify(json);
 
-  const result = await sendJsonViaOnionV4ToSogs({
+  const result = await OnionSending.sendJsonViaOnionV4ToSogs({
     serverUrl,
     endpoint,
     serverPubkey,

@@ -9,7 +9,7 @@ import { combineKeys, generateBlindingFactor } from '../../../utils/SodiumUtils'
 import { getAllOpengroupsServerPubkeys, getV2OpenGroupRoom } from '../../../../data/opengroups';
 import { ConversationModel } from '../../../../models/conversation';
 import { UserUtils } from '../../../utils';
-import { getBlindedPubKey } from './sogsBlinding';
+import { SogsBlinding } from './sogsBlinding';
 import { fromHexToArray } from '../../../utils/String';
 import { roomHasBlindEnabled } from './sogsV3Capabilities';
 
@@ -338,7 +338,7 @@ export async function findCachedOurBlindedPubkeyOrLookItUp(
     throw new Error('addSingleOutgoingMessage: getUserED25519KeyPairBytes returned nothing');
   }
 
-  const blindedPubkeyForThisSogs = getBlindedPubKey(
+  const blindedPubkeyForThisSogs = SogsBlinding.getBlindedPubKey(
     fromHexToArray(serverPubKey),
     signingKeys,
     sodium

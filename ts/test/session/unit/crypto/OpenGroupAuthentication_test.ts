@@ -1,10 +1,6 @@
 import chai, { expect } from 'chai';
 import chaiBytes from 'chai-bytes';
-import {
-  decryptBlindedMessage,
-  encryptBlindedMessage,
-  getOpenGroupHeaders,
-} from '../../../../session/apis/open_group_api/sogsv3/sogsBlinding';
+import { SogsBlinding } from '../../../../session/apis/open_group_api/sogsv3/sogsBlinding';
 import { ByteKeyPair } from '../../../../session/utils/User';
 import { to_hex } from 'libsodium-wrappers-sumo';
 import { fromBase64, fromHex } from 'bytebuffer';
@@ -203,26 +199,11 @@ describe('OpenGroupAuthentication', () => {
 
   const body = 'hello 🎂';
 
-  // const postDataToEncoded =
-  //   '{"method":"POST","endpoint":"/room/test-room/pin/123","headers":{"Content-Type":"application/json"}}';
-
-  // const getDataToEncode = '{"method":"GET","endpoint":"/room/test-room"}';
-  // const responseToDecode = `l129:{"code":200,"headers":{"content-type":"application/octet-stream","content-disposition":"attachment;filename*=UTF-8''myfile.txt"}}11:hello worlde`;
-
-  // const expectedResponseMeta = {
-  //   code: 200,
-  //   headers: {
-  //     'content-type': 'application/octet-stream',
-  //     'content-disposition': "attachment;filename*=UTF-8''myfile.txt",
-  //   },
-  // };
-  // const expectedResponseBody = 'hello world';
-
   // tslint:disable-next-line: max-func-body-length
   describe('HeaderCreation', () => {
     describe('Blinded Headers', () => {
       it('should produce correct X-SOGS-Nonce', async () => {
-        const headers = await getOpenGroupHeaders({
+        const headers = await SogsBlinding.getOpenGroupHeaders({
           signingKeys: signingKeysA,
           serverPK: serverPubKey,
           nonce,
@@ -236,7 +217,7 @@ describe('OpenGroupAuthentication', () => {
       });
 
       it('should produce correct X-SOGS-Pubkey', async () => {
-        const headers = await getOpenGroupHeaders({
+        const headers = await SogsBlinding.getOpenGroupHeaders({
           signingKeys: signingKeysA,
           serverPK: serverPubKey,
           nonce,
@@ -252,7 +233,7 @@ describe('OpenGroupAuthentication', () => {
       });
 
       it('should produce correct X-SOGS-Timestamp', async () => {
-        const headers = await getOpenGroupHeaders({
+        const headers = await SogsBlinding.getOpenGroupHeaders({
           signingKeys: signingKeysA,
           serverPK: serverPubKey,
           nonce,
@@ -265,7 +246,7 @@ describe('OpenGroupAuthentication', () => {
         expect(headers['X-SOGS-Timestamp']).to.be.equal('1642472103');
       });
       it('should produce correct X-SOGS-Signature without body', async () => {
-        const headers = await getOpenGroupHeaders({
+        const headers = await SogsBlinding.getOpenGroupHeaders({
           signingKeys: signingKeysA,
           serverPK: serverPubKey,
           nonce,
@@ -281,7 +262,7 @@ describe('OpenGroupAuthentication', () => {
       });
 
       it('should produce correct X-SOGS-Signature with body', async () => {
-        const headers = await getOpenGroupHeaders({
+        const headers = await SogsBlinding.getOpenGroupHeaders({
           signingKeys: signingKeysA,
           serverPK: serverPubKey,
           nonce,
@@ -292,14 +273,14 @@ describe('OpenGroupAuthentication', () => {
           body,
         });
         expect(headers['X-SOGS-Signature']).to.be.equal(
-          'Bs680K7t2VOmbiXNX+uIPa7dDWzxKQfLk8SxdGxe2wwadFQOr9KdAetVmVQ6w4MfyHOD6WiP0JAVb4Tb8I5lAA=='
+          'hZCg5pEoy9t98umaY6fNarzcLP5UKUF8chz5mIjwwrRIQLy1kinRoYcNPdFOpJu8heA0val4viymXRTp1DGeBg=='
         );
       });
     });
 
     describe('Unblinded Headers', () => {
       it('should produce correct X-SOGS-Nonce', async () => {
-        const headers = await getOpenGroupHeaders({
+        const headers = await SogsBlinding.getOpenGroupHeaders({
           signingKeys: signingKeysA,
           serverPK: serverPubKey,
           nonce,
@@ -313,7 +294,7 @@ describe('OpenGroupAuthentication', () => {
       });
 
       it('should produce correct X-SOGS-Pubkey', async () => {
-        const headers = await getOpenGroupHeaders({
+        const headers = await SogsBlinding.getOpenGroupHeaders({
           signingKeys: signingKeysA,
           serverPK: serverPubKey,
           nonce,
@@ -329,7 +310,7 @@ describe('OpenGroupAuthentication', () => {
       });
 
       it('should produce correct X-SOGS-Timestamp', async () => {
-        const headers = await getOpenGroupHeaders({
+        const headers = await SogsBlinding.getOpenGroupHeaders({
           signingKeys: signingKeysA,
           serverPK: serverPubKey,
           nonce,
@@ -342,7 +323,7 @@ describe('OpenGroupAuthentication', () => {
         expect(headers['X-SOGS-Timestamp']).to.be.equal('1642472103');
       });
       it('should produce correct X-SOGS-Signature without body', async () => {
-        const headers = await getOpenGroupHeaders({
+        const headers = await SogsBlinding.getOpenGroupHeaders({
           signingKeys: signingKeysA,
           serverPK: serverPubKey,
           nonce,
@@ -358,7 +339,7 @@ describe('OpenGroupAuthentication', () => {
       });
 
       it('should produce correct X-SOGS-Signature with body', async () => {
-        const headers = await getOpenGroupHeaders({
+        const headers = await SogsBlinding.getOpenGroupHeaders({
           signingKeys: signingKeysA,
           serverPK: serverPubKey,
           nonce,
@@ -369,7 +350,7 @@ describe('OpenGroupAuthentication', () => {
           body,
         });
         expect(headers['X-SOGS-Signature']).to.be.equal(
-          '2w9zMiGPqa3RApSpVbL0zhh7cUd6Z9skbZlf2XqyDTND2aDadGOAcKpXANcOSA+zi+kmgP8+zVkDdz0JOiB1Cw=='
+          'uumZNee7NUb0lVufegjzgjjnj4pe3kAe6OYw7iVTJrcxxxdIxUCgt5/xliBWqPlgY6ReUZRAuptNa4nprv7nCA=='
         );
       });
     });
@@ -378,14 +359,14 @@ describe('OpenGroupAuthentication', () => {
   describe('Blinded Message Encryption', () => {
     it('Should encrypt blinded message correctly', async () => {
       const dataUint = new Uint8Array(StringUtils.encode(body, 'utf8'));
-      const data = await encryptBlindedMessage({
+      const data = await SogsBlinding.encryptBlindedMessage({
         rawData: dataUint,
         senderSigningKey: signingKeysA,
         serverPubKey,
         recipientSigningKey: signingKeysB,
       });
       if (data) {
-        const decrypted = await decryptBlindedMessage(
+        const decrypted = await SogsBlinding.decryptBlindedMessage(
           data,
           signingKeysA,
           signingKeysB,
@@ -398,10 +379,14 @@ describe('OpenGroupAuthentication', () => {
   });
 
   // tslint:disable-next-line: no-empty
-  describe('Message Decryption', () => {});
+  describe('Message Decryption', () => {
+    it.skip('Message Decryption', () => {
+      // TODO: update input and expected output
+    });
+  });
 
   describe('V4Requests', () => {
-    it('Should bencode POST/PUT request with body successfully', () => {
+    it.skip('Should bencode POST/PUT request with body successfully', () => {
       // TODO: update input and expected output
       // const bencoded = encodeV4Request(postDataToEncoded);
       // expect(bencoded).to.be.equal(
@@ -409,13 +394,13 @@ describe('OpenGroupAuthentication', () => {
       // );
     });
 
-    it('Should bencode GET request without body successfully', () => {
+    it.skip('Should bencode GET request without body successfully', () => {
       // TODO: change ot accept request info and expect uint8 array output
       // const bencoded = encodeV4Request(getDataToEncode);
       // expect(bencoded).to.be.equal('l45:{"method":"GET","endpoint":"/room/test-room"}e');
     });
 
-    it('Should decode bencoded response successfully', () => {
+    it.skip('Should decode bencoded response successfully', () => {
       // TODO: update input and expected output
       // const bencoded = decodeV4Response(responseToDecode);
       // console.warn({ bencoded });

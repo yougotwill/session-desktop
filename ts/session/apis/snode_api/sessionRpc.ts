@@ -4,12 +4,7 @@ import { HTTPError, NotFoundError } from '../../utils/errors';
 import { Snode } from '../../../data/data';
 import { getStoragePubKey } from '../../types';
 
-import {
-  ERROR_421_HANDLED_RETRY_REQUEST,
-  lokiOnionFetch,
-  snodeHttpsAgent,
-  SnodeResponse,
-} from './onions';
+import { ERROR_421_HANDLED_RETRY_REQUEST, Onions, snodeHttpsAgent, SnodeResponse } from './onions';
 import { APPLICATION_JSON } from '../../../types/MIME';
 import https from 'https';
 
@@ -53,7 +48,7 @@ async function lokiFetch({
         ? true
         : window.sessionFeatureFlags?.useOnionRequests;
     if (useOnionRequests && targetNode) {
-      const fetchResult = await lokiOnionFetch({
+      const fetchResult = await Onions.lokiOnionFetch({
         targetNode,
         body: fetchOptions.body,
         headers: fetchOptions.headers,

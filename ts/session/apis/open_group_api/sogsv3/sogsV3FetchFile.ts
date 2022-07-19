@@ -5,9 +5,9 @@ import { MIME } from '../../../../types';
 import { processNewAttachment } from '../../../../types/MessageAttachment';
 import { callUtilsWorker } from '../../../../webworker/workers/util_worker_interface';
 import { getConversationController } from '../../../conversations';
-import { sendViaOnionV4ToNonSnode } from '../../../onions/onionSend';
+import { OnionSending } from '../../../onions/onionSend';
 import { allowOnlyOneAtATime } from '../../../utils/Promise';
-import { getOurOpenGroupHeaders } from '../opengroupV2/OpenGroupPollingUtils';
+import { OpenGroupPollingUtils } from '../opengroupV2/OpenGroupPollingUtils';
 import { getOpenGroupV2ConversationId } from '../utils/OpenGroupUtils';
 import { roomHasBlindEnabled } from './sogsV3Capabilities';
 
@@ -41,13 +41,19 @@ export async function fetchBinaryFromSogsWithOnionV4(sendOptions: {
   const builtUrl = new URL(`${serverUrl}${endpoint}`);
   let headersWithSogsHeadersIfNeeded = doNotIncludeOurSogsHeaders
     ? {}
-    : await getOurOpenGroupHeaders(serverPubkey, endpoint, method, blinded, stringifiedBody);
+    : await OpenGroupPollingUtils.getOurOpenGroupHeaders(
+        serverPubkey,
+        endpoint,
+        method,
+        blinded,
+        stringifiedBody
+      );
 
   if (!headersWithSogsHeadersIfNeeded) {
     return null;
   }
   headersWithSogsHeadersIfNeeded = { ...includedHeaders, ...headersWithSogsHeadersIfNeeded };
-  const res = await sendViaOnionV4ToNonSnode(
+  const res = await OnionSending.sendViaOnionV4ToNonSnodeWithRetries(
     serverPubkey,
     builtUrl,
     {
@@ -141,6 +147,8 @@ export async function sogsV3FetchPreviewBase64(roomInfos: OpenGroupV2RoomWithIma
  * The returned value is a Uin8Array.
  * It can be used directly, or saved on the attachments directory if needed (processNewAttachment), but this function does not handle it.
  * Be sure to give the imageID field here, otherwise the request is dropped.
+ * This function does not check if the conversation exist, as it can be called for getting the preview image of the default rooms too. (left pane join default rooms)
+ * Those default rooms do not have a conversation associated with them, as they are not joined yet
  */
 const sogsV3FetchPreview = async (
   roomInfos: OpenGroupV2RoomWithImageID
@@ -148,13 +156,7 @@ const sogsV3FetchPreview = async (
   if (!roomInfos || !roomInfos.imageID) {
     return null;
   }
-  const convoId = getOpenGroupV2ConversationId(roomInfos.serverUrl, roomInfos.roomId);
-  const convo = getConversationController().get(convoId);
-  if (!convo) {
-    window?.log?.warn('Could not find convo for sogsV3FetchPreview', convoId);
-    return null;
-  }
-  console.warn('should we turn this blinded ON?');
+
   // not a batch call yet as we need to exclude headers for this call for now
   const fetched = await fetchBinaryFromSogsWithOnionV4({
     abortSignal: new AbortController().signal,
@@ -167,12 +169,6 @@ const sogsV3FetchPreview = async (
     fileId: roomInfos.imageID,
   });
   if (fetched && fetched.byteLength) {
-    const convoStillThere = getConversationController().get(convoId);
-    if (!convoStillThere) {
-      // just to make sure the convo did not get deleted while fetching the avatar
-      window?.log?.warn('Could not find convo for sogsV3FetchPreview', convoId);
-      return null;
-    }
     return fetched;
   }
   return null;

@@ -4,17 +4,16 @@ import { OnionPaths } from '.';
 import {
   FinalDestNonSnodeOptions,
   FinalRelayOptions,
-  sendOnionRequestHandlingSnodeEject,
+  Onions,
   SnodeResponse,
-  SnodeResponseV4,
   STATUS_NO_STATUS,
 } from '../apis/snode_api/onions';
-import _, { toNumber } from 'lodash';
+import { toNumber } from 'lodash';
 import { PROTOCOLS } from '../constants';
 import pRetry from 'p-retry';
 import { Snode } from '../../data/data';
-import { decodeV4Response } from './onionv4';
-import { getOurOpenGroupHeaders } from '../apis/open_group_api/opengroupV2/OpenGroupPollingUtils';
+import { OnionV4 } from './onionv4';
+import { OpenGroupPollingUtils } from '../apis/open_group_api/opengroupV2/OpenGroupPollingUtils';
 import {
   addBinaryContentTypeToHeaders,
   addJsonContentTypeToHeaders,
@@ -45,7 +44,7 @@ const buildSendViaOnionPayload = (
   return payloadObj;
 };
 
-export const getOnionPathForSending = async () => {
+const getOnionPathForSending = async () => {
   let pathNodes: Array<Snode> = [];
   try {
     pathNodes = await OnionPaths.getOnionPath({});
@@ -82,14 +81,18 @@ export type OnionV4BinarySnodeResponse = {
   status_code: number;
 };
 
-export const sendViaOnionV4ToNonSnode = async (
+/**
+ * Build & send an onion v4 request to a non snode, and handle retries.
+ * We actually can only send v4 request to non snode, as the snodes themselves do not support v4 request as destination.
+ */
+const sendViaOnionV4ToNonSnodeWithRetries = async (
   destinationX25519Key: string,
   url: URL,
   fetchOptions: OnionFetchOptions,
   abortSignal?: AbortSignal
 ): Promise<OnionV4SnodeResponse | null> => {
   if (!fetchOptions.useV4) {
-    throw new Error('sendViaOnionV4ToNonSnode is only to be used for onion v4 calls');
+    throw new Error('sendViaOnionV4ToNonSnodeWithRetries is only to be used for onion v4 calls');
   }
 
   if (typeof destinationX25519Key !== 'string') {
@@ -111,11 +114,11 @@ export const sendViaOnionV4ToNonSnode = async (
     finalRelayOptions.port = url.port ? toNumber(url.port) : 80;
   }
 
-  let result: SnodeResponseV4 | undefined;
+  let result: OnionV4SnodeResponse | null;
   try {
     result = await pRetry(
       async () => {
-        const pathNodes = await getOnionPathForSending();
+        const pathNodes = await OnionSending.getOnionPathForSending();
 
         if (!pathNodes) {
           throw new Error('getOnionPathForSending is emtpy');
@@ -126,18 +129,50 @@ export const sendViaOnionV4ToNonSnode = async (
          * call above will call us again with the same params but a different path.
          * If the error is not recoverable, it throws a pRetry.AbortError.
          */
-        return sendOnionRequestHandlingSnodeEject({
+        const onionV4Response = await Onions.sendOnionRequestHandlingSnodeEject({
           nodePath: pathNodes,
-          destX25519Any: destinationX25519Key,
+          destSnodeX25519: destinationX25519Key,
           finalDestOptions: payloadObj,
           finalRelayOptions,
           abortSignal,
           useV4: true,
         });
+
+        if (abortSignal?.aborted) {
+          // if the request was aborted, we just want to stop retries.
+          window?.log?.warn('sendViaOnionV4ToNonSnodeRetryable request aborted.');
+
+          throw new pRetry.AbortError('Request Aborted');
+        }
+
+        if (!onionV4Response) {
+          // v4 failed responses result is undefined
+          window?.log?.warn('sendViaOnionV4ToNonSnodeRetryable failed during V4 request (in)');
+          throw new Error(
+            'sendViaOnionV4ToNonSnodeRetryable failed during V4 request. Retrying...'
+          );
+        }
+
+        // This only decodes single entries for now.
+        // We decode it here, because if the result status code is not valid, we want to trigger a retry (by throwing an error)
+        const decodedV4 = OnionV4.decodeV4Response(onionV4Response);
+
+        const foundStatusCode = decodedV4?.metadata?.code || STATUS_NO_STATUS;
+        if (foundStatusCode < 200 || foundStatusCode > 299) {
+          // we consider those cases as an error, and trigger a retry (if possible), by throwing a non-abortable error
+          throw new Error(
+            `sendViaOnionV4ToNonSnodeWithRetries failed with status code: ${foundStatusCode}. Retrying...`
+          );
+        }
+        return {
+          status_code: decodedV4?.metadata?.code || STATUS_NO_STATUS,
+          body: decodedV4?.body || null,
+          bodyBinary: decodedV4?.bodyBinary || null,
+        };
       },
       {
         retries: 2, // retry 3 (2+1) times at most
-        minTimeout: 500,
+        minTimeout: 100,
         onFailedAttempt: e => {
           window?.log?.warn(
             `sendViaOnionV4ToNonSnodeRetryable attempt #${e.attemptNumber} failed. ${e.retriesLeft} retries left...`
@@ -158,25 +193,14 @@ export const sendViaOnionV4ToNonSnode = async (
 
   if (!result) {
     // v4 failed responses result is undefined
-    window?.log?.warn('sendViaOnionV4ToNonSnodeRetryable failed during V4 request');
+    window?.log?.warn('sendViaOnionV4ToNonSnodeRetryable failed during V4 request (out)');
     return null;
   }
 
-  try {
-    // this only decodes single entries
-    const decodedV4 = decodeV4Response(result);
-    return {
-      status_code: decodedV4?.metadata?.code || STATUS_NO_STATUS,
-      body: decodedV4?.body || null,
-      bodyBinary: decodedV4?.bodyBinary || null,
-    };
-  } catch (e) {
-    window?.log?.error("sendViaOnionV4ToNonSnode Can't decode JSON body");
-    return { status_code: STATUS_NO_STATUS, body: null, bodyBinary: null };
-  }
+  return result;
 };
 
-export async function sendJsonViaOnionV4ToSogs(sendOptions: {
+async function sendJsonViaOnionV4ToSogs(sendOptions: {
   serverUrl: string;
   endpoint: string;
   serverPubkey: string;
@@ -204,13 +228,19 @@ export async function sendJsonViaOnionV4ToSogs(sendOptions: {
   const builtUrl = new URL(`${serverUrl}${endpoint}`);
   let headersWithSogsHeadersIfNeeded = doNotIncludeOurSogsHeaders
     ? {}
-    : await getOurOpenGroupHeaders(serverPubkey, endpoint, method, blinded, stringifiedBody);
+    : await OpenGroupPollingUtils.getOurOpenGroupHeaders(
+        serverPubkey,
+        endpoint,
+        method,
+        blinded,
+        stringifiedBody
+      );
 
   if (!headersWithSogsHeadersIfNeeded) {
     return null;
   }
   headersWithSogsHeadersIfNeeded = { ...includedHeaders, ...headersWithSogsHeadersIfNeeded };
-  const res = await sendViaOnionV4ToNonSnode(
+  const res = await OnionSending.sendViaOnionV4ToNonSnodeWithRetries(
     serverPubkey,
     builtUrl,
     {
@@ -231,7 +261,7 @@ export async function sendJsonViaOnionV4ToSogs(sendOptions: {
  *
  * You should probably not use this function directly but instead rely on the PnServer.notifyPnServer() function
  */
-export async function sendJsonViaOnionV4ToPnServer(sendOptions: {
+async function sendJsonViaOnionV4ToPnServer(sendOptions: {
   endpoint: string;
   method: string;
   stringifiedBody: string | null;
@@ -243,7 +273,7 @@ export async function sendJsonViaOnionV4ToPnServer(sendOptions: {
   }
   const builtUrl = new URL(`${pnServerUrl}${endpoint}`);
 
-  const res = await sendViaOnionV4ToNonSnode(
+  const res = await OnionSending.sendViaOnionV4ToNonSnodeWithRetries(
     pnServerPubkeyHex,
     builtUrl,
     {
@@ -258,7 +288,7 @@ export async function sendJsonViaOnionV4ToPnServer(sendOptions: {
   return res as OnionV4JSONSnodeResponse;
 }
 
-export async function sendBinaryViaOnionV4ToSogs(sendOptions: {
+async function sendBinaryViaOnionV4ToSogs(sendOptions: {
   serverUrl: string;
   endpoint: string;
   serverPubkey: string;
@@ -285,8 +315,8 @@ export async function sendBinaryViaOnionV4ToSogs(sendOptions: {
   if (!endpoint.startsWith('/')) {
     throw new Error('endpoint needs a leading /');
   }
-  const builtUrl = new URL(`${serverUrl}${endpoint}`);
-  let headersWithSogsHeadersIfNeeded = await getOurOpenGroupHeaders(
+  const builtUrl = new window.URL(`${serverUrl}${endpoint}`);
+  let headersWithSogsHeadersIfNeeded = await OpenGroupPollingUtils.getOurOpenGroupHeaders(
     serverPubkey,
     endpoint,
     method,
@@ -298,7 +328,7 @@ export async function sendBinaryViaOnionV4ToSogs(sendOptions: {
     return null;
   }
   headersWithSogsHeadersIfNeeded = { ...includedHeaders, ...headersWithSogsHeadersIfNeeded };
-  const res = await sendViaOnionV4ToNonSnode(
+  const res = await OnionSending.sendViaOnionV4ToNonSnodeWithRetries(
     serverPubkey,
     builtUrl,
     {
@@ -323,7 +353,7 @@ export async function sendBinaryViaOnionV4ToSogs(sendOptions: {
  * Upload binary to the file server.
  * You should probably not use this function directly, but instead rely on the FileServerAPI.uploadFileToFsWithOnionV4()
  */
-export async function sendBinaryViaOnionV4ToFileServer(sendOptions: {
+async function sendBinaryViaOnionV4ToFileServer(sendOptions: {
   endpoint: string;
   method: string;
   bodyBinary: Uint8Array;
@@ -335,7 +365,7 @@ export async function sendBinaryViaOnionV4ToFileServer(sendOptions: {
   }
   const builtUrl = new URL(`${fileServerURL}${endpoint}`);
 
-  const res = await sendViaOnionV4ToNonSnode(
+  const res = await OnionSending.sendViaOnionV4ToNonSnodeWithRetries(
     fileServerPubKey,
     builtUrl,
     {
@@ -354,7 +384,7 @@ export async function sendBinaryViaOnionV4ToFileServer(sendOptions: {
  * Download binary from the file server.
  * You should probably not use this function directly, but instead rely on the FileServerAPI.downloadFileFromFileServer()
  */
-export async function getBinaryViaOnionV4FromFileServer(sendOptions: {
+async function getBinaryViaOnionV4FromFileServer(sendOptions: {
   endpoint: string;
   method: string;
   abortSignal: AbortSignal;
@@ -365,7 +395,7 @@ export async function getBinaryViaOnionV4FromFileServer(sendOptions: {
   }
   const builtUrl = new URL(`${fileServerURL}${endpoint}`);
 
-  const res = await sendViaOnionV4ToNonSnode(
+  const res = await OnionSending.sendViaOnionV4ToNonSnodeWithRetries(
     fileServerPubKey,
     builtUrl,
     {
@@ -384,7 +414,7 @@ export async function getBinaryViaOnionV4FromFileServer(sendOptions: {
  * Send some generic json to the fileserver.
  * This function should probably not used directly as we only need it for the FileServerApi.getLatestReleaseFromFileServer() function
  */
-export async function sendJsonViaOnionV4ToFileServer(sendOptions: {
+async function sendJsonViaOnionV4ToFileServer(sendOptions: {
   endpoint: string;
   method: string;
   stringifiedBody: string | null;
@@ -396,7 +426,7 @@ export async function sendJsonViaOnionV4ToFileServer(sendOptions: {
   }
   const builtUrl = new URL(`${fileServerURL}${endpoint}`);
 
-  const res = await sendViaOnionV4ToNonSnode(
+  const res = await OnionSending.sendViaOnionV4ToNonSnodeWithRetries(
     fileServerPubKey,
     builtUrl,
     {
@@ -410,3 +440,14 @@ export async function sendJsonViaOnionV4ToFileServer(sendOptions: {
 
   return res as OnionV4JSONSnodeResponse;
 }
+
+export const OnionSending = {
+  sendViaOnionV4ToNonSnodeWithRetries,
+  getOnionPathForSending,
+  sendJsonViaOnionV4ToSogs,
+  sendJsonViaOnionV4ToPnServer,
+  sendBinaryViaOnionV4ToFileServer,
+  sendBinaryViaOnionV4ToSogs,
+  getBinaryViaOnionV4FromFileServer,
+  sendJsonViaOnionV4ToFileServer,
+};

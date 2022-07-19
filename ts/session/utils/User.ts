@@ -83,7 +83,7 @@ export async function getUserED25519KeyPair(): Promise<HexKeyPair | undefined> {
 export const getUserED25519KeyPairBytes = async (): Promise<ByteKeyPair | undefined> => {
   // 'identityKey' keeps the ed25519KeyPair under a ed25519KeyPair field.
   // it is only set if the user migrated to the ed25519 way of generating a key
-  const item = await getIdentityKeyPair();
+  const item = await UserUtils.getIdentityKeyPair();
   const ed25519KeyPair = (item as any)?.ed25519KeyPair;
   if (ed25519KeyPair?.publicKey && ed25519KeyPair?.privateKey) {
     const pubKeyBytes = new Uint8Array(_.map(ed25519KeyPair.publicKey, a => a));

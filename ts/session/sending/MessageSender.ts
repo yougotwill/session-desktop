@@ -287,7 +287,6 @@ export async function sendToOpenGroupV2(
     filesToLink,
   });
 
-  // Warning: postMessage throws
   const msg = await sendSogsMessageOnionV4(
     roomInfos.serverUrl,
     roomInfos.roomId,

@@ -74,7 +74,7 @@ import {
   fillConvoAttributesWithDefaults,
 } from './conversationAttributes';
 
-import { encryptBlindedMessage } from '../session/apis/open_group_api/sogsv3/sogsBlinding';
+import { SogsBlinding } from '../session/apis/open_group_api/sogsv3/sogsBlinding';
 import { from_hex } from 'libsodium-wrappers-sumo';
 import { getV2OpenGroupRoom } from '../data/opengroups';
 import { roomHasBlindEnabled } from '../session/apis/open_group_api/sogsv3/sogsV3Capabilities';
@@ -757,7 +757,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
 
     const serverPubKey = roomInfo.serverPublicKey;
 
-    const encryptedMsg = await encryptBlindedMessage({
+    const encryptedMsg = await SogsBlinding.encryptBlindedMessage({
       rawData: paddedBody,
       senderSigningKey: ourSignKeyBytes,
       serverPubKey: from_hex(serverPubKey),

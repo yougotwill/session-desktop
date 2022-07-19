@@ -4,7 +4,7 @@ import { callUtilsWorker } from '../../../../webworker/workers/util_worker_inter
 import { getSodiumRenderer } from '../../../crypto';
 import { UserUtils } from '../../../utils';
 import { fromBase64ToArray, fromHexToArray } from '../../../utils/String';
-import { getBlindingValues, getSogsSignature } from '../sogsv3/sogsBlinding';
+import { SogsBlinding } from '../sogsv3/sogsBlinding';
 
 export class OpenGroupMessageV2 {
   public serverId?: number;
@@ -93,7 +93,11 @@ export class OpenGroupMessageV2 {
     }
 
     const sodium = await getSodiumRenderer();
-    const blindedKeyPair = getBlindingValues(fromHexToArray(serverPubKey), signingKeys, sodium);
+    const blindedKeyPair = SogsBlinding.getBlindingValues(
+      fromHexToArray(serverPubKey),
+      signingKeys,
+      sodium
+    );
 
     if (!blindedKeyPair) {
       throw new Error('signWithBlinding: getBlindedPubKey returned nothing');
@@ -101,7 +105,7 @@ export class OpenGroupMessageV2 {
     const data = fromBase64ToArray(this.base64EncodedData);
 
     // const signature = sign(new Uint8Array(blindedKeyPair.secretKey), data, null);
-    const signature = await getSogsSignature({
+    const signature = await SogsBlinding.getSogsSignature({
       blinded: true,
       ka: blindedKeyPair.secretKey,
       kA: blindedKeyPair.publicKey,

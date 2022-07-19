@@ -3,7 +3,7 @@ import * as SnodePool from '../apis/snode_api/snodePool';
 import _ from 'lodash';
 import { default as insecureNodeFetch } from 'node-fetch';
 import { UserUtils } from '../utils';
-import { incrementBadSnodeCountOrDrop, snodeHttpsAgent } from '../apis/snode_api/onions';
+import { Onions, snodeHttpsAgent } from '../apis/snode_api/onions';
 import { allowOnlyOneAtATime } from '../utils/Promise';
 import pRetry from 'p-retry';
 
@@ -207,7 +207,7 @@ export async function incrementBadPathCountOrDrop(snodeEd25519: string) {
   if (pathWithSnodeIndex === -1) {
     window?.log?.info('incrementBadPathCountOrDrop: Did not find any path containing this snode');
     // this might happen if the snodeEd25519 is the one of the target snode, just increment the target snode count by 1
-    await incrementBadSnodeCountOrDrop({ snodeEd25519 });
+    await Onions.incrementBadSnodeCountOrDrop({ snodeEd25519 });
 
     return;
   }
@@ -230,7 +230,7 @@ export async function incrementBadPathCountOrDrop(snodeEd25519: string) {
   // a guard node is dropped when the path is dropped completely (in dropPathStartingWithGuardNode)
   for (let index = 1; index < pathWithIssues.length; index++) {
     const snode = pathWithIssues[index];
-    await incrementBadSnodeCountOrDrop({ snodeEd25519: snode.pubkey_ed25519 });
+    await Onions.incrementBadSnodeCountOrDrop({ snodeEd25519: snode.pubkey_ed25519 });
   }
 
   if (newPathFailureCount >= pathFailureThreshold) {

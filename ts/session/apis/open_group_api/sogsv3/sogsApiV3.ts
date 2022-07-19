@@ -24,7 +24,7 @@ import {
   findCachedBlindedMatchOrItLookup,
   findCachedOurBlindedPubkeyOrLookItUp,
 } from './knownBlindedkeys';
-import { decryptWithSessionBlindingProtocol } from './sogsBlinding';
+import { SogsBlinding } from './sogsBlinding';
 import { base64_variants, from_base64 } from 'libsodium-wrappers-sumo';
 import { UserUtils } from '../../../utils';
 import { innerHandleSwarmContentMessage } from '../../../../receiver/contentMessage';
@@ -319,7 +319,7 @@ async function handleInboxOutboxMessages(
       const postedAtInMs = Math.floor(inboxOutboxItem.posted_at * 1000);
 
       const otherBlindedPubkey = isOutbox ? inboxOutboxItem.recipient : inboxOutboxItem.sender;
-      const decrypted = await decryptWithSessionBlindingProtocol(
+      const decrypted = await SogsBlinding.decryptWithSessionBlindingProtocol(
         data,
         isOutgoing,
         otherBlindedPubkey,

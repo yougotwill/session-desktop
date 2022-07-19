@@ -11,8 +11,8 @@ import chaiAsPromised from 'chai-as-promised';
 import { OnionPaths } from '../../../../session/onions/';
 import {
   NEXT_NODE_NOT_FOUND_PREFIX,
+  Onions,
   OXEN_SERVER_ERROR,
-  processOnionResponse,
 } from '../../../../session/apis/snode_api/onions';
 import AbortController from 'abort-controller';
 import * as Data from '../../../../../ts/data/data';
@@ -105,7 +105,7 @@ describe('OnionPathsErrors', () => {
     dropSnodeFromSwarmIfNeededSpy = Sinon.spy(SNodeAPI.SnodePool, 'dropSnodeFromSwarmIfNeeded');
     dropSnodeFromPathSpy = Sinon.spy(OnionPaths, 'dropSnodeFromPath');
     incrementBadPathCountOrDropSpy = Sinon.spy(OnionPaths, 'incrementBadPathCountOrDrop');
-    incrementBadSnodeCountOrDropSpy = Sinon.spy(SNodeAPI.Onions, 'incrementBadSnodeCountOrDrop');
+    incrementBadSnodeCountOrDropSpy = Sinon.spy(Onions, 'incrementBadSnodeCountOrDrop');
 
     OnionPaths.clearTestOnionPath();
 
@@ -114,13 +114,12 @@ describe('OnionPathsErrors', () => {
     await OnionPaths.getOnionPath({});
 
     oldOnionPaths = OnionPaths.TEST_getTestOnionPath();
-    Sinon.stub(SNodeAPI.Onions, 'decodeOnionResult').callsFake(
-      (_symkey: ArrayBuffer, plaintext: string) =>
-        Promise.resolve({
-          plaintext,
-          ciphertextBuffer: new Uint8Array(),
-          plaintextBuffer: Buffer.alloc(0),
-        })
+    Sinon.stub(Onions, 'decodeOnionResult').callsFake((_symkey: ArrayBuffer, plaintext: string) =>
+      Promise.resolve({
+        plaintext,
+        ciphertextBuffer: new Uint8Array(),
+        plaintextBuffer: Buffer.alloc(0),
+      })
     );
   });
 
@@ -133,7 +132,7 @@ describe('OnionPathsErrors', () => {
       const abortController = new AbortController();
       abortController.abort();
       try {
-        await processOnionResponse({
+        await Onions.processOnionResponse({
           response: getFakeResponseOnPath(),
           symmetricKey: new Uint8Array(),
           guardNode: guardSnode1,
@@ -149,7 +148,7 @@ describe('OnionPathsErrors', () => {
 
     it('does not throw if we get 200 on path and destination', async () => {
       try {
-        await processOnionResponse({
+        await Onions.processOnionResponse({
           response: getFakeResponseOnDestination(200),
           symmetricKey: new Uint8Array(),
           guardNode: guardSnode1,
@@ -167,7 +166,7 @@ describe('OnionPathsErrors', () => {
 
     it('does not throw if we get 200 on path but no status code on destination', async () => {
       try {
-        await processOnionResponse({
+        await Onions.processOnionResponse({
           response: getFakeResponseOnDestination(),
           symmetricKey: new Uint8Array(),
           guardNode: guardSnode1,
@@ -186,7 +185,7 @@ describe('OnionPathsErrors', () => {
     describe('processOnionResponse - 406', () => {
       it('throws an non retryable error we get a 406 on path', async () => {
         try {
-          await processOnionResponse({
+          await Onions.processOnionResponse({
             response: getFakeResponseOnPath(406),
             symmetricKey: new Uint8Array(),
             guardNode: guardSnode1,
@@ -207,8 +206,53 @@ describe('OnionPathsErrors', () => {
       });
       it('throws an non retryable error we get a 406 on destination', async () => {
         try {
-          await processOnionResponse({
+          await Onions.processOnionResponse({
             response: getFakeResponseOnDestination(406),
+            symmetricKey: new Uint8Array(),
+            guardNode: guardSnode1,
+          });
+          throw new Error('Error expected');
+        } catch (e) {
+          expect(e.message).to.equal(
+            'Your clock is out of sync with the network. Check your clock.'
+          );
+          // this makes sure that this call would not be retried
+          expect(e.name).to.equal('AbortError');
+        }
+        expect(dropSnodeFromSnodePool.callCount).to.eq(0);
+        expect(dropSnodeFromSwarmIfNeededSpy.callCount).to.eq(0);
+        expect(dropSnodeFromPathSpy.callCount).to.eq(0);
+        expect(incrementBadPathCountOrDropSpy.callCount).to.eq(0);
+        expect(incrementBadSnodeCountOrDropSpy.callCount).to.eq(0);
+      });
+    });
+
+    describe('processOnionResponse - 425', () => {
+      it('throws an non retryable error we get a 425 on path', async () => {
+        try {
+          await Onions.processOnionResponse({
+            response: getFakeResponseOnPath(425),
+            symmetricKey: new Uint8Array(),
+            guardNode: guardSnode1,
+          });
+          throw new Error('Error expected');
+        } catch (e) {
+          expect(e.message).to.equal(
+            'Your clock is out of sync with the network. Check your clock.'
+          );
+          // this makes sure that this call would not be retried
+          expect(e.name).to.equal('AbortError');
+        }
+        expect(dropSnodeFromSnodePool.callCount).to.eq(0);
+        expect(dropSnodeFromSwarmIfNeededSpy.callCount).to.eq(0);
+        expect(dropSnodeFromPathSpy.callCount).to.eq(0);
+        expect(incrementBadPathCountOrDropSpy.callCount).to.eq(0);
+        expect(incrementBadSnodeCountOrDropSpy.callCount).to.eq(0);
+      });
+      it('throws an non retryable error we get a 425 on destination', async () => {
+        try {
+          await Onions.processOnionResponse({
+            response: getFakeResponseOnDestination(425),
             symmetricKey: new Uint8Array(),
             guardNode: guardSnode1,
           });
@@ -234,11 +278,11 @@ describe('OnionPathsErrors', () => {
           const targetNode = otherNodesPubkeys[0];
 
           try {
-            await processOnionResponse({
+            await Onions.processOnionResponse({
               response: getFakeResponseOnPath(421),
               symmetricKey: new Uint8Array(),
               guardNode: guardSnode1,
-              lsrpcEd25519Key: targetNode,
+              destinationSnodeEd25519: targetNode,
 
               associatedWith,
             });
@@ -280,14 +324,14 @@ describe('OnionPathsErrors', () => {
             otherNodesArray[6],
           ];
           try {
-            await processOnionResponse({
+            await Onions.processOnionResponse({
               response: getFakeResponseOnDestination(
                 421,
                 JSON.stringify({ snodes: resultExpected })
               ),
               symmetricKey: new Uint8Array(),
               guardNode: guardSnode1,
-              lsrpcEd25519Key: targetNode,
+              destinationSnodeEd25519: targetNode,
               associatedWith,
             });
             throw new Error('Error expected');
@@ -317,11 +361,11 @@ describe('OnionPathsErrors', () => {
           const targetNode = otherNodesPubkeys[0];
 
           try {
-            await processOnionResponse({
+            await Onions.processOnionResponse({
               response: getFakeResponseOnDestination(421, 'THIS IS SOME INVALID JSON'),
               symmetricKey: new Uint8Array(),
               guardNode: guardSnode1,
-              lsrpcEd25519Key: targetNode,
+              destinationSnodeEd25519: targetNode,
 
               associatedWith,
             });
@@ -355,11 +399,11 @@ describe('OnionPathsErrors', () => {
           const json = JSON.stringify({ status: 421 });
 
           try {
-            await processOnionResponse({
+            await Onions.processOnionResponse({
               response: getFakeResponseOnDestination(421, json),
               symmetricKey: new Uint8Array(),
               guardNode: guardSnode1,
-              lsrpcEd25519Key: targetNode,
+              destinationSnodeEd25519: targetNode,
               associatedWith,
             });
             throw new Error('Error expected');
@@ -401,11 +445,11 @@ describe('OnionPathsErrors', () => {
       const targetNode = otherNodesPubkeys[0];
 
       try {
-        await processOnionResponse({
+        await Onions.processOnionResponse({
           response: getFakeResponseOnDestination(400, OXEN_SERVER_ERROR),
           symmetricKey: new Uint8Array(),
           guardNode: guardSnode1,
-          lsrpcEd25519Key: targetNode,
+          destinationSnodeEd25519: targetNode,
 
           associatedWith,
         });
@@ -435,14 +479,14 @@ describe('OnionPathsErrors', () => {
       const targetNode = otherNodesPubkeys[0];
       const failingSnode = oldOnionPaths[0][1];
       try {
-        await processOnionResponse({
+        await Onions.processOnionResponse({
           response: getFakeResponseOnPath(
             502,
             `${NEXT_NODE_NOT_FOUND_PREFIX}${failingSnode.pubkey_ed25519}`
           ),
           symmetricKey: new Uint8Array(),
           guardNode: guardSnode1,
-          lsrpcEd25519Key: targetNode,
+          destinationSnodeEd25519: targetNode,
           associatedWith,
         });
         throw new Error('Error expected');
@@ -476,14 +520,14 @@ describe('OnionPathsErrors', () => {
       const targetNode = otherNodesPubkeys[0];
       const failingSnode = oldOnionPaths[0][2];
       try {
-        await processOnionResponse({
+        await Onions.processOnionResponse({
           response: getFakeResponseOnPath(
             502,
             `${NEXT_NODE_NOT_FOUND_PREFIX}${failingSnode.pubkey_ed25519}`
           ),
           symmetricKey: new Uint8Array(),
           guardNode: guardSnode1,
-          lsrpcEd25519Key: targetNode,
+          destinationSnodeEd25519: targetNode,
           associatedWith,
         });
         throw new Error('Error expected');
@@ -516,14 +560,14 @@ describe('OnionPathsErrors', () => {
       const failingSnode = oldOnionPaths[0][1];
       for (let index = 0; index < 3; index++) {
         try {
-          await processOnionResponse({
+          await Onions.processOnionResponse({
             response: getFakeResponseOnPath(
               502,
               `${NEXT_NODE_NOT_FOUND_PREFIX}${failingSnode.pubkey_ed25519}`
             ),
             symmetricKey: new Uint8Array(),
             guardNode: guardSnode1,
-            lsrpcEd25519Key: targetNode,
+            destinationSnodeEd25519: targetNode,
             associatedWith,
           });
           throw new Error('Error expected');
@@ -561,11 +605,11 @@ describe('OnionPathsErrors', () => {
     // doing this,
     for (let index = 0; index < 3; index++) {
       try {
-        await processOnionResponse({
+        await Onions.processOnionResponse({
           response: getFakeResponseOnPath(500),
           symmetricKey: new Uint8Array(),
           guardNode,
-          lsrpcEd25519Key: targetNode,
+          destinationSnodeEd25519: targetNode,
           associatedWith,
         });
         throw new Error('Error expected');

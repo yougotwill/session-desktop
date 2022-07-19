@@ -39,7 +39,6 @@ export async function initializeLogger() {
     }
 
     const logFile = path.join(logPath, 'log.log');
-
     logger = Logger.createLogger({
       name: 'log',
       streams: [

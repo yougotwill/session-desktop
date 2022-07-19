@@ -89,8 +89,8 @@ export class MessageQueue {
       });
     } catch (e) {
       window?.log?.warn(
-        `Failed to send message to open group: ${roomInfos.serverUrl}:${roomInfos.roomId}`,
-        e.message
+        `Failed to send message to open group: ${roomInfos.serverUrl}:${roomInfos.roomId}:`,
+        e
       );
       await MessageSentHandler.handleMessageSentFailure(
         message,
@@ -123,7 +123,7 @@ export class MessageQueue {
       });
     } catch (e) {
       window?.log?.warn(
-        `Failed to send message to open group: ${roomInfos.serverUrl}:${roomInfos.roomId}`,
+        `Failed to send message to open group: ${roomInfos.serverUrl}:${roomInfos.roomId}:`,
         e.message
       );
       await MessageSentHandler.handleMessageSentFailure(

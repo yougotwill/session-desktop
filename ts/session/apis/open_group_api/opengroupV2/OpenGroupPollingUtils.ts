@@ -1,10 +1,10 @@
 import { getV2OpenGroupRoomByRoomId, OpenGroupV2Room } from '../../../../data/opengroups';
-import _ from 'lodash';
+import _, { compact } from 'lodash';
 import { OpenGroupMessageV2 } from './OpenGroupMessageV2';
 import { UserUtils } from '../../../utils';
 import { fromHexToArray } from '../../../utils/String';
 import { getSodiumRenderer } from '../../../crypto';
-import { getOpenGroupHeaders } from '../sogsv3/sogsBlinding';
+import { SogsBlinding } from '../sogsv3/sogsBlinding';
 import { getNowWithNetworkOffset } from '../../snode_api/SNodeAPI';
 
 export type OpenGroupRequestHeaders = {
@@ -25,7 +25,7 @@ export type OpenGroupRequestHeaders = {
  * @param body the body of the request we're mkaing
  * @returns object of headers, including X-SOGS and other headers.
  */
-export const getOurOpenGroupHeaders = async (
+const getOurOpenGroupHeaders = async (
   serverPublicKey: string,
   endpoint: string,
   method: string,
@@ -42,7 +42,7 @@ export const getOurOpenGroupHeaders = async (
   const nonce = (await getSodiumRenderer()).randombytes_buf(16);
 
   const timestamp = Math.floor(getNowWithNetworkOffset() / 1000);
-  return getOpenGroupHeaders({
+  return SogsBlinding.getOpenGroupHeaders({
     signingKeys,
     serverPK: fromHexToArray(serverPublicKey),
     nonce,
@@ -58,35 +58,33 @@ export const getOurOpenGroupHeaders = async (
  * This function fetches the valid roomInfos from the database.
  * It also makes sure that the pubkey for all those rooms are the same, or returns null.
  */
-export const getAllValidRoomInfos = async (
+const getAllValidRoomInfos = (
   serverUrl: string,
   rooms: Set<string>
-): Promise<Array<OpenGroupV2Room> | null> => {
+): Array<OpenGroupV2Room> | null => {
   const allServerPubKeys: Array<string> = [];
 
   // fetch all the roomInfos for the specified rooms.
   // those invalid (like, not found in db) are excluded (with lodash compact)
-  const validRoomInfos = _.compact(
-    await Promise.all(
-      [...rooms].map(async roomId => {
-        try {
-          const fetchedInfo = getV2OpenGroupRoomByRoomId({
-            serverUrl,
-            roomId,
-          });
-          if (!fetchedInfo) {
-            window?.log?.warn('Could not find this room getMessages');
-            return null;
-          }
-          allServerPubKeys.push(fetchedInfo.serverPublicKey);
-
-          return fetchedInfo;
-        } catch (e) {
-          window?.log?.warn('failed to fetch roominfos for room', roomId);
+  const validRoomInfos = compact(
+    [...rooms].map(roomId => {
+      try {
+        const fetchedInfo = getV2OpenGroupRoomByRoomId({
+          serverUrl,
+          roomId,
+        });
+        if (!fetchedInfo) {
+          window?.log?.warn('Could not find this room getMessages');
           return null;
         }
-      })
-    )
+        allServerPubKeys.push(fetchedInfo.serverPublicKey);
+
+        return fetchedInfo;
+      } catch (e) {
+        window?.log?.warn('failed to fetch roominfos for room', roomId);
+        return null;
+      }
+    })
   );
   if (!validRoomInfos?.length) {
     return null;
@@ -129,3 +127,5 @@ export type ParsedMemberCount = {
   roomId: string;
   memberCount: number;
 };
+
+export const OpenGroupPollingUtils = { getAllValidRoomInfos, getOurOpenGroupHeaders };
