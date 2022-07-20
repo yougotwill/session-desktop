@@ -75,7 +75,7 @@
     "sass": "rimraf 'dist' && parcel build --target sass --no-autoinstall --no-cache",
     "sass:watch": "rimraf 'dist' && parcel watch --target sass --no-autoinstall --no-cache",
     "parcel-util-worker": "rimraf ts/webworker/workers/util.worker.js && parcel build --target util-worker --no-autoinstall --no-cache",
-    "rebuild-curve25519-js": "cd node_modules/curve25519-js && yarn install && yarn build && cd -"
+    "rebuild-curve25519-js": "cd node_modules/curve25519-js && yarn install && yarn build && cd ../../"
   },
   "dependencies": {
     "@reduxjs/toolkit": "^1.4.0",
