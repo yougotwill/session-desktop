@@ -1,3 +1,4 @@
+import { expect } from 'chai';
 import Sinon from 'sinon';
 import * as DataShape from '../../../../ts/data/data';
 
@@ -67,15 +68,24 @@ export function stubWindow<K extends keyof Window>(fn: K, value: WindowValue<K>)
   };
 }
 
-const enableLogRedirect = true;
+export const enableLogRedirect = false;
 
 export const stubWindowLog = () => {
   stubWindow('log', {
-    // tslint:disable: no-void-expression
-    // tslint:disable: no-console
+    // tslint:disable: no-void-expression no-console
     info: (...args: any) => (enableLogRedirect ? console.info(...args) : {}),
     warn: (...args: any) => (enableLogRedirect ? console.warn(...args) : {}),
     error: (...args: any) => (enableLogRedirect ? console.error(...args) : {}),
     debug: (...args: any) => (enableLogRedirect ? console.debug(...args) : {}),
   });
 };
+
+export async function expectAsyncToThrow(toAwait: () => Promise<any>, errorMessageToCatch: string) {
+  try {
+    await toAwait();
+    throw new Error('fake_error');
+  } catch (e) {
+    expect(e.message).to.not.be.eq('fake_error');
+    expect(e.message).to.be.eq(errorMessageToCatch);
+  }
+}
