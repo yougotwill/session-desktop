@@ -21,7 +21,7 @@ import { SessionFileDropzone } from './SessionFileDropzone';
 import { InConversationCallContainer } from '../calling/InConversationCallContainer';
 import { SplitViewContainer } from '../SplitViewContainer';
 import { LightboxGallery, MediaItemType } from '../lightbox/LightboxGallery';
-import { getLastMessageInConversation, getPubkeysInPublicConversation } from '../../data/data';
+import { Data } from '../../data/data';
 import { getConversationController } from '../../session/conversations';
 import { ToastUtils } from '../../session/utils';
 import {
@@ -279,7 +279,9 @@ export class SessionConversation extends React.Component<Props, State> {
     if (!this.props.selectedConversationKey) {
       return;
     }
-    const mostNowMessage = await getLastMessageInConversation(this.props.selectedConversationKey);
+    const mostNowMessage = await Data.getLastMessageInConversation(
+      this.props.selectedConversationKey
+    );
 
     if (mostNowMessage) {
       await openConversationToSpecificMessage({
@@ -480,7 +482,9 @@ export class SessionConversation extends React.Component<Props, State> {
 
   private async updateMemberListBouncy() {
     const start = Date.now();
-    const allPubKeys = await getPubkeysInPublicConversation(this.props.selectedConversationKey);
+    const allPubKeys = await Data.getPubkeysInPublicConversation(
+      this.props.selectedConversationKey
+    );
 
     window?.log?.debug(
       `[perf] getPubkeysInPublicConversation returned '${

@@ -4,7 +4,6 @@ import chai from 'chai';
 import Sinon, * as sinon from 'sinon';
 import { describe } from 'mocha';
 import { randomBytes } from 'crypto';
-import * as Data from '../../../../../ts/data/data';
 
 import { GroupUtils, PromiseUtils, UserUtils } from '../../../../session/utils';
 import { TestUtils } from '../../../../test/test-utils';
@@ -17,6 +16,7 @@ import { ClosedGroupMessage } from '../../../../session/messages/outgoing/contro
 
 import chaiAsPromised from 'chai-as-promised';
 import { MessageSentHandler } from '../../../../session/sending/MessageSentHandler';
+import { stubData } from '../../../test-utils/utils';
 
 chai.use(chaiAsPromised as any);
 chai.should();
@@ -118,7 +118,7 @@ describe('MessageQueue', () => {
 
     describe('events', () => {
       it('should send a success event if message was sent', done => {
-        Sinon.stub(Data, 'getMessageById').resolves();
+        stubData('getMessageById').resolves();
         const message = TestUtils.generateVisibleMessage();
 
         sendStub.resolves({ effectiveTimestamp: Date.now(), wrappedEnvelope: randomBytes(10) });

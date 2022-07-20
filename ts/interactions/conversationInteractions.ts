@@ -24,14 +24,7 @@ import {
   updateInviteContactModal,
   updateRemoveModeratorsModal,
 } from '../state/ducks/modalDialog';
-import {
-  createOrUpdateItem,
-  getItemById,
-  getMessageById,
-  hasLinkPreviewPopupBeenDisplayed,
-  lastAvatarUploadTimestamp,
-  removeAllMessagesInConversation,
-} from '../data/data';
+import { Data, hasLinkPreviewPopupBeenDisplayed, lastAvatarUploadTimestamp } from '../data/data';
 import { quoteMessage, resetConversationExternal } from '../state/ducks/conversations';
 import { getDecryptedMediaUrl } from '../session/crypto/DecryptedAttachmentsManager';
 import { IMAGE_JPEG } from '../types/MIME';
@@ -318,7 +311,7 @@ export function showChangeNickNameByConvoId(conversationId: string) {
 
 export async function deleteAllMessagesByConvoIdNoConfirmation(conversationId: string) {
   const conversation = getConversationController().get(conversationId);
-  await removeAllMessagesInConversation(conversationId);
+  await Data.removeAllMessagesInConversation(conversationId);
 
   // destroy message keeps the active timestamp set so the
   // conversation still appears on the conversation list but is empty
@@ -456,7 +449,7 @@ export async function uploadOurAvatar(newAvatarDecrypted?: ArrayBuffer) {
     avatarImageId: fileId,
   });
   const newTimestampReupload = Date.now();
-  await createOrUpdateItem({ id: lastAvatarUploadTimestamp, value: newTimestampReupload });
+  await Data.createOrUpdateItem({ id: lastAvatarUploadTimestamp, value: newTimestampReupload });
 
   if (newAvatarDecrypted) {
     await setLastProfileUpdateTimestamp(Date.now());
@@ -469,7 +462,7 @@ export async function uploadOurAvatar(newAvatarDecrypted?: ArrayBuffer) {
 }
 
 export async function replyToMessage(messageId: string) {
-  const quotedMessageModel = await getMessageById(messageId);
+  const quotedMessageModel = await Data.getMessageById(messageId);
   if (!quotedMessageModel) {
     window.log.warn('Failed to find message to reply to');
     return;
@@ -495,7 +488,7 @@ export async function showLinkSharingConfirmationModalDialog(e: any) {
   const pastedText = e.clipboardData.getData('text');
   if (isURL(pastedText) && !window.getSettingValue('link-preview-setting', false)) {
     const alreadyDisplayedPopup =
-      (await getItemById(hasLinkPreviewPopupBeenDisplayed))?.value || false;
+      (await Data.getItemById(hasLinkPreviewPopupBeenDisplayed))?.value || false;
     if (!alreadyDisplayedPopup) {
       window.inboxStore?.dispatch(
         updateConfirmModal({
@@ -508,7 +501,7 @@ export async function showLinkSharingConfirmationModalDialog(e: any) {
             window.setSettingValue('link-preview-setting', true);
           },
           onClickClose: async () => {
-            await createOrUpdateItem({ id: hasLinkPreviewPopupBeenDisplayed, value: true });
+            await Data.createOrUpdateItem({ id: hasLinkPreviewPopupBeenDisplayed, value: true });
           },
         })
       );

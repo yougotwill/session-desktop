@@ -1,5 +1,5 @@
 import _ from 'lodash';
-import { createOrUpdateItem, getItemById, hasSyncedInitialConfigurationItem } from '../data/data';
+import { Data, hasSyncedInitialConfigurationItem } from '../data/data';
 import {
   joinOpenGroupV2WithUIEvents,
   parseOpenGroupV2,
@@ -50,7 +50,7 @@ async function handleGroupsAndContactsFromConfigMessage(
   configMessage: SignalService.ConfigurationMessage
 ) {
   const envelopeTimestamp = _.toNumber(envelope.timestamp);
-  const lastConfigUpdate = await getItemById(hasSyncedInitialConfigurationItem);
+  const lastConfigUpdate = await Data.getItemById(hasSyncedInitialConfigurationItem);
   const lastConfigTimestamp = lastConfigUpdate?.timestamp;
   const isNewerConfig =
     !lastConfigTimestamp || (lastConfigTimestamp && lastConfigTimestamp < envelopeTimestamp);
@@ -60,7 +60,7 @@ async function handleGroupsAndContactsFromConfigMessage(
     return;
   }
 
-  await createOrUpdateItem({
+  await Data.createOrUpdateItem({
     id: 'hasSyncedInitialConfigurationItem',
     value: true,
     timestamp: envelopeTimestamp,

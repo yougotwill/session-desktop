@@ -1,7 +1,7 @@
 import { omit, startsWith } from 'lodash';
 
 import { MessageModel } from '../models/message';
-import { saveMessage } from '../../ts/data/data';
+import { Data } from '../../ts/data/data';
 import { AttachmentDownloads } from '../session/utils';
 import { ConversationModel } from '../models/conversation';
 import { OpenGroupRequestCommonType } from '../session/apis/open_group_api/opengroupV2/ApiUtil';
@@ -257,6 +257,6 @@ export async function queueAttachmentDownloads(
   count += await processQuoteAttachments(message, conversation);
 
   if (count > 0) {
-    await saveMessage(message.attributes);
+    await Data.saveMessage(message.attributes);
   }
 }

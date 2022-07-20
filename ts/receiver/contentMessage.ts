@@ -20,11 +20,7 @@ import { handleCallMessage } from './callMessage';
 import { SettingsKey } from '../data/settings-key';
 import { ReadReceipts } from '../util/readReceipts';
 import { Storage } from '../util/storage';
-import {
-  getMessageBySenderAndTimestamp,
-  getMessagesByConversation,
-  saveMessages,
-} from '../data/data';
+import { Data } from '../data/data';
 import {
   deleteMessagesFromSwarmAndCompletelyLocally,
   deleteMessagesFromSwarmAndMarkAsDeletedLocally,
@@ -555,7 +551,7 @@ async function handleUnsendMessage(envelope: EnvelopePlus, unsendMessage: Signal
 
     return;
   }
-  const messageToDelete = await getMessageBySenderAndTimestamp({
+  const messageToDelete = await Data.getMessageBySenderAndTimestamp({
     source: messageAuthor,
     timestamp: toNumber(timestamp),
   });
@@ -641,7 +637,10 @@ async function handleMessageRequestResponse(
       convosToMerge.map(async convoToMerge =>
         // this call will fetch like 60 messages for each conversation. I don't think we want to merge an unknown number of messages
         // so lets stick to this behavior
-        getMessagesByConversation(convoToMerge.id, { skipTimerInit: undefined, messageId: null })
+        Data.getMessagesByConversation(convoToMerge.id, {
+          skipTimerInit: undefined,
+          messageId: null,
+        })
       )
     );
 
@@ -654,7 +653,7 @@ async function handleMessageRequestResponse(
       }
     });
     // this is based on the messageId as  primary key. So this should overwrite existing messages with new merged data
-    await saveMessages(allMessageModels.map(m => m.attributes));
+    await Data.saveMessages(allMessageModels.map(m => m.attributes));
 
     // tslint:disable-next-line: prefer-for-of
     for (let index = 0; index < convosToMerge.length; index++) {

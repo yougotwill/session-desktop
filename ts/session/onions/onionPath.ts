@@ -1,4 +1,4 @@
-import * as Data from '../../../ts/data/data';
+import { Data, Snode } from '../../../ts/data/data';
 import * as SnodePool from '../apis/snode_api/snodePool';
 import _ from 'lodash';
 import { default as insecureNodeFetch } from 'node-fetch';
@@ -18,7 +18,7 @@ import { OnionPaths } from './';
 import { APPLICATION_JSON } from '../../types/MIME';
 
 const ONION_REQUEST_HOPS = 3;
-export let onionPaths: Array<Array<Data.Snode>> = [];
+export let onionPaths: Array<Array<Snode>> = [];
 
 /**
  * Used for testing only
@@ -62,7 +62,7 @@ const pathFailureThreshold = 3;
 // This array is meant to store nodes will full info,
 // so using GuardNode would not be correct (there is
 // some naming issue here it seems)
-export let guardNodes: Array<Data.Snode> = [];
+export let guardNodes: Array<Snode> = [];
 
 export const ed25519Str = (ed25519Key: string) => `(...${ed25519Key.substr(58)})`;
 
@@ -126,11 +126,7 @@ export async function dropSnodeFromPath(snodeEd25519: string) {
   onionPaths[pathWithSnodeIndex] = pathtoPatchUp;
 }
 
-export async function getOnionPath({
-  toExclude,
-}: {
-  toExclude?: Data.Snode;
-}): Promise<Array<Data.Snode>> {
+export async function getOnionPath({ toExclude }: { toExclude?: Snode }): Promise<Array<Snode>> {
   let attemptNumber = 0;
 
   // the buildNewOnionPathsOneAtATime will try to fetch from seed if it needs more snodes
@@ -271,13 +267,13 @@ async function dropPathStartingWithGuardNode(guardNodeEd25519: string) {
   await buildNewOnionPathsOneAtATime();
 }
 
-async function internalUpdateGuardNodes(updatedGuardNodes: Array<Data.Snode>) {
+async function internalUpdateGuardNodes(updatedGuardNodes: Array<Snode>) {
   const edKeys = updatedGuardNodes.map(n => n.pubkey_ed25519);
 
   await Data.updateGuardNodes(edKeys);
 }
 
-export async function testGuardNode(snode: Data.Snode) {
+export async function testGuardNode(snode: Snode) {
   window?.log?.info(`Testing a candidate guard node ${ed25519Str(snode.pubkey_ed25519)}`);
 
   // Send a post request and make sure it is OK
@@ -339,7 +335,7 @@ export async function testGuardNode(snode: Data.Snode) {
  * Only exported for testing purpose.
  * If the random snode p
  */
-export async function selectGuardNodes(): Promise<Array<Data.Snode>> {
+export async function selectGuardNodes(): Promise<Array<Snode>> {
   // `getSnodePoolFromDBOrFetchFromSeed` does not refetch stuff. It just throws.
   // this is to avoid having circular dependencies of path building, needing new snodes, which needs new paths building...
   const nodePool = await SnodePool.getSnodePoolFromDBOrFetchFromSeed();
@@ -356,7 +352,7 @@ export async function selectGuardNodes(): Promise<Array<Data.Snode>> {
 
   const shuffled = _.shuffle(nodePool);
 
-  let selectedGuardNodes: Array<Data.Snode> = [];
+  let selectedGuardNodes: Array<Snode> = [];
 
   let attempts = 0;
 
@@ -386,7 +382,7 @@ export async function selectGuardNodes(): Promise<Array<Data.Snode>> {
 
     const goodNodes = _.zip(idxOk, candidateNodes)
       .filter(x => x[0])
-      .map(x => x[1]) as Array<Data.Snode>;
+      .map(x => x[1]) as Array<Snode>;
 
     selectedGuardNodes = _.concat(selectedGuardNodes, goodNodes);
     attempts++;
@@ -474,7 +470,7 @@ async function buildNewOnionPathsWorker() {
       });
       const oneNodeForEachSubnet24KeepingRatio = _.flatten(
         _.map(allNodesGroupedBySubnet24, group => {
-          return _.fill(Array(group.length), _.sample(group) as Data.Snode);
+          return _.fill(Array(group.length), _.sample(group) as Snode);
         })
       );
       if (oneNodeForEachSubnet24KeepingRatio.length <= SnodePool.minSnodePoolCount) {
@@ -503,7 +499,7 @@ async function buildNewOnionPathsWorker() {
       for (let i = 0; i < maxPath; i += 1) {
         const path = [guards[i]];
         for (let j = 0; j < nodesNeededPerPaths; j += 1) {
-          const randomWinner = _.sample(otherNodes) as Data.Snode;
+          const randomWinner = _.sample(otherNodes) as Snode;
           otherNodes = otherNodes.filter(n => {
             return n.pubkey_ed25519 !== randomWinner?.pubkey_ed25519;
           });

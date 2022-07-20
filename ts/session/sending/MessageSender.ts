@@ -15,7 +15,7 @@ import { getNowWithNetworkOffset, storeOnNode } from '../apis/snode_api/SNodeAPI
 import { getSwarmFor } from '../apis/snode_api/snodePool';
 import { firstTrue } from '../utils/Promise';
 import { MessageSender } from '.';
-import { getMessageById, Snode } from '../../../ts/data/data';
+import { Data, Snode } from '../../../ts/data/data';
 import { getConversationController } from '../conversations';
 import { ed25519Str } from '../onions/onionPath';
 import { EmptySwarmError } from '../utils/errors';
@@ -104,7 +104,7 @@ export async function send(
       // make sure to update the local sent_at timestamp, because sometimes, we will get the just pushed message in the receiver side
       // before we return from the await below.
       // and the isDuplicate messages relies on sent_at timestamp to be valid.
-      const found = await getMessageById(message.identifier);
+      const found = await Data.getMessageById(message.identifier);
 
       // make sure to not update the sent timestamp if this a currently syncing message
       if (found && !found.get('sentSync')) {
@@ -212,7 +212,7 @@ export async function sendMessageToSnode(
 
   // If message also has a sync message, save that hash. Otherwise save the hash from the regular message send i.e. only closed groups in this case.
   if (messageId && (isSyncMessage || isClosedGroup) && successfulSendHash) {
-    const message = await getMessageById(messageId);
+    const message = await Data.getMessageById(messageId);
     if (message) {
       await message.updateMessageHash(successfulSendHash);
       await message.commit();

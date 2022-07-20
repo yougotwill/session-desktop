@@ -1,6 +1,6 @@
 import { expect } from 'chai';
 import Sinon from 'sinon';
-import * as DataShape from '../../../../ts/data/data';
+import { Data, Data as DataShape } from '../../../../ts/data/data';
 
 import * as utilWorker from '../../../webworker/workers/util_worker_interface';
 
@@ -9,8 +9,6 @@ const globalAny: any = global;
 // We have to do this in a weird way because Data uses module.exports
 //  which doesn't play well with sinon or ImportMock
 // tslint:disable: no-require-imports no-var-requires
-const Data = require('../../../../ts/data/data');
-const DataItem = require('../../../../ts/data/channelsItem');
 type DataFunction = typeof DataShape;
 
 /**
@@ -21,10 +19,6 @@ type DataFunction = typeof DataShape;
  */
 export function stubData<K extends keyof DataFunction>(fn: K): sinon.SinonStub {
   return Sinon.stub(Data, fn);
-}
-
-export function stubDataItem<K extends keyof DataFunction>(fn: K): sinon.SinonStub {
-  return Sinon.stub(DataItem, fn);
 }
 
 export function stubUtilWorker(fnName: string, returnedValue: any): sinon.SinonStub {

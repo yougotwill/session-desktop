@@ -12,12 +12,7 @@ import {
 } from '../session/crypto';
 import { getMessageQueue } from '../session';
 import { decryptWithSessionProtocol } from './contentMessage';
-import {
-  addClosedGroupEncryptionKeyPair,
-  getAllEncryptionKeyPairsForGroup,
-  getLatestClosedGroupEncryptionKeyPair,
-  removeAllClosedGroupEncryptionKeyPairs,
-} from '../../ts/data/data';
+import { Data } from '../../ts/data/data';
 import {
   ClosedGroupNewMessage,
   ClosedGroupNewMessageParams,
@@ -47,7 +42,7 @@ export async function getAllCachedECKeyPair(groupPubKey: string) {
   let keyPairsFound = cacheOfClosedGroupKeyPairs.get(groupPubKey);
 
   if (!keyPairsFound || keyPairsFound.length === 0) {
-    keyPairsFound = (await getAllEncryptionKeyPairsForGroup(groupPubKey)) || [];
+    keyPairsFound = (await Data.getAllEncryptionKeyPairsForGroup(groupPubKey)) || [];
     cacheOfClosedGroupKeyPairs.set(groupPubKey, keyPairsFound);
   }
 
@@ -72,7 +67,7 @@ export async function addKeyPairToCacheAndDBIfNeeded(
     return false;
   }
 
-  await addClosedGroupEncryptionKeyPair(groupPubKey, keyPair);
+  await Data.addClosedGroupEncryptionKeyPair(groupPubKey, keyPair);
 
   if (!cacheOfClosedGroupKeyPairs.has(groupPubKey)) {
     cacheOfClosedGroupKeyPairs.set(groupPubKey, []);
@@ -83,7 +78,7 @@ export async function addKeyPairToCacheAndDBIfNeeded(
 
 export async function innerRemoveAllClosedGroupEncryptionKeyPairs(groupPubKey: string) {
   cacheOfClosedGroupKeyPairs.set(groupPubKey, []);
-  await removeAllClosedGroupEncryptionKeyPairs(groupPubKey);
+  await Data.removeAllClosedGroupEncryptionKeyPairs(groupPubKey);
 }
 
 export async function handleClosedGroupControlMessage(
@@ -881,7 +876,7 @@ async function sendLatestKeyPairToUsers(
   const inMemoryKeyPair = distributingClosedGroupEncryptionKeyPairs.get(groupPubKey);
 
   // Get the latest encryption key pair
-  const latestKeyPair = await getLatestClosedGroupEncryptionKeyPair(groupPubKey);
+  const latestKeyPair = await Data.getLatestClosedGroupEncryptionKeyPair(groupPubKey);
   if (!inMemoryKeyPair && !latestKeyPair) {
     window?.log?.info('We do not have the keypair ourself, so dropping this message.');
     return;

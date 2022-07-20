@@ -5,12 +5,12 @@ import _ from 'lodash';
 
 import tls from 'tls';
 import { sha256 } from '../../crypto';
-import * as Data from '../../../data/data';
 import pRetry from 'p-retry';
 import { SeedNodeAPI } from '.';
 import { allowOnlyOneAtATime } from '../../utils/Promise';
 import { APPLICATION_JSON } from '../../../types/MIME';
 import { isLinux } from '../../../OS';
+import { Snode } from '../../../data/data';
 
 // tslint:disable: function-name
 
@@ -21,7 +21,7 @@ import { isLinux } from '../../../OS';
  */
 export async function fetchSnodePoolFromSeedNodeWithRetries(
   seedNodes: Array<string>
-): Promise<Array<Data.Snode>> {
+): Promise<Array<Snode>> {
   try {
     window?.log?.info(`fetchSnodePoolFromSeedNode with seedNodes.length ${seedNodes.length}`);
 

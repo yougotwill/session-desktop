@@ -7,7 +7,6 @@ import { MessageEncrypter } from '../../../../session/crypto';
 import { SignalService } from '../../../../protobuf';
 import { PubKey, RawMessage } from '../../../../session/types';
 import { MessageUtils, UserUtils } from '../../../../session/utils';
-import * as Data from '../../../../../ts/data/data';
 import { SNodeAPI } from '../../../../session/apis/snode_api';
 import _ from 'lodash';
 import { OpenGroupPollingUtils } from '../../../../session/apis/open_group_api/opengroupV2/OpenGroupPollingUtils';
@@ -37,7 +36,7 @@ describe('MessageSender', () => {
     beforeEach(() => {
       sessionMessageAPISendStub = Sinon.stub(MessageSender, 'sendMessageToSnode').resolves();
 
-      Sinon.stub(Data, 'getMessageById').resolves();
+      stubData('getMessageById').resolves();
 
       encryptStub = Sinon.stub(MessageEncrypter, 'encrypt').resolves({
         envelopeType: SignalService.Envelope.Type.SESSION_MESSAGE,

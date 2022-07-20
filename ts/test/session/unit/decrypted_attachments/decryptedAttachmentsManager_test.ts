@@ -53,7 +53,7 @@ describe('DecryptedAttachmentsManager', () => {
         readFileContent = Sinon.stub(DecryptedAttachmentsManager, 'readFileContent').resolves(
           Buffer.from('this is a test')
         );
-        getItemById = TestUtils.stubDataItem('getItemById')
+        getItemById = TestUtils.stubData('getItemById')
           .withArgs('local_attachment_encrypted_key')
           .callsFake(async () => {
             return { value: 'dfdf' };

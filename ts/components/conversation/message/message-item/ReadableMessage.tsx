@@ -2,7 +2,7 @@ import { debounce, noop } from 'lodash';
 import React, { useCallback, useContext, useLayoutEffect, useState } from 'react';
 import { InView } from 'react-intersection-observer';
 import { useDispatch, useSelector } from 'react-redux';
-import { getMessageById } from '../../../../data/data';
+import { Data } from '../../../../data/data';
 import { getConversationController } from '../../../../session/conversations';
 import {
   fetchBottomMessagesForConversation,
@@ -141,7 +141,7 @@ export const ReadableMessage = (props: ReadableMessageProps) => {
         isAppFocused
       ) {
         if (shouldMarkReadWhenVisible) {
-          const found = await getMessageById(messageId);
+          const found = await Data.getMessageById(messageId);
 
           if (found && Boolean(found.get('unread'))) {
             const foundReceivedAt = found.get('received_at');

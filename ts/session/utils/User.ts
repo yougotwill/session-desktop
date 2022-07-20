@@ -1,6 +1,6 @@
 import _ from 'lodash';
 import { UserUtils } from '.';
-import { getItemById } from '../../../ts/data/data';
+import { Data } from '../../../ts/data/data';
 import { PubKey } from '../types';
 import { fromHexToArray, toHex } from './String';
 import { getConversationController } from '../conversations';
@@ -62,7 +62,7 @@ export async function getIdentityKeyPair(): Promise<SessionKeyPair | undefined> 
   if (cachedIdentityKeyPair) {
     return cachedIdentityKeyPair;
   }
-  const item = await getItemById('identityKey');
+  const item = await Data.getItemById('identityKey');
 
   cachedIdentityKeyPair = item?.value;
   return cachedIdentityKeyPair;

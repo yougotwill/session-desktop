@@ -5,7 +5,7 @@ import _ from 'lodash';
 import { fromHexToArray, toHex } from '../utils/String';
 import { BlockedNumberController } from '../../util/blockedNumberController';
 import { getConversationController } from '../conversations';
-import { getLatestClosedGroupEncryptionKeyPair } from '../../data/data';
+import { Data } from '../../data/data';
 import { v4 as uuidv4 } from 'uuid';
 import { SignalService } from '../../protobuf';
 import { generateCurve25519KeyPairWithoutPrefix } from '../crypto';
@@ -361,7 +361,7 @@ async function sendAddedMembers(
   const admins = groupUpdate.admins || [];
 
   // Check preconditions
-  const hexEncryptionKeyPair = await getLatestClosedGroupEncryptionKeyPair(groupId);
+  const hexEncryptionKeyPair = await Data.getLatestClosedGroupEncryptionKeyPair(groupId);
   if (!hexEncryptionKeyPair) {
     throw new Error("Couldn't get key pair for closed group");
   }

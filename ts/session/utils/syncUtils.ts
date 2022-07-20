@@ -1,8 +1,4 @@
-import {
-  createOrUpdateItem,
-  getItemById,
-  getLatestClosedGroupEncryptionKeyPair,
-} from '../../../ts/data/data';
+import { Data } from '../../../ts/data/data';
 import { getMessageQueue } from '..';
 import { getConversationController } from '../conversations';
 import { v4 as uuidv4 } from 'uuid';
@@ -34,10 +30,10 @@ import { PubKey } from '../types';
 const ITEM_ID_LAST_SYNC_TIMESTAMP = 'lastSyncedTimestamp';
 
 const getLastSyncTimestampFromDb = async (): Promise<number | undefined> =>
-  (await getItemById(ITEM_ID_LAST_SYNC_TIMESTAMP))?.value;
+  (await Data.getItemById(ITEM_ID_LAST_SYNC_TIMESTAMP))?.value;
 
 const writeLastSyncTimestampToDb = async (timestamp: number) =>
-  createOrUpdateItem({ id: ITEM_ID_LAST_SYNC_TIMESTAMP, value: timestamp });
+  Data.createOrUpdateItem({ id: ITEM_ID_LAST_SYNC_TIMESTAMP, value: timestamp });
 
 /**
  * Conditionally Syncs user configuration with other devices linked.
@@ -137,7 +133,7 @@ const getValidClosedGroups = async (convos: Array<ConversationModel>) => {
   const closedGroups = await Promise.all(
     closedGroupModels.map(async c => {
       const groupPubKey = c.get('id');
-      const fetchEncryptionKeyPair = await getLatestClosedGroupEncryptionKeyPair(groupPubKey);
+      const fetchEncryptionKeyPair = await Data.getLatestClosedGroupEncryptionKeyPair(groupPubKey);
       if (!fetchEncryptionKeyPair) {
         return null;
       }

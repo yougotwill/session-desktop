@@ -25,7 +25,7 @@ import {
 } from './messageType';
 
 import autoBind from 'auto-bind';
-import { getFirstUnreadMessageWithMention, saveMessage } from '../../ts/data/data';
+import { Data } from '../../ts/data/data';
 import { ConversationModel } from './conversation';
 import {
   FindAndFormatContactType,
@@ -1066,7 +1066,7 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
 
     perfStart(`messageCommit-${this.attributes.id}`);
     // because the saving to db calls _cleanData which mutates the field for cleaning, we need to save a copy
-    const id = await saveMessage(_.cloneDeep(this.attributes));
+    const id = await Data.saveMessage(_.cloneDeep(this.attributes));
     if (triggerUIUpdate) {
       this.dispatchMessageUpdate();
     }
@@ -1088,7 +1088,7 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
       const unreadCount = await convo.getUnreadCount();
       const usInThatConversation =
         getUsBlindedInThatServer(convo) || UserUtils.getOurPubKeyStrFromCache();
-      const nextMentionedUs = await getFirstUnreadMessageWithMention(
+      const nextMentionedUs = await Data.getFirstUnreadMessageWithMention(
         convo.id,
         usInThatConversation
       );

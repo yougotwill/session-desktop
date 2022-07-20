@@ -1,6 +1,7 @@
 // tslint:disable: no-implicit-dependencies max-func-body-length no-unused-expression
 import { expect } from 'chai';
 import Sinon from 'sinon';
+import { ConversationCollection } from '../../../../models/conversation';
 import { ConversationTypeEnum } from '../../../../models/conversationAttributes';
 import { getSodiumNode } from '../../../../node/sodiumNode';
 import {
@@ -22,12 +23,7 @@ import {
 import { getConversationController } from '../../../../session/conversations';
 import { LibSodiumWrappers } from '../../../../session/crypto';
 import { UserUtils } from '../../../../session/utils';
-import {
-  expectAsyncToThrow,
-  stubData,
-  stubDataItem,
-  stubWindowLog,
-} from '../../../test-utils/utils';
+import { expectAsyncToThrow, stubData, stubWindowLog } from '../../../test-utils/utils';
 // import chaiAsPromised from 'chai-as-promised';
 // chai.use(chaiAsPromised as any);
 // tslint:disable: chai-vague-errors
@@ -49,8 +45,8 @@ describe('knownBlindedKeys', () => {
   let createOrUpdateItem: Sinon.SinonStub;
   let sodium: LibSodiumWrappers;
   beforeEach(async () => {
-    getItemById = stubDataItem('getItemById');
-    createOrUpdateItem = stubDataItem('createOrUpdateItem');
+    getItemById = stubData('getItemById');
+    createOrUpdateItem = stubData('createOrUpdateItem');
     TEST_resetCachedBlindedKeys();
     stubWindowLog();
     sodium = await getSodiumNode();
@@ -487,6 +483,9 @@ describe('knownBlindedKeys', () => {
     describe('when not in cache', () => {
       beforeEach(async () => {
         getConversationController().reset();
+
+        stubData('getAllConversations').resolves(new ConversationCollection([]));
+        stubData('saveConversation').resolves();
         await getConversationController().load();
       });
 
@@ -511,8 +510,6 @@ describe('knownBlindedKeys', () => {
       it('does iterate over all the conversations and find the first one matching (passes)', async () => {
         getItemById.resolves();
         await loadKnownBlindedKeys();
-        stubData('getAllConversations').resolves();
-        stubDataItem('getAllConversations').resolves();
 
         // await addCachedBlindedKey({
         //   blindedId: knownBlindingMatch.blindedId,

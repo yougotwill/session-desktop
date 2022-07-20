@@ -9,7 +9,7 @@ import { isEmpty, isFinite, noop, omit, toNumber } from 'lodash';
 import { StringUtils, UserUtils } from '../session/utils';
 import { getConversationController } from '../session/conversations';
 import { handleClosedGroupControlMessage } from './closedGroups';
-import { getMessageBySenderAndSentAt } from '../../ts/data/data';
+import { Data } from '../../ts/data/data';
 import { ConversationModel } from '../models/conversation';
 
 import {
@@ -262,7 +262,7 @@ export async function isSwarmMessageDuplicate({
   sentAt: number;
 }) {
   try {
-    const result = await getMessageBySenderAndSentAt({
+    const result = await Data.getMessageBySenderAndSentAt({
       source,
       sentAt,
     });

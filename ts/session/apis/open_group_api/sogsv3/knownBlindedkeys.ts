@@ -4,7 +4,7 @@ import { getConversationController } from '../../../conversations';
 import { LibSodiumWrappers } from '../../../crypto';
 import { KeyPrefixType, PubKey } from '../../../types';
 import { crypto_sign_curve25519_pk_to_ed25519 } from 'curve25519-js';
-import { createOrUpdateItem, getItemById } from '../../../../data/channelsItem';
+import { Data } from '../../../../data/data';
 import { combineKeys, generateBlindingFactor } from '../../../utils/SodiumUtils';
 import { getAllOpengroupsServerPubkeys, getV2OpenGroupRoom } from '../../../../data/opengroups';
 import { ConversationModel } from '../../../../models/conversation';
@@ -43,7 +43,7 @@ export async function loadKnownBlindedKeys() {
   if (cachedKnownMapping !== null) {
     throw new Error('loadKnownBlindedKeys must only be called once');
   }
-  const fromDb = await getItemById(KNOWN_BLINDED_KEYS_ITEM);
+  const fromDb = await Data.getItemById(KNOWN_BLINDED_KEYS_ITEM);
 
   if (fromDb && fromDb.value && !isEmpty(fromDb.value)) {
     try {
@@ -66,7 +66,7 @@ export async function loadKnownBlindedKeys() {
  */
 export async function writeKnownBlindedKeys() {
   if (cachedKnownMapping && cachedKnownMapping.length) {
-    await createOrUpdateItem({
+    await Data.createOrUpdateItem({
       id: KNOWN_BLINDED_KEYS_ITEM,
       value: JSON.stringify(cachedKnownMapping),
     });

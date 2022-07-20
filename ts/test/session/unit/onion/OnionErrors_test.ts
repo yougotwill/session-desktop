@@ -15,11 +15,10 @@ import {
   OXEN_SERVER_ERROR,
 } from '../../../../session/apis/snode_api/onions';
 import AbortController from 'abort-controller';
-import * as Data from '../../../../../ts/data/data';
-import * as DataItem from '../../../../../ts/data/channelsItem';
+import { Snode, SNODE_POOL_ITEM_ID } from '../../../../../ts/data/data';
 import { pathFailureCount } from '../../../../session/onions/onionPath';
 import { SeedNodeAPI } from '../../../../session/apis/seed_node_api';
-import { generateFakeSnodeWithEdKey } from '../../../test-utils/utils';
+import { generateFakeSnodeWithEdKey, stubData } from '../../../test-utils/utils';
 
 chai.use(chaiAsPromised as any);
 chai.should();
@@ -56,14 +55,14 @@ describe('OnionPathsErrors', () => {
   // tslint:disable-next-line: one-variable-per-declaration
   let guardPubkeys: Array<string>,
     otherNodesPubkeys: Array<string>,
-    guardNodesArray: Array<Data.Snode>,
-    guardSnode1: Data.Snode,
-    otherNodesArray: Array<Data.Snode>,
-    fakeSnodePool: Array<Data.Snode>,
+    guardNodesArray: Array<Snode>,
+    guardSnode1: Snode,
+    otherNodesArray: Array<Snode>,
+    fakeSnodePool: Array<Snode>,
     associatedWith: string,
     fakeSwarmForAssociatedWith: Array<string>;
 
-  let oldOnionPaths: Array<Array<Data.Snode>>;
+  let oldOnionPaths: Array<Array<Snode>>;
 
   beforeEach(async () => {
     TestUtils.stubWindowLog();
@@ -92,15 +91,13 @@ describe('OnionPathsErrors', () => {
     ]);
     TestUtils.stubWindow('getSeedNodeList', () => ['seednode1']);
     Sinon.stub(SeedNodeAPI, 'fetchSnodePoolFromSeedNodeWithRetries').resolves(fakeSnodePool);
-    Sinon.stub(Data, 'getSwarmNodesForPubkey').resolves(fakeSwarmForAssociatedWith);
-    updateGuardNodesStub = Sinon.stub(Data, 'updateGuardNodes').resolves();
+    stubData('getSwarmNodesForPubkey').resolves(fakeSwarmForAssociatedWith);
+    updateGuardNodesStub = stubData('updateGuardNodes').resolves();
 
     // those are still doing what they do, but we spy on their executation
-    updateSwarmSpy = Sinon.stub(Data, 'updateSwarmNodesForPubkey').resolves();
-    Sinon.stub(DataItem, 'getItemById')
-      .withArgs(Data.SNODE_POOL_ITEM_ID)
-      .resolves({ id: Data.SNODE_POOL_ITEM_ID, value: '' });
-    Sinon.stub(DataItem, 'createOrUpdateItem').resolves();
+    updateSwarmSpy = stubData('updateSwarmNodesForPubkey').resolves();
+    stubData('getItemById').resolves({ id: SNODE_POOL_ITEM_ID, value: '' });
+    stubData('createOrUpdateItem').resolves();
     dropSnodeFromSnodePool = Sinon.spy(SNodeAPI.SnodePool, 'dropSnodeFromSnodePool');
     dropSnodeFromSwarmIfNeededSpy = Sinon.spy(SNodeAPI.SnodePool, 'dropSnodeFromSwarmIfNeeded');
     dropSnodeFromPathSpy = Sinon.spy(OnionPaths, 'dropSnodeFromPath');
@@ -318,7 +315,7 @@ describe('OnionPathsErrors', () => {
         it('throws a non-retryable error we get a 421 status code with a new swarm', async () => {
           const targetNode = otherNodesPubkeys[0];
 
-          const resultExpected: Array<Data.Snode> = [
+          const resultExpected: Array<Snode> = [
             otherNodesArray[4],
             otherNodesArray[5],
             otherNodesArray[6],

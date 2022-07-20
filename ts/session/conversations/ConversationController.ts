@@ -1,4 +1,4 @@
-import * as Data from '../../data/data';
+import { Data } from '../../data/data';
 import { ConversationCollection, ConversationModel } from '../../models/conversation';
 import { BlockedNumberController } from '../../util';
 import { getSwarmFor } from '../apis/snode_api/snodePool';

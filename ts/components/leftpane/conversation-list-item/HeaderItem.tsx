@@ -2,7 +2,7 @@ import classNames from 'classnames';
 import React, { useCallback, useContext } from 'react';
 import { useSelector } from 'react-redux';
 import styled from 'styled-components';
-import { getFirstUnreadMessageWithMention } from '../../../data/data';
+import { Data } from '../../../data/data';
 import { useConversationPropsById, useIsPinned } from '../../../hooks/useParamSelector';
 import { getUsBlindedInThatServer } from '../../../session/apis/open_group_api/sogsv3/knownBlindedkeys';
 import { UserUtils } from '../../../session/utils';
@@ -128,7 +128,8 @@ export const ConversationListItemHeaderItem = () => {
           getUsBlindedInThatServer(conversationId) || UserUtils.getOurPubKeyStrFromCache();
 
         const oldestMessageUnreadWithMention =
-          (await getFirstUnreadMessageWithMention(conversationId, usInThatConversation)) || null;
+          (await Data.getFirstUnreadMessageWithMention(conversationId, usInThatConversation)) ||
+          null;
         if (oldestMessageUnreadWithMention) {
           await openConversationToSpecificMessage({
             conversationKey: conversationId,

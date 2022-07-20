@@ -1,12 +1,6 @@
 import { createAsyncThunk, createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { getConversationController } from '../../session/conversations';
-import {
-  getFirstUnreadMessageIdInConversation,
-  getLastMessageIdInConversation,
-  getLastMessageInConversation,
-  getMessagesByConversation,
-  getOldestMessageInConversation,
-} from '../../data/data';
+import { Data } from '../../data/data';
 import {
   MessageDeliveryStatus,
   MessageModelType,
@@ -346,7 +340,7 @@ async function getMessages({
     return [];
   }
 
-  const messageSet = await getMessagesByConversation(conversationKey, {
+  const messageSet = await Data.getMessagesByConversation(conversationKey, {
     messageId,
   });
 
@@ -379,7 +373,7 @@ export const fetchTopMessagesForConversation = createAsyncThunk(
     oldTopMessageId: string | null;
   }): Promise<FetchedTopMessageResults> => {
     // no need to load more top if we are already at the top
-    const oldestMessage = await getOldestMessageInConversation(conversationKey);
+    const oldestMessage = await Data.getOldestMessageInConversation(conversationKey);
 
     if (!oldestMessage || oldestMessage.id === oldTopMessageId) {
       window.log.info('fetchTopMessagesForConversation: we are already at the top');
@@ -415,7 +409,7 @@ export const fetchBottomMessagesForConversation = createAsyncThunk(
     oldBottomMessageId: string | null;
   }): Promise<FetchedBottomMessageResults> => {
     // no need to load more bottom if we are already at the bottom
-    const mostRecentMessage = await getLastMessageInConversation(conversationKey);
+    const mostRecentMessage = await Data.getLastMessageInConversation(conversationKey);
 
     if (!mostRecentMessage || mostRecentMessage.id === oldBottomMessageId) {
       window.log.info('fetchBottomMessagesForConversation: we are already at the bottom');
@@ -980,8 +974,8 @@ export async function openConversationWithMessages(args: {
   messageId: string | null;
 }) {
   const { conversationKey, messageId } = args;
-  const firstUnreadIdOnOpen = await getFirstUnreadMessageIdInConversation(conversationKey);
-  const mostRecentMessageIdOnOpen = await getLastMessageIdInConversation(conversationKey);
+  const firstUnreadIdOnOpen = await Data.getFirstUnreadMessageIdInConversation(conversationKey);
+  const mostRecentMessageIdOnOpen = await Data.getLastMessageIdInConversation(conversationKey);
 
   const initialMessages = await getMessages({
     conversationKey,
@@ -1010,7 +1004,7 @@ export async function openConversationToSpecificMessage(args: {
     messageId: messageIdToNavigateTo,
   });
 
-  const mostRecentMessageIdOnOpen = await getLastMessageIdInConversation(conversationKey);
+  const mostRecentMessageIdOnOpen = await Data.getLastMessageIdInConversation(conversationKey);
 
   // we do not care about the firstunread message id when opening to a specific message
   window.inboxStore?.dispatch(

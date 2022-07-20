@@ -5,7 +5,7 @@ import _ from 'lodash';
 import { getConversationController } from '../session/conversations';
 import { ConversationModel } from '../models/conversation';
 import { MessageModel, sliceQuoteText } from '../models/message';
-import { getMessageCountByType, getMessagesBySentAt } from '../../ts/data/data';
+import { Data } from '../../ts/data/data';
 
 import { SignalService } from '../protobuf';
 import { UserUtils } from '../session/utils';
@@ -51,7 +51,7 @@ async function copyFromQuotedMessage(
   // We always look for the quote by sentAt timestamp, for opengroups, closed groups and session chats
   // this will return an array of sent message by id we have locally.
 
-  const collection = await getMessagesBySentAt(id);
+  const collection = await Data.getMessagesBySentAt(id);
   // we now must make sure this is the sender we expect
   const found = collection.find(message => {
     return Boolean(author === message.get('source'));
@@ -248,7 +248,7 @@ async function handleRegularMessage(
   if (type === 'incoming') {
     if (conversation.isPrivate()) {
       updateReadStatus(message);
-      const incomingMessageCount = await getMessageCountByType(
+      const incomingMessageCount = await Data.getMessageCountByType(
         conversation.id,
         MessageDirection.incoming
       );

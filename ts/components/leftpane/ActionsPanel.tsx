@@ -3,8 +3,7 @@ import { getConversationController } from '../../session/conversations';
 import { syncConfigurationIfNeeded } from '../../session/utils/syncUtils';
 
 import {
-  generateAttachmentKeyIfEmpty,
-  getItemById,
+  Data,
   hasSyncedInitialConfigurationItem,
   lastAvatarUploadTimestamp,
 } from '../../data/data';
@@ -197,14 +196,14 @@ const triggerSyncIfNeeded = async () => {
     .get(UserUtils.getOurPubKeyStrFromCache())
     .setIsApproved(true, true);
   const didWeHandleAConfigurationMessageAlready =
-    (await getItemById(hasSyncedInitialConfigurationItem))?.value || false;
+    (await Data.getItemById(hasSyncedInitialConfigurationItem))?.value || false;
   if (didWeHandleAConfigurationMessageAlready) {
     await syncConfigurationIfNeeded();
   }
 };
 
 const triggerAvatarReUploadIfNeeded = async () => {
-  const lastTimeStampAvatarUpload = (await getItemById(lastAvatarUploadTimestamp))?.value || 0;
+  const lastTimeStampAvatarUpload = (await Data.getItemById(lastAvatarUploadTimestamp))?.value || 0;
 
   if (Date.now() - lastTimeStampAvatarUpload > DURATION.DAYS * 14) {
     window.log.info('Reuploading avatar...');
@@ -223,7 +222,7 @@ const doAppStartUp = () => {
 
   void setupTheme();
   // this generates the key to encrypt attachments locally
-  void generateAttachmentKeyIfEmpty();
+  void Data.generateAttachmentKeyIfEmpty();
   void getOpenGroupManager().startPolling();
   // trigger a sync message if needed for our other devices
 

@@ -36,7 +36,7 @@ import { getSodiumRenderer } from '../../../crypto';
 import { handleOutboxMessageModel } from '../../../../receiver/dataMessage';
 import { ConversationTypeEnum } from '../../../../models/conversationAttributes';
 import { createSwarmMessageSentFromUs } from '../../../../models/messageFactory';
-import { getMessageIdsFromServerIds, removeMessage } from '../../../../data/data';
+import { Data } from '../../../../data/data';
 
 /**
  * Get the convo matching those criteria and make sure it is an opengroup convo, or return null.
@@ -155,14 +155,14 @@ const handleSogsV3DeletedMessages = async (
   try {
     const convoId = getOpenGroupV2ConversationId(serverUrl, roomId);
     const convo = getConversationController().get(convoId);
-    const messageIds = await getMessageIdsFromServerIds(allIdsRemoved, convo.id);
+    const messageIds = await Data.getMessageIdsFromServerIds(allIdsRemoved, convo.id);
 
     await Promise.all(
       (messageIds || []).map(async id => {
         if (convo) {
           await convo.removeMessage(id);
         }
-        await removeMessage(id);
+        await Data.removeMessage(id);
       })
     );
     //

@@ -3,14 +3,7 @@ import { filter, isNumber, omit } from 'lodash';
 import { v4 as uuidv4 } from 'uuid';
 
 import * as Constants from '../constants';
-import {
-  getMessageById,
-  getNextAttachmentDownloadJobs,
-  removeAttachmentDownloadJob,
-  resetAttachmentDownloadPending,
-  saveAttachmentDownloadJob,
-  setAttachmentDownloadJobPending,
-} from '../../../ts/data/data';
+import { Data } from '../../../ts/data/data';
 import { MessageModel } from '../../models/message';
 import { downloadAttachment, downloadAttachmentSogsV3 } from '../../receiver/attachments';
 import { initializeAttachmentLogic, processNewAttachment } from '../../types/MessageAttachment';
@@ -42,7 +35,7 @@ export async function start(options: any = {}) {
   }
 
   enabled = true;
-  await resetAttachmentDownloadPending();
+  await Data.resetAttachmentDownloadPending();
 
   void _tick();
 }
@@ -82,7 +75,7 @@ export async function addJob(attachment: any, job: any = {}) {
     attempts: 0,
   };
 
-  await saveAttachmentDownloadJob(toSave);
+  await Data.saveAttachmentDownloadJob(toSave);
 
   void _maybeStartJob();
 
@@ -109,7 +102,7 @@ async function _maybeStartJob() {
     return;
   }
 
-  const nextJobs = await getNextAttachmentDownloadJobs(limit);
+  const nextJobs = await Data.getNextAttachmentDownloadJobs(limit);
   if (nextJobs.length <= 0) {
     return;
   }
@@ -152,7 +145,7 @@ async function _runJob(job: any) {
       throw new Error(`_runJob: Key information required for job was missing. Job id: ${id}`);
     }
 
-    found = await getMessageById(messageId);
+    found = await Data.getMessageById(messageId);
     if (!found) {
       logger.error('_runJob: Source message not found, deleting job');
       await _finishJob(null, id);
@@ -176,7 +169,7 @@ async function _runJob(job: any) {
     }
 
     const pending = true;
-    await setAttachmentDownloadJobPending(id, pending);
+    await Data.setAttachmentDownloadJobPending(id, pending);
 
     let downloaded;
 
@@ -196,7 +189,7 @@ async function _runJob(job: any) {
         );
 
         await _finishJob(found, id);
-        found = await getMessageById(messageId);
+        found = await Data.getMessageById(messageId);
 
         _addAttachmentToMessage(found, _markAttachmentAsError(attachment), { type, index });
 
@@ -213,7 +206,7 @@ async function _runJob(job: any) {
       fileName: attachment.fileName,
       contentType: attachment.contentType,
     });
-    found = await getMessageById(messageId);
+    found = await Data.getMessageById(messageId);
     if (found) {
       const {
         hasAttachments,
@@ -235,7 +228,7 @@ async function _runJob(job: any) {
         `_runJob: ${currentAttempt} failed attempts, marking attachment ${id} from message ${found?.idForLogging()} as permament error:`,
         error && error.stack ? error.stack : error
       );
-      found = await getMessageById(messageId);
+      found = await Data.getMessageById(messageId);
 
       _addAttachmentToMessage(found, _markAttachmentAsError(attachment), { type, index });
       await _finishJob(found || null, id);
@@ -255,7 +248,7 @@ async function _runJob(job: any) {
       timestamp: Date.now() + RETRY_BACKOFF[currentAttempt],
     };
 
-    await saveAttachmentDownloadJob(failedJob);
+    await Data.saveAttachmentDownloadJob(failedJob);
     // tslint:disable-next-line: no-dynamic-delete
     delete _activeAttachmentDownloadJobs[id];
     void _maybeStartJob();
@@ -270,7 +263,7 @@ async function _finishJob(message: MessageModel | null, id: string) {
     }
   }
 
-  await removeAttachmentDownloadJob(id);
+  await Data.removeAttachmentDownloadJob(id);
   // tslint:disable-next-line: no-dynamic-delete
   delete _activeAttachmentDownloadJobs[id];
   await _maybeStartJob();

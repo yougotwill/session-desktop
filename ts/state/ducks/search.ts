@@ -1,6 +1,6 @@
 import { AdvancedSearchOptions, SearchOptions } from '../../types/Search';
 import { cleanSearchTerm } from '../../util/cleanSearchTerm';
-import { searchConversations, searchMessages } from '../../../ts/data/data';
+import { Data } from '../../../ts/data/data';
 
 import { ReduxConversationType } from './conversations';
 import { PubKey } from '../../session/types';
@@ -202,7 +202,7 @@ async function queryMessages(query: string): Promise<Array<MessageResultProps>> 
     const normalized = cleanSearchTerm(trimmedQuery);
     // 200 on a large database is already pretty slow
     const limit = Math.min((trimmedQuery.length || 2) * 50, 200);
-    return searchMessages(normalized, limit);
+    return Data.searchMessages(normalized, limit);
   } catch (e) {
     window.log.warn('queryMessages failed with', e.message);
     return [];
@@ -213,7 +213,7 @@ async function queryConversationsAndContacts(providedQuery: string, options: Sea
   const { ourNumber, noteToSelf } = options;
   const query = providedQuery.replace(/[+-.()]*/g, '');
 
-  const searchResults: Array<ReduxConversationType> = await searchConversations(query);
+  const searchResults: Array<ReduxConversationType> = await Data.searchConversations(query);
 
   // Split into two groups - active conversations and items just from address book
   let conversations: Array<string> = [];

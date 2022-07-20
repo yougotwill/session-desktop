@@ -1,5 +1,5 @@
 import { compact } from 'lodash';
-import { getMessageById } from '../../data/data';
+import { Data } from '../../data/data';
 import { ConversationModel } from '../../models/conversation';
 import { MessageModel } from '../../models/message';
 import { getMessageQueue } from '../../session';
@@ -259,7 +259,7 @@ const doDeleteSelectedMessagesInSOGS = async (
   }
   await Promise.all(
     toDeleteLocallyIds.map(async id => {
-      const msgToDeleteLocally = await getMessageById(id);
+      const msgToDeleteLocally = await Data.getMessageById(id);
       if (msgToDeleteLocally) {
         return deleteMessageLocallyOnly({
           conversation,
@@ -333,7 +333,7 @@ export async function deleteMessagesByIdForEveryone(
 ) {
   const conversation = getConversationController().getOrThrow(conversationId);
   const selectedMessages = compact(
-    await Promise.all(messageIds.map(m => getMessageById(m, false)))
+    await Promise.all(messageIds.map(m => Data.getMessageById(m, false)))
   );
 
   const messageCount = selectedMessages.length;
@@ -362,7 +362,7 @@ export async function deleteMessagesByIdForEveryone(
 export async function deleteMessagesById(messageIds: Array<string>, conversationId: string) {
   const conversation = getConversationController().getOrThrow(conversationId);
   const selectedMessages = compact(
-    await Promise.all(messageIds.map(m => getMessageById(m, false)))
+    await Promise.all(messageIds.map(m => Data.getMessageById(m, false)))
   );
 
   const messageCount = selectedMessages.length;

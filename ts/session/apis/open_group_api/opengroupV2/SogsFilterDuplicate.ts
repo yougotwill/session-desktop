@@ -1,5 +1,5 @@
 import _ from 'lodash';
-import { filterAlreadyFetchedOpengroupMessage } from '../../../../data/data';
+import { Data } from '../../../../data/data';
 import { OpenGroupMessageV2 } from './OpenGroupMessageV2';
 import { OpenGroupMessageV4 } from './OpenGroupServerPoller';
 
@@ -20,7 +20,7 @@ export const filterDuplicatesFromDbAndIncoming = async (
   }).filter(m => Boolean(m.sender));
 
   // now, check database to make sure those messages are not already fetched
-  const filteredInDb = await filterAlreadyFetchedOpengroupMessage(
+  const filteredInDb = await Data.filterAlreadyFetchedOpengroupMessage(
     filtered.map(m => {
       return { sender: m.sender as string, serverTimestamp: m.sentTimestamp };
     })
@@ -55,7 +55,7 @@ export const filterDuplicatesFromDbAndIncomingV4 = async (
   }).filter(m => Boolean(m.session_id));
 
   // now, check database to make sure those messages are not already fetched
-  const filteredInDb = await filterAlreadyFetchedOpengroupMessage(
+  const filteredInDb = await Data.filterAlreadyFetchedOpengroupMessage(
     filtered.map(m => {
       return { sender: m.session_id as string, serverTimestamp: m.posted };
     })

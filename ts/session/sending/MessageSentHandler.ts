@@ -1,5 +1,5 @@
 import _ from 'lodash';
-import { getMessageById } from '../../data/data';
+import { Data } from '../../data/data';
 import { SignalService } from '../../protobuf';
 import { PnServer } from '../apis/push_notification_api';
 import { OpenGroupVisibleMessage } from '../messages/outgoing/visibleMessage/OpenGroupVisibleMessage';
@@ -182,7 +182,7 @@ async function handleMessageSentFailure(
  * If the message is found on the db, it will also register it to the MessageController so our subsequent calls are quicker.
  */
 async function fetchHandleMessageSentData(messageIdentifier: string) {
-  const dbMessage = await getMessageById(messageIdentifier);
+  const dbMessage = await Data.getMessageById(messageIdentifier);
 
   if (!dbMessage) {
     return null;

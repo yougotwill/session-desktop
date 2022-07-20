@@ -11,16 +11,7 @@ import { SignalService } from '../protobuf';
 import { MessageModel, sliceQuoteText } from './message';
 import { MessageAttributesOptionals, MessageDirection } from './messageType';
 import autoBind from 'auto-bind';
-import {
-  getLastMessagesByConversation,
-  getMessageCountByType,
-  getMessagesByConversation,
-  getUnreadByConversation,
-  getUnreadCountByConversation,
-  removeMessage as dataRemoveMessage,
-  saveConversation,
-  saveMessages,
-} from '../../ts/data/data';
+import { Data } from '../../ts/data/data';
 import { toHex } from '../session/utils/String';
 import {
   actions as conversationActions,
@@ -420,11 +411,11 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
   }
 
   public async getUnread() {
-    return getUnreadByConversation(this.id);
+    return Data.getUnreadByConversation(this.id);
   }
 
   public async getUnreadCount() {
-    const unreadCount = await getUnreadCountByConversation(this.id);
+    const unreadCount = await Data.getUnreadCountByConversation(this.id);
 
     return unreadCount;
   }
@@ -569,7 +560,10 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       };
 
       const shouldApprove = !this.isApproved() && this.isPrivate();
-      const incomingMessageCount = await getMessageCountByType(this.id, MessageDirection.incoming);
+      const incomingMessageCount = await Data.getMessageCountByType(
+        this.id,
+        MessageDirection.incoming
+      );
       const hasIncomingMessages = incomingMessageCount > 0;
 
       // TODO: retroactively add prefix for existing IDs to prevent false positives
@@ -855,7 +849,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     if (!this.id || !this.get('active_at')) {
       return;
     }
-    const messages = await getLastMessagesByConversation(this.id, 1, true);
+    const messages = await Data.getLastMessagesByConversation(this.id, 1, true);
 
     if (!messages || !messages.length) {
       return;
@@ -1009,7 +1003,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
   public async commit() {
     perfStart(`conversationCommit-${this.attributes.id}`);
     // write to DB
-    await saveConversation(this.attributes);
+    await Data.saveConversation(this.attributes);
     this.triggerUIRefresh();
     perfEnd(`conversationCommit-${this.attributes.id}`, 'conversationCommit');
   }
@@ -1113,7 +1107,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     }
     const oldUnreadNowReadAttrs = oldUnreadNowRead.map(m => m.attributes);
     if (oldUnreadNowReadAttrs?.length) {
-      await saveMessages(oldUnreadNowReadAttrs);
+      await Data.saveMessages(oldUnreadNowReadAttrs);
     }
     const allProps: Array<MessageModelPropsWithoutConvoProps> = [];
 
@@ -1466,7 +1460,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
   }
 
   public async removeMessage(messageId: any) {
-    await dataRemoveMessage(messageId);
+    await Data.removeMessage(messageId);
     this.updateLastMessage();
 
     window.inboxStore?.dispatch(
@@ -1570,7 +1564,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
             );
           }).length === 1;
       const isFirstMessageOfConvo =
-        (await getMessagesByConversation(this.id, { messageId: null })).length === 1;
+        (await Data.getMessagesByConversation(this.id, { messageId: null })).length === 1;
       if (hadNoRequestsPrior && isFirstMessageOfConvo) {
         friendRequestText = window.i18n('youHaveANewFriendRequest');
       } else {
