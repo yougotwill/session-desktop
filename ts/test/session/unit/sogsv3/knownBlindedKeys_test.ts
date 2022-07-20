@@ -24,8 +24,7 @@ import { getConversationController } from '../../../../session/conversations';
 import { LibSodiumWrappers } from '../../../../session/crypto';
 import { UserUtils } from '../../../../session/utils';
 import { expectAsyncToThrow, stubData, stubWindowLog } from '../../../test-utils/utils';
-// import chaiAsPromised from 'chai-as-promised';
-// chai.use(chaiAsPromised as any);
+
 // tslint:disable: chai-vague-errors
 
 const serverPublicKey = 'serverPublicKey';
@@ -492,43 +491,94 @@ describe('knownBlindedKeys', () => {
       it('does iterate over all the conversations and find the first one matching (fails)', async () => {
         getItemById.resolves();
         await loadKnownBlindedKeys();
-
-        await addCachedBlindedKey({
+        const shouldBeWrittenToDb = {
           blindedId: knownBlindingMatch.blindedId,
           serverPublicKey: knownBlindingMatch.serverPublicKey,
           realSessionId: knownBlindingMatch.realSessionId,
-        });
+        };
+
+        await addCachedBlindedKey(shouldBeWrittenToDb);
 
         Sinon.stub(getConversationController(), 'getConversations').returns([]);
         const real = await findCachedBlindedMatchOrItLookup(realSessionId, serverPublicKey, sodium);
-        // we should have 2 calls here as the value was not in the cache at first
+        // we should have 1 call here as the value was already added to the cache
         expect(createOrUpdateItem.callCount).to.eq(1);
-        // expect(createOrUpdateItem.lastCall.args[0]).to.deep.eq({});
+        expect(createOrUpdateItem.lastCall.args[0]).to.deep.eq({
+          id: KNOWN_BLINDED_KEYS_ITEM,
+          value: JSON.stringify([shouldBeWrittenToDb]),
+        });
         expect(real).to.eq(realSessionId);
       });
 
       it('does iterate over all the conversations and find the first one matching (passes)', async () => {
         getItemById.resolves();
         await loadKnownBlindedKeys();
-
-        // await addCachedBlindedKey({
-        //   blindedId: knownBlindingMatch.blindedId,
-        //   serverPublicKey: knownBlindingMatch.serverPublicKey,
-        //   realSessionId: knownBlindingMatch.realSessionId,
-        // });
-
+        // adding a private conversation with a known match of the blinded pubkey we have
         await getConversationController().getOrCreateAndWait(
           realSessionId,
           ConversationTypeEnum.PRIVATE
         );
+        const convo = await getConversationController().getOrCreateAndWait(
+          knownBlindingMatch.realSessionId,
+          ConversationTypeEnum.PRIVATE
+        );
+        await getConversationController().getOrCreateAndWait(
+          realSessionId2,
+          ConversationTypeEnum.PRIVATE
+        );
+        convo.set({ isApproved: true });
         const real = await findCachedBlindedMatchOrItLookup(
           knownBlindingMatch.blindedId,
-          serverPublicKey,
+          knownBlindingMatch.serverPublicKey,
           sodium
         );
         expect(createOrUpdateItem.callCount).to.eq(1);
-        // expect(createOrUpdateItem.lastCall.args[0]).to.deep.eq({});
-        expect(real).to.eq(realSessionId);
+        const lastCall = createOrUpdateItem.lastCall.args[0];
+
+        const idLastCall = lastCall.id;
+        const valueLastCall = JSON.parse(lastCall.value);
+        expect(idLastCall).to.be.deep.eq(KNOWN_BLINDED_KEYS_ITEM);
+        expect(valueLastCall).to.be.deep.eq([knownBlindingMatch]);
+
+        expect(real).to.eq(knownBlindingMatch.realSessionId);
+      });
+
+      it('does iterate over all the conversations but is not approved so must fail', async () => {
+        getItemById.resolves();
+        await loadKnownBlindedKeys();
+        // adding a private conversation with a known match of the blinded pubkey we have
+        const convo = await getConversationController().getOrCreateAndWait(
+          knownBlindingMatch.realSessionId,
+          ConversationTypeEnum.PRIVATE
+        );
+        convo.set({ isApproved: false });
+        const real = await findCachedBlindedMatchOrItLookup(
+          knownBlindingMatch.blindedId,
+          knownBlindingMatch.serverPublicKey,
+          sodium
+        );
+        expect(createOrUpdateItem.callCount).to.eq(0);
+
+        expect(real).to.eq(undefined);
+      });
+
+      it('does iterate over all the conversations but is not private so must fail', async () => {
+        getItemById.resolves();
+        await loadKnownBlindedKeys();
+        // adding a private conversation with a known match of the blinded pubkey we have
+        const convo = await getConversationController().getOrCreateAndWait(
+          knownBlindingMatch.realSessionId,
+          ConversationTypeEnum.GROUP
+        );
+        convo.set({ isApproved: false });
+        const real = await findCachedBlindedMatchOrItLookup(
+          knownBlindingMatch.blindedId,
+          knownBlindingMatch.serverPublicKey,
+          sodium
+        );
+        expect(createOrUpdateItem.callCount).to.eq(0);
+
+        expect(real).to.eq(undefined);
       });
     });
   });
