@@ -1,4 +1,4 @@
-import { getAllConversations, removeConversation, saveConversation } from '../../data/data';
+import * as Data from '../../data/data';
 import { ConversationCollection, ConversationModel } from '../../models/conversation';
 import { BlockedNumberController } from '../../util';
 import { getSwarmFor } from '../apis/snode_api/snodePool';
@@ -85,7 +85,7 @@ export class ConversationController {
 
     const create = async () => {
       try {
-        await saveConversation(conversation.attributes);
+        await Data.saveConversation(conversation.attributes);
       } catch (error) {
         window?.log?.error(
           'Conversation save failed! ',
@@ -237,7 +237,7 @@ export class ConversationController {
     } else {
       window.log.info(`deleteContact !isPrivate, removing convo from DB: ${id}`);
 
-      await removeConversation(id);
+      await Data.removeConversation(id);
       window.log.info(`deleteContact !isPrivate, convo removed from DB: ${id}`);
 
       this.conversations.remove(conversation);
@@ -270,7 +270,7 @@ export class ConversationController {
     const load = async () => {
       try {
         const start = Date.now();
-        const collection = await getAllConversations();
+        const collection = await Data.getAllConversations();
 
         this.conversations.add(collection.models);
 

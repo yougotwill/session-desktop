@@ -20,9 +20,9 @@ import { filterDuplicatesFromDbAndIncomingV4 } from '../opengroupV2/SogsFilterDu
 import { callUtilsWorker } from '../../../../webworker/workers/util_worker_interface';
 import { PubKey } from '../../../types';
 import {
-  findCachedBlindedMatchNoLookup,
   findCachedBlindedMatchOrItLookup,
   findCachedOurBlindedPubkeyOrLookItUp,
+  getCachedNakedKeyFromBlindedNoServerPubkey,
 } from './knownBlindedkeys';
 import { SogsBlinding } from './sogsBlinding';
 import { base64_variants, from_base64 } from 'libsodium-wrappers-sumo';
@@ -232,7 +232,7 @@ const handleMessagesResponseV4 = async (
     const messagesWithResolvedBlindedIdsIfFound = [];
     for (let index = 0; index < messagesFilteredBlindedIds.length; index++) {
       const newMessage = messagesFilteredBlindedIds[index];
-      const unblindedIdFound = findCachedBlindedMatchNoLookup(newMessage.session_id);
+      const unblindedIdFound = getCachedNakedKeyFromBlindedNoServerPubkey(newMessage.session_id);
 
       // override the sender in the message itself if we are the sender
       if (unblindedIdFound && UserUtils.isUsFromCache(unblindedIdFound)) {
