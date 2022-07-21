@@ -840,7 +840,7 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
       return null;
     }
 
-    this.set({ errors: null });
+    this.set({ errors: null, sent: false, sent_to: [] });
     await this.commit();
     try {
       const conversation: ConversationModel | undefined = this.getConversation();

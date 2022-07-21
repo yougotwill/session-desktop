@@ -137,13 +137,17 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     isApproved,
     isBlocked,
     isPrivate,
+    activeAt,
   }: {
     isMe?: boolean;
     isApproved?: boolean;
     isBlocked?: boolean;
     isPrivate?: boolean;
+    activeAt?: number;
   }): boolean {
-    return Boolean(isPrivate && !isMe && !isApproved && !isBlocked);
+    // if a convo is not active, it means we didn't get any messages nor sent any.
+    const isActive = activeAt && isFinite(activeAt) && activeAt > 0;
+    return Boolean(isPrivate && !isMe && !isApproved && !isBlocked && isActive);
   }
 
   public static hasValidOutgoingRequestValues({
@@ -566,7 +570,6 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       );
       const hasIncomingMessages = incomingMessageCount > 0;
 
-      // TODO: retroactively add prefix for existing IDs to prevent false positives
       if (this.id.startsWith('15')) {
         window.log.info('Sending a blinded message to this user: ', this.id);
         await this.sendBlindedMessageRequest(chatMessageParams);

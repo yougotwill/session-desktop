@@ -39,6 +39,7 @@ export const capabilitiesFetchForServer = async (
     stringifiedBody: null,
     doNotIncludeOurSogsHeaders: true, // the first capabilities needs to not have any authentification to pass on a blinding-required sogs,
     headers: null,
+    throwErrors: false,
   });
   // not a batch call yet as we need to exclude headers for this call for now
   if (!batchGlobalIsSuccess(result)) {

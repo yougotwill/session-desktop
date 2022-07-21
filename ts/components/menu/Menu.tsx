@@ -6,6 +6,7 @@ import {
   useAvatarPath,
   useConversationUsername,
   useHasNickname,
+  useIsActive,
   useIsBlocked,
   useIsKickedFromGroup,
   useIsLeft,
@@ -62,9 +63,10 @@ function showTimerOptions(
   isKickedFromGroup: boolean,
   left: boolean,
   isBlocked: boolean,
-  isRequest: boolean
+  isRequest: boolean,
+  isActive: boolean
 ): boolean {
-  return !isPublic && !left && !isKickedFromGroup && !isBlocked && !isRequest;
+  return !isPublic && !left && !isKickedFromGroup && !isBlocked && !isRequest && isActive;
 }
 
 function showNotificationConvo(
@@ -423,6 +425,7 @@ export const MarkAllReadMenuItem = (): JSX.Element | null => {
 export const DisappearingMessageMenuItem = (): JSX.Element | null => {
   const convoId = useContext(ContextConversationId);
   const isBlocked = useIsBlocked(convoId);
+  const isActive = useIsActive(convoId);
   const isPublic = useIsPublic(convoId);
   const isLeft = useIsLeft(convoId);
   const isKickedFromGroup = useIsKickedFromGroup(convoId);
@@ -435,7 +438,8 @@ export const DisappearingMessageMenuItem = (): JSX.Element | null => {
       Boolean(isKickedFromGroup),
       Boolean(isLeft),
       Boolean(isBlocked),
-      isRequest
+      isRequest,
+      isActive
     )
   ) {
     // const isRtlMode = isRtlBody();

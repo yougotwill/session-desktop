@@ -10,7 +10,7 @@ import { initializeAttachmentLogic, processNewAttachment } from '../../types/Mes
 import { getAttachmentMetadata } from '../../types/message/initializeAttachmentMetadata';
 
 // this cause issues if we increment that value to > 1.
-const MAX_ATTACHMENT_JOB_PARALLELISM = 3;
+const MAX_ATTACHMENT_JOB_PARALLELISM = 1;
 
 const TICK_INTERVAL = Constants.DURATION.MINUTES;
 // tslint:disable: function-name
@@ -66,6 +66,7 @@ export async function addJob(attachment: any, job: any = {}) {
 
   const id = uuidv4();
   const timestamp = Date.now();
+
   const toSave = {
     ...job,
     id,

@@ -306,14 +306,12 @@ export async function sendToOpenGroupV2BlindedRequest(
   roomInfos: OpenGroupRequestCommonType,
   recipientBlindedId: string
 ): Promise<{ serverId: number; serverTimestamp: number }> {
-  // we agreed to pad message for opengroupv2
   const v2Message = new OpenGroupMessageV2({
     sentTimestamp: getNowWithNetworkOffset(),
-    // sender: await getBlindedPubKey(),
     base64EncodedData: fromUInt8ArrayToBase64(encryptedContent),
   });
 
-  // Warning: postMessage throws
+  // Warning: sendMessageOnionV4BlindedRequest throws
   const msg = await sendMessageOnionV4BlindedRequest(
     roomInfos.serverUrl,
     roomInfos.roomId,

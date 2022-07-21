@@ -126,7 +126,7 @@ export const MessageDetail = () => {
                 <td className="module-message-detail__label">{i18n('error')}</td>
                 <td>
                   {' '}
-                  <span className="error-message">{error.message}</span>{' '}
+                  <span className="error-message text-selectable">{error.message}</span>{' '}
                 </td>
               </tr>
             ))}

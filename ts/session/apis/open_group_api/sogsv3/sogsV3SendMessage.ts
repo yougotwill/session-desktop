@@ -60,6 +60,7 @@ export const sendSogsMessageOnionV4 = async (
     blinded,
     stringifiedBody,
     headers: null,
+    throwErrors: true,
   });
 
   if (!batchGlobalIsSuccess(result)) {
@@ -121,6 +122,7 @@ export const sendMessageOnionV4BlindedRequest = async (
     blinded: true,
     stringifiedBody,
     headers: null,
+    throwErrors: true,
   });
 
   if (!batchGlobalIsSuccess(result)) {

@@ -12,7 +12,7 @@ import { removeMessagePadding } from '../session/crypto/BufferPadding';
 import { UserUtils } from '../session/utils';
 import { perfEnd, perfStart } from '../session/utils/Performance';
 import { fromBase64ToArray } from '../session/utils/String';
-import { isMessageEmpty } from './dataMessage';
+import { cleanIncomingDataMessage, isMessageEmpty } from './dataMessage';
 import { handleMessageJob, toRegularMessage } from './queuedJob';
 
 export const handleOpenGroupV4Message = async (
@@ -99,7 +99,7 @@ const handleOpenGroupMessage = async (
     await handleMessageJob(
       msgModel,
       groupConvo,
-      toRegularMessage(decoded?.dataMessage as SignalService.DataMessage),
+      toRegularMessage(cleanIncomingDataMessage(decoded?.dataMessage as SignalService.DataMessage)),
       noop,
       sender,
       ''

@@ -198,9 +198,10 @@ export const SessionRightPanelWithDetails = () => {
     weAreAdmin,
     isBlocked,
     isGroup,
+    activeAt,
   } = selectedConversation;
   const showMemberCount = !!(subscriberCount && subscriberCount > 0);
-  const commonNoShow = isKickedFromGroup || left || isBlocked;
+  const commonNoShow = isKickedFromGroup || left || isBlocked || !activeAt;
   const hasDisappearingMessages = !isPublic && !commonNoShow;
   const leaveGroupString = isPublic
     ? window.i18n('leaveGroup')

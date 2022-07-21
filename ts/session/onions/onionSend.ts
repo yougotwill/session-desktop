@@ -89,6 +89,7 @@ const sendViaOnionV4ToNonSnodeWithRetries = async (
   destinationX25519Key: string,
   url: URL,
   fetchOptions: OnionFetchOptions,
+  throwErrors: boolean,
   abortSignal?: AbortSignal
 ): Promise<OnionV4SnodeResponse | null> => {
   if (!fetchOptions.useV4) {
@@ -136,6 +137,7 @@ const sendViaOnionV4ToNonSnodeWithRetries = async (
           finalRelayOptions,
           abortSignal,
           useV4: true,
+          throwErrors,
         });
 
         if (abortSignal?.aborted) {
@@ -182,6 +184,9 @@ const sendViaOnionV4ToNonSnodeWithRetries = async (
     );
   } catch (e) {
     window?.log?.warn('sendViaOnionV4ToNonSnodeRetryable failed ', e.message);
+    if (throwErrors) {
+      throw e;
+    }
     return null;
   }
 
@@ -210,6 +215,7 @@ async function sendJsonViaOnionV4ToSogs(sendOptions: {
   abortSignal: AbortSignal;
   doNotIncludeOurSogsHeaders?: boolean;
   headers: Record<string, any> | null;
+  throwErrors: boolean;
 }): Promise<OnionV4JSONSnodeResponse | null> {
   const {
     serverUrl,
@@ -221,6 +227,7 @@ async function sendJsonViaOnionV4ToSogs(sendOptions: {
     abortSignal,
     headers: includedHeaders,
     doNotIncludeOurSogsHeaders,
+    throwErrors,
   } = sendOptions;
   if (!endpoint.startsWith('/')) {
     throw new Error('endpoint needs a leading /');
@@ -249,6 +256,7 @@ async function sendJsonViaOnionV4ToSogs(sendOptions: {
       body: stringifiedBody,
       useV4: true,
     },
+    throwErrors,
     abortSignal
   );
 
@@ -282,6 +290,7 @@ async function sendJsonViaOnionV4ToPnServer(sendOptions: {
       body: stringifiedBody,
       useV4: true,
     },
+    false,
     abortSignal
   );
 
@@ -337,6 +346,7 @@ async function sendBinaryViaOnionV4ToSogs(sendOptions: {
       body: bodyBinary || undefined,
       useV4: true,
     },
+    false,
     abortSignal
   );
 
@@ -374,6 +384,7 @@ async function sendBinaryViaOnionV4ToFileServer(sendOptions: {
       body: bodyBinary,
       useV4: true,
     },
+    false,
     abortSignal
   );
 
@@ -404,6 +415,7 @@ async function getBinaryViaOnionV4FromFileServer(sendOptions: {
       body: null,
       useV4: true,
     },
+    false,
     abortSignal
   );
 
@@ -435,6 +447,7 @@ async function sendJsonViaOnionV4ToFileServer(sendOptions: {
       body: stringifiedBody,
       useV4: true,
     },
+    false,
     abortSignal
   );
 

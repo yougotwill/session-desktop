@@ -62,6 +62,7 @@ export async function fetchBinaryFromSogsWithOnionV4(sendOptions: {
       body: stringifiedBody,
       useV4: true,
     },
+    false,
     abortSignal
   );
   if (!res?.bodyBinary) {

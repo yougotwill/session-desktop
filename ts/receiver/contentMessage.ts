@@ -630,7 +630,7 @@ async function handleMessageRequestResponse(
     // we have to merge all of those to a single conversation under the unblinded. including the messages
     window.log.info(
       `We just found out ${unblindedConvoId} matches some blinded conversations. Merging them together:`,
-      convosToMerge
+      convosToMerge.map(m => m.id)
     );
     // get all the messages from each conversations we have to merge
     const allMessagesCollections = await Promise.all(

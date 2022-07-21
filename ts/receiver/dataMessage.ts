@@ -97,9 +97,9 @@ function isBodyEmpty(body: string) {
   return isEmpty(body);
 }
 
-async function cleanIncomingDataMessage(
-  envelope: EnvelopePlus,
-  rawDataMessage: SignalService.DataMessage
+export function cleanIncomingDataMessage(
+  rawDataMessage: SignalService.DataMessage,
+  envelope?: EnvelopePlus
 ) {
   /* tslint:disable:no-bitwise */
   const FLAGS = SignalService.DataMessage.Flags;
@@ -125,7 +125,6 @@ async function cleanIncomingDataMessage(
   const attachmentCount = rawDataMessage?.attachments?.length || 0;
   const ATTACHMENT_MAX = 32;
   if (attachmentCount > ATTACHMENT_MAX) {
-    await removeFromCache(envelope);
     throw new Error(
       `Too many attachments: ${attachmentCount} included in one message, max is ${ATTACHMENT_MAX}`
     );
@@ -133,7 +132,7 @@ async function cleanIncomingDataMessage(
   cleanAttachments(rawDataMessage);
 
   // if the decrypted dataMessage timestamp is not set, copy the one from the envelope
-  if (!isFinite(rawDataMessage?.timestamp)) {
+  if (!isFinite(rawDataMessage?.timestamp) && envelope) {
     rawDataMessage.timestamp = envelope.timestamp;
   }
 
@@ -161,7 +160,7 @@ export async function handleSwarmDataMessage(
 ): Promise<void> {
   window.log.info('handleSwarmDataMessage');
 
-  const cleanDataMessage = await cleanIncomingDataMessage(envelope, rawDataMessage);
+  const cleanDataMessage = cleanIncomingDataMessage(rawDataMessage, envelope);
   // we handle group updates from our other devices in handleClosedGroupControlMessage()
   if (cleanDataMessage.closedGroupControlMessage) {
     await handleClosedGroupControlMessage(

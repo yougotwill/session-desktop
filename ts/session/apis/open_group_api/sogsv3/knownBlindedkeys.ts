@@ -230,6 +230,15 @@ export function getUsBlindedInThatServer(convo: ConversationModel | string): str
   if (!convo) {
     return undefined;
   }
+  const convoId = isString(convo) ? convo : convo.id;
+
+  if (
+    !getConversationController()
+      .get(convoId)
+      ?.isOpenGroupV2()
+  ) {
+    return undefined;
+  }
   const room = getV2OpenGroupRoom(isString(convo) ? convo : convo.id);
   if (!room || !roomHasBlindEnabled(room) || !room.serverPublicKey) {
     return undefined;

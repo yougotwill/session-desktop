@@ -106,6 +106,7 @@ export async function downloadAttachmentSogsV3(
   if (!roomDetails) {
     throw new Error(`Didn't find such a room ${roomInfos.serverUrl}: ${roomInfos.roomId}`);
   }
+
   const dataUint = await sogsV3FetchFileByFileID(roomDetails, `${attachment.id}`);
 
   if (!dataUint?.length) {

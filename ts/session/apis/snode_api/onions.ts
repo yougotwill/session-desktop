@@ -757,6 +757,7 @@ async function sendOnionRequestHandlingSnodeEject({
   associatedWith,
   finalRelayOptions,
   useV4,
+  throwErrors,
 }: {
   nodePath: Array<Snode>;
   destSnodeX25519: string;
@@ -765,6 +766,7 @@ async function sendOnionRequestHandlingSnodeEject({
   abortSignal?: AbortSignal;
   associatedWith?: string;
   useV4: boolean;
+  throwErrors: boolean;
 }): Promise<SnodeResponse | SnodeResponseV4 | undefined> {
   // this sendOnionRequestNoRetries() call has to be the only one like this.
   // If you need to call it, call it through sendOnionRequestHandlingSnodeEject because this is the one handling path rebuilding and known errors
@@ -792,7 +794,7 @@ async function sendOnionRequestHandlingSnodeEject({
     decodingSymmetricKey = result.decodingSymmetricKey;
   } catch (e) {
     window?.log?.warn('sendOnionRequestNoRetries error message: ', e.message);
-    if (e.code === 'ENETUNREACH' || e.message === 'ENETUNREACH') {
+    if (e.code === 'ENETUNREACH' || e.message === 'ENETUNREACH' || throwErrors) {
       throw e;
     }
   }
@@ -1041,6 +1043,7 @@ async function sendOnionRequestSnodeDest(
     },
     associatedWith,
     useV4: false, // sadly, request to snode do not support v4 yet
+    throwErrors: false,
   });
 }
 

@@ -20,6 +20,7 @@ export const getAllRoomInfos = async (roomInfos: OpenGroupV2Room) => {
     serverUrl: roomInfos.serverUrl,
     headers: null,
     doNotIncludeOurSogsHeaders: true,
+    throwErrors: false,
   });
 
   // not a batch call yet as we need to exclude headers for this call for now
@@ -91,6 +92,7 @@ export async function openGroupV2GetRoomInfoViaOnionV4({
     serverPubkey,
     headers: null,
     doNotIncludeOurSogsHeaders: true,
+    throwErrors: false,
   });
   const room = result?.body as Record<string, any> | undefined;
   if (room) {

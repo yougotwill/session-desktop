@@ -1,4 +1,4 @@
-import _ from 'lodash';
+import { pick } from 'lodash';
 import { useSelector } from 'react-redux';
 import { ConversationModel } from '../models/conversation';
 import { PubKey } from '../session/types';
@@ -97,6 +97,11 @@ export function useIsBlocked(convoId?: string) {
   return Boolean(convoProps && convoProps.isBlocked);
 }
 
+export function useIsActive(convoId?: string) {
+  const convoProps = useConversationPropsById(convoId);
+  return Boolean(convoProps && convoProps.activeAt);
+}
+
 export function useIsLeft(convoId?: string) {
   const convoProps = useConversationPropsById(convoId);
   return Boolean(convoProps && convoProps.left);
@@ -132,7 +137,7 @@ export function useIsRequest(convoId: string) {
   return Boolean(
     convoProps &&
       ConversationModel.hasValidIncomingRequestValues(
-        _.pick(convoProps, ['isMe', 'isApproved', 'isPrivate', 'isBlocked'])
+        pick(convoProps, ['isMe', 'isApproved', 'isPrivate', 'isBlocked', 'activeAt'])
       )
   );
 }

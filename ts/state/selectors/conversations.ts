@@ -457,12 +457,13 @@ const _getConversationRequests = (
   sortedConversations: Array<ReduxConversationType>
 ): Array<ReduxConversationType> => {
   return _.filter(sortedConversations, conversation => {
-    const { isApproved, isBlocked, isPrivate, isMe } = conversation;
+    const { isApproved, isBlocked, isPrivate, isMe, activeAt } = conversation;
     const isRequest = ConversationModel.hasValidIncomingRequestValues({
       isApproved,
       isBlocked,
       isPrivate,
       isMe,
+      activeAt,
     });
     return isRequest;
   });
@@ -586,6 +587,16 @@ export const getIsSelectedBlocked = createSelector(
   getSelectedConversation,
   (selectedProps): boolean => {
     return selectedProps?.isBlocked || false;
+  }
+);
+
+/**
+ * Returns true if the currently selected conversation is active (has an active_at field > 0)
+ */
+export const getIsSelectedActive = createSelector(
+  getSelectedConversation,
+  (selectedProps): boolean => {
+    return Boolean(selectedProps?.activeAt);
   }
 );
 

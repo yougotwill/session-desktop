@@ -102,7 +102,6 @@ export const RemoveModeratorsDialog = (props: Props) => {
         ) : (
           <p>{i18n('noModeratorsToRemove')}</p>
         )}
-        <SessionSpinner loading={removingInProgress} />
 
         <div className="session-modal__button-group">
           <SessionButton
