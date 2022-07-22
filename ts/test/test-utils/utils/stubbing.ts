@@ -1,6 +1,7 @@
 import { expect } from 'chai';
 import Sinon from 'sinon';
-import { Data, Data as DataShape } from '../../../../ts/data/data';
+import { Data } from '../../../../ts/data/data';
+import { OpenGroupData } from '../../../data/opengroups';
 
 import * as utilWorker from '../../../webworker/workers/util_worker_interface';
 
@@ -9,7 +10,8 @@ const globalAny: any = global;
 // We have to do this in a weird way because Data uses module.exports
 //  which doesn't play well with sinon or ImportMock
 // tslint:disable: no-require-imports no-var-requires
-type DataFunction = typeof DataShape;
+type DataFunction = typeof Data;
+type OpenGroupDataFunction = typeof OpenGroupData;
 
 /**
  * Stub a function inside Data.
@@ -19,6 +21,10 @@ type DataFunction = typeof DataShape;
  */
 export function stubData<K extends keyof DataFunction>(fn: K): sinon.SinonStub {
   return Sinon.stub(Data, fn);
+}
+
+export function stubOpenGroupData<K extends keyof OpenGroupDataFunction>(fn: K): sinon.SinonStub {
+  return Sinon.stub(OpenGroupData, fn);
 }
 
 export function stubUtilWorker(fnName: string, returnedValue: any): sinon.SinonStub {

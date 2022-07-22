@@ -60,6 +60,7 @@ export const OpenGroupData = {
   removeV2OpenGroupRoom,
   getAllOpenGroupV2Conversations,
   getAllOpengroupsServerPubkeys,
+  getAllV2OpenGroupRooms,
 };
 
 /**
@@ -78,6 +79,11 @@ function getAllV2OpenGroupRoomsMap(): Map<string, OpenGroupV2Room> | undefined {
   return results;
 }
 
+// this is just to make testing and stubbing easier
+async function getAllV2OpenGroupRooms() {
+  return channels.getAllV2OpenGroupRooms();
+}
+
 // avoid doing fetches and write too often from the db by using a cache on the renderer side.
 let cachedRooms: Array<OpenGroupV2Room> | null = null;
 
@@ -85,7 +91,7 @@ async function opengroupRoomsLoad() {
   if (cachedRooms !== null) {
     return;
   }
-  const loadedFromDB = (await channels.getAllV2OpenGroupRooms()) as
+  const loadedFromDB = (await OpenGroupData.getAllV2OpenGroupRooms()) as
     | Array<OpenGroupV2Room>
     | undefined;
 
