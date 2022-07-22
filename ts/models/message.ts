@@ -55,7 +55,7 @@ import {
   uploadQuoteThumbnailsV3,
 } from '../session/utils/AttachmentsV2';
 import { OpenGroupVisibleMessage } from '../session/messages/outgoing/visibleMessage/OpenGroupVisibleMessage';
-import { getV2OpenGroupRoom } from '../data/opengroups';
+import { OpenGroupData } from '../data/opengroups';
 import { isUsFromCache } from '../session/utils/User';
 import { perfEnd, perfStart } from '../session/utils/Performance';
 import { AttachmentTypeWithPath, isVoiceMessage } from '../types/Attachment';
@@ -583,7 +583,7 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
     let isFromMe = contact ? contact.id === UserUtils.getOurPubKeyStrFromCache() : false;
 
     if (this.getConversation()?.isPublic() && PubKey.hasBlindedPrefix(author)) {
-      const room = getV2OpenGroupRoom(this.get('conversationId'));
+      const room = OpenGroupData.getV2OpenGroupRoom(this.get('conversationId'));
       if (room && roomHasBlindEnabled(room)) {
         const usFromCache = findCachedBlindedIdFromUnblinded(
           UserUtils.getOurPubKeyStrFromCache(),
@@ -862,13 +862,13 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
           preview: preview ? [preview] : [],
           quote,
         };
-        const roomInfos = getV2OpenGroupRoom(conversation.id);
+        const roomInfos = OpenGroupData.getV2OpenGroupRoom(conversation.id);
         if (!roomInfos) {
           throw new Error('Could not find roomInfos for this conversation');
         }
 
         const openGroupMessage = new OpenGroupVisibleMessage(openGroupParams);
-        const openGroup = getV2OpenGroupRoom(conversation.id);
+        const openGroup = OpenGroupData.getV2OpenGroupRoom(conversation.id);
 
         return getMessageQueue().sendToOpenGroupV2(
           openGroupMessage,

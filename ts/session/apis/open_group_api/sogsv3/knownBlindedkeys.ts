@@ -6,7 +6,7 @@ import { KeyPrefixType, PubKey } from '../../../types';
 import { crypto_sign_curve25519_pk_to_ed25519 } from 'curve25519-js';
 import { Data } from '../../../../data/data';
 import { combineKeys, generateBlindingFactor } from '../../../utils/SodiumUtils';
-import { getAllOpengroupsServerPubkeys, getV2OpenGroupRoom } from '../../../../data/opengroups';
+import { OpenGroupData } from '../../../../data/opengroups';
 import { ConversationModel } from '../../../../models/conversation';
 import { UserUtils } from '../../../utils';
 import { SogsBlinding } from './sogsBlinding';
@@ -239,7 +239,7 @@ export function getUsBlindedInThatServer(convo: ConversationModel | string): str
   ) {
     return undefined;
   }
-  const room = getV2OpenGroupRoom(isString(convo) ? convo : convo.id);
+  const room = OpenGroupData.getV2OpenGroupRoom(isString(convo) ? convo : convo.id);
   if (!room || !roomHasBlindEnabled(room) || !room.serverPublicKey) {
     return undefined;
   }
@@ -400,7 +400,7 @@ export function findCachedBlindedMatchOrItLookupAllServers(
     throw new Error('findCachedBlindedMatchOrItLookupAllServers needs an unblindedId');
   }
 
-  const allServerPubkeys = getAllOpengroupsServerPubkeys();
+  const allServerPubkeys = OpenGroupData.getAllOpengroupsServerPubkeys();
   let matchingServerPubkeyWithThatBlindedId = flatten(
     allServerPubkeys.map(serverPk => {
       return findNotCachedBlindedConvoFromUnblindedKey(unblindedId, serverPk, sodium);

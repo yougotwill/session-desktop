@@ -3,11 +3,7 @@ import { getOpenGroupV2ConversationId } from '../utils/OpenGroupUtils';
 import { OpenGroupRequestCommonType } from './ApiUtil';
 import _, { isNumber, isObject } from 'lodash';
 
-import {
-  getV2OpenGroupRoom,
-  getV2OpenGroupRoomsByServerUrl,
-  saveV2OpenGroupRoom,
-} from '../../../../data/opengroups';
+import { OpenGroupData } from '../../../../data/opengroups';
 import { OpenGroupMessageV2 } from './OpenGroupMessageV2';
 import autoBind from 'auto-bind';
 import { DURATION } from '../../../constants';
@@ -212,7 +208,7 @@ export class OpenGroupServerPoller {
       });
 
       const convoId = getOpenGroupV2ConversationId(this.serverUrl, roomId);
-      const roomInfos = getV2OpenGroupRoom(convoId);
+      const roomInfos = OpenGroupData.getV2OpenGroupRoom(convoId);
 
       // messages
       subrequestOptions.push({
@@ -225,7 +221,7 @@ export class OpenGroupServerPoller {
     });
 
     if (this.serverUrl) {
-      const rooms = getV2OpenGroupRoomsByServerUrl(this.serverUrl);
+      const rooms = OpenGroupData.getV2OpenGroupRoomsByServerUrl(this.serverUrl);
       if (rooms?.length) {
         if (roomHasBlindEnabled(rooms[0])) {
           const maxInboxId = Math.max(...rooms.map(r => r.lastInboxIdFetched || 0));
@@ -329,7 +325,7 @@ export const getRoomAndUpdateLastFetchTimestamp = async (
   conversationId: string,
   newMessages: Array<OpenGroupMessageV2 | OpenGroupMessageV4>
 ) => {
-  const roomInfos = getV2OpenGroupRoom(conversationId);
+  const roomInfos = OpenGroupData.getV2OpenGroupRoom(conversationId);
   if (!roomInfos || !roomInfos.serverUrl || !roomInfos.roomId) {
     throw new Error(`No room for convo ${conversationId}`);
   }
@@ -340,7 +336,7 @@ export const getRoomAndUpdateLastFetchTimestamp = async (
     window?.log?.info(
       `No new messages for ${roomInfos.roomId}... just updating our last fetched timestamp`
     );
-    await saveV2OpenGroupRoom(roomInfos);
+    await OpenGroupData.saveV2OpenGroupRoom(roomInfos);
     return null;
   }
   return roomInfos;

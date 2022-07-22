@@ -1,4 +1,4 @@
-import { getV2OpenGroupRoomByRoomId } from '../../../../data/opengroups';
+import { OpenGroupData } from '../../../../data/opengroups';
 import _, { flatten, isEmpty, isNumber, isObject } from 'lodash';
 import { OnionSending, OnionV4JSONSnodeResponse } from '../../../onions/onionSend';
 import {
@@ -57,7 +57,7 @@ export const sogsBatchSend = async (
 ): Promise<BatchSogsReponse | null> => {
   // getting server pk for room
   const [roomId] = roomInfos;
-  const fetchedRoomInfo = getV2OpenGroupRoomByRoomId({
+  const fetchedRoomInfo = OpenGroupData.getV2OpenGroupRoomByRoomId({
     serverUrl,
     roomId,
   });

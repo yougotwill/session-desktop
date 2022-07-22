@@ -1,6 +1,6 @@
 import React, { useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { getV2OpenGroupRoom } from '../../../../data/opengroups';
+import { OpenGroupData } from '../../../../data/opengroups';
 import { MessageRenderingProps } from '../../../../models/messageType';
 import { findCachedBlindedMatchOrItLookup } from '../../../../session/apis/open_group_api/sogsv3/knownBlindedkeys';
 import { getConversationController } from '../../../../session/conversations';
@@ -77,7 +77,7 @@ export const MessageAvatar = (props: Props) => {
 
     if (isPublic && selectedConvoKey) {
       const convoOpen = getConversationController().get(selectedConvoKey);
-      const room = getV2OpenGroupRoom(convoOpen.id);
+      const room = OpenGroupData.getV2OpenGroupRoom(convoOpen.id);
       let privateConvoToOpen = sender;
       if (room?.serverPublicKey) {
         const foundRealSessionId = await findCachedBlindedMatchOrItLookup(

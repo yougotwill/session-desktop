@@ -1,5 +1,5 @@
 import AbortController from 'abort-controller';
-import { getV2OpenGroupRoomByRoomId } from '../../../../data/opengroups';
+import { OpenGroupData } from '../../../../data/opengroups';
 import { OnionSending } from '../../../onions/onionSend';
 import { OpenGroupRequestCommonType } from '../opengroupV2/ApiUtil';
 import { batchGlobalIsSuccess } from './sogsV3BatchPoll';
@@ -36,7 +36,7 @@ export const uploadFileToRoomSogs3 = async (
     return null;
   }
 
-  const roomDetails = getV2OpenGroupRoomByRoomId(roomInfos);
+  const roomDetails = OpenGroupData.getV2OpenGroupRoomByRoomId(roomInfos);
   if (!roomDetails || !roomDetails.serverPublicKey) {
     window.log.warn('uploadFileOpenGroupV3: roomDetails is invalid');
     return null;

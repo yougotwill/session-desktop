@@ -1,4 +1,4 @@
-import { getV2OpenGroupRoom } from '../../data/opengroups';
+import { OpenGroupData } from '../../data/opengroups';
 import { downloadAttachmentSogsV3 } from '../../receiver/attachments';
 import { MIME } from '../../types';
 import { urlToBlob } from '../../types/attachments/VisualAttachment';
@@ -28,7 +28,7 @@ export async function initiateOpenGroupUpdate(
     const blobAvatarAlreadyScaled = await urlToBlob(avatar.objectUrl);
 
     const dataResized = await blobAvatarAlreadyScaled.arrayBuffer();
-    const roomInfos = getV2OpenGroupRoom(convo.id);
+    const roomInfos = OpenGroupData.getV2OpenGroupRoom(convo.id);
     if (!roomInfos || !dataResized.byteLength) {
       return false;
     }

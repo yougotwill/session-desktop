@@ -4,7 +4,7 @@ import { BlockedNumberController } from '../../util';
 import { getSwarmFor } from '../apis/snode_api/snodePool';
 import { PubKey } from '../types';
 import { actions as conversationActions } from '../../state/ducks/conversations';
-import { getV2OpenGroupRoom, removeV2OpenGroupRoom } from '../../data/opengroups';
+import { OpenGroupData } from '../../data/opengroups';
 import _ from 'lodash';
 import { getOpenGroupManager } from '../apis/open_group_api/opengroupV2/OpenGroupManagerV2';
 
@@ -205,13 +205,13 @@ export class ConversationController {
       // open group v2
     } else if (conversation.isOpenGroupV2()) {
       window?.log?.info('leaving open group v2', conversation.id);
-      const roomInfos = getV2OpenGroupRoom(conversation.id);
+      const roomInfos = OpenGroupData.getV2OpenGroupRoom(conversation.id);
       if (roomInfos) {
         getOpenGroupManager().removeRoomFromPolledRooms(roomInfos);
 
         // remove the roomInfos locally for this open group room
         try {
-          await removeV2OpenGroupRoom(conversation.id);
+          await OpenGroupData.removeV2OpenGroupRoom(conversation.id);
         } catch (e) {
           window?.log?.info('removeV2OpenGroupRoom failed:', e);
         }

@@ -1,11 +1,7 @@
 import _, { isArray, isEmpty, isEqual, isObject } from 'lodash';
 import { OnionSending } from '../../../onions/onionSend';
 import { OpenGroupPollingUtils } from '../opengroupV2/OpenGroupPollingUtils';
-import {
-  getV2OpenGroupRoomsByServerUrl,
-  OpenGroupV2Room,
-  saveV2OpenGroupRoom,
-} from '../../../../data/opengroups';
+import { OpenGroupData, OpenGroupV2Room } from '../../../../data/opengroups';
 import AbortController, { AbortSignal } from 'abort-controller';
 import { batchGlobalIsSuccess } from './sogsV3BatchPoll';
 
@@ -81,7 +77,7 @@ export function capabilitiesListHasBlindEnabled(caps?: Array<string> | null) {
 }
 
 export async function fetchCapabilitiesAndUpdateRelatedRoomsOfServerUrl(serverUrl: string) {
-  let relatedRooms = getV2OpenGroupRoomsByServerUrl(serverUrl);
+  let relatedRooms = OpenGroupData.getV2OpenGroupRoomsByServerUrl(serverUrl);
   if (!relatedRooms || relatedRooms.length === 0) {
     return;
   }
@@ -98,7 +94,7 @@ export async function fetchCapabilitiesAndUpdateRelatedRoomsOfServerUrl(serverUr
     return;
   }
   // just fetch updated data from the DB, just in case
-  relatedRooms = getV2OpenGroupRoomsByServerUrl(serverUrl);
+  relatedRooms = OpenGroupData.getV2OpenGroupRoomsByServerUrl(serverUrl);
   if (!relatedRooms || relatedRooms.length === 0) {
     return;
   }
@@ -108,7 +104,7 @@ export async function fetchCapabilitiesAndUpdateRelatedRoomsOfServerUrl(serverUr
     relatedRooms.map(async room => {
       if (!isEqual(newSortedCaps, room.capabilities?.sort() || '')) {
         room.capabilities = newSortedCaps;
-        await saveV2OpenGroupRoom(room);
+        await OpenGroupData.saveV2OpenGroupRoom(room);
       }
     })
   );

@@ -1,10 +1,5 @@
 import _, { compact, isArray, isNumber, isObject, pick } from 'lodash';
-import {
-  getV2OpenGroupRoom,
-  getV2OpenGroupRoomsByServerUrl,
-  saveV2OpenGroupRoom,
-  saveV2OpenGroupRooms,
-} from '../../../../data/opengroups';
+import { OpenGroupData } from '../../../../data/opengroups';
 import { handleOpenGroupV4Message } from '../../../../receiver/opengroup';
 import { OpenGroupRequestCommonType } from '../opengroupV2/ApiUtil';
 import { BatchSogsReponse, OpenGroupBatchRow, SubRequestMessagesType } from './sogsV3BatchPoll';
@@ -258,7 +253,7 @@ const handleMessagesResponseV4 = async (
 
     // handling all messages might be slow, so instead refresh the data here before updating the fields we care about
     // and writing it again
-    const roomInfosRefreshed = getV2OpenGroupRoom(roomInfos.conversationId);
+    const roomInfosRefreshed = OpenGroupData.getV2OpenGroupRoom(roomInfos.conversationId);
     if (!roomInfosRefreshed || !roomInfosRefreshed.serverUrl || !roomInfosRefreshed.roomId) {
       window.log.warn(`No room for convo ${roomInfos.conversationId}`);
       return;
@@ -270,7 +265,7 @@ const handleMessagesResponseV4 = async (
     }
     roomInfosRefreshed.lastFetchTimestamp = Date.now();
 
-    await saveV2OpenGroupRoom(roomInfosRefreshed);
+    await OpenGroupData.saveV2OpenGroupRoom(roomInfosRefreshed);
   } catch (e) {
     window?.log?.warn('handleNewMessages failed:', e);
   }
@@ -297,7 +292,7 @@ async function handleInboxOutboxMessages(
     return;
   }
 
-  const roomInfos = getV2OpenGroupRoomsByServerUrl(serverUrl);
+  const roomInfos = OpenGroupData.getV2OpenGroupRoomsByServerUrl(serverUrl);
   if (!roomInfos || !roomInfos.length || !roomInfos[0].serverPublicKey) {
     return;
   }
@@ -360,7 +355,7 @@ async function handleInboxOutboxMessages(
             unblindedIDOrBlinded,
             ConversationTypeEnum.PRIVATE
           );
-          const serverConversationId = getV2OpenGroupRoomsByServerUrl(serverUrl)?.[0]
+          const serverConversationId = OpenGroupData.getV2OpenGroupRoomsByServerUrl(serverUrl)?.[0]
             .conversationId;
           if (!serverConversationId) {
             throw new Error('serverConversationId needs to exist');
@@ -393,7 +388,7 @@ async function handleInboxOutboxMessages(
     }
   }
 
-  const rooms = getV2OpenGroupRoomsByServerUrl(serverUrl);
+  const rooms = OpenGroupData.getV2OpenGroupRoomsByServerUrl(serverUrl);
 
   if (!rooms || !rooms.length) {
     window?.log?.error('handleInboxOutboxMessages - Found no rooms with matching server url');
@@ -410,7 +405,7 @@ async function handleInboxOutboxMessages(
       ? rooms.map(r => ({ ...r, lastOutboxIdFetched: maxInboxOutboxId }))
       : rooms.map(r => ({ ...r, lastInboxIdFetched: maxInboxOutboxId }));
     // this won't write if no changes are detected
-    await saveV2OpenGroupRooms(updatedRooms);
+    await OpenGroupData.saveV2OpenGroupRooms(updatedRooms);
   }
 }
 

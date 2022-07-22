@@ -9,7 +9,7 @@ import { getUnpaddedAttachment } from '../session/crypto/BufferPadding';
 import { decryptAttachment } from '../util/crypto/attachmentsEncrypter';
 import { callUtilsWorker } from '../webworker/workers/util_worker_interface';
 import { sogsV3FetchFileByFileID } from '../session/apis/open_group_api/sogsv3/sogsV3FetchFile';
-import { getV2OpenGroupRoomByRoomId } from '../data/opengroups';
+import { OpenGroupData } from '../data/opengroups';
 import {
   downloadFileFromFileServer,
   fileServerURL,
@@ -102,7 +102,7 @@ export async function downloadAttachmentSogsV3(
   },
   roomInfos: OpenGroupRequestCommonType
 ) {
-  const roomDetails = getV2OpenGroupRoomByRoomId(roomInfos);
+  const roomDetails = OpenGroupData.getV2OpenGroupRoomByRoomId(roomInfos);
   if (!roomDetails) {
     throw new Error(`Didn't find such a room ${roomInfos.serverUrl}: ${roomInfos.roomId}`);
   }

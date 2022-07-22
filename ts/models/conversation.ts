@@ -67,7 +67,7 @@ import {
 
 import { SogsBlinding } from '../session/apis/open_group_api/sogsv3/sogsBlinding';
 import { from_hex } from 'libsodium-wrappers-sumo';
-import { getV2OpenGroupRoom } from '../data/opengroups';
+import { OpenGroupData } from '../data/opengroups';
 import { roomHasBlindEnabled } from '../session/apis/open_group_api/sogsv3/sogsV3Capabilities';
 import { addMessagePadding } from '../session/crypto/BufferPadding';
 import { getSodiumRenderer } from '../session/crypto';
@@ -511,7 +511,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     }
     let msgSource = quotedMessage.getSource();
     if (this.isPublic()) {
-      const room = getV2OpenGroupRoom(this.id);
+      const room = OpenGroupData.getV2OpenGroupRoom(this.id);
       if (room && roomHasBlindEnabled(room) && msgSource === UserUtils.getOurPubKeyStrFromCache()) {
         // this room should send message with blinded pubkey, so we need to make the quote with them too.
         // when we make a quote to ourself on a blind sogs, that message has a sender being our naked pubkey
@@ -595,7 +595,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
         if (!roomInfos) {
           throw new Error('Could not find this room in db');
         }
-        const openGroup = getV2OpenGroupRoom(this.id);
+        const openGroup = OpenGroupData.getV2OpenGroupRoom(this.id);
         // send with blinding if we need to
         await getMessageQueue().sendToOpenGroupV2(
           chatMessageOpenGroupV2,
@@ -741,7 +741,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       return;
     }
 
-    const roomInfo = getV2OpenGroupRoom(groupUrl);
+    const roomInfo = OpenGroupData.getV2OpenGroupRoom(groupUrl);
 
     if (!roomInfo || !roomInfo.serverPublicKey) {
       ToastUtils.pushToastError('no-sogs-matching', window.i18n('couldntFindServerMatching'));
@@ -1019,7 +1019,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
   ) {
     let sender = UserUtils.getOurPubKeyStrFromCache();
     if (this.isPublic()) {
-      const openGroup = getV2OpenGroupRoom(this.id);
+      const openGroup = OpenGroupData.getV2OpenGroupRoom(this.id);
       if (openGroup && openGroup.serverPublicKey && roomHasBlindEnabled(openGroup)) {
         const signingKeys = await UserUtils.getUserED25519KeyPairBytes();
 
@@ -1400,7 +1400,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     }
 
     if (details.admins && isArray(details.admins)) {
-      const roomInfos = getV2OpenGroupRoom(this.id);
+      const roomInfos = OpenGroupData.getV2OpenGroupRoom(this.id);
       const ourBlindedPubkeyForThisSogs =
         roomInfos && roomHasBlindEnabled(roomInfos)
           ? await findCachedOurBlindedPubkeyOrLookItUp(
@@ -1419,7 +1419,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     }
 
     if (this.isOpenGroupV2() && details.image_id && isNumber(details.image_id)) {
-      const roomInfos = getV2OpenGroupRoom(this.id);
+      const roomInfos = OpenGroupData.getV2OpenGroupRoom(this.id);
       if (roomInfos) {
         void sogsV3FetchPreviewAndSaveIt({ ...roomInfos, imageID: `${details.image_id}` });
       }

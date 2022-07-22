@@ -1,4 +1,4 @@
-import { getV2OpenGroupRoomByRoomId, OpenGroupV2Room } from '../../../../data/opengroups';
+import { OpenGroupData, OpenGroupV2Room } from '../../../../data/opengroups';
 import _, { compact } from 'lodash';
 import { OpenGroupMessageV2 } from './OpenGroupMessageV2';
 import { UserUtils } from '../../../utils';
@@ -69,7 +69,7 @@ const getAllValidRoomInfos = (
   const validRoomInfos = compact(
     [...rooms].map(roomId => {
       try {
-        const fetchedInfo = getV2OpenGroupRoomByRoomId({
+        const fetchedInfo = OpenGroupData.getV2OpenGroupRoomByRoomId({
           serverUrl,
           roomId,
         });

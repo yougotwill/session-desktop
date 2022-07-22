@@ -20,7 +20,7 @@ import {
   VisibleMessage,
 } from '../messages/outgoing/visibleMessage/VisibleMessage';
 import { ExpirationTimerUpdateMessage } from '../messages/outgoing/controlMessage/ExpirationTimerUpdateMessage';
-import { getV2OpenGroupRoom } from '../../data/opengroups';
+import { OpenGroupData } from '../../data/opengroups';
 import { getCompleteUrlFromRoom } from '../apis/open_group_api/utils/OpenGroupUtils';
 import { DURATION } from '../constants';
 import { UnsendMessage } from '../messages/outgoing/controlMessage/UnsendMessage';
@@ -104,7 +104,7 @@ const getActiveOpenGroupV2CompleteUrls = async (
 
   const urls = await Promise.all(
     openGroupsV2ConvoIds.map(async opengroup => {
-      const roomInfos = getV2OpenGroupRoom(opengroup);
+      const roomInfos = OpenGroupData.getV2OpenGroupRoom(opengroup);
       if (roomInfos) {
         return getCompleteUrlFromRoom(roomInfos);
       }

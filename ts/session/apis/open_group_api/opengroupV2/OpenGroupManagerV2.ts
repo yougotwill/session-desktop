@@ -1,10 +1,4 @@
-import {
-  getAllOpenGroupV2Conversations,
-  getAllV2OpenGroupRoomsMap,
-  OpenGroupV2Room,
-  removeV2OpenGroupRoom,
-  saveV2OpenGroupRoom,
-} from '../../../../data/opengroups';
+import { OpenGroupData, OpenGroupV2Room } from '../../../../data/opengroups';
 import { ConversationModel } from '../../../../models/conversation';
 import { getConversationController } from '../../../conversations';
 import { allowOnlyOneAtATime } from '../../../utils/Promise';
@@ -117,9 +111,9 @@ export class OpenGroupManagerV2 {
     if (this.isPolling) {
       return;
     }
-    const allConvos = await getAllOpenGroupV2Conversations();
+    const allConvos = await OpenGroupData.getAllOpenGroupV2Conversations();
 
-    let allRoomInfos = getAllV2OpenGroupRoomsMap();
+    let allRoomInfos = OpenGroupData.getAllV2OpenGroupRoomsMap();
 
     // this is time for some cleanup!
     // We consider the conversations are our source-of-truth,
@@ -131,7 +125,7 @@ export class OpenGroupManagerV2 {
             const roomConvoId = getOpenGroupV2ConversationId(infos.serverUrl, infos.roomId);
             if (!allConvos.get(roomConvoId)) {
               // remove the roomInfos locally for this open group room
-              await removeV2OpenGroupRoom(roomConvoId);
+              await OpenGroupData.removeV2OpenGroupRoom(roomConvoId);
               getOpenGroupManager().removeRoomFromPolledRooms(infos);
               // no need to remove it from the ConversationController, the convo is already not there
             }
@@ -142,7 +136,7 @@ export class OpenGroupManagerV2 {
       );
     }
     // refresh our roomInfos list
-    allRoomInfos = getAllV2OpenGroupRoomsMap();
+    allRoomInfos = OpenGroupData.getAllV2OpenGroupRoomsMap();
     if (allRoomInfos) {
       this.addRoomToPolledRooms([...allRoomInfos.values()]);
     }
@@ -167,7 +161,7 @@ export class OpenGroupManagerV2 {
     }
 
     // here, the convo does not exist. Make sure the db is clean too
-    await removeV2OpenGroupRoom(conversationId);
+    await OpenGroupData.removeV2OpenGroupRoom(conversationId);
 
     const room: OpenGroupV2Room = {
       serverUrl,
@@ -179,7 +173,7 @@ export class OpenGroupManagerV2 {
     try {
       // save the pubkey to the db right now, the request for room Info
       // will need it and access it from the db
-      await saveV2OpenGroupRoom(room);
+      await OpenGroupData.saveV2OpenGroupRoom(room);
       const roomInfos = await openGroupV2GetRoomInfoViaOnionV4({
         serverPubkey: serverPublicKey,
         serverUrl,
@@ -195,7 +189,7 @@ export class OpenGroupManagerV2 {
       room.imageID = roomInfos.imageId || undefined;
       room.roomName = roomInfos.name || undefined;
       room.capabilities = roomInfos.capabilities;
-      await saveV2OpenGroupRoom(room);
+      await OpenGroupData.saveV2OpenGroupRoom(room);
 
       // mark active so it's not in the contacts list but in the conversation list
       // mark isApproved as this is a public chat
@@ -212,7 +206,7 @@ export class OpenGroupManagerV2 {
       return conversation;
     } catch (e) {
       window?.log?.warn('Failed to join open group v2', e.message);
-      await removeV2OpenGroupRoom(conversationId);
+      await OpenGroupData.removeV2OpenGroupRoom(conversationId);
       // throw new Error(window.i18n('connectToServerFail'));
       return undefined;
     }

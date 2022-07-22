@@ -17,7 +17,7 @@ import { SessionInboxView } from '../components/SessionInboxView';
 import { deleteAllLogs } from '../node/logs';
 import ReactDOM from 'react-dom';
 import React from 'react';
-import { opengroupRoomsLoad } from '../data/opengroups';
+import { OpenGroupData } from '../data/opengroups';
 import { loadKnownBlindedKeys } from '../session/apis/open_group_api/sogsv3/knownBlindedkeys';
 // tslint:disable: max-classes-per-file
 
@@ -174,7 +174,7 @@ Storage.onready(async () => {
     await Promise.all([
       getConversationController().load(),
       BlockedNumberController.load(),
-      opengroupRoomsLoad(),
+      OpenGroupData.opengroupRoomsLoad(),
       loadKnownBlindedKeys(),
     ]);
   } catch (error) {

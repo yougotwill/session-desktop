@@ -1,5 +1,5 @@
 import _ from 'lodash';
-import { getV2OpenGroupRoomByRoomId, OpenGroupV2Room } from '../../../../data/opengroups';
+import { OpenGroupData, OpenGroupV2Room } from '../../../../data/opengroups';
 import { getConversationController } from '../../../conversations';
 import { PromiseUtils, ToastUtils } from '../../../utils';
 
@@ -66,7 +66,7 @@ async function joinOpenGroupV2(room: OpenGroupV2Room, fromConfigMessage: boolean
   const publicKey = room.serverPublicKey.toLowerCase();
   const prefixedServer = prefixify(serverUrl);
 
-  const alreadyExist = getV2OpenGroupRoomByRoomId({ serverUrl, roomId });
+  const alreadyExist = OpenGroupData.getV2OpenGroupRoomByRoomId({ serverUrl, roomId });
   const conversationId = getOpenGroupV2ConversationId(serverUrl, roomId);
   const existingConvo = getConversationController().get(conversationId);
 

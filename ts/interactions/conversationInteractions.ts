@@ -3,7 +3,7 @@ import {
   openGroupPrefixRegex,
   openGroupV2ConversationIdRegex,
 } from '../session/apis/open_group_api/utils/OpenGroupUtils';
-import { getV2OpenGroupRoom } from '../data/opengroups';
+import { OpenGroupData } from '../data/opengroups';
 import { CallManager, SyncUtils, ToastUtils, UserUtils } from '../session/utils';
 import {
   ConversationNotificationSettingType,
@@ -44,7 +44,7 @@ import { uploadFileToFsWithOnionV4 } from '../session/apis/file_server_api/FileS
 export const getCompleteUrlForV2ConvoId = async (convoId: string) => {
   if (convoId.match(openGroupV2ConversationIdRegex)) {
     // this is a v2 group, just build the url
-    const roomInfos = getV2OpenGroupRoom(convoId);
+    const roomInfos = OpenGroupData.getV2OpenGroupRoom(convoId);
     if (roomInfos) {
       const fullUrl = getCompleteUrlFromRoom(roomInfos);
 

@@ -1,5 +1,5 @@
 import { findIndex } from 'lodash';
-import { getV2OpenGroupRoomsByServerUrl, saveV2OpenGroupRooms } from '../../../../data/opengroups';
+import { OpenGroupData } from '../../../../data/opengroups';
 import { DecodedResponseBodiesV4 } from '../../../onions/onionv4';
 import { BatchSogsReponse, OpenGroupBatchRow } from './sogsV3BatchPoll';
 import { parseCapabilities } from './sogsV3Capabilities';
@@ -45,7 +45,7 @@ export const handleCapabilities = async (
   // get all v2OpenGroup rooms with the matching serverUrl and set the capabilities.
   // TODO: implement - update capabilities. Unsure whether to store in DB or save to instance of this obj.
 
-  const rooms = getV2OpenGroupRoomsByServerUrl(serverUrl);
+  const rooms = OpenGroupData.getV2OpenGroupRoomsByServerUrl(serverUrl);
 
   if (!rooms || !rooms.length) {
     window?.log?.error('handleCapabilities - Found no groups with matching server url');
@@ -53,7 +53,7 @@ export const handleCapabilities = async (
   }
 
   const updatedRooms = rooms.map(r => ({ ...r, capabilities }));
-  await saveV2OpenGroupRooms(updatedRooms);
+  await OpenGroupData.saveV2OpenGroupRooms(updatedRooms);
 
   return capabilities;
 };

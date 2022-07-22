@@ -49,11 +49,24 @@ export type OpenGroupV2Room = {
   capabilities?: Array<string>;
 };
 
+export const OpenGroupData = {
+  getAllV2OpenGroupRoomsMap,
+  opengroupRoomsLoad,
+  getV2OpenGroupRoom,
+  getV2OpenGroupRoomsByServerUrl,
+  saveV2OpenGroupRoom,
+  saveV2OpenGroupRooms,
+  getV2OpenGroupRoomByRoomId,
+  removeV2OpenGroupRoom,
+  getAllOpenGroupV2Conversations,
+  getAllOpengroupsServerPubkeys,
+};
+
 /**
  *
  * @returns a map containing as key the conversationId of the opengroup room and as value the OpenGroupV2Room details
  */
-export function getAllV2OpenGroupRoomsMap(): Map<string, OpenGroupV2Room> | undefined {
+function getAllV2OpenGroupRoomsMap(): Map<string, OpenGroupV2Room> | undefined {
   const results = new Map<string, OpenGroupV2Room>();
 
   throwIfNotLoaded().forEach(o => {
@@ -68,7 +81,7 @@ export function getAllV2OpenGroupRoomsMap(): Map<string, OpenGroupV2Room> | unde
 // avoid doing fetches and write too often from the db by using a cache on the renderer side.
 let cachedRooms: Array<OpenGroupV2Room> | null = null;
 
-export async function opengroupRoomsLoad() {
+async function opengroupRoomsLoad() {
   if (cachedRooms !== null) {
     return;
   }
@@ -96,8 +109,7 @@ function throwIfNotLoaded() {
   }
   return cachedRooms;
 }
-
-export function getV2OpenGroupRoom(conversationId: string): OpenGroupV2Room | undefined {
+function getV2OpenGroupRoom(conversationId: string): OpenGroupV2Room | undefined {
   if (!isOpenGroupV2(conversationId)) {
     throw new Error(`getV2OpenGroupRoom: this is not a valid v2 id: ${conversationId}`);
   }
@@ -105,15 +117,13 @@ export function getV2OpenGroupRoom(conversationId: string): OpenGroupV2Room | un
   const found = throwIfNotLoaded().find(m => m.conversationId === conversationId);
   return (found && cloneDeep(found)) || undefined;
 }
-export function getV2OpenGroupRoomsByServerUrl(
-  serverUrl: string
-): Array<OpenGroupV2Room> | undefined {
+function getV2OpenGroupRoomsByServerUrl(serverUrl: string): Array<OpenGroupV2Room> | undefined {
   const found = throwIfNotLoaded().filter(m => m.serverUrl === serverUrl);
 
   return (found && cloneDeep(found)) || undefined;
 }
 
-export function getV2OpenGroupRoomByRoomId(
+function getV2OpenGroupRoomByRoomId(
   roomInfos: OpenGroupRequestCommonType
 ): OpenGroupV2Room | undefined {
   const found = throwIfNotLoaded().find(
@@ -122,12 +132,11 @@ export function getV2OpenGroupRoomByRoomId(
 
   return (found && cloneDeep(found)) || undefined;
 }
-
-export async function saveV2OpenGroupRooms(rooms: Array<OpenGroupV2Room>): Promise<void> {
+async function saveV2OpenGroupRooms(rooms: Array<OpenGroupV2Room>): Promise<void> {
   await Promise.all(rooms.map(saveV2OpenGroupRoom));
 }
 
-export async function saveV2OpenGroupRoom(room: OpenGroupV2Room): Promise<void> {
+async function saveV2OpenGroupRoom(room: OpenGroupV2Room): Promise<void> {
   if (!room.conversationId || !room.roomId || !room.serverUrl || !room.serverPublicKey) {
     throw new Error('Cannot save v2 room, invalid data');
   }
@@ -156,7 +165,7 @@ export async function saveV2OpenGroupRoom(room: OpenGroupV2Room): Promise<void> 
   }
 }
 
-export async function removeV2OpenGroupRoom(conversationId: string): Promise<void> {
+async function removeV2OpenGroupRoom(conversationId: string): Promise<void> {
   await channels.removeV2OpenGroupRoom(conversationId);
   const foundIndex =
     conversationId && throwIfNotLoaded().findIndex(m => m.conversationId === conversationId);
@@ -165,7 +174,7 @@ export async function removeV2OpenGroupRoom(conversationId: string): Promise<voi
   }
 }
 
-export async function getAllOpenGroupV2Conversations(): Promise<ConversationCollection> {
+async function getAllOpenGroupV2Conversations(): Promise<ConversationCollection> {
   const conversations = await channels.getAllOpenGroupV2Conversations();
 
   const collection = new ConversationCollection();
@@ -173,6 +182,6 @@ export async function getAllOpenGroupV2Conversations(): Promise<ConversationColl
   return collection;
 }
 
-export function getAllOpengroupsServerPubkeys(): Array<string> {
+function getAllOpengroupsServerPubkeys(): Array<string> {
   return uniq(throwIfNotLoaded().map(room => room.serverPublicKey)) || [];
 }
