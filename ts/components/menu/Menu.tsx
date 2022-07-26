@@ -7,6 +7,7 @@ import {
   useConversationUsername,
   useHasNickname,
   useIsActive,
+  useIsBlinded,
   useIsBlocked,
   useIsKickedFromGroup,
   useIsLeft,
@@ -96,8 +97,8 @@ function showChangeNickname(isMe: boolean, isPrivate: boolean, isRequest: boolea
 }
 
 // we want to show the copyId for open groups and private chats only
-function showCopyId(isPublic: boolean, isPrivate: boolean): boolean {
-  return isPrivate || isPublic;
+function showCopyId(isPublic: boolean, isPrivate: boolean, isBlinded: boolean): boolean {
+  return (isPrivate && !isBlinded) || isPublic;
 }
 
 function showDeleteContact(
@@ -276,8 +277,9 @@ export const ShowUserDetailsMenuItem = () => {
   const isPrivate = useIsPrivate(convoId);
   const avatarPath = useAvatarPath(convoId);
   const userName = useConversationUsername(convoId) || convoId;
+  const isBlinded = useIsBlinded(convoId);
 
-  if (isPrivate) {
+  if (isPrivate && !isBlinded) {
     return (
       <Item
         onClick={() => {
@@ -402,8 +404,9 @@ export const CopyMenuItem = (): JSX.Element | null => {
   const convoId = useContext(ContextConversationId);
   const isPublic = useIsPublic(convoId);
   const isPrivate = useIsPrivate(convoId);
+  const isBlinded = useIsBlinded(convoId);
 
-  if (showCopyId(isPublic, isPrivate)) {
+  if (showCopyId(isPublic, isPrivate, isBlinded)) {
     const copyIdLabel = isPublic ? window.i18n('copyOpenGroupURL') : window.i18n('copySessionID');
     return <Item onClick={() => copyPublicKeyByConvoId(convoId)}>{copyIdLabel}</Item>;
   }

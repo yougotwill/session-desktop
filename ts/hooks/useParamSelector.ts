@@ -78,6 +78,13 @@ export function useIsPrivate(convoId?: string) {
   return Boolean(convoProps && convoProps.isPrivate);
 }
 
+export function useIsBlinded(convoId?: string) {
+  if (!convoId) {
+    return false;
+  }
+  return Boolean(PubKey.hasBlindedPrefix(convoId));
+}
+
 export function useHasNickname(convoId?: string) {
   const convoProps = useConversationPropsById(convoId);
   return Boolean(convoProps && convoProps.hasNickname);

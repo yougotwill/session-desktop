@@ -117,8 +117,11 @@ export class PubKey {
 
   /**
    * Returns a localized string of the error, or undefined in the given pubkey is valid.
+   *
+   * Note: this should be used when starting a conversation and we do not support starting conversation from scratch with a blinded sessionId.
+   * So if the given pubkey has a blinded prefix, this call will fail with a localized `invalidPubkeyFormat` error
    */
-  public static validateWithError(pubkey: string): string | undefined {
+  public static validateWithErrorNoBlinding(pubkey: string): string | undefined {
     // Check if it's hex
     const isHex = pubkey.replace(/[\s]*/g, '').match(/^[0-9a-fA-F]+$/);
     if (!isHex) {
@@ -127,7 +130,19 @@ export class PubKey {
 
     // Check if the pubkey length is 33 and leading with 05 or of length 32
     const len = pubkey.length;
-    if ((len !== 33 * 2 || !/^05/.test(pubkey)) && len !== 32 * 2) {
+
+    const isDevValid = window.sessionFeatureFlags.useTestNet && len === 32 * 2; // dev pubkey can have only 64 chars
+
+    // we do not support blinded prefix, see Note above
+    const isProdValid = len === 33 * 2 && /^05/.test(pubkey); // prod pubkey can have only 66 chars and the 05 only.
+
+    if (window.sessionFeatureFlags.useTestNet) {
+      if (!isDevValid) {
+        return window.i18n('invalidPubkeyFormat');
+      }
+      return undefined;
+    }
+    if (!isProdValid) {
       return window.i18n('invalidPubkeyFormat');
     }
     return undefined;

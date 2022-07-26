@@ -40,7 +40,7 @@ export const OverlayMessage = () => {
     }
     const pubkeyorOnsTrimmed = pubkeyOrOns.trim();
 
-    if (!PubKey.validateWithError(pubkeyorOnsTrimmed)) {
+    if (!PubKey.validateWithErrorNoBlinding(pubkeyorOnsTrimmed)) {
       // this is a pubkey
       await getConversationController().getOrCreateAndWait(
         pubkeyorOnsTrimmed,
@@ -59,7 +59,7 @@ export const OverlayMessage = () => {
       setLoading(true);
       try {
         const resolvedSessionID = await SNodeAPI.getSessionIDForOnsName(pubkeyorOnsTrimmed);
-        if (PubKey.validateWithError(resolvedSessionID)) {
+        if (PubKey.validateWithErrorNoBlinding(resolvedSessionID)) {
           throw new Error('Got a resolved ONS but the returned entry is not a vlaid SessionID');
         }
         // this is a pubkey
