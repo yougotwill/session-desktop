@@ -159,7 +159,9 @@ const sendViaOnionV4ToNonSnodeWithRetries = async (
         // We decode it here, because if the result status code is not valid, we want to trigger a retry (by throwing an error)
         const decodedV4 = OnionV4.decodeV4Response(onionV4Response);
 
-        const foundStatusCode = decodedV4?.metadata?.code || STATUS_NO_STATUS;
+        // the pn server reply with the decodedV4?.metadata as any)?.status syntax
+        const foundStatusCode =
+          decodedV4?.metadata?.code || (decodedV4?.metadata as any)?.status || STATUS_NO_STATUS;
         if (foundStatusCode < 200 || foundStatusCode > 299) {
           // we consider those cases as an error, and trigger a retry (if possible), by throwing a non-abortable error
           throw new Error(
@@ -167,7 +169,7 @@ const sendViaOnionV4ToNonSnodeWithRetries = async (
           );
         }
         return {
-          status_code: decodedV4?.metadata?.code || STATUS_NO_STATUS,
+          status_code: foundStatusCode,
           body: decodedV4?.body || null,
           bodyBinary: decodedV4?.bodyBinary || null,
         };
@@ -177,7 +179,7 @@ const sendViaOnionV4ToNonSnodeWithRetries = async (
         minTimeout: 100,
         onFailedAttempt: e => {
           window?.log?.warn(
-            `sendViaOnionV4ToNonSnodeRetryable attempt #${e.attemptNumber} failed. ${e.retriesLeft} retries left...`
+            `sendViaOnionV4ToNonSnodeRetryable attempt #${e.attemptNumber} failed. ${e.retriesLeft} retries left...: ${e.message}`
           );
         },
       }
@@ -293,7 +295,6 @@ async function sendJsonViaOnionV4ToPnServer(sendOptions: {
     false,
     abortSignal
   );
-
   return res as OnionV4JSONSnodeResponse;
 }
 
