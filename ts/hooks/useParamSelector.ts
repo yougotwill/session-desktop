@@ -139,8 +139,11 @@ export function useIsApproved(convoId?: string) {
   return Boolean(convoProps && convoProps.isApproved);
 }
 
-export function useIsRequest(convoId: string) {
+export function useIsRequest(convoId?: string) {
   const convoProps = useConversationPropsById(convoId);
+  if (!convoProps) {
+    return false;
+  }
   return Boolean(
     convoProps &&
       ConversationModel.hasValidIncomingRequestValues(

@@ -1,7 +1,7 @@
 import React from 'react';
 import { useSelector } from 'react-redux';
 import styled from 'styled-components';
-import { getConversationController } from '../../session/conversations';
+import { useIsRequest } from '../../hooks/useParamSelector';
 import {
   getSelectedConversation,
   hasSelectedConversationIncomingMessages,
@@ -9,9 +9,9 @@ import {
 
 export const ConversationRequestinfo = () => {
   const selectedConversation = useSelector(getSelectedConversation);
-  const convoModel =
-    selectedConversation && getConversationController().get(selectedConversation.id);
-  const showMsgRequestUI = selectedConversation && convoModel && convoModel.isIncomingRequest();
+  const isIncomingMessageRequest = useIsRequest(selectedConversation?.id);
+
+  const showMsgRequestUI = selectedConversation && isIncomingMessageRequest;
   const hasIncomingMessages = useSelector(hasSelectedConversationIncomingMessages);
 
   if (!showMsgRequestUI || !hasIncomingMessages) {
