@@ -843,7 +843,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     });
     await this.commit();
 
-    await this.queueJob(async () => {
+    void this.queueJob(async () => {
       await this.sendMessageJob(messageModel, expireTimer);
     });
   }

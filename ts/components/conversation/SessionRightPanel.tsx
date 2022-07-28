@@ -121,6 +121,7 @@ const HeaderItem = () => {
         onClick={() => {
           dispatch(closeRightPanel());
         }}
+        style={{ position: 'absolute' }}
         dataTestId="back-button-conversation-options"
       />
       <Avatar size={AvatarSize.XL} pubkey={id} />

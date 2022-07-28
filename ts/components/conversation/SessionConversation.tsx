@@ -176,7 +176,9 @@ export class SessionConversation extends React.Component<Props, State> {
     }
 
     const sendAndScroll = async () => {
-      void conversationModel.sendMessage(msg);
+      // this needs to be awaited otherwise, the scrollToNow won't find the new message in the db.
+      // and this make the showScrollButton to be visible (even if we just scrolled to now)
+      await conversationModel.sendMessage(msg);
       await this.scrollToNow();
     };
 
