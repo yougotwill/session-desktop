@@ -150,7 +150,7 @@ export const SessionJoinableRooms = (props: { onRoomClicked: () => void }) => {
   return (
     <Flex container={true} flexGrow={1} flexDirection="column" width="93%">
       <H3 text={window.i18n('orJoinOneOfThese')} />
-      <Flex container={true} flexGrow={1} flexWrap="wrap" justifyContent="center">
+      <Flex container={true} flexGrow={0} flexWrap="wrap" justifyContent="center">
         {componentToRender}
       </Flex>
     </Flex>

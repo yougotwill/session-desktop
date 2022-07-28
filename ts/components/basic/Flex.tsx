@@ -41,10 +41,10 @@ export const Flex = styled.div<FlexProps>`
   display: ${props => (props.container ? 'flex' : 'block')};
   justify-content: ${props => props.justifyContent || 'flex-start'};
   flex-direction: ${props => props.flexDirection || 'row'};
-  flex-grow: ${props => props.flexGrow ?? '0'};
-  flex-basis: ${props => props.flexBasis ?? 'auto'};
-  flex-shrink: ${props => props.flexShrink ?? '1'};
-  flex-wrap: ${props => props.flexWrap || 'nowrap'};
+  flex-grow: ${props => (props.flexGrow !== undefined ? props.flexGrow : '0')};
+  flex-basis: ${props => (props.flexBasis !== undefined ? props.flexBasis : 'auto')};
+  flex-shrink: ${props => (props.flexShrink !== undefined ? props.flexShrink : '1')};
+  flex-wrap: ${props => (props.flexWrap !== undefined ? props.flexWrap : 'nowrap')};
   align-items: ${props => props.alignItems || 'stretch'};
   margin: ${props => props.margin || '0'};
   padding: ${props => props.padding || '0'};
