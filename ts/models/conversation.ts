@@ -71,7 +71,10 @@ import { OpenGroupData } from '../data/opengroups';
 import { roomHasBlindEnabled } from '../session/apis/open_group_api/sogsv3/sogsV3Capabilities';
 import { addMessagePadding } from '../session/crypto/BufferPadding';
 import { getSodiumRenderer } from '../session/crypto';
-import { findCachedOurBlindedPubkeyOrLookItUp } from '../session/apis/open_group_api/sogsv3/knownBlindedkeys';
+import {
+  findCachedOurBlindedPubkeyOrLookItUp,
+  isUsAnySogsFromCache,
+} from '../session/apis/open_group_api/sogsv3/knownBlindedkeys';
 import { sogsV3FetchPreviewAndSaveIt } from '../session/apis/open_group_api/sogsv3/sogsV3FetchFile';
 
 export class ConversationModel extends Backbone.Model<ConversationAttributes> {
@@ -1590,7 +1593,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       const regex = new RegExp(`@${PubKey.regexForPubkeys}`, 'g');
       const text = message.get('body');
       const mentions = text?.match(regex) || ([] as Array<string>);
-      const mentionMe = mentions && mentions.some(m => UserUtils.isUsFromCache(m.slice(1)));
+      const mentionMe = mentions && mentions.some(m => isUsAnySogsFromCache(m.slice(1)));
 
       const quotedMessageAuthor = message.get('quote')?.author;
 
