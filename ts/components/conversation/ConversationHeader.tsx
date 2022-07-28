@@ -37,6 +37,7 @@ import {
   useConversationUsername,
   useExpireTimer,
   useIsKickedFromGroup,
+  useIsRequest,
 } from '../../hooks/useParamSelector';
 import { SessionButton, SessionButtonColor, SessionButtonType } from '../basic/SessionButton';
 import { SessionIconButton } from '../icon';
@@ -232,7 +233,9 @@ const CallButton = () => {
   const hasOngoingCall = useSelector(getHasOngoingCall);
   const canCall = !(hasIncomingCall || hasOngoingCall);
 
-  if (!isPrivate || isMe || !selectedConvoKey || isBlocked || !activeAt) {
+  const isRequest = useIsRequest(selectedConvoKey);
+
+  if (!isPrivate || isMe || !selectedConvoKey || isBlocked || !activeAt || isRequest) {
     return null;
   }
 
