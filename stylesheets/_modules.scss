@@ -289,11 +289,10 @@
 }
 
 .module-conversation-header__title-container {
-  flex: 1 1 50%;
   min-width: 0;
   display: block;
   text-align: center;
-  max-width: 50%;
+  flex-grow: 1;
 }
 
 .module-conversation-header__title-flex {

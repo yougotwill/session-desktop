@@ -155,9 +155,9 @@ const TripleDotsMenu = (props: { triggerId: string; showBackButton: boolean }) =
 };
 
 const TripleDotContainer = styled.div`
-  flex: 1 0 25%;
   user-select: none;
-  box-sizing: border-box;
+  flex-grow: 0;
+  flex-shrink: 0;
 `;
 
 const ExpirationLength = (props: { expirationSettingName?: string }) => {
@@ -253,7 +253,7 @@ export const StyledSubtitleContainer = styled.div`
   display: flex;
   flex-direction: row;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
 
   span:last-child {
     margin-bottom: 0;
@@ -387,9 +387,8 @@ export const ConversationHeaderWithDetails = () => {
             container={true}
             flexDirection="row"
             alignItems="center"
-            flex="1 0 25%"
-            justifyContent="flex-end"
-            minWidth="200px"
+            flexGrow={0}
+            flexShrink={0}
           >
             {!isKickedFromGroup && (
               <ExpirationLength expirationSettingName={expirationSettingName} />
