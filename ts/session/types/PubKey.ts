@@ -131,18 +131,11 @@ export class PubKey {
     // Check if the pubkey length is 33 and leading with 05 or of length 32
     const len = pubkey.length;
 
-    const isDevValid = window.sessionFeatureFlags.useTestNet && len === 32 * 2; // dev pubkey can have only 64 chars
-
     // we do not support blinded prefix, see Note above
-    const isProdValid = len === 33 * 2 && /^05/.test(pubkey); // prod pubkey can have only 66 chars and the 05 only.
+    const isProdOrDevValid = len === 33 * 2 && /^05/.test(pubkey); // prod pubkey can have only 66 chars and the 05 only.
 
-    if (window.sessionFeatureFlags.useTestNet) {
-      if (!isDevValid) {
-        return window.i18n('invalidPubkeyFormat');
-      }
-      return undefined;
-    }
-    if (!isProdValid) {
+    // dev pubkey on testnet are now 66 chars too with the prefix, so every sessionID needs 66 chars and the prefix to be valid
+    if (!isProdOrDevValid) {
       return window.i18n('invalidPubkeyFormat');
     }
     return undefined;
