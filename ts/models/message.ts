@@ -1165,7 +1165,8 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
     try {
       const senderConvoId = this.getSource();
       const isClosedGroup = this.getConversation()?.isClosedGroup() || false;
-      if (!!this.get('isPublic') || isClosedGroup || isUsFromCache(senderConvoId)) {
+      const isOpengroup = this.getConversation()?.isOpenGroupV2() || false;
+      if (isOpengroup || isClosedGroup || isUsFromCache(senderConvoId)) {
         return true;
       }
       // check the convo from this user

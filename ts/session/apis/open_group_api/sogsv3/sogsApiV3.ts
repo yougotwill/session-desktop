@@ -15,9 +15,11 @@ import { filterDuplicatesFromDbAndIncomingV4 } from '../opengroupV2/SogsFilterDu
 import { callUtilsWorker } from '../../../../webworker/workers/util_worker_interface';
 import { PubKey } from '../../../types';
 import {
+  addCachedBlindedKey,
   findCachedBlindedMatchOrItLookup,
   findCachedOurBlindedPubkeyOrLookItUp,
   getCachedNakedKeyFromBlindedNoServerPubkey,
+  tryMatchBlindWithStandardKey,
 } from './knownBlindedkeys';
 import { SogsBlinding } from './sogsBlinding';
 import { base64_variants, from_base64 } from 'libsodium-wrappers-sumo';
@@ -376,6 +378,32 @@ async function handleInboxOutboxMessages(
           );
         }
       } else {
+        // this is an inbox message
+        const sender = inboxOutboxItem.sender;
+
+        try {
+          const match = tryMatchBlindWithStandardKey(
+            decrypted.senderUnblinded,
+            sender,
+            serverPubkey,
+            sodium
+          );
+          if (!match) {
+            throw new Error(
+              `tryMatchBlindWithStandardKey failed for blinded ${decrypted.senderUnblinded} and ${sender}`
+            );
+          }
+          // that sender just sent us its unblindedId.
+          await addCachedBlindedKey({
+            blindedId: sender,
+            realSessionId: decrypted.senderUnblinded,
+            serverPublicKey: serverPubkey,
+          });
+          await findCachedBlindedMatchOrItLookup(sender, serverPubkey, sodium);
+        } catch (e) {
+          window.log.warn('tryMatchBlindWithStandardKey could not veriyfy');
+        }
+
         await innerHandleSwarmContentMessage(
           builtEnvelope,
           postedAtInMs,
