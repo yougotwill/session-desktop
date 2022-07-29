@@ -6,26 +6,6 @@ import { batchGlobalIsSuccess } from './sogsV3BatchPoll';
 import { roomHasBlindEnabled } from './sogsV3Capabilities';
 
 /**
- * This function returns a base url to this room
- * This is basically used for building url after posting an attachment
- * hasRoomInEndpoint = true means the roomId is already in the endpoint.
- * so we don't add the room after the serverUrl.
- *
- */
-function getCompleteEndpointUrl(
-  roomInfos: OpenGroupRequestCommonType,
-  endpoint: string,
-  hasRoomInEndpoint: boolean
-) {
-  // serverUrl has the port and protocol already
-  if (!hasRoomInEndpoint) {
-    return `${roomInfos.serverUrl}/${roomInfos.roomId}/${endpoint}`;
-  }
-  // not room based, the endpoint already has the room in it
-  return `${roomInfos.serverUrl}/${endpoint}`;
-}
-
-/**
  * Returns the id on which the file is saved, or null
  */
 export const uploadFileToRoomSogs3 = async (
@@ -61,11 +41,8 @@ export const uploadFileToRoomSogs3 = async (
   if (!fileId) {
     return null;
   }
-  const fileUrl = getCompleteEndpointUrl(
-    roomInfos,
-    `/room/${roomDetails.roomId}/file/${fileId}`,
-    false
-  );
+  const fileUrl = `${roomInfos.serverUrl}/room/${roomDetails.roomId}/file/${fileId}`;
+
   return {
     fileId,
     fileUrl,

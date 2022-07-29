@@ -1,5 +1,5 @@
 import AbortController, { AbortSignal } from 'abort-controller';
-import { toNumber } from 'lodash';
+import { isUndefined, toNumber } from 'lodash';
 import { OpenGroupV2Room, OpenGroupV2RoomWithImageID } from '../../../../data/opengroups';
 import { MIME } from '../../../../types';
 import { processNewAttachment } from '../../../../types/MessageAttachment';
@@ -49,7 +49,7 @@ export async function fetchBinaryFromSogsWithOnionV4(sendOptions: {
         stringifiedBody
       );
 
-  if (!headersWithSogsHeadersIfNeeded) {
+  if (isUndefined(headersWithSogsHeadersIfNeeded)) {
     return null;
   }
   headersWithSogsHeadersIfNeeded = { ...includedHeaders, ...headersWithSogsHeadersIfNeeded };
@@ -65,6 +65,7 @@ export async function fetchBinaryFromSogsWithOnionV4(sendOptions: {
     false,
     abortSignal
   );
+
   if (!res?.bodyBinary) {
     window.log.info('fetchBinaryFromSogsWithOnionV4 no binary content');
     return null;
@@ -184,7 +185,7 @@ export const sogsV3FetchFileByFileID = async (
   roomInfos: OpenGroupV2Room,
   fileId: string
 ): Promise<Uint8Array | null> => {
-  if (!roomInfos || !roomInfos.imageID) {
+  if (!roomInfos) {
     return null;
   }
   // not a batch call yet as we need to exclude headers for this call for now
