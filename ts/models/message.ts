@@ -168,13 +168,12 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
 
   public isExpirationTimerUpdate() {
     const expirationTimerFlag = SignalService.DataMessage.Flags.EXPIRATION_TIMER_UPDATE;
-    const flags = this.get('flags');
-    if (!flags) {
-      return false;
-    }
+    const flags = this.get('flags') || 0;
+    const expirationTimerUpdate = this.get('expirationTimerUpdate');
+
     // eslint-disable-next-line no-bitwise
     // tslint:disable-next-line: no-bitwise
-    return !!(flags & expirationTimerFlag);
+    return Boolean(flags & expirationTimerFlag) || !isEmpty(expirationTimerUpdate);
   }
 
   public isIncoming() {
