@@ -1,6 +1,6 @@
 import React, { ReactElement, useEffect, useState } from 'react';
 import styled from 'styled-components';
-import { getMessageById } from '../../../../data/data';
+import { Data } from '../../../../data/data';
 import { PubKey } from '../../../../session/types/PubKey';
 import { nativeEmojiData } from '../../../../util/emoji';
 import { readableList } from '../../../../util/readableList';
@@ -57,7 +57,7 @@ const StyledEmoji = styled.span`
 
 const generateContacts = async (messageId: string, senders: Array<string>) => {
   let results = null;
-  const message = await getMessageById(messageId);
+  const message = await Data.getMessageById(messageId);
   if (message) {
     results = senders.map(sender => {
       const contact = message.findAndFormatContact(sender);

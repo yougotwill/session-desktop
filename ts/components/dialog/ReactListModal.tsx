@@ -2,7 +2,7 @@ import { isEqual } from 'lodash';
 import React, { ReactElement, useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import styled from 'styled-components';
-import { getMessageById } from '../../data/data';
+import { Data } from '../../data/data';
 import { UserUtils } from '../../session/utils';
 import { updateReactListModal, updateUserDetailsModal } from '../../state/ducks/modalDialog';
 import { StateType } from '../../state/reducer';
@@ -64,6 +64,11 @@ const StyledReactionSender = styled(Flex)`
   .module-avatar {
     margin-right: 12px;
   }
+
+  .module-conversation__user__profile-name {
+    color: var(--color-text);
+    font-weight: normal;
+  }
 `;
 
 // const StyledClearButton = styled.button`
@@ -85,7 +90,7 @@ const ReactionSenders = (props: ReactionSendersProps) => {
   const dispatch = useDispatch();
 
   const handleAvatarClick = async (sender: string) => {
-    const message = await getMessageById(messageId);
+    const message = await Data.getMessageById(messageId);
     if (message) {
       handleClose();
       const contact = message.findAndFormatContact(sender);
@@ -120,11 +125,15 @@ const ReactionSenders = (props: ReactionSendersProps) => {
                 await handleAvatarClick(sender);
               }}
             />
-            <ContactName
-              pubkey={sender}
-              module="module-conversation__user"
-              shouldShowPubkey={false}
-            />
+            {sender === me ? (
+              window.i18n('you')
+            ) : (
+              <ContactName
+                pubkey={sender}
+                module="module-conversation__user"
+                shouldShowPubkey={false}
+              />
+            )}
           </Flex>
           {sender === me && (
             <SessionIconButton

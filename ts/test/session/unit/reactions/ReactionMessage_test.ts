@@ -1,7 +1,7 @@
 import chai, { expect } from 'chai';
 import Sinon, { useFakeTimers } from 'sinon';
 import { handleMessageReaction, sendMessageReaction } from '../../../../util/reactions';
-import * as Data from '../../../../../ts/data/data';
+import { Data } from '../../../../data/data';
 import * as Storage from '../../../../util/storage';
 import { generateFakeIncomingPrivateMessage, stubWindowLog } from '../../../test-utils/utils';
 import { DEFAULT_RECENT_REACTS } from '../../../../session/constants';

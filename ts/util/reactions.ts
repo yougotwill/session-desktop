@@ -1,5 +1,5 @@
 import { isEmpty } from 'lodash';
-import { getMessageById, getMessagesBySentAt } from '../data/data';
+import { Data } from '../data/data';
 import { MessageModel } from '../models/message';
 import { SignalService } from '../protobuf';
 import { UserUtils } from '../session/utils';
@@ -26,7 +26,7 @@ export const sendMessageReaction = async (messageId: string, emoji: string) => {
     }
   }
 
-  const found = await getMessageById(messageId);
+  const found = await Data.getMessageById(messageId);
   if (found && found.get('sent_at')) {
     const conversationModel = found?.getConversation();
     if (!conversationModel) {
@@ -88,7 +88,7 @@ export const handleMessageReaction = async (
     return;
   }
 
-  const collection = await getMessagesBySentAt(originalMessageTimestamp);
+  const collection = await Data.getMessagesBySentAt(originalMessageTimestamp);
   const originalMessage = collection.find((item: MessageModel) => {
     const messageTimestamp = item.get('sent_at');
     const author = item.get('source');
