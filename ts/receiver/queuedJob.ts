@@ -17,7 +17,7 @@ import { appendFetchAvatarAndProfileJob } from './userProfileImageUpdates';
 import { ConversationTypeEnum } from '../models/conversationAttributes';
 import { getUsBlindedInThatServer } from '../session/apis/open_group_api/sogsv3/knownBlindedkeys';
 import { handleMessageReaction } from '../util/reactions';
-import { Reaction } from '../types/Message';
+import { Reaction } from '../types/Reaction';
 
 function contentTypeSupported(type: string): boolean {
   const Chrome = GoogleChrome;

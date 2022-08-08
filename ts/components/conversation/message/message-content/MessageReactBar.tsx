@@ -1,10 +1,10 @@
 import React, { ReactElement, useEffect, useState } from 'react';
 import styled from 'styled-components';
-import { RecentReactions } from '../../../../types/Util';
 import { getRecentReactions } from '../../../../util/storage';
 import { SessionIconButton } from '../../../icon';
 import { nativeEmojiData } from '../../../../util/emoji';
 import { isEqual } from 'lodash';
+import { RecentReactions } from '../../../../types/Reaction';
 
 type Props = {
   action: (...args: Array<any>) => void;

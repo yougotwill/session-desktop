@@ -5,7 +5,7 @@ import { MessageRenderingProps } from '../../../../models/messageType';
 import { StateType } from '../../../../state/reducer';
 import { getMessageReactsProps } from '../../../../state/selectors/conversations';
 import { isEmpty, isEqual } from 'lodash';
-import { ReactionList } from '../../../../types/Message';
+import { ReactionList } from '../../../../types/Reaction';
 import { StyledPopupContainer } from '../reactions/ReactionPopup';
 import { Flex } from '../../../basic/Flex';
 import { nativeEmojiData } from '../../../../util/emoji';

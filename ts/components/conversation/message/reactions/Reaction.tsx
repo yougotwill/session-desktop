@@ -1,5 +1,5 @@
 import React, { ReactElement, useRef, useState } from 'react';
-import { ReactionList } from '../../../../types/Message';
+import { ReactionList } from '../../../../types/Reaction';
 import { UserUtils } from '../../../../session/utils';
 import { abbreviateNumber } from '../../../../util/abbreviateNumber';
 import { nativeEmojiData } from '../../../../util/emoji';

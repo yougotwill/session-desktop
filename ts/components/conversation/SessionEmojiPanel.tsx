@@ -6,9 +6,9 @@ import data from '@emoji-mart/data';
 import { Picker } from '../../../node_modules/emoji-mart/dist/index.cjs';
 import { useSelector } from 'react-redux';
 import { getTheme } from '../../state/selectors/theme';
-import { FixedBaseEmoji, FixedPickerProps } from '../../types/Util.js';
 import { noop } from 'lodash';
 import { loadEmojiPanelI18n } from '../../util/i18n';
+import { FixedBaseEmoji, FixedPickerProps } from '../../types/Reaction';
 
 export const StyledEmojiPanel = styled.div<{ isModal: boolean; theme: 'light' | 'dark' }>`
   padding: var(--margins-lg);

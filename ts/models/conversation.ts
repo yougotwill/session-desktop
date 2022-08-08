@@ -75,7 +75,7 @@ import {
   isUsAnySogsFromCache,
 } from '../session/apis/open_group_api/sogsv3/knownBlindedkeys';
 import { sogsV3FetchPreviewAndSaveIt } from '../session/apis/open_group_api/sogsv3/sogsV3FetchFile';
-import { Reaction } from '../types/Message';
+import { Reaction } from '../types/Reaction';
 import { handleMessageReaction } from '../util/reactions';
 
 export class ConversationModel extends Backbone.Model<ConversationAttributes> {

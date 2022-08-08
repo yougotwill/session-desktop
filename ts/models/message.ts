@@ -93,7 +93,7 @@ import {
   isUsAnySogsFromCache,
 } from '../session/apis/open_group_api/sogsv3/knownBlindedkeys';
 import { QUOTED_TEXT_MAX_LENGTH } from '../session/constants';
-import { ReactionList } from '../types/Message';
+import { ReactionList } from '../types/Reaction';
 // tslint:disable: cyclomatic-complexity
 
 /**

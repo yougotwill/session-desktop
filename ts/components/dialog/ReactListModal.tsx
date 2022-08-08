@@ -7,7 +7,7 @@ import { UserUtils } from '../../session/utils';
 import { updateReactListModal, updateUserDetailsModal } from '../../state/ducks/modalDialog';
 import { StateType } from '../../state/reducer';
 import { getMessageReactsProps } from '../../state/selectors/conversations';
-import { ReactionList } from '../../types/Message';
+import { ReactionList } from '../../types/Reaction';
 import { nativeEmojiData } from '../../util/emoji';
 import { sendMessageReaction } from '../../util/reactions';
 import { Avatar, AvatarSize } from '../avatar/Avatar';

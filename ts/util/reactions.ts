@@ -4,8 +4,7 @@ import { MessageModel } from '../models/message';
 import { SignalService } from '../protobuf';
 import { UserUtils } from '../session/utils';
 
-import { ReactionList } from '../types/Message';
-import { RecentReactions } from '../types/Util';
+import { ReactionList, RecentReactions } from '../types/Reaction';
 import { getRecentReactions, saveRecentReations } from '../util/storage';
 
 const rateCountLimit = 20;

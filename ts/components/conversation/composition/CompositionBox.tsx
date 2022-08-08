@@ -56,7 +56,7 @@ import {
 import { renderEmojiQuickResultRow, searchEmojiForQuery } from './EmojiQuickResult';
 import { LinkPreviews } from '../../../util/linkPreviews';
 import styled from 'styled-components';
-import { FixedBaseEmoji } from '../../../types/Util';
+import { FixedBaseEmoji } from '../../../types/Reaction';
 
 export interface ReplyingToMessageProps {
   convoId: string;
