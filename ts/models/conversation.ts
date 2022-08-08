@@ -1008,7 +1008,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
         lastMessageAttribute.length > 40 &&
         lastMessageUpdate.lastMessage.startsWith(lastMessageAttribute)
       ) {
-        // if status is the same, and text have a long length which start with the db status, do not trigger an update.
+        // if status is the same, and text has a long length which starts with the db status, do not trigger an update.
         // we only store the first 60 chars in the db for the lastMessage attributes (see sql.ts)
         return;
       }
