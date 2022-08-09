@@ -294,7 +294,6 @@ export async function sendToOpenGroupV2(
       roomInfos.serverUrl,
       roomInfos.roomId,
       new AbortController().signal,
-      v2Message,
       rawMessage.dataProto().reaction as Reaction,
       blinded
     );

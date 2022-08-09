@@ -1,7 +1,6 @@
 import { AbortSignal } from 'abort-controller';
 import { Reaction } from '../../../../types/Reaction';
 import { OnionSending } from '../../../onions/onionSend';
-import { UserUtils } from '../../../utils';
 import { OpenGroupMessageV2 } from '../opengroupV2/OpenGroupMessageV2';
 import { OpenGroupPollingUtils } from '../opengroupV2/OpenGroupPollingUtils';
 import { batchGlobalIsSuccess, parseBatchGlobalStatusCode } from './sogsV3BatchPoll';
@@ -10,7 +9,6 @@ export const sendSogsReactionOnionV4 = async (
   serverUrl: string,
   room: string,
   abortSignal: AbortSignal,
-  message: OpenGroupMessageV2,
   reaction: Reaction,
   blinded: boolean
 ): Promise<OpenGroupMessageV2> => {
@@ -23,16 +21,9 @@ export const sendSogsReactionOnionV4 = async (
   const endpoint = `/room/${room}/reaction/${reaction.id}/${reaction.emoji}`;
   const method = reaction.action === 0 ? 'PUT' : 'DELETE';
   const serverPubkey = allValidRoomInfos[0].serverPublicKey;
-  const ourKeyPair = await UserUtils.getIdentityKeyPair();
 
-  // if we are sending a blinded message, we have to sign it with the derived keypair
-  // otherwise, we just sign it with our real keypair
-  const signedMessage = blinded
-    ? await message.signWithBlinding(serverPubkey)
-    : await message.sign(ourKeyPair);
-  const json = signedMessage.toJson();
-
-  const stringifiedBody = JSON.stringify(json);
+  // reaction endpoint requires an empty dict {}
+  const stringifiedBody = null;
   const result = await OnionSending.sendJsonViaOnionV4ToSogs({
     serverUrl,
     endpoint,
