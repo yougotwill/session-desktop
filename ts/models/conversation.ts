@@ -719,6 +719,10 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       }
 
       if (this.isOpenGroupV2()) {
+        const serverId = sourceMessage.get('serverId');
+        if (chatMessageParams.reaction && serverId) {
+          chatMessageParams.reaction.id = serverId;
+        }
         const chatMessageOpenGroupV2 = new OpenGroupVisibleMessage(chatMessageParams);
         const roomInfos = this.toOpenGroupV2();
         if (!roomInfos) {

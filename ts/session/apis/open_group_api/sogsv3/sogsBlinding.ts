@@ -73,7 +73,7 @@ async function getOpenGroupHeaders(data: {
     nonce,
     stringToUint8Array(timestamp.toString()),
     stringToUint8Array(method),
-    stringToUint8Array(path)
+    stringToUint8Array(encodeURI(path))
   );
   if (body) {
     const bodyHashed = sodium.crypto_generichash(64, body);
