@@ -124,6 +124,11 @@ export interface OpenGroupReaction {
   you: boolean;
 }
 
+export interface OpenGroupReactionResponse {
+  added?: boolean;
+  removed?: boolean;
+}
+
 export type ReactionList = Record<
   string,
   Record<string, string> // <sender pubkey, messageHash or serverId>

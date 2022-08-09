@@ -1,7 +1,6 @@
 import { AbortSignal } from 'abort-controller';
-import { Reaction } from '../../../../types/Reaction';
+import { OpenGroupReactionResponse, Reaction } from '../../../../types/Reaction';
 import { OnionSending } from '../../../onions/onionSend';
-import { OpenGroupMessageV2 } from '../opengroupV2/OpenGroupMessageV2';
 import { OpenGroupPollingUtils } from '../opengroupV2/OpenGroupPollingUtils';
 import { batchGlobalIsSuccess, parseBatchGlobalStatusCode } from './sogsV3BatchPoll';
 
@@ -11,7 +10,7 @@ export const sendSogsReactionOnionV4 = async (
   abortSignal: AbortSignal,
   reaction: Reaction,
   blinded: boolean
-): Promise<OpenGroupMessageV2> => {
+): Promise<boolean> => {
   const allValidRoomInfos = OpenGroupPollingUtils.getAllValidRoomInfos(serverUrl, new Set([room]));
   if (!allValidRoomInfos?.length) {
     window?.log?.info('getSendReactionRequest: no valid roominfos got.');
@@ -46,21 +45,12 @@ export const sendSogsReactionOnionV4 = async (
   if (!result) {
     throw new Error('Could not putReaction, res is invalid');
   }
-  console.log('opengroup reaction result', result);
-  const rawMessage = result.body as Record<string, any>;
+
+  const rawMessage = result.body as OpenGroupReactionResponse;
   if (!rawMessage) {
     throw new Error('putReaction parsing failed');
   }
 
-  const toParse = {
-    data: rawMessage.data,
-    server_id: rawMessage.id,
-    public_key: rawMessage.session_id,
-    timestamp: Math.floor(rawMessage.posted * 1000),
-    signature: rawMessage.signature,
-  };
-
-  // this will throw if the json is not valid
-  const parsed = OpenGroupMessageV2.fromJson(toParse);
-  return parsed;
+  const success = Boolean(reaction.action === 0 ? rawMessage.added : rawMessage.removed);
+  return success;
 };
