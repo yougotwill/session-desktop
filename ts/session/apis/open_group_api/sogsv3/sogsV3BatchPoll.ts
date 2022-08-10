@@ -224,8 +224,9 @@ const makeBatchRequestPayload = (
       if (options.messages) {
         return {
           method: 'GET',
+          // TODO ?t-r should only be used for opengroups supporting new sogs
           path: isNumber(options.messages.sinceSeqNo)
-            ? `/room/${options.messages.roomId}/messages/since/${options.messages.sinceSeqNo}`
+            ? `/room/${options.messages.roomId}/messages/since/${options.messages.sinceSeqNo}?t=r`
             : `/room/${options.messages.roomId}/messages/recent`,
         };
       }

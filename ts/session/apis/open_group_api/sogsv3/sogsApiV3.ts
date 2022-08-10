@@ -205,7 +205,7 @@ const handleMessagesResponseV4 = async (
 
     const messagesWithMsTimestamp = messages.map(m => ({
       ...m,
-      posted: Math.floor(m.posted * 1000),
+      posted: m.posted ? Math.floor(m.posted * 1000) : undefined,
     }));
 
     const messagesWithoutDeleted = await handleSogsV3DeletedMessages(
@@ -230,13 +230,17 @@ const handleMessagesResponseV4 = async (
     const messagesWithResolvedBlindedIdsIfFound = [];
     for (let index = 0; index < messagesFilteredBlindedIds.length; index++) {
       const newMessage = messagesFilteredBlindedIds[index];
-      const unblindedIdFound = getCachedNakedKeyFromBlindedNoServerPubkey(newMessage.session_id);
+      if (newMessage.session_id) {
+        const unblindedIdFound = getCachedNakedKeyFromBlindedNoServerPubkey(newMessage.session_id);
 
-      // override the sender in the message itself if we are the sender
-      if (unblindedIdFound && UserUtils.isUsFromCache(unblindedIdFound)) {
-        newMessage.session_id = unblindedIdFound;
+        // override the sender in the message itself if we are the sender
+        if (unblindedIdFound && UserUtils.isUsFromCache(unblindedIdFound)) {
+          newMessage.session_id = unblindedIdFound;
+        }
+        messagesWithResolvedBlindedIdsIfFound.push(newMessage);
+      } else {
+        throw Error('session_id is missing so we cannot resolve the blinded id');
       }
-      messagesWithResolvedBlindedIdsIfFound.push(newMessage);
     }
 
     // we use the unverified newMessages seqno and id as last polled because we actually did poll up to those ids.
