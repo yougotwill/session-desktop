@@ -1,4 +1,4 @@
-import _, { compact, isArray, isNumber, isObject, pick } from 'lodash';
+import _, { compact, isArray, isEmpty, isNumber, isObject, pick } from 'lodash';
 import { OpenGroupData } from '../../../../data/opengroups';
 import { handleOpenGroupV4Message } from '../../../../receiver/opengroup';
 import { OpenGroupRequestCommonType } from '../opengroupV2/ApiUtil';
@@ -34,6 +34,7 @@ import { handleOutboxMessageModel } from '../../../../receiver/dataMessage';
 import { ConversationTypeEnum } from '../../../../models/conversationAttributes';
 import { createSwarmMessageSentFromUs } from '../../../../models/messageFactory';
 import { Data } from '../../../../data/data';
+import { handleOpenGroupMessageReactions } from '../../../../util/reactions';
 
 /**
  * Get the convo matching those criteria and make sure it is an opengroup convo, or return null.
@@ -143,9 +144,8 @@ const handleSogsV3DeletedMessages = async (
   serverUrl: string,
   roomId: string
 ) => {
-  // FIXME those 2 `m.data === null` test should be removed when we add support for emoji-reacts
-  const deletions = messages.filter(m => Boolean(m.deleted) || m.data === null);
-  const exceptDeletion = messages.filter(m => !m.deleted && !m.data === null);
+  const deletions = messages.filter(m => Boolean(m.deleted));
+  const exceptDeletion = messages.filter(m => !m.deleted);
   if (!deletions.length) {
     return messages;
   }
@@ -208,10 +208,19 @@ const handleMessagesResponseV4 = async (
     // Incoming messages for sogs v3 have a timestamp in seconds and not ms.
     // Session works with timestamp in ms, for a lot of things, so first, lets fix this.
 
-    const messagesWithMsTimestamp = messages.map(m => ({
-      ...m,
-      posted: m.posted ? Math.floor(m.posted * 1000) : undefined,
-    }));
+    const messagesWithReactions = messages.filter(m => !isEmpty(m.reactions));
+    if (messagesWithReactions.length > 0) {
+      messagesWithReactions.forEach(async m => {
+        await handleOpenGroupMessageReactions(m.reactions, m.id);
+      });
+    }
+
+    const messagesWithMsTimestamp = messages
+      .filter(m => isEmpty(m.reactions))
+      .map(m => ({
+        ...m,
+        posted: m.posted ? Math.floor(m.posted * 1000) : undefined,
+      }));
 
     const messagesWithoutDeleted = await handleSogsV3DeletedMessages(
       messagesWithMsTimestamp,

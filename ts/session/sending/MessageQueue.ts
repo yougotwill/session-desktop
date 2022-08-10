@@ -82,7 +82,7 @@ export class MessageQueue {
         filesToLink
       );
 
-      // We handle reaction messages separately
+      // NOTE Reactions are handled in the MessageSender
       if (message && message.dataProto().reaction) {
         return;
       }

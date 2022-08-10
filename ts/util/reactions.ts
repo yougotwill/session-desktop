@@ -4,7 +4,7 @@ import { MessageModel } from '../models/message';
 import { SignalService } from '../protobuf';
 import { UserUtils } from '../session/utils';
 
-import { ReactionList, RecentReactions } from '../types/Reaction';
+import { OpenGroupReactionList, ReactionList, RecentReactions } from '../types/Reaction';
 import { getRecentReactions, saveRecentReations } from '../util/storage';
 
 const rateCountLimit = 20;
@@ -118,6 +118,10 @@ export const handleMessageReaction = async (
     return;
   }
 
+  if (originalMessage.get('isPublic')) {
+    return;
+  }
+
   const reacts: ReactionList = originalMessage.get('reacts') ?? {};
   reacts[reaction.emoji] = reacts[reaction.emoji] || { count: null, senders: {} };
   const details = reacts[reaction.emoji] ?? {};
@@ -156,6 +160,38 @@ export const handleMessageReaction = async (
     // tslint:disable-next-line: no-dynamic-delete
     delete reacts[reaction.emoji];
   }
+
+  originalMessage.set({
+    reacts: !isEmpty(reacts) ? reacts : undefined,
+  });
+
+  await originalMessage.commit();
+  return originalMessage;
+};
+
+export const handleOpenGroupMessageReactions = async (
+  reactions: OpenGroupReactionList,
+  serverId: number
+) => {
+  if (isEmpty(reactions)) {
+    window?.log?.warn(`The reactions state is empty`);
+    return;
+  }
+
+  const originalMessage = await Data.getMessageByServerId(serverId);
+  if (!originalMessage) {
+    return;
+  }
+
+  const reacts: ReactionList = {};
+  Object.keys(reactions).forEach(key => {
+    const emoji = decodeURI(key);
+    const senders: Record<string, string> = {};
+    reactions[key].reactors.forEach(reactor => {
+      senders[reactor] = String(serverId);
+    });
+    reacts[emoji] = { count: reactions[key].count, senders };
+  });
 
   originalMessage.set({
     reacts: !isEmpty(reacts) ? reacts : undefined,

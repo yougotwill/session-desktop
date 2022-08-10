@@ -51,6 +51,11 @@ export const sendSogsReactionOnionV4 = async (
     throw new Error('putReaction parsing failed');
   }
 
+  window.log.info(
+    `You ${reaction.action === 0 ? 'added' : 'removed'} a`,
+    reaction.emoji,
+    `reaction on ${serverUrl}/${room}`
+  );
   const success = Boolean(reaction.action === 0 ? rawMessage.added : rawMessage.removed);
   return success;
 };

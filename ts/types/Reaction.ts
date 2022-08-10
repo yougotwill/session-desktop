@@ -116,6 +116,14 @@ export interface Reaction {
   action: Action;
 }
 
+export type ReactionList = Record<
+  string,
+  {
+    count: number;
+    senders: Record<string, string>; // <sender pubkey, messageHash or serverId>
+  }
+>;
+
 export interface OpenGroupReaction {
   index: number;
   count: number;
@@ -124,15 +132,9 @@ export interface OpenGroupReaction {
   you: boolean;
 }
 
+export type OpenGroupReactionList = Record<string, OpenGroupReaction>;
+
 export interface OpenGroupReactionResponse {
   added?: boolean;
   removed?: boolean;
 }
-
-export type ReactionList = Record<
-  string,
-  {
-    count: number;
-    senders: Record<string, string>; // <sender pubkey, messageHash or serverId>
-  }
->;
