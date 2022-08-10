@@ -21,6 +21,7 @@ import {
 import { AbortSignal } from 'abort-controller';
 import { pnServerPubkeyHex, pnServerUrl } from '../apis/push_notification_api/PnServer';
 import { fileServerPubKey, fileServerURL } from '../apis/file_server_api/FileServerApi';
+import { invalidAuthRequiresBlinding } from '../apis/open_group_api/opengroupV2/OpenGroupServerPoller';
 
 export type OnionFetchOptions = {
   method: string;
@@ -101,6 +102,13 @@ const sendViaOnionV4ToNonSnodeWithRetries = async (
   }
 
   const payloadObj = buildSendViaOnionPayload(url, fetchOptions);
+
+  if (window.sessionFeatureFlags?.debug.debugNonSnodeRequests) {
+    window.log.info(
+      'sendViaOnionV4ToNonSnodeWithRetries: buildSendViaOnionPayload returned ',
+      JSON.stringify(payloadObj)
+    );
+  }
   // if protocol is forced to 'http:' => just use http (without the ':').
   // otherwise use https as protocol (this is the default)
   const forcedHttp = url.protocol === PROTOCOLS.HTTP;
@@ -120,7 +128,12 @@ const sendViaOnionV4ToNonSnodeWithRetries = async (
     result = await pRetry(
       async () => {
         const pathNodes = await OnionSending.getOnionPathForSending();
-
+        if (window.sessionFeatureFlags?.debug.debugNonSnodeRequests) {
+          window.log.info(
+            'sendViaOnionV4ToNonSnodeWithRetries: getOnionPathForSending returned',
+            JSON.stringify(pathNodes)
+          );
+        }
         if (!pathNodes) {
           throw new Error('getOnionPathForSending is emtpy');
         }
@@ -139,6 +152,12 @@ const sendViaOnionV4ToNonSnodeWithRetries = async (
           useV4: true,
           throwErrors,
         });
+        if (window.sessionFeatureFlags?.debug.debugNonSnodeRequests) {
+          window.log.info(
+            'sendViaOnionV4ToNonSnodeWithRetries: sendOnionRequestHandlingSnodeEject returned: ',
+            JSON.stringify(onionV4Response)
+          );
+        }
 
         if (abortSignal?.aborted) {
           // if the request was aborted, we just want to stop retries.
@@ -162,6 +181,24 @@ const sendViaOnionV4ToNonSnodeWithRetries = async (
         // the pn server replies with the decodedV4?.metadata as any)?.code syntax too since onion v4
         const foundStatusCode = decodedV4?.metadata?.code || STATUS_NO_STATUS;
         if (foundStatusCode < 200 || foundStatusCode > 299) {
+          // this is temporary (as of 27/06/2022) as we want to not support unblinded sogs after some time
+
+          if (
+            foundStatusCode === 400 &&
+            (decodedV4?.body as any).plainText === invalidAuthRequiresBlinding
+          ) {
+            return {
+              status_code: foundStatusCode,
+              body: decodedV4?.body || null,
+              bodyBinary: decodedV4?.bodyBinary || null,
+            };
+          }
+          if (foundStatusCode === 404) {
+            // this is most likely that a 404 won't fix itself. So just stop right here retries by throwing a non retryable error
+            throw new pRetry.AbortError(
+              `Got 404 while sendViaOnionV4ToNonSnodeWithRetries with url:${url}. Stopping retries`
+            );
+          }
           // we consider those cases as an error, and trigger a retry (if possible), by throwing a non-abortable error
           throw new Error(
             `sendViaOnionV4ToNonSnodeWithRetries failed with status code: ${foundStatusCode}. Retrying...`
@@ -406,6 +443,9 @@ async function getBinaryViaOnionV4FromFileServer(sendOptions: {
   }
   const builtUrl = new URL(`${fileServerURL}${endpoint}`);
 
+  if (window.sessionFeatureFlags?.debug.debugFileServerRequests) {
+    window.log.info(`getBinaryViaOnionV4FromFileServer fsv2: "${builtUrl} `);
+  }
   const res = await OnionSending.sendViaOnionV4ToNonSnodeWithRetries(
     fileServerPubKey,
     builtUrl,
@@ -419,6 +459,12 @@ async function getBinaryViaOnionV4FromFileServer(sendOptions: {
     abortSignal
   );
 
+  if (window.sessionFeatureFlags?.debug.debugFileServerRequests) {
+    window.log.info(
+      `getBinaryViaOnionV4FromFileServer fsv2: "${builtUrl}; got:`,
+      JSON.stringify(res)
+    );
+  }
   return res as OnionV4BinarySnodeResponse;
 }
 
