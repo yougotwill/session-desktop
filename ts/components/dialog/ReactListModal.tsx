@@ -186,6 +186,7 @@ export const ReactListModal = (props: Props): ReactElement => {
     dispatch(updateReactListModal(null));
   };
 
+  // TODO
   // const handleClearReactions = (event: any) => {
   //   event.preventDefault();
   //   handleClose();
@@ -208,7 +209,10 @@ export const ReactListModal = (props: Props): ReactElement => {
       setReactions({});
     }
 
-    let _senders = reactions[currentReact] ? Object.keys(reactions[currentReact]) : null;
+    let _senders =
+      reactions[currentReact] && reactions[currentReact].senders
+        ? Object.keys(reactions[currentReact].senders)
+        : null;
 
     if (_senders && !isEqual(senders, _senders)) {
       if (_senders.length > 1) {
@@ -221,7 +225,13 @@ export const ReactListModal = (props: Props): ReactElement => {
       setSenders(_senders);
     }
 
-    if (senders.length > 0 && (!reactions[currentReact] || _senders === [] || _senders === null)) {
+    if (
+      senders.length > 0 &&
+      (!reactions[currentReact] ||
+        !reactions[currentReact].senders ||
+        _senders === [] ||
+        _senders === null)
+    ) {
       setSenders([]);
     }
   }, [currentReact, reaction, reacts, reactions, senders]);

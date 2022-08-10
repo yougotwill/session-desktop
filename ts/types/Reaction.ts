@@ -131,5 +131,8 @@ export interface OpenGroupReactionResponse {
 
 export type ReactionList = Record<
   string,
-  Record<string, string> // <sender pubkey, messageHash or serverId>
+  {
+    count: number;
+    senders: Record<string, string>; // <sender pubkey, messageHash or serverId>
+  }
 >;

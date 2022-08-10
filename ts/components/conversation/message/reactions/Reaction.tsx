@@ -67,7 +67,7 @@ export const Reaction = (props: ReactionProps): ReactElement => {
     handlePopupReaction,
     handlePopupClick,
   } = props;
-  const senders = Object.keys(reactions[emoji]);
+  const senders = Object.keys(reactions[emoji].senders);
   const showCount = senders && (senders.length > 1 || inGroup);
 
   const reactionRef = useRef<HTMLDivElement>(null);
@@ -132,7 +132,7 @@ export const Reaction = (props: ReactionProps): ReactElement => {
         <ReactionPopup
           messageId={messageId}
           emoji={popupReaction}
-          senders={Object.keys(reactions[popupReaction])}
+          senders={Object.keys(reactions[popupReaction].senders)}
           tooltipPosition={tooltipPosition}
           onClick={() => {
             if (handlePopupReaction) {

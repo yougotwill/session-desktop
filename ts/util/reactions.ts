@@ -11,6 +11,32 @@ const rateCountLimit = 20;
 const rateTimeLimit = 60 * 1000;
 const latestReactionTimestamps: Array<number> = [];
 
+const getMessageByReaction = async (
+  reaction: SignalService.DataMessage.IReaction
+): Promise<MessageModel | null> => {
+  const originalMessageTimestamp = Number(reaction.id);
+  const originalMessageAuthor = reaction.author;
+
+  const collection = await Data.getMessagesBySentAt(originalMessageTimestamp);
+  const originalMessage = collection.find((item: MessageModel) => {
+    const messageTimestamp = item.get('sent_at');
+    const author = item.get('source');
+    return Boolean(
+      messageTimestamp &&
+        messageTimestamp === originalMessageTimestamp &&
+        author &&
+        author === originalMessageAuthor
+    );
+  });
+
+  if (!originalMessage) {
+    window?.log?.warn(`Cannot find the original reacted message ${originalMessageTimestamp}.`);
+    return null;
+  }
+
+  return originalMessage;
+};
+
 export const sendMessageReaction = async (messageId: string, emoji: string) => {
   const timestamp = Date.now();
   latestReactionTimestamps.push(timestamp);
@@ -38,7 +64,11 @@ export const sendMessageReaction = async (messageId: string, emoji: string) => {
     let action = 0;
 
     const reacts = found.get('reacts');
-    if (reacts && Object.keys(reacts).includes(emoji) && Object.keys(reacts[emoji]).includes(me)) {
+    if (
+      reacts &&
+      Object.keys(reacts).includes(emoji) &&
+      Object.keys(reacts[emoji].senders).includes(me)
+    ) {
       window.log.info('found matching reaction removing it');
       action = 1;
     } else {
@@ -58,8 +88,7 @@ export const sendMessageReaction = async (messageId: string, emoji: string) => {
     await conversationModel.sendReaction(messageId, reaction);
 
     window.log.info(
-      me,
-      `${action === 0 ? 'added' : 'removed'} a`,
+      `You ${action === 0 ? 'added' : 'removed'} a`,
       emoji,
       'reaction at',
       found.get('sent_at')
@@ -79,56 +108,50 @@ export const handleMessageReaction = async (
   sender: string,
   messageId?: string
 ) => {
-  const originalMessageTimestamp = Number(reaction.id);
-  const originalMessageAuthor = reaction.author;
-
   if (!reaction.emoji) {
     window?.log?.warn(`There is no emoji for the reaction ${messageId}.`);
     return;
   }
 
-  const collection = await Data.getMessagesBySentAt(originalMessageTimestamp);
-  const originalMessage = collection.find((item: MessageModel) => {
-    const messageTimestamp = item.get('sent_at');
-    const author = item.get('source');
-    return Boolean(
-      messageTimestamp &&
-        messageTimestamp === originalMessageTimestamp &&
-        author &&
-        author === originalMessageAuthor
-    );
-  });
-
+  const originalMessage = await getMessageByReaction(reaction);
   if (!originalMessage) {
-    window?.log?.warn(`We did not find the original reacted message ${originalMessageTimestamp}.`);
     return;
   }
 
   const reacts: ReactionList = originalMessage.get('reacts') ?? {};
-  reacts[reaction.emoji] = reacts[reaction.emoji] || {};
+  reacts[reaction.emoji] = reacts[reaction.emoji] || { count: null, senders: {} };
   const details = reacts[reaction.emoji] ?? {};
-  const senders = Object.keys(details);
+  const senders = Object.keys(details.senders);
+
+  window.log.info(
+    `${sender} ${reaction.action === 0 ? 'added' : 'removed'} a ${reaction.emoji} reaction`
+  );
 
   switch (reaction.action) {
     case SignalService.DataMessage.Reaction.Action.REACT:
-      if (senders.includes(sender) && details[sender] !== '') {
-        window?.log?.info('Received duplicate message reaction. Dropping it. id:', details[sender]);
+      if (senders.includes(sender) && details.senders[sender] !== '') {
+        window?.log?.info(
+          'Received duplicate message reaction. Dropping it. id:',
+          details.senders[sender]
+        );
         return;
       }
-      details[sender] = messageId ?? '';
+      details.senders[sender] = messageId ?? '';
       break;
     case SignalService.DataMessage.Reaction.Action.REMOVE:
     default:
       if (senders.length > 0) {
         if (senders.indexOf(sender) >= 0) {
           // tslint:disable-next-line: no-dynamic-delete
-          delete details[sender];
+          delete details.senders[sender];
         }
       }
   }
 
-  if (Object.keys(details).length > 0) {
-    reacts[reaction.emoji] = details;
+  const count = Object.keys(details.senders).length;
+  if (count > 0) {
+    reacts[reaction.emoji].count = count;
+    reacts[reaction.emoji].senders = details.senders;
   } else {
     // tslint:disable-next-line: no-dynamic-delete
     delete reacts[reaction.emoji];
