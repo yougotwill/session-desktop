@@ -191,29 +191,33 @@ export const handleOpenGroupMessageReactions = async (
   reactions: OpenGroupReactionList,
   serverId: number
 ) => {
-  if (isEmpty(reactions)) {
-    window?.log?.warn('The reactions state is empty');
-    return;
-  }
-
   const originalMessage = await Data.getMessageByServerId(serverId);
   if (!originalMessage) {
+    window?.log?.warn(`Cannot find the original reacted message ${serverId}.`);
     return;
   }
 
-  const reacts: ReactionList = {};
-  Object.keys(reactions).forEach(key => {
-    const emoji = decodeURI(key);
-    const senders: Record<string, string> = {};
-    reactions[key].reactors.forEach(reactor => {
-      senders[reactor] = String(serverId);
+  if (isEmpty(reactions)) {
+    if (originalMessage.get('reacts')) {
+      originalMessage.set({
+        reacts: undefined,
+      });
+    }
+  } else {
+    const reacts: ReactionList = {};
+    Object.keys(reactions).forEach(key => {
+      const emoji = decodeURI(key);
+      const senders: Record<string, string> = {};
+      reactions[key].reactors.forEach(reactor => {
+        senders[reactor] = String(serverId);
+      });
+      reacts[emoji] = { count: reactions[key].count, senders };
     });
-    reacts[emoji] = { count: reactions[key].count, senders };
-  });
 
-  originalMessage.set({
-    reacts: !isEmpty(reacts) ? reacts : undefined,
-  });
+    originalMessage.set({
+      reacts,
+    });
+  }
 
   await originalMessage.commit();
   return originalMessage;

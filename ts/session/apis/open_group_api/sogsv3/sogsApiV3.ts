@@ -1,4 +1,4 @@
-import _, { compact, isArray, isEmpty, isNumber, isObject, pick } from 'lodash';
+import _, { compact, isArray, isNumber, isObject, pick } from 'lodash';
 import { OpenGroupData } from '../../../../data/opengroups';
 import { handleOpenGroupV4Message } from '../../../../receiver/opengroup';
 import { OpenGroupRequestCommonType } from '../opengroupV2/ApiUtil';
@@ -205,22 +205,25 @@ const handleMessagesResponseV4 = async (
       return;
     }
 
+    const messagesWithoutReactionOnlyUpdates = messages.filter(m => {
+      const keys = Object.keys(m);
+      if (
+        keys.length === 3 &&
+        keys.includes('id') &&
+        keys.includes('seqno') &&
+        keys.includes('reactions')
+      ) {
+        return false;
+      }
+      return true;
+    });
+
     // Incoming messages for sogs v3 have a timestamp in seconds and not ms.
     // Session works with timestamp in ms, for a lot of things, so first, lets fix this.
-
-    const messagesWithReactions = messages.filter(m => !isEmpty(m.reactions));
-    if (messagesWithReactions.length > 0) {
-      messagesWithReactions.forEach(async m => {
-        await handleOpenGroupMessageReactions(m.reactions, m.id);
-      });
-    }
-
-    const messagesWithMsTimestamp = messages
-      .filter(m => isEmpty(m.reactions))
-      .map(m => ({
-        ...m,
-        posted: m.posted ? Math.floor(m.posted * 1000) : undefined,
-      }));
+    const messagesWithMsTimestamp = messagesWithoutReactionOnlyUpdates.map(m => ({
+      ...m,
+      posted: m.posted ? Math.floor(m.posted * 1000) : undefined,
+    }));
 
     const messagesWithoutDeleted = await handleSogsV3DeletedMessages(
       messagesWithMsTimestamp,
@@ -235,6 +238,13 @@ const handleMessagesResponseV4 = async (
     const messagesFilteredBlindedIds = await filterDuplicatesFromDbAndIncomingV4(
       messagesWithValidSignature
     );
+
+    const messagesWithReactions = messages.filter(m => m.reactions !== undefined);
+    if (messagesWithReactions.length > 0) {
+      messagesWithReactions.forEach(async m => {
+        await handleOpenGroupMessageReactions(m.reactions, m.id);
+      });
+    }
 
     const roomDetails: OpenGroupRequestCommonType = pick(roomInfos, 'serverUrl', 'roomId');
     // then we try to find matching real session ids with the blinded ids we have.
