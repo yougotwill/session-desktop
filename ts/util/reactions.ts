@@ -2,6 +2,7 @@ import { isEmpty } from 'lodash';
 import { Data } from '../data/data';
 import { MessageModel } from '../models/message';
 import { SignalService } from '../protobuf';
+import { getUsBlindedInThatServer } from '../session/apis/open_group_api/sogsv3/knownBlindedkeys';
 import { UserUtils } from '../session/utils';
 
 import { OpenGroupReactionList, ReactionList, RecentReactions } from '../types/Reaction';
@@ -11,32 +12,44 @@ const rateCountLimit = 20;
 const rateTimeLimit = 60 * 1000;
 const latestReactionTimestamps: Array<number> = [];
 
+/**
+ * Retrieves the original message of a reaction
+ */
 const getMessageByReaction = async (
-  reaction: SignalService.DataMessage.IReaction
+  reaction: SignalService.DataMessage.IReaction,
+  isOpenGroup: boolean
 ): Promise<MessageModel | null> => {
-  const originalMessageTimestamp = Number(reaction.id);
+  let originalMessage = null;
+  const originalMessageId = Number(reaction.id);
   const originalMessageAuthor = reaction.author;
 
-  const collection = await Data.getMessagesBySentAt(originalMessageTimestamp);
-  const originalMessage = collection.find((item: MessageModel) => {
-    const messageTimestamp = item.get('sent_at');
-    const author = item.get('source');
-    return Boolean(
-      messageTimestamp &&
-        messageTimestamp === originalMessageTimestamp &&
-        author &&
-        author === originalMessageAuthor
-    );
-  });
+  if (isOpenGroup) {
+    originalMessage = await Data.getMessageByServerId(originalMessageId);
+  } else {
+    const collection = await Data.getMessagesBySentAt(originalMessageId);
+    originalMessage = collection.find((item: MessageModel) => {
+      const messageTimestamp = item.get('sent_at');
+      const author = item.get('source');
+      return Boolean(
+        messageTimestamp &&
+          messageTimestamp === originalMessageId &&
+          author &&
+          author === originalMessageAuthor
+      );
+    });
+  }
 
   if (!originalMessage) {
-    window?.log?.warn(`Cannot find the original reacted message ${originalMessageTimestamp}.`);
+    window?.log?.warn(`Cannot find the original reacted message ${originalMessageId}.`);
     return null;
   }
 
   return originalMessage;
 };
 
+/**
+ * Sends a Reaction Data Message, don't use for OpenGroups
+ */
 export const sendMessageReaction = async (messageId: string, emoji: string) => {
   const timestamp = Date.now();
   latestReactionTimestamps.push(timestamp);
@@ -52,14 +65,19 @@ export const sendMessageReaction = async (messageId: string, emoji: string) => {
   }
 
   const found = await Data.getMessageById(messageId);
-  if (found && found.get('sent_at')) {
+
+  if (found) {
     const conversationModel = found?.getConversation();
     if (!conversationModel) {
       window.log.warn(`Conversation for ${messageId} not found in db`);
       return;
     }
 
-    const me = UserUtils.getOurPubKeyStrFromCache();
+    const isOpenGroup = Boolean(found?.get('isPublic'));
+    const id = (isOpenGroup && found.get('serverId')) || Number(found.get('sent_at'));
+    const me =
+      (isOpenGroup && getUsBlindedInThatServer(conversationModel)) ||
+      UserUtils.getOurPubKeyStrFromCache();
     const author = found.get('source');
     let action = 0;
 
@@ -79,7 +97,7 @@ export const sendMessageReaction = async (messageId: string, emoji: string) => {
     }
 
     const reaction = {
-      id: Number(found.get('sent_at')),
+      id,
       author,
       emoji,
       action,
@@ -90,8 +108,8 @@ export const sendMessageReaction = async (messageId: string, emoji: string) => {
     window.log.info(
       `You ${action === 0 ? 'added' : 'removed'} a`,
       emoji,
-      'reaction at',
-      found.get('sent_at')
+      'reaction for message',
+      id
     );
     return reaction;
   } else {
@@ -106,6 +124,7 @@ export const sendMessageReaction = async (messageId: string, emoji: string) => {
 export const handleMessageReaction = async (
   reaction: SignalService.DataMessage.IReaction,
   sender: string,
+  isOpenGroup: boolean,
   messageId?: string
 ) => {
   if (!reaction.emoji) {
@@ -113,12 +132,8 @@ export const handleMessageReaction = async (
     return;
   }
 
-  const originalMessage = await getMessageByReaction(reaction);
+  const originalMessage = await getMessageByReaction(reaction, isOpenGroup);
   if (!originalMessage) {
-    return;
-  }
-
-  if (originalMessage.get('isPublic')) {
     return;
   }
 
@@ -169,12 +184,15 @@ export const handleMessageReaction = async (
   return originalMessage;
 };
 
+/**
+ * Handle all updates to messages reactions from the SOGS API
+ */
 export const handleOpenGroupMessageReactions = async (
   reactions: OpenGroupReactionList,
   serverId: number
 ) => {
   if (isEmpty(reactions)) {
-    window?.log?.warn(`The reactions state is empty`);
+    window?.log?.warn('The reactions state is empty');
     return;
   }
 

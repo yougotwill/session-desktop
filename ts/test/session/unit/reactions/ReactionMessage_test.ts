@@ -54,6 +54,7 @@ describe('ReactionMessage', () => {
     const updatedMessage = await handleMessageReaction(
       reaction as SignalService.DataMessage.IReaction,
       ourNumber,
+      false,
       originalMessage.get('id')
     );
 
@@ -85,6 +86,7 @@ describe('ReactionMessage', () => {
     const updatedMessage = await handleMessageReaction(
       reaction as SignalService.DataMessage.IReaction,
       ourNumber,
+      false,
       originalMessage.get('id')
     );
 

@@ -86,6 +86,7 @@ import { addMessagePadding } from '../session/crypto/BufferPadding';
 import { getSodiumRenderer } from '../session/crypto';
 import {
   findCachedOurBlindedPubkeyOrLookItUp,
+  getUsBlindedInThatServer,
   isUsAnySogsFromCache,
 } from '../session/apis/open_group_api/sogsv3/knownBlindedkeys';
 import { sogsV3FetchPreviewAndSaveIt } from '../session/apis/open_group_api/sogsv3/sogsV3FetchFile';
@@ -736,8 +737,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
         throw new Error('Only opengroupv2 are supported now');
       }
 
-      const sender = UserUtils.getOurPubKeyStrFromCache();
-      await handleMessageReaction(reaction, sender);
+      let sender = UserUtils.getOurPubKeyStrFromCache();
 
       // an OpenGroupV2 message is just a visible message
       const chatMessageParams: VisibleMessageParams = {
@@ -776,24 +776,33 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       }
 
       if (this.isOpenGroupV2()) {
-        const serverId = sourceMessage.get('serverId');
-        if (chatMessageParams.reaction && serverId) {
-          chatMessageParams.reaction.id = serverId;
-        }
         const chatMessageOpenGroupV2 = new OpenGroupVisibleMessage(chatMessageParams);
         const roomInfos = this.toOpenGroupV2();
         if (!roomInfos) {
           throw new Error('Could not find this room in db');
         }
         const openGroup = OpenGroupData.getV2OpenGroupRoom(this.id);
+        const blinded = Boolean(roomHasBlindEnabled(openGroup));
+
+        if (blinded) {
+          const blindedSender = getUsBlindedInThatServer(this);
+          if (blindedSender) {
+            sender = blindedSender;
+          }
+        }
+
+        await handleMessageReaction(reaction, sender, true);
+
         // send with blinding if we need to
         await getMessageQueue().sendToOpenGroupV2(
           chatMessageOpenGroupV2,
           roomInfos,
-          Boolean(roomHasBlindEnabled(openGroup)),
+          blinded,
           fileIdsToLink
         );
         return;
+      } else {
+        await handleMessageReaction(reaction, sender, false);
       }
 
       const destinationPubkey = new PubKey(destination);
