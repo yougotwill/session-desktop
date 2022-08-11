@@ -95,7 +95,7 @@
     "lodash": "4.17.11",
     "long": "^4.0.0",
     "mic-recorder-to-mp3": "^2.2.2",
-    "moment": "2.21.0",
+    "moment": "2.29.4",
     "mustache": "2.3.0",
     "nan": "2.14.2",
     "node-fetch": "2.3.0",
