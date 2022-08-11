@@ -7,6 +7,7 @@ import styled from 'styled-components';
 import { useMouse } from 'react-use';
 import { ReactionPopup, TipPosition } from './ReactionPopup';
 import { popupXDefault, popupYDefault } from '../message-content/MessageReactions';
+import { isUsAnySogsFromCache } from '../../../../session/apis/open_group_api/sogsv3/knownBlindedkeys';
 
 const StyledReaction = styled.button<{ selected: boolean; inModal: boolean; showCount: boolean }>`
   display: flex;
@@ -78,12 +79,19 @@ export const Reaction = (props: ReactionProps): ReactElement => {
   const [tooltipPosition, setTooltipPosition] = useState<TipPosition>('center');
 
   const me = UserUtils.getOurPubKeyStrFromCache();
+  const isBlindedMe =
+    senders &&
+    senders.length > 0 &&
+    senders.filter(sender => sender.startsWith('15') && isUsAnySogsFromCache(sender)).length > 0;
+
   const selected = () => {
     if (onSelected) {
       return onSelected(emoji);
     }
-    return senders && senders.length > 0 && senders.includes(me);
+
+    return senders && senders.length > 0 && (senders.includes(me) || isBlindedMe);
   };
+
   const handleReactionClick = () => {
     onClick(emoji);
   };

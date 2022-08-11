@@ -1217,7 +1217,10 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
     let profileName: string | null = null;
     let isMe = false;
 
-    if (pubkey === UserUtils.getOurPubKeyStrFromCache()) {
+    if (
+      pubkey === UserUtils.getOurPubKeyStrFromCache() ||
+      (pubkey && pubkey.startsWith('15') && isUsAnySogsFromCache(pubkey))
+    ) {
       profileName = window.i18n('you');
       isMe = true;
     } else {

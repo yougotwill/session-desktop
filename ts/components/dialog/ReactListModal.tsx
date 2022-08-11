@@ -3,6 +3,7 @@ import React, { ReactElement, useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import styled from 'styled-components';
 import { Data } from '../../data/data';
+import { isUsAnySogsFromCache } from '../../session/apis/open_group_api/sogsv3/knownBlindedkeys';
 import { UserUtils } from '../../session/utils';
 import { updateReactListModal, updateUserDetailsModal } from '../../state/ducks/modalDialog';
 import { StateType } from '../../state/reducer';
@@ -162,6 +163,7 @@ export const ReactListModal = (props: Props): ReactElement => {
   const [currentReact, setCurrentReact] = useState('');
   const [reactAriaLabel, setReactAriaLabel] = useState<string | undefined>();
   const [senders, setSenders] = useState<Array<string>>([]);
+
   const msgProps = useSelector((state: StateType) => getMessageReactsProps(state, messageId));
 
   if (!msgProps) {
@@ -170,7 +172,7 @@ export const ReactListModal = (props: Props): ReactElement => {
 
   const dispatch = useDispatch();
 
-  const me = UserUtils.getOurPubKeyStrFromCache();
+  let me = UserUtils.getOurPubKeyStrFromCache();
   const { reacts } = msgProps;
 
   const handleSelectedReaction = (emoji: string): boolean => {
@@ -215,8 +217,16 @@ export const ReactListModal = (props: Props): ReactElement => {
         : null;
 
     if (_senders && !isEqual(senders, _senders)) {
-      if (_senders.length > 1) {
-        const meIndex = _senders.indexOf(me);
+      if (_senders.length > 0) {
+        const blindedMe = _senders.filter(
+          sender => sender.startsWith('15') && isUsAnySogsFromCache(sender)
+        );
+        let meIndex = -1;
+        if (blindedMe && blindedMe[0]) {
+          meIndex = _senders.indexOf(blindedMe[0]);
+        } else {
+          meIndex = _senders.indexOf(me);
+        }
         if (meIndex >= 0) {
           _senders.splice(meIndex, 1);
           _senders = [me, ..._senders];
@@ -234,7 +244,7 @@ export const ReactListModal = (props: Props): ReactElement => {
     ) {
       setSenders([]);
     }
-  }, [currentReact, reaction, reacts, reactions, senders]);
+  }, [currentReact, me, reaction, reacts, reactions, senders]);
 
   return (
     <SessionWrapperModal
