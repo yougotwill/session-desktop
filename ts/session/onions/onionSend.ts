@@ -30,14 +30,29 @@ export type OnionFetchOptions = {
   useV4: boolean;
 };
 
+// NOTE some endpoints require decoded strings
+const endpointExceptions = ['/reaction'];
+export const endpointRequiresDecoding = (url: string): string => {
+  for (let i = 0; i < endpointExceptions.length; i++) {
+    if (url.includes(endpointExceptions[i])) {
+      return decodeURIComponent(url);
+    }
+  }
+  return url;
+};
+
 const buildSendViaOnionPayload = (
   url: URL,
   fetchOptions: OnionFetchOptions
 ): FinalDestNonSnodeOptions => {
+  const endpoint = endpointRequiresDecoding(
+    url.search ? `${url.pathname}${url.search}` : url.pathname
+  );
+
   const payloadObj: FinalDestNonSnodeOptions = {
     method: fetchOptions.method || 'GET',
     body: fetchOptions.body,
-    endpoint: url.search ? `${url.pathname}${url.search}` : url.pathname,
+    endpoint,
     headers: fetchOptions.headers || {},
   };
 
@@ -152,6 +167,7 @@ const sendViaOnionV4ToNonSnodeWithRetries = async (
           useV4: true,
           throwErrors,
         });
+
         if (window.sessionFeatureFlags?.debug.debugNonSnodeRequests) {
           window.log.info(
             'sendViaOnionV4ToNonSnodeWithRetries: sendOnionRequestHandlingSnodeEject returned: ',
@@ -285,6 +301,7 @@ async function sendJsonViaOnionV4ToSogs(sendOptions: {
     return null;
   }
   headersWithSogsHeadersIfNeeded = { ...includedHeaders, ...headersWithSogsHeadersIfNeeded };
+
   const res = await OnionSending.sendViaOnionV4ToNonSnodeWithRetries(
     serverPubkey,
     builtUrl,

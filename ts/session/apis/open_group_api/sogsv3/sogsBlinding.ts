@@ -12,6 +12,7 @@ import {
   toX25519,
 } from '../../../utils/SodiumUtils';
 import { isEqual } from 'lodash';
+import { endpointRequiresDecoding } from '../../../onions/onionSend';
 
 async function getSogsSignature({
   blinded,
@@ -73,8 +74,9 @@ async function getOpenGroupHeaders(data: {
     nonce,
     stringToUint8Array(timestamp.toString()),
     stringToUint8Array(method),
-    stringToUint8Array(encodeURI(path))
+    stringToUint8Array(endpointRequiresDecoding(path))
   );
+
   if (body) {
     const bodyHashed = sodium.crypto_generichash(64, body);
 
