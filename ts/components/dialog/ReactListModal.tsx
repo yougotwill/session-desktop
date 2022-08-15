@@ -161,6 +161,26 @@ type Props = {
   messageId: string;
 };
 
+const handleSenders = (senders: Array<string>, me: string) => {
+  let updatedSenders = senders;
+  const blindedMe = updatedSenders.filter(
+    sender => sender.startsWith('15') && isUsAnySogsFromCache(sender)
+  );
+
+  let meIndex = -1;
+  if (blindedMe && blindedMe[0]) {
+    meIndex = updatedSenders.indexOf(blindedMe[0]);
+  } else {
+    meIndex = updatedSenders.indexOf(me);
+  }
+  if (meIndex >= 0) {
+    updatedSenders.splice(meIndex, 1);
+    updatedSenders = [me, ...updatedSenders];
+  }
+
+  return updatedSenders;
+};
+
 export const ReactListModal = (props: Props): ReactElement => {
   const { reaction, messageId } = props;
 
@@ -177,7 +197,7 @@ export const ReactListModal = (props: Props): ReactElement => {
 
   const dispatch = useDispatch();
 
-  let me = UserUtils.getOurPubKeyStrFromCache();
+  const me = UserUtils.getOurPubKeyStrFromCache();
   const { convoId, reacts, isPublic } = msgProps;
   const convo = getConversationController().get(convoId);
   const weAreModerator = convo.getConversationModelProps().weAreModerator;
@@ -198,9 +218,15 @@ export const ReactListModal = (props: Props): ReactElement => {
   const handleClearReactions = (event: any) => {
     event.preventDefault();
     handleClose();
-    dispatch(updateReactClearAllModal({ reaction: currentReact, messageId }));
+    dispatch(
+      updateReactClearAllModal({
+        reaction: currentReact,
+        messageId,
+      })
+    );
   };
 
+  // tslint:disable: cyclomatic-complexity
   useEffect(() => {
     if (currentReact === '' && currentReact !== reaction) {
       setReactAriaLabel(
@@ -224,19 +250,7 @@ export const ReactListModal = (props: Props): ReactElement => {
 
     if (_senders && !isEqual(senders, _senders)) {
       if (_senders.length > 0) {
-        const blindedMe = _senders.filter(
-          sender => sender.startsWith('15') && isUsAnySogsFromCache(sender)
-        );
-        let meIndex = -1;
-        if (blindedMe && blindedMe[0]) {
-          meIndex = _senders.indexOf(blindedMe[0]);
-        } else {
-          meIndex = _senders.indexOf(me);
-        }
-        if (meIndex >= 0) {
-          _senders.splice(meIndex, 1);
-          _senders = [me, ..._senders];
-        }
+        _senders = handleSenders(_senders, me);
       }
       setSenders(_senders);
     }

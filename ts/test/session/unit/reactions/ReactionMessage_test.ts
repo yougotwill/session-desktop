@@ -64,9 +64,10 @@ describe('ReactionMessage', () => {
     expect(updatedMessage?.get('reacts')!['😄'], 'reacts should have 😄 key').to.not.be.undefined;
     // tslint:disable: no-non-null-assertion
     expect(
-      Object.keys(updatedMessage!.get('reacts')!['😄'])[0],
+      Object.keys(updatedMessage!.get('reacts')!['😄'].senders)[0],
       'sender pubkey should match'
     ).to.be.equal(ourNumber);
+    expect(updatedMessage!.get('reacts')!['😄'].count, 'count should be 1').to.be.equal(1);
   });
 
   it('can remove a reaction from a message', async () => {

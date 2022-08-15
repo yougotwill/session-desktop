@@ -33,6 +33,7 @@ export type OnionFetchOptions = {
 // NOTE some endpoints require decoded strings
 const endpointExceptions = ['/reaction'];
 export const endpointRequiresDecoding = (url: string): string => {
+  // tslint:disable-next-line: prefer-for-of
   for (let i = 0; i < endpointExceptions.length; i++) {
     if (url.includes(endpointExceptions[i])) {
       return decodeURIComponent(url);
@@ -101,6 +102,7 @@ export type OnionV4BinarySnodeResponse = {
  * Build & send an onion v4 request to a non snode, and handle retries.
  * We actually can only send v4 request to non snode, as the snodes themselves do not support v4 request as destination.
  */
+// tslint:disable-next-line: max-func-body-length
 const sendViaOnionV4ToNonSnodeWithRetries = async (
   destinationX25519Key: string,
   url: URL,
