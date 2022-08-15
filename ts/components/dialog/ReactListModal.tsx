@@ -188,7 +188,7 @@ export const ReactListModal = (props: Props): ReactElement => {
     dispatch(updateReactListModal(null));
   };
 
-  // TODO
+  // TODO Open Group Moderators / Admins Only
   // const handleClearReactions = (event: any) => {
   //   event.preventDefault();
   //   handleClose();
@@ -277,8 +277,12 @@ export const ReactListModal = (props: Props): ReactElement => {
                 <span role={'img'} aria-label={reactAriaLabel}>
                   {currentReact}
                 </span>
-                <span>&#8226;</span>
-                <span>{senders.length}</span>
+                {reactions[currentReact].count && (
+                  <>
+                    <span>&#8226;</span>
+                    <span>{reactions[currentReact].count}</span>
+                  </>
+                )}
               </p>
               {/* {isPublic && weAreAdmin && (
                 <StyledClearButton onClick={handleClearReactions}>

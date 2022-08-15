@@ -69,7 +69,8 @@ export const Reaction = (props: ReactionProps): ReactElement => {
     handlePopupClick,
   } = props;
   const senders = Object.keys(reactions[emoji].senders);
-  const showCount = senders && (senders.length > 1 || inGroup);
+  const count = reactions[emoji].count;
+  const showCount = count !== undefined && (count > 1 || inGroup);
 
   const reactionRef = useRef<HTMLDivElement>(null);
   const { docX, elW } = useMouse(reactionRef);
@@ -133,7 +134,7 @@ export const Reaction = (props: ReactionProps): ReactElement => {
           aria-label={nativeEmojiData?.ariaLabels ? nativeEmojiData.ariaLabels[emoji] : undefined}
         >
           {emoji}
-          {showCount && `\u00A0\u00A0${abbreviateNumber(senders.length)}`}
+          {showCount && `\u00A0\u00A0${abbreviateNumber(count)}`}
         </span>
       </StyledReaction>
       {inGroup && popupReaction && popupReaction === emoji && (
