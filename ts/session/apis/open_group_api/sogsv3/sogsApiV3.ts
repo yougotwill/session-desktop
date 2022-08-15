@@ -218,12 +218,15 @@ const handleMessagesResponseV4 = async (
       return true;
     });
 
+    // Incoming messages from sogvs v3 are returned in descending order from the latest seqno, we need to sort it chronologically
     // Incoming messages for sogs v3 have a timestamp in seconds and not ms.
     // Session works with timestamp in ms, for a lot of things, so first, lets fix this.
-    const messagesWithMsTimestamp = messagesWithoutReactionOnlyUpdates.map(m => ({
-      ...m,
-      posted: m.posted ? Math.floor(m.posted * 1000) : undefined,
-    }));
+    const messagesWithMsTimestamp = messagesWithoutReactionOnlyUpdates
+      .sort((a, b) => (a.seqno < b.seqno ? -1 : a.seqno > b.seqno ? 1 : 0))
+      .map(m => ({
+        ...m,
+        posted: m.posted ? Math.floor(m.posted * 1000) : undefined,
+      }));
 
     const messagesWithoutDeleted = await handleSogsV3DeletedMessages(
       messagesWithMsTimestamp,
@@ -238,13 +241,6 @@ const handleMessagesResponseV4 = async (
     const messagesFilteredBlindedIds = await filterDuplicatesFromDbAndIncomingV4(
       messagesWithValidSignature
     );
-
-    const messagesWithReactions = messages.filter(m => m.reactions !== undefined);
-    if (messagesWithReactions.length > 0) {
-      messagesWithReactions.forEach(async m => {
-        await handleOpenGroupMessageReactions(m.reactions, m.id);
-      });
-    }
 
     const roomDetails: OpenGroupRequestCommonType = pick(roomInfos, 'serverUrl', 'roomId');
     // then we try to find matching real session ids with the blinded ids we have.
@@ -295,6 +291,13 @@ const handleMessagesResponseV4 = async (
     roomInfosRefreshed.lastFetchTimestamp = Date.now();
 
     await OpenGroupData.saveV2OpenGroupRoom(roomInfosRefreshed);
+
+    const messagesWithReactions = messages.filter(m => m.reactions !== undefined);
+    if (messagesWithReactions.length > 0) {
+      messagesWithReactions.forEach(async m => {
+        await handleOpenGroupMessageReactions(m.reactions, m.id);
+      });
+    }
   } catch (e) {
     window?.log?.warn('handleNewMessages failed:', e);
   }
