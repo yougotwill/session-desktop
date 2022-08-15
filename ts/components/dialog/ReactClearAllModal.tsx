@@ -1,12 +1,15 @@
-import React, { ReactElement } from 'react';
+import React, { ReactElement, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import styled from 'styled-components';
+import { deleteSogsReactionByServerId } from '../../session/apis/open_group_api/sogsv3/sogsV3DeleteReaction';
+import { getConversationController } from '../../session/conversations';
 import { updateReactClearAllModal } from '../../state/ducks/modalDialog';
 import { StateType } from '../../state/reducer';
 import { getMessageReactsProps } from '../../state/selectors/conversations';
 import { getTheme } from '../../state/selectors/theme';
 import { Flex } from '../basic/Flex';
 import { SessionButton, SessionButtonColor, SessionButtonType } from '../basic/SessionButton';
+import { SessionSpinner } from '../basic/SessionSpinner';
 import { SessionWrapperModal } from '../SessionWrapperModal';
 
 type Props = {
@@ -40,6 +43,8 @@ const StyledReactClearAllContainer = styled(Flex)<{ darkMode: boolean }>`
 export const ReactClearAllModal = (props: Props): ReactElement => {
   const { reaction, messageId } = props;
 
+  const [deletionInProgress, setDeletionInProgress] = useState(false);
+
   const dispatch = useDispatch();
   const darkMode = useSelector(getTheme) === 'dark';
   const msgProps = useSelector((state: StateType) => getMessageReactsProps(state, messageId));
@@ -48,14 +53,26 @@ export const ReactClearAllModal = (props: Props): ReactElement => {
     return <></>;
   }
 
+  const { convoId, serverId } = msgProps;
+  const roomInfos = getConversationController()
+    .get(convoId)
+    .toOpenGroupV2();
+
   const confirmButtonColor = darkMode ? SessionButtonColor.Green : SessionButtonColor.Secondary;
 
   const handleClose = () => {
     dispatch(updateReactClearAllModal(null));
   };
 
-  const handleClearAll = () => {
-    // TODO Handle Batch Clearing of Reactions
+  const handleClearAll = async () => {
+    if (roomInfos && serverId) {
+      setDeletionInProgress(true);
+      await deleteSogsReactionByServerId(reaction, serverId, roomInfos);
+      setDeletionInProgress(false);
+      handleClose();
+    } else {
+      window.log.warn('Error for batch removal of', reaction, 'on message', messageId);
+    }
   };
 
   return (
@@ -64,22 +81,30 @@ export const ReactClearAllModal = (props: Props): ReactElement => {
       showHeader={false}
       onClose={handleClose}
     >
-      <StyledReactClearAllContainer container={true} flexDirection={'column'} darkMode={darkMode}>
+      <StyledReactClearAllContainer
+        container={true}
+        flexDirection={'column'}
+        alignItems="center"
+        darkMode={darkMode}
+      >
         <p>{window.i18n('clearAllReactions', [reaction])}</p>
         <div className="session-modal__button-group">
           <SessionButton
-            text={'Clear'}
+            text={window.i18n('clear')}
             buttonColor={confirmButtonColor}
             buttonType={SessionButtonType.BrandOutline}
             onClick={handleClearAll}
+            disabled={deletionInProgress}
           />
           <SessionButton
-            text={'Cancel'}
+            text={window.i18n('cancel')}
             buttonColor={SessionButtonColor.Danger}
             buttonType={SessionButtonType.BrandOutline}
             onClick={handleClose}
+            disabled={deletionInProgress}
           />
         </div>
+        <SessionSpinner loading={deletionInProgress} />
       </StyledReactClearAllContainer>
     </SessionWrapperModal>
   );

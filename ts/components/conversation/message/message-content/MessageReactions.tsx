@@ -128,7 +128,7 @@ const ExpandedReactions = (props: ExpandReactionsProps): ReactElement => {
 
 export type MessageReactsSelectorProps = Pick<
   MessageRenderingProps,
-  'conversationType' | 'isPublic' | 'reacts' | 'weAreAdmin'
+  'convoId' | 'conversationType' | 'isPublic' | 'reacts' | 'serverId'
 >;
 
 type Props = {

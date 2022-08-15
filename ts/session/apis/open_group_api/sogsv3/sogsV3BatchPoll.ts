@@ -198,6 +198,15 @@ export type SubRequestUpdateRoomType = {
   };
 };
 
+export type SubRequestDeleteReactionType = {
+  type: 'deleteReaction';
+  deleteReaction: {
+    reaction: string;
+    messageId: number;
+    roomId: string;
+  };
+};
+
 export type OpenGroupBatchRow =
   | SubRequestCapabilitiesType
   | SubRequestMessagesType
@@ -208,7 +217,8 @@ export type OpenGroupBatchRow =
   | SubRequestAddRemoveModeratorType
   | SubRequestBanUnbanUserType
   | SubRequestDeleteAllUserPostsType
-  | SubRequestUpdateRoomType;
+  | SubRequestUpdateRoomType
+  | SubRequestDeleteReactionType;
 
 /**
  *
@@ -303,6 +313,11 @@ const makeBatchRequestPayload = (
         method: 'PUT',
         path: `/room/${options.updateRoom.roomId}`,
         json: { image: options.updateRoom.imageId },
+      };
+    case 'deleteReaction':
+      return {
+        method: 'DELETE',
+        path: `/room/${options.deleteReaction.roomId}/reactions/${options.deleteReaction.messageId}/${options.deleteReaction.reaction}`,
       };
     default:
       throw new Error('Invalid batch request row');

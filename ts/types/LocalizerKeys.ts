@@ -234,6 +234,7 @@ export type LocalizerKeys =
   | 'messageDeletedPlaceholder'
   | 'notificationFrom'
   | 'displayName'
+  | 'clear'
   | 'invalidSessionId'
   | 'audioPermissionNeeded'
   | 'add'

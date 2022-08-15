@@ -910,10 +910,11 @@ export const getMessageReactsProps = createSelector(getMessagePropsByMessageId, 
   }
 
   const msgProps: MessageReactsSelectorProps = pick(props.propsForMessage, [
+    'convoId',
     'conversationType',
     'isPublic',
     'reacts',
-    'weAreAdmin',
+    'serverId',
   ]);
 
   return msgProps;
