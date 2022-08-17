@@ -18,7 +18,8 @@ export const clearSogsReactionByServerId = async (
   serverId: number,
   roomInfos: OpenGroupRequestCommonType
 ): Promise<boolean> => {
-  if (!hasReactionSupport(serverId)) {
+  const canReact = await hasReactionSupport(serverId);
+  if (!canReact) {
     return false;
   }
 

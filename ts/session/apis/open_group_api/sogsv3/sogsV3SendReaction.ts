@@ -39,7 +39,8 @@ export const sendSogsReactionOnionV4 = async (
     throw new Error(`Could not find sogs pubkey of url:${serverUrl}`);
   }
 
-  if (!hasReactionSupport(reaction.id)) {
+  const canReact = await hasReactionSupport(reaction.id);
+  if (!canReact) {
     return false;
   }
 
