@@ -1,8 +1,30 @@
 import { AbortSignal } from 'abort-controller';
+import { Data } from '../../../../data/data';
 import { OpenGroupReactionResponse, Reaction } from '../../../../types/Reaction';
 import { OnionSending } from '../../../onions/onionSend';
 import { OpenGroupPollingUtils } from '../opengroupV2/OpenGroupPollingUtils';
 import { batchGlobalIsSuccess, parseBatchGlobalStatusCode } from './sogsV3BatchPoll';
+
+export const hasReactionSupport = async (id: number): Promise<boolean> => {
+  const found = await Data.getMessageByServerId(id);
+  if (!found) {
+    window.log.warn(`Open Group Message ${id} not found in db`);
+    return false;
+  }
+
+  const conversationModel = found?.getConversation();
+  if (!conversationModel) {
+    window.log.warn(`Conversation for ${id} not found in db`);
+    return false;
+  }
+
+  if (!conversationModel.hasReactions) {
+    window.log.warn("This open group doesn't have reaction support. Server Message Id", id);
+    return false;
+  }
+
+  return true;
+};
 
 export const sendSogsReactionOnionV4 = async (
   serverUrl: string,
@@ -15,6 +37,10 @@ export const sendSogsReactionOnionV4 = async (
   if (!allValidRoomInfos?.length) {
     window?.log?.info('getSendReactionRequest: no valid roominfos got.');
     throw new Error(`Could not find sogs pubkey of url:${serverUrl}`);
+  }
+
+  if (!hasReactionSupport(reaction.id)) {
+    return false;
   }
 
   const endpoint = `/room/${room}/reaction/${reaction.id}/${reaction.emoji}`;

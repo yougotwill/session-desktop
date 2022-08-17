@@ -6,16 +6,22 @@ import {
   OpenGroupBatchRow,
   sogsBatchSend,
 } from './sogsV3BatchPoll';
+import { hasReactionSupport } from './sogsV3SendReaction';
 
 /**
- * Deletes a reaction on open group server using onion v4 logic and batch send
+ * Clears a reaction on open group server using onion v4 logic and batch send
  * User must have moderator permissions
+ * Clearing implies removing all reactors for a specific emoji
  */
-export const deleteSogsReactionByServerId = async (
+export const clearSogsReactionByServerId = async (
   reaction: string,
   serverId: number,
   roomInfos: OpenGroupRequestCommonType
 ): Promise<boolean> => {
+  if (!hasReactionSupport(serverId)) {
+    return false;
+  }
+
   const options: Array<OpenGroupBatchRow> = [
     {
       type: 'deleteReaction',
@@ -33,7 +39,7 @@ export const deleteSogsReactionByServerId = async (
   try {
     return batchGlobalIsSuccess(result) && batchFirstSubIsSuccess(result);
   } catch (e) {
-    window?.log?.error("deleteSogsReactionByServerId Can't decode JSON body");
+    window?.log?.error("clearSogsReactionByServerId Can't decode JSON body");
   }
   return false;
 };

@@ -1,7 +1,7 @@
 import React, { ReactElement, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import styled from 'styled-components';
-import { deleteSogsReactionByServerId } from '../../session/apis/open_group_api/sogsv3/sogsV3DeleteReaction';
+import { clearSogsReactionByServerId } from '../../session/apis/open_group_api/sogsv3/sogsV3ClearReaction';
 import { getConversationController } from '../../session/conversations';
 import { updateReactClearAllModal } from '../../state/ducks/modalDialog';
 import { StateType } from '../../state/reducer';
@@ -43,7 +43,7 @@ const StyledReactClearAllContainer = styled(Flex)<{ darkMode: boolean }>`
 export const ReactClearAllModal = (props: Props): ReactElement => {
   const { reaction, messageId } = props;
 
-  const [deletionInProgress, setDeletionInProgress] = useState(false);
+  const [clearingInProgress, setClearingInProgress] = useState(false);
 
   const dispatch = useDispatch();
   const darkMode = useSelector(getTheme) === 'dark';
@@ -66,9 +66,9 @@ export const ReactClearAllModal = (props: Props): ReactElement => {
 
   const handleClearAll = async () => {
     if (roomInfos && serverId) {
-      setDeletionInProgress(true);
-      await deleteSogsReactionByServerId(reaction, serverId, roomInfos);
-      setDeletionInProgress(false);
+      setClearingInProgress(true);
+      await clearSogsReactionByServerId(reaction, serverId, roomInfos);
+      setClearingInProgress(false);
       handleClose();
     } else {
       window.log.warn('Error for batch removal of', reaction, 'on message', messageId);
@@ -94,17 +94,17 @@ export const ReactClearAllModal = (props: Props): ReactElement => {
             buttonColor={confirmButtonColor}
             buttonType={SessionButtonType.BrandOutline}
             onClick={handleClearAll}
-            disabled={deletionInProgress}
+            disabled={clearingInProgress}
           />
           <SessionButton
             text={window.i18n('cancel')}
             buttonColor={SessionButtonColor.Danger}
             buttonType={SessionButtonType.BrandOutline}
             onClick={handleClose}
-            disabled={deletionInProgress}
+            disabled={clearingInProgress}
           />
         </div>
-        <SessionSpinner loading={deletionInProgress} />
+        <SessionSpinner loading={clearingInProgress} />
       </StyledReactClearAllContainer>
     </SessionWrapperModal>
   );

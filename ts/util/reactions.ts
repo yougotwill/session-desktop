@@ -51,26 +51,30 @@ const getMessageByReaction = async (
  * Sends a Reaction Data Message, don't use for OpenGroups
  */
 export const sendMessageReaction = async (messageId: string, emoji: string) => {
-  const timestamp = Date.now();
-  latestReactionTimestamps.push(timestamp);
-
-  if (latestReactionTimestamps.length > rateCountLimit) {
-    const firstTimestamp = latestReactionTimestamps[0];
-    if (timestamp - firstTimestamp < rateTimeLimit) {
-      latestReactionTimestamps.pop();
-      return;
-    } else {
-      latestReactionTimestamps.shift();
-    }
-  }
-
   const found = await Data.getMessageById(messageId);
-
   if (found) {
     const conversationModel = found?.getConversation();
     if (!conversationModel) {
       window.log.warn(`Conversation for ${messageId} not found in db`);
       return;
+    }
+
+    if (!conversationModel.hasReactions) {
+      window.log.warn("This conversation doesn't have reaction support");
+      return;
+    }
+
+    const timestamp = Date.now();
+    latestReactionTimestamps.push(timestamp);
+
+    if (latestReactionTimestamps.length > rateCountLimit) {
+      const firstTimestamp = latestReactionTimestamps[0];
+      if (timestamp - firstTimestamp < rateTimeLimit) {
+        latestReactionTimestamps.pop();
+        return;
+      } else {
+        latestReactionTimestamps.shift();
+      }
     }
 
     const isOpenGroup = Boolean(found?.get('isPublic'));
