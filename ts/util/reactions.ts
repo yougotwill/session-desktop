@@ -215,7 +215,7 @@ export const handleOpenGroupMessageReactions = async (
       reactions[key].reactors.forEach(reactor => {
         senders[reactor] = String(serverId);
       });
-      reacts[emoji] = { count: reactions[key].count, senders };
+      reacts[emoji] = { count: reactions[key].count, index: reactions[key].index, senders };
     });
 
     originalMessage.set({

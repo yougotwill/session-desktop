@@ -120,6 +120,7 @@ export type ReactionList = Record<
   string,
   {
     count: number;
+    index?: number; // used with opengroups only
     senders: Record<string, string>; // <sender pubkey, messageHash or serverId>
   }
 >;
