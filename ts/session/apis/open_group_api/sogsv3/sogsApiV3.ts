@@ -294,9 +294,15 @@ const handleMessagesResponseV4 = async (
 
     const messagesWithReactions = messages.filter(m => m.reactions !== undefined);
     if (messagesWithReactions.length > 0) {
-      messagesWithReactions.forEach(async m => {
-        await handleOpenGroupMessageReactions(m.reactions, m.id);
-      });
+      const conversationId = getOpenGroupV2ConversationId(serverUrl, roomId);
+      const groupConvo = getConversationController().get(conversationId);
+      if (groupConvo && groupConvo.isOpenGroupV2()) {
+        for (const message of messagesWithReactions) {
+          await groupConvo.queueJob(async () => {
+            await handleOpenGroupMessageReactions(message.reactions, message.id);
+          });
+        }
+      }
     }
   } catch (e) {
     window?.log?.warn('handleNewMessages failed:', e);
