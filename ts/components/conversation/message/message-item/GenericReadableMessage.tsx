@@ -141,6 +141,9 @@ const StyledReadableMessage = styled(ReadableMessage)<{
 
 export const GenericReadableMessage = (props: Props) => {
   const { ctxMenuID, messageId, isDetailView } = props;
+
+  const [enableReactions, setEnableReactions] = useState(true);
+
   const msgProps = useSelector(state =>
     getGenericReadableMessageSelectorProps(state as any, props.messageId)
   );
@@ -186,6 +189,7 @@ export const GenericReadableMessage = (props: Props) => {
     return null;
   }
   const {
+    convoId,
     direction,
     conversationType,
     receivedAt,
@@ -201,6 +205,13 @@ export const GenericReadableMessage = (props: Props) => {
   const selected = isMessageSelected || false;
   const isGroup = conversationType === 'group';
   const isIncoming = direction === 'incoming';
+
+  useEffect(() => {
+    const conversationModel = getConversationController().get(convoId);
+    if (conversationModel) {
+      setEnableReactions(conversationModel.hasReactions());
+    }
+  }, [convoId]);
 
   useEffect(() => {
     document.addEventListener('click', onMessageLoseFocus);
@@ -238,6 +249,7 @@ export const GenericReadableMessage = (props: Props) => {
         messageId={messageId}
         isDetailView={isDetailView}
         dataTestId={`message-content-${messageId}`}
+        enableReactions={enableReactions}
       />
       {expirationLength && expirationTimestamp && (
         <ExpireTimer

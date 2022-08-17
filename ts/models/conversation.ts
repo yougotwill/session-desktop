@@ -81,7 +81,10 @@ import {
 import { SogsBlinding } from '../session/apis/open_group_api/sogsv3/sogsBlinding';
 import { from_hex } from 'libsodium-wrappers-sumo';
 import { OpenGroupData } from '../data/opengroups';
-import { roomHasBlindEnabled } from '../session/apis/open_group_api/sogsv3/sogsV3Capabilities';
+import {
+  roomHasBlindEnabled,
+  roomHasReactionsEnabled,
+} from '../session/apis/open_group_api/sogsv3/sogsV3Capabilities';
 import { addMessagePadding } from '../session/crypto/BufferPadding';
 import { getSodiumRenderer } from '../session/crypto';
 import {
@@ -1674,6 +1677,17 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
   public hasMember(pubkey: string) {
     return includes(this.get('members'), pubkey);
   }
+
+  public hasReactions() {
+    // older open group conversations won't have reaction support
+    if (this.isOpenGroupV2()) {
+      const openGroup = OpenGroupData.getV2OpenGroupRoom(this.id);
+      return roomHasReactionsEnabled(openGroup);
+    } else {
+      return true;
+    }
+  }
+
   // returns true if this is a closed/medium or open group
   public isGroup() {
     return this.get('type') === ConversationTypeEnum.GROUP;

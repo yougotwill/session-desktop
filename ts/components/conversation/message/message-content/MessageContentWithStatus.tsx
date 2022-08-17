@@ -28,6 +28,7 @@ type Props = {
   ctxMenuID: string;
   isDetailView?: boolean;
   dataTestId?: string;
+  enableReactions: boolean;
 };
 
 const StyledMessageContentContainer = styled.div<{ direction: 'left' | 'right' }>`
@@ -79,7 +80,7 @@ export const MessageContentWithStatuses = (props: Props) => {
     }
   };
 
-  const { messageId, ctxMenuID, isDetailView, dataTestId } = props;
+  const { messageId, ctxMenuID, isDetailView, dataTestId, enableReactions } = props;
   if (!contentProps) {
     return null;
   }
@@ -108,7 +109,9 @@ export const MessageContentWithStatuses = (props: Props) => {
         role="button"
         onClick={onClickOnMessageOuterContainer}
         onDoubleClickCapture={onDoubleClickReplyToMessage}
-        style={{ width: hasAttachments && isTrustedForAttachmentDownload ? 'min-content' : 'auto' }}
+        style={{
+          width: hasAttachments && isTrustedForAttachmentDownload ? 'min-content' : 'auto',
+        }}
         data-testid={dataTestId}
       >
         <MessageStatus
@@ -126,15 +129,23 @@ export const MessageContentWithStatuses = (props: Props) => {
           messageId={messageId}
           isCorrectSide={!isIncoming}
         />
-        {!isDeleted && <MessageContextMenu messageId={messageId} contextMenuId={ctxMenuID} />}
+        {!isDeleted && (
+          <MessageContextMenu
+            messageId={messageId}
+            contextMenuId={ctxMenuID}
+            enableReactions={enableReactions}
+          />
+        )}
       </div>
-      <MessageReactions
-        messageId={messageId}
-        onClick={handleMessageReaction}
-        popupReaction={popupReaction}
-        setPopupReaction={setPopupReaction}
-        onPopupClick={handlePopupClick}
-      />
+      {enableReactions && (
+        <MessageReactions
+          messageId={messageId}
+          onClick={handleMessageReaction}
+          popupReaction={popupReaction}
+          setPopupReaction={setPopupReaction}
+          onPopupClick={handlePopupClick}
+        />
+      )}
     </StyledMessageContentContainer>
   );
 };

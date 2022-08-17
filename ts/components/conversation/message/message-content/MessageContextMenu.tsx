@@ -48,7 +48,7 @@ export type MessageContextMenuSelectorProps = Pick<
   | 'isDeletableForEveryone'
 >;
 
-type Props = { messageId: string; contextMenuId: string };
+type Props = { messageId: string; contextMenuId: string; enableReactions: boolean };
 
 const StyledMessageContextMenu = styled.div`
   position: relative;
@@ -75,7 +75,7 @@ const StyledEmojiPanelContainer = styled.div<{ x: number; y: number }>`
 
 // tslint:disable: max-func-body-length cyclomatic-complexity
 export const MessageContextMenu = (props: Props) => {
-  const { messageId, contextMenuId } = props;
+  const { messageId, contextMenuId, enableReactions } = props;
   const dispatch = useDispatch();
   const { hideAll } = useContextMenu();
 
@@ -281,7 +281,7 @@ export const MessageContextMenu = (props: Props) => {
 
   return (
     <StyledMessageContextMenu ref={contextMenuRef}>
-      {showEmojiPanel && (
+      {enableReactions && showEmojiPanel && (
         <StyledEmojiPanelContainer role="button" x={mouseX} y={mouseY}>
           <SessionEmojiPanel
             ref={emojiPanelRef}
@@ -298,7 +298,9 @@ export const MessageContextMenu = (props: Props) => {
         onHidden={onContextMenuHidden}
         animation={animation.fade}
       >
-        <MessageReactBar action={onEmojiClick} additionalAction={onShowEmoji} />
+        {enableReactions && (
+          <MessageReactBar action={onEmojiClick} additionalAction={onShowEmoji} />
+        )}
         {attachments?.length ? (
           <Item onClick={saveAttachment}>{window.i18n('downloadAttachment')}</Item>
         ) : null}

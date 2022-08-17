@@ -68,7 +68,7 @@ export const Reaction = (props: ReactionProps): ReactElement => {
     handlePopupReaction,
     handlePopupClick,
   } = props;
-  const senders = Object.keys(reactions[emoji].senders);
+  const senders = reactions[emoji].senders ? Object.keys(reactions[emoji].senders) : [];
   const count = reactions[emoji].count;
   const showCount = count !== undefined && (count > 1 || inGroup);
 
