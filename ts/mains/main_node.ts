@@ -158,6 +158,7 @@ import { load as loadLocale, LocaleMessagesWithNameType } from '../node/locale';
 import { setLastestRelease } from '../node/latest_desktop_release';
 import { getAppRootPath } from '../node/getRootPath';
 import { classicDark, classicLight, oceanDark, oceanLight } from '../themes';
+import { titleBarHeight } from '../components/SessionWindow';
 
 // Both of these will be set after app fires the 'ready' event
 let logger: Logger | null = null;
@@ -289,7 +290,7 @@ async function createWindow() {
     titleBarOverlay: {
       color: classicDark['--background-primary-color'],
       symbolColor: classicDark['--text-primary-color'],
-      height: 28,
+      height: titleBarHeight,
     },
     backgroundColor: classicDark['--background-primary-color'],
     webPreferences: {

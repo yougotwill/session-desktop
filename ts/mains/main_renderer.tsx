@@ -22,6 +22,7 @@ import { loadKnownBlindedKeys } from '../session/apis/open_group_api/sogsv3/know
 import nativeEmojiData from '@emoji-mart/data';
 import { initialiseEmojiData } from '../util/emoji';
 import { switchPrimaryColorTo } from '../themes/switchPrimaryColor';
+import { SessionWindow } from '../components/SessionWindow';
 // tslint:disable: max-classes-per-file
 
 // Globally disable drag and drop
@@ -256,11 +257,17 @@ async function start() {
     getConversationController()
       .loadPromise()
       ?.then(() => {
-        ReactDOM.render(<SessionInboxView />, document.getElementById('root'));
+        ReactDOM.render(
+          <SessionWindow>
+            <SessionInboxView />
+          </SessionWindow>,
+          document.getElementById('root')
+        );
       });
   }
 
   function openStandAlone() {
+    // TODO add SessionWindow
     ReactDOM.render(<SessionRegistrationView />, document.getElementById('root'));
   }
   ExpirationTimerOptions.initExpiringMessageListener();

@@ -65,7 +65,7 @@
   display: flex;
 }
 .conversation.placeholder {
-  height: 100vh;
+  height: var(--app-height);
 }
 .left-pane-wrapper {
   flex: 1;
