@@ -286,6 +286,7 @@ async function createWindow() {
     fullscreen: false as boolean | undefined,
 
     titleBarStyle: 'hidden' as 'default' | 'hidden' | 'hiddenInset' | 'customButtonsOnHover',
+    // Only supported on macOS and windows
     // By default use Classic Dark theme colors
     titleBarOverlay: {
       color: classicDark['--background-primary-color'],
