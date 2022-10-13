@@ -1145,12 +1145,12 @@ ipc.on('set-window-controls-theme', async (_, theme, location: 'settings' | 'mai
       break;
     case 'ocean-light':
       backgroundColor =
-        oceanLight[`--background-${location === 'main' ? 'secondary' : 'primary'}-color`];
+        oceanLight[`--background-${location === 'main' ? 'primary' : 'secondary'}-color`];
       symbolColor = oceanLight['--text-primary-color'];
       break;
     case 'ocean-dark':
       backgroundColor =
-        oceanDark[`--background-${location === 'main' ? 'secondary' : 'primary'}-color`];
+        oceanDark[`--background-${location === 'main' ? 'primary' : 'secondary'}-color`];
       symbolColor = oceanDark['--text-primary-color'];
       break;
     case 'classic-dark':

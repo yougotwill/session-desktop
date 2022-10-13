@@ -88,6 +88,7 @@ const Themes = () => {
             await switchThemeTo({
               theme: theme.id,
               mainWindow: true,
+              isSettingsScreen: true,
               dispatch,
             });
           }}
