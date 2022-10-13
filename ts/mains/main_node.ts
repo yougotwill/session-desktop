@@ -282,6 +282,9 @@ async function createWindow() {
     minWidth,
     minHeight,
     fullscreen: false as boolean | undefined,
+
+    titleBarStyle: 'hidden' as 'default' | 'hidden' | 'hiddenInset' | 'customButtonsOnHover',
+    titleBarOverlay: true,
     backgroundColor: '#000',
     webPreferences: {
       nodeIntegration: true,
