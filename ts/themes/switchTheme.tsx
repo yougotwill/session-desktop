@@ -6,6 +6,8 @@ import { loadThemeColors } from './variableColors';
 import { findPrimaryColorId, switchPrimaryColorTo } from './switchPrimaryColor';
 import { ipcRenderer as ipc } from 'electron/renderer';
 import { isWindows } from '../OS';
+import { useSelector } from 'react-redux';
+import { getFocusedSettingsSection } from '../state/selectors/section';
 
 type SwitchThemeProps = {
   theme: ThemeStateType;
@@ -15,6 +17,9 @@ type SwitchThemeProps = {
 };
 
 export async function switchThemeTo(props: SwitchThemeProps) {
+  const focusedSettingsSection = useSelector(getFocusedSettingsSection);
+  const isSettingsView = focusedSettingsSection !== undefined;
+
   const { theme, mainWindow, usePrimaryColor, dispatch } = props;
   let newTheme: ThemeStateType | null = null;
 
@@ -44,7 +49,7 @@ export async function switchThemeTo(props: SwitchThemeProps) {
       await window.setTheme(theme);
       // Update window controls overlay colors
       if (isWindows()) {
-        ipc.send('set-window-controls-theme', theme);
+        ipc.send('set-window-controls-theme', theme, isSettingsView ? 'settings' : 'main');
       }
     }
 

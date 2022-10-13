@@ -1129,24 +1129,28 @@ async function getThemeFromMainWindow() {
   });
 }
 
-ipc.on('set-window-controls-theme', async (_, theme) => {
+ipc.on('set-window-controls-theme', async (_, theme, location: 'settings' | 'main') => {
   if (os.platform() !== 'win32') {
     console.error('set-window-controls-theme is only supported on Windows');
     return;
   }
-  let backgroundColor = classicDark['--background-primary-color'];
+  let backgroundColor =
+    classicDark[`--background-${location === 'main' ? 'primary' : 'secondary'}-color`];
   let symbolColor = classicDark['--text-primary-color'];
   switch (theme) {
     case 'classic-light':
-      backgroundColor = classicLight['--background-primary-color'];
+      backgroundColor =
+        classicLight[`--background-${location === 'main' ? 'primary' : 'secondary'}-color`];
       symbolColor = classicLight['--text-primary-color'];
       break;
     case 'ocean-light':
-      backgroundColor = oceanLight['--background-primary-color'];
+      backgroundColor =
+        oceanLight[`--background-${location === 'main' ? 'secondary' : 'primary'}-color`];
       symbolColor = oceanLight['--text-primary-color'];
       break;
     case 'ocean-dark':
-      backgroundColor = oceanDark['--background-primary-color'];
+      backgroundColor =
+        oceanDark[`--background-${location === 'main' ? 'secondary' : 'primary'}-color`];
       symbolColor = oceanDark['--text-primary-color'];
       break;
     case 'classic-dark':
