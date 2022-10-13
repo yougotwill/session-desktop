@@ -48,6 +48,7 @@ import { getLatestReleaseFromFileServer } from '../../session/apis/file_server_a
 import { switchThemeTo } from '../../themes/switchTheme';
 import { ThemeStateType } from '../../themes/constants/colors';
 import { getTheme } from '../../state/selectors/theme';
+import { isMacOS } from '../../OS';
 
 const Section = (props: { type: SectionType }) => {
   const ourNumber = useSelector(getOurNumber);
@@ -239,6 +240,7 @@ async function fetchReleaseFromFSAndUpdateMain() {
 export const ActionsPanel = () => {
   const [startCleanUpMedia, setStartCleanUpMedia] = useState(false);
   const ourPrimaryConversation = useSelector(getOurPrimaryConversation);
+  const isMac = isMacOS();
 
   // this maxi useEffect is called only once: when the component is mounted.
   // For the action panel, it means this is called only one per app start/with a user loggedin
@@ -287,7 +289,7 @@ export const ActionsPanel = () => {
 
   return (
     <>
-      <LeftPaneSectionContainer data-testid="leftpane-section-container">
+      <LeftPaneSectionContainer isMac={isMac} data-testid="leftpane-section-container">
         <Section type={SectionType.Profile} />
         <Section type={SectionType.Message} />
         <Section type={SectionType.Settings} />
