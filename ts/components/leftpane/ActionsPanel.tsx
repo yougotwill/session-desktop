@@ -75,6 +75,7 @@ const Section = (props: { type: SectionType }) => {
         theme: newTheme,
         mainWindow: true,
         usePrimaryColor: true,
+        isSettingsScreen: focusedSection === SectionType.Settings,
         dispatch,
       });
     } else if (type === SectionType.PathIndicator) {
