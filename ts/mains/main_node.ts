@@ -290,7 +290,7 @@ async function createWindow() {
     titleBarOverlay: {
       color: classicDark['--background-primary-color'],
       symbolColor: classicDark['--text-primary-color'],
-      height: titleBarHeight,
+      height: titleBarHeight - 1, // 1 less so title bar border renders on windows
     },
     backgroundColor: classicDark['--background-primary-color'],
     webPreferences: {

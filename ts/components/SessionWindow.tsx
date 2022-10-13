@@ -1,24 +1,33 @@
 import React, { ReactNode } from 'react';
+import { useSelector } from 'react-redux';
 import styled from 'styled-components';
-import { isMacOS } from '../OS';
+import { isWindows } from '../OS';
+import { getFocusedSettingsSection } from '../state/selectors/section';
 import { Flex } from './basic/Flex';
 
 // TODO Need to account for linux
-export const titleBarHeight = 28;
+// 28 + 1 so we get the full border on windows
+export const titleBarHeight = 29;
 
-const StyledTitleBarSpace = styled.div<{ isMac: boolean }>`
-  width: 100vw;
+const StyledTitleBarSpace = styled.div<{ supportSettingsScreen: boolean }>`
+  width: 100%;
   height: ${titleBarHeight}px;
-  ${props => props.isMac && 'background-color: var(--background-primary-color);'}
+  background-color: ${props =>
+    props.supportSettingsScreen
+      ? 'var(--background-secondary-color)'
+      : 'var(--background-primary-color)'};
   border-bottom: 1px solid var(--border-color);
   -webkit-app-region: drag;
 `;
 
 export const SessionWindow = ({ children }: { children: ReactNode }) => {
-  const isMac = isMacOS();
+  const isWin = isWindows();
+  const focusedSettingsSection = useSelector(getFocusedSettingsSection);
+  const supportSettingsScreen = isWin && focusedSettingsSection !== undefined;
+
   return (
     <Flex container={true} flexDirection={'column'}>
-      <StyledTitleBarSpace isMac={isMac} />
+      <StyledTitleBarSpace supportSettingsScreen={supportSettingsScreen} />
       {children}
     </Flex>
   );
