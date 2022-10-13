@@ -157,7 +157,7 @@ if (windowFromUserConfig) {
 import { load as loadLocale, LocaleMessagesWithNameType } from '../node/locale';
 import { setLastestRelease } from '../node/latest_desktop_release';
 import { getAppRootPath } from '../node/getRootPath';
-import { classicDark } from '../themes';
+import { classicDark, classicLight, oceanDark, oceanLight } from '../themes';
 
 // Both of these will be set after app fires the 'ready' event
 let logger: Logger | null = null;
@@ -1118,6 +1118,8 @@ ipc.on('set-auto-update-setting', async (_event, enabled) => {
   }
 });
 
+// Theming
+
 async function getThemeFromMainWindow() {
   return new Promise(resolve => {
     ipc.once('get-success-theme-setting', (_event, value) => {
@@ -1126,6 +1128,36 @@ async function getThemeFromMainWindow() {
     mainWindow?.webContents.send('get-theme-setting');
   });
 }
+
+ipc.on('set-window-controls-theme', async (_, theme) => {
+  if (os.platform() !== 'win32') {
+    console.error('set-window-controls-theme is only supported on Windows');
+    return;
+  }
+  let backgroundColor = classicDark['--background-primary-color'];
+  let symbolColor = classicDark['--text-primary-color'];
+  switch (theme) {
+    case 'classic-light':
+      backgroundColor = classicLight['--background-primary-color'];
+      symbolColor = classicLight['--text-primary-color'];
+      break;
+    case 'ocean-light':
+      backgroundColor = oceanLight['--background-primary-color'];
+      symbolColor = oceanLight['--text-primary-color'];
+      break;
+    case 'ocean-dark':
+      backgroundColor = oceanDark['--background-primary-color'];
+      symbolColor = oceanDark['--text-primary-color'];
+      break;
+    case 'classic-dark':
+    default:
+  }
+
+  mainWindow?.setTitleBarOverlay({
+    color: backgroundColor,
+    symbolColor,
+  });
+});
 
 async function askForMediaAccess() {
   // Microphone part
