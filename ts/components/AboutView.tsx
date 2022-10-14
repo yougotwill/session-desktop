@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import styled from 'styled-components';
 import { switchThemeTo } from '../themes/switchTheme';
 import { SessionTheme } from '../themes/SessionTheme';
+import { SessionWindow } from './SessionWindow';
 
 const StyledContent = styled.div`
   background-color: var(--background-primary-color);
@@ -10,7 +11,7 @@ const StyledContent = styled.div`
 
   font-family: var(--font-default);
   font-size: 14px;
-  height: 100%;
+  height: var(--app-height);
   width: 100%;
 
   img {
@@ -40,30 +41,32 @@ export const AboutView = () => {
         theme: (window as any).theme,
       });
     }
-  }, []);
+  }, [(window as any).theme]);
 
   return (
     <SessionTheme>
-      <StyledContent>
-        <img src="images/session/session_icon.png" width="250" height="250" alt="session icon" />
+      <SessionWindow>
+        <StyledContent>
+          <img src="images/session/session_icon.png" width="250" height="250" alt="session icon" />
 
-        <div className="version">{`v${window.getVersion()}`}</div>
-        <div className="commitHash">{window.getCommitHash() || ''}</div>
-        <div className="environment">{states.join(' - ')}</div>
-        <div>
-          <a href="https://getsession.org">getsession.org</a>
-        </div>
-        <br />
-        <div>
-          <a className="privacy" href="https://getsession.org/privacy-policy">
-            Privacy Policy
-          </a>
+          <div className="version">{`v${window.getVersion()}`}</div>
+          <div className="commitHash">{window.getCommitHash() || ''}</div>
+          <div className="environment">{states.join(' - ')}</div>
+          <div>
+            <a href="https://getsession.org">getsession.org</a>
+          </div>
           <br />
-          <a className="privacy" href="https://getsession.org/terms-of-service/">
-            Terms of Service
-          </a>
-        </div>
-      </StyledContent>
+          <div>
+            <a className="privacy" href="https://getsession.org/privacy-policy">
+              Privacy Policy
+            </a>
+            <br />
+            <a className="privacy" href="https://getsession.org/terms-of-service/">
+              Terms of Service
+            </a>
+          </div>
+        </StyledContent>
+      </SessionWindow>
     </SessionTheme>
   );
 };

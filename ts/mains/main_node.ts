@@ -284,7 +284,6 @@ async function createWindow() {
     minWidth,
     minHeight,
     fullscreen: false as boolean | undefined,
-
     titleBarStyle: 'hidden' as 'default' | 'hidden' | 'hiddenInset' | 'customButtonsOnHover',
     // Only supported on macOS and windows
     // By default use Classic Dark theme colors
@@ -541,6 +540,15 @@ async function showPasswordWindow() {
     minWidth,
     minHeight,
     autoHideMenuBar: false,
+    titleBarStyle: 'hidden' as 'default' | 'hidden' | 'hiddenInset' | 'customButtonsOnHover',
+    // Only supported on macOS and windows
+    // By default use Classic Dark theme colors
+    titleBarOverlay: {
+      color: classicDark['--background-primary-color'],
+      symbolColor: classicDark['--text-primary-color'],
+      height: titleBarHeight - 1, // 1 less so title bar border renders on windows
+    },
+    backgroundColor: classicDark['--background-primary-color'],
     webPreferences: {
       nodeIntegration: true,
       enableRemoteModule: true,
@@ -615,6 +623,14 @@ async function showAbout() {
     resizable: true,
     title: locale.messages.about,
     autoHideMenuBar: true,
+    titleBarStyle: 'hidden' as 'default' | 'hidden' | 'hiddenInset' | 'customButtonsOnHover',
+    // Only supported on macOS and windows
+    // By default use Classic Dark theme colors
+    titleBarOverlay: {
+      color: classicDark['--background-primary-color'],
+      symbolColor: classicDark['--text-primary-color'],
+      height: titleBarHeight - 1, // 1 less so title bar border renders on windows
+    },
     backgroundColor: classicDark['--background-primary-color'],
     show: false,
     webPreferences: {

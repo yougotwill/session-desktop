@@ -7,6 +7,7 @@ import { SessionToastContainer } from '../SessionToastContainer';
 import { SessionTheme } from '../../themes/SessionTheme';
 import { Flex } from '../basic/Flex';
 import { setSignInByLinking } from '../../util/storage';
+import { SessionWindow } from '../SessionWindow';
 
 export const SessionRegistrationView = () => {
   React.useEffect(() => {
@@ -14,25 +15,27 @@ export const SessionRegistrationView = () => {
   }, []);
   return (
     <SessionTheme>
-      <div className="session-fullscreen">
-        <div className="session-full-screen-flow session-fullscreen">
-          <Flex
-            className="session-content"
-            alignItems="center"
-            flexDirection="column"
-            container={true}
-            height="100%"
-          >
-            <Flex container={true} margin="auto" alignItems="center" flexDirection="column">
-              <SessionToastContainer />
-              <SessionIcon iconSize={150} iconType="brand" />
+      <SessionWindow>
+        <div className="session-fullscreen">
+          <div className="session-full-screen-flow session-fullscreen">
+            <Flex
+              className="session-content"
+              alignItems="center"
+              flexDirection="column"
+              container={true}
+              height="100%"
+            >
+              <Flex container={true} margin="auto" alignItems="center" flexDirection="column">
+                <SessionToastContainer />
+                <SessionIcon iconSize={150} iconType="brand" />
 
-              <AccentText />
-              <RegistrationStages />
+                <AccentText />
+                <RegistrationStages />
+              </Flex>
             </Flex>
-          </Flex>
+          </div>
         </div>
-      </div>
+      </SessionWindow>
     </SessionTheme>
   );
 };

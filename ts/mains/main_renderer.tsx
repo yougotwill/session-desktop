@@ -261,7 +261,6 @@ async function start() {
   }
 
   function openStandAlone() {
-    // TODO add SessionWindow
     ReactDOM.render(<SessionRegistrationView />, document.getElementById('root'));
   }
   ExpirationTimerOptions.initExpiringMessageListener();

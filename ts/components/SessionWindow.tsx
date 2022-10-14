@@ -17,23 +17,40 @@ const StyledTitleBarSpace = styled.div<{ supportSettingsScreen: boolean }>`
       : 'var(--background-primary-color)'};
   border-bottom: 1px solid var(--border-color);
   -webkit-app-region: drag;
+  cursor: grab;
 `;
 
-export const SessionWindow = ({ children }: { children: ReactNode }) => {
+type SessionWindowProps = {
+  children: ReactNode;
+  supportSettingsScreen?: boolean;
+};
+
+export const SessionWindow = (props: SessionWindowProps) => {
+  const { children, supportSettingsScreen = false } = props;
   const onLinux = isLinux();
-  const onWindows = isWindows();
-  const focusedSettingsSection = useSelector(getFocusedSettingsSection);
-  const supportSettingsScreen = onWindows && focusedSettingsSection !== undefined;
 
   // Electron doesn't support window control overlays on linux
   if (onLinux) {
-    return(<>{children}</>);
+    return <>{children}</>;
   }
 
   return (
     <Flex container={true} flexDirection={'column'}>
-      <StyledTitleBarSpace supportSettingsScreen={supportSettingsScreen} />
+      <StyledTitleBarSpace
+        aria-aria-label="Session App Menu Bar"
+        supportSettingsScreen={supportSettingsScreen}
+      />
       {children}
     </Flex>
   );
+};
+
+// Used where we have access to the redux store
+export const SmartSessionWindow = (props: SessionWindowProps) => {
+  const { children } = props;
+  const onWindows = isWindows();
+  const focusedSettingsSection = useSelector(getFocusedSettingsSection);
+  const supportSettingsScreen = Boolean(onWindows && focusedSettingsSection);
+
+  return <SessionWindow supportSettingsScreen={supportSettingsScreen}>{children}</SessionWindow>;
 };
