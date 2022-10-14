@@ -157,6 +157,8 @@ if (windowFromUserConfig) {
 import { load as loadLocale, LocaleMessagesWithNameType } from '../node/locale';
 import { setLastestRelease } from '../node/latest_desktop_release';
 import { getAppRootPath } from '../node/getRootPath';
+import { classicDark, classicLight, oceanDark, oceanLight } from '../themes';
+import { titleBarHeight } from '../components/SessionWindow';
 
 // Both of these will be set after app fires the 'ready' event
 let logger: Logger | null = null;
@@ -282,7 +284,15 @@ async function createWindow() {
     minWidth,
     minHeight,
     fullscreen: false as boolean | undefined,
-    backgroundColor: '#000',
+    titleBarStyle: 'hidden' as 'default' | 'hidden' | 'hiddenInset' | 'customButtonsOnHover',
+    // Only supported on macOS and windows
+    // By default use Classic Dark theme colors
+    titleBarOverlay: {
+      color: classicDark['--background-primary-color'],
+      symbolColor: classicDark['--text-primary-color'],
+      height: titleBarHeight - 1, // 1 less so title bar border renders on windows
+    },
+    backgroundColor: classicDark['--background-primary-color'],
     webPreferences: {
       nodeIntegration: true,
       enableRemoteModule: true,
@@ -530,6 +540,15 @@ async function showPasswordWindow() {
     minWidth,
     minHeight,
     autoHideMenuBar: false,
+    titleBarStyle: 'hidden' as 'default' | 'hidden' | 'hiddenInset' | 'customButtonsOnHover',
+    // Only supported on macOS and windows
+    // By default use Classic Dark theme colors
+    titleBarOverlay: {
+      color: classicDark['--background-primary-color'],
+      symbolColor: classicDark['--text-primary-color'],
+      height: titleBarHeight - 1, // 1 less so title bar border renders on windows
+    },
+    backgroundColor: classicDark['--background-primary-color'],
     webPreferences: {
       nodeIntegration: true,
       enableRemoteModule: true,
@@ -604,7 +623,15 @@ async function showAbout() {
     resizable: true,
     title: locale.messages.about,
     autoHideMenuBar: true,
-    backgroundColor: '#000',
+    titleBarStyle: 'hidden' as 'default' | 'hidden' | 'hiddenInset' | 'customButtonsOnHover',
+    // Only supported on macOS and windows
+    // By default use Classic Dark theme colors
+    titleBarOverlay: {
+      color: classicDark['--background-primary-color'],
+      symbolColor: classicDark['--text-primary-color'],
+      height: titleBarHeight - 1, // 1 less so title bar border renders on windows
+    },
+    backgroundColor: classicDark['--background-primary-color'],
     show: false,
     webPreferences: {
       nodeIntegration: true,
@@ -627,7 +654,7 @@ async function showAbout() {
   });
 
   aboutWindow.once('ready-to-show', () => {
-    aboutWindow?.setBackgroundColor('#000');
+    aboutWindow?.setBackgroundColor(classicDark['--background-primary-color']);
   });
 
   // looks like sometimes ready-to-show is not fired by electron.
@@ -657,7 +684,7 @@ async function showDebugLogWindow() {
     resizable: true,
     title: locale.messages.debugLog,
     autoHideMenuBar: true,
-    backgroundColor: '#000',
+    backgroundColor: classicDark['--background-primary-color'],
     shadow: true,
     show: false,
     modal: true,
@@ -682,7 +709,7 @@ async function showDebugLogWindow() {
   });
 
   debugLogWindow.once('ready-to-show', () => {
-    debugLogWindow?.setBackgroundColor('#000');
+    debugLogWindow?.setBackgroundColor(classicDark['--background-primary-color']);
   });
 
   // see above: looks like sometimes ready-to-show is not fired by electron
@@ -1109,6 +1136,8 @@ ipc.on('set-auto-update-setting', async (_event, enabled) => {
   }
 });
 
+// Theming
+
 async function getThemeFromMainWindow() {
   return new Promise(resolve => {
     ipc.once('get-success-theme-setting', (_event, value) => {
@@ -1117,6 +1146,40 @@ async function getThemeFromMainWindow() {
     mainWindow?.webContents.send('get-theme-setting');
   });
 }
+
+ipc.on('set-window-controls-theme', async (_, theme, location: 'settings' | 'main') => {
+  if (os.platform() !== 'win32') {
+    console.error('set-window-controls-theme is only supported on Windows');
+    return;
+  }
+  let backgroundColor =
+    classicDark[`--background-${location === 'main' ? 'primary' : 'secondary'}-color`];
+  let symbolColor = classicDark['--text-primary-color'];
+  switch (theme) {
+    case 'classic-light':
+      backgroundColor =
+        classicLight[`--background-${location === 'main' ? 'primary' : 'secondary'}-color`];
+      symbolColor = classicLight['--text-primary-color'];
+      break;
+    case 'ocean-light':
+      backgroundColor =
+        oceanLight[`--background-${location === 'main' ? 'primary' : 'secondary'}-color`];
+      symbolColor = oceanLight['--text-primary-color'];
+      break;
+    case 'ocean-dark':
+      backgroundColor =
+        oceanDark[`--background-${location === 'main' ? 'primary' : 'secondary'}-color`];
+      symbolColor = oceanDark['--text-primary-color'];
+      break;
+    case 'classic-dark':
+    default:
+  }
+
+  mainWindow?.setTitleBarOverlay({
+    color: backgroundColor,
+    symbolColor,
+  });
+});
 
 async function askForMediaAccess() {
   // Microphone part

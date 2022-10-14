@@ -1,3 +1,4 @@
+import { titleBarHeight } from '../components/SessionWindow';
 import { hexColorToRGB } from '../util/hexColorToRGB';
 import { COLORS } from './constants/colors';
 
@@ -31,6 +32,7 @@ export type ThemeGlobals = {
   '--border-radius-message-box': string;
 
   /* Sizes */
+  '--app-height': string;
   '--main-view-header-height': string;
   '--composition-container-height': string;
   '--search-input-height': string;
@@ -107,6 +109,7 @@ export const THEME_GLOBALS: ThemeGlobals = {
   '--border-radius': '5px',
   '--border-radius-message-box': '16px',
 
+  '--app-height': `calc(100vh - ${titleBarHeight}px)`,
   '--main-view-header-height': '63px',
   '--composition-container-height': '60px',
   '--search-input-height': '34px',

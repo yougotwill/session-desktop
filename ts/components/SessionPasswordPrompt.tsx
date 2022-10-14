@@ -12,6 +12,7 @@ import { isString } from 'lodash';
 import { SessionToastContainer } from './SessionToastContainer';
 import { SessionWrapperModal } from './SessionWrapperModal';
 import { switchPrimaryColorTo } from '../themes/switchPrimaryColor';
+import { SessionWindow } from './SessionWindow';
 
 interface State {
   errorCount: number;
@@ -31,7 +32,7 @@ const TextPleaseWait = (props: { isLoading: boolean }) => {
 
 const StyledContent = styled.div`
   background-color: var(--background-secondary-color);
-  height: 100%;
+  height: var(--app-height);
   width: 100%;
 `;
 
@@ -207,10 +208,12 @@ export const SessionPasswordPrompt = () => {
 
   return (
     <SessionTheme>
-      <SessionToastContainer />
-      <StyledContent>
-        <SessionPasswordPromptInner />
-      </StyledContent>
+      <SessionWindow>
+        <SessionToastContainer />
+        <StyledContent>
+          <SessionPasswordPromptInner />
+        </StyledContent>
+      </SessionWindow>
     </SessionTheme>
   );
 };

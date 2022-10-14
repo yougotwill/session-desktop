@@ -48,6 +48,7 @@ import { getLatestReleaseFromFileServer } from '../../session/apis/file_server_a
 import { switchThemeTo } from '../../themes/switchTheme';
 import { ThemeStateType } from '../../themes/constants/colors';
 import { getTheme } from '../../state/selectors/theme';
+import { isWindows } from '../../OS';
 
 const Section = (props: { type: SectionType }) => {
   const ourNumber = useSelector(getOurNumber);
@@ -74,6 +75,7 @@ const Section = (props: { type: SectionType }) => {
         theme: newTheme,
         mainWindow: true,
         usePrimaryColor: true,
+        isSettingsScreen: focusedSection === SectionType.Settings,
         dispatch,
       });
     } else if (type === SectionType.PathIndicator) {
@@ -84,6 +86,14 @@ const Section = (props: { type: SectionType }) => {
       dispatch(clearSearch());
       dispatch(showLeftPaneSection(type));
       dispatch(resetOverlayMode());
+      // Update window controls overlay colors
+      if (isWindows()) {
+        ipcRenderer.send(
+          'set-window-controls-theme',
+          theme,
+          type === SectionType.Settings ? 'settings' : 'main'
+        );
+      }
     }
   };
 

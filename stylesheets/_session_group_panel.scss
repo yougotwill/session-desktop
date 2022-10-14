@@ -1,7 +1,7 @@
 .group-settings {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: var(--app-height);
   width: -webkit-fill-available;
 
   align-items: center;

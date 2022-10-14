@@ -4,16 +4,19 @@ import { classicDark, classicLight, oceanDark, oceanLight } from '.';
 import { convertThemeStateToName, THEMES, ThemeStateType } from './constants/colors';
 import { loadThemeColors } from './variableColors';
 import { findPrimaryColorId, switchPrimaryColorTo } from './switchPrimaryColor';
+import { ipcRenderer as ipc } from 'electron/renderer';
+import { isWindows } from '../OS';
 
 type SwitchThemeProps = {
   theme: ThemeStateType;
   mainWindow?: boolean;
+  isSettingsScreen?: boolean;
   usePrimaryColor?: boolean;
   dispatch?: Dispatch;
 };
 
 export async function switchThemeTo(props: SwitchThemeProps) {
-  const { theme, mainWindow, usePrimaryColor, dispatch } = props;
+  const { theme, mainWindow, isSettingsScreen, usePrimaryColor, dispatch } = props;
   let newTheme: ThemeStateType | null = null;
 
   switch (theme) {
@@ -40,6 +43,10 @@ export async function switchThemeTo(props: SwitchThemeProps) {
   if (newTheme) {
     if (mainWindow) {
       await window.setTheme(theme);
+      // Update window controls overlay colors
+      if (isWindows()) {
+        ipc.send('set-window-controls-theme', theme, isSettingsScreen ? 'settings' : 'main');
+      }
     }
 
     if (dispatch) {
