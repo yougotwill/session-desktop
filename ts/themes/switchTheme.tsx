@@ -4,6 +4,7 @@ import { classicDark, classicLight, oceanDark, oceanLight } from '.';
 import { convertThemeStateToName, THEMES, ThemeStateType } from './constants/colors';
 import { loadThemeColors } from './variableColors';
 import { findPrimaryColorId, switchPrimaryColorTo } from './switchPrimaryColor';
+import { ipcRenderer } from 'electron';
 
 type SwitchThemeProps = {
   theme: ThemeStateType;
@@ -40,6 +41,7 @@ export async function switchThemeTo(props: SwitchThemeProps) {
   if (newTheme) {
     if (mainWindow) {
       await window.setTheme(theme);
+      ipcRenderer.send('set-native-theme', theme);
     }
 
     if (dispatch) {

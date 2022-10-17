@@ -157,6 +157,8 @@ if (windowFromUserConfig) {
 import { load as loadLocale, LocaleMessagesWithNameType } from '../node/locale';
 import { setLastestRelease } from '../node/latest_desktop_release';
 import { getAppRootPath } from '../node/getRootPath';
+import { classicDark } from '../themes';
+import { nativeTheme } from 'electron/main';
 
 // Both of these will be set after app fires the 'ready' event
 let logger: Logger | null = null;
@@ -277,12 +279,16 @@ async function createWindow() {
     picked.y = Math.floor(Math.random() * screenHeight);
   }
 
+  // Set here because we don't have access to the DB yet.
+  nativeTheme.themeSource = 'dark';
+
   const windowOptions = {
     show: true,
     minWidth,
     minHeight,
     fullscreen: false as boolean | undefined,
-    backgroundColor: '#000',
+    // Default theme is Classic Dark
+    backgroundColor: classicDark['--background-primary-color'],
     webPreferences: {
       nodeIntegration: true,
       enableRemoteModule: true,
@@ -522,6 +528,10 @@ async function showPasswordWindow() {
     passwordWindow.show();
     return;
   }
+
+  // Set here because we don't have access to the DB yet.
+  nativeTheme.themeSource = 'dark';
+
   const { minWidth, minHeight, width, height } = getWindowSize();
   const windowOptions = {
     show: true, // allow to start minimised in tray
@@ -530,6 +540,7 @@ async function showPasswordWindow() {
     minWidth,
     minHeight,
     autoHideMenuBar: false,
+    backgroundColor: classicDark['--background-primary-color'],
     webPreferences: {
       nodeIntegration: true,
       enableRemoteModule: true,
@@ -598,13 +609,14 @@ async function showAbout() {
   }
 
   const theme = await getThemeFromMainWindow();
+
   const options = {
     width: 500,
     height: 500,
     resizable: true,
     title: locale.messages.about,
     autoHideMenuBar: true,
-    backgroundColor: '#000',
+    backgroundColor: classicDark['--background-primary-color'],
     show: false,
     webPreferences: {
       nodeIntegration: true,
@@ -627,7 +639,7 @@ async function showAbout() {
   });
 
   aboutWindow.once('ready-to-show', () => {
-    aboutWindow?.setBackgroundColor('#000');
+    aboutWindow?.setBackgroundColor(classicDark['--background-primary-color']);
   });
 
   // looks like sometimes ready-to-show is not fired by electron.
@@ -657,7 +669,7 @@ async function showDebugLogWindow() {
     resizable: true,
     title: locale.messages.debugLog,
     autoHideMenuBar: true,
-    backgroundColor: '#000',
+    backgroundColor: classicDark['--background-primary-color'],
     shadow: true,
     show: false,
     modal: true,
@@ -682,7 +694,7 @@ async function showDebugLogWindow() {
   });
 
   debugLogWindow.once('ready-to-show', () => {
-    debugLogWindow?.setBackgroundColor('#000');
+    debugLogWindow?.setBackgroundColor(classicDark['--background-primary-color']);
   });
 
   // see above: looks like sometimes ready-to-show is not fired by electron
@@ -1109,6 +1121,8 @@ ipc.on('set-auto-update-setting', async (_event, enabled) => {
   }
 });
 
+// Theming
+
 async function getThemeFromMainWindow() {
   return new Promise(resolve => {
     ipc.once('get-success-theme-setting', (_event, value) => {
@@ -1117,6 +1131,10 @@ async function getThemeFromMainWindow() {
     mainWindow?.webContents.send('get-theme-setting');
   });
 }
+
+ipc.on('set-native-theme', (_event, theme) => {
+  nativeTheme.themeSource = theme.includes('dark') ? 'dark' : 'light';
+});
 
 async function askForMediaAccess() {
   // Microphone part
