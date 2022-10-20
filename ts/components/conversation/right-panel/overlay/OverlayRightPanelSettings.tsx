@@ -1,33 +1,35 @@
 import React, { useEffect, useState } from 'react';
-import { SessionIconButton } from '../icon';
 import _ from 'lodash';
 // tslint:disable-next-line: no-submodule-imports
 import useInterval from 'react-use/lib/useInterval';
 import { useDispatch, useSelector } from 'react-redux';
-import { Data } from '../../data/data';
+import { Data } from '../../../../data/data';
 import {
   deleteAllMessagesByConvoIdWithConfirmation,
-  setDisappearingMessagesByConvoId,
   showAddModeratorsByConvoId,
   showInviteContactByConvoId,
   showLeaveGroupByConvoId,
   showRemoveModeratorsByConvoId,
   showUpdateGroupMembersByConvoId,
   showUpdateGroupNameByConvoId,
-} from '../../interactions/conversationInteractions';
-import { Constants } from '../../session';
-import { closeRightPanel } from '../../state/ducks/conversations';
-import { getSelectedConversation, isRightPanelShowing } from '../../state/selectors/conversations';
-import { getTimerOptions } from '../../state/selectors/timerOptions';
-import { AttachmentTypeWithPath } from '../../types/Attachment';
-import { Avatar, AvatarSize } from '../avatar/Avatar';
-import { SessionButton, SessionButtonColor, SessionButtonType } from '../basic/SessionButton';
-import { SessionDropdown } from '../basic/SessionDropdown';
-import { SpacerLG } from '../basic/Text';
-import { MediaItemType } from '../lightbox/LightboxGallery';
-import { MediaGallery } from './media-gallery/MediaGallery';
-import { getAbsoluteAttachmentPath } from '../../types/MessageAttachment';
+} from '../../../../interactions/conversationInteractions';
+import { Constants } from '../../../../session';
+import {
+  getSelectedConversation,
+  isRightPanelShowing,
+} from '../../../../state/selectors/conversations';
+import { AttachmentTypeWithPath } from '../../../../types/Attachment';
+import { SessionButton, SessionButtonColor, SessionButtonType } from '../../../basic/SessionButton';
+import { SpacerLG } from '../../../basic/Text';
+import { MediaItemType } from '../../../lightbox/LightboxGallery';
+import { MediaGallery } from '../../media-gallery/MediaGallery';
+import { getAbsoluteAttachmentPath } from '../../../../types/MessageAttachment';
 import styled from 'styled-components';
+import { SessionIconButton } from '../../../icon';
+import { closeRightPanel } from '../../../../state/ducks/conversations';
+import { Avatar, AvatarSize } from '../../../avatar/Avatar';
+import { setRightOverlayMode } from '../../../../state/ducks/section';
+import { PanelButtonGroup, PanelIconButton } from '../../../buttons';
 
 async function getMediaGalleryProps(
   conversationId: string
@@ -114,7 +116,7 @@ const HeaderItem = () => {
   const showInviteContacts = isGroup && !isKickedFromGroup && !isBlocked && !left;
 
   return (
-    <div className="group-settings-header">
+    <div className="right-panel-header">
       <SessionIconButton
         iconType="chevron"
         iconSize="medium"
@@ -183,10 +185,11 @@ const StyledGroupSettingsItem = styled.div`
 
 // tslint:disable: cyclomatic-complexity
 // tslint:disable: max-func-body-length
-export const SessionRightPanelWithDetails = () => {
+export const OverlayRightPanelSettings = () => {
   const [documents, setDocuments] = useState<Array<MediaItemType>>([]);
   const [media, setMedia] = useState<Array<MediaItemType>>([]);
 
+  const dispatch = useDispatch();
   const selectedConversation = useSelector(getSelectedConversation);
   const isShowing = useSelector(isRightPanelShowing);
 
@@ -250,17 +253,6 @@ export const SessionRightPanelWithDetails = () => {
     ? window.i18n('youLeftTheGroup')
     : window.i18n('leaveGroup');
 
-  const timerOptions = useSelector(getTimerOptions).timerOptions;
-
-  const disappearingMessagesOptions = timerOptions.map(option => {
-    return {
-      content: option.name,
-      onClick: () => {
-        void setDisappearingMessagesByConvoId(id, option.value);
-      },
-    };
-  });
-
   const showUpdateGroupNameButton =
     isGroup && (!isPublic || (isPublic && weAreAdmin)) && !commonNoShow;
   const showAddRemoveModeratorsButton = weAreAdmin && !commonNoShow && isPublic;
@@ -273,8 +265,9 @@ export const SessionRightPanelWithDetails = () => {
     : () => {
         showLeaveGroupByConvoId(id);
       };
+
   return (
-    <div className="group-settings">
+    <>
       <HeaderItem />
       <h2 data-testid="right-panel-group-name">{displayNameInProfile}</h2>
       {showMemberCount && (
@@ -288,7 +281,7 @@ export const SessionRightPanelWithDetails = () => {
       )}
       {showUpdateGroupNameButton && (
         <StyledGroupSettingsItem
-          className="group-settings-item"
+          className="right-panel-item"
           role="button"
           onClick={async () => {
             await showUpdateGroupNameByConvoId(id);
@@ -300,7 +293,7 @@ export const SessionRightPanelWithDetails = () => {
       {showAddRemoveModeratorsButton && (
         <>
           <StyledGroupSettingsItem
-            className="group-settings-item"
+            className="right-panel-item"
             role="button"
             onClick={() => {
               showAddModeratorsByConvoId(id);
@@ -309,7 +302,7 @@ export const SessionRightPanelWithDetails = () => {
             {window.i18n('addModerators')}
           </StyledGroupSettingsItem>
           <StyledGroupSettingsItem
-            className="group-settings-item"
+            className="right-panel-item"
             role="button"
             onClick={() => {
               showRemoveModeratorsByConvoId(id);
@@ -322,7 +315,7 @@ export const SessionRightPanelWithDetails = () => {
 
       {showUpdateGroupMembersButton && (
         <StyledGroupSettingsItem
-          className="group-settings-item"
+          className="right-panel-item"
           role="button"
           onClick={async () => {
             await showUpdateGroupMembersByConvoId(id);
@@ -333,10 +326,17 @@ export const SessionRightPanelWithDetails = () => {
       )}
 
       {hasDisappearingMessages && (
-        <SessionDropdown
-          label={window.i18n('disappearingMessages')}
-          options={disappearingMessagesOptions}
-        />
+        /* TODO Move ButtonGroup around all settings items */
+        <PanelButtonGroup>
+          <PanelIconButton
+            iconType={'timer50'}
+            text={window.i18n('disappearingMessages')}
+            disableBg={true}
+            onClick={() => {
+              dispatch(setRightOverlayMode('disappearing-messages'));
+            }}
+          />
+        </PanelButtonGroup>
       )}
 
       <MediaGallery documents={documents} media={media} />
@@ -352,6 +352,6 @@ export const SessionRightPanelWithDetails = () => {
           />
         </StyledLeaveButton>
       )}
-    </div>
+    </>
   );
 };
