@@ -107,6 +107,10 @@ export const SessionEmojiPanel = forwardRef<HTMLDivElement, Props>((props: Props
   let panelTextRGB = hexColorToRGB(THEMES.CLASSIC_DARK.COLOR6);
 
   switch (theme) {
+    case 'windows-crash':
+      panelBackgroundRGB = hexColorToRGB(THEMES.WINDOWS_CRASH.COLOR1);
+      panelTextRGB = hexColorToRGB(THEMES.WINDOWS_CRASH.COLOR6);
+      break;
     case 'ocean-dark':
       panelBackgroundRGB = hexColorToRGB(THEMES.OCEAN_DARK.COLOR1);
       // tslint:disable: no-non-null-assertion

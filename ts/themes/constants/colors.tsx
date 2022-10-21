@@ -13,6 +13,7 @@ export type ColorsType = {
     PURPLE: string;
     ORANGE: string;
     RED: string;
+    GREY: string;
   };
   PATH: {
     DEFAULT: string;
@@ -37,6 +38,7 @@ const primaryPink = '#FF95EF';
 const primaryPurple = '#C993FF';
 const primaryOrange = '#FCB159';
 const primaryRed = '#FF9C8E';
+const primaryGrey = '#babbba';
 
 // Danger
 const dangerLight = '#E12D19';
@@ -72,6 +74,7 @@ const COLORS: ColorsType = {
     PURPLE: primaryPurple,
     ORANGE: primaryOrange,
     RED: primaryRed,
+    GREY: primaryGrey,
   },
   PATH: {
     DEFAULT: pathDefault,
@@ -92,24 +95,43 @@ export type PrimaryColorStateType =
   | 'pink'
   | 'purple'
   | 'orange'
-  | 'red';
+  | 'red'
+  | 'grey';
 
 type PrimaryColorType = { id: PrimaryColorStateType; ariaLabel: string; color: string };
 
 export const getPrimaryColors = (): Array<PrimaryColorType> => [
   { id: 'green', ariaLabel: window.i18n('primaryColorGreen'), color: COLORS.PRIMARY.GREEN },
   { id: 'blue', ariaLabel: window.i18n('primaryColorBlue'), color: COLORS.PRIMARY.BLUE },
-  { id: 'yellow', ariaLabel: window.i18n('primaryColorYellow'), color: COLORS.PRIMARY.YELLOW },
+  {
+    id: 'yellow',
+    ariaLabel: window.i18n('primaryColorYellow'),
+    color: COLORS.PRIMARY.YELLOW,
+  },
   { id: 'pink', ariaLabel: window.i18n('primaryColorPink'), color: COLORS.PRIMARY.PINK },
-  { id: 'purple', ariaLabel: window.i18n('primaryColorPurple'), color: COLORS.PRIMARY.PURPLE },
-  { id: 'orange', ariaLabel: window.i18n('primaryColorOrange'), color: COLORS.PRIMARY.ORANGE },
+  {
+    id: 'purple',
+    ariaLabel: window.i18n('primaryColorPurple'),
+    color: COLORS.PRIMARY.PURPLE,
+  },
+  {
+    id: 'orange',
+    ariaLabel: window.i18n('primaryColorOrange'),
+    color: COLORS.PRIMARY.ORANGE,
+  },
   { id: 'red', ariaLabel: window.i18n('primaryColorRed'), color: COLORS.PRIMARY.RED },
+  { id: 'grey', ariaLabel: 'grey', color: COLORS.PRIMARY.GREY },
 ];
 
 // Themes
-export type ThemeStateType = 'classic-light' | 'classic-dark' | 'ocean-light' | 'ocean-dark'; // used for redux state
+export type ThemeStateType =
+  | 'classic-light'
+  | 'classic-dark'
+  | 'ocean-light'
+  | 'ocean-dark'
+  | 'windows-crash'; // used for redux state
 
-type ThemeNames = 'CLASSIC_LIGHT' | 'CLASSIC_DARK' | 'OCEAN_LIGHT' | 'OCEAN_DARK';
+type ThemeNames = 'CLASSIC_LIGHT' | 'CLASSIC_DARK' | 'OCEAN_LIGHT' | 'OCEAN_DARK' | 'WINDOWS_CRASH';
 
 export function convertThemeStateToName(themeState: string): ThemeNames {
   return themeState.replace('-', '_').toUpperCase() as ThemeNames;
@@ -180,6 +202,18 @@ const oceanDark5 = '#A6A9CE';
 const oceanDark6 = '#5CAACC';
 const oceanDark7 = '#FFFFFF';
 
+// Windows Crash
+const windowsCrashPrimary = primaryGrey;
+const windowsCrashDanger = dangerDark;
+const windowsCrashDisabled = disabledDark;
+const windowsCrash0 = '#2041e3';
+const windowsCrash1 = '#0023d3';
+const windowsCrash2 = '#2941bb';
+const windowsCrash3 = '#324dd5';
+const windowsCrash4 = '#767676';
+const windowsCrash5 = '#A1A2A1';
+const windowsCrash6 = '#FFFFFF';
+
 const THEMES: Themes = {
   CLASSIC_LIGHT: {
     PRIMARY: classicLightPrimary,
@@ -230,6 +264,18 @@ const THEMES: Themes = {
     COLOR5: oceanDark5,
     COLOR6: oceanDark6,
     COLOR7: oceanDark7,
+  },
+  WINDOWS_CRASH: {
+    PRIMARY: windowsCrashPrimary,
+    DANGER: windowsCrashDanger,
+    DISABLED: windowsCrashDisabled,
+    COLOR0: windowsCrash0,
+    COLOR1: windowsCrash1,
+    COLOR2: windowsCrash2,
+    COLOR3: windowsCrash3,
+    COLOR4: windowsCrash4,
+    COLOR5: windowsCrash5,
+    COLOR6: windowsCrash6,
   },
 };
 
@@ -286,6 +332,16 @@ export const getThemeColors = (): Array<ThemeType> => [
       border: THEMES.OCEAN_LIGHT.COLOR3,
       receivedBackground: THEMES.OCEAN_LIGHT.COLOR1,
       sentBackground: THEMES.OCEAN_LIGHT.PRIMARY,
+    },
+  },
+  {
+    id: 'windows-crash',
+    title: 'Windows Crash',
+    style: {
+      background: THEMES.WINDOWS_CRASH.COLOR1,
+      border: THEMES.WINDOWS_CRASH.COLOR3,
+      receivedBackground: THEMES.WINDOWS_CRASH.COLOR2,
+      sentBackground: THEMES.WINDOWS_CRASH.PRIMARY,
     },
   },
 ];
