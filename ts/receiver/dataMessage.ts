@@ -152,7 +152,8 @@ export async function handleSwarmDataMessage(
   sentAtTimestamp: number,
   rawDataMessage: SignalService.DataMessage,
   messageHash: string,
-  senderConversationModel: ConversationModel
+  senderConversationModel: ConversationModel,
+  expireUpdate: any
 ): Promise<void> {
   window.log.info('handleSwarmDataMessage');
 
@@ -246,7 +247,8 @@ export async function handleSwarmDataMessage(
     sentAtTimestamp,
     cleanDataMessage,
     convoToAddMessageTo,
-    () => removeFromCache(envelope)
+    () => removeFromCache(envelope),
+    expireUpdate
   );
 }
 
@@ -293,7 +295,8 @@ async function handleSwarmMessage(
   sentAt: number,
   rawDataMessage: SignalService.DataMessage,
   convoToAddMessageTo: ConversationModel,
-  confirm: () => void
+  confirm: () => void,
+  expireUpdate?: any
 ): Promise<void> {
   if (!rawDataMessage || !msgModel) {
     window?.log?.warn('Invalid data passed to handleSwarmMessage.');
@@ -311,6 +314,7 @@ async function handleSwarmMessage(
         you: isUsFromCache(msgModel.get('source')),
         isOpenGroup: false,
       });
+
       if (
         convoToAddMessageTo.isPrivate() &&
         msgModel.get('unread') &&
@@ -323,6 +327,7 @@ async function handleSwarmMessage(
       confirm();
       return;
     }
+
     const isDuplicate = await isSwarmMessageDuplicate({
       source: msgModel.get('source'),
       sentAt,
@@ -340,7 +345,8 @@ async function handleSwarmMessage(
       toRegularMessage(rawDataMessage),
       confirm,
       msgModel.get('source'),
-      messageHash
+      messageHash,
+      expireUpdate
     );
   });
 }
