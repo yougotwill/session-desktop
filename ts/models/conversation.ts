@@ -1050,7 +1050,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       return;
     }
 
-    window?.log?.info('Updated conversation disappearing messages setting', {
+    window?.log?.info('WIP: Updated conversation disappearing messages setting', {
       id: this.idForLogging(),
       expirationType,
       expireTimer,
@@ -1082,9 +1082,6 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
         source,
         fromSync,
       },
-      // TODO do we need this?
-      // expirationType,
-      // expireTimer,
     };
 
     let message: MessageModel | undefined;
