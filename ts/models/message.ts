@@ -95,6 +95,7 @@ import {
 import { QUOTED_TEXT_MAX_LENGTH } from '../session/constants';
 import { ReactionList } from '../types/Reaction';
 import { getAttachmentMetadata } from '../types/message/initializeAttachmentMetadata';
+import { expireMessageOnSnode } from '../session/apis/snode_api/expire';
 // tslint:disable: cyclomatic-complexity
 
 /**
@@ -1244,6 +1245,13 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
         expiresAt,
         sentAt: this.get('sent_at'),
       });
+
+      if (this.get('expirationType') === 'deleteAfterRead') {
+        const messageHash = this.get('messageHash');
+        if (messageHash) {
+          await expireMessageOnSnode(messageHash, this.get('expireTimer'));
+        }
+      }
     }
   }
 
