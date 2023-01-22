@@ -750,7 +750,6 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
           reaction,
           sender: UserUtils.getOurPubKeyStrFromCache(),
           you: true,
-          isOpenGroup: false,
         });
         return;
       }
@@ -767,7 +766,6 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
           reaction,
           sender: UserUtils.getOurPubKeyStrFromCache(),
           you: true,
-          isOpenGroup: false,
         });
         return;
       }
