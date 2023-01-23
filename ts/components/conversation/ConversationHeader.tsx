@@ -6,8 +6,6 @@ import { contextMenu } from 'react-contexify';
 import styled from 'styled-components';
 import { ConversationNotificationSettingType } from '../../models/conversationAttributes';
 import {
-  getConversationHeaderTitleProps,
-  getCurrentNotificationSettingText,
   getIsSelectedActive,
   getIsSelectedBlocked,
   getIsSelectedNoteToSelf,
@@ -17,7 +15,6 @@ import {
   getSelectedMessageIds,
   isMessageDetailView,
   isMessageSelectionMode,
-  isRightPanelShowing,
 } from '../../state/selectors/conversations';
 import { useDispatch, useSelector } from 'react-redux';
 
@@ -27,18 +24,12 @@ import {
 } from '../../interactions/conversations/unsendingInteractions';
 import {
   closeMessageDetailsView,
-  closeRightPanel,
   openRightPanel,
   resetSelectedMessageIds,
 } from '../../state/ducks/conversations';
 import { callRecipient } from '../../interactions/conversationInteractions';
 import { getHasIncomingCall, getHasOngoingCall } from '../../state/selectors/call';
-import {
-  useConversationUsername,
-  useExpireTimer,
-  useIsKickedFromGroup,
-  useIsRequest,
-} from '../../hooks/useParamSelector';
+import { useIsRequest } from '../../hooks/useParamSelector';
 import {
   SessionButton,
   SessionButtonColor,
@@ -48,7 +39,7 @@ import {
 import { SessionIconButton } from '../icon';
 import { ConversationHeaderMenu } from '../menu/ConversationHeaderMenu';
 import { Flex } from '../basic/Flex';
-import { ExpirationTimerOptions } from '../../util/expiringMessages';
+import { ConversationHeaderTitle } from './ConversationHeaderTitle';
 
 export interface TimerOption {
   name: string;
@@ -168,26 +159,6 @@ const TripleDotsMenu = (props: { triggerId: string; showBackButton: boolean }) =
   );
 };
 
-const ExpirationLength = (props: { expirationSettingName?: string }) => {
-  const { expirationSettingName } = props;
-
-  if (!expirationSettingName) {
-    return null;
-  }
-
-  return (
-    <div className="module-conversation-header__expiration">
-      <div className="module-conversation-header__expiration__clock-icon" />
-      <div
-        className="module-conversation-header__expiration__setting"
-        data-testid="disappearing-messages-indicator"
-      >
-        {expirationSettingName}
-      </div>
-    </div>
-  );
-};
-
 const AvatarHeader = (props: {
   pubkey: string;
   showBackButton: boolean;
@@ -251,109 +222,12 @@ const CallButton = () => {
       iconType="phone"
       iconSize="large"
       iconPadding="2px"
-      margin="0 10px 0 0"
+      // negative margin to keep conversation header title centered
+      margin="0 10px 0 -32px"
       onClick={() => {
         void callRecipient(selectedConvoKey, canCall);
       }}
     />
-  );
-};
-
-export const StyledSubtitleContainer = styled.div`
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-
-  span:last-child {
-    margin-bottom: 0;
-  }
-`;
-
-export type ConversationHeaderTitleProps = {
-  conversationKey: string;
-  isMe: boolean;
-  isGroup: boolean;
-  isPublic: boolean;
-  members: Array<any>;
-  subscriberCount?: number;
-  isKickedFromGroup: boolean;
-  currentNotificationSetting?: ConversationNotificationSettingType;
-};
-
-/**
- * The subtitle beneath a conversation title when looking at a conversation screen.
- * @param props props for subtitle. Text to be displayed
- * @returns JSX Element of the subtitle of conversation header
- */
-export const ConversationHeaderSubtitle = (props: { text?: string | null }): JSX.Element | null => {
-  const { text } = props;
-  if (!text) {
-    return null;
-  }
-  return <span className="module-conversation-header__title-text">{text}</span>;
-};
-
-const ConversationHeaderTitle = () => {
-  const headerTitleProps = useSelector(getConversationHeaderTitleProps);
-  const notificationSetting = useSelector(getCurrentNotificationSettingText);
-  const isRightPanelOn = useSelector(isRightPanelShowing);
-
-  const convoName = useConversationUsername(headerTitleProps?.conversationKey);
-  const dispatch = useDispatch();
-  if (!headerTitleProps) {
-    return null;
-  }
-
-  const { isGroup, isPublic, members, subscriberCount, isMe, isKickedFromGroup } = headerTitleProps;
-
-  const { i18n } = window;
-
-  if (isMe) {
-    return <div className="module-conversation-header__title">{i18n('noteToSelf')}</div>;
-  }
-
-  let memberCount = 0;
-  if (isGroup) {
-    if (isPublic) {
-      memberCount = subscriberCount || 0;
-    } else {
-      memberCount = members.length;
-    }
-  }
-
-  let memberCountText = '';
-  if (isGroup && memberCount > 0 && !isKickedFromGroup) {
-    const count = String(memberCount);
-    memberCountText = isPublic ? i18n('activeMembers', [count]) : i18n('members', [count]);
-  }
-
-  const notificationSubtitle = notificationSetting
-    ? window.i18n('notificationSubtitle', [notificationSetting])
-    : null;
-  const fullTextSubtitle = memberCountText
-    ? `${memberCountText} ● ${notificationSubtitle}`
-    : `${notificationSubtitle}`;
-
-  return (
-    <div
-      className="module-conversation-header__title"
-      onClick={() => {
-        if (isRightPanelOn) {
-          dispatch(closeRightPanel());
-        } else {
-          dispatch(openRightPanel());
-        }
-      }}
-      role="button"
-    >
-      <span className="module-contact-name__profile-name" data-testid="header-conversation-name">
-        {convoName}
-      </span>
-      <StyledSubtitleContainer>
-        <ConversationHeaderSubtitle text={fullTextSubtitle} />
-      </StyledSubtitleContainer>
-    </div>
   );
 };
 
@@ -367,12 +241,6 @@ export const ConversationHeaderWithDetails = () => {
     return null;
   }
 
-  const isKickedFromGroup = useIsKickedFromGroup(selectedConvoKey);
-  const expireTimerSetting = useExpireTimer(selectedConvoKey);
-  const expirationSettingName = expireTimerSetting
-    ? ExpirationTimerOptions.getName(expireTimerSetting || 0)
-    : undefined;
-
   const triggerId = 'conversation-header';
 
   return (
@@ -385,12 +253,7 @@ export const ConversationHeaderWithDetails = () => {
           showBackButton={isMessageDetailOpened}
         />
         <TripleDotsMenu triggerId={triggerId} showBackButton={isMessageDetailOpened} />
-
-        <div className="module-conversation-header__title-container">
-          <div className="module-conversation-header__title-flex">
-            <ConversationHeaderTitle />
-          </div>
-        </div>
+        <ConversationHeaderTitle />
 
         {!isSelectionMode && (
           <Flex
@@ -400,9 +263,6 @@ export const ConversationHeaderWithDetails = () => {
             flexGrow={0}
             flexShrink={0}
           >
-            {!isKickedFromGroup && (
-              <ExpirationLength expirationSettingName={expirationSettingName} />
-            )}
             <CallButton />
             <AvatarHeader
               onAvatarClick={() => {
