@@ -15,7 +15,7 @@ import { MessageAvatar } from '../message-content/MessageAvatar';
 import { MessageContentWithStatuses } from '../message-content/MessageContentWithStatus';
 import { ReadableMessage } from './ReadableMessage';
 import styled, { keyframes } from 'styled-components';
-import { ExpirableReadableMessage } from './ExpirableReadableMEssage';
+import { ExpirableReadableMessage } from './ExpirableReadableMessage';
 
 export type GenericReadableMessageSelectorProps = Pick<
   MessageRenderingProps,
