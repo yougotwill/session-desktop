@@ -339,13 +339,8 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
       return null;
     }
     const invitation = this.get('groupInvitation');
-
-    let direction = this.get('direction');
-    if (!direction) {
-      direction = this.get('type') === 'outgoing' ? 'outgoing' : 'incoming';
-    }
-
     let serverAddress = '';
+
     try {
       const url = new URL(invitation.url);
       serverAddress = url.origin;
@@ -383,6 +378,7 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
       messageId: this.id,
       receivedAt: this.get('received_at'),
       isUnread: this.isUnread(),
+      ...this.getPropsForExpiringMessage(),
     };
   }
 
