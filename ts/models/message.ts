@@ -82,7 +82,11 @@ import {
   loadPreviewData,
   loadQuoteData,
 } from '../types/MessageAttachment';
-import { ExpirationTimerOptions, setExpirationStartTimestamp } from '../util/expiringMessages';
+import {
+  DisappearingMessageUpdate,
+  ExpirationTimerOptions,
+  setExpirationStartTimestamp,
+} from '../util/expiringMessages';
 import { Notifications } from '../util/notifications';
 import { Storage } from '../util/storage';
 import { LinkPreviews } from '../util/linkPreviews';
@@ -251,8 +255,6 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
       return window.i18n('mediaMessage');
     }
     if (this.isExpirationTimerUpdate()) {
-      // TODO Backwards compatibility for Disappearing Messages in old clients
-      // TODO What does this comment refer to mean?
       const expireTimerUpdate = this.get('expirationTimerUpdate');
       const expirationType = expireTimerUpdate?.expirationType;
       const expireTimer = expireTimerUpdate?.expireTimer;
@@ -1081,28 +1083,28 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
       sent: true,
     });
 
-    let expireUpdate = null;
+    let expireUpdate: DisappearingMessageUpdate | null = null;
     const expirationType = dataMessage.getDisappearingMessageType();
 
     if (expirationType && contentMessage.expirationTimer) {
       expireUpdate = {
         expirationType,
         expireTimer: contentMessage.expirationTimer,
-        lastDisappearingMessageChangeTimestamp:
-          contentMessage.lastDisappearingMessageChangeTimestamp,
+        lastDisappearingMessageChangeTimestamp: Number(
+          contentMessage.lastDisappearingMessageChangeTimestamp
+        ),
       };
     }
 
     await this.commit();
 
-    await this.sendSyncMessage(dataMessage, now, expireUpdate);
+    await this.sendSyncMessage(dataMessage, now, expireUpdate || undefined);
   }
 
   public async sendSyncMessage(
     data: DataMessage | SignalService.DataMessage,
     sentTimestamp: number,
-    // TODO add proper types
-    expireUpdate?: any
+    expireUpdate?: DisappearingMessageUpdate
   ) {
     if (this.get('synced') || this.get('sentSync')) {
       return;
