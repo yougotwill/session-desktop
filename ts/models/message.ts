@@ -1097,7 +1097,6 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
     const { dataMessage } = content;
 
     // TODO maybe we need to account for lastDisappearingMessageChangeTimestamp?
-    // if this message needs to be synced
     if (
       dataMessage &&
       (dataMessage.body?.length ||
@@ -1110,15 +1109,21 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
       }
 
       // TODO legacy messages support will be removed in a future release
+      const isLegacyMessage = Boolean(dataMessage.expireTimer && dataMessage.expireTimer > -1);
+
       const expirationType = content.expirationType
         ? DisappearingMessageConversationSetting[content.expirationType]
-        : DisappearingMessageConversationSetting[3];
-      const expireTimer = content.expirationTimer || content?.dataMessage?.expireTimer || undefined;
+        : isLegacyMessage
+        ? DisappearingMessageConversationSetting[3]
+        : 'off';
+      const expireTimer = isLegacyMessage
+        ? Number(dataMessage.expireTimer)
+        : content.expirationTimer;
       const lastDisappearingMessageChangeTimestamp = content.lastDisappearingMessageChangeTimestamp
         ? Number(content.lastDisappearingMessageChangeTimestamp)
         : undefined;
-      let expireUpdate: DisappearingMessageUpdate | null = null;
 
+      let expireUpdate: DisappearingMessageUpdate | null = null;
       if (expirationType && expireTimer !== undefined) {
         expireUpdate = {
           expirationType,
