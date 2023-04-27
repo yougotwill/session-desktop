@@ -159,6 +159,8 @@
     "uuid": "8.3.2"
   },
   "devDependencies": {
+    "@commitlint/cli": "^17.6.1",
+    "@commitlint/config-conventional": "^17.6.1",
     "@parcel/transformer-sass": "^2.8.3",
     "@playwright/test": "1.16.3",
     "@types/backbone": "1.4.2",
@@ -226,7 +228,7 @@
     "grunt-contrib-watch": "1.1.0",
     "grunt-exec": "3.0.0",
     "grunt-gitinfo": "0.1.9",
-    "husky": "^8.0.0",
+    "husky": "^8.0.3",
     "jsdom": "^19.0.0",
     "jsdom-global": "^3.0.2",
     "mocha": "10.0.0",

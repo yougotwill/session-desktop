@@ -10,7 +10,7 @@ It's a good idea to gauge interest in your intended work by finding the current 
 for it or creating a new one yourself. Use Github issues as a place to signal
 your intentions and get feedback from the users most likely to appreciate your changes.
 
-You're most likely to have your pull request accepted if it addresses an existing Github issue marked with the [good-first-issue](https://github.com/oxen-io/session-desktop/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22) tag, these issues are specifically tagged, because they are generally features/bug fixes which can be cleanly merged on a single platform without requiring cross platform work, are generally of lower complexity than larger features and are non contentious, meaning that the core team doesn't need to try and assess the community desire for such a feature before merging. 
+You're most likely to have your pull request accepted if it addresses an existing Github issue marked with the [good-first-issue](https://github.com/oxen-io/session-desktop/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22) tag, these issues are specifically tagged, because they are generally features/bug fixes which can be cleanly merged on a single platform without requiring cross platform work, are generally of lower complexity than larger features and are non contentious, meaning that the core team doesn't need to try and assess the community desire for such a feature before merging.
 
 Of course we encourage community developers to work on ANY issue filed on our Github regardless of how it’s tagged, however if you pick up or create an issue without the “Good first issue” tag it would be best if you leave a comment on the issue so that the core team can give you any guidance required, especially around UI heavy features or issues which require cross platform integration.
 
@@ -45,10 +45,10 @@ Building on Windows versions 8+ is supported out of the box
 1.  Install `make`
 1.  Depending on your distro, you might need to install `hunspell` and `hunspell-<lan>` (e.g. `hunspell-en-au`)
 
-If you are using a Debian based Linux distribution gcc, g++ and make can be installed as part of the `build-essential` package using 
+If you are using a Debian based Linux distribution gcc, g++ and make can be installed as part of the `build-essential` package using
 
-``` 
-apt install build-essential 
+```
+apt install build-essential
 ```
 
 ### All platforms
@@ -121,6 +121,16 @@ This will then set the `userData` directory to `%appData%/Session-alice-profile`
 So you're in the process of preparing that pull request. Here's how to make that go
 smoothly.
 
+## Committing your changes
+
+Before a commit is accepted the staged changes will be formatted using [prettier](https://prettier.io/) and linted using [eslint](https://eslint.org/). The commit will be reverted if files are formatted or lint errors are returned.
+
+### Commit Message Convention
+
+This project follows [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/)
+
+Commit messages will be checked using [husky](https://typicode.github.io/husky/#/) and [commitlint](https://commitlint.js.org/).
+
 ## Tests
 
 Please write tests! Our testing framework is
@@ -138,8 +148,8 @@ So you wanna make a pull request? Please observe the following guidelines.
 - Never use plain strings right in the source code - pull them from `messages.json`!
   You **only** need to modify the default locale
   [`_locales/en/messages.json`](_locales/en/messages.json).
-    Other locales are generated automatically based on that file and then periodically
-    uploaded to Crowdin for translation.
+  Other locales are generated automatically based on that file and then periodically
+  uploaded to Crowdin for translation.
 - Please do not submit pull requests for pure translation fixes. Anyone can update
   the translations at [Crowdin](https://crowdin.com/project/session-desktop).
 - [Rebase](https://nathanleclaire.com/blog/2014/09/14/dont-be-scared-of-git-rebase/) your
@@ -166,9 +176,9 @@ So you wanna make a pull request? Please observe the following guidelines.
       choices that may be helpful to someone reviewing or auditing the commit
       history in the future. When in doubt, err on the side of a longer
       commit message.
-Above all, spend some time with the repository. Follow the pull request template added to
-your pull request description automatically. Take a look at recent approved pull requests,
-see how they did things.
+      Above all, spend some time with the repository. Follow the pull request template added to
+      your pull request description automatically. Take a look at recent approved pull requests,
+      see how they did things.
 
 ## Production Builds
 
