@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { isEmpty } from 'lodash';
 
 import { useIsPrivate, useIsPublic } from '../../../hooks/useParamSelector';
@@ -8,19 +8,46 @@ import {
   ConversationInteractionProps,
   ConversationInteractionStatus,
   ConversationInteractionType,
+  clearConversationInteractionState,
 } from '../../../interactions/conversationInteractions';
 import styled from 'styled-components';
+import { getConversationController } from '../../../session/conversations';
+import { LastMessageType } from '../../../state/ducks/conversations';
 
 const StyledInteractionItemText = styled.div<{ isError: boolean }>`
   ${props => props.isError && 'color: var(--danger-color) !important;'}
 `;
 
-export const InteractionItem = (props: ConversationInteractionProps) => {
-  const { conversationId, interactionStatus, interactionType } = props;
+type InteractionItemProps = ConversationInteractionProps & {
+  lastMessage?: LastMessageType | null;
+};
+
+export const InteractionItem = (props: InteractionItemProps) => {
+  const { conversationId, interactionStatus, interactionType, lastMessage } = props;
   const isGroup = !useIsPrivate(conversationId);
   const isCommunity = useIsPublic(conversationId);
 
+  const [newLastMessage, setNewLastMessage] = useState<string | null>();
+
+  // NOTE we want to reset the interaction state when the last message changes
+  useEffect(() => {
+    if (conversationId && lastMessage) {
+      const convo = getConversationController().get(conversationId);
+
+      if (!convo || convo.get('interactionStatus') === ConversationInteractionStatus.Loading) {
+        return;
+      }
+
+      window.log.debug(`WIP: we running`);
+      setNewLastMessage(convo.get('lastMessage'));
+      if (lastMessage.text !== newLastMessage) {
+        void clearConversationInteractionState({ conversationId });
+      }
+    }
+  }, [conversationId, interactionStatus, lastMessage]);
+
   if (isEmpty(conversationId) || isEmpty(interactionType) || isEmpty(interactionStatus)) {
+    window.log.debug(`WIP: hi`);
     return null;
   }
 

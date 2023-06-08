@@ -43,6 +43,7 @@ import { encryptProfile } from '../util/crypto/profileEncrypter';
 import { ReleasedFeatures } from '../util/releaseFeature';
 import { Storage, setLastProfileUpdateTimestamp } from '../util/storage';
 import { UserGroupsWrapperActions } from '../webworker/workers/browser/libsession_worker_interface';
+import { sleepFor } from '../session/utils/Promise';
 
 export enum ConversationInteractionStatus {
   Start = 'start',
@@ -260,10 +261,10 @@ export function showLeavePrivateConversationbyConvoId(conversationId: string, na
         type: ConversationInteractionType.Leave,
         status: ConversationInteractionStatus.Start,
       });
-      await getConversationController().delete1o1(conversationId, {
-        fromSyncMessage: false,
-        justHidePrivate: true,
-      });
+      // await getConversationController().delete1o1(conversationId, {
+      //   fromSyncMessage: false,
+      //   justHidePrivate: true,
+      // });
       onClickClose();
 
       // Note (Will): This is probably redundant since this is a destructive interaction and therefore the conversation will be undefined
@@ -317,17 +318,18 @@ export function showLeaveGroupByConvoId(conversationId: string, name?: string) {
         type: ConversationInteractionType.Leave,
         status: ConversationInteractionStatus.Start,
       });
-      if (isPublic) {
-        await getConversationController().deleteCommunity(conversation.id, {
-          fromSyncMessage: false,
-        });
-      } else {
-        await getConversationController().deleteClosedGroup(conversation.id, {
-          fromSyncMessage: false,
-          sendLeaveMessage: true,
-        });
-      }
+      // if (isPublic) {
+      //   await getConversationController().deleteCommunity(conversation.id, {
+      //     fromSyncMessage: false,
+      //   });
+      // } else {
+      //   await getConversationController().deleteClosedGroup(conversation.id, {
+      //     fromSyncMessage: false,
+      //     sendLeaveMessage: true,
+      //   });
+      // }
       onClickClose();
+      throw Error('haha');
 
       // Note (Will): This is probably redundant since this is a destructive interaction and therefore the conversation will be undefined
       await clearConversationInteractionState({ conversationId });
