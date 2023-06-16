@@ -1,5 +1,5 @@
 import _ from 'lodash';
-import React from 'react';
+import React, { useState } from 'react';
 import { animation, Item, Menu } from 'react-contexify';
 
 import { useSelector } from 'react-redux';
@@ -35,6 +35,7 @@ export type PropsContextConversationItem = {
 const ConversationListItemContextMenu = (props: PropsContextConversationItem) => {
   const { triggerId } = props;
   const isSearchingMode = useSelector(isSearching);
+  const [leaveGroupCount, setLeaveGroupCount] = useState(0);
 
   if (isSearchingMode) {
     return null;
@@ -63,7 +64,10 @@ const ConversationListItemContextMenu = (props: PropsContextConversationItem) =>
         <InviteContactMenuItem />
         <DeleteMessagesMenuItem />
         <DeletePrivateConversationMenuItem />
-        <LeaveGroupOrCommunityMenuItem />
+        <LeaveGroupOrCommunityMenuItem
+          leaveGroupCount={leaveGroupCount}
+          setLeaveGroupCount={setLeaveGroupCount}
+        />
         <ShowUserDetailsMenuItem />
       </Menu>
     </SessionContextMenuContainer>

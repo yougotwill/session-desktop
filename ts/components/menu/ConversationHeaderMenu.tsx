@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { animation, Item, Menu, Submenu } from 'react-contexify';
 import { useSelector } from 'react-redux';
 import {
@@ -54,6 +54,7 @@ export const ConversationHeaderMenu = (props: PropsConversationHeaderMenu) => {
   const isPrivateFriend = useSelectedIsPrivateFriend();
   const isPrivate = useSelectedIsPrivate();
   const isSearchingMode = useSelector(isSearching);
+  const [leaveGroupCount, setLeaveGroupCount] = useState(0);
 
   if (!convoId) {
     throw new Error('convoId must be set for a header to be visible!');
@@ -86,7 +87,10 @@ export const ConversationHeaderMenu = (props: PropsConversationHeaderMenu) => {
           <InviteContactMenuItem />
           <DeleteMessagesMenuItem />
           <DeletePrivateConversationMenuItem />
-          <LeaveGroupOrCommunityMenuItem />
+          <LeaveGroupOrCommunityMenuItem
+            leaveGroupCount={leaveGroupCount}
+            setLeaveGroupCount={setLeaveGroupCount}
+          />
           <ShowUserDetailsMenuItem />
         </Menu>
       </SessionContextMenuContainer>

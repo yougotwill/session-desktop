@@ -206,6 +206,7 @@ const StyledName = styled.h4`
 export const SessionRightPanelWithDetails = () => {
   const [documents, setDocuments] = useState<Array<MediaItemType>>([]);
   const [media, setMedia] = useState<Array<MediaItemType>>([]);
+  const [leaveGroupCount, setLeaveGroupCount] = useState(0);
 
   const selectedConvoKey = useSelectedConversationKey();
   const selectedUsername = useConversationUsername(selectedConvoKey) || selectedConvoKey;
@@ -216,7 +217,7 @@ export const SessionRightPanelWithDetails = () => {
   const displayNameInProfile = useSelectedDisplayNameInProfile();
   const isBlocked = useSelectedIsBlocked();
   const isKickedFromGroup = useSelectedIsKickedFromGroup();
-  const left = useSelectedIsLeft();
+  const isLeft = useSelectedIsLeft();
   const isGroup = useSelectedIsGroup();
   const isPublic = useSelectedIsPublic();
   const weAreAdmin = useSelectedWeAreAdmin();
@@ -259,13 +260,15 @@ export const SessionRightPanelWithDetails = () => {
   }
 
   const showMemberCount = !!(subscriberCount && subscriberCount > 0);
-  const commonNoShow = isKickedFromGroup || left || isBlocked || !isActive;
+  const commonNoShow = isKickedFromGroup || isLeft || isBlocked || !isActive;
   const hasDisappearingMessages = !isPublic && !commonNoShow;
   const leaveGroupString = isPublic
     ? window.i18n('leaveCommunity')
+    : leaveGroupCount >= 1
+    ? window.i18n('deleteConversation')
     : isKickedFromGroup
     ? window.i18n('youGotKickedFromGroup')
-    : left
+    : isLeft
     ? window.i18n('youLeftTheGroup')
     : window.i18n('leaveGroup');
 
@@ -286,7 +289,13 @@ export const SessionRightPanelWithDetails = () => {
   const showUpdateGroupMembersButton = !isPublic && isGroup && !commonNoShow;
 
   const deleteConvoAction = () => {
-    showLeaveGroupByConvoId(selectedConvoKey, selectedUsername);
+    showLeaveGroupByConvoId({
+      conversationId: selectedConvoKey,
+      name: selectedUsername,
+      shouldDeleteConversation: leaveGroupCount >= 1,
+    });
+    window.log.debug(`WIP: SessionRightPanel leaveGroupCount: ${leaveGroupCount + 1}`);
+    setLeaveGroupCount(leaveGroupCount + 1);
   };
 
   return (
@@ -363,7 +372,7 @@ export const SessionRightPanelWithDetails = () => {
             text={leaveGroupString}
             buttonColor={SessionButtonColor.Danger}
             buttonType={SessionButtonType.Simple}
-            disabled={isKickedFromGroup || left}
+            disabled={isKickedFromGroup}
             onClick={deleteConvoAction}
           />
         </StyledLeaveButton>
