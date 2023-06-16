@@ -42,7 +42,12 @@ export const getConversationController = () => {
   return instance;
 };
 
-type DeleteOptions = { fromSyncMessage: boolean };
+/**
+ * fromSyncMessage - is used to know if we need to send a leave group message to the group first.
+ * So if the user made the action on this device, fromSyncMessage should be false, but if it happened from a linked device polled update, set this to true.
+ * keepMessages - in some cases (hiding a conversation) we don't want to delete the messages only hide the conversation
+ */
+type LeaveOptions = { fromSyncMessage: boolean; keepMessages?: boolean };
 
 export class ConversationController {
   private readonly conversations: ConversationCollection;
@@ -180,7 +185,7 @@ export class ConversationController {
 
   public async delete1o1(
     id: string,
-    options: DeleteOptions & { justHidePrivate?: boolean; keepMessages?: boolean }
+    { justHidePrivate = true, ...options }: LeaveOptions & { justHidePrivate?: boolean }
   ) {
     const conversation = await this.deleteConvoInitialChecks(id, '1o1', options?.keepMessages);
 
@@ -190,7 +195,7 @@ export class ConversationController {
 
     window.log.debug(`WIP: delete1o1 keepMessages ${id} ${options.keepMessages}`);
 
-    if (options.justHidePrivate || isNil(options.justHidePrivate) || conversation.isMe()) {
+    if (justHidePrivate || isNil(justHidePrivate) || conversation.isMe()) {
       window.log.debug(`WIP: delete1o1 justHide ${id}`);
       // we just set the hidden field to true
       // so the conversation still exists (needed for that user's profile in groups) but is not shown on the list of conversation.
@@ -229,7 +234,7 @@ export class ConversationController {
 
   public async deleteClosedGroup(
     groupId: string,
-    options: DeleteOptions & { sendLeaveMessage: boolean }
+    options: LeaveOptions & { sendLeaveMessage: boolean; deleteConversation?: boolean }
   ) {
     const conversation = await this.deleteConvoInitialChecks(groupId, 'LegacyGroup');
     if (!conversation || !conversation.isClosedGroup()) {
@@ -238,21 +243,31 @@ export class ConversationController {
     window.log.info(`deleteClosedGroup: ${groupId}, sendLeaveMessage?:${options.sendLeaveMessage}`);
     getSwarmPollingInstance().removePubkey(groupId); // we don't need to keep polling anymore.
 
+    let failedToSendLeaveMessage = false;
+
     if (options.sendLeaveMessage) {
-      await leaveClosedGroup(groupId, options.fromSyncMessage);
+      failedToSendLeaveMessage = await leaveClosedGroup(groupId, options);
+      if (failedToSendLeaveMessage) {
+        window.log.debug(
+          `WIP: deleteClosedGroup ${groupId} failedToSendLeaveMessage ${failedToSendLeaveMessage}`
+        );
+      }
     }
 
-    // if we were kicked or sent our left message, we have nothing to do more with that group.
-    // Just delete everything related to it, not trying to add update message or send a left message.
-    await this.removeGroupOrCommunityFromDBAndRedux(groupId);
-    await removeLegacyGroupFromWrappers(groupId);
+    if (options.deleteConversation) {
+      window.log.debug(`WIP: deleteClosedGroup ${groupId} deleteConversation`);
+      // if we were kicked or sent our left message, we have nothing to do more with that group.
+      // Just delete everything related to it, not trying to add update message or send a left message.
+      await this.removeGroupOrCommunityFromDBAndRedux(groupId);
+      await removeLegacyGroupFromWrappers(groupId);
+    }
 
     if (!options.fromSyncMessage) {
       await ConfigurationSync.queueNewJobIfNeeded();
     }
   }
 
-  public async deleteCommunity(convoId: string, options: DeleteOptions) {
+  public async deleteCommunity(convoId: string, options: LeaveOptions) {
     const conversation = await this.deleteConvoInitialChecks(convoId, 'Community');
     if (!conversation || !conversation.isPublic()) {
       return;
@@ -413,7 +428,6 @@ export class ConversationController {
       return null;
     }
 
-    // Note in some cases (hiding a conversation) we don't want to delete the messages
     if (!keepMessages) {
       window.log.debug(`WIP: ${deleteType} destroyingMessages: ${convoId}`);
       // those are the stuff to do for all conversation types
@@ -460,17 +474,14 @@ export class ConversationController {
 }
 
 /**
- * You most likely don't want to call this function directly, but instead use the deleteLegacyGroup() from the ConversationController as it will take care of more cleaningup.
- *
- * Note: `fromSyncMessage` is used to know if we need to send a leave group message to the group first.
- * So if the user made the action on this device, fromSyncMessage should be false, but if it happened from a linked device polled update, set this to true.
+ * You most likely don't want to call this function directly, but instead use the deleteClosedGroup() from the ConversationController as it will take care of more cleaning up.
  */
-async function leaveClosedGroup(groupId: string, fromSyncMessage: boolean) {
+async function leaveClosedGroup(groupId: string, options: LeaveOptions): Promise<boolean> {
   const convo = getConversationController().get(groupId);
 
   if (!convo || !convo.isClosedGroup()) {
     window?.log?.error('Cannot leave non-existing group');
-    return;
+    return false;
   }
 
   const ourNumber = UserUtils.getOurPubKeyStrFromCache();
@@ -499,16 +510,17 @@ async function leaveClosedGroup(groupId: string, fromSyncMessage: boolean) {
 
   getSwarmPollingInstance().removePubkey(groupId);
 
-  if (fromSyncMessage) {
+  if (options.fromSyncMessage) {
     // no need to send our leave message as our other device should already have sent it.
-    return;
+    return false;
   }
 
   const keypair = await Data.getLatestClosedGroupEncryptionKeyPair(groupId);
   if (!keypair || isEmpty(keypair) || isEmpty(keypair.publicHex) || isEmpty(keypair.privateHex)) {
+    window.log.debug(`WIP: leaveClosedGroup: no keypair for ${groupId}`);
     // if we do not have a keypair, we won't be able to send our leaving message neither, so just skip sending it.
     // this can happen when getting a group from a broken libsession usergroup wrapper, but not only.
-    return;
+    return true;
   }
 
   // Send the update to the group
@@ -531,10 +543,12 @@ async function leaveClosedGroup(groupId: string, fromSyncMessage: boolean) {
     window?.log?.info(
       `Leaving message sent ${groupId}. Removing everything related to this group.`
     );
+    return false;
   } else {
     window?.log?.info(
       `Leaving message failed to be sent for ${groupId}. But still removing everything related to this group....`
     );
+    return true;
   }
   // the rest of the cleaning of that conversation is done in the `deleteClosedGroup()`
 }

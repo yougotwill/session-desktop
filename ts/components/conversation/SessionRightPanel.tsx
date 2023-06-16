@@ -40,6 +40,7 @@ import { SpacerLG } from '../basic/Text';
 import { MediaItemType } from '../lightbox/LightboxGallery';
 import { MediaGallery } from './media-gallery/MediaGallery';
 import { useConversationUsername } from '../../hooks/useParamSelector';
+import { getConversationController } from '../../session/conversations';
 
 async function getMediaGalleryProps(
   conversationId: string
@@ -288,11 +289,18 @@ export const SessionRightPanelWithDetails = () => {
   const showAddRemoveModeratorsButton = weAreAdmin && !commonNoShow && isPublic;
   const showUpdateGroupMembersButton = !isPublic && isGroup && !commonNoShow;
 
-  const deleteConvoAction = () => {
-    showLeaveGroupByConvoId({
+  const deleteConvoAction = async () => {
+    if (leaveGroupCount >= 1) {
+      await getConversationController().deleteClosedGroup(selectedConvoKey, {
+        fromSyncMessage: false,
+        sendLeaveMessage: false,
+        deleteConversation: true,
+      });
+      return;
+    }
+    void showLeaveGroupByConvoId({
       conversationId: selectedConvoKey,
       name: selectedUsername,
-      shouldDeleteConversation: leaveGroupCount >= 1,
     });
     window.log.debug(`WIP: SessionRightPanel leaveGroupCount: ${leaveGroupCount + 1}`);
     setLeaveGroupCount(leaveGroupCount + 1);

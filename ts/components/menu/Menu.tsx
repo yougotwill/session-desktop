@@ -127,22 +127,48 @@ export const DeletePrivateContactMenuItem = () => {
   return null;
 };
 
-export const LeaveGroupOrCommunityMenuItem = () => {
-  const convoId = useConvoIdFromContext();
-  const username = useConversationUsername(convoId) || convoId;
-  const isLeft = useIsLeft(convoId);
-  const isKickedFromGroup = useIsKickedFromGroup(convoId);
-  const isPrivate = useIsPrivate(convoId);
-  const isPublic = useIsPublic(convoId);
+type LeaveGroupOrCommunityMenuItemProps = {
+  leaveGroupCount: number;
+  setLeaveGroupCount: (value: number) => void;
+};
 
-  if (!isKickedFromGroup && !isLeft && !isPrivate) {
+export const LeaveGroupOrCommunityMenuItem = (props: LeaveGroupOrCommunityMenuItemProps) => {
+  const { leaveGroupCount, setLeaveGroupCount } = props;
+  const conversationId = useConvoIdFromContext();
+  const name = useConversationUsername(conversationId) || conversationId;
+  const isLeft = useIsLeft(conversationId);
+  const isKickedFromGroup = useIsKickedFromGroup(conversationId);
+  const isPrivate = useIsPrivate(conversationId);
+  const isPublic = useIsPublic(conversationId);
+
+  window.log.debug(`WIP: leaveGroupCount ${leaveGroupCount} ${leaveGroupCount >= 1}`);
+
+  if (!isKickedFromGroup && !isPrivate) {
     return (
       <Item
-        onClick={() => {
-          showLeaveGroupByConvoId(convoId, username);
+        onClick={async () => {
+          if (leaveGroupCount >= 1) {
+            await getConversationController().deleteClosedGroup(conversationId, {
+              fromSyncMessage: false,
+              sendLeaveMessage: false,
+              deleteConversation: true,
+            });
+            return;
+          }
+
+          void showLeaveGroupByConvoId({
+            conversationId,
+            name,
+          });
+          window.log.debug(`WIP: Menu leaveGroupCount: ${leaveGroupCount + 1}`);
+          setLeaveGroupCount(leaveGroupCount + 1);
         }}
       >
-        {isPublic ? window.i18n('leaveCommunity') : window.i18n('leaveGroup')}
+        {isPublic
+          ? window.i18n('leaveCommunity')
+          : leaveGroupCount >= 1
+          ? window.i18n('deleteConversation')
+          : window.i18n('leaveGroup')}
       </Item>
     );
   }
@@ -402,20 +428,20 @@ export const DeleteMessagesMenuItem = () => {
  * Note: A dialog is opened to ask for confirmation before processing.
  */
 export const DeletePrivateConversationMenuItem = () => {
-  const convoId = useConvoIdFromContext();
-  const username = useConversationUsername(convoId) || convoId;
-  const isRequest = useIsIncomingRequest(convoId);
-  const isPrivate = useIsPrivate(convoId);
-  const isMe = useIsMe(convoId);
+  const conversationId = useConvoIdFromContext();
+  const name = useConversationUsername(conversationId) || conversationId;
+  const isRequest = useIsIncomingRequest(conversationId);
+  const isPrivate = useIsPrivate(conversationId);
+  const isMe = useIsMe(conversationId);
 
-  if (!convoId || !isPrivate || isRequest) {
+  if (!conversationId || !isPrivate || isRequest) {
     return null;
   }
 
   return (
     <Item
       onClick={() => {
-        showLeavePrivateConversationbyConvoId(convoId, username);
+        showLeavePrivateConversationbyConvoId({ conversationId, name });
       }}
     >
       {isMe ? window.i18n('hideConversation') : window.i18n('deleteConversation')}

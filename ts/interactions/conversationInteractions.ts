@@ -237,10 +237,15 @@ export async function showUpdateGroupMembersByConvoId(conversationId: string) {
   window.inboxStore?.dispatch(updateGroupMembersModal({ conversationId }));
 }
 
-export function showLeavePrivateConversationbyConvoId(
-  conversationId: string,
-  name: string | undefined
-) {
+type LeaveConversationOptions = {
+  conversationId: string;
+  name: string | undefined;
+};
+
+export function showLeavePrivateConversationbyConvoId({
+  conversationId,
+  name,
+}: LeaveConversationOptions) {
   const conversation = getConversationController().get(conversationId);
   const isMe = conversation.isMe();
 
@@ -292,7 +297,7 @@ export function showLeavePrivateConversationbyConvoId(
   );
 }
 
-export function showLeaveGroupByConvoId(conversationId: string, name: string | undefined) {
+export function showLeaveGroupByConvoId({ conversationId, name }: LeaveConversationOptions) {
   const conversation = getConversationController().get(conversationId);
 
   if (!conversation.isGroup()) {
