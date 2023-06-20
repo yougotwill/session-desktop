@@ -52,7 +52,6 @@ import { InConversationCallContainer } from '../calling/InConversationCallContai
 import { LightboxGallery, MediaItemType } from '../lightbox/LightboxGallery';
 import { NoMessageInConversation } from './SubtleNotification';
 import { ConversationHeaderWithDetails } from './header/ConversationHeader';
-import { MessageDetail } from './message/message-item/MessageDetail';
 
 import styled from 'styled-components';
 import { NoticeBanner } from '../NoticeBanner';
@@ -236,7 +235,6 @@ export class SessionConversation extends React.Component<Props, State> {
     const {
       selectedConversation,
       messagesProps,
-      showMessageDetails,
       selectedMessages,
       isRightPanelShowing,
       lightBoxOptions,
@@ -247,7 +245,7 @@ export class SessionConversation extends React.Component<Props, State> {
       // return an empty message view
       return <MessageView />;
     }
-    // TODOLATER break showMessageDetails & selectionMode into it's own container component so we can use hooks to fetch relevant state from the store
+    // TODOLATER break selectionMode into it's own container component so we can use hooks to fetch relevant state from the store
     const selectionMode = selectedMessages.length > 0;
 
     return (
@@ -279,9 +277,6 @@ export class SessionConversation extends React.Component<Props, State> {
               onKeyDown={this.onKeyDown}
               role="navigation"
             >
-              <div className={classNames('conversation-info-panel', showMessageDetails && 'show')}>
-                <MessageDetail />
-              </div>
               {lightBoxOptions?.media && this.renderLightBox(lightBoxOptions)}
 
               <div className="conversation-messages">

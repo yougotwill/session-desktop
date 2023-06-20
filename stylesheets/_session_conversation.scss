@@ -112,24 +112,6 @@
     background-color: var(--background-secondary-color);
     border-top: 1px solid var(--border-color);
   }
-
-  .conversation-info-panel {
-    position: absolute;
-    justify-content: flex-start;
-    flex-direction: column;
-    align-items: center;
-    height: 100%;
-    width: 100%;
-    z-index: 5; // to be sure to hide the borders of images in messages
-    background-color: inherit;
-    display: none;
-    padding: 20px;
-
-    &.show {
-      display: flex;
-      background: var(--background-primary-color);
-    }
-  }
 }
 
 .composition-container {

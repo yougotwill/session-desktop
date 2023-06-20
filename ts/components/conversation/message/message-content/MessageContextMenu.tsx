@@ -145,7 +145,7 @@ export const MessageContextMenu = (props: Props) => {
     const found = await Data.getMessageById(messageId);
     if (found) {
       const messageDetailsProps = await found.getPropsForMessageDetail();
-      // dispatch(showMessageDetailsView(messageDetailsProps));
+      dispatch(showMessageDetailsView(messageDetailsProps));
       dispatch(setRightOverlayMode('message-details'));
       if (!isRightPanelVisible) {
         dispatch(openRightPanel());
