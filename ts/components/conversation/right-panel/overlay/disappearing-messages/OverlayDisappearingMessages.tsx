@@ -23,14 +23,8 @@ import { Flex } from '../../../../basic/Flex';
 import { SessionButton } from '../../../../basic/SessionButton';
 import { SpacerLG, SpacerXL } from '../../../../basic/Text';
 import { DisappearingModes } from './DisappearingModes';
-import { Header } from './Header';
 import { TimeOptions } from './TimeOptions';
-
-const StyledScrollContainer = styled.div`
-  width: 100%;
-  height: 100%;
-  overflow: hidden auto;
-`;
+import { Header, StyledScrollContainer } from '../components';
 
 const StyledContainer = styled(Flex)`
   .session-button {

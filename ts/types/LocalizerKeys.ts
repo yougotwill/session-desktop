@@ -520,4 +520,5 @@ export type LocalizerKeys =
   | 'reactionListCountSingular'
   | 'reactionListCountPlural'
   | 'settingAppliesToEveryone'
-  | 'onlyGroupAdminsCanChange';
+  | 'onlyGroupAdminsCanChange'
+  | 'messageInfo';

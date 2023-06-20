@@ -24,23 +24,27 @@ const StyledSubTitle = styled.h3`
 
 type HeaderProps = {
   title: string;
-  subtitle: string;
+  subtitle?: string;
+  hideBackButton?: boolean;
+  hideCloseButton?: boolean;
 };
 
 export const Header = (props: HeaderProps) => {
-  const { title, subtitle } = props;
+  const { title, subtitle, hideBackButton = false, hideCloseButton = false } = props;
   const dispatch = useDispatch();
 
   return (
     <Flex container={true} width={'100%'} padding={'32px var(--margins-lg) var(--margins-md)'}>
-      <SessionIconButton
-        iconSize={'medium'}
-        iconType={'chevron'}
-        iconRotation={90}
-        onClick={() => {
-          dispatch(resetRightOverlayMode());
-        }}
-      />
+      {!hideBackButton && (
+        <SessionIconButton
+          iconSize={'medium'}
+          iconType={'chevron'}
+          iconRotation={90}
+          onClick={() => {
+            dispatch(resetRightOverlayMode());
+          }}
+        />
+      )}
       <Flex
         container={true}
         flexDirection={'column'}
@@ -50,16 +54,18 @@ export const Header = (props: HeaderProps) => {
         margin={'-5px auto auto'}
       >
         <StyledTitle>{title}</StyledTitle>
-        <StyledSubTitle>{subtitle}</StyledSubTitle>
+        {subtitle && <StyledSubTitle>{subtitle}</StyledSubTitle>}
       </Flex>
-      <SessionIconButton
-        iconSize={'tiny'}
-        iconType={'exit'}
-        onClick={() => {
-          dispatch(closeRightPanel());
-          dispatch(resetRightOverlayMode());
-        }}
-      />
+      {!hideCloseButton && (
+        <SessionIconButton
+          iconSize={'tiny'}
+          iconType={'exit'}
+          onClick={() => {
+            dispatch(closeRightPanel());
+            dispatch(resetRightOverlayMode());
+          }}
+        />
+      )}
     </Flex>
   );
 };

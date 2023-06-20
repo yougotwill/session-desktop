@@ -5,6 +5,7 @@ import { getRightOverlayMode } from '../../../state/selectors/section';
 import { ReleasedFeatures } from '../../../util/releaseFeature';
 import { OverlayDisappearingMessages } from './overlay/disappearing-messages/OverlayDisappearingMessages';
 import { OverlayRightPanelSettings } from './overlay/OverlayRightPanelSettings';
+import { OverlayMessageDetails } from './overlay/message-details/OverlayMessageDetails';
 
 const ClosableOverlay = () => {
   const rightOverlayMode = useSelector(getRightOverlayMode);
@@ -35,6 +36,8 @@ const ClosableOverlay = () => {
     case 'disappearing-messages':
       // TODO legacy messages support will be removed in a future release
       return <OverlayDisappearingMessages unlockNewModes={showNewDisappearingMessageModes} />;
+    case 'message-details':
+      return <OverlayMessageDetails />;
     default:
       return <OverlayRightPanelSettings />;
   }

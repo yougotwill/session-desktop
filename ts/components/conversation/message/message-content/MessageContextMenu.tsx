@@ -19,16 +19,21 @@ import {
 import { MessageRenderingProps } from '../../../../models/messageType';
 import { pushUnblockToSend } from '../../../../session/utils/Toast';
 import {
+  openRightPanel,
   showMessageDetailsView,
   toggleSelectedMessageId,
 } from '../../../../state/ducks/conversations';
 import { StateType } from '../../../../state/reducer';
-import { getMessageContextMenuProps } from '../../../../state/selectors/conversations';
+import {
+  getMessageContextMenuProps,
+  isRightPanelShowing,
+} from '../../../../state/selectors/conversations';
 import { saveAttachmentToDisk } from '../../../../util/attachmentsUtil';
 import { Reactions } from '../../../../util/reactions';
 import { SessionContextMenuContainer } from '../../../SessionContextMenuContainer';
 import { SessionEmojiPanel, StyledEmojiPanel } from '../../SessionEmojiPanel';
 import { MessageReactBar } from './MessageReactBar';
+import { setRightOverlayMode } from '../../../../state/ducks/section';
 
 export type MessageContextMenuSelectorProps = Pick<
   MessageRenderingProps,
@@ -79,6 +84,8 @@ export const MessageContextMenu = (props: Props) => {
   const { messageId, contextMenuId, enableReactions } = props;
   const dispatch = useDispatch();
   const { hideAll } = useContextMenu();
+
+  const isRightPanelVisible = useSelector(isRightPanelShowing);
 
   const selected = useSelector((state: StateType) => getMessageContextMenuProps(state, messageId));
 
@@ -138,7 +145,11 @@ export const MessageContextMenu = (props: Props) => {
     const found = await Data.getMessageById(messageId);
     if (found) {
       const messageDetailsProps = await found.getPropsForMessageDetail();
-      dispatch(showMessageDetailsView(messageDetailsProps));
+      // dispatch(showMessageDetailsView(messageDetailsProps));
+      dispatch(setRightOverlayMode('message-details'));
+      if (!isRightPanelVisible) {
+        dispatch(openRightPanel());
+      }
     } else {
       window.log.warn(`Message ${messageId} not found in db`);
     }
