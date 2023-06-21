@@ -14,10 +14,10 @@ import { ConversationHeaderMenu } from '../../menu/ConversationHeaderMenu';
 import { AvatarHeader, BackButton, CallButton, TripleDotsMenu } from './ConversationHeaderItems';
 import { SelectionOverlay } from './ConversationHeaderSelectionOverlay';
 import { ConversationHeaderTitle } from './ConversationHeaderTitle';
+import { resetRightOverlayMode } from '../../../state/ducks/section';
 
 export const ConversationHeaderWithDetails = () => {
   const isSelectionMode = useSelector(isMessageSelectionMode);
-  const isMessageDetailOpened = useSelector(isMessageDetailView);
   const selectedConvoKey = useSelectedConversationKey();
   const dispatch = useDispatch();
 
@@ -30,13 +30,14 @@ export const ConversationHeaderWithDetails = () => {
   return (
     <div className="module-conversation-header">
       <div className="conversation-header--items-wrapper">
+        {/* TODOLATER Remove the back button entirely? */}
         <BackButton
           onGoBack={() => {
             dispatch(closeMessageDetailsView());
           }}
-          showBackButton={isMessageDetailOpened}
+          showBackButton={false}
         />
-        <TripleDotsMenu triggerId={triggerId} showBackButton={isMessageDetailOpened} />
+        <TripleDotsMenu triggerId={triggerId} showBackButton={false} />
         <ConversationHeaderTitle />
 
         {!isSelectionMode && (
@@ -50,10 +51,11 @@ export const ConversationHeaderWithDetails = () => {
             <CallButton />
             <AvatarHeader
               onAvatarClick={() => {
+                dispatch(resetRightOverlayMode());
                 dispatch(openRightPanel());
               }}
               pubkey={selectedConvoKey}
-              showBackButton={isMessageDetailOpened}
+              showBackButton={false}
             />
           </Flex>
         )}
