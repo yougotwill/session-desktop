@@ -54,7 +54,7 @@ const DeleteButtonItem = (props: { messageId: string; convoId: string; isDeletab
 };
 
 const StyledContactContainer = styled.div`
-  margin: 20px 0 20px 0;
+  margin-bottom: var(--margins-lg);
 `;
 
 const ContactsItem = (props: { contacts: Array<ContactPropsMessageDetail> }) => {
@@ -84,6 +84,10 @@ const StyledContactText = styled.div`
   margin-inline-start: 10px;
   flex-grow: 1;
   min-width: 0;
+
+  .message-detail__profile-name {
+    font-weight: bold;
+  }
 `;
 
 const StyledContactError = styled.div`
@@ -110,14 +114,13 @@ const ContactItem = (props: { contact: ContactPropsMessageDetail }) => {
     <StyledContact key={contact.pubkey}>
       <Avatar size={AvatarSize.S} pubkey={contact.pubkey} />
       <StyledContactText>
-        <div>
-          <ContactName
-            pubkey={contact.pubkey}
-            name={contact.name}
-            profileName={contact.profileName}
-            shouldShowPubkey={true}
-          />
-        </div>
+        <ContactName
+          pubkey={contact.pubkey}
+          name={contact.name}
+          profileName={contact.profileName}
+          shouldShowPubkey={true}
+          module={'message-detail'}
+        />
         {errors.map((error, index) => (
           <StyledContactError key={index}>{error.message}</StyledContactError>
         ))}
@@ -157,8 +160,12 @@ const StyledMessageContainer = styled.div`
 `;
 
 const StyledDetailLabel = styled.td`
-  font-weight: 300;
-  padding-inline-end: 5px;
+  font-weight: bold;
+`;
+
+const StyledAuthorContainerRow = styled.tr`
+  display: block;
+  margin-top: var(--margins-md);
 `;
 
 export const MessageDetail = () => {
@@ -181,7 +188,15 @@ export const MessageDetail = () => {
     return null;
   }
 
-  const { errors, receivedAt, sentAt, convoId, direction, messageId } = messageDetailProps;
+  const {
+    errors,
+    receivedAt,
+    sentAt,
+    convoId,
+    direction,
+    messageId,
+    contacts,
+  } = messageDetailProps;
 
   return (
     <StyledMessageDetailContainer>
@@ -201,27 +216,33 @@ export const MessageDetail = () => {
               </tr>
             ))}
             <tr>
-              <StyledDetailLabel>{i18n('sent')}</StyledDetailLabel>
+              <StyledDetailLabel>{i18n('sent')}:</StyledDetailLabel>
+            </tr>
+            <tr>
               <td>
                 {moment(sentAt).format('LLLL')} <span>({sentAt})</span>
               </td>
             </tr>
-            {receivedAt ? (
-              <tr>
-                <StyledDetailLabel>{i18n('received')}</StyledDetailLabel>
-                <td>
-                  {moment(receivedAt).format('LLLL')} <span>({receivedAt})</span>
-                </td>
-              </tr>
+            {direction === 'incoming' ? (
+              <>
+                <tr>
+                  <StyledDetailLabel>{i18n('received')}:</StyledDetailLabel>
+                </tr>
+                <tr>
+                  <td>
+                    {moment(receivedAt).format('LLLL')} <span>({receivedAt})</span>
+                  </td>
+                </tr>
+              </>
             ) : null}
-            <tr>
+            <StyledAuthorContainerRow>
               <StyledDetailLabel>
                 {direction === 'incoming' ? i18n('from') : i18n('to')}
               </StyledDetailLabel>
-            </tr>
+            </StyledAuthorContainerRow>
           </tbody>
         </table>
-        <ContactsItem contacts={messageDetailProps.contacts} />
+        <ContactsItem contacts={contacts} />
         <DeleteButtonItem convoId={convoId} messageId={messageId} isDeletable={isDeletable} />
       </StyledMessageDetail>
     </StyledMessageDetailContainer>
