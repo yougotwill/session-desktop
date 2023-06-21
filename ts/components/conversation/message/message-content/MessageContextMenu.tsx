@@ -24,10 +24,7 @@ import {
   toggleSelectedMessageId,
 } from '../../../../state/ducks/conversations';
 import { StateType } from '../../../../state/reducer';
-import {
-  getMessageContextMenuProps,
-  isRightPanelShowing,
-} from '../../../../state/selectors/conversations';
+import { getMessageContextMenuProps } from '../../../../state/selectors/conversations';
 import { saveAttachmentToDisk } from '../../../../util/attachmentsUtil';
 import { Reactions } from '../../../../util/reactions';
 import { SessionContextMenuContainer } from '../../../SessionContextMenuContainer';
@@ -84,8 +81,6 @@ export const MessageContextMenu = (props: Props) => {
   const { messageId, contextMenuId, enableReactions } = props;
   const dispatch = useDispatch();
   const { hideAll } = useContextMenu();
-
-  const isRightPanelVisible = useSelector(isRightPanelShowing);
 
   const selected = useSelector((state: StateType) => getMessageContextMenuProps(state, messageId));
 
@@ -147,9 +142,7 @@ export const MessageContextMenu = (props: Props) => {
       const messageDetailsProps = await found.getPropsForMessageDetail();
       dispatch(showMessageDetailsView(messageDetailsProps));
       dispatch(setRightOverlayMode('message-details'));
-      if (!isRightPanelVisible) {
-        dispatch(openRightPanel());
-      }
+      dispatch(openRightPanel());
     } else {
       window.log.warn(`Message ${messageId} not found in db`);
     }
