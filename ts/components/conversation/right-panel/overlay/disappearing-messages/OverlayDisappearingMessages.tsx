@@ -24,7 +24,7 @@ import { SessionButton } from '../../../../basic/SessionButton';
 import { SpacerLG, SpacerXL } from '../../../../basic/Text';
 import { DisappearingModes } from './DisappearingModes';
 import { TimeOptions } from './TimeOptions';
-import { Header, StyledScrollContainer } from '../components';
+import { Header, HeaderSubtitle, HeaderTitle, StyledScrollContainer } from '../components';
 
 const StyledContainer = styled(Flex)`
   .session-button {
@@ -151,16 +151,16 @@ export const OverlayDisappearingMessages = ({ unlockNewModes }: { unlockNewModes
   return (
     <StyledScrollContainer>
       <StyledContainer container={true} flexDirection={'column'} alignItems={'center'}>
-        <Header
-          title={window.i18n('disappearingMessages')}
-          subtitle={
-            singleMode === 'deleteAfterRead'
+        <Header>
+          <HeaderTitle>{window.i18n('disappearingMessages')}</HeaderTitle>
+          <HeaderSubtitle>
+            {singleMode === 'deleteAfterRead'
               ? window.i18n('disappearingMessagesModeAfterReadSubtitle')
               : singleMode === 'deleteAfterSend'
               ? window.i18n('disappearingMessagesModeAfterSendSubtitle')
-              : window.i18n('settingAppliesToEveryone')
-          }
-        />
+              : window.i18n('settingAppliesToEveryone')}
+          </HeaderSubtitle>
+        </Header>
         <DisappearingModes
           options={disappearingModeOptions}
           selected={modeSelected}

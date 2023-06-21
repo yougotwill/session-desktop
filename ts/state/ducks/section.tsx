@@ -86,7 +86,6 @@ export function resetOverlayMode(): ResetOverlayModeActionType {
   };
 }
 
-// TODO possibly more overlays here
 export type RightOverlayMode = 'disappearing-messages' | 'message-details';
 
 export function setRightOverlayMode(overlayMode: RightOverlayMode): RightOverlayModeActionType {

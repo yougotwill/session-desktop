@@ -6,20 +6,6 @@
 
   align-items: center;
 
-  &-header {
-    margin-top: var(--margins-lg);
-    margin-inline-start: var(--margins-sm);
-    margin-inline-end: var(--margins-sm);
-    width: -webkit-fill-available;
-    display: flex;
-    flex-direction: row;
-    flex-shrink: 0;
-
-    .module-avatar {
-      margin: auto;
-    }
-  }
-
   h2 {
     word-break: break-word;
   }

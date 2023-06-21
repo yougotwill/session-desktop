@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { ReactNode } from 'react';
 import { useDispatch } from 'react-redux';
 import styled from 'styled-components';
 import { closeRightPanel } from '../../../../../state/ducks/conversations';
@@ -6,14 +6,14 @@ import { resetRightOverlayMode } from '../../../../../state/ducks/section';
 import { Flex } from '../../../../basic/Flex';
 import { SessionIconButton } from '../../../../icon';
 
-const StyledTitle = styled.h2`
+export const HeaderTitle = styled.h2`
   font-family: var(--font-default);
   text-align: center;
   margin-top: 0px;
   margin-bottom: 0px;
 `;
 
-const StyledSubTitle = styled.h3`
+export const HeaderSubtitle = styled.h3`
   font-family: var(--font-default);
   font-size: 11px;
   font-weight: 400;
@@ -23,14 +23,23 @@ const StyledSubTitle = styled.h3`
 `;
 
 type HeaderProps = {
-  title: string;
-  subtitle?: string;
   hideBackButton?: boolean;
+  backButtonDirection?: 'left' | 'right';
+  backButtonOnClick?: () => void;
   hideCloseButton?: boolean;
+  closeButtonOnClick?: () => void;
+  children?: ReactNode;
 };
 
 export const Header = (props: HeaderProps) => {
-  const { title, subtitle, hideBackButton = false, hideCloseButton = false } = props;
+  const {
+    children,
+    hideBackButton = false,
+    backButtonDirection = 'left',
+    backButtonOnClick,
+    hideCloseButton = false,
+    closeButtonOnClick,
+  } = props;
   const dispatch = useDispatch();
 
   return (
@@ -39,10 +48,15 @@ export const Header = (props: HeaderProps) => {
         <SessionIconButton
           iconSize={'medium'}
           iconType={'chevron'}
-          iconRotation={90}
+          iconRotation={backButtonDirection === 'left' ? 90 : 270}
           onClick={() => {
-            dispatch(resetRightOverlayMode());
+            if (backButtonOnClick) {
+              backButtonOnClick();
+            } else {
+              dispatch(resetRightOverlayMode());
+            }
           }}
+          dataTestId="back-button-conversation-options"
         />
       )}
       <Flex
@@ -53,16 +67,19 @@ export const Header = (props: HeaderProps) => {
         width={'100%'}
         margin={'-5px auto auto'}
       >
-        <StyledTitle>{title}</StyledTitle>
-        {subtitle && <StyledSubTitle>{subtitle}</StyledSubTitle>}
+        {children}
       </Flex>
       {!hideCloseButton && (
         <SessionIconButton
           iconSize={'tiny'}
           iconType={'exit'}
           onClick={() => {
-            dispatch(closeRightPanel());
-            dispatch(resetRightOverlayMode());
+            if (closeButtonOnClick) {
+              closeButtonOnClick();
+            } else {
+              dispatch(closeRightPanel());
+              dispatch(resetRightOverlayMode());
+            }
           }}
         />
       )}

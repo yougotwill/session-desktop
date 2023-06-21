@@ -1,4 +1,4 @@
-import { Header } from './Header';
+import { Header, HeaderTitle, HeaderSubtitle } from './Header';
 import { StyledScrollContainer } from './Containers';
 
-export { Header, StyledScrollContainer };
+export { Header, HeaderTitle, HeaderSubtitle, StyledScrollContainer };

@@ -19,7 +19,7 @@ import {
 } from '../../../../interactions/conversationInteractions';
 import { Constants } from '../../../../session';
 import { closeRightPanel } from '../../../../state/ducks/conversations';
-import { setRightOverlayMode } from '../../../../state/ducks/section';
+import { resetRightOverlayMode, setRightOverlayMode } from '../../../../state/ducks/section';
 import { isRightPanelShowing } from '../../../../state/selectors/conversations';
 import {
   useSelectedConversationKey,
@@ -41,6 +41,8 @@ import { SpacerLG } from '../../../basic/Text';
 import { PanelButtonGroup, PanelIconButton } from '../../../buttons';
 import { MediaItemType } from '../../../lightbox/LightboxGallery';
 import { MediaGallery } from '../../media-gallery/MediaGallery';
+import { Header } from './components';
+import { Flex } from '../../../basic/Flex';
 
 async function getMediaGalleryProps(
   conversationId: string
@@ -117,6 +119,7 @@ async function getMediaGalleryProps(
 
 const HeaderItem = () => {
   const selectedConvoKey = useSelectedConversationKey();
+  const displayNameInProfile = useSelectedDisplayNameInProfile();
   const dispatch = useDispatch();
   const isBlocked = useSelectedIsBlocked();
   const isKickedFromGroup = useSelectedIsKickedFromGroup();
@@ -128,33 +131,39 @@ const HeaderItem = () => {
   }
 
   const showInviteContacts = isGroup && !isKickedFromGroup && !isBlocked && !left;
-
   return (
-    <div className="right-panel-header">
-      <SessionIconButton
-        iconType="chevron"
-        iconSize="medium"
-        iconRotation={270}
-        onClick={() => {
-          dispatch(closeRightPanel());
-        }}
-        style={{ position: 'absolute' }}
-        dataTestId="back-button-conversation-options"
-      />
-      <Avatar size={AvatarSize.XL} pubkey={selectedConvoKey} />
-      {showInviteContacts && (
-        <SessionIconButton
-          iconType="addUser"
-          iconSize="medium"
-          onClick={() => {
-            if (selectedConvoKey) {
-              showInviteContactByConvoId(selectedConvoKey);
-            }
-          }}
-          dataTestId="add-user-button"
-        />
-      )}
-    </div>
+    <Header
+      backButtonDirection="right"
+      backButtonOnClick={() => {
+        dispatch(closeRightPanel());
+        dispatch(resetRightOverlayMode());
+      }}
+      hideCloseButton={true}
+    >
+      <Flex
+        container={true}
+        justifyContent={'center'}
+        alignItems={'center'}
+        width={'100%'}
+        style={{ position: 'relative' }}
+      >
+        <Avatar size={AvatarSize.XL} pubkey={selectedConvoKey} />
+        {showInviteContacts && (
+          <SessionIconButton
+            iconType="addUser"
+            iconSize="medium"
+            onClick={() => {
+              if (selectedConvoKey) {
+                showInviteContactByConvoId(selectedConvoKey);
+              }
+            }}
+            style={{ position: 'absolute', right: '0px', top: '4px' }}
+            dataTestId="add-user-button"
+          />
+        )}
+      </Flex>
+      <StyledName data-testid="right-panel-group-name">{displayNameInProfile}</StyledName>
+    </Header>
   );
 };
 
@@ -214,7 +223,6 @@ export const OverlayRightPanelSettings = () => {
   const subscriberCount = useSelectedSubscriberCount();
 
   const isActive = useSelectedIsActive();
-  const displayNameInProfile = useSelectedDisplayNameInProfile();
   const isBlocked = useSelectedIsBlocked();
   const isKickedFromGroup = useSelectedIsKickedFromGroup();
   const left = useSelectedIsLeft();
@@ -286,7 +294,6 @@ export const OverlayRightPanelSettings = () => {
   return (
     <>
       <HeaderItem />
-      <StyledName data-testid="right-panel-group-name">{displayNameInProfile}</StyledName>
       {showMemberCount && (
         <>
           <SpacerLG />
