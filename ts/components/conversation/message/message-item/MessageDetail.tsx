@@ -20,6 +20,7 @@ import { ContactName } from '../../ContactName';
 import useKey from 'react-use/lib/useKey';
 import { SessionButton, SessionButtonColor, SessionButtonType } from '../../../basic/SessionButton';
 import { resetRightOverlayMode } from '../../../../state/ducks/section';
+import styled from 'styled-components';
 
 const AvatarItem = (props: { pubkey: string }) => {
   const { pubkey } = props;
@@ -96,6 +97,31 @@ const ContactItem = (props: { contact: ContactPropsMessageDetail }) => {
   );
 };
 
+const StyledMessageDetailContainer = styled.div`
+  height: calc(100% - 48px);
+  width: 100%;
+  overflow-y: auto;
+  z-index: 2;
+`;
+
+const StyledMessageDetail = styled.div`
+  max-width: 650px;
+  margin-inline-start: auto;
+  margin-inline-end: auto;
+  padding: var(--margins-lg);
+`;
+
+const StyledMessageContainer = styled.div`
+  padding-bottom: var(--margins-lg);
+  &:after {
+    content: '.';
+    visibility: hidden;
+    display: block;
+    height: 0;
+    clear: both;
+  }
+`;
+
 export const MessageDetail = () => {
   const { i18n } = window;
 
@@ -119,11 +145,11 @@ export const MessageDetail = () => {
   const { errors, receivedAt, sentAt, convoId, direction, messageId } = messageDetailProps;
 
   return (
-    <div className="message-detail-wrapper">
-      <div className="module-message-detail">
-        <div className="module-message-detail__message-container">
+    <StyledMessageDetailContainer>
+      <StyledMessageDetail>
+        <StyledMessageContainer>
           <Message messageId={messageId} isDetailView={true} />
-        </div>
+        </StyledMessageContainer>
         <table className="module-message-detail__info">
           <tbody>
             {(errors || []).map((error, index) => (
@@ -158,7 +184,7 @@ export const MessageDetail = () => {
         </table>
         <ContactsItem contacts={messageDetailProps.contacts} />
         <DeleteButtonItem convoId={convoId} messageId={messageId} isDeletable={isDeletable} />
-      </div>
-    </div>
+      </StyledMessageDetail>
+    </StyledMessageDetailContainer>
   );
 };

@@ -367,26 +367,6 @@
 
 // Module: Message Detail
 
-.module-message-detail {
-  max-width: 650px;
-  margin-inline-start: auto;
-  margin-inline-end: auto;
-  padding: 20px;
-}
-
-.module-message-detail__message-container {
-  padding-top: 20px;
-  padding-bottom: 20px;
-
-  &:after {
-    content: '.';
-    visibility: hidden;
-    display: block;
-    height: 0;
-    clear: both;
-  }
-}
-
 .module-message-detail__label {
   font-weight: 300;
   padding-inline-end: 5px;

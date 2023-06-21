@@ -87,14 +87,16 @@ export const MessageContentWithStatuses = (props: Props) => {
     }
   };
 
-  const { messageId, ctxMenuID, isDetailView, dataTestId, enableReactions } = props;
+  const { messageId, ctxMenuID, isDetailView = false, dataTestId, enableReactions } = props;
 
   if (!contentProps) {
     return null;
   }
-  const { conversationType, direction, isDeleted } = contentProps;
+  const { conversationType, direction: _direction, isDeleted } = contentProps;
+  // NOTE we want messages on the left in the message detail view regardless of direction
+  const direction = isDetailView ? 'incoming' : _direction;
   const isIncoming = direction === 'incoming';
-  const noAvatar = conversationType !== 'group' || direction === 'outgoing';
+  const noAvatar = conversationType !== 'group' || direction === 'outgoing' || isDetailView;
 
   const [popupReaction, setPopupReaction] = useState('');
 
@@ -125,6 +127,7 @@ export const MessageContentWithStatuses = (props: Props) => {
           dataTestId="msg-status-incoming"
           messageId={messageId}
           isCorrectSide={isIncoming}
+          isDetailView={isDetailView}
         />
         <StyledMessageWithAuthor isIncoming={isIncoming}>
           <MessageAuthorText messageId={messageId} />
@@ -134,6 +137,7 @@ export const MessageContentWithStatuses = (props: Props) => {
           dataTestId="msg-status-outgoing"
           messageId={messageId}
           isCorrectSide={!isIncoming}
+          isDetailView={isDetailView}
         />
         {!isDeleted && (
           <MessageContextMenu
