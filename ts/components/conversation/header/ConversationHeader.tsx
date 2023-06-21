@@ -1,12 +1,9 @@
 import React from 'react';
 
 import { useDispatch, useSelector } from 'react-redux';
-import {
-  isMessageDetailView,
-  isMessageSelectionMode,
-} from '../../../state/selectors/conversations';
+import { isMessageSelectionMode } from '../../../state/selectors/conversations';
 
-import { closeMessageDetailsView, openRightPanel } from '../../../state/ducks/conversations';
+import { openRightPanel } from '../../../state/ducks/conversations';
 
 import { useSelectedConversationKey } from '../../../state/selectors/selectedConversation';
 import { Flex } from '../../basic/Flex';
@@ -31,12 +28,7 @@ export const ConversationHeaderWithDetails = () => {
     <div className="module-conversation-header">
       <div className="conversation-header--items-wrapper">
         {/* TODOLATER Remove the back button entirely? */}
-        <BackButton
-          onGoBack={() => {
-            dispatch(closeMessageDetailsView());
-          }}
-          showBackButton={false}
-        />
+        <BackButton onGoBack={() => {}} showBackButton={false} />
         <TripleDotsMenu triggerId={triggerId} showBackButton={false} />
         <ConversationHeaderTitle />
 

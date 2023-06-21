@@ -8,6 +8,7 @@ import { Avatar, AvatarSize } from '../../../avatar/Avatar';
 import { deleteMessagesById } from '../../../../interactions/conversations/unsendingInteractions';
 import {
   closeMessageDetailsView,
+  closeRightPanel,
   ContactPropsMessageDetail,
 } from '../../../../state/ducks/conversations';
 import {
@@ -18,6 +19,7 @@ import { ContactName } from '../../ContactName';
 // tslint:disable-next-line: no-submodule-imports
 import useKey from 'react-use/lib/useKey';
 import { SessionButton, SessionButtonColor, SessionButtonType } from '../../../basic/SessionButton';
+import { resetRightOverlayMode } from '../../../../state/ducks/section';
 
 const AvatarItem = (props: { pubkey: string }) => {
   const { pubkey } = props;
@@ -105,6 +107,8 @@ export const MessageDetail = () => {
   const dispatch = useDispatch();
 
   useKey('Escape', () => {
+    dispatch(closeRightPanel());
+    dispatch(resetRightOverlayMode());
     dispatch(closeMessageDetailsView());
   });
 
