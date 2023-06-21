@@ -130,7 +130,7 @@ export const MessageContentWithStatuses = (props: Props) => {
           isDetailView={isDetailView}
         />
         <StyledMessageWithAuthor isIncoming={isIncoming}>
-          <MessageAuthorText messageId={messageId} />
+          {!isDetailView && <MessageAuthorText messageId={messageId} />}
           <MessageContent messageId={messageId} isDetailView={isDetailView} />
         </StyledMessageWithAuthor>
         <MessageStatus
