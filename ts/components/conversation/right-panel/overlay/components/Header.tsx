@@ -8,6 +8,7 @@ import { SessionIconButton } from '../../../../icon';
 
 export const HeaderTitle = styled.h2`
   font-family: var(--font-default);
+  font-size: var(--font-size-h2);
   text-align: center;
   margin-top: 0px;
   margin-bottom: 0px;

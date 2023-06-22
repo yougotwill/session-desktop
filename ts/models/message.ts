@@ -753,38 +753,10 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
   }
 
   public async getPropsForMessageDetail(): Promise<MessagePropsDetails> {
-    // We include numbers we didn't successfully send to so we can display errors.
-    // Older messages don't have the recipients included on the message, so we fall
-    //   back to the conversation's current recipients
-    const contacts: Array<string> = this.isIncoming()
-      ? [this.get('source')]
-      : this.get('sent_to') || [];
-
     // This will make the error message for outgoing key errors a bit nicer
-    const allErrors = (this.get('errors') || []).map((error: any) => {
+    const errors = (this.get('errors') || []).map((error: any) => {
       return error;
     });
-
-    // If an error has a specific number it's associated with, we'll show it next to
-    //   that contact. Otherwise, it will be a standalone entry.
-    const errors = reject(allErrors, error => Boolean(error.number));
-    const errorsGroupedById = groupBy(allErrors, 'number');
-    const finalContacts = await Promise.all(
-      (contacts || []).map(async id => {
-        const errorsForContact = errorsGroupedById[id];
-
-        const contact = this.findAndFormatContact(id);
-        return {
-          ...contact,
-          status: this.getMessagePropStatus(),
-          errors: errorsForContact,
-          profileName: contact.profileName,
-        };
-      })
-    );
-
-    // sort by pubkey
-    const sortedContacts = sortBy(finalContacts, contact => contact.pubkey);
 
     const toRet: MessagePropsDetails = {
       sentAt: this.get('sent_at') || 0,
@@ -793,7 +765,7 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
       messageId: this.get('id'),
       errors,
       direction: this.get('direction'),
-      contacts: sortedContacts || [],
+      sender: this.get('source'),
     };
 
     return toRet;
