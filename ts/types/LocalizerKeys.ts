@@ -521,4 +521,10 @@ export type LocalizerKeys =
   | 'reactionListCountPlural'
   | 'settingAppliesToEveryone'
   | 'onlyGroupAdminsCanChange'
-  | 'messageInfo';
+  | 'messageInfo'
+  | 'fileId'
+  | 'fileSize'
+  | 'fileType'
+  | 'resolution'
+  | 'duration'
+  | 'notApplicable';

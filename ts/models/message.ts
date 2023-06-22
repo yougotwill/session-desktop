@@ -753,6 +753,11 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
   }
 
   public async getPropsForMessageDetail(): Promise<MessagePropsDetails> {
+    // process attachments so we have the fileSize, url and screenshots
+    const attachments = (this.get('attachments') || []).map((attachment: any) =>
+      this.getPropsForAttachment(attachment)
+    );
+
     // This will make the error message for outgoing key errors a bit nicer
     const errors = (this.get('errors') || []).map((error: any) => {
       return error;
@@ -766,6 +771,7 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
       errors,
       direction: this.get('direction'),
       sender: this.get('source'),
+      attachments,
     };
 
     return toRet;

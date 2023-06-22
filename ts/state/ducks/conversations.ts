@@ -60,6 +60,7 @@ export type MessagePropsDetails = {
   convoId: string;
   messageId: string;
   direction: MessageModelType;
+  attachments: Array<PropsForAttachment>;
 };
 
 export type LastMessageStatusType = 'sending' | 'sent' | 'read' | 'error' | undefined;

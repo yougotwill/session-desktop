@@ -121,13 +121,23 @@ export const MessageDetail = () => {
     return null;
   }
 
-  const { errors, receivedAt, sentAt, convoId, direction, messageId, sender } = messageDetailProps;
+  const {
+    errors,
+    receivedAt,
+    sentAt,
+    convoId,
+    direction,
+    messageId,
+    sender,
+    attachments,
+  } = messageDetailProps;
 
   const sentAtStr = `${moment(sentAt).format(formatTimestamps)}`;
   const receivedAtStr = `${moment(receivedAt).format(formatTimestamps)}`;
 
-  const hasError = !isEmpty(errors);
+  const hasAttachments = attachments && attachments.length > 0 && attachments[0];
 
+  const hasError = !isEmpty(errors);
   const errorString = hasError
     ? errors?.reduce((previous, current) => {
         return `${previous} ${current.name}: "${current.message}";`;
@@ -140,10 +150,50 @@ export const MessageDetail = () => {
         <StyledMessageContainer>
           <Message messageId={messageId} isDetailView={true} />
         </StyledMessageContainer>
-        <LabelWithInfo label={`${window.i18n('sent')}:`} info={sentAtStr} />
-        {direction === 'incoming' ? (
-          <LabelWithInfo label={`${window.i18n('received')}:`} info={receivedAtStr} />
-        ) : null}
+        {hasAttachments ? (
+          <>
+            <LabelWithInfo
+              label={`${window.i18n('fileId')}:`}
+              info={attachments[0]?.id ? String(attachments[0].id) : window.i18n('notApplicable')}
+            />
+            <LabelWithInfo
+              label={`${window.i18n('fileType')}:`}
+              info={
+                attachments[0]?.contentType
+                  ? String(attachments[0].contentType)
+                  : window.i18n('notApplicable')
+              }
+            />
+            <LabelWithInfo
+              label={`${window.i18n('fileSize')}:`}
+              info={
+                attachments[0]?.fileSize
+                  ? String(attachments[0].fileSize)
+                  : window.i18n('notApplicable')
+              }
+            />
+            <LabelWithInfo
+              label={`${window.i18n('resolution')}:`}
+              info={
+                attachments[0]?.width && attachments[0].height
+                  ? `${attachments[0].width}X${attachments[0].height}`
+                  : window.i18n('notApplicable')
+              }
+            />
+            <LabelWithInfo
+              label={`${window.i18n('duration')}:`}
+              info={attachments[0]?.id ? String('TODO') : window.i18n('notApplicable')}
+            />
+            {`${JSON.stringify(attachments[0])}`}
+          </>
+        ) : (
+          <>
+            <LabelWithInfo label={`${window.i18n('sent')}:`} info={sentAtStr} />
+            {direction === 'incoming' ? (
+              <LabelWithInfo label={`${window.i18n('received')}:`} info={receivedAtStr} />
+            ) : null}
+          </>
+        )}
         <MessageInfoAuthor sender={sender} />
         {hasError && (
           <LabelWithInfo label={window.i18n('error')} info={errorString || 'Unknown error'} />
