@@ -7,7 +7,7 @@ import { useDispatch } from 'react-redux';
 import { closeMessageDetailsView, closeRightPanel } from '../../../../../state/ducks/conversations';
 import { resetRightOverlayMode } from '../../../../../state/ducks/section';
 
-export const OverlayMessageDetails = () => {
+export const OverlayMessageInfo = () => {
   const dispatch = useDispatch();
 
   return (

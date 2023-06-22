@@ -141,7 +141,7 @@ export const MessageContextMenu = (props: Props) => {
     if (found) {
       const messageDetailsProps = await found.getPropsForMessageDetail();
       dispatch(showMessageDetailsView(messageDetailsProps));
-      dispatch(setRightOverlayMode('message-details'));
+      dispatch(setRightOverlayMode('message_info'));
       dispatch(openRightPanel());
     } else {
       window.log.warn(`Message ${messageId} not found in db`);

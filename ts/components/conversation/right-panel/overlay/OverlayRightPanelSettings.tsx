@@ -357,7 +357,7 @@ export const OverlayRightPanelSettings = () => {
             text={window.i18n('disappearingMessages')}
             noBackgroundColor={true}
             onClick={() => {
-              dispatch(setRightOverlayMode('disappearing-messages'));
+              dispatch(setRightOverlayMode('disappearing_messages'));
             }}
           />
         </PanelButtonGroup>
