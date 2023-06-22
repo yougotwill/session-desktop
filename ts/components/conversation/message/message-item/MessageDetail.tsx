@@ -182,9 +182,10 @@ export const MessageDetail = () => {
             />
             <LabelWithInfo
               label={`${window.i18n('duration')}:`}
-              info={attachments[0]?.id ? String('TODO') : window.i18n('notApplicable')}
+              info={
+                attachments[0]?.duration ? attachments[0]?.duration : window.i18n('notApplicable')
+              }
             />
-            {`${JSON.stringify(attachments[0])}`}
           </>
         ) : (
           <>

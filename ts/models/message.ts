@@ -28,14 +28,11 @@ import autoBind from 'auto-bind';
 import {
   cloneDeep,
   debounce,
-  groupBy,
   isEmpty,
   size as lodashSize,
   map,
   partition,
   pick,
-  reject,
-  sortBy,
   uniq,
 } from 'lodash';
 import { Data } from '../../ts/data/data';
@@ -103,6 +100,9 @@ import { Notifications } from '../util/notifications';
 import { Storage } from '../util/storage';
 import { ConversationModel } from './conversation';
 import { READ_MESSAGE_STATE } from './conversationAttributes';
+import { GoogleChrome } from '../util';
+import { getAudioDuration, getVideoDuration } from '../types/attachments/VisualAttachment';
+import { isAudio } from '../types/MIME';
 // tslint:disable: cyclomatic-complexity
 
 /**
@@ -711,6 +711,7 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
       contentType,
       width,
       height,
+      duration,
       pending,
       flags,
       size,
@@ -731,6 +732,7 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
       size: size || 0,
       width: width || 0,
       height: height || 0,
+      duration,
       path,
       fileName,
       fileSize: size ? filesize(size, { base: 10 }) : null,
@@ -754,9 +756,29 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
 
   public async getPropsForMessageDetail(): Promise<MessagePropsDetails> {
     // process attachments so we have the fileSize, url and screenshots
-    const attachments = (this.get('attachments') || []).map((attachment: any) =>
-      this.getPropsForAttachment(attachment)
-    );
+    const attachments = this.get('attachments') || [];
+    for (let i = 0; i < attachments.length; i++) {
+      let props = this.getPropsForAttachment(attachments[0]);
+      if (
+        props?.contentType &&
+        GoogleChrome.isVideoTypeSupported(props?.contentType) &&
+        !props.duration
+      ) {
+        const duration = await getVideoDuration({
+          objectUrl: props.url,
+          contentType: props.contentType,
+        });
+        props = { ...props, duration };
+      }
+      if (props?.contentType && isAudio(props?.contentType) && !props.duration) {
+        const duration = await getAudioDuration({
+          objectUrl: props.url,
+          contentType: props.contentType,
+        });
+        props = { ...props, duration };
+      }
+      attachments[i] = props;
+    }
 
     // This will make the error message for outgoing key errors a bit nicer
     const errors = (this.get('errors') || []).map((error: any) => {

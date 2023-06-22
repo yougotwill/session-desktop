@@ -149,6 +149,7 @@ export type PropsForAttachment = {
   size: number;
   width?: number;
   height?: number;
+  duration?: string;
   url: string;
   path: string;
   fileSize: string | null;

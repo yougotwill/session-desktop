@@ -11,6 +11,8 @@ import { blobToArrayBuffer, dataURLToBlob } from 'blob-util';
 import { autoScaleForAvatar, autoScaleForThumbnail } from '../../util/attachmentsUtil';
 import { GoogleChrome } from '../../util';
 import { ToastUtils } from '../../session/utils';
+import moment from 'moment';
+import { isAudio } from '../MIME';
 
 export const THUMBNAIL_SIDE = 200;
 export const THUMBNAIL_CONTENT_TYPE = 'image/png';
@@ -100,6 +102,60 @@ export const makeVideoScreenshot = async ({
     // for some reason, this is to be started, otherwise the generated thumbnail will be empty
     await video.play();
   });
+
+export async function getVideoDuration({
+  objectUrl,
+  contentType,
+}: {
+  objectUrl: string;
+  contentType: string;
+}): Promise<string> {
+  return new Promise(async (resolve, reject) => {
+    const video = document.createElement('video');
+
+    video.addEventListener('loadedmetadata', () => {
+      const duration = moment.duration(video.duration, 'seconds');
+      const durationString = moment.utc(duration.asMilliseconds()).format('m:ss');
+      resolve(durationString);
+    });
+
+    video.addEventListener('error', error => {
+      reject(error);
+    });
+
+    const decryptedUrl = await getDecryptedMediaUrl(objectUrl, contentType, false);
+    video.src = decryptedUrl;
+  });
+}
+
+export async function getAudioDuration({
+  objectUrl,
+  contentType,
+}: {
+  objectUrl: string;
+  contentType: string;
+}): Promise<string> {
+  if (!isAudio(contentType)) {
+    throw new Error('getAudioDuration can only be called with audio content type');
+  }
+
+  return new Promise(async (resolve, reject) => {
+    const audio = document.createElement('audio');
+
+    audio.addEventListener('loadedmetadata', () => {
+      const duration = moment.duration(audio.duration, 'seconds');
+      const durationString = moment.utc(duration.asMilliseconds()).format('m:ss');
+      resolve(durationString);
+    });
+
+    audio.addEventListener('error', error => {
+      reject(error);
+    });
+
+    const decryptedUrl = await getDecryptedMediaUrl(objectUrl, contentType, false);
+    audio.src = decryptedUrl;
+  });
+}
 
 export const makeObjectUrl = (data: ArrayBufferLike, contentType: string) => {
   const blob = new Blob([data], {

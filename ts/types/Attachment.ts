@@ -29,6 +29,7 @@ export interface AttachmentType {
   pending?: boolean;
   width?: number;
   height?: number;
+  duration?: string;
   screenshot: {
     height: number;
     width: number;
