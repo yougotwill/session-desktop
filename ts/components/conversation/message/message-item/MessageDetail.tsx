@@ -16,6 +16,7 @@ import { resetRightOverlayMode } from '../../../../state/ducks/section';
 import styled from 'styled-components';
 import { MessageInfoAuthor } from '../../right-panel/overlay/message-info/components/MessageInfoAuthor';
 import { isEmpty } from 'lodash';
+import { FileInfo } from '../../right-panel/overlay/message-info/components/FileInfo';
 
 const StyledDeleteButtonContainer = styled.div`
   text-align: center;
@@ -94,7 +95,9 @@ const LabelWithInfoContainer = styled.div`
   margin-bottom: var(--margins-md);
 `;
 
-const LabelWithInfo = (props: { label: string; info: string }) => {
+type LabelWithInfoProps = { label: string; info: string };
+
+export const LabelWithInfo = (props: LabelWithInfoProps) => {
   return (
     <LabelWithInfoContainer>
       <MessageInfoLabel>{props.label}</MessageInfoLabel>
@@ -151,42 +154,7 @@ export const MessageDetail = () => {
           <Message messageId={messageId} isDetailView={true} />
         </StyledMessageContainer>
         {hasAttachments ? (
-          <>
-            <LabelWithInfo
-              label={`${window.i18n('fileId')}:`}
-              info={attachments[0]?.id ? String(attachments[0].id) : window.i18n('notApplicable')}
-            />
-            <LabelWithInfo
-              label={`${window.i18n('fileType')}:`}
-              info={
-                attachments[0]?.contentType
-                  ? String(attachments[0].contentType)
-                  : window.i18n('notApplicable')
-              }
-            />
-            <LabelWithInfo
-              label={`${window.i18n('fileSize')}:`}
-              info={
-                attachments[0]?.fileSize
-                  ? String(attachments[0].fileSize)
-                  : window.i18n('notApplicable')
-              }
-            />
-            <LabelWithInfo
-              label={`${window.i18n('resolution')}:`}
-              info={
-                attachments[0]?.width && attachments[0].height
-                  ? `${attachments[0].width}X${attachments[0].height}`
-                  : window.i18n('notApplicable')
-              }
-            />
-            <LabelWithInfo
-              label={`${window.i18n('duration')}:`}
-              info={
-                attachments[0]?.duration ? attachments[0]?.duration : window.i18n('notApplicable')
-              }
-            />
-          </>
+          <FileInfo attachment={attachments[0]} />
         ) : (
           <>
             <LabelWithInfo label={`${window.i18n('sent')}:`} info={sentAtStr} />
