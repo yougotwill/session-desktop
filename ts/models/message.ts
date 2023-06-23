@@ -794,6 +794,8 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
       direction: this.get('direction'),
       sender: this.get('source'),
       attachments,
+      timestamp: this.get('timestamp'),
+      serverTimestamp: this.get('serverTimestamp'),
     };
 
     return toRet;

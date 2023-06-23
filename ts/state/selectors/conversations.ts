@@ -943,6 +943,17 @@ export const getMessageIsDeletable = createSelector(
   }
 );
 
+export const getMessageIsDeletableForEveryone = createSelector(
+  getMessagePropsByMessageId,
+  (props): boolean => {
+    if (!props || isEmpty(props)) {
+      return false;
+    }
+
+    return props.propsForMessage.isDeletableForEveryone;
+  }
+);
+
 export const getMessageAttachmentProps = createSelector(getMessagePropsByMessageId, (props):
   | MessageAttachmentSelectorProps
   | undefined => {

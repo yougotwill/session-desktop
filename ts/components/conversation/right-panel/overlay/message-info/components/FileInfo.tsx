@@ -40,7 +40,7 @@ export const FileInfo = (props: Props) => {
           label={`${window.i18n('resolution')}:`}
           info={
             attachment?.width && attachment.height
-              ? `${attachment.width}X${attachment.height}`
+              ? `${attachment.width}x${attachment.height}`
               : window.i18n('notApplicable')
           }
         />

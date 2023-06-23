@@ -61,6 +61,8 @@ export type MessagePropsDetails = {
   messageId: string;
   direction: MessageModelType;
   attachments: Array<PropsForAttachment>;
+  timestamp?: number;
+  serverTimestamp?: number;
 };
 
 export type LastMessageStatusType = 'sending' | 'sent' | 'read' | 'error' | undefined;

@@ -2,19 +2,18 @@ import React from 'react';
 
 import { useDispatch, useSelector } from 'react-redux';
 import styled from 'styled-components';
-import { deleteMessagesById } from '../../../../../interactions/conversations/unsendingInteractions';
+import {
+  deleteMessagesById,
+  deleteMessagesByIdForEveryone,
+} from '../../../../../interactions/conversations/unsendingInteractions';
 import { closeMessageDetailsView, closeRightPanel } from '../../../../../state/ducks/conversations';
 import { resetRightOverlayMode } from '../../../../../state/ducks/section';
 import {
   getMessageDetailsViewProps,
   getMessageIsDeletable,
+  getMessageIsDeletableForEveryone,
 } from '../../../../../state/selectors/conversations';
 import { Flex } from '../../../../basic/Flex';
-import {
-  SessionButton,
-  SessionButtonColor,
-  SessionButtonType,
-} from '../../../../basic/SessionButton';
 import { Header, HeaderTitle, StyledScrollContainer } from '../components';
 // tslint:disable-next-line: no-submodule-imports
 import { isEmpty } from 'lodash';
@@ -22,37 +21,9 @@ import moment from 'moment';
 import useKey from 'react-use/lib/useKey';
 import { Message } from '../../../message/message-item/Message';
 import { FileInfo, MessageInfoAuthor } from './components';
-
-const StyledDeleteButtonContainer = styled.div`
-  text-align: center;
-  margin-top: 10px;
-
-  .session-button {
-    width: 160px;
-    margin: 1rem auto;
-  }
-`;
-
-const DeleteButtonItem = (props: { messageId: string; convoId: string; isDeletable: boolean }) => {
-  const { i18n } = window;
-
-  if (!props.isDeletable) {
-    return null;
-  }
-
-  return (
-    <StyledDeleteButtonContainer>
-      <SessionButton
-        text={i18n('delete')}
-        buttonColor={SessionButtonColor.Danger}
-        buttonType={SessionButtonType.Solid}
-        onClick={async () => {
-          await deleteMessagesById([props.messageId], props.convoId);
-        }}
-      />
-    </StyledDeleteButtonContainer>
-  );
-};
+import { PanelButtonGroup, PanelIconButton } from '../../../../buttons';
+import { saveAttachmentToDisk } from '../../../../../util/attachmentsUtil';
+import { replyToMessage } from '../../../../../interactions/conversationInteractions';
 
 const StyledMessageDetailContainer = styled.div`
   height: calc(100% - 48px);
@@ -116,6 +87,9 @@ export const OverlayMessageInfo = () => {
   const isDeletable = useSelector(state =>
     getMessageIsDeletable(state as any, messageDetailProps?.messageId || '')
   );
+  const isDeletableForEveryone = useSelector(state =>
+    getMessageIsDeletableForEveryone(state as any, messageDetailProps?.messageId || '')
+  );
 
   const dispatch = useDispatch();
 
@@ -138,6 +112,8 @@ export const OverlayMessageInfo = () => {
     messageId,
     sender,
     attachments,
+    timestamp,
+    serverTimestamp,
   } = messageDetailProps;
 
   const sentAtStr = `${moment(sentAt).format(formatTimestamps)}`;
@@ -184,7 +160,65 @@ export const OverlayMessageInfo = () => {
             {hasError && (
               <LabelWithInfo label={window.i18n('error')} info={errorString || 'Unknown error'} />
             )}
-            <DeleteButtonItem convoId={convoId} messageId={messageId} isDeletable={isDeletable} />
+            <PanelButtonGroup>
+              <PanelIconButton
+                text={window.i18n('replyToMessage')}
+                iconType="reply"
+                noBackgroundColor={true}
+                onClick={async () => {
+                  const foundIt = await replyToMessage(messageId);
+                  if (foundIt) {
+                    dispatch(closeRightPanel());
+                    dispatch(resetRightOverlayMode());
+                  }
+                }}
+                dataTestId="reply-to-msg-from-details"
+              />
+              {hasAttachments && (
+                <PanelIconButton
+                  text={window.i18n('save')}
+                  noBackgroundColor={true}
+                  iconType="saveToDisk"
+                  dataTestId="save-attachment-from-details"
+                  onClick={() => {
+                    if (hasAttachments) {
+                      void saveAttachmentToDisk({
+                        conversationId: convoId,
+                        messageSender: sender,
+                        messageTimestamp: serverTimestamp || timestamp || Date.now(),
+                        attachment: attachments[0],
+                      });
+                    }
+                  }}
+                />
+              )}
+              {isDeletable && (
+                <PanelIconButton
+                  text={window.i18n('deleteJustForMe')}
+                  noBackgroundColor={true}
+                  iconType="delete"
+                  dataTestId="delete-for-me-from-details"
+                  onClick={async () => {
+                    await deleteMessagesById([messageId], convoId);
+                    dispatch(closeRightPanel());
+                    dispatch(resetRightOverlayMode());
+                  }}
+                />
+              )}
+              {isDeletableForEveryone && (
+                <PanelIconButton
+                  text={window.i18n('deleteForEveryone')}
+                  iconType="delete"
+                  dataTestId="delete-for-everyone-from-details"
+                  noBackgroundColor={true}
+                  onClick={async () => {
+                    await deleteMessagesByIdForEveryone([messageId], convoId);
+                    dispatch(closeRightPanel());
+                    dispatch(resetRightOverlayMode());
+                  }}
+                />
+              )}
+            </PanelButtonGroup>
           </StyledMessageDetail>
         </StyledMessageDetailContainer>
       </Flex>
