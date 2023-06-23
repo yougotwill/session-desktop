@@ -1,15 +1,17 @@
 import React, { ReactNode } from 'react';
 import styled, { CSSProperties } from 'styled-components';
+import { Flex } from '../basic/Flex';
 
 // NOTE Used for descendant components
 export const StyledContent = styled.div<{ disabled: boolean }>`
   display: flex;
   align-items: center;
+  flex-grow: 1;
   width: 100%;
   color: ${props => (props.disabled ? 'var(--disabled-color)' : 'inherit')};
 `;
 
-export const StyledText = styled.span`
+const StyledText = styled.span`
   font-size: var(--font-size-md);
   font-weight: 500;
   margin-inline-start: var(--margins-lg);
@@ -37,14 +39,14 @@ const StyledRoundedPanelButtonGroup = styled.div`
   overflow: hidden;
   background: var(--right-panel-item-background-color);
   border-radius: 16px;
-  padding: var(--margins-lg);
-  margin: 0 var(--margins-lg);
+  padding: 4px var(--margins-lg);
   width: -webkit-fill-available;
+  flex-shrink: 0;
 `;
 
 const PanelButtonContainer = styled.div`
   overflow: auto;
-  min-height: 50px;
+  min-height: 40px;
   max-height: 100%;
 `;
 
@@ -119,5 +121,27 @@ export const PanelButton = (props: PanelButtonProps) => {
     >
       {children}
     </StyledPanelButton>
+  );
+};
+
+const StyledSubtitle = styled.p`
+  font-size: var(--font-size-xs);
+  margin: 0;
+  text-align: initial;
+`;
+
+export const PanelButtonText = (props: { text: string; subtitle?: string }) => {
+  return (
+    <Flex
+      container={true}
+      width={'100%'}
+      flexDirection={'column'}
+      alignItems={'flex-start'}
+      margin="0 var(--margins-lg) 0 var(--margins-lg)"
+      minWidth="0"
+    >
+      <StyledText>{props.text}</StyledText>
+      {!!props.subtitle && <StyledSubtitle>{props.subtitle}</StyledSubtitle>}
+    </Flex>
   );
 };

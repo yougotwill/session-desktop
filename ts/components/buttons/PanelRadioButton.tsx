@@ -1,8 +1,7 @@
 import React from 'react';
 import styled from 'styled-components';
-import { Flex } from '../basic/Flex';
 import { SessionRadio } from '../basic/SessionRadio';
-import { PanelButton, PanelButtonProps, StyledContent, StyledText } from './PanelButton';
+import { PanelButton, PanelButtonProps, PanelButtonText, StyledContent } from './PanelButton';
 
 const StyledPanelButton = styled(PanelButton)`
   padding-top: var(--margins-lg);
@@ -23,11 +22,6 @@ const StyledPanelButton = styled(PanelButton)`
   :last-child {
     padding-bottom: 0;
   }
-`;
-
-const StyledSubtitle = styled.p`
-  font-size: var(--font-size-xs);
-  margin: 0;
 `;
 
 const StyledCheckContainer = styled.div`
@@ -67,10 +61,7 @@ export const PanelRadioButton = (props: PanelRadioButtonProps) => {
       dataTestId={dataTestId}
     >
       <StyledContent disabled={disabled}>
-        <Flex container={true} width={'100%'} flexDirection={'column'} alignItems={'flex-start'}>
-          <StyledText>{text}</StyledText>
-          {subtitle && <StyledSubtitle>{subtitle}</StyledSubtitle>}
-        </Flex>
+        <PanelButtonText text={text} subtitle={subtitle} />
         <StyledCheckContainer>
           <SessionRadio
             active={isSelected}

@@ -1,14 +1,29 @@
 import React from 'react';
 import { SessionIcon, SessionIconType } from '../icon';
-import { PanelButton, PanelButtonProps, StyledContent, StyledText } from './PanelButton';
+import { PanelButton, PanelButtonProps, PanelButtonText, StyledContent } from './PanelButton';
+import styled from 'styled-components';
 
 interface PanelIconButton extends Omit<PanelButtonProps, 'children'> {
   iconType: SessionIconType;
   text: string;
+  subtitle?: string;
 }
 
+const IconContainer = styled.div`
+  flex-shrink: 0;
+  width: var(--toggle-width);
+`;
+
 export const PanelIconButton = (props: PanelIconButton) => {
-  const { iconType, text, disabled = false, noBackgroundColor, onClick, dataTestId } = props;
+  const {
+    iconType,
+    text,
+    subtitle,
+    disabled = false,
+    noBackgroundColor,
+    onClick,
+    dataTestId,
+  } = props;
 
   return (
     <PanelButton
@@ -18,8 +33,10 @@ export const PanelIconButton = (props: PanelIconButton) => {
       dataTestId={dataTestId}
     >
       <StyledContent disabled={disabled}>
-        <SessionIcon iconType={iconType} iconSize="medium" />
-        <StyledText>{text}</StyledText>
+        <IconContainer>
+          <SessionIcon iconType={iconType} iconSize="medium" />
+        </IconContainer>
+        <PanelButtonText text={text} subtitle={subtitle} />
       </StyledContent>
     </PanelButton>
   );

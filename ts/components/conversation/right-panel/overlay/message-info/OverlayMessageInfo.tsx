@@ -24,6 +24,7 @@ import { FileInfo, MessageInfoAuthor } from './components';
 import { PanelButtonGroup, PanelIconButton } from '../../../../buttons';
 import { saveAttachmentToDisk } from '../../../../../util/attachmentsUtil';
 import { replyToMessage } from '../../../../../interactions/conversationInteractions';
+import { SpacerXL } from '../../../../basic/Text';
 
 const StyledMessageDetailContainer = styled.div`
   height: calc(100% - 48px);
@@ -219,6 +220,7 @@ export const OverlayMessageInfo = () => {
                 />
               )}
             </PanelButtonGroup>
+            <SpacerXL />
           </StyledMessageDetail>
         </StyledMessageDetailContainer>
       </Flex>
