@@ -1,8 +1,8 @@
 import React from 'react';
 import { PropsForAttachment } from '../../../../../../state/ducks/conversations';
 import { Flex } from '../../../../../basic/Flex';
-import { LabelWithInfo } from '../../../../message/message-item/MessageDetail';
 import styled from 'styled-components';
+import { LabelWithInfo } from '../OverlayMessageInfo';
 
 type Props = {
   attachment: PropsForAttachment;

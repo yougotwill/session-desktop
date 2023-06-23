@@ -1,8 +1,8 @@
 import React from 'react';
 import styled from 'styled-components';
 import { useConversationUsername } from '../../../../../../hooks/useParamSelector';
-import { MessageInfoLabel } from '../../../../message/message-item/MessageDetail';
 import { Avatar, AvatarSize } from '../../../../../avatar/Avatar';
+import { MessageInfoLabel } from '../OverlayMessageInfo';
 
 const StyledAuthorContainer = styled.div`
   display: flex;
