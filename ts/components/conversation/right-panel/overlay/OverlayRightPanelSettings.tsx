@@ -351,7 +351,7 @@ export const OverlayRightPanelSettings = () => {
 
       {hasDisappearingMessages && (
         /* TODO Move ButtonGroup around all settings items */
-        <PanelButtonGroup>
+        <PanelButtonGroup style={{ margin: '0 var(--margins-lg)' }}>
           <PanelIconButton
             iconType={'timer50'}
             text={window.i18n('disappearingMessages')}

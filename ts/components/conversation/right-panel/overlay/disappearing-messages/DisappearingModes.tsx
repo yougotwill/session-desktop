@@ -35,7 +35,7 @@ export const DisappearingModes = (props: DisappearingModesProps) => {
   return (
     <>
       <PanelLabel>{window.i18n('disappearingMessagesModeLabel')}</PanelLabel>
-      <PanelButtonGroup>
+      <PanelButtonGroup style={{ margin: '0 var(--margins-lg)' }}>
         {Object.keys(options).map((mode: DisappearingMessageConversationType) => {
           const optionI18n =
             mode === 'legacy'
