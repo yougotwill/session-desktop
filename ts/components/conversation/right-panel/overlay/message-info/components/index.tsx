@@ -1,4 +1,5 @@
-import { FileInfo } from './FileInfo';
-import { MessageInfoAuthor } from './MessageInfoAuthor';
+import { AttachmentInfo } from './AttachmentInfo';
+import { MessageFrom } from './MessageFrom';
+import { LabelWithInfo, MessageInfo, MessageInfoLabel } from './MessageInfo';
 
-export { FileInfo, MessageInfoAuthor };
+export { AttachmentInfo, LabelWithInfo, MessageFrom, MessageInfo, MessageInfoLabel };

@@ -16,15 +16,13 @@ import {
 import { Flex } from '../../../../basic/Flex';
 import { Header, HeaderTitle, StyledScrollContainer } from '../components';
 // tslint:disable-next-line: no-submodule-imports
-import { isEmpty } from 'lodash';
-import moment from 'moment';
 import useKey from 'react-use/lib/useKey';
 import { Message } from '../../../message/message-item/Message';
-import { FileInfo, MessageInfoAuthor } from './components';
+import { AttachmentInfo, MessageInfo } from './components';
 import { PanelButtonGroup, PanelIconButton } from '../../../../buttons';
 import { saveAttachmentToDisk } from '../../../../../util/attachmentsUtil';
 import { replyToMessage } from '../../../../../interactions/conversationInteractions';
-import { SpacerXL } from '../../../../basic/Text';
+import { SpacerLG, SpacerXL } from '../../../../basic/Text';
 
 const StyledMessageDetailContainer = styled.div`
   height: calc(100% - 48px);
@@ -55,34 +53,6 @@ const StyledMessageContainer = styled.div`
   }
 `;
 
-// Message timestamp format: "06:02 PM Tue, 15/11/2022"
-const formatTimestamps = 'hh:mm A ddd, D/M/Y';
-
-export const MessageInfoLabel = styled.label`
-  font-size: var(--font-size-lg);
-  font-weight: bold;
-`;
-
-const MessageInfoData = styled.div`
-  font-size: var(--font-size-md);
-  user-select: text;
-`;
-
-const LabelWithInfoContainer = styled.div`
-  margin-bottom: var(--margins-md);
-`;
-
-type LabelWithInfoProps = { label: string; info: string };
-
-export const LabelWithInfo = (props: LabelWithInfoProps) => {
-  return (
-    <LabelWithInfoContainer>
-      <MessageInfoLabel>{props.label}</MessageInfoLabel>
-      <MessageInfoData>{props.info}</MessageInfoData>
-    </LabelWithInfoContainer>
-  );
-};
-
 export const OverlayMessageInfo = () => {
   const messageDetailProps = useSelector(getMessageDetailsViewProps);
   const isDeletable = useSelector(state =>
@@ -105,11 +75,7 @@ export const OverlayMessageInfo = () => {
   }
 
   const {
-    errors,
-    receivedAt,
-    sentAt,
     convoId,
-    direction,
     messageId,
     sender,
     attachments,
@@ -117,17 +83,7 @@ export const OverlayMessageInfo = () => {
     serverTimestamp,
   } = messageDetailProps;
 
-  const sentAtStr = `${moment(sentAt).format(formatTimestamps)}`;
-  const receivedAtStr = `${moment(receivedAt).format(formatTimestamps)}`;
-
   const hasAttachments = attachments && attachments.length > 0 && attachments[0];
-
-  const hasError = !isEmpty(errors);
-  const errorString = hasError
-    ? errors?.reduce((previous, current) => {
-        return `${previous} ${current.name}: "${current.message}";`;
-      }, '')
-    : null;
 
   return (
     <StyledScrollContainer>
@@ -147,20 +103,8 @@ export const OverlayMessageInfo = () => {
             <StyledMessageContainer>
               <Message messageId={messageId} isDetailView={true} />
             </StyledMessageContainer>
-            {hasAttachments ? (
-              <FileInfo attachment={attachments[0]} />
-            ) : (
-              <>
-                <LabelWithInfo label={`${window.i18n('sent')}:`} info={sentAtStr} />
-                {direction === 'incoming' ? (
-                  <LabelWithInfo label={`${window.i18n('received')}:`} info={receivedAtStr} />
-                ) : null}
-              </>
-            )}
-            <MessageInfoAuthor sender={sender} />
-            {hasError && (
-              <LabelWithInfo label={window.i18n('error')} info={errorString || 'Unknown error'} />
-            )}
+            {hasAttachments ? <AttachmentInfo attachment={attachments[0]} /> : <MessageInfo />}
+            <SpacerLG />
             <PanelButtonGroup>
               <PanelIconButton
                 text={window.i18n('replyToMessage')}

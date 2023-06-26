@@ -2,7 +2,7 @@ import React from 'react';
 import { PropsForAttachment } from '../../../../../../state/ducks/conversations';
 import { Flex } from '../../../../../basic/Flex';
 import styled from 'styled-components';
-import { LabelWithInfo } from '../OverlayMessageInfo';
+import { LabelWithInfo } from '.';
 
 type Props = {
   attachment: PropsForAttachment;
@@ -14,11 +14,12 @@ const StyledLabelContainer = styled(Flex)`
   }
 `;
 
-export const FileInfo = (props: Props) => {
+export const AttachmentInfo = (props: Props) => {
   const { attachment } = props;
 
   return (
     <Flex container={true} flexDirection="column">
+      {/* TODO Attachment / Carousel */}
       <LabelWithInfo
         label={`${window.i18n('fileId')}:`}
         info={attachment?.id ? String(attachment.id) : window.i18n('notApplicable')}
