@@ -524,6 +524,18 @@ export async function replyToMessage(messageId: string) {
   return true;
 }
 
+export async function resendMessage(messageId: string) {
+  const foundMessageModel = await Data.getMessageById(messageId);
+
+  if (!foundMessageModel) {
+    window.log.warn('Failed to find message to resend');
+    return false;
+  }
+
+  await foundMessageModel.retrySend();
+  return true;
+}
+
 /**
  * Check if what is pasted is a URL and prompt confirmation for a setting change
  * @param e paste event

@@ -21,8 +21,11 @@ import { Message } from '../../../message/message-item/Message';
 import { AttachmentInfo, MessageInfo } from './components';
 import { PanelButtonGroup, PanelIconButton } from '../../../../buttons';
 import { saveAttachmentToDisk } from '../../../../../util/attachmentsUtil';
-import { replyToMessage } from '../../../../../interactions/conversationInteractions';
-import { SpacerLG, SpacerXL } from '../../../../basic/Text';
+import {
+  replyToMessage,
+  resendMessage,
+} from '../../../../../interactions/conversationInteractions';
+import { SpacerLG, SpacerMD, SpacerXL } from '../../../../basic/Text';
 
 const StyledMessageDetailContainer = styled.div`
   height: calc(100% - 48px);
@@ -81,9 +84,12 @@ export const OverlayMessageInfo = () => {
     attachments,
     timestamp,
     serverTimestamp,
+    errors,
+    direction,
   } = messageDetailProps;
 
-  const hasAttachments = attachments && attachments.length > 0 && attachments[0];
+  const hasAttachments = attachments && attachments.length > 0;
+  const hasErrors = errors && errors.length > 0;
 
   return (
     <StyledScrollContainer>
@@ -103,7 +109,13 @@ export const OverlayMessageInfo = () => {
             <StyledMessageContainer>
               <Message messageId={messageId} isDetailView={true} />
             </StyledMessageContainer>
-            {hasAttachments ? <AttachmentInfo attachment={attachments[0]} /> : <MessageInfo />}
+            {hasAttachments && (
+              <>
+                <AttachmentInfo attachment={attachments[0]} />
+                <SpacerMD />
+              </>
+            )}
+            <MessageInfo />
             <SpacerLG />
             <PanelButtonGroup>
               <PanelIconButton
@@ -119,6 +131,21 @@ export const OverlayMessageInfo = () => {
                 }}
                 dataTestId="reply-to-msg-from-details"
               />
+              {hasErrors && direction === 'outgoing' && (
+                <PanelIconButton
+                  text={window.i18n('resend')}
+                  iconType="resend"
+                  noBackgroundColor={true}
+                  onClick={async () => {
+                    const resendSuccess = await resendMessage(messageId);
+                    if (resendSuccess) {
+                      dispatch(closeRightPanel());
+                      dispatch(resetRightOverlayMode());
+                    }
+                  }}
+                  dataTestId="resend-msg-from-details"
+                />
+              )}
               {hasAttachments && (
                 <PanelIconButton
                   text={window.i18n('save')}
