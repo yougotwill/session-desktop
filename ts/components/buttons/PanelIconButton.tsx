@@ -7,6 +7,7 @@ interface PanelIconButton extends Omit<PanelButtonProps, 'children'> {
   iconType: SessionIconType;
   text: string;
   subtitle?: string;
+  color?: string;
 }
 
 const IconContainer = styled.div`
@@ -19,6 +20,7 @@ export const PanelIconButton = (props: PanelIconButton) => {
     iconType,
     text,
     subtitle,
+    color,
     disabled = false,
     noBackgroundColor,
     onClick,
@@ -34,9 +36,9 @@ export const PanelIconButton = (props: PanelIconButton) => {
     >
       <StyledContent disabled={disabled}>
         <IconContainer>
-          <SessionIcon iconType={iconType} iconSize="medium" />
+          <SessionIcon iconType={iconType} iconColor={color} iconSize="medium" />
         </IconContainer>
-        <PanelButtonText text={text} subtitle={subtitle} />
+        <PanelButtonText text={text} subtitle={subtitle} color={color} />
       </StyledContent>
     </PanelButton>
   );

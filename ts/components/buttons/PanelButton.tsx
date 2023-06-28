@@ -11,7 +11,7 @@ export const StyledContent = styled.div<{ disabled: boolean }>`
   color: ${props => (props.disabled ? 'var(--disabled-color)' : 'inherit')};
 `;
 
-const StyledText = styled.span`
+const StyledText = styled.span<{ color?: string }>`
   font-size: var(--font-size-md);
   font-weight: 500;
   margin-inline-start: var(--margins-lg);
@@ -22,6 +22,8 @@ const StyledText = styled.span`
   width: 100%;
   /* TODO needs RTL support */
   text-align: left;
+
+  ${props => props.color && `color: ${props.color};`}
 `;
 
 export const PanelLabel = styled.p`
@@ -124,13 +126,15 @@ export const PanelButton = (props: PanelButtonProps) => {
   );
 };
 
-const StyledSubtitle = styled.p`
+const StyledSubtitle = styled.p<{ color?: string }>`
   font-size: var(--font-size-xs);
   margin: 0;
   text-align: initial;
+
+  ${props => props.color && `color: ${props.color};`}
 `;
 
-export const PanelButtonText = (props: { text: string; subtitle?: string }) => {
+export const PanelButtonText = (props: { text: string; subtitle?: string; color?: string }) => {
   return (
     <Flex
       container={true}
@@ -140,8 +144,8 @@ export const PanelButtonText = (props: { text: string; subtitle?: string }) => {
       margin="0 var(--margins-lg) 0 var(--margins-lg)"
       minWidth="0"
     >
-      <StyledText>{props.text}</StyledText>
-      {!!props.subtitle && <StyledSubtitle>{props.subtitle}</StyledSubtitle>}
+      <StyledText color={props.color}>{props.text}</StyledText>
+      {!!props.subtitle && <StyledSubtitle color={props.color}>{props.subtitle}</StyledSubtitle>}
     </Flex>
   );
 };

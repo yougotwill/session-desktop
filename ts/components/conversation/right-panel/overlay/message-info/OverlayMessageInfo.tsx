@@ -169,6 +169,7 @@ export const OverlayMessageInfo = () => {
                   text={window.i18n('deleteJustForMe')}
                   noBackgroundColor={true}
                   iconType="delete"
+                  color={'var(--danger-color)'}
                   dataTestId="delete-for-me-from-details"
                   onClick={async () => {
                     await deleteMessagesById([messageId], convoId);
@@ -181,6 +182,7 @@ export const OverlayMessageInfo = () => {
                 <PanelIconButton
                   text={window.i18n('deleteForEveryone')}
                   iconType="delete"
+                  color={'var(--danger-color)'}
                   dataTestId="delete-for-everyone-from-details"
                   noBackgroundColor={true}
                   onClick={async () => {

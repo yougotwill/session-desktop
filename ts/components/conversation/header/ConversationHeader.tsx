@@ -8,7 +8,7 @@ import { openRightPanel } from '../../../state/ducks/conversations';
 import { useSelectedConversationKey } from '../../../state/selectors/selectedConversation';
 import { Flex } from '../../basic/Flex';
 import { ConversationHeaderMenu } from '../../menu/ConversationHeaderMenu';
-import { AvatarHeader, BackButton, CallButton, TripleDotsMenu } from './ConversationHeaderItems';
+import { AvatarHeader, CallButton, TripleDotsMenu } from './ConversationHeaderItems';
 import { SelectionOverlay } from './ConversationHeaderSelectionOverlay';
 import { ConversationHeaderTitle } from './ConversationHeaderTitle';
 import { resetRightOverlayMode } from '../../../state/ducks/section';
@@ -27,8 +27,6 @@ export const ConversationHeaderWithDetails = () => {
   return (
     <div className="module-conversation-header">
       <div className="conversation-header--items-wrapper">
-        {/* TODOLATER Remove the back button entirely? */}
-        <BackButton onGoBack={() => {}} showBackButton={false} />
         <TripleDotsMenu triggerId={triggerId} showBackButton={false} />
         <ConversationHeaderTitle />
 
