@@ -527,4 +527,5 @@ export type LocalizerKeys =
   | 'fileType'
   | 'resolution'
   | 'duration'
-  | 'notApplicable';
+  | 'notApplicable'
+  | 'unknownError';

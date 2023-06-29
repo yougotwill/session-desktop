@@ -8,27 +8,29 @@ import { MessageFrom } from '.';
 import styled from 'styled-components';
 import { SpacerSM } from '../../../../../basic/Text';
 
-export const MessageInfoLabel = styled.label`
+export const MessageInfoLabel = styled.label<{ color?: string }>`
   font-size: var(--font-size-lg);
   font-weight: bold;
+  ${props => props.color && `color: ${props.color};`}
 `;
 
-const MessageInfoData = styled.div`
+const MessageInfoData = styled.div<{ color?: string }>`
   font-size: var(--font-size-md);
   user-select: text;
+  ${props => props.color && `color: ${props.color};`}
 `;
 
 const LabelWithInfoContainer = styled.div`
   margin-bottom: var(--margins-md);
 `;
 
-type LabelWithInfoProps = { label: string; info: string };
+type LabelWithInfoProps = { label: string; info: string; labelColor?: string; dataColor?: string };
 
 export const LabelWithInfo = (props: LabelWithInfoProps) => {
   return (
     <LabelWithInfoContainer>
-      <MessageInfoLabel>{props.label}</MessageInfoLabel>
-      <MessageInfoData>{props.info}</MessageInfoData>
+      <MessageInfoLabel color={props.labelColor}>{props.label}</MessageInfoLabel>
+      <MessageInfoData color={props.dataColor}>{props.info}</MessageInfoData>
     </LabelWithInfoContainer>
   );
 };
@@ -50,8 +52,10 @@ export const MessageInfo = () => {
 
   const hasError = !isEmpty(errors);
   const errorString = hasError
-    ? errors?.reduce((previous, current) => {
-        return `${previous} ${current.name}: "${current.message}";`;
+    ? errors?.reduce((previous, current, currentIndex) => {
+        return `${previous}${current.message}${
+          errors.length > 1 && currentIndex < errors.length - 1 ? ', ' : ''
+        }`;
       }, '')
     : null;
 
@@ -66,7 +70,11 @@ export const MessageInfo = () => {
       {hasError && (
         <>
           <SpacerSM />
-          <LabelWithInfo label={window.i18n('error')} info={errorString || 'Unknown error'} />
+          <LabelWithInfo
+            label={`${window.i18n('error')}:`}
+            info={errorString || window.i18n('unknownError')}
+            dataColor={'var(--danger-color)'}
+          />
         </>
       )}
     </Flex>

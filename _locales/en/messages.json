@@ -527,5 +527,6 @@
   "fileType": "File Type",
   "resolution": "Resolution",
   "duration": "Duration",
-  "notApplicable": "N/A"
+  "notApplicable": "N/A",
+  "unknownError": "Unknown Error"
 }
