@@ -3,7 +3,7 @@ import classNames from 'classnames';
 import { SessionIcon, SessionIconProps } from '../icon';
 import _ from 'lodash';
 import { SessionNotificationCount } from './SessionNotificationCount';
-import styled from 'styled-components';
+import styled, { CSSProperties } from 'styled-components';
 
 interface SProps extends SessionIconProps {
   onClick?: (e?: React.MouseEvent<HTMLDivElement>) => void;
@@ -13,7 +13,7 @@ interface SProps extends SessionIconProps {
   margin?: string;
   dataTestId?: string;
   id?: string;
-  style?: object;
+  style?: CSSProperties;
   tabIndex?: number;
 }
 

@@ -758,7 +758,7 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
     // process attachments so we have the fileSize, url and screenshots
     const attachments = this.get('attachments') || [];
     for (let i = 0; i < attachments.length; i++) {
-      let props = this.getPropsForAttachment(attachments[0]);
+      let props = this.getPropsForAttachment(attachments[i]);
       if (
         props?.contentType &&
         GoogleChrome.isVideoTypeSupported(props?.contentType) &&

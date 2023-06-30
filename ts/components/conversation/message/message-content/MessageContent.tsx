@@ -188,13 +188,14 @@ export const MessageContent = (props: Props) => {
               <MessageText messageId={props.messageId} />
             </StyledMessageOpaqueContent>
           )}
-          {!isDeleted && (
-            <MessageAttachment
-              messageId={props.messageId}
-              imageBroken={imageBroken}
-              handleImageError={handleImageError}
-            />
-          )}
+          {!isDeleted &&
+            (props.isDetailView && !imageBroken ? null : (
+              <MessageAttachment
+                messageId={props.messageId}
+                imageBroken={imageBroken}
+                handleImageError={handleImageError}
+              />
+            ))}
         </IsMessageVisibleContext.Provider>
       </InView>
     </StyledMessageContent>

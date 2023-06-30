@@ -7,7 +7,7 @@ import {
   deleteMessagesByIdForEveryone,
 } from '../../../../../interactions/conversations/unsendingInteractions';
 import { closeMessageDetailsView, closeRightPanel } from '../../../../../state/ducks/conversations';
-import { resetRightOverlayMode } from '../../../../../state/ducks/section';
+import { resetRightOverlayMode, setRightOverlayMode } from '../../../../../state/ducks/section';
 import {
   getMessageDetailsViewProps,
   getMessageIsDeletable,
@@ -26,6 +26,8 @@ import {
   resendMessage,
 } from '../../../../../interactions/conversationInteractions';
 import { SpacerLG, SpacerMD, SpacerXL } from '../../../../basic/Text';
+import { AttachmentCarousel } from './components/AttachmentCarousel';
+import { getRightOverlayMode } from '../../../../../state/selectors/section';
 
 const StyledMessageDetailContainer = styled.div`
   height: calc(100% - 48px);
@@ -42,21 +44,15 @@ const StyledMessageDetail = styled.div`
 `;
 
 const StyledMessageContainer = styled.div`
+  // TODO tweak for when there are no attachments
   padding-bottom: var(--margins-lg);
-  &:after {
-    content: '.';
-    visibility: hidden;
-    display: block;
-    height: 0;
-    clear: both;
-  }
-
   .module-message {
     pointer-events: none;
   }
 `;
 
 export const OverlayMessageInfo = () => {
+  const rightOverlayMode = useSelector(getRightOverlayMode);
   const messageDetailProps = useSelector(getMessageDetailsViewProps);
   const isDeletable = useSelector(state =>
     getMessageIsDeletable(state as any, messageDetailProps?.messageId || '')
@@ -73,9 +69,12 @@ export const OverlayMessageInfo = () => {
     dispatch(closeMessageDetailsView());
   });
 
-  if (!messageDetailProps) {
+  if (!rightOverlayMode || !messageDetailProps) {
     return null;
   }
+
+  const { params } = rightOverlayMode;
+  const visibleAttachmentIndex = params?.visibleAttachmentIndex || 0;
 
   const {
     convoId,
@@ -90,6 +89,30 @@ export const OverlayMessageInfo = () => {
 
   const hasAttachments = attachments && attachments.length > 0;
   const hasErrors = errors && errors.length > 0;
+
+  const handleChangeAttachment = (direction: 1 | -1) => {
+    if (!hasAttachments) {
+      return;
+    }
+
+    let newVisibleIndex = visibleAttachmentIndex + direction;
+    if (newVisibleIndex > attachments.length - 1) {
+      return;
+    }
+
+    if (newVisibleIndex < 0) {
+      return;
+    }
+
+    if (attachments[newVisibleIndex]) {
+      dispatch(
+        setRightOverlayMode({
+          type: 'message_info',
+          params: { messageId, visibleAttachmentIndex: newVisibleIndex },
+        })
+      );
+    }
+  };
 
   return (
     <StyledScrollContainer>
@@ -111,7 +134,19 @@ export const OverlayMessageInfo = () => {
             </StyledMessageContainer>
             {hasAttachments && (
               <>
-                <AttachmentInfo attachment={attachments[0]} />
+                <AttachmentCarousel
+                  messageId={messageId}
+                  attachments={attachments}
+                  visibleIndex={visibleAttachmentIndex}
+                  nextAction={() => {
+                    handleChangeAttachment(1);
+                  }}
+                  previousAction={() => {
+                    handleChangeAttachment(-1);
+                  }}
+                />
+                <SpacerXL />
+                <AttachmentInfo attachment={attachments[visibleAttachmentIndex]} />
                 <SpacerMD />
               </>
             )}
