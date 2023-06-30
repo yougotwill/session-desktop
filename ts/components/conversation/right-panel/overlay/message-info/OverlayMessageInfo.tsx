@@ -90,12 +90,12 @@ export const OverlayMessageInfo = () => {
   const hasAttachments = attachments && attachments.length > 0;
   const hasErrors = errors && errors.length > 0;
 
-  const handleChangeAttachment = (direction: 1 | -1) => {
+  const handleChangeAttachment = (changeDirection: 1 | -1) => {
     if (!hasAttachments) {
       return;
     }
 
-    let newVisibleIndex = visibleAttachmentIndex + direction;
+    const newVisibleIndex = visibleAttachmentIndex + changeDirection;
     if (newVisibleIndex > attachments.length - 1) {
       return;
     }

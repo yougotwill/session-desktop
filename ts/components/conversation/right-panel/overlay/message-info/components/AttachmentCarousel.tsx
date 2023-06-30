@@ -5,17 +5,18 @@ import { getAlt, getThumbnailUrl, isVideoAttachment } from '../../../../../../ty
 import { showLightboxFromAttachmentProps } from '../../../../message/message-content/MessageAttachment';
 import { SessionIconButton } from '../../../../../icon';
 import { Flex } from '../../../../../basic/Flex';
-import styled from 'styled-components';
+import styled, { CSSProperties } from 'styled-components';
 import {
   StyledSubtitleDotMenu,
   SubtitleDotMenu,
 } from '../../../../header/ConversationHeaderSubtitle';
+import { PropsForAttachment } from '../../../../../../state/ducks/conversations';
 
 const CarouselButton = (props: { visible: boolean; rotation: number; onClick: () => void }) => {
   return (
     <SessionIconButton
       iconSize={'huge'}
-      iconType="chevron"
+      iconType={'chevron'}
       iconRotation={props.rotation}
       onClick={props.onClick}
       iconPadding={'var(--margins-xs)'}
@@ -26,20 +27,44 @@ const CarouselButton = (props: { visible: boolean; rotation: number; onClick: ()
   );
 };
 
+const StyledFullscreenButton = styled.div``;
+
+const FullscreenButton = (props: { onClick: () => void; style?: CSSProperties }) => {
+  return (
+    <StyledFullscreenButton style={props.style}>
+      <SessionIconButton
+        iconSize={'large'}
+        iconColor={'var(--button-icon-stroke-hover-color)'}
+        iconType={'fullscreen'}
+        onClick={props.onClick}
+        iconPadding={'var(--margins-xs)'}
+      />
+    </StyledFullscreenButton>
+  );
+};
+
 const ImageContainer = styled.div`
   position: relative;
+
   ${StyledSubtitleDotMenu} {
     position: absolute;
-    bottom: 5px;
+    bottom: 12px;
     left: 0;
     right: 0;
     margin: 0 auto;
+  }
+
+  ${StyledFullscreenButton} {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    z-index: 2;
   }
 `;
 
 type Props = {
   messageId: string;
-  attachments: any[];
+  attachments: Array<PropsForAttachment>;
   visibleIndex: number;
   nextAction: () => void;
   previousAction: () => void;
@@ -72,10 +97,9 @@ export const AttachmentCarousel = (props: Props) => {
           height={300}
           width={300}
           url={getThumbnailUrl(attachments[visibleIndex])}
-          attachmentIndex={0}
+          attachmentIndex={visibleIndex}
           softCorners={true}
-          // TODO move onto full screen button
-          onClick={showLightbox}
+          onClick={isVideo ? showLightbox : undefined}
         />
         <SubtitleDotMenu
           id={'attachment-carousel-subtitle-dots'}
@@ -87,6 +111,13 @@ export const AttachmentCarousel = (props: Props) => {
             borderRadius: '50px',
             width: 'fit-content',
             padding: 'var(--margins-xs)',
+          }}
+        />
+        <FullscreenButton
+          onClick={showLightbox}
+          style={{
+            backgroundColor: 'var(--modal-background-color)',
+            borderRadius: '50px',
           }}
         />
       </ImageContainer>
