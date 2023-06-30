@@ -7,6 +7,7 @@ import { isEmpty } from 'lodash';
 import { MessageFrom } from '.';
 import styled from 'styled-components';
 import { SpacerSM } from '../../../../../basic/Text';
+import { ipcRenderer } from 'electron/renderer';
 
 export const MessageInfoLabel = styled.label<{ color?: string }>`
   font-size: var(--font-size-lg);
@@ -22,13 +23,21 @@ const MessageInfoData = styled.div<{ color?: string }>`
 
 const LabelWithInfoContainer = styled.div`
   margin-bottom: var(--margins-md);
+  ${props => props.onClick && 'cursor: pointer;'}
 `;
 
-type LabelWithInfoProps = { label: string; info: string; labelColor?: string; dataColor?: string };
+type LabelWithInfoProps = {
+  label: string;
+  info: string;
+  labelColor?: string;
+  dataColor?: string;
+  title?: string;
+  onClick?: () => void;
+};
 
 export const LabelWithInfo = (props: LabelWithInfoProps) => {
   return (
-    <LabelWithInfoContainer>
+    <LabelWithInfoContainer title={props.title || undefined} onClick={props.onClick}>
       <MessageInfoLabel color={props.labelColor}>{props.label}</MessageInfoLabel>
       <MessageInfoData color={props.dataColor}>{props.info}</MessageInfoData>
     </LabelWithInfoContainer>
@@ -37,6 +46,10 @@ export const LabelWithInfo = (props: LabelWithInfoProps) => {
 
 // Message timestamp format: "06:02 PM Tue, 15/11/2022"
 const formatTimestamps = 'hh:mm A ddd, D/M/Y';
+
+const showDebugLog = () => {
+  ipcRenderer.send('show-debug-log');
+};
 
 export const MessageInfo = () => {
   const messageDetailProps = useSelector(getMessageDetailsViewProps);
@@ -71,9 +84,11 @@ export const MessageInfo = () => {
         <>
           <SpacerSM />
           <LabelWithInfo
+            title={window.i18n('shareBugDetails')}
             label={`${window.i18n('error')}:`}
             info={errorString || window.i18n('unknownError')}
             dataColor={'var(--danger-color)'}
+            onClick={showDebugLog}
           />
         </>
       )}

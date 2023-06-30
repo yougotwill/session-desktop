@@ -31,6 +31,7 @@ import { SessionContextMenuContainer } from '../../../SessionContextMenuContaine
 import { SessionEmojiPanel, StyledEmojiPanel } from '../../SessionEmojiPanel';
 import { MessageReactBar } from './MessageReactBar';
 import { setRightOverlayMode } from '../../../../state/ducks/section';
+import { Dispatch } from '@reduxjs/toolkit';
 
 export type MessageContextMenuSelectorProps = Pick<
   MessageRenderingProps,
@@ -75,6 +76,24 @@ const StyledEmojiPanelContainer = styled.div<{ x: number; y: number }>`
     top: ${props => `${props.y}px`};
   }
 `;
+
+export const showMessageInfoOverlay = async ({
+  messageId,
+  dispatch,
+}: {
+  messageId: string;
+  dispatch: Dispatch;
+}) => {
+  const found = await Data.getMessageById(messageId);
+  if (found) {
+    const messageDetailsProps = await found.getPropsForMessageDetail();
+    dispatch(showMessageDetailsView(messageDetailsProps));
+    dispatch(setRightOverlayMode('message_info'));
+    dispatch(openRightPanel());
+  } else {
+    window.log.warn(`Message ${messageId} not found in db`);
+  }
+};
 
 // tslint:disable: max-func-body-length cyclomatic-complexity
 export const MessageContextMenu = (props: Props) => {
@@ -135,18 +154,6 @@ export const MessageContextMenu = (props: Props) => {
       window.contextMenuShown = false;
     }, 100);
   }, []);
-
-  const onShowDetail = async () => {
-    const found = await Data.getMessageById(messageId);
-    if (found) {
-      const messageDetailsProps = await found.getPropsForMessageDetail();
-      dispatch(showMessageDetailsView(messageDetailsProps));
-      dispatch(setRightOverlayMode('message_info'));
-      dispatch(openRightPanel());
-    } else {
-      window.log.warn(`Message ${messageId} not found in db`);
-    }
-  };
 
   const selectMessageText = window.i18n('selectMessage');
   const deleteMessageJustForMeText = window.i18n('deleteJustForMe');
@@ -316,7 +323,13 @@ export const MessageContextMenu = (props: Props) => {
             <Item onClick={onReply}>{window.i18n('replyToMessage')}</Item>
           )}
           {(!isPublic || isOutgoing) && (
-            <Item onClick={onShowDetail}>{window.i18n('moreInformation')}</Item>
+            <Item
+              onClick={async () => {
+                await showMessageInfoOverlay({ messageId, dispatch });
+              }}
+            >
+              {window.i18n('moreInformation')}
+            </Item>
           )}
           {showRetry ? <Item onClick={onRetry}>{window.i18n('resend')}</Item> : null}
           {isDeletable ? (

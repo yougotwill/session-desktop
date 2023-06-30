@@ -14,7 +14,7 @@ type Props = {
 export type MessageStatusSelectorProps = Pick<MessageRenderingProps, 'direction' | 'status'>;
 
 export const MessageStatus = (props: Props) => {
-  const { isCorrectSide, isDetailView, dataTestId } = props;
+  const { messageId, isCorrectSide, isDetailView, dataTestId } = props;
 
   const selected = useSelector(state => getMessageStatusProps(state as any, props.messageId));
   if (!selected) {
@@ -33,5 +33,5 @@ export const MessageStatus = (props: Props) => {
     return null;
   }
 
-  return <OutgoingMessageStatus dataTestId={dataTestId} status={status} />;
+  return <OutgoingMessageStatus messageId={messageId} dataTestId={dataTestId} status={status} />;
 };
