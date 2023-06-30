@@ -32,12 +32,13 @@ const ClosableOverlay = () => {
     };
   }, []);
 
-  switch (rightOverlayMode) {
+  switch (rightOverlayMode?.type) {
     case 'disappearing_messages':
       // TODO legacy messages support will be removed in a future release
       return <OverlayDisappearingMessages unlockNewModes={showNewDisappearingMessageModes} />;
     case 'message_info':
       return <OverlayMessageInfo />;
+    case 'default':
     default:
       return <OverlayRightPanelSettings />;
   }

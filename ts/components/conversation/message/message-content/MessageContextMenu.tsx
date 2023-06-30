@@ -88,7 +88,12 @@ export const showMessageInfoOverlay = async ({
   if (found) {
     const messageDetailsProps = await found.getPropsForMessageDetail();
     dispatch(showMessageDetailsView(messageDetailsProps));
-    dispatch(setRightOverlayMode('message_info'));
+    dispatch(
+      setRightOverlayMode({
+        type: 'message_info',
+        params: { messageId, visibleAttachmentIndex: 0 },
+      })
+    );
     dispatch(openRightPanel());
   } else {
     window.log.warn(`Message ${messageId} not found in db`);
