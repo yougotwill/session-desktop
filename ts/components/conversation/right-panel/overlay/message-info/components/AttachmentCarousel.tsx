@@ -1,7 +1,12 @@
-import React from 'react';
+import React, { useCallback, useState } from 'react';
 import { Image } from '../../../../Image';
 import { isEmpty } from 'lodash';
-import { getAlt, getThumbnailUrl, isVideoAttachment } from '../../../../../../types/Attachment';
+import {
+  canDisplayImage,
+  getAlt,
+  getThumbnailUrl,
+  isVideoAttachment,
+} from '../../../../../../types/Attachment';
 import { showLightboxFromAttachmentProps } from '../../../../message/message-content/MessageAttachment';
 import { SessionIconButton } from '../../../../../icon';
 import { Flex } from '../../../../../basic/Flex';
@@ -73,18 +78,27 @@ type Props = {
 export const AttachmentCarousel = (props: Props) => {
   const { messageId, attachments, visibleIndex, nextAction, previousAction } = props;
 
+  const [imageBroken, setImageBroken] = useState(false);
+
   if (isEmpty(attachments)) {
     window.log.debug('No attachments to render in carousel');
     return null;
   }
 
+  const displayImage = canDisplayImage(attachments);
   const isVideo = isVideoAttachment(attachments[visibleIndex]);
 
   const showLightbox = () => {
     void showLightboxFromAttachmentProps(messageId, attachments[visibleIndex]);
   };
 
-  // TODO error handling
+  const handleImageError = useCallback(() => {
+    setImageBroken(true);
+  }, [setImageBroken]);
+
+  if (!displayImage || imageBroken) {
+    return null;
+  }
 
   return (
     <Flex container={true} flexDirection={'row'} justifyContent={'center'} alignItems={'center'}>
@@ -100,6 +114,7 @@ export const AttachmentCarousel = (props: Props) => {
           attachmentIndex={visibleIndex}
           softCorners={true}
           onClick={isVideo ? showLightbox : undefined}
+          onError={handleImageError}
         />
         <SubtitleDotMenu
           id={'attachment-carousel-subtitle-dots'}
