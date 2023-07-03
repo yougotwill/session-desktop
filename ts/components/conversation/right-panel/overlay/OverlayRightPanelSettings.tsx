@@ -37,7 +37,7 @@ import { AttachmentTypeWithPath } from '../../../../types/Attachment';
 import { getAbsoluteAttachmentPath } from '../../../../types/MessageAttachment';
 import { Avatar, AvatarSize } from '../../../avatar/Avatar';
 import { SessionButton, SessionButtonColor, SessionButtonType } from '../../../basic/SessionButton';
-import { SpacerLG } from '../../../basic/Text';
+import { SpacerMD } from '../../../basic/Text';
 import { PanelButtonGroup, PanelIconButton } from '../../../buttons';
 import { MediaItemType } from '../../../lightbox/LightboxGallery';
 import { MediaGallery } from '../../media-gallery/MediaGallery';
@@ -125,12 +125,15 @@ const HeaderItem = () => {
   const isKickedFromGroup = useSelectedIsKickedFromGroup();
   const left = useSelectedIsLeft();
   const isGroup = useSelectedIsGroup();
+  const subscriberCount = useSelectedSubscriberCount();
 
   if (!selectedConvoKey) {
     return null;
   }
 
   const showInviteContacts = isGroup && !isKickedFromGroup && !isBlocked && !left;
+  const showMemberCount = !!(subscriberCount && subscriberCount > 0);
+
   return (
     <Header
       backButtonDirection="right"
@@ -163,6 +166,14 @@ const HeaderItem = () => {
         )}
       </Flex>
       <StyledName data-testid="right-panel-group-name">{displayNameInProfile}</StyledName>
+      {showMemberCount && (
+        <Flex container={true} flexDirection={'column'}>
+          <div role="button" className="subtle">
+            {window.i18n('members', [`${subscriberCount}`])}
+          </div>
+          <SpacerMD />
+        </Flex>
+      )}
     </Header>
   );
 };
@@ -186,26 +197,6 @@ const StyledLeaveButton = styled.div`
   }
 `;
 
-const StyledGroupSettingsItem = styled.div`
-  display: flex;
-  align-items: center;
-  min-height: 3rem;
-  font-size: var(--font-size-md);
-  color: var(--right-panel-item-text-color);
-  background-color: var(--right-panel-item-background-color);
-  border-top: 1px solid var(--border-color);
-  border-bottom: 1px solid var(--border-color);
-
-  width: -webkit-fill-available;
-  padding: 0 var(--margins-md);
-  transition: var(--default-duration);
-  cursor: pointer;
-
-  &:hover {
-    background-color: var(--right-panel-item-background-hover-color);
-  }
-`;
-
 const StyledName = styled.h4`
   padding-inline: var(--margins-md);
   font-size: var(--font-size-md);
@@ -220,7 +211,6 @@ export const OverlayRightPanelSettings = () => {
   const selectedConvoKey = useSelectedConversationKey();
   const dispatch = useDispatch();
   const isShowing = useSelector(isRightPanelShowing);
-  const subscriberCount = useSelectedSubscriberCount();
 
   const isActive = useSelectedIsActive();
   const isBlocked = useSelectedIsBlocked();
@@ -267,7 +257,6 @@ export const OverlayRightPanelSettings = () => {
     return null;
   }
 
-  const showMemberCount = !!(subscriberCount && subscriberCount > 0);
   const commonNoShow = isKickedFromGroup || left || isBlocked || !isActive;
   const hasDisappearingMessages = !isPublic && !commonNoShow;
   const leaveGroupString = isPublic
@@ -294,64 +283,51 @@ export const OverlayRightPanelSettings = () => {
   return (
     <>
       <HeaderItem />
-      {showMemberCount && (
-        <>
-          <SpacerLG />
-          <div role="button" className="subtle">
-            {window.i18n('members', [`${subscriberCount}`])}
-          </div>
-          <SpacerLG />
-        </>
-      )}
-      {showUpdateGroupNameButton && (
-        <StyledGroupSettingsItem
-          className="right-panel-item"
-          role="button"
-          onClick={async () => {
-            await showUpdateGroupNameByConvoId(selectedConvoKey);
-          }}
-        >
-          {isPublic ? window.i18n('editGroup') : window.i18n('editGroupName')}
-        </StyledGroupSettingsItem>
-      )}
-      {showAddRemoveModeratorsButton && (
-        <>
-          <StyledGroupSettingsItem
-            className="right-panel-item"
-            role="button"
-            onClick={() => {
-              showAddModeratorsByConvoId(selectedConvoKey);
+      <PanelButtonGroup style={{ margin: '0 var(--margins-lg)' }}>
+        {showUpdateGroupNameButton && (
+          <PanelIconButton
+            iconType={'group'}
+            text={isPublic ? window.i18n('editGroup') : window.i18n('editGroupName')}
+            noBackgroundColor={true}
+            onClick={async () => {
+              await showUpdateGroupNameByConvoId(selectedConvoKey);
             }}
-          >
-            {window.i18n('addModerators')}
-          </StyledGroupSettingsItem>
-          <StyledGroupSettingsItem
-            className="right-panel-item"
-            role="button"
-            onClick={() => {
-              showRemoveModeratorsByConvoId(selectedConvoKey);
+          />
+        )}
+        {showAddRemoveModeratorsButton && (
+          <>
+            <PanelIconButton
+              iconType={'addModerator'}
+              text={window.i18n('addModerators')}
+              noBackgroundColor={true}
+              onClick={() => {
+                showAddModeratorsByConvoId(selectedConvoKey);
+              }}
+            />
+
+            <PanelIconButton
+              iconType={'deleteModerator'}
+              text={window.i18n('removeModerators')}
+              noBackgroundColor={true}
+              onClick={() => {
+                showRemoveModeratorsByConvoId(selectedConvoKey);
+              }}
+            />
+          </>
+        )}
+
+        {showUpdateGroupMembersButton && (
+          <PanelIconButton
+            iconType={'groupMembers'}
+            text={window.i18n('groupMembers')}
+            noBackgroundColor={true}
+            onClick={async () => {
+              await showUpdateGroupMembersByConvoId(selectedConvoKey);
             }}
-          >
-            {window.i18n('removeModerators')}
-          </StyledGroupSettingsItem>
-        </>
-      )}
+          />
+        )}
 
-      {showUpdateGroupMembersButton && (
-        <StyledGroupSettingsItem
-          className="right-panel-item"
-          role="button"
-          onClick={async () => {
-            await showUpdateGroupMembersByConvoId(selectedConvoKey);
-          }}
-        >
-          {window.i18n('groupMembers')}
-        </StyledGroupSettingsItem>
-      )}
-
-      {hasDisappearingMessages && (
-        /* TODO Move ButtonGroup around all settings items */
-        <PanelButtonGroup style={{ margin: '0 var(--margins-lg)' }}>
+        {hasDisappearingMessages && (
           <PanelIconButton
             iconType={'timer50'}
             text={window.i18n('disappearingMessages')}
@@ -360,8 +336,8 @@ export const OverlayRightPanelSettings = () => {
               dispatch(setRightOverlayMode({ type: 'disappearing_messages', params: null }));
             }}
           />
-        </PanelButtonGroup>
-      )}
+        )}
+      </PanelButtonGroup>
 
       <MediaGallery documents={documents} media={media} />
       {isGroup && (
