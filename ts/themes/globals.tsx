@@ -83,6 +83,12 @@ export type ThemeGlobals = {
   /* Also used for FileDropZone */
   /* Used for Quote References Not Found */
   '--message-link-preview-background-color': string;
+
+  /* Right Panel */
+  '--right-panel-width': string;
+  '--right-panel-height': string;
+  '--right-panel-attachment-width': string;
+  '--right-panel-attachment-height': string;
 };
 
 // These are only set once in the global style (at root).
@@ -149,6 +155,11 @@ export const THEME_GLOBALS: ThemeGlobals = {
   '--avatar-border-color': 'var(--transparent-color)',
 
   '--message-link-preview-background-color': `rgba(${hexColorToRGB(COLORS.BLACK)}, 0.06)`,
+
+  '--right-panel-width': '-webkit-fill-available',
+  '--right-panel-height': '100%',
+  '--right-panel-attachment-width': '350px',
+  '--right-panel-attachment-height': '350px',
 };
 
 // These should only be needed for the global style (at root).

@@ -99,6 +99,11 @@
   flex-direction: column;
   position: relative;
   outline: none;
+  height: inherit;
+
+  &-left {
+    flex-grow: 1;
+  }
 
   .conversation-messages {
     display: flex;
