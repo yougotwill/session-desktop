@@ -17,15 +17,13 @@ import {
 import { StateType } from '../../state/reducer';
 import {
   getQuotedMessageToAnimate,
-  getSortedMessagesOfSelectedConversation,
-} from '../../state/selectors/conversations';
-import {
   getSelectedConversation,
   getSelectedConversationKey,
-} from '../../state/selectors/selectedConversation';
+  getSortedMessagesOfSelectedConversation,
+} from '../../state/selectors/conversations';
+import { ConversationMessageRequestButtons } from './MessageRequestButtons';
 import { SessionMessagesList } from './SessionMessagesList';
 import { TypingBubble } from './TypingBubble';
-import { ConversationMessageRequestButtons } from './MessageRequestButtons';
 
 export type SessionMessageListProps = {
   messageContainerRef: React.RefObject<HTMLDivElement>;

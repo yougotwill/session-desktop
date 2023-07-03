@@ -69,7 +69,8 @@ async function insertContactFromDBIntoWrapperAndRefresh(id: string): Promise<voi
     dbProfileKey,
     dbProfileUrl,
     priority,
-    expirationTimerSeconds,
+    dbCreatedAtSeconds: 0, // just give 0, now() will be used internally by the wrapper if the contact does not exist yet.
+    expirationTimerSeconds, //FIXME WILL add expirationMode here
   });
   try {
     window.log.debug('inserting into contact wrapper: ', JSON.stringify(wrapperContact));

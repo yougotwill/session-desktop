@@ -16,14 +16,9 @@ import { StateType } from '../reducer';
 import { LightBoxOptions } from '../../components/conversation/SessionConversation';
 import { ReplyingToMessageProps } from '../../components/conversation/composition/CompositionBox';
 import { MessageAttachmentSelectorProps } from '../../components/conversation/message/message-content/MessageAttachment';
-import { MessageAuthorSelectorProps } from '../../components/conversation/message/message-content/MessageAuthorText';
-import { MessageAvatarSelectorProps } from '../../components/conversation/message/message-content/MessageAvatar';
 import { MessageContentSelectorProps } from '../../components/conversation/message/message-content/MessageContent';
 import { MessageContentWithStatusSelectorProps } from '../../components/conversation/message/message-content/MessageContentWithStatus';
 import { MessageContextMenuSelectorProps } from '../../components/conversation/message/message-content/MessageContextMenu';
-import { MessageLinkPreviewSelectorProps } from '../../components/conversation/message/message-content/MessageLinkPreview';
-import { MessageQuoteSelectorProps } from '../../components/conversation/message/message-content/MessageQuote';
-import { MessageStatusSelectorProps } from '../../components/conversation/message/message-content/MessageStatus';
 import { MessageTextSelectorProps } from '../../components/conversation/message/message-content/MessageText';
 import { GenericReadableMessageSelectorProps } from '../../components/conversation/message/message-item/GenericReadableMessage';
 import { hasValidIncomingRequestValues } from '../../models/conversation';
@@ -39,23 +34,26 @@ import { BlockedNumberController } from '../../util';
 import { Storage } from '../../util/storage';
 import { getIntl } from './user';
 
-import { filter, isEmpty, isNumber, pick, sortBy } from 'lodash';
-import { useSelector } from 'react-redux';
+import { filter, isEmpty, isNumber, isString, pick, sortBy } from 'lodash';
 import { MessageReactsSelectorProps } from '../../components/conversation/message/message-content/MessageReactions';
-import { getSelectedConversation, getSelectedConversationKey } from './selectedConversation';
-import { getModeratorsOutsideRedux } from './sogsRoomInfo';
+import {
+  getCanWrite,
+  getModerators,
+  getModeratorsOutsideRedux,
+  getSubscriberCount,
+} from './sogsRoomInfo';
+import { useSelector } from 'react-redux';
+import { PubKey } from '../../session/types';
+import { DisappearingMessageConversationSetting } from '../../util/expiringMessages';
 
 export const getConversations = (state: StateType): ConversationsStateType => state.conversations;
 
-export const getConversationLookup = createSelector(
-  getConversations,
-  (state: ConversationsStateType): ConversationLookupType => {
-    return state.conversationLookup;
-  }
-);
+export const getConversationLookup = (state: StateType): ConversationLookupType => {
+  return state.conversations.conversationLookup;
+};
 
 export const getConversationsCount = createSelector(getConversationLookup, (state): number => {
-  return Object.values(state).length;
+  return Object.keys(state).length;
 });
 
 export const getOurPrimaryConversation = createSelector(
@@ -64,10 +62,9 @@ export const getOurPrimaryConversation = createSelector(
     state.conversationLookup[Storage.get('primaryDevicePubKey') as string]
 );
 
-const getMessagesOfSelectedConversation = createSelector(
-  getConversations,
-  (state: ConversationsStateType): Array<MessageModelPropsWithoutConvoProps> => state.messages
-);
+const getMessagesOfSelectedConversation = (
+  state: StateType
+): Array<MessageModelPropsWithoutConvoProps> => state.conversations.messages;
 
 // Redux recommends to do filtered and deriving state in a selector rather than ourself
 export const getSortedMessagesOfSelectedConversation = createSelector(
@@ -98,12 +95,9 @@ export const hasSelectedConversationIncomingMessages = createSelector(
   }
 );
 
-export const getFirstUnreadMessageId = createSelector(
-  getConversations,
-  (state: ConversationsStateType): string | undefined => {
-    return state.firstUnreadMessageId;
-  }
-);
+export const getFirstUnreadMessageId = (state: StateType): string | undefined => {
+  return state.conversations.firstUnreadMessageId;
+};
 
 export type MessagePropsType =
   | 'group-notification'
@@ -263,52 +257,70 @@ export const _getConversationComparator = (testingi18n?: LocalizerType) => {
 
 export const getConversationComparator = createSelector(getIntl, _getConversationComparator);
 
-// tslint:disable-next-line: cyclomatic-complexity
-const _getLeftPaneLists = (
+const _getLeftPaneConversationIds = (
   sortedConversations: Array<ReduxConversationType>
-): {
-  conversations: Array<ReduxConversationType>;
-  contacts: Array<ReduxConversationType>;
-  globalUnreadCount: number;
-} => {
-  const conversations: Array<ReduxConversationType> = [];
-  const directConversations: Array<ReduxConversationType> = [];
+): Array<string> => {
+  return sortedConversations
+    .filter(conversation => {
+      if (conversation.isBlocked) {
+        return false;
+      }
 
+      // a non private conversation is always returned here
+      if (!conversation.isPrivate) {
+        return true;
+      }
+
+      // a private conversation not approved is a message request. Exclude them from the left pane lists
+      if (!conversation.isApproved) {
+        return false;
+      }
+
+      // a hidden contact conversation is only visible from the contact list, not from the global conversation list
+      if (conversation.priority && conversation.priority <= CONVERSATION_PRIORITIES.default) {
+        return false;
+      }
+
+      return true;
+    })
+    .map(m => m.id);
+};
+
+// tslint:disable-next-line: cyclomatic-complexity
+const _getPrivateFriendsConversations = (
+  sortedConversations: Array<ReduxConversationType>
+): Array<ReduxConversationType> => {
+  return sortedConversations.filter(convo => {
+    return (
+      convo.isPrivate &&
+      !convo.isMe &&
+      !convo.isBlocked &&
+      convo.isApproved &&
+      convo.didApproveMe &&
+      convo.activeAt !== undefined
+    );
+  });
+};
+
+// tslint:disable-next-line: cyclomatic-complexity
+const _getGlobalUnreadCount = (sortedConversations: Array<ReduxConversationType>): number => {
   let globalUnreadCount = 0;
   for (const conversation of sortedConversations) {
     // Blocked conversation are now only visible from the settings, not in the conversation list, so don't add it neither to the contacts list nor the conversation list
     if (conversation.isBlocked) {
       continue;
     }
-    // a contact is a private conversation that is approved by us and active
-    if (
-      conversation.activeAt !== undefined &&
-      conversation.type === ConversationTypeEnum.PRIVATE &&
-      conversation.isApproved
-      // we want to keep the hidden conversation in the direct contact list, so we don't filter based on priority
-    ) {
-      directConversations.push(conversation);
-    }
 
-    // a private conversation not approved is a message request. Exclude them from the left pane lists
+    // a private conversation not approved is a message request. Exclude them from the unread count
     if (conversation.isPrivate && !conversation.isApproved) {
       continue;
     }
 
-    const isPrivateButHidden =
+    // a hidden contact conversation is only visible from the contact list, not from the global conversation list
+    if (
       conversation.isPrivate &&
       conversation.priority &&
-      conversation.priority <= CONVERSATION_PRIORITIES.default;
-
-    /**
-     * When getting a contact from a linked device, before he sent a message, the approved field is false, but a createdAt is used as activeAt
-     */
-    const isPrivateUnapprovedButActive =
-      conversation.isPrivate && !conversation.isApproved && !conversation.activeAt;
-
-    if (
-      isPrivateUnapprovedButActive ||
-      isPrivateButHidden // a hidden contact conversation is only visible from the contact list, not from the global conversation list
+      conversation.priority <= CONVERSATION_PRIORITIES.default
     ) {
       // dont increase unread counter, don't push to convo list.
       continue;
@@ -323,21 +335,18 @@ const _getLeftPaneLists = (
     ) {
       globalUnreadCount += conversation.unreadCount;
     }
-
-    conversations.push(conversation);
   }
 
-  return {
-    conversations,
-    contacts: directConversations,
-    globalUnreadCount,
-  };
+  return globalUnreadCount;
+};
+
+export const getSelectedConversationKey = (state: StateType): string | undefined => {
+  return state.conversations.selectedConversation;
 };
 
 export const _getSortedConversations = (
   lookup: ConversationLookupType,
-  comparator: (left: ReduxConversationType, right: ReduxConversationType) => number,
-  selectedConversation?: string
+  comparator: (left: ReduxConversationType, right: ReduxConversationType) => number
 ): Array<ReduxConversationType> => {
   const values = Object.values(lookup);
   const sorted = values.sort(comparator);
@@ -352,11 +361,9 @@ export const _getSortedConversations = (
     }
 
     const isBlocked = BlockedNumberController.isBlocked(conversation.id);
-    const isSelected = selectedConversation === conversation.id;
 
     sortedConversations.push({
       ...conversation,
-      isSelected: isSelected || undefined,
       isBlocked: isBlocked || undefined,
     });
   }
@@ -398,6 +405,14 @@ export const getConversationRequests = createSelector(
   _getConversationRequests
 );
 
+export const getConversationRequestsIds = createSelector(getConversationRequests, requests =>
+  requests.map(m => m.id)
+);
+
+export const hasConversationRequests = (state: StateType) => {
+  return !!getConversationRequests(state).length;
+};
+
 const _getUnreadConversationRequests = (
   sortedConversationRequests: Array<ReduxConversationType>
 ): Array<ReduxConversationType> => {
@@ -411,21 +426,6 @@ export const getUnreadConversationRequests = createSelector(
   _getUnreadConversationRequests
 );
 
-const _getPrivateContactsPubkeys = (
-  sortedConversations: Array<ReduxConversationType>
-): Array<string> => {
-  return filter(sortedConversations, conversation => {
-    return !!(
-      conversation.isPrivate &&
-      !conversation.isBlocked &&
-      !conversation.isMe &&
-      conversation.didApproveMe &&
-      conversation.isApproved &&
-      conversation.activeAt
-    );
-  }).map(convo => convo.id);
-};
-
 /**
  * Returns all the conversation ids of private conversations which are
  * - private
@@ -434,20 +434,16 @@ const _getPrivateContactsPubkeys = (
  * - approved (or message requests are disabled)
  * - active_at is set to something truthy
  */
-export const getPrivateContactsPubkeys = createSelector(
+
+export const getLeftPaneConversationIds = createSelector(
   getSortedConversations,
-  _getPrivateContactsPubkeys
+  _getLeftPaneConversationIds
 );
 
-export const getLeftPaneLists = createSelector(getSortedConversations, _getLeftPaneLists);
+const getDirectContacts = createSelector(getSortedConversations, _getPrivateFriendsConversations);
 
-export const getDirectContacts = createSelector(
-  getLeftPaneLists,
-  (state: {
-    conversations: Array<ReduxConversationType>;
-    contacts: Array<ReduxConversationType>;
-    globalUnreadCount: number;
-  }) => state.contacts
+export const getPrivateContactsPubkeys = createSelector(getDirectContacts, state =>
+  state.map(m => m.id)
 );
 
 export const getDirectContactsCount = createSelector(
@@ -486,80 +482,52 @@ export const getDirectContactsByName = createSelector(
   }
 );
 
-export const getGlobalUnreadMessageCount = createSelector(getLeftPaneLists, (state): number => {
-  return state.globalUnreadCount;
-});
-
-export const isMessageDetailView = createSelector(
-  getConversations,
-  (state: ConversationsStateType): boolean => state.messageDetailProps !== undefined
+export const getGlobalUnreadMessageCount = createSelector(
+  getSortedConversations,
+  _getGlobalUnreadCount
 );
 
-export const getMessageDetailsViewProps = createSelector(
-  getConversations,
-  (state: ConversationsStateType): MessagePropsDetails | undefined => state.messageDetailProps
-);
+export const isMessageDetailView = (state: StateType): boolean =>
+  state.conversations.messageDetailProps !== undefined;
 
-export const isRightPanelShowing = createSelector(
-  getConversations,
-  (state: ConversationsStateType): boolean => state.showRightPanel
-);
+export const getMessageDetailsViewProps = (state: StateType): MessagePropsDetails | undefined =>
+  state.conversations.messageDetailProps;
 
-export const isMessageSelectionMode = createSelector(
-  getConversations,
-  (state: ConversationsStateType): boolean => Boolean(state.selectedMessageIds.length > 0)
-);
+export const isRightPanelShowing = (state: StateType): boolean =>
+  state.conversations.showRightPanel;
 
-export const getSelectedMessageIds = createSelector(
-  getConversations,
-  (state: ConversationsStateType): Array<string> => state.selectedMessageIds
-);
+export const isMessageSelectionMode = (state: StateType): boolean =>
+  state.conversations.selectedMessageIds.length > 0;
 
-export const getIsMessageSelectionMode = createSelector(
-  getSelectedMessageIds,
-  (state: Array<string>): boolean => Boolean(state.length)
-);
+export const getSelectedMessageIds = (state: StateType): Array<string> =>
+  state.conversations.selectedMessageIds;
 
-export const getLightBoxOptions = createSelector(
-  getConversations,
-  (state: ConversationsStateType): LightBoxOptions | undefined => state.lightBox
-);
+export const getIsMessageSelectionMode = (state: StateType): boolean =>
+  Boolean(getSelectedMessageIds(state).length);
 
-export const getQuotedMessage = createSelector(
-  getConversations,
-  (state: ConversationsStateType): ReplyingToMessageProps | undefined => state.quotedMessage
-);
+export const getLightBoxOptions = (state: StateType): LightBoxOptions | undefined =>
+  state.conversations.lightBox;
 
-export const areMoreMessagesBeingFetched = createSelector(
-  getConversations,
-  (state: ConversationsStateType): boolean => state.areMoreMessagesBeingFetched || false
-);
+export const getQuotedMessage = (state: StateType): ReplyingToMessageProps | undefined =>
+  state.conversations.quotedMessage;
 
-export const getShowScrollButton = createSelector(
-  getConversations,
-  (state: ConversationsStateType): boolean => state.showScrollButton || false
-);
+export const areMoreMessagesBeingFetched = (state: StateType): boolean =>
+  state.conversations.areMoreMessagesBeingFetched || false;
 
-export const getQuotedMessageToAnimate = createSelector(
-  getConversations,
-  (state: ConversationsStateType): string | undefined => state.animateQuotedMessageId || undefined
-);
+export const getShowScrollButton = (state: StateType): boolean =>
+  state.conversations.showScrollButton || false;
 
-export const getShouldHighlightMessage = createSelector(
-  getConversations,
-  (state: ConversationsStateType): boolean =>
-    Boolean(state.animateQuotedMessageId && state.shouldHighlightMessage)
-);
+export const getQuotedMessageToAnimate = (state: StateType): string | undefined =>
+  state.conversations.animateQuotedMessageId || undefined;
 
-export const getNextMessageToPlayId = createSelector(
-  getConversations,
-  (state: ConversationsStateType): string | undefined => state.nextMessageToPlayId || undefined
-);
+export const getShouldHighlightMessage = (state: StateType): boolean =>
+  Boolean(state.conversations.animateQuotedMessageId && state.conversations.shouldHighlightMessage);
 
-export const getMentionsInput = createSelector(
-  getConversations,
-  (state: ConversationsStateType): MentionsMembersType => state.mentionMembers
-);
+export const getNextMessageToPlayId = (state: StateType): string | undefined =>
+  state.conversations.nextMessageToPlayId || undefined;
+
+export const getMentionsInput = (state: StateType): MentionsMembersType =>
+  state.conversations.mentionMembers;
 
 /// Those calls are just related to ordering messages in the redux store.
 
@@ -622,12 +590,9 @@ function sortMessages(
  * This returns the most recent message id in the database. This is not the most recent message shown,
  * but the most recent one, which could still not be loaded.
  */
-export const getMostRecentMessageId = createSelector(
-  getConversations,
-  (state: ConversationsStateType): string | null => {
-    return state.mostRecentMessageId;
-  }
-);
+export const getMostRecentMessageId = (state: StateType): string | null => {
+  return state.conversations.mostRecentMessageId;
+};
 
 export const getOldestMessageId = createSelector(
   getSortedMessagesOfSelectedConversation,
@@ -675,20 +640,33 @@ export const isFirstUnreadMessageIdAbove = createSelector(
   }
 );
 
-const getMessageId = (_whatever: any, id: string) => id;
+const getMessageId = (_whatever: any, id: string | undefined) => id;
+
+/**
+ * A lot of our UI changes on the main panel need to happen quickly (composition box).
+ */
+export const getSelectedConversation = createSelector(
+  getConversationLookup,
+  getSelectedConversationKey,
+  (lookup, selectedConvo) => {
+    return selectedConvo ? lookup[selectedConvo] : undefined;
+  }
+);
 
 // tslint:disable: cyclomatic-complexity
 
 export const getMessagePropsByMessageId = createSelector(
   getSortedMessagesOfSelectedConversation,
-  getConversationLookup,
+  getSelectedConversation,
   getMessageId,
-
   (
     messages: Array<SortedMessageModelProps>,
-    conversations,
+    selectedConvo,
     id
   ): MessageModelPropsWithConvoProps | undefined => {
+    if (!id) {
+      return undefined;
+    }
     const foundMessageProps: SortedMessageModelProps | undefined = messages?.find(
       m => m?.propsForMessage?.id === id
     );
@@ -698,27 +676,20 @@ export const getMessagePropsByMessageId = createSelector(
     }
     const sender = foundMessageProps?.propsForMessage?.sender;
 
-    // foundMessageConversation is the conversation this message is
-    const foundMessageConversation = conversations[foundMessageProps.propsForMessage.convoId];
-    if (!foundMessageConversation || !sender) {
-      return undefined;
-    }
-
-    const foundSenderConversation = conversations[sender];
-    if (!foundSenderConversation) {
+    // we can only show messages when the convo is selected.
+    if (!selectedConvo || !sender) {
       return undefined;
     }
 
     const ourPubkey = UserUtils.getOurPubKeyStrFromCache();
-    const isGroup = !foundMessageConversation.isPrivate;
-    const isPublic = foundMessageConversation.isPublic;
+    const isGroup = !selectedConvo.isPrivate;
+    const isPublic = selectedConvo.isPublic;
 
-    const groupAdmins = (isGroup && foundMessageConversation.groupAdmins) || [];
+    const groupAdmins = (isGroup && selectedConvo.groupAdmins) || [];
     const weAreAdmin = groupAdmins.includes(ourPubkey) || false;
 
     const weAreModerator =
-      (isPublic && getModeratorsOutsideRedux(foundMessageConversation.id).includes(ourPubkey)) ||
-      false;
+      (isPublic && getModeratorsOutsideRedux(selectedConvo.id).includes(ourPubkey)) || false;
     // A message is deletable if
     // either we sent it,
     // or the convo is not a public one (in this case, we will only be able to delete for us)
@@ -733,63 +704,26 @@ export const getMessagePropsByMessageId = createSelector(
       sender === ourPubkey || (isPublic && (weAreAdmin || weAreModerator)) || false;
 
     const isSenderAdmin = groupAdmins.includes(sender);
-    const senderIsUs = sender === ourPubkey;
-
-    const authorName =
-      foundSenderConversation.nickname || foundSenderConversation.displayNameInProfile || null;
-    const authorProfileName = senderIsUs
-      ? window.i18n('you')
-      : foundSenderConversation.nickname ||
-        foundSenderConversation.displayNameInProfile ||
-        window.i18n('anonymous');
 
     const messageProps: MessageModelPropsWithConvoProps = {
       ...foundMessageProps,
       propsForMessage: {
         ...foundMessageProps.propsForMessage,
-        isBlocked: !!foundMessageConversation.isBlocked,
+        isBlocked: !!selectedConvo.isBlocked,
         isPublic: !!isPublic,
-        isOpenGroupV2: !!isPublic,
         isSenderAdmin,
         isDeletable,
         isDeletableForEveryone,
         weAreAdmin,
-        conversationType: foundMessageConversation.type,
+        conversationType: selectedConvo.type,
         sender,
-        authorAvatarPath: foundSenderConversation.avatarPath || null,
-        isKickedFromGroup: foundMessageConversation.isKickedFromGroup || false,
-        authorProfileName: authorProfileName || 'Unknown',
-        authorName,
+        isKickedFromGroup: selectedConvo.isKickedFromGroup || false,
       },
     };
 
     return messageProps;
   }
 );
-
-export const getMessageAvatarProps = createSelector(getMessagePropsByMessageId, (props):
-  | MessageAvatarSelectorProps
-  | undefined => {
-  if (!props || isEmpty(props)) {
-    return undefined;
-  }
-
-  const messageAvatarProps: MessageAvatarSelectorProps = {
-    lastMessageOfSeries: props.lastMessageOfSeries,
-    ...pick(props.propsForMessage, [
-      'authorAvatarPath',
-      'authorName',
-      'sender',
-      'authorProfileName',
-      'conversationType',
-      'direction',
-      'isPublic',
-      'isSenderAdmin',
-    ]),
-  };
-
-  return messageAvatarProps;
-});
 
 export const getMessageReactsProps = createSelector(getMessagePropsByMessageId, (props):
   | MessageReactsSelectorProps
@@ -801,7 +735,6 @@ export const getMessageReactsProps = createSelector(getMessagePropsByMessageId, 
   const msgProps: MessageReactsSelectorProps = pick(props.propsForMessage, [
     'convoId',
     'conversationType',
-    'isPublic',
     'reacts',
     'serverId',
   ]);
@@ -826,46 +759,6 @@ export const getMessageReactsProps = createSelector(getMessagePropsByMessageId, 
   return msgProps;
 });
 
-export const getMessageLinkPreviewProps = createSelector(getMessagePropsByMessageId, (props):
-  | MessageLinkPreviewSelectorProps
-  | undefined => {
-  if (!props || isEmpty(props)) {
-    return undefined;
-  }
-
-  const msgProps: MessageLinkPreviewSelectorProps = pick(props.propsForMessage, [
-    'direction',
-    'attachments',
-    'previews',
-  ]);
-
-  return msgProps;
-});
-
-export const getMessageQuoteProps = createSelector(getMessagePropsByMessageId, (props):
-  | MessageQuoteSelectorProps
-  | undefined => {
-  if (!props || isEmpty(props)) {
-    return undefined;
-  }
-
-  const msgProps: MessageQuoteSelectorProps = pick(props.propsForMessage, ['direction', 'quote']);
-
-  return msgProps;
-});
-
-export const getMessageStatusProps = createSelector(getMessagePropsByMessageId, (props):
-  | MessageStatusSelectorProps
-  | undefined => {
-  if (!props || isEmpty(props)) {
-    return undefined;
-  }
-
-  const msgProps: MessageStatusSelectorProps = pick(props.propsForMessage, ['direction', 'status']);
-
-  return msgProps;
-});
-
 export const getMessageTextProps = createSelector(getMessagePropsByMessageId, (props):
   | MessageTextSelectorProps
   | undefined => {
@@ -884,11 +777,10 @@ export const getMessageTextProps = createSelector(getMessagePropsByMessageId, (p
   return msgProps;
 });
 
-export const useMessageIsDeleted = (messageId: string): boolean => {
-  const props = useSelector((state: StateType) => getMessagePropsByMessageId(state, messageId));
-  return props?.propsForMessage.isDeleted || false;
-};
-
+/**
+ * TODO probably not something which should be memoized with createSelector as we rememoize it for each message (and override the previous one). Not sure what is the right way to do a lookup. But maybe something like having the messages as a record<id, message> and do a simple lookup to grab the details.
+ * And the the sorting would be done in a memoized selector
+ */
 export const getMessageContextMenuProps = createSelector(getMessagePropsByMessageId, (props):
   | MessageContextMenuSelectorProps
   | undefined => {
@@ -899,60 +791,18 @@ export const getMessageContextMenuProps = createSelector(getMessagePropsByMessag
   const msgProps: MessageContextMenuSelectorProps = pick(props.propsForMessage, [
     'attachments',
     'sender',
-    'convoId',
     'direction',
     'status',
     'isDeletable',
-    'isPublic',
-    'isOpenGroupV2',
-    'weAreAdmin',
     'isSenderAdmin',
     'text',
     'serverTimestamp',
     'timestamp',
-    'isBlocked',
     'isDeletableForEveryone',
   ]);
 
   return msgProps;
 });
-
-export const getMessageAuthorProps = createSelector(getMessagePropsByMessageId, (props):
-  | MessageAuthorSelectorProps
-  | undefined => {
-  if (!props || isEmpty(props)) {
-    return undefined;
-  }
-
-  const msgProps: MessageAuthorSelectorProps = {
-    firstMessageOfSeries: props.firstMessageOfSeries,
-    ...pick(props.propsForMessage, ['authorName', 'sender', 'authorProfileName', 'direction']),
-  };
-
-  return msgProps;
-});
-
-export const getMessageIsDeletable = createSelector(
-  getMessagePropsByMessageId,
-  (props): boolean => {
-    if (!props || isEmpty(props)) {
-      return false;
-    }
-
-    return props.propsForMessage.isDeletable;
-  }
-);
-
-export const getMessageIsDeletableForEveryone = createSelector(
-  getMessagePropsByMessageId,
-  (props): boolean => {
-    if (!props || isEmpty(props)) {
-      return false;
-    }
-
-    return props.propsForMessage.isDeletableForEveryone;
-  }
-);
 
 export const getMessageAttachmentProps = createSelector(getMessagePropsByMessageId, (props):
   | MessageAttachmentSelectorProps
@@ -1071,23 +921,349 @@ export const getGenericReadableMessageSelectorProps = createSelector(
   }
 );
 
-export const getOldTopMessageId = createSelector(
-  getConversations,
-  (state: ConversationsStateType): string | null => state.oldTopMessageId || null
-);
+export const getOldTopMessageId = (state: StateType): string | null =>
+  state.conversations.oldTopMessageId || null;
 
-// TODOLATER get rid of all the unneeded createSelector calls
+export const getOldBottomMessageId = (state: StateType): string | null =>
+  state.conversations.oldBottomMessageId || null;
 
-export const getOldBottomMessageId = createSelector(
-  getConversations,
-  (state: ConversationsStateType): string | null => state.oldBottomMessageId || null
-);
-
-export const getIsSelectedConvoInitialLoadingInProgress = createSelector(
-  getSelectedConversation,
-  (convo: ReduxConversationType | undefined): boolean => Boolean(convo?.isInitialFetchingInProgress)
-);
+export const getIsSelectedConvoInitialLoadingInProgress = (state: StateType): boolean =>
+  Boolean(getSelectedConversation(state)?.isInitialFetchingInProgress);
 
 export function getCurrentlySelectedConversationOutsideRedux() {
   return window?.inboxStore?.getState().conversations.selectedConversation as string | undefined;
+}
+
+/**
+ * Selected conversation selectors & hooks
+ *
+ */
+
+/**
+ * Returns the formatted text for notification setting.
+ */
+const getCurrentNotificationSettingText = (state: StateType): string | undefined => {
+  if (!state) {
+    return undefined;
+  }
+  const currentNotificationSetting = getSelectedConversation(state)?.currentNotificationSetting;
+  switch (currentNotificationSetting) {
+    case 'all':
+      return window.i18n('notificationForConvo_all');
+    case 'mentions_only':
+      return window.i18n('notificationForConvo_mentions_only');
+    case 'disabled':
+      return window.i18n('notificationForConvo_disabled');
+    default:
+      return window.i18n('notificationForConvo_all');
+  }
+};
+
+const getIsSelectedPrivate = (state: StateType): boolean => {
+  return Boolean(getSelectedConversation(state)?.isPrivate) || false;
+};
+
+const getIsSelectedBlocked = (state: StateType): boolean => {
+  return Boolean(getSelectedConversation(state)?.isBlocked) || false;
+};
+
+const getSelectedIsApproved = (state: StateType): boolean => {
+  return Boolean(getSelectedConversation(state)?.isApproved) || false;
+};
+
+const getSelectedApprovedMe = (state: StateType): boolean => {
+  return Boolean(getSelectedConversation(state)?.didApproveMe) || false;
+};
+
+/**
+ * Returns true if the currently selected conversation is active (has an active_at field > 0)
+ */
+const getIsSelectedActive = (state: StateType): boolean => {
+  return Boolean(getSelectedConversation(state)?.activeAt) || false;
+};
+
+const getIsSelectedNoteToSelf = (state: StateType): boolean => {
+  return getSelectedConversation(state)?.isMe || false;
+};
+
+/**
+ * Returns true if the current conversation selected is a public group and false otherwise.
+ */
+export const getSelectedConversationIsPublic = (state: StateType): boolean => {
+  return Boolean(getSelectedConversation(state)?.isPublic) || false;
+};
+
+/**
+ * Returns true if the current conversation selected can be typed into
+ */
+export function getSelectedCanWrite(state: StateType) {
+  const selectedConvoPubkey = getSelectedConversationKey(state);
+  if (!selectedConvoPubkey) {
+    return false;
+  }
+  const selectedConvo = getSelectedConversation(state);
+  if (!selectedConvo) {
+    return false;
+  }
+  const canWriteSogs = getCanWrite(state, selectedConvoPubkey);
+  const { isBlocked, isKickedFromGroup, left, isPublic } = selectedConvo;
+
+  return !(isBlocked || isKickedFromGroup || left || (isPublic && !canWriteSogs));
+}
+
+/**
+ * Returns true if the current conversation selected is a group conversation.
+ * Returns false if the current conversation selected is not a group conversation, or none are selected
+ */
+const getSelectedConversationIsGroup = (state: StateType): boolean => {
+  const selected = getSelectedConversation(state);
+  if (!selected || !selected.type) {
+    return false;
+  }
+  return selected.type ? isOpenOrClosedGroup(selected.type) : false;
+};
+
+/**
+ * Returns true if the current conversation selected is a closed group and false otherwise.
+ */
+export const isClosedGroupConversation = (state: StateType): boolean => {
+  const selected = getSelectedConversation(state);
+  if (!selected) {
+    return false;
+  }
+  return (
+    (selected.type === ConversationTypeEnum.GROUP && !selected.isPublic) ||
+    selected.type === ConversationTypeEnum.GROUPV3 ||
+    false
+  );
+};
+
+const getGroupMembers = (state: StateType): Array<string> => {
+  const selected = getSelectedConversation(state);
+  if (!selected) {
+    return [];
+  }
+  return selected.members || [];
+};
+
+const getSelectedSubscriberCount = (state: StateType): number | undefined => {
+  const convo = getSelectedConversation(state);
+  if (!convo) {
+    return undefined;
+  }
+  return getSubscriberCount(state, convo.id);
+};
+
+// ============== SELECTORS RELEVANT TO SELECTED/OPENED CONVERSATION ==============
+
+export function useSelectedConversationKey() {
+  return useSelector(getSelectedConversationKey);
+}
+
+export function useSelectedIsGroup() {
+  return useSelector(getSelectedConversationIsGroup);
+}
+
+export function useSelectedIsPublic() {
+  return useSelector(getSelectedConversationIsPublic);
+}
+
+export function useSelectedIsPrivate() {
+  return useSelector(getIsSelectedPrivate);
+}
+
+export function useSelectedIsBlocked() {
+  return useSelector(getIsSelectedBlocked);
+}
+
+export function useSelectedIsApproved() {
+  return useSelector(getSelectedIsApproved);
+}
+
+export function useSelectedApprovedMe() {
+  return useSelector(getSelectedApprovedMe);
+}
+
+/**
+ * Returns true if the given arguments corresponds to a private contact which is approved both sides. i.e. a friend.
+ */
+export function isPrivateAndFriend({
+  approvedMe,
+  isApproved,
+  isPrivate,
+}: {
+  isPrivate: boolean;
+  isApproved: boolean;
+  approvedMe: boolean;
+}) {
+  return isPrivate && isApproved && approvedMe;
+}
+
+/**
+ * Returns true if the selected conversation is private and is approved both sides
+ */
+export function useSelectedIsPrivateFriend() {
+  const isPrivate = useSelectedIsPrivate();
+  const isApproved = useSelectedIsApproved();
+  const approvedMe = useSelectedApprovedMe();
+  return isPrivateAndFriend({ isPrivate, isApproved, approvedMe });
+}
+
+export function useSelectedIsActive() {
+  return useSelector(getIsSelectedActive);
+}
+
+export function useSelectedIsNoteToSelf() {
+  return useSelector(getIsSelectedNoteToSelf);
+}
+
+export function useSelectedMembers() {
+  return useSelector(getGroupMembers);
+}
+
+export function useSelectedSubscriberCount() {
+  return useSelector(getSelectedSubscriberCount);
+}
+
+export function useSelectedNotificationSetting() {
+  return useSelector(getCurrentNotificationSettingText);
+}
+
+export function useSelectedIsKickedFromGroup() {
+  return useSelector(
+    (state: StateType) => Boolean(getSelectedConversation(state)?.isKickedFromGroup) || false
+  );
+}
+
+export function useSelectedExpireTimer(): number | undefined {
+  return useSelector((state: StateType) => getSelectedConversation(state)?.expireTimer);
+}
+
+export function useSelectedExpirationType(): string | undefined {
+  return useSelector((state: StateType) => getSelectedConversation(state)?.expirationType);
+}
+
+export function useSelectedIsLeft() {
+  return useSelector((state: StateType) => Boolean(getSelectedConversation(state)?.left) || false);
+}
+
+export function useSelectedNickname() {
+  return useSelector((state: StateType) => getSelectedConversation(state)?.nickname);
+}
+
+export function useSelectedDisplayNameInProfile() {
+  return useSelector((state: StateType) => getSelectedConversation(state)?.displayNameInProfile);
+}
+
+/**
+ * For a private chat, this returns the (xxxx...xxxx) shortened pubkey
+ * If this is a private chat, but somehow, we have no pubkey, this returns the localized `anonymous` string
+ * Otherwise, this returns the localized `unknown` string
+ */
+export function useSelectedShortenedPubkeyOrFallback() {
+  const isPrivate = useSelectedIsPrivate();
+  const selected = useSelectedConversationKey();
+  if (isPrivate && selected) {
+    return PubKey.shorten(selected);
+  }
+  if (isPrivate) {
+    return window.i18n('anonymous');
+  }
+  return window.i18n('unknown');
+}
+
+/**
+ * That's a very convoluted way to say "nickname or profile name or shortened pubkey or ("Anonymous" or "unknown" depending on the type of conversation).
+ * This also returns the localized "Note to Self" if the conversation is the note to self.
+ */
+export function useSelectedNicknameOrProfileNameOrShortenedPubkey() {
+  const nickname = useSelectedNickname();
+  const profileName = useSelectedDisplayNameInProfile();
+  const shortenedPubkey = useSelectedShortenedPubkeyOrFallback();
+  const isMe = useSelectedIsNoteToSelf();
+  if (isMe) {
+    return window.i18n('noteToSelf');
+  }
+  return nickname || profileName || shortenedPubkey;
+}
+
+export function useSelectedWeAreAdmin() {
+  return useSelector((state: StateType) => getSelectedConversation(state)?.weAreAdmin || false);
+}
+
+export const getSelectedConversationExpirationModes = createSelector(
+  getSelectedConversation,
+  (convo: ReduxConversationType | undefined) => {
+    if (!convo) {
+      return null;
+    }
+    let modes = DisappearingMessageConversationSetting;
+    // TODO legacy messages support will be removed in a future release
+    // TODO remove legacy mode
+    modes = modes.slice(0, -1);
+
+    // Note to Self and Closed Groups only support deleteAfterSend
+    const isClosedGroup = !convo.isPrivate && !convo.isPublic;
+    if (convo?.isMe || isClosedGroup) {
+      modes = [modes[0], modes[2]];
+    }
+
+    const modesWithDisabledState: Record<string, boolean> = {};
+    if (modes && modes.length > 1) {
+      modes.forEach(mode => {
+        modesWithDisabledState[mode] = isClosedGroup ? !convo.weAreAdmin : false;
+      });
+    }
+
+    return modesWithDisabledState;
+  }
+);
+
+// TODO legacy messages support will be removed in a future release
+export const getSelectedConversationExpirationModesWithLegacy = createSelector(
+  getSelectedConversation,
+  (convo: ReduxConversationType | undefined) => {
+    // this just won't happen
+    if (!convo) {
+      return null;
+    }
+    let modes = DisappearingMessageConversationSetting;
+
+    // Note to Self and Closed Groups only support deleteAfterSend and legacy modes
+    const isClosedGroup = !convo.isPrivate && !convo.isPublic;
+    if (convo?.isMe || isClosedGroup) {
+      modes = [modes[0], ...modes.slice(2)];
+    }
+
+    // Legacy mode is the 2nd option in the UI
+    modes = [modes[0], modes[modes.length - 1], ...modes.slice(1, modes.length - 1)];
+
+    // TODO it would be nice to type those with something else that string but it causes a lot of issues
+    const modesWithDisabledState: Record<string, boolean> = {};
+    // The new modes are disabled by default
+    if (modes && modes.length > 1) {
+      modes.forEach(mode => {
+        modesWithDisabledState[mode] = Boolean(
+          (mode !== 'legacy' && mode !== 'off') || (isClosedGroup && !convo.weAreAdmin)
+        );
+      });
+    }
+
+    return modesWithDisabledState;
+  }
+);
+
+/**
+ * Only for communities.
+ * @returns true if the selected convo is a community and we are one of the moderators
+ */
+export function useSelectedWeAreModerator() {
+  // TODO might be something to memoize let's see
+  const isPublic = useSelectedIsPublic();
+  const selectedConvoKey = useSelectedConversationKey();
+  const us = UserUtils.getOurPubKeyStrFromCache();
+  const mods = useSelector((state: StateType) => getModerators(state, selectedConvoKey));
+
+  const weAreModerator = mods.includes(us);
+  return isPublic && isString(selectedConvoKey) && weAreModerator;
 }

@@ -8,11 +8,7 @@ import {
 } from '../../../../../interactions/conversations/unsendingInteractions';
 import { closeMessageDetailsView, closeRightPanel } from '../../../../../state/ducks/conversations';
 import { resetRightOverlayMode, setRightOverlayMode } from '../../../../../state/ducks/section';
-import {
-  getMessageDetailsViewProps,
-  getMessageIsDeletable,
-  getMessageIsDeletableForEveryone,
-} from '../../../../../state/selectors/conversations';
+import { getMessageDetailsViewProps } from '../../../../../state/selectors/conversations';
 import { Flex } from '../../../../basic/Flex';
 import { Header, HeaderTitle, StyledScrollContainer } from '../components';
 // tslint:disable-next-line: no-submodule-imports
@@ -28,6 +24,10 @@ import {
 import { SpacerLG, SpacerMD, SpacerXL } from '../../../../basic/Text';
 import { AttachmentCarousel } from './components/AttachmentCarousel';
 import { getRightOverlayMode } from '../../../../../state/selectors/section';
+import {
+  useMessageIsDeletable,
+  useMessageIsDeletableForEveryone,
+} from '../../../../../state/selectors';
 
 const StyledMessageDetailContainer = styled.div`
   height: calc(100% - 48px);
@@ -54,12 +54,8 @@ const StyledMessageContainer = styled.div`
 export const OverlayMessageInfo = () => {
   const rightOverlayMode = useSelector(getRightOverlayMode);
   const messageDetailProps = useSelector(getMessageDetailsViewProps);
-  const isDeletable = useSelector(state =>
-    getMessageIsDeletable(state as any, messageDetailProps?.messageId || '')
-  );
-  const isDeletableForEveryone = useSelector(state =>
-    getMessageIsDeletableForEveryone(state as any, messageDetailProps?.messageId || '')
-  );
+  const isDeletable = useMessageIsDeletable(messageDetailProps?.messageId);
+  const isDeletableForEveryone = useMessageIsDeletableForEveryone(messageDetailProps?.messageId);
 
   const dispatch = useDispatch();
 
