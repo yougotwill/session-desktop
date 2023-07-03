@@ -43,11 +43,17 @@ const StyledMessageDetail = styled.div`
   padding: var(--margins-sm) var(--margins-lg) var(--margins-lg);
 `;
 
+// NOTE we override the default max-widths when in the detail isDetailView
 const StyledMessageContainer = styled.div`
   // TODO tweak for when there are no attachments
   padding-bottom: var(--margins-lg);
   .module-message {
     pointer-events: none;
+
+    max-width: 100%;
+    @media (min-width: 1200px) {
+      max-width: 100%;
+    }
   }
 `;
 
@@ -168,11 +174,9 @@ export const OverlayMessageInfo = () => {
                   iconType="resend"
                   noBackgroundColor={true}
                   onClick={async () => {
-                    const resendSuccess = await resendMessage(messageId);
-                    if (resendSuccess) {
-                      dispatch(closeRightPanel());
-                      dispatch(resetRightOverlayMode());
-                    }
+                    await resendMessage(messageId);
+                    dispatch(closeRightPanel());
+                    dispatch(resetRightOverlayMode());
                   }}
                   dataTestId="resend-msg-from-details"
                 />
