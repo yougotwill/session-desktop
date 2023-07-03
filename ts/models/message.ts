@@ -755,7 +755,8 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
       if (
         props?.contentType &&
         GoogleChrome.isVideoTypeSupported(props?.contentType) &&
-        !props.duration
+        !props.duration &&
+        props.url
       ) {
         const duration = await getVideoDuration({
           objectUrl: props.url,
@@ -763,7 +764,7 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
         });
         props = { ...props, duration };
       }
-      if (props?.contentType && isAudio(props?.contentType) && !props.duration) {
+      if (props?.contentType && isAudio(props?.contentType) && !props.duration && props.url) {
         const duration = await getAudioDuration({
           objectUrl: props.url,
           contentType: props.contentType,
