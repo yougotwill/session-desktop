@@ -98,7 +98,7 @@ export const showMessageInfoOverlay = async ({
     );
     dispatch(openRightPanel());
   } else {
-    window.log.warn(`Message ${messageId} not found in db`);
+    window.log.warn(`[showMessageInfoOverlay] Message ${messageId} not found in db`);
   }
 };
 
@@ -333,15 +333,13 @@ export const MessageContextMenu = (props: Props) => {
           {(isSent || !isOutgoing) && (
             <Item onClick={onReply}>{window.i18n('replyToMessage')}</Item>
           )}
-          {(!isPublic || isOutgoing) && (
-            <Item
-              onClick={async () => {
-                await showMessageInfoOverlay({ messageId, dispatch });
-              }}
-            >
-              {window.i18n('moreInformation')}
-            </Item>
-          )}
+          <Item
+            onClick={async () => {
+              await showMessageInfoOverlay({ messageId, dispatch });
+            }}
+          >
+            {window.i18n('moreInformation')}
+          </Item>
           {showRetry ? <Item onClick={onRetry}>{window.i18n('resend')}</Item> : null}
           {isDeletable ? (
             <>

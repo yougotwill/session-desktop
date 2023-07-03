@@ -908,7 +908,7 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
       const conversation: ConversationModel | undefined = this.getConversation();
       if (!conversation) {
         window?.log?.info(
-          'cannot retry send message, the corresponding conversation was not found.'
+          'retrySend: cannot retry send message, the corresponding conversation was not found.'
         );
         return;
       }
@@ -926,7 +926,7 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
         };
         const roomInfos = OpenGroupData.getV2OpenGroupRoom(conversation.id);
         if (!roomInfos) {
-          throw new Error('Could not find roomInfos for this conversation');
+          throw new Error('retrySend: Could not find roomInfos for this conversation');
         }
 
         const openGroupMessage = new OpenGroupVisibleMessage(openGroupParams);
@@ -977,7 +977,7 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
       // as they are all polling from the same group swarm pubkey
       if (!conversation.isClosedGroup()) {
         throw new Error(
-          'We should only end up with a closed group here. Anything else is an error'
+          'retrySend: We should only end up with a closed group here. Anything else is an error'
         );
       }
 
