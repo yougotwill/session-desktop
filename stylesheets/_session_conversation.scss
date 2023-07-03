@@ -18,15 +18,16 @@
   }
 }
 
+// TODO move this into the right panel as Styled container component
 .conversation-item__options-pane {
   position: absolute;
-  height: 100%;
+  height: var(--right-panel-height);
   right: 0vw;
 
   transition: transform 0.3s ease-in-out;
   transform: translateX(100%);
   will-change: transform;
-  width: 25vw;
+  width: var(--right-panel-width);
   z-index: 5;
 
   background-color: var(--background-primary-color);

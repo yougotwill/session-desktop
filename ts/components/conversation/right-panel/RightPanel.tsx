@@ -9,43 +9,6 @@ import { OverlayMessageInfo } from './overlay/message-info/OverlayMessageInfo';
 import styled from 'styled-components';
 import { Flex } from '../../basic/Flex';
 
-const ClosableOverlay = () => {
-  const rightOverlayMode = useSelector(getRightOverlayMode);
-  // TODO we can probably use the ReleasedFeatures.isDisappearMessageV2FeatureReleased instead here so we can remove the state.
-  const [showNewDisappearingMessageModes, setShowNewDisappearingMessageModes] = useState(false);
-
-  useEffect(() => {
-    let isCancelled = false;
-    ReleasedFeatures.checkIsDisappearMessageV2FeatureReleased()
-      .then(result => {
-        if (isCancelled) {
-          return;
-        }
-        setShowNewDisappearingMessageModes(result);
-      })
-      .catch(() => {
-        if (isCancelled) {
-          return;
-        }
-      });
-
-    return () => {
-      isCancelled = true;
-    };
-  }, []);
-
-  switch (rightOverlayMode?.type) {
-    case 'disappearing_messages':
-      // TODO legacy messages support will be removed in a future release
-      return <OverlayDisappearingMessages unlockNewModes={showNewDisappearingMessageModes} />;
-    case 'message_info':
-      return <OverlayMessageInfo />;
-    case 'default':
-    default:
-      return <OverlayRightPanelSettings />;
-  }
-};
-
 const StyledRightPanel = styled(Flex)`
   h2 {
     word-break: break-word;
@@ -116,17 +79,54 @@ const StyledRightPanel = styled(Flex)`
         .module-media-grid-item__image,
         .module-media-grid-item {
           height: calc(
-            22vw / 4
-          ); //.right-panel is 22vw and we want three rows with some space so divide it by 4
+            var(--right-panel-width) / 4
+          ); //.right-panel is var(--right-panel-width) and we want three rows with some space so divide it by 4
           width: calc(
-            22vw / 4
-          ); //.right-panel is 22vw and we want three rows with some space so divide it by 4
+            var(--right-panel-width) / 4
+          ); //.right-panel is var(--right-panel-width) and we want three rows with some space so divide it by 4
           margin: auto;
         }
       }
     }
   }
 `;
+
+const ClosableOverlay = () => {
+  const rightOverlayMode = useSelector(getRightOverlayMode);
+  // TODO we can probably use the ReleasedFeatures.isDisappearMessageV2FeatureReleased instead here so we can remove the state.
+  const [showNewDisappearingMessageModes, setShowNewDisappearingMessageModes] = useState(false);
+
+  useEffect(() => {
+    let isCancelled = false;
+    ReleasedFeatures.checkIsDisappearMessageV2FeatureReleased()
+      .then(result => {
+        if (isCancelled) {
+          return;
+        }
+        setShowNewDisappearingMessageModes(result);
+      })
+      .catch(() => {
+        if (isCancelled) {
+          return;
+        }
+      });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, []);
+
+  switch (rightOverlayMode?.type) {
+    case 'disappearing_messages':
+      // TODO legacy messages support will be removed in a future release
+      return <OverlayDisappearingMessages unlockNewModes={showNewDisappearingMessageModes} />;
+    case 'message_info':
+      return <OverlayMessageInfo />;
+    case 'default':
+    default:
+      return <OverlayRightPanelSettings />;
+  }
+};
 
 export const RightPanel = () => {
   return (

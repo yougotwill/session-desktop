@@ -156,7 +156,7 @@ export const THEME_GLOBALS: ThemeGlobals = {
 
   '--message-link-preview-background-color': `rgba(${hexColorToRGB(COLORS.BLACK)}, 0.06)`,
 
-  '--right-panel-width': '-webkit-fill-available',
+  '--right-panel-width': '420px',
   '--right-panel-height': '100%',
   '--right-panel-attachment-width': '350px',
   '--right-panel-attachment-height': '350px',
