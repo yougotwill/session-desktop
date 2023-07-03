@@ -94,8 +94,8 @@ export const AttachmentCarousel = (props: Props) => {
           alt={getAlt(attachments[visibleIndex])}
           attachment={attachments[visibleIndex]}
           playIconOverlay={isVideo}
-          height={300}
-          width={300}
+          height={'var(--right-panel-attachment-height)'}
+          width={'var(--right-panel-attachment-width)'}
           url={getThumbnailUrl(attachments[visibleIndex])}
           attachmentIndex={visibleIndex}
           softCorners={true}
