@@ -1,11 +1,13 @@
 import React from 'react';
 
 import { useDispatch, useSelector } from 'react-redux';
-import { isMessageSelectionMode } from '../../../state/selectors/conversations';
+import {
+  isMessageSelectionMode,
+  useSelectedConversationKey,
+} from '../../../state/selectors/conversations';
 
 import { openRightPanel } from '../../../state/ducks/conversations';
 
-import { useSelectedConversationKey } from '../../../state/selectors/conversations';
 import { Flex } from '../../basic/Flex';
 import { ConversationHeaderMenu } from '../../menu/ConversationHeaderMenu';
 import { AvatarHeader, CallButton, TripleDotsMenu } from './ConversationHeaderItems';
