@@ -8,6 +8,9 @@ import { useMouse } from 'react-use';
 import { POPUP_WIDTH, ReactionPopup, TipPosition } from './ReactionPopup';
 import { popupXDefault, popupYDefault } from '../message-content/MessageReactions';
 import { isUsAnySogsFromCache } from '../../../../session/apis/open_group_api/sogsv3/knownBlindedkeys';
+import { useSelector } from 'react-redux';
+import { getRightOverlayMode } from '../../../../state/selectors/section';
+import { THEME_GLOBALS } from '../../../../themes/globals';
 
 const StyledReaction = styled.button<{
   selected: boolean;
@@ -75,13 +78,14 @@ export const Reaction = (props: ReactionProps): ReactElement => {
     handlePopupReaction,
     handlePopupClick,
   } = props;
+  const rightOverlayMode = useSelector(getRightOverlayMode);
   const reactionsMap = (reactions && Object.fromEntries(reactions)) || {};
   const senders = reactionsMap[emoji]?.senders || [];
   const count = reactionsMap[emoji]?.count;
   const showCount = count !== undefined && (count > 1 || inGroup);
 
   const reactionRef = useRef<HTMLDivElement>(null);
-  const { docX, elW } = useMouse(reactionRef);
+  let { docX, elW } = useMouse(reactionRef);
 
   const gutterWidth = 380; // TODOLATER make this a variable which can be shared in CSS and JS
   const tooltipMidPoint = POPUP_WIDTH / 2; // px
@@ -115,7 +119,20 @@ export const Reaction = (props: ReactionProps): ReactElement => {
         hasOnClick={Boolean(onClick)}
         onMouseEnter={() => {
           if (inGroup) {
-            const { innerWidth: windowWidth } = window;
+            const { innerWidth } = window;
+            let windowWidth = innerWidth;
+            // if the right panel is open we may need to show a reaction tooltip relative to it
+            if (rightOverlayMode && rightOverlayMode.type === 'message_info') {
+              const rightPanelWidth = Number(THEME_GLOBALS['--right-panel-width'].split('px')[0]);
+
+              // we need to check that the reaction we are hovering over is inside of the right panel and not in the messages list
+              if (docX > windowWidth - rightPanelWidth) {
+                // make the values relative to the right panel
+                docX = docX - windowWidth + rightPanelWidth;
+                windowWidth = rightPanelWidth;
+              }
+            }
+
             if (handlePopupReaction) {
               // overflow on far right means we shift left
               if (docX + elW + tooltipMidPoint > windowWidth) {
