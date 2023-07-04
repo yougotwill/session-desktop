@@ -155,6 +155,7 @@ export const MessageContentWithStatuses = (props: Props) => {
           setPopupReaction={setPopupReaction}
           onPopupClick={handlePopupClick}
           noAvatar={noAvatar}
+          isDetailView={isDetailView}
         />
       )}
     </StyledMessageContentContainer>

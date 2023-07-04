@@ -9,7 +9,12 @@ import { POPUP_WIDTH, ReactionPopup, TipPosition } from './ReactionPopup';
 import { popupXDefault, popupYDefault } from '../message-content/MessageReactions';
 import { isUsAnySogsFromCache } from '../../../../session/apis/open_group_api/sogsv3/knownBlindedkeys';
 
-const StyledReaction = styled.button<{ selected: boolean; inModal: boolean; showCount: boolean }>`
+const StyledReaction = styled.button<{
+  selected: boolean;
+  inModal: boolean;
+  showCount: boolean;
+  hasOnClick?: boolean;
+}>`
   display: flex;
   justify-content: ${props => (props.showCount ? 'flex-start' : 'center')};
   align-items: center;
@@ -28,6 +33,8 @@ const StyledReaction = styled.button<{ selected: boolean; inModal: boolean; show
   span {
     width: 100%;
   }
+
+  ${props => !props.hasOnClick && 'cursor: not-allowed;'}
 `;
 
 const StyledReactionContainer = styled.div<{
@@ -45,7 +52,7 @@ export type ReactionProps = {
   inGroup: boolean;
   handlePopupX: (x: number) => void;
   handlePopupY: (y: number) => void;
-  onClick: (emoji: string) => void;
+  onClick?: (emoji: string) => void;
   popupReaction?: string;
   onSelected?: (emoji: string) => boolean;
   handlePopupReaction?: (emoji: string) => void;
@@ -93,7 +100,9 @@ export const Reaction = (props: ReactionProps): ReactElement => {
   };
 
   const handleReactionClick = () => {
-    onClick(emoji);
+    if (onClick) {
+      onClick(emoji);
+    }
   };
 
   return (
@@ -103,6 +112,7 @@ export const Reaction = (props: ReactionProps): ReactElement => {
         selected={selected()}
         inModal={inModal}
         onClick={handleReactionClick}
+        hasOnClick={Boolean(onClick)}
         onMouseEnter={() => {
           if (inGroup) {
             const { innerWidth: windowWidth } = window;

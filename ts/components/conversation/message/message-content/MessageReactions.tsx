@@ -14,7 +14,11 @@ import { StyledPopupContainer } from '../reactions/ReactionPopup';
 export const popupXDefault = -81;
 export const popupYDefault = -90;
 
-const StyledMessageReactionsContainer = styled(Flex)<{ x: number; y: number; noAvatar: boolean }>`
+const StyledMessageReactionsContainer = styled(Flex)<{
+  x: number;
+  y: number;
+  noAvatar: boolean;
+}>`
   ${StyledPopupContainer} {
     position: absolute;
     top: ${props => `${props.y}px;`};
@@ -142,6 +146,7 @@ type Props = {
   inModal?: boolean;
   onSelected?: (emoji: string) => boolean;
   noAvatar: boolean;
+  isDetailView?: boolean;
 };
 
 export const MessageReactions = (props: Props): ReactElement => {
@@ -155,6 +160,7 @@ export const MessageReactions = (props: Props): ReactElement => {
     inModal = false,
     onSelected,
     noAvatar,
+    isDetailView,
   } = props;
   const [reactions, setReactions] = useState<SortedReactionList>([]);
 
@@ -195,7 +201,7 @@ export const MessageReactions = (props: Props): ReactElement => {
     inGroup,
     handlePopupX: setPopupX,
     handlePopupY: setPopupY,
-    onClick,
+    onClick: !isDetailView ? onClick : undefined,
     popupReaction,
     onSelected,
     handlePopupReaction: setPopupReaction,
