@@ -85,7 +85,7 @@ export const Reaction = (props: ReactionProps): ReactElement => {
   const showCount = count !== undefined && (count > 1 || inGroup);
 
   const reactionRef = useRef<HTMLDivElement>(null);
-  let { docX, elW } = useMouse(reactionRef);
+  const { docX: _docX, elW } = useMouse(reactionRef);
 
   const gutterWidth = 380; // TODOLATER make this a variable which can be shared in CSS and JS
   const tooltipMidPoint = POPUP_WIDTH / 2; // px
@@ -121,6 +121,7 @@ export const Reaction = (props: ReactionProps): ReactElement => {
           if (inGroup) {
             const { innerWidth } = window;
             let windowWidth = innerWidth;
+            let docX = _docX;
             // if the right panel is open we may need to show a reaction tooltip relative to it
             if (rightOverlayMode && rightOverlayMode.type === 'message_info') {
               const rightPanelWidth = Number(THEME_GLOBALS['--right-panel-width'].split('px')[0]);
