@@ -1,12 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import { Image } from '../../../../Image';
 import { isEmpty } from 'lodash';
-import {
-  canDisplayImage,
-  getAlt,
-  getThumbnailUrl,
-  isVideoAttachment,
-} from '../../../../../../types/Attachment';
+import { getAlt, getThumbnailUrl, isVideoAttachment } from '../../../../../../types/Attachment';
 import { showLightboxFromAttachmentProps } from '../../../../message/message-content/MessageAttachment';
 import { SessionIconButton } from '../../../../../icon';
 import { Flex } from '../../../../../basic/Flex';
@@ -85,7 +80,6 @@ export const AttachmentCarousel = (props: Props) => {
     return null;
   }
 
-  const displayImage = canDisplayImage(attachments);
   const isVideo = isVideoAttachment(attachments[visibleIndex]);
 
   const showLightbox = () => {
@@ -96,7 +90,7 @@ export const AttachmentCarousel = (props: Props) => {
     setImageBroken(true);
   }, [setImageBroken]);
 
-  if (!displayImage || imageBroken) {
+  if (imageBroken) {
     return null;
   }
 

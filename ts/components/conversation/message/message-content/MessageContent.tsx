@@ -17,6 +17,7 @@ import { MessageAttachment } from './MessageAttachment';
 import { MessageLinkPreview } from './MessageLinkPreview';
 import { MessageQuote } from './MessageQuote';
 import { MessageText } from './MessageText';
+import { canDisplayImage } from '../../../../types/Attachment';
 
 export type MessageContentSelectorProps = Pick<
   MessageRenderingProps,
@@ -148,11 +149,14 @@ export const MessageContent = (props: Props) => {
     return null;
   }
 
-  const { direction, text, timestamp, serverTimestamp, previews } = contentProps;
+  const { direction, text, timestamp, serverTimestamp, previews, attachments } = contentProps;
 
   const hasContentAfterAttachmentAndQuote = !isEmpty(previews) || !isEmpty(text);
 
   const toolTipTitle = moment(serverTimestamp || timestamp).format('llll');
+
+  const isDetailViewAndSupportsAttachmentCarousel =
+    props.isDetailView && canDisplayImage(attachments);
 
   return (
     <StyledMessageContent
@@ -189,7 +193,7 @@ export const MessageContent = (props: Props) => {
             </StyledMessageOpaqueContent>
           )}
           {!isDeleted &&
-            (props.isDetailView && !imageBroken ? null : (
+            (isDetailViewAndSupportsAttachmentCarousel && !imageBroken ? null : (
               <MessageAttachment
                 messageId={props.messageId}
                 imageBroken={imageBroken}

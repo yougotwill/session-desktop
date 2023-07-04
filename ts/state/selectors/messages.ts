@@ -114,3 +114,7 @@ export const useMessageStatus = (
 ): LastMessageStatusType | undefined => {
   return useMessageIdProps(messageId)?.propsForMessage.status;
 };
+
+export const useMessageText = (messageId: string | undefined): string | undefined => {
+  return useMessageIdProps(messageId)?.propsForMessage.text;
+};

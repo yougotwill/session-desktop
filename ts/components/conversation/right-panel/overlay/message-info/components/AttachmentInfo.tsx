@@ -19,7 +19,6 @@ export const AttachmentInfo = (props: Props) => {
 
   return (
     <Flex container={true} flexDirection="column">
-      {/* TODO Attachment / Carousel */}
       <LabelWithInfo
         label={`${window.i18n('fileId')}:`}
         info={attachment?.id ? String(attachment.id) : window.i18n('notApplicable')}

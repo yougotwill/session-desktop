@@ -27,7 +27,45 @@ import { getRightOverlayMode } from '../../../../../state/selectors/section';
 import {
   useMessageIsDeletable,
   useMessageIsDeletableForEveryone,
+  useMessageQuote,
+  useMessageText,
 } from '../../../../../state/selectors';
+import { canDisplayImage } from '../../../../../types/Attachment';
+
+// NOTE we override the default max-widths when in the detail isDetailView
+const StyledMessageBody = styled.div`
+  padding-bottom: var(--margins-lg);
+  .module-message {
+    pointer-events: none;
+
+    max-width: 100%;
+    @media (min-width: 1200px) {
+      max-width: 100%;
+    }
+  }
+`;
+
+const MessageBody = ({
+  messageId,
+  supportsAttachmentCarousel,
+}: {
+  messageId: string;
+  supportsAttachmentCarousel: boolean;
+}) => {
+  const quote = useMessageQuote(messageId);
+  const text = useMessageText(messageId);
+
+  // NOTE we don't want to render the message body if it's empty and the attachments carousel can render it instead
+  if (supportsAttachmentCarousel && !text && !quote) {
+    return null;
+  }
+
+  return (
+    <StyledMessageBody>
+      <Message messageId={messageId} isDetailView={true} />
+    </StyledMessageBody>
+  );
+};
 
 const StyledMessageDetailContainer = styled.div`
   height: calc(100% - 48px);
@@ -41,20 +79,6 @@ const StyledMessageDetail = styled.div`
   margin-inline-start: auto;
   margin-inline-end: auto;
   padding: var(--margins-sm) var(--margins-lg) var(--margins-lg);
-`;
-
-// NOTE we override the default max-widths when in the detail isDetailView
-const StyledMessageContainer = styled.div`
-  // TODO tweak for when there are no attachments
-  padding-bottom: var(--margins-lg);
-  .module-message {
-    pointer-events: none;
-
-    max-width: 100%;
-    @media (min-width: 1200px) {
-      max-width: 100%;
-    }
-  }
 `;
 
 export const OverlayMessageInfo = () => {
@@ -90,6 +114,7 @@ export const OverlayMessageInfo = () => {
   } = messageDetailProps;
 
   const hasAttachments = attachments && attachments.length > 0;
+  const supportsAttachmentCarousel = canDisplayImage(attachments);
   const hasErrors = errors && errors.length > 0;
 
   const handleChangeAttachment = (changeDirection: 1 | -1) => {
@@ -131,23 +156,28 @@ export const OverlayMessageInfo = () => {
         </Header>
         <StyledMessageDetailContainer>
           <StyledMessageDetail>
-            <StyledMessageContainer>
-              <Message messageId={messageId} isDetailView={true} />
-            </StyledMessageContainer>
+            <MessageBody
+              messageId={messageId}
+              supportsAttachmentCarousel={supportsAttachmentCarousel}
+            />
             {hasAttachments && (
               <>
-                <AttachmentCarousel
-                  messageId={messageId}
-                  attachments={attachments}
-                  visibleIndex={visibleAttachmentIndex}
-                  nextAction={() => {
-                    handleChangeAttachment(1);
-                  }}
-                  previousAction={() => {
-                    handleChangeAttachment(-1);
-                  }}
-                />
-                <SpacerXL />
+                {supportsAttachmentCarousel && (
+                  <>
+                    <AttachmentCarousel
+                      messageId={messageId}
+                      attachments={attachments}
+                      visibleIndex={visibleAttachmentIndex}
+                      nextAction={() => {
+                        handleChangeAttachment(1);
+                      }}
+                      previousAction={() => {
+                        handleChangeAttachment(-1);
+                      }}
+                    />
+                    <SpacerXL />
+                  </>
+                )}
                 <AttachmentInfo attachment={attachments[visibleAttachmentIndex]} />
                 <SpacerMD />
               </>
