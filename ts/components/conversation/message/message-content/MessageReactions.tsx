@@ -204,7 +204,7 @@ export const MessageReactions = (props: Props): ReactElement => {
     onClick: !isDetailView ? onClick : undefined,
     popupReaction,
     onSelected,
-    handlePopupReaction: setPopupReaction,
+    handlePopupReaction: !isDetailView ? setPopupReaction : undefined,
     handlePopupClick: onPopupClick,
   };
 
