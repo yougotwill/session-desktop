@@ -370,7 +370,7 @@ export async function showLeaveGroupByConvoId(conversationId: string, name: stri
     window?.inboxStore?.dispatch(
       updateConfirmModal({
         title: window.i18n('leaveGroup'),
-        message: window.i18n('leaveGroupConrirmationOnlyAdminLegacy', name ? [name] : ['']),
+        message: window.i18n('leaveGroupConfirmationAdmin'),
         onClickOk,
         okText: window.i18n('leave'),
         okTheme: SessionButtonColor.Danger,

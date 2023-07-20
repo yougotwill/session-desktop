@@ -18,12 +18,14 @@ import styled from 'styled-components';
 
 const StyledMessageText = styled(SessionHtmlRenderer)`
   margin-bottom: var(--margins-lg);
+  line-height: 20px;
 `;
 
 const StyledSubMessageText = styled(SessionHtmlRenderer)`
   // Overrides SASS in this one case
   margin-top: 0;
   margin-bottom: var(--margins-md);
+  line-height: 20px;
 `;
 
 export interface SessionConfirmDialogProps {

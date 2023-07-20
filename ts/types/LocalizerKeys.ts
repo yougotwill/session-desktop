@@ -272,7 +272,6 @@ export type LocalizerKeys =
   | 'leaveAndRemoveForEveryone'
   | 'leaveGroupConfirmation'
   | 'leaveGroupConfirmationAdmin'
-  | 'leaveGroupConrirmationOnlyAdminLegacy'
   | 'leaveGroupConfirmationOnlyAdmin'
   | 'leaveGroupConfirmationOnlyAdminWarning'
   | 'leaveGroupFailed'
