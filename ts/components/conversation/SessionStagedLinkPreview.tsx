@@ -52,7 +52,7 @@ export const getPreview = async (
 
   let image;
   if (imageHref && LinkPreviews.isLinkSafeToPreview(imageHref)) {
-    let objectUrl: void | string;
+    let objectUrl: string | null = null;
     try {
       window?.log?.info('insecureNodeFetch => plaintext for getPreview()');
 
