@@ -1,5 +1,5 @@
 import { SignalService } from '../protobuf';
-import loadImage, { CropOptions, LoadImageOptions } from 'blueimp-load-image';
+import loadImage, { LoadImageOptions } from 'blueimp-load-image';
 import { getDecryptedMediaUrl } from '../session/crypto/DecryptedAttachmentsManager';
 import { sendDataExtractionNotification } from '../session/messages/outgoing/controlMessage/DataExtractionNotificationMessage';
 import { AttachmentType, save } from '../types/Attachment';
@@ -187,14 +187,10 @@ export async function autoScale<T extends { contentType: string; blob: Blob }>(
     throw new Error(`GIF is too large, required size is ${maxSize}`);
   }
 
-  const crop: CropOptions = {
-    crop: makeSquare,
-  };
-
   const loadImgOpts: LoadImageOptions = {
     maxWidth: makeSquare ? maxMeasurements?.maxSide : maxWidth,
     maxHeight: makeSquare ? maxMeasurements?.maxSide : maxHeight,
-    ...crop,
+    crop: !!makeSquare,
     orientation: 1,
     aspectRatio: makeSquare ? 1 : undefined,
     canvas: true,

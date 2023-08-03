@@ -116,8 +116,8 @@ export function getContactInfoFromDBValues({
   dbProfileUrl,
   dbProfileKey,
   dbCreatedAtSeconds,
-  expirationTimerSeconds, //FIXME WILL add expirationMode here
-}: {
+}: // expirationTimerSeconds, //TODO add expirationMode here
+{
   id: string;
   dbApproved: boolean;
   dbApprovedMe: boolean;
@@ -139,11 +139,12 @@ export function getContactInfoFromDBValues({
     nickname: dbNickname,
     name: dbName,
     createdAtSeconds: dbCreatedAtSeconds,
-    expirationTimerSeconds:
-      !!expirationTimerSeconds && isFinite(expirationTimerSeconds) && expirationTimerSeconds > 0
-        ? expirationTimerSeconds
-        : 0,
-    expirationMode: 'off', //FIXME WILL add expirationMode here
+    // TODO Disappearing messages support here
+    // expirationTimerSeconds:
+    //   !!expirationTimerSeconds && isFinite(expirationTimerSeconds) && expirationTimerSeconds > 0
+    //     ? expirationTimerSeconds
+    //     : 0,
+    // expirationMode: 'off', //FIXME WILL add expirationMode here
   };
 
   if (
@@ -199,7 +200,7 @@ export function getLegacyGroupInfoFromDBValues({
   priority,
   members: maybeMembers,
   displayNameInProfile,
-  expireTimer,
+  // expireTimer,
   encPubkeyHex,
   encSeckeyHex,
   groupAdmins: maybeAdmins,
@@ -224,7 +225,8 @@ export function getLegacyGroupInfoFromDBValues({
   });
   const legacyGroup: LegacyGroupInfo = {
     pubkeyHex: id,
-    disappearingTimerSeconds: !expireTimer ? 0 : expireTimer, //FIXME WILL add expirationMode here
+    // TODO Disappearing messages support here
+    // disappearingTimerSeconds: !expireTimer ? 0 : expireTimer, //TODO add expirationMode here
     name: displayNameInProfile || '',
     priority: priority || 0,
     members: wrappedMembers,

@@ -1630,7 +1630,8 @@ function updateToSessionSchemaVersion31(currentVersion: number, db: BetterSqlite
       const ourDbProfileUrl = ourConversation.avatarPointer || '';
       const ourDbProfileKey = fromHexToArray(ourConversation.profileKey || '');
       const ourConvoPriority = ourConversation.priority;
-      const ourConvoExpire = ourConversation.expireTimer || 0;
+      // TODO Add disappearing messages support
+      // const ourConvoExpire = ourConversation.expireTimer || 0;
       if (ourDbProfileUrl && !isEmpty(ourDbProfileKey)) {
         userProfileWrapper.setUserInfo(
           ourDbName,
@@ -1638,8 +1639,8 @@ function updateToSessionSchemaVersion31(currentVersion: number, db: BetterSqlite
           {
             url: ourDbProfileUrl,
             key: ourDbProfileKey,
-          },
-          ourConvoExpire
+          }
+          // ourConvoExpire
         );
       }
 

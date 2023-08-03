@@ -34,6 +34,7 @@ export async function decryptProfile(data: ArrayBuffer, key: ArrayBuffer): Promi
             error.name = 'ProfileDecryptError';
             throw error;
           }
+          throw error;
         })
     );
 }

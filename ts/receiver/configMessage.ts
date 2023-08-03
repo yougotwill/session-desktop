@@ -329,18 +329,18 @@ async function handleContactsUpdate(result: IncomingConfResult): Promise<Incomin
         await contactConvo.setDidApproveMe(Boolean(wrapperConvo.approvedMe), false);
         changes = true;
       }
-      // FIXME Will unsure
-      if (wrapperConvo.expirationTimerSeconds !== contactConvo.get('expireTimer')) {
-        await contactConvo.updateExpireTimer({
-          providedExpireTimer: wrapperConvo.expirationTimerSeconds,
-          fromSync: true,
-          providedExpirationType: wrapperConvo.expirationMode,
-          shouldCommit: false,
-          providedChangeTimestamp: result.latestEnvelopeTimestamp,
-          fromConfigMessage: true,
-        });
-        changes = true;
-      }
+      // FIXME TODO we need to handle the expiration timer here
+      // if (wrapperConvo.expirationTimerSeconds !== contactConvo.get('expireTimer')) {
+      //   await contactConvo.updateExpireTimer({
+      //     providedExpireTimer: wrapperConvo.expirationTimerSeconds,
+      //     fromSync: true,
+      //     providedExpirationType: wrapperConvo.expirationMode,
+      //     shouldCommit: false,
+      //     providedChangeTimestamp: result.latestEnvelopeTimestamp,
+      //     fromConfigMessage: true,
+      //   });
+      //   changes = true;
+      // }
 
       // we want to set the active_at to the created_at timestamp if active_at is unset, so that it shows up in our list.
       if (!contactConvo.get('active_at') && wrapperConvo.createdAtSeconds) {
@@ -565,19 +565,19 @@ async function handleLegacyGroupUpdate(latestEnvelopeTimestamp: number) {
       changes = true;
     }
 
-    // FIXME Will unsure
-    if (legacyGroupConvo.get('expireTimer') !== fromWrapper.disappearingTimerSeconds) {
-      await legacyGroupConvo.updateExpireTimer({
-        providedExpireTimer: fromWrapper.disappearingTimerSeconds,
-        shouldCommit: false,
-        fromSync: true,
-        providedChangeTimestamp: latestEnvelopeTimestamp,
-        fromConfigMessage: true,
-        providedExpirationType:
-          fromWrapper.disappearingTimerSeconds === 0 ? 'off' : 'deleteAfterSend',
-      });
-      changes = true;
-    }
+    // TODO We need to update the expire timer for legacy groups
+    // if (legacyGroupConvo.get('expireTimer') !== fromWrapper.disappearingTimerSeconds) {
+    //   await legacyGroupConvo.updateExpireTimer({
+    //     providedExpireTimer: fromWrapper.disappearingTimerSeconds,
+    //     shouldCommit: false,
+    //     fromSync: true,
+    //     providedChangeTimestamp: latestEnvelopeTimestamp,
+    //     fromConfigMessage: true,
+    //     providedExpirationType:
+    //       fromWrapper.disappearingTimerSeconds === 0 ? 'off' : 'deleteAfterSend',
+    //   });
+    //   changes = true;
+    // }
 
     // start polling for this group if we haven't left it yet. The wrapper does not store this info for legacy group so we check from the DB entry instead
     if (!legacyGroupConvo.get('isKickedFromGroup') && !legacyGroupConvo.get('left')) {
