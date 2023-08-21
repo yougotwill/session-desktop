@@ -27,6 +27,7 @@ import {
 import {
   useSelectedConversationKey,
   useSelectedIsBlocked,
+  useSelectedisNoteToSelf,
   useSelectedIsPublic,
   useSelectedWeAreAdmin,
   useSelectedWeAreModerator,
@@ -89,6 +90,7 @@ const StyledEmojiPanelContainer = styled.div<{ x: number; y: number }>`
 
 const DeleteForEveryone = ({ messageId }: { messageId: string }) => {
   const convoId = useSelectedConversationKey();
+  const isMe = useSelectedisNoteToSelf();
   const isDeletableForEveryone = useMessageIsDeletableForEveryone(messageId);
   if (!convoId || !isDeletableForEveryone) {
     return null;
@@ -97,7 +99,9 @@ const DeleteForEveryone = ({ messageId }: { messageId: string }) => {
     void deleteMessagesByIdForEveryone([messageId], convoId);
   };
 
-  const unsendMessageText = window.i18n('deleteForEveryone');
+  const unsendMessageText = isMe
+    ? window.i18n('deleteFromAllMyDevices')
+    : window.i18n('deleteForEveryone');
 
   return <Item onClick={onDeleteForEveryone}>{unsendMessageText}</Item>;
 };

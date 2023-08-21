@@ -99,6 +99,7 @@ export type LocalizerKeys =
   | 'delete'
   | 'messageDeletionForbidden'
   | 'deleteJustForMe'
+  | 'deleteFromAllMyDevices'
   | 'deleteForEveryone'
   | 'deleteMessagesQuestion'
   | 'deleteMessageQuestion'

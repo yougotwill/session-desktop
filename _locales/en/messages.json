@@ -99,6 +99,7 @@
   "delete": "Delete",
   "messageDeletionForbidden": "You don’t have permission to delete others’ messages",
   "deleteJustForMe": "Delete just for me",
+  "deleteFromAllMyDevices": "Delete from all my devices",
   "deleteForEveryone": "Delete for everyone",
   "deleteMessagesQuestion": "Delete $count$ messages?",
   "deleteMessageQuestion": "Delete this message?",

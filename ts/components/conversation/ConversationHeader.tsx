@@ -65,6 +65,7 @@ const SelectionOverlay = () => {
   const selectedConversationKey = useSelectedConversationKey();
   const isPublic = useSelectedIsPublic();
   const dispatch = useDispatch();
+  const isMe = useSelectedisNoteToSelf();
 
   const { i18n } = window;
 
@@ -85,7 +86,9 @@ const SelectionOverlay = () => {
 
   const isOnlyServerDeletable = isPublic;
   const deleteMessageButtonText = i18n('delete');
-  const deleteForEveryoneMessageButtonText = i18n('deleteForEveryone');
+  const deleteForEveryoneMessageButtonText = isMe
+    ? i18n('deleteFromAllMyDevices')
+    : i18n('deleteForEveryone');
 
   return (
     <div className="message-selection-overlay">

@@ -340,6 +340,7 @@ export async function deleteMessagesByIdForEveryone(
   conversationId: string
 ) {
   const conversation = getConversationController().getOrThrow(conversationId);
+  const isMe = conversation.isMe();
   const selectedMessages = compact(
     await Promise.all(messageIds.map(m => Data.getMessageById(m, false)))
   );
@@ -349,11 +350,11 @@ export async function deleteMessagesByIdForEveryone(
 
   window.inboxStore?.dispatch(
     updateConfirmModal({
-      title: window.i18n('deleteForEveryone'),
+      title: isMe ? window.i18n('deleteFromAllMyDevices') : window.i18n('deleteForEveryone'),
       message: moreThanOne
         ? window.i18n('deleteMessagesQuestion', [messageCount.toString()])
         : window.i18n('deleteMessageQuestion'),
-      okText: window.i18n('deleteForEveryone'),
+      okText: isMe ? window.i18n('deleteFromAllMyDevices') : window.i18n('deleteForEveryone'),
       okTheme: SessionButtonColor.Danger,
       onClickOk: async () => {
         await doDeleteSelectedMessages({ selectedMessages, conversation, deleteForEveryone: true });
