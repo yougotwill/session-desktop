@@ -65,11 +65,7 @@ describe('Message Utils', () => {
       const device = TestUtils.generateFakePubKey();
       const message = TestUtils.generateVisibleMessage();
 
-      const rawMessage = await MessageUtils.toRawMessage(
-        device,
-        message,
-        SnodeNamespaces.UserMessages
-      );
+      const rawMessage = await MessageUtils.toRawMessage(device, message, SnodeNamespaces.Default);
 
       const rawBuffer = rawMessage.plainTextBuffer;
       const rawBufferJSON = JSON.stringify(rawBuffer);
@@ -89,11 +85,7 @@ describe('Message Utils', () => {
       const device = TestUtils.generateFakePubKey();
       const message = TestUtils.generateVisibleMessage();
 
-      const rawMessage = await MessageUtils.toRawMessage(
-        device,
-        message,
-        SnodeNamespaces.UserMessages
-      );
+      const rawMessage = await MessageUtils.toRawMessage(device, message, SnodeNamespaces.Default);
       const derivedPubKey = PubKey.from(rawMessage.device);
 
       expect(derivedPubKey).to.not.be.eq(undefined, 'should maintain pubkey');
@@ -109,22 +101,14 @@ describe('Message Utils', () => {
       const chatMessage = TestUtils.generateVisibleMessage();
       const message = new ClosedGroupVisibleMessage({ chatMessage, groupId });
 
-      const rawMessage = await MessageUtils.toRawMessage(
-        device,
-        message,
-        SnodeNamespaces.UserMessages
-      );
+      const rawMessage = await MessageUtils.toRawMessage(device, message, SnodeNamespaces.Default);
       expect(rawMessage.encryption).to.equal(SignalService.Envelope.Type.CLOSED_GROUP_MESSAGE);
     });
 
     it('should set encryption to Fallback on other messages', async () => {
       const device = TestUtils.generateFakePubKey();
       const message = TestUtils.generateVisibleMessage();
-      const rawMessage = await MessageUtils.toRawMessage(
-        device,
-        message,
-        SnodeNamespaces.UserMessages
-      );
+      const rawMessage = await MessageUtils.toRawMessage(device, message, SnodeNamespaces.Default);
 
       expect(rawMessage.encryption).to.equal(SignalService.Envelope.Type.SESSION_MESSAGE);
     });
@@ -142,7 +126,7 @@ describe('Message Utils', () => {
         keypair: TestUtils.generateFakeECKeyPair(),
         expireTimer: 0,
       });
-      const rawMessage = await MessageUtils.toRawMessage(device, msg, SnodeNamespaces.UserMessages);
+      const rawMessage = await MessageUtils.toRawMessage(device, msg, SnodeNamespaces.Default);
       expect(rawMessage.encryption).to.equal(SignalService.Envelope.Type.SESSION_MESSAGE);
     });
 
@@ -154,7 +138,7 @@ describe('Message Utils', () => {
         name: 'df',
         groupId: TestUtils.generateFakePubKey().key,
       });
-      const rawMessage = await MessageUtils.toRawMessage(device, msg, SnodeNamespaces.UserMessages);
+      const rawMessage = await MessageUtils.toRawMessage(device, msg, SnodeNamespaces.Default);
       expect(rawMessage.encryption).to.equal(SignalService.Envelope.Type.CLOSED_GROUP_MESSAGE);
     });
 
@@ -166,7 +150,7 @@ describe('Message Utils', () => {
         addedMembers: [TestUtils.generateFakePubKey().key],
         groupId: TestUtils.generateFakePubKey().key,
       });
-      const rawMessage = await MessageUtils.toRawMessage(device, msg, SnodeNamespaces.UserMessages);
+      const rawMessage = await MessageUtils.toRawMessage(device, msg, SnodeNamespaces.Default);
       expect(rawMessage.encryption).to.equal(SignalService.Envelope.Type.CLOSED_GROUP_MESSAGE);
     });
 
@@ -178,7 +162,7 @@ describe('Message Utils', () => {
         removedMembers: [TestUtils.generateFakePubKey().key],
         groupId: TestUtils.generateFakePubKey().key,
       });
-      const rawMessage = await MessageUtils.toRawMessage(device, msg, SnodeNamespaces.UserMessages);
+      const rawMessage = await MessageUtils.toRawMessage(device, msg, SnodeNamespaces.Default);
       expect(rawMessage.encryption).to.equal(SignalService.Envelope.Type.CLOSED_GROUP_MESSAGE);
     });
 
@@ -199,7 +183,7 @@ describe('Message Utils', () => {
         groupId: TestUtils.generateFakePubKey().key,
         encryptedKeyPairs: fakeWrappers,
       });
-      const rawMessage = await MessageUtils.toRawMessage(device, msg, SnodeNamespaces.UserMessages);
+      const rawMessage = await MessageUtils.toRawMessage(device, msg, SnodeNamespaces.Default);
       expect(rawMessage.encryption).to.equal(SignalService.Envelope.Type.CLOSED_GROUP_MESSAGE);
     });
 
@@ -220,7 +204,7 @@ describe('Message Utils', () => {
         groupId: TestUtils.generateFakePubKey().key,
         encryptedKeyPairs: fakeWrappers,
       });
-      const rawMessage = await MessageUtils.toRawMessage(device, msg, SnodeNamespaces.UserMessages);
+      const rawMessage = await MessageUtils.toRawMessage(device, msg, SnodeNamespaces.Default);
       expect(rawMessage.encryption).to.equal(SignalService.Envelope.Type.SESSION_MESSAGE);
     });
 
@@ -234,7 +218,7 @@ describe('Message Utils', () => {
         displayName: 'displayName',
         contacts: [],
       });
-      const rawMessage = await MessageUtils.toRawMessage(device, msg, SnodeNamespaces.UserMessages);
+      const rawMessage = await MessageUtils.toRawMessage(device, msg, SnodeNamespaces.Default);
       expect(rawMessage.encryption).to.equal(SignalService.Envelope.Type.SESSION_MESSAGE);
     });
   });

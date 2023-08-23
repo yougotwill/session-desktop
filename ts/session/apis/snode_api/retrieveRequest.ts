@@ -34,7 +34,7 @@ async function buildRetrieveRequest(
         max_size: foundMaxSize,
       };
 
-      if (namespace === SnodeNamespaces.ClosedGroupMessage) {
+      if (namespace === SnodeNamespaces.LegacyClosedGroup) {
         if (pubkey === ourPubkey || !pubkey.startsWith('05')) {
           throw new Error(
             'namespace -10 can only be used to retrieve messages from a legacy closed group (prefix 05)'
@@ -56,7 +56,7 @@ async function buildRetrieveRequest(
       // if we get here, this can only be a retrieve for our own swarm, which must be authenticated
       if (
         !SnodeNamespace.isUserConfigNamespace(namespace) &&
-        namespace !== SnodeNamespaces.UserMessages
+        namespace !== SnodeNamespaces.Default
       ) {
         throw new Error(`not a legacy closed group. namespace can only be 0 and was ${namespace}`);
       }

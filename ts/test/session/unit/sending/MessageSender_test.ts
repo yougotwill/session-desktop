@@ -62,7 +62,7 @@ describe('MessageSender', () => {
         rawMessage = await MessageUtils.toRawMessage(
           TestUtils.generateFakePubKey(),
           TestUtils.generateVisibleMessage(),
-          SnodeNamespaces.UserMessages
+          SnodeNamespaces.Default
         );
       });
 
@@ -111,7 +111,7 @@ describe('MessageSender', () => {
         const rawMessage = await MessageUtils.toRawMessage(
           device,
           visibleMessage,
-          SnodeNamespaces.UserMessages
+          SnodeNamespaces.Default
         );
 
         await MessageSender.send(rawMessage, 3, 10);
@@ -123,7 +123,7 @@ describe('MessageSender', () => {
         // expect(args[3]).to.equal(visibleMessage.timestamp); the timestamp is overwritten on sending by the network clock offset
         expect(firstArg[0].ttl).to.equal(visibleMessage.ttl());
         expect(firstArg[0].pubkey).to.equal(device.key);
-        expect(firstArg[0].namespace).to.equal(SnodeNamespaces.UserMessages);
+        expect(firstArg[0].namespace).to.equal(SnodeNamespaces.Default);
       });
 
       it('should correctly build the envelope and override the timestamp', async () => {
@@ -136,7 +136,7 @@ describe('MessageSender', () => {
         const rawMessage = await MessageUtils.toRawMessage(
           device,
           visibleMessage,
-          SnodeNamespaces.UserMessages
+          SnodeNamespaces.Default
         );
         const offset = 200000;
         Sinon.stub(GetNetworkTime, 'getLatestTimestampOffset').returns(offset);
@@ -192,7 +192,7 @@ describe('MessageSender', () => {
           const rawMessage = await MessageUtils.toRawMessage(
             device,
             visibleMessage,
-            SnodeNamespaces.UserMessages
+            SnodeNamespaces.Default
           );
           await MessageSender.send(rawMessage, 3, 10);
 

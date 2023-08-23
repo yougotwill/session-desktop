@@ -112,7 +112,7 @@ describe('MessageQueue', () => {
         await pendingMessageCache.add(
           device,
           TestUtils.generateVisibleMessage(),
-          SnodeNamespaces.UserMessages
+          SnodeNamespaces.Default
         );
 
         const initialMessages = await pendingMessageCache.getForDevice(device);
@@ -150,7 +150,7 @@ describe('MessageQueue', () => {
           });
 
         void pendingMessageCache
-          .add(device, message, SnodeNamespaces.UserMessages, waitForMessageSentEvent)
+          .add(device, message, SnodeNamespaces.Default, waitForMessageSentEvent)
           .then(() => messageQueueStub.processPending(device));
       });
 
@@ -160,7 +160,7 @@ describe('MessageQueue', () => {
         const device = TestUtils.generateFakePubKey();
         const message = TestUtils.generateVisibleMessage();
         void pendingMessageCache
-          .add(device, message, SnodeNamespaces.UserMessages)
+          .add(device, message, SnodeNamespaces.Default)
           .then(() => messageQueueStub.processPending(device));
         // The cb is only invoke is all reties fails. Here we poll until the messageSentHandlerFailed was invoked as this is what we want to do
 
@@ -188,7 +188,7 @@ describe('MessageQueue', () => {
       const stub = Sinon.stub(messageQueueStub as any, 'process').resolves();
 
       const message = TestUtils.generateVisibleMessage();
-      await messageQueueStub.sendToPubKey(device, message, SnodeNamespaces.UserMessages);
+      await messageQueueStub.sendToPubKey(device, message, SnodeNamespaces.Default);
 
       const args = stub.lastCall.args as [Array<PubKey>, ContentMessage];
       expect(args[0]).to.be.equal(device);
@@ -202,7 +202,7 @@ describe('MessageQueue', () => {
       return expect(
         messageQueueStub.sendToGroup({
           message: chatMessage as any,
-          namespace: SnodeNamespaces.ClosedGroupMessage,
+          namespace: SnodeNamespaces.LegacyClosedGroup,
         })
       ).to.be.rejectedWith('Invalid group message passed in sendToGroup.');
     });
@@ -217,7 +217,7 @@ describe('MessageQueue', () => {
         const message = TestUtils.generateClosedGroupMessage();
         await messageQueueStub.sendToGroup({
           message,
-          namespace: SnodeNamespaces.ClosedGroupMessage,
+          namespace: SnodeNamespaces.LegacyClosedGroup,
         });
         expect(send.callCount).to.equal(1);
 

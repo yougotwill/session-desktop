@@ -39,14 +39,14 @@ async function unsendMessagesForEveryone(
     await Promise.all(
       unsendMsgObjects.map(unsendObject =>
         getMessageQueue()
-          .sendToPubKey(new PubKey(destinationId), unsendObject, SnodeNamespaces.UserMessages)
+          .sendToPubKey(new PubKey(destinationId), unsendObject, SnodeNamespaces.Default)
           .catch(window?.log?.error)
       )
     );
     await Promise.all(
       unsendMsgObjects.map(unsendObject =>
         getMessageQueue()
-          .sendSyncMessage({ namespace: SnodeNamespaces.UserMessages, message: unsendObject })
+          .sendSyncMessage({ namespace: SnodeNamespaces.Default, message: unsendObject })
           .catch(window?.log?.error)
       )
     );
@@ -57,7 +57,7 @@ async function unsendMessagesForEveryone(
         return getMessageQueue()
           .sendToGroup({
             message: unsendObject,
-            namespace: SnodeNamespaces.ClosedGroupMessage,
+            namespace: SnodeNamespaces.LegacyClosedGroup,
             groupPubKey: new PubKey(destinationId),
           })
           .catch(window?.log?.error);
@@ -227,7 +227,7 @@ async function unsendMessageJustForThisUser(
   await Promise.all(
     unsendMsgObjects.map(unsendObject =>
       getMessageQueue()
-        .sendSyncMessage({ namespace: SnodeNamespaces.UserMessages, message: unsendObject })
+        .sendSyncMessage({ namespace: SnodeNamespaces.Default, message: unsendObject })
         .catch(window?.log?.error)
     )
   );

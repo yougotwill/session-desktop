@@ -422,7 +422,7 @@ async function createOfferAndSendIt(recipient: string) {
       const negotiationOfferSendResult = await getMessageQueue().sendToPubKeyNonDurably({
         pubkey: PubKey.cast(recipient),
         message: offerMessage,
-        namespace: SnodeNamespaces.UserMessages,
+        namespace: SnodeNamespaces.Default,
       });
       if (typeof negotiationOfferSendResult === 'number') {
         // window.log?.warn('setting last sent timestamp');
@@ -524,7 +524,7 @@ export async function USER_callRecipient(recipient: string) {
   const rawMessage = await MessageUtils.toRawMessage(
     PubKey.cast(recipient),
     preOfferMsg,
-    SnodeNamespaces.UserMessages
+    SnodeNamespaces.Default
   );
   const { wrappedEnvelope } = await MessageSender.send(rawMessage);
   void PnServer.notifyPnServer(wrappedEnvelope, recipient);
@@ -587,7 +587,7 @@ const iceSenderDebouncer = _.debounce(async (recipient: string) => {
   await getMessageQueue().sendToPubKeyNonDurably({
     pubkey: PubKey.cast(recipient),
     message: callIceCandicates,
-    namespace: SnodeNamespaces.UserMessages,
+    namespace: SnodeNamespaces.Default,
   });
 }, 2000);
 
@@ -926,12 +926,12 @@ async function sendCallMessageAndSync(callmessage: CallMessage, user: string) {
     getMessageQueue().sendToPubKeyNonDurably({
       pubkey: PubKey.cast(user),
       message: callmessage,
-      namespace: SnodeNamespaces.UserMessages,
+      namespace: SnodeNamespaces.Default,
     }),
     getMessageQueue().sendToPubKeyNonDurably({
       pubkey: UserUtils.getOurPubKeyFromCache(),
       message: callmessage,
-      namespace: SnodeNamespaces.UserMessages,
+      namespace: SnodeNamespaces.Default,
     }),
   ]);
 }
@@ -952,7 +952,7 @@ export async function USER_hangup(fromSender: string) {
   void getMessageQueue().sendToPubKeyNonDurably({
     pubkey: PubKey.cast(fromSender),
     message: endCallMessage,
-    namespace: SnodeNamespaces.UserMessages,
+    namespace: SnodeNamespaces.Default,
   });
 
   window.inboxStore?.dispatch(endCall());

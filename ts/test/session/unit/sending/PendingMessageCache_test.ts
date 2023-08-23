@@ -58,13 +58,9 @@ describe('PendingMessageCache', () => {
   it('can add to cache', async () => {
     const device = TestUtils.generateFakePubKey();
     const message = TestUtils.generateVisibleMessage();
-    const rawMessage = await MessageUtils.toRawMessage(
-      device,
-      message,
-      SnodeNamespaces.UserMessages
-    );
+    const rawMessage = await MessageUtils.toRawMessage(device, message, SnodeNamespaces.Default);
 
-    await pendingMessageCacheStub.add(device, message, SnodeNamespaces.UserMessages);
+    await pendingMessageCacheStub.add(device, message, SnodeNamespaces.Default);
 
     // Verify that the message is in the cache
     const finalCache = await pendingMessageCacheStub.getAllPending();
@@ -81,20 +77,20 @@ describe('PendingMessageCache', () => {
     await pendingMessageCacheStub.add(
       device,
       TestUtils.generateVisibleMessage(),
-      SnodeNamespaces.UserMessages
+      SnodeNamespaces.Default
     );
     // We have to timeout here otherwise it's processed too fast and messages start having the same timestamp
     await TestUtils.timeout(5);
     await pendingMessageCacheStub.add(
       device,
       TestUtils.generateVisibleMessage(),
-      SnodeNamespaces.UserMessages
+      SnodeNamespaces.Default
     );
     await TestUtils.timeout(5);
     await pendingMessageCacheStub.add(
       device,
       TestUtils.generateVisibleMessage(),
-      SnodeNamespaces.UserMessages
+      SnodeNamespaces.Default
     );
 
     // Verify that the message is in the cache
@@ -106,13 +102,9 @@ describe('PendingMessageCache', () => {
   it('can remove from cache', async () => {
     const device = TestUtils.generateFakePubKey();
     const message = TestUtils.generateVisibleMessage();
-    const rawMessage = await MessageUtils.toRawMessage(
-      device,
-      message,
-      SnodeNamespaces.UserMessages
-    );
+    const rawMessage = await MessageUtils.toRawMessage(device, message, SnodeNamespaces.Default);
 
-    await pendingMessageCacheStub.add(device, message, SnodeNamespaces.UserMessages);
+    await pendingMessageCacheStub.add(device, message, SnodeNamespaces.Default);
 
     const initialCache = await pendingMessageCacheStub.getAllPending();
     expect(initialCache).to.have.length(1);
@@ -129,23 +121,19 @@ describe('PendingMessageCache', () => {
   it('should only remove messages with different identifier and device', async () => {
     const device = TestUtils.generateFakePubKey();
     const message = TestUtils.generateVisibleMessage();
-    const rawMessage = await MessageUtils.toRawMessage(
-      device,
-      message,
-      SnodeNamespaces.UserMessages
-    );
+    const rawMessage = await MessageUtils.toRawMessage(device, message, SnodeNamespaces.Default);
 
-    await pendingMessageCacheStub.add(device, message, SnodeNamespaces.UserMessages);
+    await pendingMessageCacheStub.add(device, message, SnodeNamespaces.Default);
     await TestUtils.timeout(5);
     const one = await pendingMessageCacheStub.add(
       device,
       TestUtils.generateVisibleMessage(),
-      SnodeNamespaces.UserMessages
+      SnodeNamespaces.Default
     );
     const two = await pendingMessageCacheStub.add(
       TestUtils.generateFakePubKey(),
       message,
-      SnodeNamespaces.UserMessages
+      SnodeNamespaces.Default
     );
 
     const initialCache = await pendingMessageCacheStub.getAllPending();
@@ -178,7 +166,7 @@ describe('PendingMessageCache', () => {
     ];
 
     for (const item of cacheItems) {
-      await pendingMessageCacheStub.add(item.device, item.message, SnodeNamespaces.UserMessages);
+      await pendingMessageCacheStub.add(item.device, item.message, SnodeNamespaces.Default);
     }
 
     const cache = await pendingMessageCacheStub.getAllPending();
@@ -206,7 +194,7 @@ describe('PendingMessageCache', () => {
     ];
 
     for (const item of cacheItems) {
-      await pendingMessageCacheStub.add(item.device, item.message, SnodeNamespaces.UserMessages);
+      await pendingMessageCacheStub.add(item.device, item.message, SnodeNamespaces.Default);
     }
 
     const initialCache = await pendingMessageCacheStub.getAllPending();
@@ -223,11 +211,7 @@ describe('PendingMessageCache', () => {
   it('can find nothing when empty', async () => {
     const device = TestUtils.generateFakePubKey();
     const message = TestUtils.generateVisibleMessage();
-    const rawMessage = await MessageUtils.toRawMessage(
-      device,
-      message,
-      SnodeNamespaces.UserMessages
-    );
+    const rawMessage = await MessageUtils.toRawMessage(device, message, SnodeNamespaces.Default);
 
     const foundMessage = pendingMessageCacheStub.find(rawMessage);
     expect(foundMessage, 'a message was found in empty cache').to.be.undefined;
@@ -236,13 +220,9 @@ describe('PendingMessageCache', () => {
   it('can find message in cache', async () => {
     const device = TestUtils.generateFakePubKey();
     const message = TestUtils.generateVisibleMessage();
-    const rawMessage = await MessageUtils.toRawMessage(
-      device,
-      message,
-      SnodeNamespaces.UserMessages
-    );
+    const rawMessage = await MessageUtils.toRawMessage(device, message, SnodeNamespaces.Default);
 
-    await pendingMessageCacheStub.add(device, message, SnodeNamespaces.UserMessages);
+    await pendingMessageCacheStub.add(device, message, SnodeNamespaces.Default);
 
     const finalCache = await pendingMessageCacheStub.getAllPending();
     expect(finalCache).to.have.length(1);
@@ -269,7 +249,7 @@ describe('PendingMessageCache', () => {
     ];
 
     for (const item of cacheItems) {
-      await pendingMessageCacheStub.add(item.device, item.message, SnodeNamespaces.UserMessages);
+      await pendingMessageCacheStub.add(item.device, item.message, SnodeNamespaces.Default);
     }
 
     const initialCache = await pendingMessageCacheStub.getAllPending();
@@ -299,7 +279,7 @@ describe('PendingMessageCache', () => {
     ];
 
     for (const item of cacheItems) {
-      await pendingMessageCacheStub.add(item.device, item.message, SnodeNamespaces.UserMessages);
+      await pendingMessageCacheStub.add(item.device, item.message, SnodeNamespaces.Default);
     }
 
     const addedMessages = await pendingMessageCacheStub.getAllPending();

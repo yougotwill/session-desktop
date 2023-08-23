@@ -923,7 +923,7 @@ async function sendLatestKeyPairToUsers(
       await getMessageQueue().sendToPubKey(
         PubKey.cast(member),
         keypairsMessage,
-        SnodeNamespaces.UserMessages
+        SnodeNamespaces.Default
       );
     })
   );

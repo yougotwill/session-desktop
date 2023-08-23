@@ -839,7 +839,7 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
         return getMessageQueue().sendToPubKey(
           PubKey.cast(conversation.id),
           chatMessage,
-          SnodeNamespaces.UserMessages
+          SnodeNamespaces.Default
         );
       }
 
@@ -860,7 +860,7 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
 
       return getMessageQueue().sendToGroup({
         message: closedGroupVisibleMessage,
-        namespace: SnodeNamespaces.ClosedGroupMessage,
+        namespace: SnodeNamespaces.LegacyClosedGroup,
       });
     } catch (e) {
       await this.saveErrors(e);
@@ -955,7 +955,7 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
       }
       const syncMessage = buildSyncMessage(this.id, dataMessage, conversation.id, sentTimestamp);
       await getMessageQueue().sendSyncMessage({
-        namespace: SnodeNamespaces.UserMessages,
+        namespace: SnodeNamespaces.Default,
         message: syncMessage,
       });
     }

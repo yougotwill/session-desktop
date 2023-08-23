@@ -7,7 +7,11 @@ import { openConversationWithMessages } from '../../state/ducks/conversations';
 import { updateConfirmModal } from '../../state/ducks/modalDialog';
 import { getSwarmPollingInstance } from '../apis/snode_api';
 import { SnodeNamespaces } from '../apis/snode_api/namespaces';
-import { generateClosedGroupPublicKey, generateCurve25519KeyPairWithoutPrefix } from '../crypto';
+import {
+  generateClosedGroupPublicKey,
+  generateCurve25519KeyPairWithoutPrefix,
+  generateGroupV3Keypair,
+} from '../crypto';
 import {
   ClosedGroupNewMessage,
   ClosedGroupNewMessageParams,
@@ -17,23 +21,24 @@ import { UserUtils } from '../utils';
 import { forceSyncConfigurationNowIfNeeded } from '../utils/sync/syncUtils';
 import { getConversationController } from './ConversationController';
 
+/**
+ * Creates a brand new closed group from user supplied details. This function generates a new identityKeyPair so cannot be used to restore a closed group.
+ * @param groupName the name of this closed group
+ * @param members the initial members of this closed group
+ * @param isV3 if this closed group is a v3 closed group or not (has a 03 prefix in the identity keypair)
+ */
 export async function createClosedGroup(groupName: string, members: Array<string>, isV3: boolean) {
   const setOfMembers = new Set(members);
 
-  if (isV3) {
-    throw new Error('groupv3 is not supported yet');
-  }
-
   const us = UserUtils.getOurPubKeyStrFromCache();
 
-  // const identityKeyPair = await generateGroupV3Keypair();
-  // if (!identityKeyPair) {
-  //   throw new Error('Could not create identity keypair for new closed group v3');
-  // }
+  const identityKeyPair = await generateGroupV3Keypair();
+  if (!identityKeyPair) {
+    throw new Error('Could not create identity keypair for new closed group v3');
+  }
 
   // a v3 pubkey starts with 03 and an old one starts with 05
-  const groupPublicKey = await generateClosedGroupPublicKey();
-  // const groupPublicKey = isV3 ? identityKeyPair.pubkey : await generateClosedGroupPublicKey();
+  const groupPublicKey = isV3 ? identityKeyPair.pubkey : await generateClosedGroupPublicKey();
 
   // the first encryption keypair is generated the same for all versions of closed group
   const encryptionKeyPair = await generateCurve25519KeyPairWithoutPrefix();
@@ -42,11 +47,16 @@ export async function createClosedGroup(groupName: string, members: Array<string
   }
 
   // Create the group
-  const convo = await getConversationController().getOrCreateAndWait(
-    groupPublicKey,
-    isV3 ? ConversationTypeEnum.GROUPV3 : ConversationTypeEnum.GROUP
-  );
+  const convo = isV3
+    ? await getConversationController().createGroupV3(groupPublicKey, identityKeyPair.privateKey)
+    : await getConversationController().getOrCreateAndWait(
+        groupPublicKey,
+        ConversationTypeEnum.GROUP
+      );
+
   await convo.setIsApproved(true, false);
+
+  console.warn('store the v3 identityPriatekeypair as part of the wrapper only?');
 
   // Ensure the current user is a member
   setOfMembers.add(us);
@@ -73,7 +83,8 @@ export async function createClosedGroup(groupName: string, members: Array<string
 
   if (isV3) {
     // we need to send a group info and encryption keys message to the batch endpoint with both seqno being 0
-    throw new Error('fixme');
+    console.error('isV3 send invite to group TODO'); // FIXME
+    return;
   }
 
   // Send a closed group update message to all members individually
@@ -208,7 +219,7 @@ function createInvitePromises(
     return getMessageQueue().sendToPubKeyNonDurably({
       pubkey: PubKey.cast(m),
       message,
-      namespace: SnodeNamespaces.UserMessages,
+      namespace: SnodeNamespaces.Default,
     });
   });
 }

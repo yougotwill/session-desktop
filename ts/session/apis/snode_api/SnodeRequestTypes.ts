@@ -32,7 +32,7 @@ export type RetrievePubkeySubRequestType = {
 export type RetrieveLegacyClosedGroupSubRequestType = {
   method: 'retrieve';
   params: {
-    namespace: SnodeNamespaces.ClosedGroupMessage; // legacy closed groups retrieve are not authenticated because the clients do not have a shared key
+    namespace: SnodeNamespaces.LegacyClosedGroup; // legacy closed groups retrieve are not authenticated because the clients do not have a shared key
   } & RetrieveAlwaysNeeded &
     RetrieveMaxCountSize;
 };

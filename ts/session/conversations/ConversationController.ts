@@ -179,6 +179,15 @@ export class ConversationController {
     });
   }
 
+  public async createGroupV3(id: string, privateIdentityKey: string): Promise<ConversationModel> {
+    if (!PubKey.isClosedGroupV3(id)) {
+      throw new Error('createGroupV3 invalid id given');
+    }
+    // FIXME we should save the key to the wrapper right away? or even to the DB idk
+
+    return getConversationController().getOrCreateAndWait(id, ConversationTypeEnum.GROUPV3);
+  }
+
   /**
    * Usually, we want to mark private contact deleted as inactive (active_at = undefined).
    * That way we can still have the username and avatar for them, but they won't appear in search results etc.
@@ -503,7 +512,7 @@ async function leaveClosedGroup(groupId: string, fromSyncMessage: boolean) {
   // if we do not have a keypair for that group, we can't send our leave message, so just skip the message sending part
   const wasSent = await getMessageQueue().sendToPubKeyNonDurably({
     message: ourLeavingMessage,
-    namespace: SnodeNamespaces.ClosedGroupMessage,
+    namespace: SnodeNamespaces.LegacyClosedGroup,
     pubkey: PubKey.cast(groupId),
   });
   // TODO our leaving message might fail to be sent for some specific reason we want to still delete the group.

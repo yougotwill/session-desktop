@@ -64,7 +64,7 @@ export const syncConfigurationIfNeeded = async () => {
       // window?.log?.info('syncConfigurationIfNeeded with', configMessage);
 
       await getMessageQueue().sendSyncMessage({
-        namespace: SnodeNamespaces.UserMessages,
+        namespace: SnodeNamespaces.Default,
         message: configMessage,
       });
     } catch (e) {
@@ -116,7 +116,7 @@ export const forceSyncConfigurationNowIfNeeded = async (waitForMessageSent = fal
             }
           : undefined;
         void getMessageQueue().sendSyncMessage({
-          namespace: SnodeNamespaces.UserMessages,
+          namespace: SnodeNamespaces.Default,
           message: configMessage,
           sentCb: callback as any,
         });

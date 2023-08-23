@@ -4,9 +4,14 @@ import { PickEnum } from '../../../types/Enums';
 
 export enum SnodeNamespaces {
   /**
+   * The messages sent to a closed group are sent and polled from this namespace
+   */
+  LegacyClosedGroup = -10,
+
+  /**
    * This is the namespace anyone can deposit a message for us
    */
-  UserMessages = 0,
+  Default = 0,
 
   /**
    * This is the namespace used to sync our profile
@@ -27,24 +32,33 @@ export enum SnodeNamespaces {
   UserGroups = 5,
 
   /**
-   * The messages sent to a closed group are sent and polled from this namespace
+   * This is the namespace used to sync the closed group details for each closed group
    */
-  ClosedGroupMessage = -10,
+  ClosedGroupInfo = 11,
 
   /**
-   * This is the namespace used to sync the closed group details for each of the closed groups we are polling
+   * This is the namespace used to sync the members for each closed group
    */
-  // ClosedGroupInfo = 1,
+  ClosedGroupMembers = 12,
+
+  /**
+   * This is the namespace used to sync the keys for each closed group
+   */
+  ClosedGroupKeys = 13,
 }
 
 export type SnodeNamespacesGroup = PickEnum<
   SnodeNamespaces,
-  SnodeNamespaces.ClosedGroupMessage // | SnodeNamespaces.ClosedGroupInfo
+  | SnodeNamespaces.LegacyClosedGroup
+  | SnodeNamespaces.ClosedGroupInfo
+  | SnodeNamespaces.ClosedGroupMembers
+  | SnodeNamespaces.ClosedGroupKeys
+  | SnodeNamespaces.Default
 >;
 
 export type SnodeNamespacesUser = PickEnum<
   SnodeNamespaces,
-  SnodeNamespaces.UserContacts | SnodeNamespaces.UserProfile | SnodeNamespaces.UserMessages
+  SnodeNamespaces.UserContacts | SnodeNamespaces.UserProfile | SnodeNamespaces.Default
 >;
 
 /**
@@ -53,7 +67,7 @@ export type SnodeNamespacesUser = PickEnum<
 // eslint-disable-next-line consistent-return
 function isUserConfigNamespace(namespace: SnodeNamespaces) {
   switch (namespace) {
-    case SnodeNamespaces.UserMessages:
+    case SnodeNamespaces.Default:
       // user messages is not hosting config based messages
       return false;
     case SnodeNamespaces.UserContacts:
@@ -61,8 +75,10 @@ function isUserConfigNamespace(namespace: SnodeNamespaces) {
     case SnodeNamespaces.UserGroups:
     case SnodeNamespaces.ConvoInfoVolatile:
       return true;
-    // case SnodeNamespaces.ClosedGroupInfo:
-    case SnodeNamespaces.ClosedGroupMessage:
+    case SnodeNamespaces.ClosedGroupInfo:
+    case SnodeNamespaces.ClosedGroupKeys:
+    case SnodeNamespaces.ClosedGroupMembers:
+    case SnodeNamespaces.LegacyClosedGroup:
       return false;
 
     default:
@@ -75,10 +91,34 @@ function isUserConfigNamespace(namespace: SnodeNamespaces) {
   }
 }
 
+function isGroupConfigNamespace(namespace: SnodeNamespaces) {
+  switch (namespace) {
+    case SnodeNamespaces.Default:
+    case SnodeNamespaces.UserContacts:
+    case SnodeNamespaces.UserProfile:
+    case SnodeNamespaces.UserGroups:
+    case SnodeNamespaces.ConvoInfoVolatile:
+    case SnodeNamespaces.LegacyClosedGroup:
+      return false;
+    case SnodeNamespaces.ClosedGroupInfo:
+    case SnodeNamespaces.ClosedGroupKeys:
+    case SnodeNamespaces.ClosedGroupMembers:
+      return true;
+
+    default:
+      try {
+        assertUnreachable(namespace, `isGroupConfigNamespace case not handled: ${namespace}`);
+      } catch (e) {
+        window.log.warn(`isGroupConfigNamespace case not handled: ${namespace}: ${e.message}`);
+        return false;
+      }
+  }
+}
+
 // eslint-disable-next-line consistent-return
 function namespacePriority(namespace: SnodeNamespaces): number {
   switch (namespace) {
-    case SnodeNamespaces.UserMessages:
+    case SnodeNamespaces.Default:
       return 10;
     case SnodeNamespaces.UserContacts:
       return 1;
@@ -88,7 +128,10 @@ function namespacePriority(namespace: SnodeNamespaces): number {
       return 1;
     case SnodeNamespaces.ConvoInfoVolatile:
       return 1;
-    case SnodeNamespaces.ClosedGroupMessage:
+    case SnodeNamespaces.LegacyClosedGroup:
+    case SnodeNamespaces.ClosedGroupInfo:
+    case SnodeNamespaces.ClosedGroupMembers:
+    case SnodeNamespaces.ClosedGroupKeys:
       return 10;
 
     default:
@@ -127,5 +170,6 @@ function maxSizeMap(namespaces: Array<SnodeNamespaces>) {
 
 export const SnodeNamespace = {
   isUserConfigNamespace,
+  isGroupConfigNamespace,
   maxSizeMap,
 };

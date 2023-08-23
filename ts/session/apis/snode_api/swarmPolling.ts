@@ -10,11 +10,11 @@ import { ERROR_CODE_NO_CONNECT } from './SNodeAPI';
 import * as snodePool from './snodePool';
 
 import { ConversationModel } from '../../../models/conversation';
+import { ConversationTypeEnum } from '../../../models/conversationAttributes';
 import { ConfigMessageHandler } from '../../../receiver/configMessage';
 import { decryptEnvelopeWithOurKey } from '../../../receiver/contentMessage';
 import { EnvelopePlus } from '../../../receiver/types';
 import { updateIsOnline } from '../../../state/ducks/onion';
-import { ReleasedFeatures } from '../../../util/releaseFeature';
 import {
   GenericWrapperActions,
   UserGroupsWrapperActions,
@@ -167,28 +167,38 @@ export class SwarmPolling {
       return;
     }
     // we always poll as often as possible for our pubkey
-    const ourPubkey = UserUtils.getOurPubKeyFromCache();
+    const ourPubkey = UserUtils.getOurPubKeyStrFromCache();
     const userNamespaces = await this.getUserNamespacesPolled();
-    const directPromise = Promise.all([this.pollOnceForKey(ourPubkey, false, userNamespaces)]).then(
-      () => undefined
-    );
+    const directPromise = Promise.all([
+      this.pollOnceForKey(ourPubkey, ConversationTypeEnum.PRIVATE, userNamespaces),
+    ]).then(() => undefined);
 
     const now = Date.now();
     const groupPromises = this.groupPolling.map(async group => {
       const convoPollingTimeout = this.getPollingTimeout(group.pubkey);
-
       const diff = now - group.lastPolledTimestamp;
+      const { key } = group.pubkey;
+      const isV3 = PubKey.isClosedGroupV3(key);
 
       const loggingId =
         getConversationController()
-          .get(group.pubkey.key)
-          ?.idForLogging() || group.pubkey.key;
+          .get(key)
+          ?.idForLogging() || key;
       if (diff >= convoPollingTimeout) {
         window?.log?.debug(
           `Polling for ${loggingId}; timeout: ${convoPollingTimeout}; diff: ${diff} `
         );
-
-        return this.pollOnceForKey(group.pubkey, true, [SnodeNamespaces.ClosedGroupMessage]);
+        if (isV3) {
+          return this.pollOnceForKey(key, ConversationTypeEnum.GROUPV3, [
+            SnodeNamespaces.Default,
+            SnodeNamespaces.ClosedGroupKeys,
+            SnodeNamespaces.ClosedGroupInfo,
+            SnodeNamespaces.ClosedGroupMembers,
+          ]);
+        }
+        return this.pollOnceForKey(key, ConversationTypeEnum.GROUP, [
+          SnodeNamespaces.LegacyClosedGroup,
+        ]);
       }
       window?.log?.debug(
         `Not polling for ${loggingId}; timeout: ${convoPollingTimeout} ; diff: ${diff}`
@@ -196,6 +206,7 @@ export class SwarmPolling {
 
       return Promise.resolve();
     });
+
     try {
       await Promise.all(concat([directPromise], groupPromises));
     } catch (e) {
@@ -210,13 +221,11 @@ export class SwarmPolling {
    * Only exposed as public for testing
    */
   public async pollOnceForKey(
-    pubkey: PubKey,
-    isGroup: boolean,
+    pubkey: string,
+    type: ConversationTypeEnum,
     namespaces: Array<SnodeNamespaces>
   ) {
-    const polledPubkey = pubkey.key;
-
-    const swarmSnodes = await snodePool.getSwarmFor(polledPubkey);
+    const swarmSnodes = await snodePool.getSwarmFor(pubkey);
 
     // Select nodes for which we already have lastHashes
     const alreadyPolled = swarmSnodes.filter((n: Snode) => this.lastHashes[n.pubkey_ed25519]);
@@ -230,12 +239,7 @@ export class SwarmPolling {
 
     let resultsFromAllNamespaces: RetrieveMessagesResultsBatched | null;
     try {
-      resultsFromAllNamespaces = await this.pollNodeForKey(
-        toPollFrom,
-        pubkey,
-        namespaces,
-        !isGroup
-      );
+      resultsFromAllNamespaces = await this.pollNodeForKey(toPollFrom, pubkey, namespaces, type);
     } catch (e) {
       window.log.warn(
         `pollNodeForKey of ${pubkey} namespaces: ${namespaces} failed with: ${e.message}`
@@ -243,58 +247,60 @@ export class SwarmPolling {
       resultsFromAllNamespaces = null;
     }
 
-    let allNamespacesWithoutUserConfigIfNeeded: Array<RetrieveMessageItem> = [];
-    const userConfigLibsession = await ReleasedFeatures.checkIsUserConfigFeatureReleased();
+    if (!resultsFromAllNamespaces?.length) {
+      // not a single message from any of the polled namespace was retrieve. nothing else to do
+      return;
+    }
+    const { confMessages, otherMessages } = filterMessagesPerTypeOfConvo(
+      type,
+      resultsFromAllNamespaces
+    );
 
-    // check if we just fetched the details from the config namespaces.
-    // If yes, merge them together and exclude them from the rest of the messages.
-    if (userConfigLibsession && resultsFromAllNamespaces) {
-      const userConfigMessages = resultsFromAllNamespaces
-        .filter(m => SnodeNamespace.isUserConfigNamespace(m.namespace))
-        .map(r => r.messages.messages);
+    // first make sure to handle the shared user config message first
 
-      allNamespacesWithoutUserConfigIfNeeded = flatten(
-        compact(
-          resultsFromAllNamespaces
-            .filter(m => !SnodeNamespace.isUserConfigNamespace(m.namespace))
-            .map(r => r.messages.messages)
-        )
-      );
-      const userConfigMessagesMerged = flatten(compact(userConfigMessages));
-
-      if (!isGroup && userConfigMessagesMerged.length) {
+    if (type === ConversationTypeEnum.PRIVATE) {
+      if (confMessages?.length) {
         window.log.info(
-          `received userConfigMessages count: ${userConfigMessagesMerged.length} for key ${pubkey.key}`
+          `received userConfigMessagesMerged count: ${confMessages.length} for key ${pubkey}`
         );
         try {
-          await this.handleSharedConfigMessages(userConfigMessagesMerged);
+          await this.handleUserSharedConfigMessages(confMessages);
         } catch (e) {
           window.log.warn(
-            `handleSharedConfigMessages of ${userConfigMessagesMerged.length} failed with ${e.message}`
+            `handleSharedConfigMessages of ${confMessages.length} failed with ${e.message}`
           );
           // not rethrowing
         }
       }
+    } else if (type === ConversationTypeEnum.GROUPV3) {
+      if (confMessages?.length) {
+        window.log.info(
+          `received GROUPV3MessagesMerged count: ${confMessages.length} for key ${pubkey}`
+        );
+        throw new Error('received GROUPV3MessagesMerged TODO');
 
-      // first make sure to handle the shared user config message first
-    } else {
-      allNamespacesWithoutUserConfigIfNeeded = flatten(
-        compact(resultsFromAllNamespaces?.map(m => m.messages.messages))
-      );
+        // try {
+        //   await this.handleUserSharedConfigMessages(confMessages);
+        // } catch (e) {
+        //   window.log.warn(
+        //     `handleSharedConfigMessages of ${confMessages.length} failed with ${e.message}`
+        //   );
+        //   // not rethrowing
+        // }
+      }
     }
-    if (allNamespacesWithoutUserConfigIfNeeded.length) {
-      window.log.debug(
-        `received allNamespacesWithoutUserConfigIfNeeded: ${allNamespacesWithoutUserConfigIfNeeded.length}`
-      );
+
+    if (otherMessages.length) {
+      window.log.debug(`received otherMessages: ${otherMessages.length} for type: ${type}`);
     }
 
     // Merge results into one list of unique messages
-    const messages = uniqBy(allNamespacesWithoutUserConfigIfNeeded, x => x.hash);
+    const messages = uniqBy(otherMessages, x => x.hash);
 
     // if all snodes returned an error (null), no need to update the lastPolledTimestamp
-    if (isGroup) {
+    if (type === ConversationTypeEnum.GROUP || type === ConversationTypeEnum.GROUPV3) {
       window?.log?.debug(
-        `Polled for group(${ed25519Str(pubkey.key)}):, got ${messages.length} messages back.`
+        `Polled for group(${ed25519Str(pubkey)}):, got ${messages.length} messages back.`
       );
       let lastPolledTimestamp = Date.now();
       if (messages.length >= 95) {
@@ -315,21 +321,19 @@ export class SwarmPolling {
       });
     }
 
-    perfStart(`handleSeenMessages-${polledPubkey}`);
+    perfStart(`handleSeenMessages-${pubkey}`);
     const newMessages = await this.handleSeenMessages(messages);
-    perfEnd(`handleSeenMessages-${polledPubkey}`, 'handleSeenMessages');
+    perfEnd(`handleSeenMessages-${pubkey}`, 'handleSeenMessages');
 
-    // don't handle incoming messages from group swarms when using the userconfig and the group is not one of the tracked group
-    const isUserConfigReleaseLive = await ReleasedFeatures.checkIsUserConfigFeatureReleased();
+    // don't handle incoming messages from group swarms when the group is not one of the tracked group
     if (
-      isUserConfigReleaseLive &&
-      isGroup &&
-      polledPubkey.startsWith('05') &&
-      !(await UserGroupsWrapperActions.getLegacyGroup(polledPubkey)) // just check if a legacy group with that name exists
+      type === ConversationTypeEnum.GROUP &&
+      pubkey.startsWith('05') &&
+      !(await UserGroupsWrapperActions.getLegacyGroup(pubkey)) // just check if a legacy group with that name exists
     ) {
       // that pubkey is not tracked in the wrapper anymore. Just discard those messages and make sure we are not polling
       // TODOLATER we might need to do something like this for the new closed groups once released
-      getSwarmPollingInstance().removePubkey(polledPubkey);
+      getSwarmPollingInstance().removePubkey(pubkey);
     } else {
       // trigger the handling of all the other messages, not shared config related
       newMessages.forEach(m => {
@@ -338,12 +342,20 @@ export class SwarmPolling {
           return;
         }
 
-        Receiver.handleRequest(content.body, isGroup ? polledPubkey : null, content.messageHash);
+        Receiver.handleRequest(
+          content.body,
+          type === ConversationTypeEnum.GROUP || type === ConversationTypeEnum.GROUPV3
+            ? pubkey
+            : null,
+          content.messageHash
+        );
       });
     }
   }
 
-  private async handleSharedConfigMessages(userConfigMessagesMerged: Array<RetrieveMessageItem>) {
+  private async handleUserSharedConfigMessages(
+    userConfigMessagesMerged: Array<RetrieveMessageItem>
+  ) {
     const extractedUserConfigMessage = compact(
       userConfigMessagesMerged.map((m: RetrieveMessageItem) => {
         return extractWebSocketContent(m.data, m.hash);
@@ -403,46 +415,45 @@ export class SwarmPolling {
   // the lash hash record
   private async pollNodeForKey(
     node: Snode,
-    pubkey: PubKey,
+    pubkey: string,
     namespaces: Array<SnodeNamespaces>,
-    isUs: boolean
+    type: ConversationTypeEnum
   ): Promise<RetrieveMessagesResultsBatched | null> {
     const namespaceLength = namespaces.length;
     if (namespaceLength <= 0) {
       throw new Error(`invalid number of retrieve namespace provided: ${namespaceLength}`);
     }
     const snodeEdkey = node.pubkey_ed25519;
-    const pkStr = pubkey.key;
 
     try {
       const prevHashes = await Promise.all(
-        namespaces.map(namespace => this.getLastHash(snodeEdkey, pkStr, namespace))
+        namespaces.map(namespace => this.getLastHash(snodeEdkey, pubkey, namespace))
       );
       const configHashesToBump: Array<string> = [];
 
-      if (await ReleasedFeatures.checkIsUserConfigFeatureReleased()) {
-        // TODOLATER add the logic to take care of the closed groups too once we have a way to do it with the wrappers
-        if (isUs) {
-          for (let index = 0; index < LibSessionUtil.requiredUserVariants.length; index++) {
-            const variant = LibSessionUtil.requiredUserVariants[index];
-            try {
-              const toBump = await GenericWrapperActions.currentHashes(variant);
+      // TODOLATER add the logic to take care of the closed groups too once we have a way to do it with the wrappers
+      if (type === ConversationTypeEnum.PRIVATE) {
+        for (let index = 0; index < LibSessionUtil.requiredUserVariants.length; index++) {
+          const variant = LibSessionUtil.requiredUserVariants[index];
+          try {
+            const toBump = await GenericWrapperActions.currentHashes(variant);
 
-              if (toBump?.length) {
-                configHashesToBump.push(...toBump);
-              }
-            } catch (e) {
-              window.log.warn(`failed to get currentHashes for user variant ${variant}`);
+            if (toBump?.length) {
+              configHashesToBump.push(...toBump);
             }
+          } catch (e) {
+            window.log.warn(`failed to get currentHashes for user variant ${variant}`);
           }
-          window.log.debug(`configHashesToBump: ${configHashesToBump}`);
         }
+        window.log.debug(`configHashesToBump: ${configHashesToBump}`);
+      } else if (type === ConversationTypeEnum.GROUPV3) {
+        console.error('pollNodeForKey case bump of hashes closedgroup v3 to do ');
       }
 
       let results = await SnodeAPIRetrieve.retrieveNextMessages(
         node,
         prevHashes,
-        pkStr,
+        pubkey,
         namespaces,
         UserUtils.getOurPubKeyStrFromCache(),
         configHashesToBump
@@ -538,16 +549,13 @@ export class SwarmPolling {
   }
 
   private async getUserNamespacesPolled() {
-    const isUserConfigRelease = await ReleasedFeatures.checkIsUserConfigFeatureReleased();
-    return isUserConfigRelease
-      ? [
-          SnodeNamespaces.UserMessages,
-          SnodeNamespaces.UserProfile,
-          SnodeNamespaces.UserContacts,
-          SnodeNamespaces.UserGroups,
-          SnodeNamespaces.ConvoInfoVolatile,
-        ]
-      : [SnodeNamespaces.UserMessages];
+    return [
+      SnodeNamespaces.Default,
+      SnodeNamespaces.UserProfile,
+      SnodeNamespaces.UserContacts,
+      SnodeNamespaces.UserGroups,
+      SnodeNamespaces.ConvoInfoVolatile,
+    ];
   }
 
   private async updateLastHash({
@@ -558,17 +566,16 @@ export class SwarmPolling {
     pubkey,
   }: {
     edkey: string;
-    pubkey: PubKey;
+    pubkey: string;
     namespace: number;
     hash: string;
     expiration: number;
   }): Promise<void> {
-    const pkStr = pubkey.key;
-    const cached = await this.getLastHash(edkey, pubkey.key, namespace);
+    const cached = await this.getLastHash(edkey, pubkey, namespace);
 
     if (!cached || cached !== hash) {
       await Data.updateLastHash({
-        convoId: pkStr,
+        convoId: pubkey,
         snode: edkey,
         hash,
         expiresAt: expiration,
@@ -579,10 +586,10 @@ export class SwarmPolling {
     if (!this.lastHashes[edkey]) {
       this.lastHashes[edkey] = {};
     }
-    if (!this.lastHashes[edkey][pkStr]) {
-      this.lastHashes[edkey][pkStr] = {};
+    if (!this.lastHashes[edkey][pubkey]) {
+      this.lastHashes[edkey][pubkey] = {};
     }
-    this.lastHashes[edkey][pkStr][namespace] = hash;
+    this.lastHashes[edkey][pubkey][namespace] = hash;
   }
 
   private async getLastHash(nodeEdKey: string, pubkey: string, namespace: number): Promise<string> {
@@ -601,5 +608,61 @@ export class SwarmPolling {
     }
     // return the cached value
     return this.lastHashes[nodeEdKey][pubkey][namespace];
+  }
+}
+
+function filterMessagesPerTypeOfConvo<T extends ConversationTypeEnum>(
+  type: T,
+  retrieveResults: RetrieveMessagesResultsBatched
+): { confMessages: Array<RetrieveMessageItem> | null; otherMessages: Array<RetrieveMessageItem> } {
+  switch (type) {
+    case ConversationTypeEnum.PRIVATE: {
+      const confMessages = flatten(
+        compact(
+          retrieveResults
+            .filter(m => SnodeNamespace.isUserConfigNamespace(m.namespace))
+            .map(r => r.messages.messages)
+        )
+      );
+
+      const otherMessages = flatten(
+        compact(
+          retrieveResults
+            .filter(m => !SnodeNamespace.isUserConfigNamespace(m.namespace))
+            .map(r => r.messages.messages)
+        )
+      );
+
+      return { confMessages, otherMessages: uniqBy(otherMessages, x => x.hash) };
+    }
+
+    case ConversationTypeEnum.GROUP:
+      return {
+        confMessages: null,
+        otherMessages: flatten(compact(retrieveResults.map(m => m.messages.messages))),
+      };
+
+    case ConversationTypeEnum.GROUPV3: {
+      const confMessages = flatten(
+        compact(
+          retrieveResults
+            .filter(m => SnodeNamespace.isGroupConfigNamespace(m.namespace))
+            .map(r => r.messages.messages)
+        )
+      );
+
+      const otherMessages = flatten(
+        compact(
+          retrieveResults
+            .filter(m => !SnodeNamespace.isGroupConfigNamespace(m.namespace))
+            .map(r => r.messages.messages)
+        )
+      );
+
+      return { confMessages, otherMessages: uniqBy(otherMessages, x => x.hash) };
+    }
+
+    default:
+      return { confMessages: null, otherMessages: [] };
   }
 }

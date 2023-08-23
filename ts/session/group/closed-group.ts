@@ -206,9 +206,11 @@ function buildGroupDiff(convo: ConversationModel, update: GroupInfo): GroupDiff 
 export async function updateOrCreateClosedGroup(details: GroupInfo) {
   const { id, expireTimer } = details;
 
+  const isV3 = PubKey.isClosedGroupV3(id);
+
   const conversation = await getConversationController().getOrCreateAndWait(
     id,
-    ConversationTypeEnum.GROUP
+    isV3 ? ConversationTypeEnum.GROUPV3 : ConversationTypeEnum.GROUP
   );
 
   const updates: Pick<
@@ -217,8 +219,7 @@ export async function updateOrCreateClosedGroup(details: GroupInfo) {
   > = {
     displayNameInProfile: details.name,
     members: details.members,
-    // Note: legacy group to not support change of admins.
-    type: ConversationTypeEnum.GROUP,
+    type: isV3 ? ConversationTypeEnum.GROUPV3 : ConversationTypeEnum.GROUP,
     active_at: details.activeAt ? details.activeAt : 0,
     left: !details.activeAt,
   };
@@ -262,7 +263,7 @@ async function sendNewName(convo: ConversationModel, name: string, messageId: st
   });
   await getMessageQueue().sendToGroup({
     message: nameChangeMessage,
-    namespace: SnodeNamespaces.ClosedGroupMessage,
+    namespace: SnodeNamespaces.LegacyClosedGroup,
   });
 }
 
@@ -297,7 +298,7 @@ async function sendAddedMembers(
   });
   await getMessageQueue().sendToGroup({
     message: closedGroupControlMessage,
-    namespace: SnodeNamespaces.ClosedGroupMessage,
+    namespace: SnodeNamespaces.LegacyClosedGroup,
   });
 
   // Send closed group update messages to any new members individually
@@ -318,7 +319,7 @@ async function sendAddedMembers(
     await getMessageQueue().sendToPubKey(
       memberPubKey,
       newClosedGroupUpdate,
-      SnodeNamespaces.UserMessages
+      SnodeNamespaces.Default
     );
   });
   await Promise.all(promises);
@@ -356,7 +357,7 @@ export async function sendRemovedMembers(
   // Send the group update, and only once sent, generate and distribute a new encryption key pair if needed
   await getMessageQueue().sendToGroup({
     message: mainClosedGroupControlMessage,
-    namespace: SnodeNamespaces.ClosedGroupMessage,
+    namespace: SnodeNamespaces.LegacyClosedGroup,
     sentCb: async () => {
       if (isCurrentUserAdmin) {
         // we send the new encryption key only to members already here before the update
@@ -430,7 +431,7 @@ async function generateAndSendNewEncryptionKeyPair(
   // this is to be sent to the group pubkey address
   await getMessageQueue().sendToGroup({
     message: keypairsMessage,
-    namespace: SnodeNamespaces.ClosedGroupMessage,
+    namespace: SnodeNamespaces.LegacyClosedGroup,
     sentCb: messageSentCallback,
   });
 }

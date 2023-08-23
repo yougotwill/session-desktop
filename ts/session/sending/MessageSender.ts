@@ -321,8 +321,8 @@ async function encryptMessageAndWrap(
     : getConversationController()
         .get(recipient.key)
         ?.isClosedGroup()
-    ? SnodeNamespaces.ClosedGroupMessage
-    : SnodeNamespaces.UserMessages;
+    ? SnodeNamespaces.LegacyClosedGroup
+    : SnodeNamespaces.Default;
 
   return {
     data64,
