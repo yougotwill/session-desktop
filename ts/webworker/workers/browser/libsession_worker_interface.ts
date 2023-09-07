@@ -13,6 +13,7 @@ import {
   ProfilePicture,
   UserConfigWrapperActionsCalls,
   UserGroupsWrapperActionsCalls,
+  UserGroupsSet,
 } from 'libsession_util_nodejs';
 import { join } from 'path';
 
@@ -263,6 +264,21 @@ export const UserGroupsWrapperActions: UserGroupsWrapperActionsCalls = {
   getGroup: async (pubkeyHex: GroupPubkeyType) =>
     callLibSessionWorker(['UserGroupsConfig', 'getGroup', pubkeyHex]) as Promise<
       ReturnType<UserGroupsWrapperActionsCalls['getGroup']>
+    >,
+
+  getAllGroups: async () =>
+    callLibSessionWorker(['UserGroupsConfig', 'getAllGroups']) as Promise<
+      ReturnType<UserGroupsWrapperActionsCalls['getAllGroups']>
+    >,
+
+  setGroup: async (info: UserGroupsSet) =>
+    callLibSessionWorker(['UserGroupsConfig', 'setGroup', info]) as Promise<
+      ReturnType<UserGroupsWrapperActionsCalls['setGroup']>
+    >,
+
+  eraseGroup: async (pubkeyHex: GroupPubkeyType) =>
+    callLibSessionWorker(['UserGroupsConfig', 'eraseGroup', pubkeyHex]) as Promise<
+      ReturnType<UserGroupsWrapperActionsCalls['eraseGroup']>
     >,
 };
 
