@@ -94,7 +94,7 @@ message GroupUpdateInviteMessage {
   required bytes          memberSubkey           = 3;
   // @required
   required bytes          memberTag              = 4;
-	optional bytes          profileKey             = 5;
+  optional bytes          profileKey             = 5;
   optional LokiProfile    profile                = 6;
 }
 
@@ -106,9 +106,9 @@ message GroupUpdateDeleteMessage {
 }
 
 message GroupUpdateInfoChangeMessage {
-	enum Type {
+  enum Type {
     NAME                  = 1;
-		AVATAR                = 2;
+    AVATAR                = 2;
     DISAPPEARING_MESSAGES = 3;
   }
 
@@ -149,8 +149,8 @@ message GroupUpdateInviteResponseMessage {
 }
 
 message GroupUpdatePromotionResponseMessage {
-	// @required
-	required bytes    encryptedMemberPublicKey  = 1;
+  // @required
+  required bytes    encryptedMemberPublicKey  = 1;
 }
 
 message GroupUpdateDeleteMemberContentMessage {
@@ -164,9 +164,9 @@ message GroupUpdateMessage {
   optional GroupUpdateMemberChangeMessage         memberChangeMessage    = 34;
   optional GroupUpdatePromoteMessage              promoteMessage         = 35;
   optional GroupUpdateMemberLeftMessage           memberLeftMessage      = 36;
-	optional GroupUpdateInviteResponseMessage       inviteResponse         = 37;
-	optional GroupUpdatePromotionResponseMessage    promotionResponse      = 38;
-	optional GroupUpdateDeleteMemberContentMessage  deleteMemberContent    = 39;
+  optional GroupUpdateInviteResponseMessage       inviteResponse         = 37;
+  optional GroupUpdatePromotionResponseMessage    promotionResponse      = 38;
+  optional GroupUpdateDeleteMemberContentMessage  deleteMemberContent    = 39;
 }
 
 
