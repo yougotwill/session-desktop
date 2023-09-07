@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
 const path = require('path');
+const isProd = process.env.NODE_ENV === 'production';
 
 module.exports = {
   entry: './ts/webworker/workers/node/libsession/libsession.worker.ts',
@@ -29,11 +30,11 @@ module.exports = {
     },
   },
   output: {
-    filename: 'libsession.worker.js',
+    filename: 'libsession.worker.compiled.js',
     path: path.resolve(__dirname, 'ts', 'webworker', 'workers', 'node', 'libsession'),
   },
   target: 'node',
   optimization: {
-    minimize: true,
+    minimize: isProd,
   },
 };

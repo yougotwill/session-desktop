@@ -41,11 +41,17 @@ import {
 } from '../util/storage';
 import { deleteAllMessagesByConvoIdNoConfirmation } from '../interactions/conversationInteractions';
 // eslint-disable-next-line import/no-unresolved, import/extensions
-import { ConfigWrapperObjectTypes } from '../../ts/webworker/workers/browser/libsession_worker_functions';
+import {
+  ConfigWrapperObjectTypes,
+  getGroupPubkeyFromWrapperType,
+  isMetaWrapperType,
+  isUserConfigWrapperType,
+} from '../../ts/webworker/workers/browser/libsession_worker_functions';
 import {
   ContactsWrapperActions,
   ConvoInfoVolatileWrapperActions,
   GenericWrapperActions,
+  MetaGroupWrapperActions,
   UserConfigWrapperActions,
   UserGroupsWrapperActions,
 } from '../webworker/workers/browser/libsession_worker_interface';
@@ -77,6 +83,29 @@ function groupByVariant(
   return groupedByVariant;
 }
 
+async function printDumpForDebug(prefix: string, variant: ConfigWrapperObjectTypes) {
+  if (isUserConfigWrapperType(variant)) {
+    window.log.info(prefix, StringUtils.toHex(await GenericWrapperActions.dump(variant)));
+    return;
+  }
+  const metaGroupDumps = await MetaGroupWrapperActions.metaDump(
+    getGroupPubkeyFromWrapperType(variant)
+  );
+
+  window.log.info(prefix, StringUtils.toHex(metaGroupDumps));
+}
+
+async function variantNeedsDump(variant: ConfigWrapperObjectTypes) {
+  return isUserConfigWrapperType(variant)
+    ? await GenericWrapperActions.needsDump(variant)
+    : await MetaGroupWrapperActions.needsDump(getGroupPubkeyFromWrapperType(variant));
+}
+async function variantNeedsPush(variant: ConfigWrapperObjectTypes) {
+  return isUserConfigWrapperType(variant)
+    ? await GenericWrapperActions.needsPush(variant)
+    : await MetaGroupWrapperActions.needsPush(getGroupPubkeyFromWrapperType(variant));
+}
+
 async function mergeConfigsWithIncomingUpdates(
   incomingConfigs: Array<IncomingMessage<SignalService.ISharedConfigMessage>>
 ): Promise<Map<ConfigWrapperObjectTypes, IncomingConfResult>> {
@@ -100,25 +129,17 @@ async function mergeConfigsWithIncomingUpdates(
         hash: msg.messageHash,
       }));
       if (window.sessionFeatureFlags.debug.debugLibsessionDumps) {
-        window.log.info(
-          `printDumpsForDebugging: before merge of ${variant}:`,
-          StringUtils.toHex(await GenericWrapperActions.dump(variant))
-        );
-
-        for (let dumpIndex = 0; dumpIndex < toMerge.length; dumpIndex++) {
-          const element = toMerge[dumpIndex];
-          window.log.info(
-            `printDumpsForDebugging: toMerge of ${dumpIndex}:${element.hash}:  ${StringUtils.toHex(
-              element.data
-            )} `,
-            StringUtils.toHex(await GenericWrapperActions.dump(variant))
-          );
-        }
+        printDumpForDebug(`printDumpsForDebugging: before merge of ${variant}:`, variant);
       }
 
+      if (!isUserConfigWrapperType(variant)) {
+        window.log.info('// TODO Audric');
+        continue;
+      }
       const mergedCount = await GenericWrapperActions.merge(variant, toMerge);
-      const needsPush = await GenericWrapperActions.needsPush(variant);
-      const needsDump = await GenericWrapperActions.needsDump(variant);
+
+      const needsDump = await variantNeedsDump(variant);
+      const needsPush = await variantNeedsPush(variant);
       const latestEnvelopeTimestamp = Math.max(...sameVariant.map(m => m.envelopeTimestamp));
 
       window.log.debug(
@@ -126,10 +147,7 @@ async function mergeConfigsWithIncomingUpdates(
       );
 
       if (window.sessionFeatureFlags.debug.debugLibsessionDumps) {
-        window.log.info(
-          `printDumpsForDebugging: after merge of ${variant}:`,
-          StringUtils.toHex(await GenericWrapperActions.dump(variant))
-        );
+        printDumpForDebug(`printDumpsForDebugging: after merge of ${variant}:`, variant);
       }
       const incomingConfResult: IncomingConfResult = {
         needsDump,
@@ -161,6 +179,10 @@ export function getSettingsKeyFromLibsessionWrapper(
     case 'ConvoInfoVolatileConfig':
       return null; // we don't really care about the convo info volatile one
     default:
+      if (isMetaWrapperType(wrapperType)) {
+        // we don't care about the group updates as we don't need to drop older one for now
+        return null; // TODO maybe we do?
+      }
       try {
         assertUnreachable(
           wrapperType,
@@ -791,6 +813,10 @@ async function processMergingResults(results: Map<ConfigWrapperObjectTypes, Inco
       if (incomingResult.needsDump) {
         // The config data had changes so regenerate the dump and save it
 
+        if (!isUserConfigWrapperType(variant)) {
+          window.log.info('// TODO Audric');
+          return;
+        }
         const dump = await GenericWrapperActions.dump(variant);
         await ConfigDumpData.saveConfigDump({
           data: dump,

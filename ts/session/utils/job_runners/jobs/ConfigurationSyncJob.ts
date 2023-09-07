@@ -20,6 +20,7 @@ import {
 import { ReleasedFeatures } from '../../../../util/releaseFeature';
 import { allowOnlyOneAtATime } from '../../Promise';
 import { isSignInByLinking } from '../../../../util/storage';
+import { isUserConfigWrapperType } from '../../../../webworker/workers/browser/libsession_worker_functions';
 
 const defaultMsBetweenRetries = 15000; // a long time between retries, to avoid running multiple jobs at the same time, when one was postponed at the same time as one already planned (5s)
 const defaultMaxAttempts = 2;
@@ -104,6 +105,10 @@ async function buildAndSaveDumpsToDB(
     const change = changes[i];
     const variant = LibSessionUtil.kindToVariant(change.message.kind);
 
+    if (!isUserConfigWrapperType(variant)) {
+      window.log.info('// TODO Audric');
+      continue;
+    }
     const needsDump = await LibSessionUtil.markAsPushed(
       variant,
       destination,

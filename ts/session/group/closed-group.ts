@@ -1,4 +1,4 @@
-import _ from 'lodash';
+import _, { isNumber } from 'lodash';
 import { v4 as uuidv4 } from 'uuid';
 
 import { PubKey } from '../types';
@@ -233,17 +233,16 @@ export async function updateOrCreateClosedGroup(details: GroupInfo) {
 
   await conversation.commit();
 
-  if (expireTimer === undefined || typeof expireTimer !== 'number') {
-    return;
+  if (isNumber(expireTimer) && isFinite(expireTimer)) {
+    await conversation.updateExpireTimer(
+      expireTimer,
+      UserUtils.getOurPubKeyStrFromCache(),
+      Date.now(),
+      {
+        fromSync: true,
+      }
+    );
   }
-  await conversation.updateExpireTimer(
-    expireTimer,
-    UserUtils.getOurPubKeyStrFromCache(),
-    Date.now(),
-    {
-      fromSync: true,
-    }
-  );
 }
 
 async function sendNewName(convo: ConversationModel, name: string, messageId: string) {

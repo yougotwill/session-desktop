@@ -1,15 +1,25 @@
 /* eslint-disable consistent-return */
 /* eslint-disable no-case-declarations */
-import { isEmpty, isNull } from 'lodash';
 import {
   BaseConfigWrapperNode,
   ContactsConfigWrapperNode,
   ConvoInfoVolatileWrapperNode,
+  GroupPubkeyType,
+  GroupWrapperConstructor,
+  MetaGroupWrapperNode,
   UserConfigWrapperNode,
   UserGroupsWrapperNode,
 } from 'libsession_util_nodejs';
-// eslint-disable-next-line import/no-unresolved, import/extensions
-import { ConfigWrapperObjectTypes } from '../../browser/libsession_worker_functions';
+import { isEmpty, isNull } from 'lodash';
+
+import {
+  ConfigWrapperGroup,
+  ConfigWrapperObjectTypes,
+  ConfigWrapperUser,
+  MetaGroupConfig,
+  isMetaWrapperType,
+  isUserConfigWrapperType,
+} from '../../browser/libsession_worker_functions';
 
 /* eslint-disable no-console */
 /* eslint-disable strict */
@@ -29,7 +39,9 @@ let contactsConfigWrapper: ContactsConfigWrapperNode | undefined;
 let userGroupsConfigWrapper: UserGroupsWrapperNode | undefined;
 let convoInfoVolatileConfigWrapper: ConvoInfoVolatileWrapperNode | undefined;
 
-function getUserWrapper(type: ConfigWrapperObjectTypes): BaseConfigWrapperNode | undefined {
+const metaGroupWrappers: Map<GroupPubkeyType, MetaGroupWrapperNode> = new Map();
+
+function getUserWrapper(type: ConfigWrapperUser): BaseConfigWrapperNode | undefined {
   switch (type) {
     case 'UserConfig':
       return userProfileWrapper;
@@ -44,37 +56,76 @@ function getUserWrapper(type: ConfigWrapperObjectTypes): BaseConfigWrapperNode |
   }
 }
 
-function getCorrespondingWrapper(wrapperType: ConfigWrapperObjectTypes): BaseConfigWrapperNode {
-  switch (wrapperType) {
-    case 'UserConfig':
-    case 'ContactsConfig':
-    case 'UserGroupsConfig':
-    case 'ConvoInfoVolatileConfig':
-      const wrapper = getUserWrapper(wrapperType);
-      if (!wrapper) {
-        throw new Error(`${wrapperType} is not init yet`);
-      }
-      return wrapper;
-    default:
-      assertUnreachable(
-        wrapperType,
-        `getCorrespondingWrapper: Missing case error "${wrapperType}"`
-      );
+function getGroupPubkeyFromWrapperType(type: ConfigWrapperGroup): GroupPubkeyType {
+  assertGroupWrapperType(type);
+  return type.substring(type.indexOf('-03') + 1) as GroupPubkeyType; // typescript is not yet smart enough
+}
+
+function getGroupWrapper(type: ConfigWrapperGroup): MetaGroupWrapperNode | undefined {
+  assertGroupWrapperType(type);
+
+  if (isMetaWrapperType(type)) {
+    const pk = getGroupPubkeyFromWrapperType(type);
+    return metaGroupWrappers.get(pk);
   }
+
+  assertUnreachable(type, `getGroupWrapper: Missing case error "${type}"`);
+}
+
+function getCorrespondingUserWrapper(wrapperType: ConfigWrapperUser): BaseConfigWrapperNode {
+  if (isUserConfigWrapperType(wrapperType)) {
+    switch (wrapperType) {
+      case 'UserConfig':
+      case 'ContactsConfig':
+      case 'UserGroupsConfig':
+      case 'ConvoInfoVolatileConfig':
+        const wrapper = getUserWrapper(wrapperType);
+        if (!wrapper) {
+          throw new Error(`UserWrapper: ${wrapperType} is not init yet`);
+        }
+        return wrapper;
+      default:
+        assertUnreachable(
+          wrapperType,
+          `getCorrespondingUserWrapper: Missing case error "${wrapperType}"`
+        );
+    }
+  }
+
+  assertUnreachable(
+    wrapperType,
+    `getCorrespondingUserWrapper missing global handling for "${wrapperType}"`
+  );
+}
+
+function getCorrespondingGroupWrapper(wrapperType: MetaGroupConfig): MetaGroupWrapperNode {
+  if (isMetaWrapperType(wrapperType)) {
+    const wrapper = getGroupWrapper(wrapperType);
+    if (!wrapper) {
+      throw new Error(`GroupWrapper: ${wrapperType} is not init yet`);
+    }
+    return wrapper;
+  }
+  assertUnreachable(
+    wrapperType,
+    `getCorrespondingGroupWrapper missing global handling for "${wrapperType}"`
+  );
 }
 
 function isUInt8Array(value: any) {
   return value.constructor === Uint8Array;
 }
 
-function assertUserWrapperType(wrapperType: ConfigWrapperObjectTypes): ConfigWrapperObjectTypes {
-  if (
-    wrapperType !== 'ContactsConfig' &&
-    wrapperType !== 'UserConfig' &&
-    wrapperType !== 'UserGroupsConfig' &&
-    wrapperType !== 'ConvoInfoVolatileConfig'
-  ) {
+function assertUserWrapperType(wrapperType: ConfigWrapperObjectTypes): ConfigWrapperUser {
+  if (!isUserConfigWrapperType(wrapperType)) {
     throw new Error(`wrapperType "${wrapperType} is not of type User"`);
+  }
+  return wrapperType;
+}
+
+function assertGroupWrapperType(wrapperType: ConfigWrapperObjectTypes): ConfigWrapperGroup {
+  if (!isMetaWrapperType(wrapperType)) {
+    throw new Error(`wrapperType "${wrapperType} is not of type Group"`);
   }
   return wrapperType;
 }
@@ -82,7 +133,7 @@ function assertUserWrapperType(wrapperType: ConfigWrapperObjectTypes): ConfigWra
 /**
  * This function can be used to initialize a wrapper which takes the private ed25519 key of the user and a dump as argument.
  */
-function initUserWrapper(options: Array<any>, wrapperType: ConfigWrapperObjectTypes) {
+function initUserWrapper(options: Array<any>, wrapperType: ConfigWrapperUser) {
   const userType = assertUserWrapperType(wrapperType);
 
   const wrapper = getUserWrapper(wrapperType);
@@ -119,16 +170,69 @@ function initUserWrapper(options: Array<any>, wrapperType: ConfigWrapperObjectTy
   }
 }
 
+/**
+ * This function can be used to initialize a group wrapper
+ */
+function initGroupWrapper(options: Array<any>, wrapperType: ConfigWrapperGroup) {
+  const groupType = assertGroupWrapperType(wrapperType);
+
+  const wrapper = getGroupWrapper(wrapperType);
+  if (wrapper) {
+    throw new Error(`group: "${wrapperType}" already init`);
+  }
+
+  if (options.length !== 1) {
+    throw new Error(`group: "${wrapperType}" init needs 1 arguments`);
+  }
+  // we need all the fields defined in GroupWrapperConstructor, but the function in the wrapper will throw if we don't forward what's needed
+
+  const {
+    groupEd25519Pubkey,
+    groupEd25519Secretkey,
+    metaDumped,
+    userEd25519Secretkey,
+  }: GroupWrapperConstructor = options[0];
+
+  if (isMetaWrapperType(groupType)) {
+    const pk = getGroupPubkeyFromWrapperType(groupType);
+    const wrapper = new MetaGroupWrapperNode({
+      groupEd25519Pubkey,
+      groupEd25519Secretkey,
+      metaDumped,
+      userEd25519Secretkey,
+    });
+
+    metaGroupWrappers.set(pk, wrapper);
+    return;
+  }
+  assertUnreachable(groupType, `initGroupWrapper: Missing case error "${groupType}"`);
+}
+
 onmessage = async (e: { data: [number, ConfigWrapperObjectTypes, string, ...any] }) => {
   const [jobId, config, action, ...args] = e.data;
 
   try {
     if (action === 'init') {
-      initUserWrapper(args, config);
-      postMessage([jobId, null, null]);
-      return;
+      if (isUserConfigWrapperType(config)) {
+        initUserWrapper(args, config);
+        postMessage([jobId, null, null]);
+        return;
+      } else if (isMetaWrapperType(config)) {
+        initGroupWrapper(args, config);
+        postMessage([jobId, null, null]);
+        return;
+      }
+      throw new Error('Unhandled init wrapper type:' + config);
     }
-    const wrapper = getCorrespondingWrapper(config);
+
+    const wrapper = isUserConfigWrapperType(config)
+      ? getCorrespondingUserWrapper(config)
+      : isMetaWrapperType(config)
+      ? getCorrespondingGroupWrapper(config)
+      : undefined;
+    if (!wrapper) {
+      throw new Error(`did not find an already built wrapper for config: "${config}"`);
+    }
     const fn = (wrapper as any)[action];
 
     if (!fn) {

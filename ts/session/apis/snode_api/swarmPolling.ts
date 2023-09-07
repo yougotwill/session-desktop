@@ -396,6 +396,11 @@ export class SwarmPolling {
         );
       }
     }
+
+    throw new Error(
+      "todo audric make sure we don't handle shared config messages through the old pipeline since I cleanedup this part"
+    );
+
     if (allDecryptedConfigMessages.length) {
       try {
         window.log.info(
@@ -447,7 +452,7 @@ export class SwarmPolling {
         }
         window.log.debug(`configHashesToBump: ${configHashesToBump}`);
       } else if (type === ConversationTypeEnum.GROUPV3) {
-        console.error('pollNodeForKey case bump of hashes closedgroup v3 to do ');
+        console.info('pollNodeForKey case bump of hashes closedgroup v3 to do ');
       }
 
       let results = await SnodeAPIRetrieve.retrieveNextMessages(

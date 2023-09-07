@@ -7,6 +7,7 @@ import { actions as sections } from './ducks/section';
 import { actions as theme } from './ducks/theme';
 import { actions as modalDialog } from './ducks/modalDialog';
 import { actions as primaryColor } from './ducks/primaryColor';
+import { groupInfoActions } from './ducks/groupInfos';
 
 export function mapDispatchToProps(dispatch: Dispatch): object {
   return {
@@ -19,6 +20,7 @@ export function mapDispatchToProps(dispatch: Dispatch): object {
         ...sections,
         ...modalDialog,
         ...primaryColor,
+        ...groupInfoActions,
       },
       dispatch
     ),

@@ -5,16 +5,28 @@ import { difference, omit } from 'lodash';
 import Long from 'long';
 import { UserUtils } from '..';
 import { ConfigDumpData } from '../../../data/configDump/configDump';
+import { HexString } from '../../../node/hexStrings';
 import { SignalService } from '../../../protobuf';
-import { assertUnreachable } from '../../../types/sqlSharedTypes';
-import { ConfigWrapperObjectTypes } from '../../../webworker/workers/browser/libsession_worker_functions';
-import { GenericWrapperActions } from '../../../webworker/workers/browser/libsession_worker_interface';
+import { assertUnreachable, toFixedUint8ArrayOfLength } from '../../../types/sqlSharedTypes';
+import {
+  ConfigWrapperObjectTypes,
+  ConfigWrapperUser,
+  getGroupPubkeyFromWrapperType,
+  isMetaWrapperType,
+  isUserConfigWrapperType,
+} from '../../../webworker/workers/browser/libsession_worker_functions';
+import {
+  GenericWrapperActions,
+  MetaGroupWrapperActions,
+  UserGroupsWrapperActions,
+} from '../../../webworker/workers/browser/libsession_worker_interface';
 import { GetNetworkTime } from '../../apis/snode_api/getNetworkTime';
 import { SnodeNamespaces } from '../../apis/snode_api/namespaces';
 import { SharedConfigMessage } from '../../messages/outgoing/controlMessage/SharedConfigMessage';
+import { getUserED25519KeyPairBytes } from '../User';
 import { ConfigurationSync } from '../job_runners/jobs/ConfigurationSyncJob';
 
-const requiredUserVariants: Array<ConfigWrapperObjectTypes> = [
+const requiredUserVariants: Array<ConfigWrapperUser> = [
   'UserConfig',
   'ContactsConfig',
   'UserGroupsConfig',
@@ -51,27 +63,31 @@ async function initializeLibSessionUtilWrappers() {
     JSON.stringify(dumps.map(m => omit(m, 'data')))
   );
 
-  const userVariantsBuildWithoutErrors = new Set<ConfigWrapperObjectTypes>();
+  const userVariantsBuildWithoutErrors = new Set<ConfigWrapperUser>();
 
   // load the dumps retrieved from the database into their corresponding wrappers
   for (let index = 0; index < dumps.length; index++) {
     const dump = dumps[index];
-    window.log.debug('initializeLibSessionUtilWrappers initing from dump', dump.variant);
+    const variant = dump.variant;
+    if (!isUserConfigWrapperType(variant)) {
+      continue;
+    }
+    window.log.debug('initializeLibSessionUtilWrappers initing from dump', variant);
     try {
       await GenericWrapperActions.init(
-        dump.variant,
+        variant,
         privateKeyEd25519,
         dump.data.length ? dump.data : null
       );
 
-      userVariantsBuildWithoutErrors.add(dump.variant);
+      userVariantsBuildWithoutErrors.add(variant);
     } catch (e) {
       window.log.warn(`init of UserConfig failed with ${e.message} `);
       throw new Error(`initializeLibSessionUtilWrappers failed with ${e.message}`);
     }
   }
 
-  const missingRequiredVariants: Array<ConfigWrapperObjectTypes> = difference(
+  const missingRequiredVariants: Array<ConfigWrapperUser> = difference(
     LibSessionUtil.requiredUserVariants,
     [...userVariantsBuildWithoutErrors.values()]
   );
@@ -93,6 +109,39 @@ async function initializeLibSessionUtilWrappers() {
     window.log.debug(
       `initializeLibSessionUtilWrappers: missingRequiredVariants "${missingVariant}" created`
     );
+  }
+  const ed25519KeyPairBytes = await getUserED25519KeyPairBytes();
+  if (!ed25519KeyPairBytes?.privKeyBytes) {
+    throw new Error('user has no ed25519KeyPairBytes.');
+  }
+  // TODO then load the Group wrappers (not handled yet) into memory
+  // load the dumps retrieved from the database into their corresponding wrappers
+  for (let index = 0; index < dumps.length; index++) {
+    const dump = dumps[index];
+    const { variant } = dump;
+    if (!isMetaWrapperType(variant)) {
+      continue;
+    }
+    const groupPk = getGroupPubkeyFromWrapperType(variant);
+    const groupPkNoPrefix = groupPk.substring(2);
+    const groupEd25519Pubkey = HexString.fromHexString(groupPkNoPrefix);
+
+    try {
+      const foundInUserGroups = await UserGroupsWrapperActions.getGroup(groupPk);
+
+      window.log.debug('initializeLibSessionUtilWrappers initing from dump', variant);
+      // TODO we need to fetch the admin key here if we have it, maybe from the usergroup wrapper?
+      await MetaGroupWrapperActions.init(groupPk, {
+        groupEd25519Pubkey: toFixedUint8ArrayOfLength(groupEd25519Pubkey, 32),
+        groupEd25519Secretkey: foundInUserGroups?.secretKey || null,
+        userEd25519Secretkey: toFixedUint8ArrayOfLength(ed25519KeyPairBytes.privKeyBytes, 64),
+        metaDumped: dump.data,
+      });
+    } catch (e) {
+      // TODO should not throw in this case? we should probably just try to load what we manage to load
+      window.log.warn(`initGroup of Group wrapper of variant ${variant} failed with ${e.message} `);
+      // throw new Error(`initializeLibSessionUtilWrappers failed with ${e.message}`);
+    }
   }
 }
 
@@ -119,6 +168,10 @@ async function pendingChangesForPubkey(pubkey: string): Promise<Array<OutgoingCo
   for (let index = 0; index < dumps.length; index++) {
     const dump = dumps[index];
     const variant = dump.variant;
+    if (!isUserConfigWrapperType(variant)) {
+      window.log.info('// TODO Audric');
+      continue;
+    }
     const needsPush = await GenericWrapperActions.needsPush(variant);
 
     if (!needsPush) {
@@ -183,13 +236,13 @@ function variantToKind(variant: ConfigWrapperObjectTypes): SignalService.SharedC
  * Returns true if the config needs to be dumped afterwards
  */
 async function markAsPushed(
-  variant: ConfigWrapperObjectTypes,
+  variant: ConfigWrapperUser,
   pubkey: string,
   seqno: number,
   hash: string
 ) {
   if (pubkey !== UserUtils.getOurPubKeyStrFromCache()) {
-    throw new Error('FIXME, generic case is to be done');
+    throw new Error('FIXME, generic case is to be done'); // TODO Audric
   }
   await GenericWrapperActions.confirmPushed(variant, seqno, hash);
   return GenericWrapperActions.needsDump(variant);

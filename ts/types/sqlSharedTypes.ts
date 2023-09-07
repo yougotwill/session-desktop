@@ -1,7 +1,12 @@
 /* eslint-disable import/extensions */
 /* eslint-disable import/no-unresolved */
 // eslint-disable-next-line camelcase
-import { ContactInfoSet, LegacyGroupInfo, LegacyGroupMemberInfo } from 'libsession_util_nodejs';
+import {
+  ContactInfoSet,
+  FixedSizeUint8Array,
+  LegacyGroupInfo,
+  LegacyGroupMemberInfo,
+} from 'libsession_util_nodejs';
 import { from_hex } from 'libsodium-wrappers-sumo';
 import { isArray, isEmpty, isEqual } from 'lodash';
 import { OpenGroupV2Room } from '../data/opengroups';
@@ -264,4 +269,14 @@ export function capabilitiesListHasBlindEnabled(caps?: Array<string> | null) {
 
 export function roomHasReactionsEnabled(openGroup?: OpenGroupV2Room) {
   return Boolean(openGroup?.capabilities?.includes('reactions'));
+}
+
+export function toFixedUint8ArrayOfLength<T extends number>(
+  data: Uint8Array,
+  length: T
+): FixedSizeUint8Array<T> {
+  if (data.length === length) return (data as any) as FixedSizeUint8Array<T>;
+  throw new Error(
+    `toFixedUint8ArrayOfLength invalid. Expected length ${length} but got: ${data.length}`
+  );
 }

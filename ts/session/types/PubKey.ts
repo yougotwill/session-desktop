@@ -1,3 +1,4 @@
+import { GroupPubkeyType } from 'libsession_util_nodejs';
 import { fromHexToArray } from '../utils/String';
 
 export enum KeyPrefixType {
@@ -240,7 +241,7 @@ export class PubKey {
     return key.startsWith(KeyPrefixType.blinded15) || key.startsWith(KeyPrefixType.blinded25);
   }
 
-  public static isClosedGroupV3(key: string) {
+  public static isClosedGroupV3(key: string): key is GroupPubkeyType {
     const regex = new RegExp(`^${KeyPrefixType.groupV3}${PubKey.HEX}{64}$`);
     return regex.test(key);
   }

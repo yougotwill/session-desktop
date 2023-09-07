@@ -34,7 +34,7 @@ window.sessionFeatureFlags = {
   integrationTestEnv: Boolean(
     process.env.NODE_APP_INSTANCE && process.env.NODE_APP_INSTANCE.includes('test-integration')
   ),
-  useClosedGroupV3: false || process.env.USE_CLOSED_GROUP_V3,
+  useClosedGroupV3: true,
   debug: {
     debugLogging: !_.isEmpty(process.env.SESSION_DEBUG),
     debugLibsessionDumps: !_.isEmpty(process.env.SESSION_DEBUG_LIBSESSION_DUMPS),

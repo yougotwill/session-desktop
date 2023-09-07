@@ -16,7 +16,6 @@ const directConsole = {
   group: console.group,
   groupEnd: console.groupEnd,
   warn: console.warn,
-
   error: console.error,
 };
 

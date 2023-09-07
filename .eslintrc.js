@@ -5,6 +5,11 @@ module.exports = {
     react: {
       version: 'detect',
     },
+    'import/resolver': {
+      node: {
+        paths: [path.resolve(__dirname)],
+      },
+    },
   },
 
   extends: [

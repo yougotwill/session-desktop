@@ -1,19 +1,24 @@
 /* eslint-disable import/extensions */
 /* eslint-disable import/no-unresolved */
-import { join } from 'path';
 import {
-  BaseWrapperActionsCalls,
+  GroupWrapperConstructor,
   ContactInfoSet,
   ContactsWrapperActionsCalls,
   ConvoInfoVolatileWrapperActionsCalls,
+  GenericWrapperActionsCall,
+  GroupInfoSet,
+  GroupPubkeyType,
   LegacyGroupInfo,
+  MetaGroupWrapperActionsCalls,
+  ProfilePicture,
   UserConfigWrapperActionsCalls,
   UserGroupsWrapperActionsCalls,
 } from 'libsession_util_nodejs';
+import { join } from 'path';
 
 import { getAppRootPath } from '../../../node/getRootPath';
 import { WorkerInterface } from '../../worker_interface';
-import { ConfigWrapperObjectTypes, LibSessionWorkerFunctions } from './libsession_worker_functions';
+import { ConfigWrapperUser, LibSessionWorkerFunctions } from './libsession_worker_functions';
 
 let libsessionWorkerInterface: WorkerInterface | undefined;
 
@@ -30,56 +35,68 @@ const internalCallLibSessionWorker = async ([
       'workers',
       'node',
       'libsession',
-      'libsession.worker.js'
+      'libsession.worker.compiled.js'
     );
 
     libsessionWorkerInterface = new WorkerInterface(libsessionWorkerPath, 1 * 60 * 1000);
   }
-  return libsessionWorkerInterface?.callWorker(config, fnName, ...args);
+  const result = libsessionWorkerInterface?.callWorker(config, fnName, ...args);
+
+  return result;
 };
 
-export const GenericWrapperActions = {
-  init: async (
-    wrapperId: ConfigWrapperObjectTypes,
+type GenericWrapperActionsCalls = {
+  init: (
+    wrapperId: ConfigWrapperUser,
     ed25519Key: Uint8Array,
     dump: Uint8Array | null
-  ) =>
-    /** base wrapper generic actions */
-    callLibSessionWorker([wrapperId, 'init', ed25519Key, dump]) as Promise<void>,
-  confirmPushed: async (wrapperId: ConfigWrapperObjectTypes, seqno: number, hash: string) =>
+  ) => Promise<void>;
+  confirmPushed: GenericWrapperActionsCall<ConfigWrapperUser, 'confirmPushed'>;
+  dump: GenericWrapperActionsCall<ConfigWrapperUser, 'dump'>;
+  merge: GenericWrapperActionsCall<ConfigWrapperUser, 'merge'>;
+  needsDump: GenericWrapperActionsCall<ConfigWrapperUser, 'needsDump'>;
+  needsPush: GenericWrapperActionsCall<ConfigWrapperUser, 'needsPush'>;
+  push: GenericWrapperActionsCall<ConfigWrapperUser, 'push'>;
+  storageNamespace: GenericWrapperActionsCall<ConfigWrapperUser, 'storageNamespace'>;
+  currentHashes: GenericWrapperActionsCall<ConfigWrapperUser, 'currentHashes'>;
+};
+
+// TODO rename this to a UserWrapperActions or UserGenericWrapperActions as those actions are only used for User Wrappers now
+export const GenericWrapperActions: GenericWrapperActionsCalls = {
+  /** base wrapper generic actions */
+
+  init: async (wrapperId: ConfigWrapperUser, ed25519Key: Uint8Array, dump: Uint8Array | null) =>
+    callLibSessionWorker([wrapperId, 'init', ed25519Key, dump]) as ReturnType<
+      GenericWrapperActionsCalls['init']
+    >,
+
+  confirmPushed: async (wrapperId: ConfigWrapperUser, seqno: number, hash: string) =>
     callLibSessionWorker([wrapperId, 'confirmPushed', seqno, hash]) as ReturnType<
-      BaseWrapperActionsCalls['confirmPushed']
+      GenericWrapperActionsCalls['confirmPushed']
     >,
-  dump: async (wrapperId: ConfigWrapperObjectTypes) =>
-    callLibSessionWorker([wrapperId, 'dump']) as Promise<
-      ReturnType<BaseWrapperActionsCalls['dump']>
+  dump: async (wrapperId: ConfigWrapperUser) =>
+    callLibSessionWorker([wrapperId, 'dump']) as ReturnType<GenericWrapperActionsCalls['dump']>,
+  merge: async (wrapperId: ConfigWrapperUser, toMerge: Array<{ hash: string; data: Uint8Array }>) =>
+    callLibSessionWorker([wrapperId, 'merge', toMerge]) as ReturnType<
+      GenericWrapperActionsCalls['merge']
     >,
-  merge: async (
-    wrapperId: ConfigWrapperObjectTypes,
-    toMerge: Array<{ hash: string; data: Uint8Array }>
-  ) =>
-    callLibSessionWorker([wrapperId, 'merge', toMerge]) as Promise<
-      ReturnType<BaseWrapperActionsCalls['merge']>
+  needsDump: async (wrapperId: ConfigWrapperUser) =>
+    callLibSessionWorker([wrapperId, 'needsDump']) as ReturnType<
+      GenericWrapperActionsCalls['needsDump']
     >,
-  needsDump: async (wrapperId: ConfigWrapperObjectTypes) =>
-    callLibSessionWorker([wrapperId, 'needsDump']) as Promise<
-      ReturnType<BaseWrapperActionsCalls['needsDump']>
+  needsPush: async (wrapperId: ConfigWrapperUser) =>
+    callLibSessionWorker([wrapperId, 'needsPush']) as ReturnType<
+      GenericWrapperActionsCalls['needsPush']
     >,
-  needsPush: async (wrapperId: ConfigWrapperObjectTypes) =>
-    callLibSessionWorker([wrapperId, 'needsPush']) as Promise<
-      ReturnType<BaseWrapperActionsCalls['needsPush']>
+  push: async (wrapperId: ConfigWrapperUser) =>
+    callLibSessionWorker([wrapperId, 'push']) as ReturnType<GenericWrapperActionsCalls['push']>,
+  storageNamespace: async (wrapperId: ConfigWrapperUser) =>
+    callLibSessionWorker([wrapperId, 'storageNamespace']) as ReturnType<
+      GenericWrapperActionsCalls['storageNamespace']
     >,
-  push: async (wrapperId: ConfigWrapperObjectTypes) =>
-    callLibSessionWorker([wrapperId, 'push']) as Promise<
-      ReturnType<BaseWrapperActionsCalls['push']>
-    >,
-  storageNamespace: async (wrapperId: ConfigWrapperObjectTypes) =>
-    callLibSessionWorker([wrapperId, 'storageNamespace']) as Promise<
-      ReturnType<BaseWrapperActionsCalls['storageNamespace']>
-    >,
-  currentHashes: async (wrapperId: ConfigWrapperObjectTypes) =>
-    callLibSessionWorker([wrapperId, 'currentHashes']) as Promise<
-      ReturnType<BaseWrapperActionsCalls['currentHashes']>
+  currentHashes: async (wrapperId: ConfigWrapperUser) =>
+    callLibSessionWorker([wrapperId, 'currentHashes']) as ReturnType<
+      GenericWrapperActionsCalls['currentHashes']
     >,
 };
 
@@ -237,6 +254,16 @@ export const UserGroupsWrapperActions: UserGroupsWrapperActionsCalls = {
     callLibSessionWorker(['UserGroupsConfig', 'eraseLegacyGroup', pubkeyHex]) as Promise<
       ReturnType<UserGroupsWrapperActionsCalls['eraseLegacyGroup']>
     >,
+
+  createGroup: async () =>
+    callLibSessionWorker(['UserGroupsConfig', 'createGroup']) as Promise<
+      ReturnType<UserGroupsWrapperActionsCalls['createGroup']>
+    >,
+
+  getGroup: async (pubkeyHex: GroupPubkeyType) =>
+    callLibSessionWorker(['UserGroupsConfig', 'getGroup', pubkeyHex]) as Promise<
+      ReturnType<UserGroupsWrapperActionsCalls['getGroup']>
+    >,
 };
 
 export const ConvoInfoVolatileWrapperActions: ConvoInfoVolatileWrapperActionsCalls = {
@@ -331,6 +358,144 @@ export const ConvoInfoVolatileWrapperActions: ConvoInfoVolatileWrapperActionsCal
       'eraseCommunityByFullUrl',
       fullUrlWithOrWithoutPubkey,
     ]) as Promise<ReturnType<ConvoInfoVolatileWrapperActionsCalls['eraseCommunityByFullUrl']>>,
+};
+
+export const MetaGroupWrapperActions: MetaGroupWrapperActionsCalls = {
+  /** Shared actions */
+  init: async (groupPk: GroupPubkeyType, options: GroupWrapperConstructor) =>
+    callLibSessionWorker([`MetaGroupConfig-${groupPk}`, 'init', options]) as Promise<
+      ReturnType<MetaGroupWrapperActionsCalls['init']>
+    >,
+  needsPush: async (groupPk: GroupPubkeyType) =>
+    callLibSessionWorker([`MetaGroupConfig-${groupPk}`, 'needsPush']) as Promise<
+      ReturnType<MetaGroupWrapperActionsCalls['needsPush']>
+    >,
+  push: async (groupPk: GroupPubkeyType) =>
+    callLibSessionWorker([`MetaGroupConfig-${groupPk}`, 'push']) as Promise<
+      ReturnType<MetaGroupWrapperActionsCalls['push']>
+    >,
+  needsDump: async (groupPk: GroupPubkeyType) =>
+    callLibSessionWorker([`MetaGroupConfig-${groupPk}`, 'needsDump']) as Promise<
+      ReturnType<MetaGroupWrapperActionsCalls['needsDump']>
+    >,
+  metaDump: async (groupPk: GroupPubkeyType) =>
+    callLibSessionWorker([`MetaGroupConfig-${groupPk}`, 'metaDump']) as Promise<
+      ReturnType<MetaGroupWrapperActionsCalls['metaDump']>
+    >,
+
+  /** GroupInfo wrapper specific actions */
+  infoGet: async (groupPk: GroupPubkeyType) =>
+    callLibSessionWorker([`MetaGroupConfig-${groupPk}`, 'infoGet']) as Promise<
+      ReturnType<MetaGroupWrapperActionsCalls['infoGet']>
+    >,
+  infoSet: async (groupPk: GroupPubkeyType, infos: GroupInfoSet) =>
+    callLibSessionWorker([`MetaGroupConfig-${groupPk}`, 'infoSet', infos]) as Promise<
+      ReturnType<MetaGroupWrapperActionsCalls['infoSet']>
+    >,
+  infoDestroy: async (groupPk: GroupPubkeyType) =>
+    callLibSessionWorker([`MetaGroupConfig-${groupPk}`, 'infoDestroy']) as Promise<
+      ReturnType<MetaGroupWrapperActionsCalls['infoDestroy']>
+    >,
+
+  /** GroupMembers wrapper specific actions */
+  memberGet: async (groupPk: GroupPubkeyType, pubkeyHex: string) =>
+    callLibSessionWorker([`MetaGroupConfig-${groupPk}`, 'memberGet', pubkeyHex]) as Promise<
+      ReturnType<MetaGroupWrapperActionsCalls['memberGet']>
+    >,
+  memberGetOrConstruct: async (groupPk: GroupPubkeyType, pubkeyHex: string) =>
+    callLibSessionWorker([
+      `MetaGroupConfig-${groupPk}`,
+      'memberGetOrConstruct',
+      pubkeyHex,
+    ]) as Promise<ReturnType<MetaGroupWrapperActionsCalls['memberGetOrConstruct']>>,
+  memberGetAll: async (groupPk: GroupPubkeyType) =>
+    callLibSessionWorker([`MetaGroupConfig-${groupPk}`, 'memberGetAll']) as Promise<
+      ReturnType<MetaGroupWrapperActionsCalls['memberGetAll']>
+    >,
+  memberErase: async (groupPk: GroupPubkeyType, pubkeyHex: string) =>
+    callLibSessionWorker([`MetaGroupConfig-${groupPk}`, 'memberErase', pubkeyHex]) as Promise<
+      ReturnType<MetaGroupWrapperActionsCalls['memberErase']>
+    >,
+  memberSetAccepted: async (groupPk: GroupPubkeyType, pubkeyHex: string) =>
+    callLibSessionWorker([`MetaGroupConfig-${groupPk}`, 'memberSetAccepted', pubkeyHex]) as Promise<
+      ReturnType<MetaGroupWrapperActionsCalls['memberSetAccepted']>
+    >,
+  memberSetPromoted: async (groupPk: GroupPubkeyType, pubkeyHex: string, failed: boolean) =>
+    callLibSessionWorker([
+      `MetaGroupConfig-${groupPk}`,
+      'memberSetPromoted',
+      pubkeyHex,
+      failed,
+    ]) as Promise<ReturnType<MetaGroupWrapperActionsCalls['memberSetPromoted']>>,
+  memberSetInvited: async (groupPk: GroupPubkeyType, pubkeyHex: string, failed: boolean) =>
+    callLibSessionWorker([
+      `MetaGroupConfig-${groupPk}`,
+      'memberSetInvited',
+      pubkeyHex,
+      failed,
+    ]) as Promise<ReturnType<MetaGroupWrapperActionsCalls['memberSetInvited']>>,
+  memberSetName: async (groupPk: GroupPubkeyType, pubkeyHex: string, name: string) =>
+    callLibSessionWorker([
+      `MetaGroupConfig-${groupPk}`,
+      'memberSetName',
+      pubkeyHex,
+      name,
+    ]) as Promise<ReturnType<MetaGroupWrapperActionsCalls['memberSetName']>>,
+  memberSetProfilePicture: async (
+    groupPk: GroupPubkeyType,
+    pubkeyHex: string,
+    profilePicture: ProfilePicture
+  ) =>
+    callLibSessionWorker([
+      `MetaGroupConfig-${groupPk}`,
+      'memberSetProfilePicture',
+      pubkeyHex,
+      profilePicture,
+    ]) as Promise<ReturnType<MetaGroupWrapperActionsCalls['memberSetProfilePicture']>>,
+
+  /** GroupKeys wrapper specific actions */
+
+  keyRekey: async (groupPk: GroupPubkeyType) =>
+    callLibSessionWorker([`MetaGroupConfig-${groupPk}`, 'keyRekey']) as Promise<
+      ReturnType<MetaGroupWrapperActionsCalls['keyRekey']>
+    >,
+  keysNeedsRekey: async (groupPk: GroupPubkeyType) =>
+    callLibSessionWorker([`MetaGroupConfig-${groupPk}`, 'keysNeedsRekey']) as Promise<
+      ReturnType<MetaGroupWrapperActionsCalls['keysNeedsRekey']>
+    >,
+  groupKeys: async (groupPk: GroupPubkeyType) =>
+    callLibSessionWorker([`MetaGroupConfig-${groupPk}`, 'groupKeys']) as Promise<
+      ReturnType<MetaGroupWrapperActionsCalls['groupKeys']>
+    >,
+  currentHashes: async (groupPk: GroupPubkeyType) =>
+    callLibSessionWorker([`MetaGroupConfig-${groupPk}`, 'currentHashes']) as Promise<
+      ReturnType<MetaGroupWrapperActionsCalls['currentHashes']>
+    >,
+
+  loadKeyMessage: async (
+    groupPk: GroupPubkeyType,
+    hash: string,
+    data: Uint8Array,
+    timestampMs: number
+  ) =>
+    callLibSessionWorker([
+      `MetaGroupConfig-${groupPk}`,
+      'loadKeyMessage',
+      hash,
+      data,
+      timestampMs,
+    ]) as Promise<ReturnType<MetaGroupWrapperActionsCalls['loadKeyMessage']>>,
+  encryptMessage: async (groupPk: GroupPubkeyType, plaintext: Uint8Array, compress: boolean) =>
+    callLibSessionWorker([
+      `MetaGroupConfig-${groupPk}`,
+      'encryptMessage',
+      plaintext,
+      compress,
+    ]) as Promise<ReturnType<MetaGroupWrapperActionsCalls['encryptMessage']>>,
+  decryptMessage: async (groupPk: GroupPubkeyType, ciphertext: Uint8Array) =>
+    callLibSessionWorker([`MetaGroupConfig-${groupPk}`, 'decryptMessage', ciphertext]) as Promise<
+      ReturnType<MetaGroupWrapperActionsCalls['decryptMessage']>
+    >,
 };
 
 export const callLibSessionWorker = async (
