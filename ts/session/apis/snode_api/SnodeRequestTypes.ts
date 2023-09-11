@@ -1,7 +1,5 @@
-import {
-  SharedGroupConfigMessage,
-  SharedUserConfigMessage,
-} from '../../messages/outgoing/controlMessage/SharedConfigMessage';
+import { GroupPubkeyType } from 'libsession_util_nodejs';
+import { SharedUserConfigMessage } from '../../messages/outgoing/controlMessage/SharedConfigMessage';
 import { SnodeNamespaces } from './namespaces';
 
 export type SwarmForSubRequest = { method: 'get_swarm'; params: { pubkey: string } };
@@ -112,7 +110,15 @@ export type StoreOnNodeMessage = {
   pubkey: string;
   timestamp: number;
   namespace: number;
-  message: SharedUserConfigMessage | SharedGroupConfigMessage;
+  message: SharedUserConfigMessage;
+};
+
+export type StoreOnNodeData = {
+  pubkey: GroupPubkeyType;
+  networkTimestamp: number;
+  namespace: number;
+  data: Uint8Array;
+  ttl: number;
 };
 
 export type StoreOnNodeSubRequest = { method: 'store'; params: StoreOnNodeParams };

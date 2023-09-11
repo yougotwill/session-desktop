@@ -10,7 +10,6 @@ import { HexString } from '../../../node/hexStrings';
 import { SignalService } from '../../../protobuf';
 import { assertUnreachable, toFixedUint8ArrayOfLength } from '../../../types/sqlSharedTypes';
 import {
-  ConfigWrapperGroup,
   ConfigWrapperGroupDetailed,
   ConfigWrapperUser,
   getGroupPubkeyFromWrapperType,
@@ -26,13 +25,12 @@ import { GetNetworkTime } from '../../apis/snode_api/getNetworkTime';
 import { SnodeNamespaces } from '../../apis/snode_api/namespaces';
 import {
   SharedConfigMessage,
-  SharedGroupConfigMessage,
   SharedUserConfigMessage,
 } from '../../messages/outgoing/controlMessage/SharedConfigMessage';
 import { PubKey } from '../../types';
 import { getUserED25519KeyPairBytes } from '../User';
 import { ConfigurationSync } from '../job_runners/jobs/ConfigurationSyncJob';
-import { GroupConfigKind, UserConfigKind } from '../../../types/ProtobufKind';
+import { UserConfigKind } from '../../../types/ProtobufKind';
 
 const requiredUserVariants: Array<ConfigWrapperUser> = [
   'UserConfig',
@@ -41,10 +39,7 @@ const requiredUserVariants: Array<ConfigWrapperUser> = [
   'ConvoInfoVolatileConfig',
 ];
 
-export type OutgoingConfResult<
-  K extends UserConfigKind | GroupConfigKind,
-  T extends SharedConfigMessage<K>
-> = {
+export type OutgoingConfResult<K extends UserConfigKind, T extends SharedConfigMessage<K>> = {
   message: T;
   namespace: SnodeNamespaces;
   oldMessageHashes: Array<string>;
@@ -203,60 +198,53 @@ async function pendingChangesForUs(): Promise<
   return results;
 }
 
+export type PendingChangesForGroup = {
+  data: Uint8Array;
+  seqno: Long;
+  timestamp: number;
+  oldMessageHashes: Array<string>;
+  namespace: SnodeNamespaces;
+};
+
 async function pendingChangesForGroup(
   groupPk: GroupPubkeyType
-): Promise<Array<OutgoingConfResult<GroupConfigKind, SharedGroupConfigMessage>>> {
-  const dumps = await ConfigDumpData.getAllDumpsWithoutDataFor(groupPk);
-
-  const results: Array<OutgoingConfResult<GroupConfigKind, SharedGroupConfigMessage>> = [];
+): Promise<Map<ConfigWrapperGroupDetailed, PendingChangesForGroup>> {
+  const results: Map<ConfigWrapperGroupDetailed, PendingChangesForGroup> = new Map();
   const variantsNeedingPush = new Set<ConfigWrapperGroupDetailed>();
 
   if (!PubKey.isClosedGroupV3(groupPk)) {
     throw new Error(`pendingChangesForGroup only works for user or 03 group pubkeys`);
   }
 
-  for (let index = 0; index < dumps.length; index++) {
-    const dump = dumps[index];
-    const variant = dump.variant;
-    if (!isMetaWrapperType(variant)) {
-      // shouldn't happen
-      continue;
-    }
+  // one of the wrapper behind the metagroup needs a push
+  const needsPush = await MetaGroupWrapperActions.needsPush(groupPk);
 
-    // one of the wrapper behind the metagroup needs a push
-    const needsPush = await MetaGroupWrapperActions.needsPush(groupPk);
+  // we probably need to add the GROUP_KEYS check here
 
-    if (!needsPush) {
-      continue;
-    }
+  if (!needsPush) {
+    return results;
+  }
 
-    const { groupInfo, groupMember } = await MetaGroupWrapperActions.push(groupPk);
-    if (groupInfo) {
-      variantsNeedingPush.add('GroupInfo');
-      results.push({
-        message: new SharedGroupConfigMessage({
-          data: groupInfo.data,
-          kind: SignalService.SharedConfigMessage.Kind.GROUP_INFO,
-          seqno: Long.fromNumber(groupInfo.seqno),
-          timestamp: GetNetworkTime.getNowWithNetworkOffset(),
-        }),
-        oldMessageHashes: groupInfo.hashes,
-        namespace: groupInfo.namespace,
-      });
-    }
-    if (groupMember) {
-      variantsNeedingPush.add('GroupMember');
-      results.push({
-        message: new SharedGroupConfigMessage({
-          data: groupMember.data,
-          kind: SignalService.SharedConfigMessage.Kind.GROUP_MEMBERS,
-          seqno: Long.fromNumber(groupMember.seqno),
-          timestamp: GetNetworkTime.getNowWithNetworkOffset(),
-        }),
-        oldMessageHashes: groupMember.hashes,
-        namespace: groupMember.namespace,
-      });
-    }
+  const { groupInfo, groupMember } = await MetaGroupWrapperActions.push(groupPk);
+  if (groupInfo) {
+    variantsNeedingPush.add('GroupInfo');
+    results.set('GroupInfo', {
+      data: groupInfo.data,
+      seqno: Long.fromNumber(groupInfo.seqno),
+      timestamp: GetNetworkTime.getNowWithNetworkOffset(),
+      oldMessageHashes: groupInfo.hashes,
+      namespace: groupInfo.namespace,
+    });
+  }
+  if (groupMember) {
+    variantsNeedingPush.add('GroupMember');
+    results.set('GroupMember', {
+      data: groupMember.data,
+      seqno: Long.fromNumber(groupMember.seqno),
+      timestamp: GetNetworkTime.getNowWithNetworkOffset(),
+      oldMessageHashes: groupMember.hashes,
+      namespace: groupMember.namespace,
+    });
   }
   window.log.info(`those variants needs push: "${[...variantsNeedingPush]}"`);
 
@@ -293,20 +281,6 @@ function userVariantToUserKind(variant: ConfigWrapperUser) {
   }
 }
 
-function groupKindToVariant(kind: GroupConfigKind, groupPk: GroupPubkeyType): ConfigWrapperGroup {
-  if (!PubKey.isClosedGroupV3(groupPk)) {
-    throw new Error(`Not a groupPk starting with 03: ${groupPk}`);
-  }
-  switch (kind) {
-    case SignalService.SharedConfigMessage.Kind.GROUP_INFO:
-    case SignalService.SharedConfigMessage.Kind.GROUP_KEYS:
-    case SignalService.SharedConfigMessage.Kind.GROUP_MEMBERS:
-      return `MetaGroupConfig-${groupPk}`;
-    default:
-      assertUnreachable(kind, `userKindToVariant: Unsupported variant: "${kind}"`);
-  }
-}
-
 /**
  * Returns true if the config needs to be dumped afterwards
  */
@@ -322,6 +296,5 @@ export const LibSessionUtil = {
   pendingChangesForUs,
   pendingChangesForGroup,
   userKindToVariant,
-  groupKindToVariant,
   markAsPushed,
 };

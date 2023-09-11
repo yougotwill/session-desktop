@@ -44,9 +44,6 @@ message SharedConfigMessage {
     CONTACTS                  = 2;
     CONVO_INFO_VOLATILE       = 3;
     USER_GROUPS               = 4;
-    GROUP_INFO                = 5;
-    GROUP_MEMBERS             = 6;
-    GROUP_KEYS                = 7;
   }
 
   required Kind              kind             = 1;

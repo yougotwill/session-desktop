@@ -17,6 +17,7 @@ import { SnodeNamespace, SnodeNamespaces } from '../apis/snode_api/namespaces';
 import { getSwarmFor } from '../apis/snode_api/snodePool';
 import {
   NotEmptyArrayOfBatchResults,
+  StoreOnNodeData,
   StoreOnNodeMessage,
   StoreOnNodeParams,
   StoreOnNodeParamsNoSig,
@@ -37,6 +38,8 @@ import { PubKey } from '../types';
 import { RawMessage } from '../types/RawMessage';
 import { EmptySwarmError } from '../utils/errors';
 import { fromUInt8ArrayToBase64 } from '../utils/String';
+import { GroupPubkeyType } from 'libsession_util_nodejs';
+import { to_base64 } from 'libsodium-wrappers-sumo';
 
 // ================ SNODE STORE ================
 
@@ -446,6 +449,53 @@ async function sendMessagesToSnode(
   }
 }
 
+/**
+ * Send an array of preencrypted data to the corresponding swarm.
+ * Used currently only for sending libsession GroupInfo, GroupMembers and groupKeys config updates.
+ *
+ * @param params the data to deposit
+ * @param destination the pubkey we should deposit those message to
+ * @returns the hashes of successful deposit
+ */
+async function sendEncryptedDataToSnode(
+  encryptedData: Array<StoreOnNodeData>,
+  destination: GroupPubkeyType,
+  messagesHashesToDelete: Set<string> | null
+): Promise<NotEmptyArrayOfBatchResults | null> {
+  try {
+    const batchResults = await pRetry(
+      async () => {
+        return MessageSender.sendMessagesDataToSnode(
+          encryptedData.map(content => ({
+            pubkey: destination,
+            data64: to_base64(content.data),
+            ttl: content.ttl,
+            timestamp: content.networkTimestamp,
+            namespace: content.namespace,
+          })),
+          destination,
+          messagesHashesToDelete
+        );
+      },
+      {
+        retries: 2,
+        factor: 1,
+        minTimeout: MessageSender.getMinRetryTimeout(),
+        maxTimeout: 1000,
+      }
+    );
+
+    if (!batchResults || isEmpty(batchResults)) {
+      throw new Error('result is empty for sendEncryptedDataToSnode');
+    }
+
+    return batchResults;
+  } catch (e) {
+    window.log.warn(`sendEncryptedDataToSnode failed with ${e.message}`);
+    return null;
+  }
+}
+
 async function buildEnvelope(
   type: SignalService.Envelope.Type,
   sskSource: string | undefined,
@@ -543,6 +593,7 @@ export const MessageSender = {
   sendToOpenGroupV2BlindedRequest,
   sendMessagesDataToSnode,
   sendMessagesToSnode,
+  sendEncryptedDataToSnode,
   getMinRetryTimeout,
   sendToOpenGroupV2,
   send,

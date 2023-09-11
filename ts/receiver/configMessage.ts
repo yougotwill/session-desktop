@@ -34,7 +34,7 @@ import {
   getGroupPubkeyFromWrapperType,
   isUserConfigWrapperType,
 } from '../../ts/webworker/workers/browser/libsession_worker_functions';
-import { GroupConfigKind, UserConfigKind, isUserKind } from '../types/ProtobufKind';
+import { UserConfigKind, isUserKind } from '../types/ProtobufKind';
 import {
   ContactsWrapperActions,
   ConvoInfoVolatileWrapperActions,
@@ -47,16 +47,13 @@ import { addKeyPairToCacheAndDBIfNeeded } from './closedGroups';
 import { HexKeyPair } from './keypairs';
 import { queueAllCachedFromSource } from './receiver';
 
-type IncomingConfResult<T extends UserConfigKind | GroupConfigKind> = {
+type IncomingUserResult = {
   needsPush: boolean;
   needsDump: boolean;
-  kind: T;
+  kind: UserConfigKind;
   publicKey: string;
   latestEnvelopeTimestamp: number;
 };
-
-type IncomingUserResult = IncomingConfResult<UserConfigKind>;
-type IncomingGroupResult = IncomingConfResult<GroupConfigKind>;
 
 function byUserVariant(
   incomingConfigs: Array<IncomingMessage<SignalService.ISharedConfigMessage>>

@@ -31,7 +31,7 @@ const defaultMaxAttempts = 2;
  */
 let lastRunConfigSyncJobTimestamp: number | null = null;
 
-export type SingleDestinationChanges = {
+type SingleDestinationChanges = {
   messages: Array<OutgoingConfResult<UserConfigKind, SharedUserConfigMessage>>;
   allOldHashes: Array<string>;
 };

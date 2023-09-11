@@ -233,12 +233,7 @@ export class MessageQueue {
     pubkey,
   }: {
     pubkey: PubKey;
-    message:
-      | ClosedGroupNewMessage
-      | CallMessage
-      // | SharedUserConfigMessage
-      // | SharedGroupConfigMessage
-      | ClosedGroupMemberLeftMessage;
+    message: ClosedGroupNewMessage | CallMessage | ClosedGroupMemberLeftMessage;
     namespace: SnodeNamespaces;
   }): Promise<boolean | number> {
     let rawMessage;

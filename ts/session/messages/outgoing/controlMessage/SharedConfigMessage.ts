@@ -5,17 +5,16 @@ import { SignalService } from '../../../../protobuf';
 import { MessageParams } from '../Message';
 import { ContentMessage } from '..';
 import { TTL_DEFAULT } from '../../../constants';
-import { GroupConfigKind, UserConfigKind } from '../../../../types/ProtobufKind';
+import { UserConfigKind } from '../../../../types/ProtobufKind';
 
-interface SharedConfigParams<KindsPicked extends UserConfigKind | GroupConfigKind>
-  extends MessageParams {
+interface SharedConfigParams<KindsPicked extends UserConfigKind> extends MessageParams {
   seqno: Long;
   data: Uint8Array;
   kind: KindsPicked;
 }
 
 export abstract class SharedConfigMessage<
-  KindsPicked extends UserConfigKind | GroupConfigKind
+  KindsPicked extends UserConfigKind
 > extends ContentMessage {
   public readonly seqno: Long;
   public readonly kind: KindsPicked;
@@ -49,18 +48,6 @@ export abstract class SharedConfigMessage<
 
 export class SharedUserConfigMessage extends SharedConfigMessage<UserConfigKind> {
   constructor(params: SharedConfigParams<UserConfigKind>) {
-    super({
-      timestamp: params.timestamp,
-      identifier: params.identifier,
-      data: params.data,
-      kind: params.kind,
-      seqno: params.seqno,
-    });
-  }
-}
-
-export class SharedGroupConfigMessage extends SharedConfigMessage<GroupConfigKind> {
-  constructor(params: SharedConfigParams<GroupConfigKind>) {
     super({
       timestamp: params.timestamp,
       identifier: params.identifier,
