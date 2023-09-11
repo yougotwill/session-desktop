@@ -32,7 +32,6 @@ import { ReadReceipts } from '../util/readReceipts';
 import { Storage } from '../util/storage';
 import { handleCallMessage } from './callMessage';
 import { getAllCachedECKeyPair, sentAtMoreRecentThanWrapper } from './closedGroups';
-import { ConfigMessageHandler } from './configMessage';
 import { ECKeyPair } from './keypairs';
 import { ContactsWrapperActions } from '../webworker/workers/browser/libsession_worker_interface';
 
@@ -468,12 +467,8 @@ export async function innerHandleSwarmContentMessage(
       return;
     }
     if (content.configurationMessage) {
-      // this one can be quite long (downloads profilePictures and everything),
-      // so do not await it
-      void ConfigMessageHandler.handleConfigurationMessageLegacy(
-        envelope,
-        content.configurationMessage as SignalService.ConfigurationMessage
-      );
+      // we drop support for legacy configuration message
+      await removeFromCache(envelope);
       return;
     }
     if (content.sharedConfigMessage) {

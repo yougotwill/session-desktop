@@ -14,7 +14,7 @@ import { isEmpty, isNull } from 'lodash';
 
 import {
   ConfigWrapperGroup,
-  ConfigWrapperObjectTypes,
+  ConfigWrapperObjectTypesMeta,
   ConfigWrapperUser,
   MetaGroupConfig,
   isMetaWrapperType,
@@ -116,14 +116,14 @@ function isUInt8Array(value: any) {
   return value.constructor === Uint8Array;
 }
 
-function assertUserWrapperType(wrapperType: ConfigWrapperObjectTypes): ConfigWrapperUser {
+function assertUserWrapperType(wrapperType: ConfigWrapperObjectTypesMeta): ConfigWrapperUser {
   if (!isUserConfigWrapperType(wrapperType)) {
     throw new Error(`wrapperType "${wrapperType} is not of type User"`);
   }
   return wrapperType;
 }
 
-function assertGroupWrapperType(wrapperType: ConfigWrapperObjectTypes): ConfigWrapperGroup {
+function assertGroupWrapperType(wrapperType: ConfigWrapperObjectTypesMeta): ConfigWrapperGroup {
   if (!isMetaWrapperType(wrapperType)) {
     throw new Error(`wrapperType "${wrapperType} is not of type Group"`);
   }
@@ -208,7 +208,7 @@ function initGroupWrapper(options: Array<any>, wrapperType: ConfigWrapperGroup) 
   assertUnreachable(groupType, `initGroupWrapper: Missing case error "${groupType}"`);
 }
 
-onmessage = async (e: { data: [number, ConfigWrapperObjectTypes, string, ...any] }) => {
+onmessage = async (e: { data: [number, ConfigWrapperObjectTypesMeta, string, ...any] }) => {
   const [jobId, config, action, ...args] = e.data;
 
   try {

@@ -22,10 +22,10 @@ import { perfEnd, perfStart } from '../session/utils/Performance';
 import { ReleasedFeatures } from '../util/releaseFeature';
 import { Storage } from '../util/storage';
 // eslint-disable-next-line import/no-unresolved, import/extensions
-import { ConfigWrapperObjectTypes } from '../webworker/workers/browser/libsession_worker_functions';
 import { getSettingsKeyFromLibsessionWrapper } from './configMessage';
 import { ECKeyPair, HexKeyPair } from './keypairs';
 import { queueAllCachedFromSource } from './receiver';
+import { ConfigWrapperUser } from '../webworker/workers/browser/libsession_worker_functions';
 
 export const distributingClosedGroupEncryptionKeyPairs = new Map<string, ECKeyPair>();
 
@@ -216,7 +216,7 @@ function sanityCheckNewGroup(
  */
 export async function sentAtMoreRecentThanWrapper(
   envelopeSentAtMs: number,
-  variant: ConfigWrapperObjectTypes
+  variant: ConfigWrapperUser
 ): Promise<'unknown' | 'wrapper_more_recent' | 'envelope_more_recent'> {
   const userConfigReleased = await ReleasedFeatures.checkIsUserConfigFeatureReleased();
   if (!userConfigReleased) {

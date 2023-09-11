@@ -6,6 +6,7 @@ import { JobRunnerType } from './jobs/JobRunnerType';
 import {
   AvatarDownloadPersistedData,
   ConfigurationSyncPersistedData,
+  GroupSyncPersistedData,
   PersistedJob,
   RunJobResult,
   TypeOfPersistedData,
@@ -351,6 +352,7 @@ const configurationSyncRunner = new PersistedJobRunner<ConfigurationSyncPersiste
   'ConfigurationSyncJob',
   null
 );
+const groupSyncRunner = new PersistedJobRunner<GroupSyncPersistedData>('GroupSyncJob', null);
 
 const avatarDownloadRunner = new PersistedJobRunner<AvatarDownloadPersistedData>(
   'AvatarDownloadJob',
@@ -359,5 +361,6 @@ const avatarDownloadRunner = new PersistedJobRunner<AvatarDownloadPersistedData>
 
 export const runners = {
   configurationSyncRunner,
+  groupSyncRunner,
   avatarDownloadRunner,
 };

@@ -2,16 +2,11 @@
 import { ContactInfo } from 'libsession_util_nodejs';
 import { compact, difference, isEmpty, isNil, isNumber, toNumber } from 'lodash';
 import { ConfigDumpData } from '../data/configDump/configDump';
-import { Data } from '../data/data';
 import { SettingsKey } from '../data/settings-key';
-import { ConversationInteraction } from '../interactions';
+import { deleteAllMessagesByConvoIdNoConfirmation } from '../interactions/conversationInteractions';
 import { CONVERSATION_PRIORITIES, ConversationTypeEnum } from '../models/conversationAttributes';
 import { SignalService } from '../protobuf';
 import { ClosedGroup } from '../session';
-import {
-  joinOpenGroupV2WithUIEvents,
-  parseOpenGroupV2,
-} from '../session/apis/open_group_api/opengroupV2/JoinOpenGroupV2';
 import { getOpenGroupManager } from '../session/apis/open_group_api/opengroupV2/OpenGroupManagerV2';
 import { OpenGroupUtils } from '../session/apis/open_group_api/utils';
 import { getOpenGroupV2ConversationId } from '../session/apis/open_group_api/utils/OpenGroupUtils';
@@ -23,7 +18,7 @@ import { PubKey } from '../session/types';
 import { StringUtils, UserUtils } from '../session/utils';
 import { toHex } from '../session/utils/String';
 import { ConfigurationSync } from '../session/utils/job_runners/jobs/ConfigurationSyncJob';
-import { IncomingConfResult, LibSessionUtil } from '../session/utils/libsession/libsession_utils';
+import { LibSessionUtil } from '../session/utils/libsession/libsession_utils';
 import { SessionUtilContact } from '../session/utils/libsession/libsession_utils_contacts';
 import { SessionUtilConvoInfoVolatile } from '../session/utils/libsession/libsession_utils_convo_info_volatile';
 import { SessionUtilUserGroups } from '../session/utils/libsession/libsession_utils_user_groups';
@@ -31,22 +26,15 @@ import { configurationMessageReceived, trigger } from '../shims/events';
 import { getCurrentlySelectedConversationOutsideRedux } from '../state/selectors/conversations';
 import { assertUnreachable } from '../types/sqlSharedTypes';
 import { BlockedNumberController } from '../util';
-import { Registration } from '../util/registration';
-import { ReleasedFeatures } from '../util/releaseFeature';
-import {
-  Storage,
-  getLastProfileUpdateTimestamp,
-  isSignInByLinking,
-  setLastProfileUpdateTimestamp,
-} from '../util/storage';
-import { deleteAllMessagesByConvoIdNoConfirmation } from '../interactions/conversationInteractions';
+import { Storage, setLastProfileUpdateTimestamp } from '../util/storage';
 // eslint-disable-next-line import/no-unresolved, import/extensions
 import {
-  ConfigWrapperObjectTypes,
+  ConfigWrapperObjectTypesMeta,
+  ConfigWrapperUser,
   getGroupPubkeyFromWrapperType,
-  isMetaWrapperType,
   isUserConfigWrapperType,
 } from '../../ts/webworker/workers/browser/libsession_worker_functions';
+import { GroupConfigKind, UserConfigKind, isUserKind } from '../types/ProtobufKind';
 import {
   ContactsWrapperActions,
   ConvoInfoVolatileWrapperActions,
@@ -55,24 +43,36 @@ import {
   UserConfigWrapperActions,
   UserGroupsWrapperActions,
 } from '../webworker/workers/browser/libsession_worker_interface';
-import { removeFromCache } from './cache';
-import { addKeyPairToCacheAndDBIfNeeded, handleNewClosedGroup } from './closedGroups';
+import { addKeyPairToCacheAndDBIfNeeded } from './closedGroups';
 import { HexKeyPair } from './keypairs';
 import { queueAllCachedFromSource } from './receiver';
-import { EnvelopePlus } from './types';
 
-function groupByVariant(
+type IncomingConfResult<T extends UserConfigKind | GroupConfigKind> = {
+  needsPush: boolean;
+  needsDump: boolean;
+  kind: T;
+  publicKey: string;
+  latestEnvelopeTimestamp: number;
+};
+
+type IncomingUserResult = IncomingConfResult<UserConfigKind>;
+type IncomingGroupResult = IncomingConfResult<GroupConfigKind>;
+
+function byUserVariant(
   incomingConfigs: Array<IncomingMessage<SignalService.ISharedConfigMessage>>
 ) {
   const groupedByVariant: Map<
-    ConfigWrapperObjectTypes,
+    ConfigWrapperUser,
     Array<IncomingMessage<SignalService.ISharedConfigMessage>>
   > = new Map();
 
   incomingConfigs.forEach(incomingConfig => {
     const { kind } = incomingConfig.message;
+    if (!isUserKind(kind)) {
+      throw new Error(`Invalid kind when handling userkinds: ${kind}`);
+    }
 
-    const wrapperId = LibSessionUtil.kindToVariant(kind);
+    const wrapperId = LibSessionUtil.userKindToVariant(kind);
 
     if (!groupedByVariant.has(wrapperId)) {
       groupedByVariant.set(wrapperId, []);
@@ -83,7 +83,7 @@ function groupByVariant(
   return groupedByVariant;
 }
 
-async function printDumpForDebug(prefix: string, variant: ConfigWrapperObjectTypes) {
+async function printDumpForDebug(prefix: string, variant: ConfigWrapperObjectTypesMeta) {
   if (isUserConfigWrapperType(variant)) {
     window.log.info(prefix, StringUtils.toHex(await GenericWrapperActions.dump(variant)));
     return;
@@ -95,26 +95,15 @@ async function printDumpForDebug(prefix: string, variant: ConfigWrapperObjectTyp
   window.log.info(prefix, StringUtils.toHex(metaGroupDumps));
 }
 
-async function variantNeedsDump(variant: ConfigWrapperObjectTypes) {
-  return isUserConfigWrapperType(variant)
-    ? await GenericWrapperActions.needsDump(variant)
-    : await MetaGroupWrapperActions.needsDump(getGroupPubkeyFromWrapperType(variant));
-}
-async function variantNeedsPush(variant: ConfigWrapperObjectTypes) {
-  return isUserConfigWrapperType(variant)
-    ? await GenericWrapperActions.needsPush(variant)
-    : await MetaGroupWrapperActions.needsPush(getGroupPubkeyFromWrapperType(variant));
-}
-
-async function mergeConfigsWithIncomingUpdates(
+async function mergeUserConfigsWithIncomingUpdates(
   incomingConfigs: Array<IncomingMessage<SignalService.ISharedConfigMessage>>
-): Promise<Map<ConfigWrapperObjectTypes, IncomingConfResult>> {
+): Promise<Map<ConfigWrapperUser, IncomingUserResult>> {
   // first, group by variant so we do a single merge call
-  const groupedByVariant = groupByVariant(incomingConfigs);
+  // Note: this call throws if given a non user kind as this functio should only handle user variants/kinds
+  const groupedByVariant = byUserVariant(incomingConfigs);
 
-  const groupedResults: Map<ConfigWrapperObjectTypes, IncomingConfResult> = new Map();
+  const groupedResults: Map<ConfigWrapperUser, IncomingUserResult> = new Map();
 
-  // TODOLATER currently we only poll for user config messages, so this can be hardcoded
   const publicKey = UserUtils.getOurPubKeyStrFromCache();
 
   try {
@@ -132,14 +121,10 @@ async function mergeConfigsWithIncomingUpdates(
         printDumpForDebug(`printDumpsForDebugging: before merge of ${variant}:`, variant);
       }
 
-      if (!isUserConfigWrapperType(variant)) {
-        window.log.info('// TODO Audric');
-        continue;
-      }
       const mergedCount = await GenericWrapperActions.merge(variant, toMerge);
 
-      const needsDump = await variantNeedsDump(variant);
-      const needsPush = await variantNeedsPush(variant);
+      const needsDump = await GenericWrapperActions.needsDump(variant);
+      const needsPush = await GenericWrapperActions.needsPush(variant);
       const latestEnvelopeTimestamp = Math.max(...sameVariant.map(m => m.envelopeTimestamp));
 
       window.log.debug(
@@ -149,10 +134,10 @@ async function mergeConfigsWithIncomingUpdates(
       if (window.sessionFeatureFlags.debug.debugLibsessionDumps) {
         printDumpForDebug(`printDumpsForDebugging: after merge of ${variant}:`, variant);
       }
-      const incomingConfResult: IncomingConfResult = {
+      const incomingConfResult: IncomingUserResult = {
         needsDump,
         needsPush,
-        kind: LibSessionUtil.variantToKind(variant),
+        kind: LibSessionUtil.userVariantToUserKind(variant),
         publicKey,
         latestEnvelopeTimestamp: latestEnvelopeTimestamp || Date.now(),
       };
@@ -167,8 +152,13 @@ async function mergeConfigsWithIncomingUpdates(
 }
 
 export function getSettingsKeyFromLibsessionWrapper(
-  wrapperType: ConfigWrapperObjectTypes
+  wrapperType: ConfigWrapperObjectTypesMeta
 ): string | null {
+  if (!isUserConfigWrapperType(wrapperType)) {
+    throw new Error(
+      `getSettingsKeyFromLibsessionWrapper only cares about uservariants but got ${wrapperType}`
+    );
+  }
   switch (wrapperType) {
     case 'UserConfig':
       return SettingsKey.latestUserProfileEnvelopeTimestamp;
@@ -179,10 +169,6 @@ export function getSettingsKeyFromLibsessionWrapper(
     case 'ConvoInfoVolatileConfig':
       return null; // we don't really care about the convo info volatile one
     default:
-      if (isMetaWrapperType(wrapperType)) {
-        // we don't care about the group updates as we don't need to drop older one for now
-        return null; // TODO maybe we do?
-      }
       try {
         assertUnreachable(
           wrapperType,
@@ -196,7 +182,7 @@ export function getSettingsKeyFromLibsessionWrapper(
 }
 
 async function updateLibsessionLatestProcessedUserTimestamp(
-  wrapperType: ConfigWrapperObjectTypes,
+  wrapperType: ConfigWrapperUser,
   latestEnvelopeTimestamp: number
 ) {
   const settingsKey = getSettingsKeyFromLibsessionWrapper(wrapperType);
@@ -214,10 +200,10 @@ async function updateLibsessionLatestProcessedUserTimestamp(
   }
 }
 
-async function handleUserProfileUpdate(result: IncomingConfResult): Promise<IncomingConfResult> {
+async function handleUserProfileUpdate(result: IncomingUserResult) {
   const updateUserInfo = await UserConfigWrapperActions.getUserInfo();
   if (!updateUserInfo) {
-    return result;
+    return;
   }
 
   const currentBlindedMsgRequest = Storage.get(SettingsKey.hasBlindedMsgRequestsEnabled);
@@ -228,8 +214,8 @@ async function handleUserProfileUpdate(result: IncomingConfResult): Promise<Inco
 
   const picUpdate = !isEmpty(updateUserInfo.key) && !isEmpty(updateUserInfo.url);
 
-  // NOTE: if you do any changes to the settings of a user which are synced, it should be done above the `updateOurProfileLegacyOrViaLibSession` call
-  await updateOurProfileLegacyOrViaLibSession(
+  // NOTE: if you do any changes to the settings of a user which are synced, it should be done above the `updateOurProfileViaLibSession` call
+  await updateOurProfileViaLibSession(
     result.latestEnvelopeTimestamp,
     updateUserInfo.name,
     picUpdate ? updateUserInfo.url : null,
@@ -247,8 +233,6 @@ async function handleUserProfileUpdate(result: IncomingConfResult): Promise<Inco
   if (newLatestProcessed !== currentLatestEnvelopeProcessed) {
     await Storage.put(settingsKey, newLatestProcessed);
   }
-
-  return result;
 }
 
 function getContactsToRemoveFromDB(contactsInWrapper: Array<ContactInfo>) {
@@ -311,7 +295,7 @@ async function deleteContactsFromDB(contactsToRemove: Array<string>) {
   }
 }
 
-async function handleContactsUpdate(result: IncomingConfResult): Promise<IncomingConfResult> {
+async function handleContactsUpdate() {
   const us = UserUtils.getOurPubKeyStrFromCache();
 
   const allContactsInWrapper = await ContactsWrapperActions.getAll();
@@ -389,7 +373,6 @@ async function handleContactsUpdate(result: IncomingConfResult): Promise<Incomin
       );
     }
   }
-  return result;
 }
 
 async function handleCommunitiesUpdate() {
@@ -629,7 +612,7 @@ async function handleLegacyGroupUpdate(latestEnvelopeTimestamp: number) {
   }
 }
 
-async function handleUserGroupsUpdate(result: IncomingConfResult): Promise<IncomingConfResult> {
+async function handleUserGroupsUpdate(result: IncomingUserResult) {
   const toHandle = SessionUtilUserGroups.getUserGroupTypes();
   for (let index = 0; index < toHandle.length; index++) {
     const typeToHandle = toHandle[index];
@@ -646,8 +629,6 @@ async function handleUserGroupsUpdate(result: IncomingConfResult): Promise<Incom
         assertUnreachable(typeToHandle, `handleUserGroupsUpdate unhandled type "${typeToHandle}"`);
     }
   }
-
-  return result;
 }
 
 async function applyConvoVolatileUpdateFromWrapper(
@@ -685,9 +666,7 @@ async function applyConvoVolatileUpdateFromWrapper(
   }
 }
 
-async function handleConvoInfoVolatileUpdate(
-  result: IncomingConfResult
-): Promise<IncomingConfResult> {
+async function handleConvoInfoVolatileUpdate() {
   const types = SessionUtilConvoInfoVolatile.getConvoInfoVolatileTypes();
   for (let typeIndex = 0; typeIndex < types.length; typeIndex++) {
     const type = types[typeIndex];
@@ -759,11 +738,9 @@ async function handleConvoInfoVolatileUpdate(
         assertUnreachable(type, `handleConvoInfoVolatileUpdate: unhandeld switch case: ${type}`);
     }
   }
-
-  return result;
 }
 
-async function processMergingResults(results: Map<ConfigWrapperObjectTypes, IncomingConfResult>) {
+async function processUserMergingResults(results: Map<ConfigWrapperUser, IncomingUserResult>) {
   if (!results || !results.size) {
     return;
   }
@@ -784,23 +761,23 @@ async function processMergingResults(results: Map<ConfigWrapperObjectTypes, Inco
           await handleUserProfileUpdate(incomingResult);
           break;
         case SignalService.SharedConfigMessage.Kind.CONTACTS:
-          await handleContactsUpdate(incomingResult);
+          await handleContactsUpdate();
           break;
         case SignalService.SharedConfigMessage.Kind.USER_GROUPS:
           await handleUserGroupsUpdate(incomingResult);
           break;
         case SignalService.SharedConfigMessage.Kind.CONVO_INFO_VOLATILE:
-          await handleConvoInfoVolatileUpdate(incomingResult);
+          await handleConvoInfoVolatileUpdate();
           break;
         default:
           try {
             // we catch errors here because an old client knowing about a new type of config coming from the network should not just crash
-            assertUnreachable(kind, `processMergingResults unsupported kind: "${kind}"`);
+            assertUnreachable(kind, `processUserMergingResults unsupported kind: "${kind}"`);
           } catch (e) {
             window.log.warn('assertUnreachable failed', e.message);
           }
       }
-      const variant = LibSessionUtil.kindToVariant(kind);
+      const variant = LibSessionUtil.userKindToVariant(kind);
       try {
         await updateLibsessionLatestProcessedUserTimestamp(
           variant,
@@ -812,11 +789,6 @@ async function processMergingResults(results: Map<ConfigWrapperObjectTypes, Inco
 
       if (incomingResult.needsDump) {
         // The config data had changes so regenerate the dump and save it
-
-        if (!isUserConfigWrapperType(variant)) {
-          window.log.info('// TODO Audric');
-          return;
-        }
         const dump = await GenericWrapperActions.dump(variant);
         await ConfigDumpData.saveConfigDump({
           data: dump,
@@ -840,15 +812,9 @@ async function processMergingResults(results: Map<ConfigWrapperObjectTypes, Inco
   }
 }
 
-async function handleConfigMessagesViaLibSession(
+async function handleUserConfigMessagesViaLibSession(
   configMessages: Array<IncomingMessage<SignalService.ISharedConfigMessage>>
 ) {
-  const userConfigLibsession = await ReleasedFeatures.checkIsUserConfigFeatureReleased();
-
-  if (!userConfigLibsession) {
-    return;
-  }
-
   if (isEmpty(configMessages)) {
     return;
   }
@@ -856,18 +822,18 @@ async function handleConfigMessagesViaLibSession(
   window?.log?.debug(
     `Handling our sharedConfig message via libsession_util ${JSON.stringify(
       configMessages.map(m => ({
-        variant: LibSessionUtil.kindToVariant(m.message.kind),
+        kind: m.message.kind,
         hash: m.messageHash,
         seqno: (m.message.seqno as Long).toNumber(),
       }))
     )}`
   );
 
-  const incomingMergeResult = await mergeConfigsWithIncomingUpdates(configMessages);
-  await processMergingResults(incomingMergeResult);
+  const incomingMergeResult = await mergeUserConfigsWithIncomingUpdates(configMessages);
+  await processUserMergingResults(incomingMergeResult);
 }
 
-async function updateOurProfileLegacyOrViaLibSession(
+async function updateOurProfileViaLibSession(
   sentAt: number,
   displayName: string,
   profileUrl: string | null,
@@ -885,250 +851,6 @@ async function updateOurProfileLegacyOrViaLibSession(
   }
 }
 
-async function handleOurProfileUpdateLegacy(
-  sentAt: number | Long,
-  configMessage: SignalService.ConfigurationMessage
-) {
-  const userConfigLibsession = await ReleasedFeatures.checkIsUserConfigFeatureReleased();
-  // we want to allow if we are not registered, as we might need to fetch an old config message (can be removed once we released for a weeks the libsession util)
-  if (userConfigLibsession && !isSignInByLinking()) {
-    return;
-  }
-  const latestProfileUpdateTimestamp = getLastProfileUpdateTimestamp();
-  if (!latestProfileUpdateTimestamp || sentAt > latestProfileUpdateTimestamp) {
-    window?.log?.info(
-      `Handling our profileUdpate ourLastUpdate:${latestProfileUpdateTimestamp}, envelope sent at: ${sentAt}`
-    );
-    const { profileKey, profilePicture, displayName } = configMessage;
-
-    await updateOurProfileLegacyOrViaLibSession(
-      toNumber(sentAt),
-      displayName,
-      profilePicture,
-      profileKey,
-      null // passing null to say do not the prioroti, as we do not get one from the legacy config message
-    );
-  }
-}
-
-async function handleGroupsAndContactsFromConfigMessageLegacy(
-  envelope: EnvelopePlus,
-  configMessage: SignalService.ConfigurationMessage
-) {
-  const userConfigLibsession = await ReleasedFeatures.checkIsUserConfigFeatureReleased();
-
-  if (userConfigLibsession && Registration.isDone()) {
-    return;
-  }
-  const envelopeTimestamp = toNumber(envelope.timestamp);
-
-  // at some point, we made the hasSyncedInitialConfigurationItem item to have a value=true and a timestamp set.
-  // we can actually just use the timestamp as a boolean, as if it is set, we know we have synced the initial config
-  // but we still need to handle the case where the timestamp was set when the value is true (for backwards compatiblity, until we get rid of the config message legacy)
-  const lastConfigUpdate = await Data.getItemById(SettingsKey.hasSyncedInitialConfigurationItem);
-
-  let lastConfigTimestamp: number | undefined;
-  if (isNumber(lastConfigUpdate?.value)) {
-    lastConfigTimestamp = lastConfigUpdate?.value;
-  } else if (isNumber((lastConfigUpdate as any)?.timestamp)) {
-    lastConfigTimestamp = (lastConfigUpdate as any)?.timestamp; // ugly, but we can remove it once we dropped support for legacy config message, see comment above
-  }
-
-  const isNewerConfig =
-    !lastConfigTimestamp || (lastConfigTimestamp && lastConfigTimestamp < envelopeTimestamp);
-
-  if (!isNewerConfig) {
-    window?.log?.info('Received outdated configuration message... Dropping message.');
-    return;
-  }
-
-  await Storage.put(SettingsKey.hasSyncedInitialConfigurationItem, envelopeTimestamp);
-
-  // we only want to apply changes to closed groups if we never got them
-  // new opengroups get added when we get a new closed group message from someone, or a sync'ed message from outself creating the group
-  if (!lastConfigTimestamp) {
-    await handleClosedGroupsFromConfigLegacy(configMessage.closedGroups, envelope);
-  }
-
-  void handleOpenGroupsFromConfigLegacy(configMessage.openGroups);
-
-  if (configMessage.contacts?.length) {
-    await Promise.all(
-      configMessage.contacts.map(async c => handleContactFromConfigLegacy(c, envelope))
-    );
-  }
-}
-
-/**
- * Trigger a join for all open groups we are not already in.
- * @param openGroups string array of open group urls
- */
-const handleOpenGroupsFromConfigLegacy = async (openGroups: Array<string>) => {
-  const userConfigLibsession = await ReleasedFeatures.checkIsUserConfigFeatureReleased();
-
-  if (userConfigLibsession && Registration.isDone()) {
-    return;
-  }
-  const numberOpenGroup = openGroups?.length || 0;
-  for (let i = 0; i < numberOpenGroup; i++) {
-    const currentOpenGroupUrl = openGroups[i];
-    const parsedRoom = parseOpenGroupV2(currentOpenGroupUrl);
-    if (!parsedRoom) {
-      continue;
-    }
-    const roomConvoId = getOpenGroupV2ConversationId(parsedRoom.serverUrl, parsedRoom.roomId);
-    if (!getConversationController().get(roomConvoId)) {
-      window?.log?.info(
-        `triggering join of public chat '${currentOpenGroupUrl}' from ConfigurationMessage`
-      );
-      void joinOpenGroupV2WithUIEvents(currentOpenGroupUrl, false, true);
-    }
-  }
-};
-
-/**
- * Trigger a join for all closed groups which doesn't exist yet
- * @param openGroups string array of open group urls
- */
-const handleClosedGroupsFromConfigLegacy = async (
-  closedGroups: Array<SignalService.ConfigurationMessage.IClosedGroup>,
-  envelope: EnvelopePlus
-) => {
-  const userConfigLibsession = await ReleasedFeatures.checkIsUserConfigFeatureReleased();
-
-  if (userConfigLibsession && Registration.isDone()) {
-    return;
-  }
-  const numberClosedGroup = closedGroups?.length || 0;
-
-  window?.log?.info(
-    `Received ${numberClosedGroup} closed group on configuration. Creating them... `
-  );
-  await Promise.all(
-    closedGroups.map(async c => {
-      const groupUpdate = new SignalService.DataMessage.ClosedGroupControlMessage({
-        type: SignalService.DataMessage.ClosedGroupControlMessage.Type.NEW,
-        encryptionKeyPair: c.encryptionKeyPair,
-        name: c.name,
-        admins: c.admins,
-        members: c.members,
-        publicKey: c.publicKey,
-      });
-      try {
-        await handleNewClosedGroup(envelope, groupUpdate, true);
-      } catch (e) {
-        window?.log?.warn('failed to handle a new closed group from configuration message');
-      }
-    })
-  );
-};
-
-/**
- * Handles adding of a contact and setting approval/block status
- * @param contactReceived Contact to sync
- */
-const handleContactFromConfigLegacy = async (
-  contactReceived: SignalService.ConfigurationMessage.IContact,
-  envelope: EnvelopePlus
-) => {
-  const userConfigLibsession = await ReleasedFeatures.checkIsUserConfigFeatureReleased();
-
-  if (userConfigLibsession && Registration.isDone()) {
-    return;
-  }
-  try {
-    if (!contactReceived.publicKey?.length) {
-      return;
-    }
-    const contactConvo = await getConversationController().getOrCreateAndWait(
-      toHex(contactReceived.publicKey),
-      ConversationTypeEnum.PRIVATE
-    );
-    const profileInDataMessage: SignalService.DataMessage.ILokiProfile = {
-      displayName: contactReceived.name,
-      profilePicture: contactReceived.profilePicture,
-    };
-
-    const existingActiveAt = contactConvo.get('active_at');
-    if (!existingActiveAt || existingActiveAt === 0) {
-      contactConvo.set('active_at', toNumber(envelope.timestamp));
-    }
-
-    // checking for existence of field on protobuf
-    if (contactReceived.isApproved === true) {
-      if (!contactConvo.isApproved()) {
-        await contactConvo.setIsApproved(Boolean(contactReceived.isApproved));
-        await contactConvo.addOutgoingApprovalMessage(toNumber(envelope.timestamp));
-      }
-
-      if (contactReceived.didApproveMe === true) {
-        // checking for existence of field on message
-        await contactConvo.setDidApproveMe(Boolean(contactReceived.didApproveMe));
-      }
-    }
-
-    // only set for explicit true/false values in case outdated sender doesn't have the fields
-    if (contactReceived.isBlocked === true) {
-      if (contactConvo.isIncomingRequest()) {
-        // handling case where restored device's declined message requests were getting restored
-        await ConversationInteraction.deleteAllMessagesByConvoIdNoConfirmation(contactConvo.id);
-      }
-      await BlockedNumberController.block(contactConvo.id);
-    } else if (contactReceived.isBlocked === false) {
-      await BlockedNumberController.unblockAll([contactConvo.id]);
-    }
-
-    await ProfileManager.updateProfileOfContact(
-      contactConvo.id,
-      profileInDataMessage.displayName || undefined,
-      profileInDataMessage.profilePicture || null,
-      contactReceived.profileKey || null
-    );
-  } catch (e) {
-    window?.log?.warn('failed to handle  a new closed group from configuration message');
-  }
-};
-
-/**
- * This is the legacy way of handling incoming configuration message.
- * Should not be used at all soon.
- */
-async function handleConfigurationMessageLegacy(
-  envelope: EnvelopePlus,
-  configurationMessage: SignalService.ConfigurationMessage
-): Promise<void> {
-  // when the useSharedUtilForUserConfig flag is ON, we want only allow a legacy config message if we are registering a new user.
-  // this is to allow users linking a device to find their config message if they do not have a shared config message yet.
-  // the process of those messages is always done after the process of the shared config messages, so that's only a fallback.
-  const userConfigLibsession = await ReleasedFeatures.checkIsUserConfigFeatureReleased();
-
-  if (userConfigLibsession && !isSignInByLinking()) {
-    window?.log?.info(
-      'useSharedUtilForUserConfig is set, not handling config messages with "handleConfigurationMessageLegacy()"'
-    );
-    await window.setSettingValue(SettingsKey.someDeviceOutdatedSyncing, true);
-    await removeFromCache(envelope);
-    return;
-  }
-
-  window?.log?.info('Handling legacy configuration message');
-  const ourPubkey = UserUtils.getOurPubKeyStrFromCache();
-  if (!ourPubkey) {
-    return;
-  }
-
-  if (envelope.source !== ourPubkey) {
-    window?.log?.info('Dropping configuration change from someone else than us.');
-    await removeFromCache(envelope);
-    return;
-  }
-
-  await handleOurProfileUpdateLegacy(envelope.timestamp, configurationMessage);
-  await handleGroupsAndContactsFromConfigMessageLegacy(envelope, configurationMessage);
-  await removeFromCache(envelope);
-}
-
 export const ConfigMessageHandler = {
-  handleConfigurationMessageLegacy,
-  handleConfigMessagesViaLibSession,
+  handleUserConfigMessagesViaLibSession,
 };

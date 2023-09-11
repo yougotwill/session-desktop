@@ -1,4 +1,7 @@
-import { SharedConfigMessage } from '../../messages/outgoing/controlMessage/SharedConfigMessage';
+import {
+  SharedGroupConfigMessage,
+  SharedUserConfigMessage,
+} from '../../messages/outgoing/controlMessage/SharedConfigMessage';
 import { SnodeNamespaces } from './namespaces';
 
 export type SwarmForSubRequest = { method: 'get_swarm'; params: { pubkey: string } };
@@ -109,7 +112,7 @@ export type StoreOnNodeMessage = {
   pubkey: string;
   timestamp: number;
   namespace: number;
-  message: SharedConfigMessage;
+  message: SharedUserConfigMessage | SharedGroupConfigMessage;
 };
 
 export type StoreOnNodeSubRequest = { method: 'store'; params: StoreOnNodeParams };

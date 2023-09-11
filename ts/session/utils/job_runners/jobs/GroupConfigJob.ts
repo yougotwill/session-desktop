@@ -1,26 +1,28 @@
 /* eslint-disable no-await-in-loop */
+import { GroupPubkeyType } from 'libsession_util_nodejs';
 import { compact, isArray, isEmpty, isNumber, isString } from 'lodash';
-import { v4 } from 'uuid';
 import { UserUtils } from '../..';
 import { ConfigDumpData } from '../../../../data/configDump/configDump';
-import { ConfigurationSyncJobDone } from '../../../../shims/events';
 import { ReleasedFeatures } from '../../../../util/releaseFeature';
 import { isSignInByLinking } from '../../../../util/storage';
-import { GenericWrapperActions } from '../../../../webworker/workers/browser/libsession_worker_interface';
+import { isMetaWrapperType } from '../../../../webworker/workers/browser/libsession_worker_functions';
 import { NotEmptyArrayOfBatchResults } from '../../../apis/snode_api/SnodeRequestTypes';
 import { getConversationController } from '../../../conversations';
-import { SharedUserConfigMessage } from '../../../messages/outgoing/controlMessage/SharedConfigMessage';
+import { SharedGroupConfigMessage } from '../../../messages/outgoing/controlMessage/SharedConfigMessage';
 import { MessageSender } from '../../../sending/MessageSender';
+import { PubKey } from '../../../types';
 import { allowOnlyOneAtATime } from '../../Promise';
 import { LibSessionUtil, OutgoingConfResult } from '../../libsession/libsession_utils';
 import { runners } from '../JobRunner';
 import {
   AddJobCheckReturn,
-  ConfigurationSyncPersistedData,
+  GroupSyncPersistedData,
   PersistedJob,
   RunJobResult,
 } from '../PersistedJob';
-import { UserConfigKind } from '../../../../types/ProtobufKind';
+import { MetaGroupWrapperActions } from '../../../../webworker/workers/browser/libsession_worker_interface';
+import { SignalService } from '../../../../protobuf';
+import { GroupConfigKind } from '../../../../types/ProtobufKind';
 
 const defaultMsBetweenRetries = 15000; // a long time between retries, to avoid running multiple jobs at the same time, when one was postponed at the same time as one already planned (5s)
 const defaultMaxAttempts = 2;
@@ -32,12 +34,12 @@ const defaultMaxAttempts = 2;
 let lastRunConfigSyncJobTimestamp: number | null = null;
 
 export type SingleDestinationChanges = {
-  messages: Array<OutgoingConfResult<UserConfigKind, SharedUserConfigMessage>>;
+  messages: Array<OutgoingConfResult<GroupConfigKind, SharedGroupConfigMessage>>;
   allOldHashes: Array<string>;
 };
 
 type SuccessfulChange = {
-  message: SharedUserConfigMessage;
+  message: SharedGroupConfigMessage;
   updatedHash: string;
 };
 
@@ -46,12 +48,9 @@ type SuccessfulChange = {
  * To make this easier, this function prebuilds and merges together all the changes for each pubkey.
  */
 async function retrieveSingleDestinationChanges(
-  destination: string
+  groupPk: GroupPubkeyType
 ): Promise<SingleDestinationChanges> {
-  if (destination !== UserUtils.getOurPubKeyStrFromCache()) {
-    throw new Error('retrieveSingleDestinationChanges can only be us for ConfigurationSyncJob');
-  }
-  const outgoingConfResults = await LibSessionUtil.pendingChangesForUs();
+  const outgoingConfResults = await LibSessionUtil.pendingChangesForGroup(groupPk);
 
   const compactedHashes = compact(outgoingConfResults.map(m => m.oldMessageHashes)).flat();
 
@@ -102,62 +101,76 @@ function resultsToSuccessfulChange(
 
 async function buildAndSaveDumpsToDB(
   changes: Array<SuccessfulChange>,
-  destination: string
+  groupPk: GroupPubkeyType
 ): Promise<void> {
+  const toConfirm: Parameters<typeof MetaGroupWrapperActions.metaConfirmPushed> = [
+    groupPk,
+    { groupInfo: null, groupKeys: null, groupMember: null },
+  ];
+
   for (let i = 0; i < changes.length; i++) {
     const change = changes[i];
-    const variant = LibSessionUtil.userKindToVariant(change.message.kind);
+    const variant = LibSessionUtil.groupKindToVariant(change.message.kind, groupPk);
 
-    const needsDump = await LibSessionUtil.markAsPushed(
-      variant,
-      change.message.seqno.toNumber(),
-      change.updatedHash
-    );
-
-    if (!needsDump) {
-      continue;
+    if (!isMetaWrapperType(variant)) {
+      throw new Error(`buildAndSaveDumpsToDB non metagroup variant: ${variant}`);
     }
-    const dump = await GenericWrapperActions.dump(variant);
+    const Kind = SignalService.SharedConfigMessage.Kind;
+    switch (change.message.kind) {
+      case Kind.GROUP_INFO: {
+        toConfirm[1].groupInfo = [change.message.seqno.toNumber(), change.updatedHash];
+        break;
+      }
+      case Kind.GROUP_MEMBERS: {
+        toConfirm[1].groupMember = [change.message.seqno.toNumber(), change.updatedHash];
+        break;
+      }
+      case Kind.GROUP_KEYS: {
+        toConfirm[1].groupKeys = [change.message.seqno.toNumber(), change.updatedHash];
+        break;
+      }
+    }
+  }
+  await MetaGroupWrapperActions.metaConfirmPushed(...toConfirm);
+  const metaNeedsDump = await MetaGroupWrapperActions.needsDump(groupPk);
+  // save the concatenated dumps as a single entry in the DB if any of the dumps had a need for dump
+  if (metaNeedsDump) {
+    const dump = await MetaGroupWrapperActions.metaDump(groupPk);
     await ConfigDumpData.saveConfigDump({
       data: dump,
-      publicKey: destination,
-      variant,
+      publicKey: groupPk,
+      variant: `MetaGroupConfig-${groupPk}`,
     });
   }
 }
 
-async function saveDumpsNeededToDB(destination: string) {
-  for (let i = 0; i < LibSessionUtil.requiredUserVariants.length; i++) {
-    const variant = LibSessionUtil.requiredUserVariants[i];
-    const needsDump = await GenericWrapperActions.needsDump(variant);
+async function saveDumpsNeededToDB(groupPk: GroupPubkeyType) {
+  const needsDump = await MetaGroupWrapperActions.needsDump(groupPk);
 
-    if (!needsDump) {
-      continue;
-    }
-    const dump = await GenericWrapperActions.dump(variant);
-    await ConfigDumpData.saveConfigDump({
-      data: dump,
-      publicKey: destination,
-      variant,
-    });
+  if (!needsDump) {
+    return;
   }
+  const dump = await MetaGroupWrapperActions.metaDump(groupPk);
+  await ConfigDumpData.saveConfigDump({
+    data: dump,
+    publicKey: groupPk,
+    variant: `MetaGroupConfig-${groupPk}`,
+  });
 }
 
-class ConfigurationSyncJob extends PersistedJob<ConfigurationSyncPersistedData> {
+class GroupSyncJob extends PersistedJob<GroupSyncPersistedData> {
   constructor({
-    identifier,
+    identifier, // this has to be the pubkey to which we
     nextAttemptTimestamp,
     maxAttempts,
     currentRetry,
-  }: Partial<
-    Pick<
-      ConfigurationSyncPersistedData,
-      'identifier' | 'nextAttemptTimestamp' | 'currentRetry' | 'maxAttempts'
-    >
-  >) {
+  }: Pick<GroupSyncPersistedData, 'identifier'> &
+    Partial<
+      Pick<GroupSyncPersistedData, 'nextAttemptTimestamp' | 'currentRetry' | 'maxAttempts'>
+    >) {
     super({
-      jobType: 'ConfigurationSyncJobType',
-      identifier: identifier || v4(),
+      jobType: 'GroupSyncJobType',
+      identifier,
       delayBetweenRetries: defaultMsBetweenRetries,
       maxAttempts: isNumber(maxAttempts) ? maxAttempts : defaultMaxAttempts,
       currentRetry: isNumber(currentRetry) ? currentRetry : 0,
@@ -169,7 +182,9 @@ class ConfigurationSyncJob extends PersistedJob<ConfigurationSyncPersistedData> 
     const start = Date.now();
 
     try {
-      window.log.debug(`ConfigurationSyncJob starting ${this.persistedData.identifier}`);
+      const thisJobDestination = this.persistedData.identifier;
+
+      window.log.debug(`GroupSyncJob starting ${thisJobDestination}`);
 
       const us = UserUtils.getOurPubKeyStrFromCache();
       const ed25519Key = await UserUtils.getUserED25519KeyPairBytes();
@@ -180,16 +195,16 @@ class ConfigurationSyncJob extends PersistedJob<ConfigurationSyncPersistedData> 
         return RunJobResult.PermanentFailure;
       }
 
-      // TODOLATER add a way to have a few configuration sync jobs running at the same time, but only a single one per pubkey
-      const thisJobDestination = us;
+      if (!PubKey.isClosedGroupV3(thisJobDestination)) {
+        return RunJobResult.PermanentFailure;
+      }
 
       // save the dumps to DB even before trying to push them, so at least we have an up to date dumps in the DB in case of crash, no network etc
       await saveDumpsNeededToDB(thisJobDestination);
-      const userConfigLibsession = await ReleasedFeatures.checkIsUserConfigFeatureReleased();
+      const newGroupsReleased = await ReleasedFeatures.checkIsNewGroupsReleased();
 
       // if the feature flag is not enabled, we want to keep updating the dumps, but just not sync them.
-      if (!userConfigLibsession) {
-        this.triggerConfSyncJobDone();
+      if (!newGroupsReleased) {
         return RunJobResult.Success;
       }
       const singleDestChanges = await retrieveSingleDestinationChanges(thisJobDestination);
@@ -197,7 +212,6 @@ class ConfigurationSyncJob extends PersistedJob<ConfigurationSyncPersistedData> 
       // If there are no pending changes then the job can just complete (next time something
       // is updated we want to try and run immediately so don't scuedule another run in this case)
       if (isEmpty(singleDestChanges?.messages)) {
-        this.triggerConfSyncJobDone();
         return RunJobResult.Success;
       }
       const oldHashesToDelete = new Set(singleDestChanges.allOldHashes);
@@ -236,7 +250,6 @@ class ConfigurationSyncJob extends PersistedJob<ConfigurationSyncPersistedData> 
       // generate any config dumps which need to be stored
 
       await buildAndSaveDumpsToDB(changes, thisJobDestination);
-      this.triggerConfSyncJobDone();
       return RunJobResult.Success;
       // eslint-disable-next-line no-useless-catch
     } catch (e) {
@@ -250,21 +263,16 @@ class ConfigurationSyncJob extends PersistedJob<ConfigurationSyncPersistedData> 
     }
   }
 
-  public serializeJob(): ConfigurationSyncPersistedData {
+  public serializeJob(): GroupSyncPersistedData {
     const fromParent = super.serializeBase();
     return fromParent;
   }
 
-  public addJobCheck(jobs: Array<ConfigurationSyncPersistedData>): AddJobCheckReturn {
-    return this.addJobCheckSameTypePresent(jobs);
+  public addJobCheck(jobs: Array<GroupSyncPersistedData>): AddJobCheckReturn {
+    return this.addJobCheckSameTypeAndIdentifierPresent(jobs);
   }
 
-  /**
-   * For the SharedConfig job, we do not care about the jobs already in the list.
-   * We never want to add a new sync configuration job if there is already one in the queue.
-   * This is done by the `addJobCheck` method above
-   */
-  public nonRunningJobsToRemove(_jobs: Array<ConfigurationSyncPersistedData>) {
+  public nonRunningJobsToRemove(_jobs: Array<GroupSyncPersistedData>) {
     return [];
   }
 
@@ -275,19 +283,15 @@ class ConfigurationSyncJob extends PersistedJob<ConfigurationSyncPersistedData> 
   private updateLastTickTimestamp() {
     lastRunConfigSyncJobTimestamp = Date.now();
   }
-
-  private triggerConfSyncJobDone() {
-    window.Whisper.events.trigger(ConfigurationSyncJobDone);
-  }
 }
 
 /**
  * Queue a new Sync Configuration if needed job.
- * A ConfigurationSyncJob can only be added if there is none of the same type queued already.
+ * A GroupSyncJob can only be added if there is none of the same type queued already.
  */
-async function queueNewJobIfNeeded() {
+async function queueNewJobIfNeeded(groupPk: GroupPubkeyType) {
   if (isSignInByLinking()) {
-    window.log.info('NOT Scheduling ConfSyncJob: as we are linking a device');
+    window.log.info(`NOT Scheduling GroupSyncJob for ${groupPk} as we are linking a device`);
 
     return;
   }
@@ -295,27 +299,30 @@ async function queueNewJobIfNeeded() {
     !lastRunConfigSyncJobTimestamp ||
     lastRunConfigSyncJobTimestamp < Date.now() - defaultMsBetweenRetries
   ) {
-    // window.log.debug('Scheduling ConfSyncJob: ASAP');
+    // window.log.debug('Scheduling GroupSyncJob: ASAP');
     // we postpone by 1000ms to make sure whoever is adding this job is done with what is needs to do first
     // this call will make sure that there is only one configuration sync job at all times
-    await runners.configurationSyncRunner.addJob(
-      new ConfigurationSyncJob({ nextAttemptTimestamp: Date.now() + 1000 })
+    await runners.groupSyncRunner.addJob(
+      new GroupSyncJob({ identifier: groupPk, nextAttemptTimestamp: Date.now() + 1000 })
     );
   } else {
     // if we did run at t=100, and it is currently t=110, the difference is 10
     const diff = Math.max(Date.now() - lastRunConfigSyncJobTimestamp, 0);
     // but we want to run every 30, so what we need is actually `30-10` from now = 20
     const leftBeforeNextTick = Math.max(defaultMsBetweenRetries - diff, 1000);
-    // window.log.debug('Scheduling ConfSyncJob: LATER');
+    // window.log.debug('Scheduling GroupSyncJob: LATER');
 
-    await runners.configurationSyncRunner.addJob(
-      new ConfigurationSyncJob({ nextAttemptTimestamp: Date.now() + leftBeforeNextTick })
+    await runners.groupSyncRunner.addJob(
+      new GroupSyncJob({
+        identifier: groupPk,
+        nextAttemptTimestamp: Date.now() + leftBeforeNextTick,
+      })
     );
   }
 }
 
-export const ConfigurationSync = {
-  ConfigurationSyncJob,
-  queueNewJobIfNeeded: () =>
-    allowOnlyOneAtATime('ConfigurationSyncJob-oneAtAtTime', queueNewJobIfNeeded),
+export const GroupSync = {
+  GroupSyncJob,
+  queueNewJobIfNeeded: (groupPk: GroupPubkeyType) =>
+    allowOnlyOneAtATime('GroupSyncJob-oneAtAtTime' + groupPk, () => queueNewJobIfNeeded(groupPk)),
 };

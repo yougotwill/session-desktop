@@ -2,6 +2,7 @@ import { cloneDeep, isEmpty } from 'lodash';
 
 export type PersistedJobType =
   | 'ConfigurationSyncJobType'
+  | 'GroupSyncJobType'
   | 'AvatarDownloadJobType'
   | 'FakeSleepForJobType'
   | 'FakeSleepForJobMultiType';
@@ -34,12 +35,16 @@ export interface AvatarDownloadPersistedData extends PersistedJobData {
 export interface ConfigurationSyncPersistedData extends PersistedJobData {
   jobType: 'ConfigurationSyncJobType';
 }
+export interface GroupSyncPersistedData extends PersistedJobData {
+  jobType: 'GroupSyncJobType';
+}
 
 export type TypeOfPersistedData =
   | ConfigurationSyncPersistedData
   | AvatarDownloadPersistedData
   | FakeSleepJobData
-  | FakeSleepForMultiJobData;
+  | FakeSleepForMultiJobData
+  | GroupSyncPersistedData;
 
 export type AddJobCheckReturn = 'skipAddSameJobPresent' | 'sameJobDataAlreadyInQueue' | null;
 
@@ -118,6 +123,15 @@ export abstract class PersistedJob<T extends PersistedJobData> {
 
   public addJobCheckSameTypePresent(jobs: Array<T>): 'skipAddSameJobPresent' | null {
     return jobs.some(j => j.jobType === this.persistedData.jobType)
+      ? 'skipAddSameJobPresent'
+      : null;
+  }
+
+  public addJobCheckSameTypeAndIdentifierPresent(jobs: Array<T>): 'skipAddSameJobPresent' | null {
+    return jobs.some(
+      j =>
+        j.jobType === this.persistedData.jobType && j.identifier === this.persistedData.identifier
+    )
       ? 'skipAddSameJobPresent'
       : null;
   }

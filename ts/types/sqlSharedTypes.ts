@@ -13,7 +13,7 @@ import { OpenGroupV2Room } from '../data/opengroups';
 import { ConversationAttributes } from '../models/conversationAttributes';
 import { OpenGroupRequestCommonType } from '../session/apis/open_group_api/opengroupV2/ApiUtil';
 import { fromHexToArray } from '../session/utils/String';
-import { ConfigWrapperObjectTypes } from '../webworker/workers/browser/libsession_worker_functions';
+import { ConfigWrapperObjectTypesMeta } from '../webworker/workers/browser/libsession_worker_functions';
 
 /**
  * This wrapper can be used to make a function type not async, asynced.
@@ -45,7 +45,7 @@ export type UpdateLastHashType = {
 };
 
 export type ConfigDumpRow = {
-  variant: ConfigWrapperObjectTypes; // the variant this entry is about. (user pr, contacts, ...)
+  variant: ConfigWrapperObjectTypesMeta; // the variant this entry is about. (user pr, contacts, ...)
   publicKey: string; // either our pubkey if a dump for our own swarm or the closed group pubkey
   data: Uint8Array; // the blob returned by libsession.dump() call
 };
@@ -58,13 +58,14 @@ export const CONFIG_DUMP_TABLE = 'configDump';
 
 export type ConfigDumpDataNode = {
   getByVariantAndPubkey: (
-    variant: ConfigWrapperObjectTypes,
+    variant: ConfigWrapperObjectTypesMeta,
     publicKey: string
   ) => Array<ConfigDumpRow>;
   saveConfigDump: (dump: ConfigDumpRow) => void;
 
   getAllDumpsWithData: () => Array<ConfigDumpRow>;
   getAllDumpsWithoutData: () => Array<ConfigDumpRowWithoutData>;
+  getAllDumpsWithoutDataFor: (pk: string) => Array<ConfigDumpRowWithoutData>;
 };
 
 // ========== unprocessed

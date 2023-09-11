@@ -58,7 +58,6 @@ type GenericWrapperActionsCalls = {
   needsDump: GenericWrapperActionsCall<ConfigWrapperUser, 'needsDump'>;
   needsPush: GenericWrapperActionsCall<ConfigWrapperUser, 'needsPush'>;
   push: GenericWrapperActionsCall<ConfigWrapperUser, 'push'>;
-  storageNamespace: GenericWrapperActionsCall<ConfigWrapperUser, 'storageNamespace'>;
   currentHashes: GenericWrapperActionsCall<ConfigWrapperUser, 'currentHashes'>;
 };
 
@@ -91,10 +90,6 @@ export const GenericWrapperActions: GenericWrapperActionsCalls = {
     >,
   push: async (wrapperId: ConfigWrapperUser) =>
     callLibSessionWorker([wrapperId, 'push']) as ReturnType<GenericWrapperActionsCalls['push']>,
-  storageNamespace: async (wrapperId: ConfigWrapperUser) =>
-    callLibSessionWorker([wrapperId, 'storageNamespace']) as ReturnType<
-      GenericWrapperActionsCalls['storageNamespace']
-    >,
   currentHashes: async (wrapperId: ConfigWrapperUser) =>
     callLibSessionWorker([wrapperId, 'currentHashes']) as ReturnType<
       GenericWrapperActionsCalls['currentHashes']
@@ -113,7 +108,6 @@ export const UserConfigWrapperActions: UserConfigWrapperActionsCalls = {
   needsDump: async () => GenericWrapperActions.needsDump('UserConfig'),
   needsPush: async () => GenericWrapperActions.needsPush('UserConfig'),
   push: async () => GenericWrapperActions.push('UserConfig'),
-  storageNamespace: async () => GenericWrapperActions.storageNamespace('UserConfig'),
   currentHashes: async () => GenericWrapperActions.currentHashes('UserConfig'),
 
   /** UserConfig wrapper specific actions */
@@ -160,7 +154,6 @@ export const ContactsWrapperActions: ContactsWrapperActionsCalls = {
   needsDump: async () => GenericWrapperActions.needsDump('ContactsConfig'),
   needsPush: async () => GenericWrapperActions.needsPush('ContactsConfig'),
   push: async () => GenericWrapperActions.push('ContactsConfig'),
-  storageNamespace: async () => GenericWrapperActions.storageNamespace('ContactsConfig'),
   currentHashes: async () => GenericWrapperActions.currentHashes('ContactsConfig'),
 
   /** ContactsConfig wrapper specific actions */
@@ -196,7 +189,6 @@ export const UserGroupsWrapperActions: UserGroupsWrapperActionsCalls = {
   needsDump: async () => GenericWrapperActions.needsDump('UserGroupsConfig'),
   needsPush: async () => GenericWrapperActions.needsPush('UserGroupsConfig'),
   push: async () => GenericWrapperActions.push('UserGroupsConfig'),
-  storageNamespace: async () => GenericWrapperActions.storageNamespace('UserGroupsConfig'),
   currentHashes: async () => GenericWrapperActions.currentHashes('UserGroupsConfig'),
 
   /** UserGroups wrapper specific actions */
@@ -294,7 +286,6 @@ export const ConvoInfoVolatileWrapperActions: ConvoInfoVolatileWrapperActionsCal
   needsDump: async () => GenericWrapperActions.needsDump('ConvoInfoVolatileConfig'),
   needsPush: async () => GenericWrapperActions.needsPush('ConvoInfoVolatileConfig'),
   push: async () => GenericWrapperActions.push('ConvoInfoVolatileConfig'),
-  storageNamespace: async () => GenericWrapperActions.storageNamespace('ConvoInfoVolatileConfig'),
   currentHashes: async () => GenericWrapperActions.currentHashes('ConvoInfoVolatileConfig'),
 
   /** ConvoInfoVolatile wrapper specific actions */
@@ -397,6 +388,13 @@ export const MetaGroupWrapperActions: MetaGroupWrapperActionsCalls = {
   metaDump: async (groupPk: GroupPubkeyType) =>
     callLibSessionWorker([`MetaGroupConfig-${groupPk}`, 'metaDump']) as Promise<
       ReturnType<MetaGroupWrapperActionsCalls['metaDump']>
+    >,
+  metaConfirmPushed: async (
+    groupPk: GroupPubkeyType,
+    args: Parameters<MetaGroupWrapperActionsCalls['metaConfirmPushed']>[1]
+  ) =>
+    callLibSessionWorker([`MetaGroupConfig-${groupPk}`, 'metaConfirmPushed', args]) as Promise<
+      ReturnType<MetaGroupWrapperActionsCalls['metaConfirmPushed']>
     >,
 
   /** GroupInfo wrapper specific actions */

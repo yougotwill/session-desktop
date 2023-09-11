@@ -10,6 +10,7 @@ import {
   UserGroupsWrapperActions,
 } from '../../webworker/workers/browser/libsession_worker_interface';
 import { toFixedUint8ArrayOfLength } from '../../types/sqlSharedTypes';
+import { uniq } from 'lodash';
 
 type GroupInfoGetWithId = GroupInfoGet & { id: GroupPubkeyType };
 
@@ -76,20 +77,17 @@ const initNewGroupInfoInWrapper = createAsyncThunk(
       console.warn('store the v3 identityPrivatekeypair as part of the wrapper only?');
 
       const us = UserUtils.getOurPubKeyStrFromCache();
-      const setOfMembers = new Set(...groupDetails.members);
-      // Ensure the current user is a member
-      setOfMembers.add(us);
+      // Ensure the current user is a member and admin
+      const members = uniq([...groupDetails.members, us]);
 
       const updateGroupDetails: ClosedGroup.GroupInfo = {
         id: newGroup.pubkeyHex,
         name: groupDetails.groupName,
-        members: [...setOfMembers],
+        members,
         admins: [us],
         activeAt: Date.now(),
         expireTimer: 0,
       };
-
-      // we don't want the initial "AAA and You joined the group"
 
       // be sure to call this before sending the message.
       // the sending pipeline needs to know from GroupUtils when a message is for a medium group

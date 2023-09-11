@@ -1,6 +1,7 @@
 /* eslint-disable no-await-in-loop */
 /* eslint-disable import/extensions */
 /* eslint-disable import/no-unresolved */
+import { GroupPubkeyType } from 'libsession_util_nodejs';
 import { difference, omit } from 'lodash';
 import Long from 'long';
 import { UserUtils } from '..';
@@ -9,7 +10,8 @@ import { HexString } from '../../../node/hexStrings';
 import { SignalService } from '../../../protobuf';
 import { assertUnreachable, toFixedUint8ArrayOfLength } from '../../../types/sqlSharedTypes';
 import {
-  ConfigWrapperObjectTypes,
+  ConfigWrapperGroup,
+  ConfigWrapperGroupDetailed,
   ConfigWrapperUser,
   getGroupPubkeyFromWrapperType,
   isMetaWrapperType,
@@ -22,9 +24,15 @@ import {
 } from '../../../webworker/workers/browser/libsession_worker_interface';
 import { GetNetworkTime } from '../../apis/snode_api/getNetworkTime';
 import { SnodeNamespaces } from '../../apis/snode_api/namespaces';
-import { SharedConfigMessage } from '../../messages/outgoing/controlMessage/SharedConfigMessage';
+import {
+  SharedConfigMessage,
+  SharedGroupConfigMessage,
+  SharedUserConfigMessage,
+} from '../../messages/outgoing/controlMessage/SharedConfigMessage';
+import { PubKey } from '../../types';
 import { getUserED25519KeyPairBytes } from '../User';
 import { ConfigurationSync } from '../job_runners/jobs/ConfigurationSyncJob';
+import { GroupConfigKind, UserConfigKind } from '../../../types/ProtobufKind';
 
 const requiredUserVariants: Array<ConfigWrapperUser> = [
   'UserConfig',
@@ -33,16 +41,11 @@ const requiredUserVariants: Array<ConfigWrapperUser> = [
   'ConvoInfoVolatileConfig',
 ];
 
-export type IncomingConfResult = {
-  needsPush: boolean;
-  needsDump: boolean;
-  kind: SignalService.SharedConfigMessage.Kind;
-  publicKey: string;
-  latestEnvelopeTimestamp: number;
-};
-
-export type OutgoingConfResult = {
-  message: SharedConfigMessage;
+export type OutgoingConfResult<
+  K extends UserConfigKind | GroupConfigKind,
+  T extends SharedConfigMessage<K>
+> = {
+  message: T;
   namespace: SnodeNamespaces;
   oldMessageHashes: Array<string>;
 };
@@ -145,31 +148,32 @@ async function initializeLibSessionUtilWrappers() {
   }
 }
 
-async function pendingChangesForPubkey(pubkey: string): Promise<Array<OutgoingConfResult>> {
-  const dumps = await ConfigDumpData.getAllDumpsWithoutData();
+async function pendingChangesForUs(): Promise<
+  Array<OutgoingConfResult<UserConfigKind, SharedUserConfigMessage>>
+> {
   const us = UserUtils.getOurPubKeyStrFromCache();
+
+  const dumps = await ConfigDumpData.getAllDumpsWithoutDataFor(us);
 
   // Ensure we always check the required user config types for changes even if there is no dump
   // data yet (to deal with first launch cases)
-  if (pubkey === us) {
-    LibSessionUtil.requiredUserVariants.forEach(requiredVariant => {
-      if (!dumps.find(m => m.publicKey === us && m.variant === requiredVariant)) {
-        dumps.push({
-          publicKey: us,
-          variant: requiredVariant,
-        });
-      }
-    });
-  }
+  LibSessionUtil.requiredUserVariants.forEach(requiredVariant => {
+    if (!dumps.find(m => m.publicKey === us && m.variant === requiredVariant)) {
+      dumps.push({
+        publicKey: us,
+        variant: requiredVariant,
+      });
+    }
+  });
 
-  const results: Array<OutgoingConfResult> = [];
-  const variantsNeedingPush = new Set<ConfigWrapperObjectTypes>();
+  const results: Array<OutgoingConfResult<UserConfigKind, SharedUserConfigMessage>> = [];
+  const variantsNeedingPush = new Set<ConfigWrapperUser>();
 
   for (let index = 0; index < dumps.length; index++) {
     const dump = dumps[index];
     const variant = dump.variant;
     if (!isUserConfigWrapperType(variant)) {
-      window.log.info('// TODO Audric');
+      // this shouldn't happen for our pubkey.
       continue;
     }
     const needsPush = await GenericWrapperActions.needsPush(variant);
@@ -179,13 +183,12 @@ async function pendingChangesForPubkey(pubkey: string): Promise<Array<OutgoingCo
     }
 
     variantsNeedingPush.add(variant);
-    const { data, seqno, hashes } = await GenericWrapperActions.push(variant);
+    const { data, seqno, hashes, namespace } = await GenericWrapperActions.push(variant);
 
-    const kind = variantToKind(variant);
+    const kind = userVariantToUserKind(variant);
 
-    const namespace = await GenericWrapperActions.storageNamespace(variant);
     results.push({
-      message: new SharedConfigMessage({
+      message: new SharedUserConfigMessage({
         data,
         kind,
         seqno: Long.fromNumber(seqno),
@@ -200,8 +203,67 @@ async function pendingChangesForPubkey(pubkey: string): Promise<Array<OutgoingCo
   return results;
 }
 
-// eslint-disable-next-line consistent-return
-function kindToVariant(kind: SignalService.SharedConfigMessage.Kind): ConfigWrapperObjectTypes {
+async function pendingChangesForGroup(
+  groupPk: GroupPubkeyType
+): Promise<Array<OutgoingConfResult<GroupConfigKind, SharedGroupConfigMessage>>> {
+  const dumps = await ConfigDumpData.getAllDumpsWithoutDataFor(groupPk);
+
+  const results: Array<OutgoingConfResult<GroupConfigKind, SharedGroupConfigMessage>> = [];
+  const variantsNeedingPush = new Set<ConfigWrapperGroupDetailed>();
+
+  if (!PubKey.isClosedGroupV3(groupPk)) {
+    throw new Error(`pendingChangesForGroup only works for user or 03 group pubkeys`);
+  }
+
+  for (let index = 0; index < dumps.length; index++) {
+    const dump = dumps[index];
+    const variant = dump.variant;
+    if (!isMetaWrapperType(variant)) {
+      // shouldn't happen
+      continue;
+    }
+
+    // one of the wrapper behind the metagroup needs a push
+    const needsPush = await MetaGroupWrapperActions.needsPush(groupPk);
+
+    if (!needsPush) {
+      continue;
+    }
+
+    const { groupInfo, groupMember } = await MetaGroupWrapperActions.push(groupPk);
+    if (groupInfo) {
+      variantsNeedingPush.add('GroupInfo');
+      results.push({
+        message: new SharedGroupConfigMessage({
+          data: groupInfo.data,
+          kind: SignalService.SharedConfigMessage.Kind.GROUP_INFO,
+          seqno: Long.fromNumber(groupInfo.seqno),
+          timestamp: GetNetworkTime.getNowWithNetworkOffset(),
+        }),
+        oldMessageHashes: groupInfo.hashes,
+        namespace: groupInfo.namespace,
+      });
+    }
+    if (groupMember) {
+      variantsNeedingPush.add('GroupMember');
+      results.push({
+        message: new SharedGroupConfigMessage({
+          data: groupMember.data,
+          kind: SignalService.SharedConfigMessage.Kind.GROUP_MEMBERS,
+          seqno: Long.fromNumber(groupMember.seqno),
+          timestamp: GetNetworkTime.getNowWithNetworkOffset(),
+        }),
+        oldMessageHashes: groupMember.hashes,
+        namespace: groupMember.namespace,
+      });
+    }
+  }
+  window.log.info(`those variants needs push: "${[...variantsNeedingPush]}"`);
+
+  return results;
+}
+
+function userKindToVariant(kind: UserConfigKind): ConfigWrapperUser {
   switch (kind) {
     case SignalService.SharedConfigMessage.Kind.USER_PROFILE:
       return 'UserConfig';
@@ -212,12 +274,11 @@ function kindToVariant(kind: SignalService.SharedConfigMessage.Kind): ConfigWrap
     case SignalService.SharedConfigMessage.Kind.CONVO_INFO_VOLATILE:
       return 'ConvoInfoVolatileConfig';
     default:
-      assertUnreachable(kind, `kindToVariant: Unsupported variant: "${kind}"`);
+      assertUnreachable(kind, `userKindToVariant: Unsupported variant: "${kind}"`);
   }
 }
 
-// eslint-disable-next-line consistent-return
-function variantToKind(variant: ConfigWrapperObjectTypes): SignalService.SharedConfigMessage.Kind {
+function userVariantToUserKind(variant: ConfigWrapperUser) {
   switch (variant) {
     case 'UserConfig':
       return SignalService.SharedConfigMessage.Kind.USER_PROFILE;
@@ -228,31 +289,39 @@ function variantToKind(variant: ConfigWrapperObjectTypes): SignalService.SharedC
     case 'ConvoInfoVolatileConfig':
       return SignalService.SharedConfigMessage.Kind.CONVO_INFO_VOLATILE;
     default:
-      assertUnreachable(variant, `variantToKind: Unsupported kind: "${variant}"`);
+      assertUnreachable(variant, `userVariantToKind: Unsupported kind: "${variant}"`);
+  }
+}
+
+function groupKindToVariant(kind: GroupConfigKind, groupPk: GroupPubkeyType): ConfigWrapperGroup {
+  if (!PubKey.isClosedGroupV3(groupPk)) {
+    throw new Error(`Not a groupPk starting with 03: ${groupPk}`);
+  }
+  switch (kind) {
+    case SignalService.SharedConfigMessage.Kind.GROUP_INFO:
+    case SignalService.SharedConfigMessage.Kind.GROUP_KEYS:
+    case SignalService.SharedConfigMessage.Kind.GROUP_MEMBERS:
+      return `MetaGroupConfig-${groupPk}`;
+    default:
+      assertUnreachable(kind, `userKindToVariant: Unsupported variant: "${kind}"`);
   }
 }
 
 /**
  * Returns true if the config needs to be dumped afterwards
  */
-async function markAsPushed(
-  variant: ConfigWrapperUser,
-  pubkey: string,
-  seqno: number,
-  hash: string
-) {
-  if (pubkey !== UserUtils.getOurPubKeyStrFromCache()) {
-    throw new Error('FIXME, generic case is to be done'); // TODO Audric
-  }
+async function markAsPushed(variant: ConfigWrapperUser, seqno: number, hash: string) {
   await GenericWrapperActions.confirmPushed(variant, seqno, hash);
   return GenericWrapperActions.needsDump(variant);
 }
 
 export const LibSessionUtil = {
   initializeLibSessionUtilWrappers,
+  userVariantToUserKind,
   requiredUserVariants,
-  pendingChangesForPubkey,
-  kindToVariant,
-  variantToKind,
+  pendingChangesForUs,
+  pendingChangesForGroup,
+  userKindToVariant,
+  groupKindToVariant,
   markAsPushed,
 };

@@ -236,7 +236,8 @@ export class MessageQueue {
     message:
       | ClosedGroupNewMessage
       | CallMessage
-      | SharedConfigMessage
+      // | SharedUserConfigMessage
+      // | SharedGroupConfigMessage
       | ClosedGroupMemberLeftMessage;
     namespace: SnodeNamespaces;
   }): Promise<boolean | number> {

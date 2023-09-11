@@ -8,6 +8,9 @@ import { ConversationModel } from '../../../models/conversation';
 import { SignalService } from '../../../protobuf';
 import { ECKeyPair } from '../../../receiver/keypairs';
 import { ConfigurationSyncJobDone } from '../../../shims/events';
+import { ReleasedFeatures } from '../../../util/releaseFeature';
+import { Storage } from '../../../util/storage';
+import { getCompleteUrlFromRoom } from '../../apis/open_group_api/utils/OpenGroupUtils';
 import { SnodeNamespaces } from '../../apis/snode_api/namespaces';
 import { DURATION } from '../../constants';
 import { getConversationController } from '../../conversations';
@@ -18,7 +21,7 @@ import {
 } from '../../messages/outgoing/controlMessage/ConfigurationMessage';
 import { ExpirationTimerUpdateMessage } from '../../messages/outgoing/controlMessage/ExpirationTimerUpdateMessage';
 import { MessageRequestResponse } from '../../messages/outgoing/controlMessage/MessageRequestResponse';
-import { SharedConfigMessage } from '../../messages/outgoing/controlMessage/SharedConfigMessage';
+import { SharedUserConfigMessage } from '../../messages/outgoing/controlMessage/SharedConfigMessage';
 import { UnsendMessage } from '../../messages/outgoing/controlMessage/UnsendMessage';
 import {
   AttachmentPointerWithUrl,
@@ -27,11 +30,8 @@ import {
   VisibleMessage,
 } from '../../messages/outgoing/visibleMessage/VisibleMessage';
 import { PubKey } from '../../types';
-import { ConfigurationSync } from '../job_runners/jobs/ConfigurationSyncJob';
 import { fromBase64ToArray, fromHexToArray } from '../String';
-import { getCompleteUrlFromRoom } from '../../apis/open_group_api/utils/OpenGroupUtils';
-import { Storage } from '../../../util/storage';
-import { ReleasedFeatures } from '../../../util/releaseFeature';
+import { ConfigurationSync } from '../job_runners/jobs/ConfigurationSyncJob';
 
 const ITEM_ID_LAST_SYNC_TIMESTAMP = 'lastSyncedTimestamp';
 
@@ -354,7 +354,7 @@ export type SyncMessageType =
   | ConfigurationMessage
   | MessageRequestResponse
   | UnsendMessage
-  | SharedConfigMessage;
+  | SharedUserConfigMessage;
 
 export const buildSyncMessage = (
   identifier: string,

@@ -1,7 +1,7 @@
 /* eslint-disable no-await-in-loop */
 /* eslint-disable more/no-then */
 /* eslint-disable @typescript-eslint/no-misused-promises */
-import { compact, concat, difference, flatten, last, sample, toNumber, uniqBy } from 'lodash';
+import { compact, concat, difference, flatten, last, sample, uniqBy } from 'lodash';
 import { Data, Snode } from '../../../data/data';
 import { SignalService } from '../../../protobuf';
 import * as Receiver from '../../../receiver/receiver';
@@ -11,9 +11,6 @@ import * as snodePool from './snodePool';
 
 import { ConversationModel } from '../../../models/conversation';
 import { ConversationTypeEnum } from '../../../models/conversationAttributes';
-import { ConfigMessageHandler } from '../../../receiver/configMessage';
-import { decryptEnvelopeWithOurKey } from '../../../receiver/contentMessage';
-import { EnvelopePlus } from '../../../receiver/types';
 import { updateIsOnline } from '../../../state/ducks/onion';
 import {
   GenericWrapperActions,
@@ -21,13 +18,14 @@ import {
 } from '../../../webworker/workers/browser/libsession_worker_interface';
 import { DURATION, SWARM_POLLING_TIMEOUT } from '../../constants';
 import { getConversationController } from '../../conversations';
-import { IncomingMessage } from '../../messages/incoming/IncomingMessage';
 import { ed25519Str } from '../../onions/onionPath';
 import { StringUtils, UserUtils } from '../../utils';
 import { perfEnd, perfStart } from '../../utils/Performance';
 import { LibSessionUtil } from '../../utils/libsession/libsession_utils';
 import { SnodeNamespace, SnodeNamespaces } from './namespaces';
 import { SnodeAPIRetrieve } from './retrieveRequest';
+import { SwarmPollingGroupConfig } from './swarm_polling_config/SwarmPollingGroupConfig';
+import { SwarmPollingUserConfig } from './swarm_polling_config/SwarmPollingUserConfig';
 import { RetrieveMessageItem, RetrieveMessagesResultsBatched } from './types';
 
 export function extractWebSocketContent(
@@ -257,53 +255,34 @@ export class SwarmPolling {
     );
 
     // first make sure to handle the shared user config message first
-
-    if (type === ConversationTypeEnum.PRIVATE) {
-      if (confMessages?.length) {
-        window.log.info(
-          `received userConfigMessagesMerged count: ${confMessages.length} for key ${pubkey}`
-        );
-        try {
-          await this.handleUserSharedConfigMessages(confMessages);
-        } catch (e) {
-          window.log.warn(
-            `handleSharedConfigMessages of ${confMessages.length} failed with ${e.message}`
-          );
-          // not rethrowing
-        }
-      }
-    } else if (type === ConversationTypeEnum.GROUPV3) {
-      if (confMessages?.length) {
-        window.log.info(
-          `received GROUPV3MessagesMerged count: ${confMessages.length} for key ${pubkey}`
-        );
-        throw new Error('received GROUPV3MessagesMerged TODO');
-
-        // try {
-        //   await this.handleUserSharedConfigMessages(confMessages);
-        // } catch (e) {
-        //   window.log.warn(
-        //     `handleSharedConfigMessages of ${confMessages.length} failed with ${e.message}`
-        //   );
-        //   // not rethrowing
-        // }
-      }
-    }
-
-    if (otherMessages.length) {
-      window.log.debug(`received otherMessages: ${otherMessages.length} for type: ${type}`);
+    if (
+      type === ConversationTypeEnum.PRIVATE &&
+      confMessages?.length &&
+      UserUtils.isUsFromCache(pubkey)
+    ) {
+      // this does not throw, no matter what happens
+      await SwarmPollingUserConfig.handleUserSharedConfigMessages(confMessages);
+    } else if (
+      type === ConversationTypeEnum.GROUPV3 &&
+      confMessages?.length &&
+      PubKey.isClosedGroupV3(pubkey)
+    ) {
+      await SwarmPollingGroupConfig.handleGroupSharedConfigMessages(confMessages, pubkey);
     }
 
     // Merge results into one list of unique messages
-    const messages = uniqBy(otherMessages, x => x.hash);
+    const uniqOtherMsgs = uniqBy(otherMessages, x => x.hash);
+    if (uniqOtherMsgs.length) {
+      window.log.debug(`received otherMessages: ${otherMessages.length} for type: ${type}`);
+    }
 
     // if all snodes returned an error (null), no need to update the lastPolledTimestamp
     if (type === ConversationTypeEnum.GROUP || type === ConversationTypeEnum.GROUPV3) {
       window?.log?.debug(
-        `Polled for group(${ed25519Str(pubkey)}):, got ${messages.length} messages back.`
+        `Polled for group(${ed25519Str(pubkey)}):, got ${uniqOtherMsgs.length} messages back.`
       );
       let lastPolledTimestamp = Date.now();
-      if (messages.length >= 95) {
+      if (uniqOtherMsgs.length >= 95) {
         // if we get 95 messages or more back, it means there are probably more than this
         // so make sure to retry the polling in the next 5sec by marking the last polled timestamp way before that it is really
         // this is a kind of hack
@@ -322,7 +301,7 @@ export class SwarmPolling {
     }
 
     perfStart(`handleSeenMessages-${pubkey}`);
-    const newMessages = await this.handleSeenMessages(messages);
+    const newMessages = await this.handleSeenMessages(uniqOtherMsgs);
     perfEnd(`handleSeenMessages-${pubkey}`, 'handleSeenMessages');
 
     // don't handle incoming messages from group swarms when the group is not one of the tracked group
@@ -350,69 +329,6 @@ export class SwarmPolling {
           content.messageHash
         );
       });
-    }
-  }
-
-  private async handleUserSharedConfigMessages(
-    userConfigMessagesMerged: Array<RetrieveMessageItem>
-  ) {
-    const extractedUserConfigMessage = compact(
-      userConfigMessagesMerged.map((m: RetrieveMessageItem) => {
-        return extractWebSocketContent(m.data, m.hash);
-      })
-    );
-
-    const allDecryptedConfigMessages: Array<IncomingMessage<
-      SignalService.ISharedConfigMessage
-    >> = [];
-
-    for (let index = 0; index < extractedUserConfigMessage.length; index++) {
-      const userConfigMessage = extractedUserConfigMessage[index];
-
-      try {
-        const envelope: EnvelopePlus = SignalService.Envelope.decode(userConfigMessage.body) as any;
-        const decryptedEnvelope = await decryptEnvelopeWithOurKey(envelope);
-        if (!decryptedEnvelope?.byteLength) {
-          continue;
-        }
-        const content = SignalService.Content.decode(new Uint8Array(decryptedEnvelope));
-        if (content.sharedConfigMessage) {
-          const asIncomingMsg: IncomingMessage<SignalService.ISharedConfigMessage> = {
-            envelopeTimestamp: toNumber(envelope.timestamp),
-            message: content.sharedConfigMessage,
-            messageHash: userConfigMessage.messageHash,
-            authorOrGroupPubkey: envelope.source,
-            authorInGroup: envelope.senderIdentity,
-          };
-          allDecryptedConfigMessages.push(asIncomingMsg);
-        } else {
-          throw new Error(
-            'received a message to a namespace reserved for user config but not containign a sharedConfigMessage'
-          );
-        }
-      } catch (e) {
-        window.log.warn(
-          `failed to decrypt message with hash "${userConfigMessage.messageHash}": ${e.message}`
-        );
-      }
-    }
-
-    throw new Error(
-      "todo audric make sure we don't handle shared config messages through the old pipeline since I cleanedup this part"
-    );
-
-    if (allDecryptedConfigMessages.length) {
-      try {
-        window.log.info(
-          `handleConfigMessagesViaLibSession of "${allDecryptedConfigMessages.length}" messages with libsession`
-        );
-        await ConfigMessageHandler.handleConfigMessagesViaLibSession(allDecryptedConfigMessages);
-      } catch (e) {
-        const allMessageHases = allDecryptedConfigMessages.map(m => m.messageHash).join(',');
-        window.log.warn(
-          `failed to handle messages hashes "${allMessageHases}" with libsession. Error: "${e.message}"`
-        );
-      }
     }
   }
 

@@ -28,9 +28,16 @@ export type ConfigWrapperUser =
 
 export type ConfigWrapperGroup = MetaGroupConfig;
 
-export type ConfigWrapperObjectTypes =
+export type ConfigWrapperObjectTypesMeta =
   | ConfigWrapperUser
   | ConfigWrapperGroup;
+
+
+  export type ConfigWrapperGroupDetailed = 'GroupInfo' | 'GroupMember'| 'GroupKeys';
+
+  export type ConfigWrapperObjectTypesDetailed =
+  | ConfigWrapperUser
+  | ConfigWrapperGroupDetailed;
 
 type UserConfigFunctions =
   | [UserConfig, ...BaseConfigActions]
@@ -57,7 +64,7 @@ export type LibSessionWorkerFunctions =
   | ConvoInfoVolatileConfigFunctions
   | MetaGroupFunctions;
 
-export function isUserConfigWrapperType(config: ConfigWrapperObjectTypes): config is ConfigWrapperUser {
+export function isUserConfigWrapperType(config: ConfigWrapperObjectTypesMeta): config is ConfigWrapperUser {
   return (
     config === 'ContactsConfig' ||
     config === 'UserConfig' ||
@@ -66,7 +73,7 @@ export function isUserConfigWrapperType(config: ConfigWrapperObjectTypes): confi
   );
 }
 
-export function isMetaWrapperType(config: ConfigWrapperObjectTypes): config is MetaGroupConfig {
+export function isMetaWrapperType(config: ConfigWrapperObjectTypesMeta): config is MetaGroupConfig {
   return config.startsWith(MetaGroupConfigValue);
 }
 

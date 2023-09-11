@@ -10,7 +10,7 @@ import {
   ConfigDumpRowWithoutData,
 } from '../../types/sqlSharedTypes';
 // eslint-disable-next-line import/no-unresolved, import/extensions
-import { ConfigWrapperObjectTypes } from '../../webworker/workers/browser/libsession_worker_functions';
+import { ConfigWrapperObjectTypesMeta } from '../../webworker/workers/browser/libsession_worker_functions';
 import { assertGlobalInstance } from '../sqlInstance';
 
 function parseRow(
@@ -42,7 +42,7 @@ export function uniqCompacted<T extends string>(list: Array<T>): Array<T> {
 }
 
 export const configDumpData: ConfigDumpDataNode = {
-  getByVariantAndPubkey: (variant: ConfigWrapperObjectTypes, publicKey: string) => {
+  getByVariantAndPubkey: (variant: ConfigWrapperObjectTypesMeta, publicKey: string) => {
     const rows = assertGlobalInstance()
       .prepare(
         `SELECT publicKey, variant, data FROM ${CONFIG_DUMP_TABLE} WHERE variant = $variant AND publicKey = $publicKey;`
@@ -75,6 +75,18 @@ export const configDumpData: ConfigDumpDataNode = {
     const rows = assertGlobalInstance()
       .prepare(`SELECT variant, publicKey from ${CONFIG_DUMP_TABLE};`)
       .all();
+
+    if (!rows) {
+      return [];
+    }
+
+    return compact(rows.map(parseRowNoData));
+  },
+
+  getAllDumpsWithoutDataFor: (publicKey: string) => {
+    const rows = assertGlobalInstance()
+      .prepare(`SELECT variant, publicKey from ${CONFIG_DUMP_TABLE} WHERE publicKey=$publicKey;`)
+      .all({ publicKey });
 
     if (!rows) {
       return [];
