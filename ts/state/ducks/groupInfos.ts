@@ -11,6 +11,7 @@ import {
 } from '../../webworker/workers/browser/libsession_worker_interface';
 import { toFixedUint8ArrayOfLength } from '../../types/sqlSharedTypes';
 import { uniq } from 'lodash';
+import { GroupSync } from '../../session/utils/job_runners/jobs/GroupConfigJob';
 
 type GroupInfoGetWithId = GroupInfoGet & { id: GroupPubkeyType };
 
@@ -75,6 +76,8 @@ const initNewGroupInfoInWrapper = createAsyncThunk(
       await convo.setIsApproved(true, false);
 
       console.warn('store the v3 identityPrivatekeypair as part of the wrapper only?');
+
+      await GroupSync.queueNewJobIfNeeded(newGroup.pubkeyHex);
 
       const us = UserUtils.getOurPubKeyStrFromCache();
       // Ensure the current user is a member and admin

@@ -34,17 +34,22 @@ export enum SnodeNamespaces {
   /**
    * This is the namespace used to sync the closed group details for each closed group
    */
-  ClosedGroupInfo = 11,
+  ClosedGroupMessages = 11,
+
+  /**
+   * This is the namespace used to sync the closed group details for each closed group
+   */
+  ClosedGroupKeys = 12,
 
   /**
    * This is the namespace used to sync the members for each closed group
    */
-  ClosedGroupMembers = 12,
+  ClosedGroupInfo = 13,
 
   /**
    * This is the namespace used to sync the keys for each closed group
    */
-  ClosedGroupKeys = 13,
+  ClosedGroupMembers = 14,
 }
 
 export type SnodeNamespacesGroup = PickEnum<
@@ -78,6 +83,7 @@ function isUserConfigNamespace(namespace: SnodeNamespaces) {
     case SnodeNamespaces.ClosedGroupInfo:
     case SnodeNamespaces.ClosedGroupKeys:
     case SnodeNamespaces.ClosedGroupMembers:
+    case SnodeNamespaces.ClosedGroupMessages:
     case SnodeNamespaces.LegacyClosedGroup:
       return false;
 
@@ -99,6 +105,7 @@ function isGroupConfigNamespace(namespace: SnodeNamespaces) {
     case SnodeNamespaces.UserGroups:
     case SnodeNamespaces.ConvoInfoVolatile:
     case SnodeNamespaces.LegacyClosedGroup:
+    case SnodeNamespaces.ClosedGroupMessages:
       return false;
     case SnodeNamespaces.ClosedGroupInfo:
     case SnodeNamespaces.ClosedGroupKeys:
@@ -119,20 +126,18 @@ function isGroupConfigNamespace(namespace: SnodeNamespaces) {
 function namespacePriority(namespace: SnodeNamespaces): number {
   switch (namespace) {
     case SnodeNamespaces.Default:
+    case SnodeNamespaces.ClosedGroupMessages:
       return 10;
-    case SnodeNamespaces.UserContacts:
-      return 1;
-    case SnodeNamespaces.UserProfile:
-      return 1;
     case SnodeNamespaces.UserGroups:
-      return 1;
     case SnodeNamespaces.ConvoInfoVolatile:
+    case SnodeNamespaces.UserProfile:
+    case SnodeNamespaces.UserContacts:
       return 1;
     case SnodeNamespaces.LegacyClosedGroup:
     case SnodeNamespaces.ClosedGroupInfo:
     case SnodeNamespaces.ClosedGroupMembers:
     case SnodeNamespaces.ClosedGroupKeys:
-      return 10;
+      return 1;
 
     default:
       try {

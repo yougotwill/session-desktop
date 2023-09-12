@@ -2,6 +2,7 @@
 
 import { AbortController } from 'abort-controller';
 import ByteBuffer from 'bytebuffer';
+import { GroupPubkeyType } from 'libsession_util_nodejs';
 import _, { isEmpty, isNil, isString, sample, toNumber } from 'lodash';
 import pRetry from 'p-retry';
 import { Data } from '../../data/data';
@@ -12,9 +13,6 @@ import {
   sendMessageOnionV4BlindedRequest,
   sendSogsMessageOnionV4,
 } from '../apis/open_group_api/sogsv3/sogsV3SendMessage';
-import { GetNetworkTime } from '../apis/snode_api/getNetworkTime';
-import { SnodeNamespace, SnodeNamespaces } from '../apis/snode_api/namespaces';
-import { getSwarmFor } from '../apis/snode_api/snodePool';
 import {
   NotEmptyArrayOfBatchResults,
   StoreOnNodeData,
@@ -22,6 +20,9 @@ import {
   StoreOnNodeParams,
   StoreOnNodeParamsNoSig,
 } from '../apis/snode_api/SnodeRequestTypes';
+import { GetNetworkTime } from '../apis/snode_api/getNetworkTime';
+import { SnodeNamespace, SnodeNamespaces } from '../apis/snode_api/namespaces';
+import { getSwarmFor } from '../apis/snode_api/snodePool';
 import { SnodeSignature, SnodeSignatureResult } from '../apis/snode_api/snodeSignatures';
 import { SnodeAPIStore } from '../apis/snode_api/storeMessage';
 import { getConversationController } from '../conversations';
@@ -29,17 +30,15 @@ import { MessageEncrypter } from '../crypto';
 import { addMessagePadding } from '../crypto/BufferPadding';
 import { ContentMessage } from '../messages/outgoing';
 import { ConfigurationMessage } from '../messages/outgoing/controlMessage/ConfigurationMessage';
-import { ClosedGroupNewMessage } from '../messages/outgoing/controlMessage/group/ClosedGroupNewMessage';
 import { SharedConfigMessage } from '../messages/outgoing/controlMessage/SharedConfigMessage';
 import { UnsendMessage } from '../messages/outgoing/controlMessage/UnsendMessage';
+import { ClosedGroupNewMessage } from '../messages/outgoing/controlMessage/group/ClosedGroupNewMessage';
 import { OpenGroupVisibleMessage } from '../messages/outgoing/visibleMessage/OpenGroupVisibleMessage';
 import { ed25519Str } from '../onions/onionPath';
 import { PubKey } from '../types';
 import { RawMessage } from '../types/RawMessage';
-import { EmptySwarmError } from '../utils/errors';
 import { fromUInt8ArrayToBase64 } from '../utils/String';
-import { GroupPubkeyType } from 'libsession_util_nodejs';
-import { to_base64 } from 'libsodium-wrappers-sumo';
+import { EmptySwarmError } from '../utils/errors';
 
 // ================ SNODE STORE ================
 
@@ -468,7 +467,7 @@ async function sendEncryptedDataToSnode(
         return MessageSender.sendMessagesDataToSnode(
           encryptedData.map(content => ({
             pubkey: destination,
-            data64: to_base64(content.data),
+            data64: ByteBuffer.wrap(content.data).toString('base64'),
             ttl: content.ttl,
             timestamp: content.networkTimestamp,
             namespace: content.namespace,

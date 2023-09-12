@@ -2,12 +2,13 @@
 /* eslint-disable import/extensions */
 /* eslint-disable import/no-unresolved */
 import { GroupPubkeyType } from 'libsession_util_nodejs';
-import { difference, omit } from 'lodash';
+import { compact, difference, omit } from 'lodash';
 import Long from 'long';
 import { UserUtils } from '..';
 import { ConfigDumpData } from '../../../data/configDump/configDump';
 import { HexString } from '../../../node/hexStrings';
 import { SignalService } from '../../../protobuf';
+import { UserConfigKind } from '../../../types/ProtobufKind';
 import { assertUnreachable, toFixedUint8ArrayOfLength } from '../../../types/sqlSharedTypes';
 import {
   ConfigWrapperGroupDetailed,
@@ -27,10 +28,10 @@ import {
   SharedConfigMessage,
   SharedUserConfigMessage,
 } from '../../messages/outgoing/controlMessage/SharedConfigMessage';
+import { ed25519Str } from '../../onions/onionPath';
 import { PubKey } from '../../types';
 import { getUserED25519KeyPairBytes } from '../User';
 import { ConfigurationSync } from '../job_runners/jobs/ConfigurationSyncJob';
-import { UserConfigKind } from '../../../types/ProtobufKind';
 
 const requiredUserVariants: Array<ConfigWrapperUser> = [
   'UserConfig',
@@ -198,57 +199,86 @@ async function pendingChangesForUs(): Promise<
   return results;
 }
 
-export type PendingChangesForGroup = {
+type PendingChangesForGroupShared = {
   data: Uint8Array;
   seqno: Long;
   timestamp: number;
-  oldMessageHashes: Array<string>;
   namespace: SnodeNamespaces;
+};
+
+type PendingChangesForGroupNonKey = PendingChangesForGroupShared & {
+  type: Extract<ConfigWrapperGroupDetailed, 'GroupInfo' | 'GroupMember'>;
+};
+
+type PendingChangesForGroupKey = Pick<
+  PendingChangesForGroupShared,
+  'data' | 'namespace' | 'timestamp'
+> & { type: Extract<ConfigWrapperGroupDetailed, 'GroupKeys'> };
+
+export type PendingChangesForGroup = PendingChangesForGroupNonKey | PendingChangesForGroupKey;
+
+export type GroupSingleDestinationChanges = {
+  messages: Array<PendingChangesForGroup>;
+  allOldHashes: Set<string>;
 };
 
 async function pendingChangesForGroup(
   groupPk: GroupPubkeyType
-): Promise<Map<ConfigWrapperGroupDetailed, PendingChangesForGroup>> {
-  const results: Map<ConfigWrapperGroupDetailed, PendingChangesForGroup> = new Map();
-  const variantsNeedingPush = new Set<ConfigWrapperGroupDetailed>();
-
+): Promise<GroupSingleDestinationChanges> {
+  const results = new Array<PendingChangesForGroup>();
   if (!PubKey.isClosedGroupV3(groupPk)) {
     throw new Error(`pendingChangesForGroup only works for user or 03 group pubkeys`);
   }
-
   // one of the wrapper behind the metagroup needs a push
   const needsPush = await MetaGroupWrapperActions.needsPush(groupPk);
 
   // we probably need to add the GROUP_KEYS check here
 
   if (!needsPush) {
-    return results;
+    return { messages: results, allOldHashes: new Set() };
   }
 
-  const { groupInfo, groupMember } = await MetaGroupWrapperActions.push(groupPk);
+  const { groupInfo, groupMember, groupKeys } = await MetaGroupWrapperActions.push(groupPk);
+  debugger;
+
+  // Note: We need the keys to be pushed first to avoid a race condition
+  if (groupKeys) {
+    results.push({
+      type: 'GroupKeys',
+      data: groupKeys.data,
+      namespace: groupKeys.namespace,
+      timestamp: GetNetworkTime.getNowWithNetworkOffset(),
+    });
+  }
+
   if (groupInfo) {
-    variantsNeedingPush.add('GroupInfo');
-    results.set('GroupInfo', {
+    results.push({
+      type: 'GroupInfo',
       data: groupInfo.data,
       seqno: Long.fromNumber(groupInfo.seqno),
       timestamp: GetNetworkTime.getNowWithNetworkOffset(),
-      oldMessageHashes: groupInfo.hashes,
       namespace: groupInfo.namespace,
     });
   }
   if (groupMember) {
-    variantsNeedingPush.add('GroupMember');
-    results.set('GroupMember', {
+    results.push({
+      type: 'GroupMember',
       data: groupMember.data,
       seqno: Long.fromNumber(groupMember.seqno),
       timestamp: GetNetworkTime.getNowWithNetworkOffset(),
-      oldMessageHashes: groupMember.hashes,
       namespace: groupMember.namespace,
     });
   }
-  window.log.info(`those variants needs push: "${[...variantsNeedingPush]}"`);
+  window.log.debug(
+    `${ed25519Str(groupPk)} those group variants needs push: "${results.map(m => m.type)}"`
+  );
 
-  return results;
+  const memberHashes = compact(groupMember?.hashes) || [];
+  const infoHashes = compact(groupInfo?.hashes) || [];
+  const allOldHashes = new Set([...infoHashes, ...memberHashes]);
+
+  console.error('compactedHashes', [...allOldHashes]);
+  return { messages: results, allOldHashes };
 }
 
 function userKindToVariant(kind: UserConfigKind): ConfigWrapperUser {

@@ -189,9 +189,9 @@ export class SwarmPolling {
         if (isV3) {
           return this.pollOnceForKey(key, ConversationTypeEnum.GROUPV3, [
             SnodeNamespaces.Default,
-            SnodeNamespaces.ClosedGroupKeys,
             SnodeNamespaces.ClosedGroupInfo,
             SnodeNamespaces.ClosedGroupMembers,
+            SnodeNamespaces.ClosedGroupKeys, // keys are fetched last to avoid race conditions when someone deposits them
           ]);
         }
         return this.pollOnceForKey(key, ConversationTypeEnum.GROUP, [

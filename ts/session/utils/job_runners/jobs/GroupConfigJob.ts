@@ -1,6 +1,6 @@
 /* eslint-disable no-await-in-loop */
 import { GroupPubkeyType } from 'libsession_util_nodejs';
-import { compact, isArray, isEmpty, isNumber, isString } from 'lodash';
+import { isArray, isEmpty, isNumber, isString } from 'lodash';
 import { UserUtils } from '../..';
 import { ConfigDumpData } from '../../../../data/configDump/configDump';
 import { ReleasedFeatures } from '../../../../util/releaseFeature';
@@ -17,7 +17,11 @@ import { getConversationController } from '../../../conversations';
 import { MessageSender } from '../../../sending/MessageSender';
 import { PubKey } from '../../../types';
 import { allowOnlyOneAtATime } from '../../Promise';
-import { LibSessionUtil, PendingChangesForGroup } from '../../libsession/libsession_utils';
+import {
+  GroupSingleDestinationChanges,
+  LibSessionUtil,
+  PendingChangesForGroup,
+} from '../../libsession/libsession_utils';
 import { runners } from '../JobRunner';
 import {
   AddJobCheckReturn,
@@ -33,41 +37,12 @@ const defaultMaxAttempts = 2;
  * We want to run each of those jobs at least 3seconds apart.
  * So every time one of that job finishes, update this timestamp, so we know when adding a new job, what is the next minimun date to run it.
  */
-let lastRunConfigSyncJobTimestamp: number | null = null;
-
-type GroupSingleDestinationChanges = {
-  messages: Array<PendingChangesForGroup>;
-  allOldHashes: Array<string>;
-};
+const lastRunConfigSyncJobTimestamps = new Map<string, number | null>();
 
 type SuccessfulChange = {
   pushed: PendingChangesForGroup;
   updatedHash: string;
 };
-
-/**
- * Later in the syncing logic, we want to batch-send all the updates for a pubkey in a single batch call.
- * To make this easier, this function prebuilds and merges together all the changes for each pubkey.
- */
-async function retrieveGroupSingleDestinationChanges(
-  groupPk: GroupPubkeyType
-): Promise<GroupSingleDestinationChanges> {
-  const outgoingConfResults = await LibSessionUtil.pendingChangesForGroup(groupPk);
-
-  const compactedHashes = compact([...outgoingConfResults].map(m => m[1].oldMessageHashes)).flat();
-  const sortedMessagesKeyFirst = compact(
-    [...outgoingConfResults.keys()]
-      .sort((a, b) => {
-        if (a === 'GroupKeys') return -1;
-        if (b === 'GroupKeys') return 1;
-        return 0;
-      })
-      .map(key => {
-        return outgoingConfResults.get(key);
-      })
-  );
-  return { messages: sortedMessagesKeyFirst, allOldHashes: compactedHashes };
-}
 
 /**
  * This function is run once we get the results from the multiple batch-send.
@@ -94,7 +69,10 @@ function resultsToSuccessfulChange(
   for (let j = 0; j < result.length; j++) {
     const batchResult = result[j];
     const messagePostedHashes = batchResult?.body?.hash;
-    console.warn('messagePostedHashes', messagePostedHashes);
+    console.error(
+      'this might be wrong as the key message is first now messagePostedHashes',
+      messagePostedHashes
+    );
 
     if (batchResult.code === 200 && isString(messagePostedHashes) && request.messages?.[j].data) {
       // libsession keeps track of the hashes to push and pushed using the hashes now
@@ -116,6 +94,7 @@ async function buildAndSaveDumpsToDB(
     groupPk,
     { groupInfo: null, groupKeys: null, groupMember: null },
   ];
+  debugger;
 
   for (let i = 0; i < changes.length; i++) {
     const change = changes[i];
@@ -212,7 +191,7 @@ class GroupSyncJob extends PersistedJob<GroupSyncPersistedData> {
       if (!newGroupsReleased) {
         return RunJobResult.Success;
       }
-      const singleDestChanges = await retrieveGroupSingleDestinationChanges(thisJobDestination);
+      const singleDestChanges = await LibSessionUtil.pendingChangesForGroup(thisJobDestination);
 
       // If there are no pending changes then the job can just complete (next time something
       // is updated we want to try and run immediately so don't scuedule another run in this case)
@@ -287,7 +266,7 @@ class GroupSyncJob extends PersistedJob<GroupSyncPersistedData> {
   }
 
   private updateLastTickTimestamp() {
-    lastRunConfigSyncJobTimestamp = Date.now();
+    lastRunConfigSyncJobTimestamps.set(this.persistedData.identifier, Date.now());
   }
 }
 
@@ -301,6 +280,7 @@ async function queueNewJobIfNeeded(groupPk: GroupPubkeyType) {
 
     return;
   }
+  const lastRunConfigSyncJobTimestamp = lastRunConfigSyncJobTimestamps.get(groupPk);
   if (
     !lastRunConfigSyncJobTimestamp ||
     lastRunConfigSyncJobTimestamp < Date.now() - defaultMsBetweenRetries
@@ -311,24 +291,25 @@ async function queueNewJobIfNeeded(groupPk: GroupPubkeyType) {
     await runners.groupSyncRunner.addJob(
       new GroupSyncJob({ identifier: groupPk, nextAttemptTimestamp: Date.now() + 1000 })
     );
-  } else {
-    // if we did run at t=100, and it is currently t=110, the difference is 10
-    const diff = Math.max(Date.now() - lastRunConfigSyncJobTimestamp, 0);
-    // but we want to run every 30, so what we need is actually `30-10` from now = 20
-    const leftBeforeNextTick = Math.max(defaultMsBetweenRetries - diff, 1000);
-    // window.log.debug('Scheduling GroupSyncJob: LATER');
-
-    await runners.groupSyncRunner.addJob(
-      new GroupSyncJob({
-        identifier: groupPk,
-        nextAttemptTimestamp: Date.now() + leftBeforeNextTick,
-      })
-    );
+    return;
   }
+
+  // if we did run at t=100, and it is currently t=110, the difference is 10
+  const diff = Math.max(Date.now() - lastRunConfigSyncJobTimestamp, 0);
+  // but we want to run every 30, so what we need is actually `30-10` from now = 20
+  const leftBeforeNextTick = Math.max(defaultMsBetweenRetries - diff, 1000);
+  // window.log.debug('Scheduling GroupSyncJob: LATER');
+
+  await runners.groupSyncRunner.addJob(
+    new GroupSyncJob({
+      identifier: groupPk,
+      nextAttemptTimestamp: Date.now() + leftBeforeNextTick,
+    })
+  );
 }
 
 export const GroupSync = {
   GroupSyncJob,
   queueNewJobIfNeeded: (groupPk: GroupPubkeyType) =>
-    allowOnlyOneAtATime('GroupSyncJob-oneAtAtTime' + groupPk, () => queueNewJobIfNeeded(groupPk)),
+    allowOnlyOneAtATime(`GroupSyncJob-oneAtAtTime-${groupPk}`, () => queueNewJobIfNeeded(groupPk)),
 };
