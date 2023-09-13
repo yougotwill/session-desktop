@@ -94,14 +94,15 @@ async function buildAndSaveDumpsToDB(
     groupPk,
     { groupInfo: null, groupKeys: null, groupMember: null },
   ];
-  debugger;
 
   for (let i = 0; i < changes.length; i++) {
     const change = changes[i];
 
     switch (change.pushed.namespace) {
       case SnodeNamespaces.ClosedGroupInfo: {
-        toConfirm[1].groupInfo = [change.pushed.seqno.toNumber(), change.updatedHash];
+        if ((change.pushed as any).seqno) {
+          toConfirm[1].groupInfo = [change.pushed.seqno.toNumber(), change.updatedHash];
+        }
         break;
       }
       case SnodeNamespaces.ClosedGroupMembers: {
@@ -109,7 +110,7 @@ async function buildAndSaveDumpsToDB(
         break;
       }
       case SnodeNamespaces.ClosedGroupKeys: {
-        toConfirm[1].groupKeys = [change.pushed.seqno.toNumber(), change.updatedHash];
+        toConfirm[1].groupKeys = [change.pushed.data, change.updatedHash, change.pushed.timestamp];
         break;
       }
     }

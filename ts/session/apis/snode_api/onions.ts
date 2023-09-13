@@ -1085,7 +1085,6 @@ async function sendOnionRequestSnodeDest(
   onionPath: Array<Snode>,
   targetNode: Snode,
   headers: Record<string, any>,
-
   plaintext: string | null,
   associatedWith?: string
 ) {

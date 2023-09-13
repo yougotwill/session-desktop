@@ -1,14 +1,21 @@
+import { FixedSizeUint8Array, GroupPubkeyType } from 'libsession_util_nodejs';
 import { getSodiumRenderer } from '../../crypto';
 import { StringUtils, UserUtils } from '../../utils';
 import { fromHexToArray, fromUInt8ArrayToBase64 } from '../../utils/String';
 import { GetNetworkTime } from './getNetworkTime';
+import { SnodeNamespaces } from './namespaces';
+import { PubKey } from '../../types';
+import { toFixedUint8ArrayOfLength } from '../../../types/sqlSharedTypes';
 
 export type SnodeSignatureResult = {
   timestamp: number;
-  // sig_timestamp: number;
   signature: string;
   pubkey_ed25519: string;
   pubkey: string; // this is the x25519 key of the pubkey we are doing the request to (ourself for our swarm usually)
+};
+
+export type SnodeGroupSignatureResult = Pick<SnodeSignatureResult, 'signature' | 'timestamp'> & {
+  pubkey: GroupPubkeyType; // this is the 03 pubkey of the corresponding group
 };
 
 async function getSnodeSignatureByHashesParams({
@@ -52,48 +59,104 @@ async function getSnodeSignatureByHashesParams({
   }
 }
 
-async function getSnodeSignatureParams(params: {
-  pubkey: string;
+type SnodeSigParamsShared = {
   namespace: number | null | 'all'; // 'all' can be used to clear all namespaces (during account deletion)
   method: 'retrieve' | 'store' | 'delete_all';
-}): Promise<SnodeSignatureResult> {
-  const ourEd25519Key = await UserUtils.getUserED25519KeyPair();
+};
 
-  if (!ourEd25519Key) {
-    const err = `getSnodeSignatureParams "${params.method}": User has no getUserED25519KeyPair()`;
+type SnodeSigParamsAdminGroup = SnodeSigParamsShared & {
+  groupPk: GroupPubkeyType;
+  privKey: Uint8Array; // our ed25519 key when we are signing with our pubkey
+};
+type SnodeSigParamsUs = SnodeSigParamsShared & {
+  pubKey: string;
+  privKey: FixedSizeUint8Array<64>;
+};
+
+function isSigParamsForGroupAdmin(
+  sigParams: SnodeSigParamsAdminGroup | SnodeSigParamsUs
+): sigParams is SnodeSigParamsAdminGroup {
+  const asGr = sigParams as SnodeSigParamsAdminGroup;
+  return PubKey.isClosedGroupV3(asGr.groupPk) && !!asGr.privKey;
+}
+
+async function getSnodeShared(params: SnodeSigParamsAdminGroup | SnodeSigParamsUs) {
+  const signatureTimestamp = GetNetworkTime.getNowWithNetworkOffset();
+  const verificationData = StringUtils.encode(
+    `${params.method}${params.namespace === 0 ? '' : params.namespace}${signatureTimestamp}`,
+    'utf8'
+  );
+  try {
+    const message = new Uint8Array(verificationData);
+    const sodium = await getSodiumRenderer();
+    const signature = sodium.crypto_sign_detached(message, params.privKey as Uint8Array);
+    const signatureBase64 = fromUInt8ArrayToBase64(signature);
+    if (isSigParamsForGroupAdmin(params)) {
+      return {
+        timestamp: signatureTimestamp,
+        signature: signatureBase64,
+        pubkey: params.groupPk,
+      };
+    }
+    return {
+      timestamp: signatureTimestamp,
+      signature: signatureBase64,
+    };
+  } catch (e) {
+    window.log.warn('getSnodeShared failed with: ', e.message);
+    throw e;
+  }
+}
+
+async function getSnodeSignatureParamsUs({
+  method,
+  namespace = 0,
+}: Pick<SnodeSigParamsUs, 'method' | 'namespace'>): Promise<SnodeSignatureResult> {
+  const ourEd25519Key = await UserUtils.getUserED25519KeyPairBytes();
+  const ourEd25519PubKey = await UserUtils.getUserED25519KeyPair();
+
+  if (!ourEd25519Key || !ourEd25519PubKey) {
+    const err = `getSnodeSignatureParams "${method}": User has no getUserED25519KeyPairBytes()`;
     window.log.warn(err);
     throw new Error(err);
   }
-  const namespace = params.namespace || 0;
-  const edKeyPrivBytes = fromHexToArray(ourEd25519Key?.privKey);
 
-  const signatureTimestamp = GetNetworkTime.getNowWithNetworkOffset();
+  const edKeyPrivBytes = ourEd25519Key.privKeyBytes;
 
-  const withoutNamespace = `${params.method}${signatureTimestamp}`;
-  const withNamespace = `${params.method}${namespace}${signatureTimestamp}`;
-  const verificationData =
-    namespace === 0
-      ? StringUtils.encode(withoutNamespace, 'utf8')
-      : StringUtils.encode(withNamespace, 'utf8');
+  const lengthCheckedPrivKey = toFixedUint8ArrayOfLength(edKeyPrivBytes, 64);
+  const sigData = await getSnodeShared({
+    pubKey: UserUtils.getOurPubKeyStrFromCache(),
+    method,
+    namespace,
+    privKey: lengthCheckedPrivKey,
+  });
 
-  const message = new Uint8Array(verificationData);
+  const us = UserUtils.getOurPubKeyStrFromCache();
+  return {
+    ...sigData,
+    pubkey_ed25519: ourEd25519PubKey.pubKey,
+    pubkey: us,
+  };
+}
 
-  const sodium = await getSodiumRenderer();
-  try {
-    const signature = sodium.crypto_sign_detached(message, edKeyPrivBytes);
-    const signatureBase64 = fromUInt8ArrayToBase64(signature);
-
-    return {
-      // sig_timestamp: signatureTimestamp,
-      timestamp: signatureTimestamp,
-      signature: signatureBase64,
-      pubkey_ed25519: ourEd25519Key.pubKey,
-      pubkey: params.pubkey,
-    };
-  } catch (e) {
-    window.log.warn('getSnodeSignatureParams failed with: ', e.message);
-    throw e;
-  }
+async function getSnodeGroupSignatureParams({
+  groupIdentityPrivKey,
+  groupPk,
+  method,
+  namespace = 0,
+}: {
+  groupPk: GroupPubkeyType;
+  groupIdentityPrivKey: FixedSizeUint8Array<64>;
+  namespace: SnodeNamespaces;
+  method: 'retrieve' | 'store';
+}): Promise<SnodeGroupSignatureResult> {
+  const sigData = await getSnodeShared({
+    pubKey: groupPk,
+    method,
+    namespace,
+    privKey: groupIdentityPrivKey,
+  });
+  return { ...sigData, pubkey: groupPk };
 }
 
 async function generateUpdateExpirySignature({
@@ -136,7 +199,8 @@ async function generateUpdateExpirySignature({
 }
 
 export const SnodeSignature = {
-  getSnodeSignatureParams,
+  getSnodeSignatureParamsUs,
+  getSnodeGroupSignatureParams,
   getSnodeSignatureByHashesParams,
   generateUpdateExpirySignature,
 };

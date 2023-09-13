@@ -166,20 +166,6 @@ async function removeCommunityFromWrapper(_convoId: string, fullUrlWithOrWithout
 }
 
 /**
- * Remove the matching legacy group from the wrapper and from the cached list of legacy groups
- */
-async function removeLegacyGroupFromWrapper(groupPk: string) {
-  try {
-    await UserGroupsWrapperActions.eraseLegacyGroup(groupPk);
-  } catch (e) {
-    window.log.warn(
-      `UserGroupsWrapperActions.eraseLegacyGroup with = ${groupPk} failed with`,
-      e.message
-    );
-  }
-}
-
-/**
  * This function can be used where there are things to do for all the types handled by this wrapper.
  * You can do a loop on all the types handled by this wrapper and have a switch using assertUnreachable to get errors when not every case is handled.
  *
@@ -207,6 +193,4 @@ export const SessionUtilUserGroups = {
   // legacy group
   isLegacyGroupToStoreInWrapper,
   isLegacyGroupToRemoveFromDBIfNotInWrapper,
-
-  removeLegacyGroupFromWrapper, // a group can be removed but also just marked hidden, so only call this function when the group is completely removed // TODOLATER
 };

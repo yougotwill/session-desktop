@@ -1,5 +1,5 @@
 /* eslint-disable no-case-declarations */
-import { BaseConvoInfoVolatile, ConvoVolatileType } from 'libsession_util_nodejs';
+import { BaseConvoInfoVolatile, ConvoVolatileType, GroupPubkeyType } from 'libsession_util_nodejs';
 import { isEmpty, isFinite } from 'lodash';
 import { Data } from '../../../data/data';
 import { OpenGroupData } from '../../../data/opengroups';
@@ -24,6 +24,11 @@ const mapped1o1WrapperValues = new Map<string, BaseConvoInfoVolatile>();
  * The key of this map is the convoId as stored in the database. So the legacy group 05 sessionID
  */
 const mappedLegacyGroupWrapperValues = new Map<string, BaseConvoInfoVolatile>();
+
+/**
+ * The key of this map is the convoId as stored in the database. So the group 03 pubkey
+ */
+const mappedGroupWrapperValues = new Map<GroupPubkeyType, BaseConvoInfoVolatile>();
 
 /**
  * The key of this map is the convoId as stored in the database, so withoutpubkey
@@ -243,6 +248,16 @@ async function removeLegacyGroupFromWrapper(convoId: string) {
   mappedLegacyGroupWrapperValues.delete(convoId);
 }
 
+async function removeGroupFromWrapper(groupPk: GroupPubkeyType) {
+  // try {
+  //   await ConvoInfoVolatileWrapperActions.eraseGroup(groupPk);
+  // } catch (e) {
+  // window.log.warn('removeGroupFromWrapper failed with ', e.message);
+  // }
+  window.log.warn('removeGroupFromWrapper TODO');
+  mappedGroupWrapperValues.delete(groupPk);
+}
+
 /**
  * Removes the matching legacy group from the wrapper and from the cached list of legacy groups
  */
@@ -281,6 +296,9 @@ export const SessionUtilConvoInfoVolatile = {
 
   // legacy group
   removeLegacyGroupFromWrapper, // a group can be removed but also just marked hidden, so only call this function when the group is completely removed // TODOLATER
+
+  // group
+  removeGroupFromWrapper, // a group can be removed but also just marked hidden, so only call this function when the group is completely removed // TODOLATER
 
   // communities
   removeCommunityFromWrapper,

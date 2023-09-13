@@ -199,21 +199,22 @@ async function pendingChangesForUs(): Promise<
   return results;
 }
 
-type PendingChangesForGroupShared = {
+// we link the namespace to the type of what each wrapper needs
+
+type PendingChangesForGroupNonKey = {
   data: Uint8Array;
   seqno: Long;
   timestamp: number;
-  namespace: SnodeNamespaces;
-};
-
-type PendingChangesForGroupNonKey = PendingChangesForGroupShared & {
+  namespace: SnodeNamespaces.ClosedGroupInfo | SnodeNamespaces.ClosedGroupMembers;
   type: Extract<ConfigWrapperGroupDetailed, 'GroupInfo' | 'GroupMember'>;
 };
 
-type PendingChangesForGroupKey = Pick<
-  PendingChangesForGroupShared,
-  'data' | 'namespace' | 'timestamp'
-> & { type: Extract<ConfigWrapperGroupDetailed, 'GroupKeys'> };
+type PendingChangesForGroupKey = {
+  data: Uint8Array;
+  timestamp: number;
+  namespace: SnodeNamespaces.ClosedGroupKeys;
+  type: Extract<ConfigWrapperGroupDetailed, 'GroupKeys'>;
+};
 
 export type PendingChangesForGroup = PendingChangesForGroupNonKey | PendingChangesForGroupKey;
 
@@ -239,7 +240,6 @@ async function pendingChangesForGroup(
   }
 
   const { groupInfo, groupMember, groupKeys } = await MetaGroupWrapperActions.push(groupPk);
-  debugger;
 
   // Note: We need the keys to be pushed first to avoid a race condition
   if (groupKeys) {

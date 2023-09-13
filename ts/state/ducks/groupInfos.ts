@@ -76,6 +76,8 @@ const initNewGroupInfoInWrapper = createAsyncThunk(
       await convo.setIsApproved(true, false);
 
       console.warn('store the v3 identityPrivatekeypair as part of the wrapper only?');
+      // the sync below will need the secretKey of the group to be saved in the wrapper. So save it!
+      await UserGroupsWrapperActions.setGroup(newGroup);
 
       await GroupSync.queueNewJobIfNeeded(newGroup.pubkeyHex);
 

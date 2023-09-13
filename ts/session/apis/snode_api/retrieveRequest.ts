@@ -64,7 +64,7 @@ async function buildRetrieveRequest(
         throw new Error('not a legacy closed group. pubkey can only be ours');
       }
       const signatureArgs = { ...retrieveParam, method: 'retrieve' as const, ourPubkey };
-      const signatureBuilt = await SnodeSignature.getSnodeSignatureParams(signatureArgs);
+      const signatureBuilt = await SnodeSignature.getSnodeSignatureParamsUs(signatureArgs);
       const retrieve: RetrieveSubRequestType = {
         method: 'retrieve',
         params: { ...retrieveParam, ...signatureBuilt },

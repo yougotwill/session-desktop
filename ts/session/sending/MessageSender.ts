@@ -23,7 +23,7 @@ import {
 import { GetNetworkTime } from '../apis/snode_api/getNetworkTime';
 import { SnodeNamespace, SnodeNamespaces } from '../apis/snode_api/namespaces';
 import { getSwarmFor } from '../apis/snode_api/snodePool';
-import { SnodeSignature, SnodeSignatureResult } from '../apis/snode_api/snodeSignatures';
+import { SnodeSignature } from '../apis/snode_api/snodeSignatures';
 import { SnodeAPIStore } from '../apis/snode_api/storeMessage';
 import { getConversationController } from '../conversations';
 import { MessageEncrypter } from '../crypto';
@@ -37,8 +37,10 @@ import { OpenGroupVisibleMessage } from '../messages/outgoing/visibleMessage/Ope
 import { ed25519Str } from '../onions/onionPath';
 import { PubKey } from '../types';
 import { RawMessage } from '../types/RawMessage';
+import { UserUtils } from '../utils';
 import { fromUInt8ArrayToBase64 } from '../utils/String';
 import { EmptySwarmError } from '../utils/errors';
+import { UserGroupsWrapperActions } from '../../webworker/workers/browser/libsession_worker_interface';
 
 // ================ SNODE STORE ================
 
@@ -140,7 +142,8 @@ async function send(
           },
         ],
         recipient.key,
-        null
+        null,
+        'batch'
       );
 
       const isDestinationClosedGroup = getConversationController()
@@ -181,33 +184,57 @@ async function send(
   );
 }
 
+async function getSignatureParamsFromNamespace(item: StoreOnNodeParamsNoSig, destination: string) {
+  if (SnodeNamespace.isUserConfigNamespace(item.namespace)) {
+    const ourPrivKey = (await UserUtils.getUserED25519KeyPairBytes())?.privKeyBytes;
+    if (!ourPrivKey) {
+      throw new Error('sendMessagesDataToSnode UserUtils.getUserED25519KeyPairBytes is empty');
+    }
+    return SnodeSignature.getSnodeSignatureParamsUs({
+      method: 'store' as const,
+      namespace: item.namespace,
+    });
+  }
+
+  if (SnodeNamespace.isGroupConfigNamespace(item.namespace)) {
+    if (!PubKey.isClosedGroupV3(destination)) {
+      throw new Error('sendMessagesDataToSnode: groupconfig namespace required a 03 pubkey');
+    }
+    const group = await UserGroupsWrapperActions.getGroup(destination);
+    const groupSecretKey = group?.secretKey;
+    if (isNil(groupSecretKey) || isEmpty(groupSecretKey)) {
+      throw new Error(`sendMessagesDataToSnode: failed to find group admin secret key in wrapper`);
+    }
+    return SnodeSignature.getSnodeGroupSignatureParams({
+      method: 'store' as const,
+      namespace: item.namespace,
+      groupPk: destination,
+      groupIdentityPrivKey: groupSecretKey,
+    });
+  }
+  return {};
+}
+
 async function sendMessagesDataToSnode(
   params: Array<StoreOnNodeParamsNoSig>,
   destination: string,
-  messagesHashesToDelete: Set<string> | null
+  messagesHashesToDelete: Set<string> | null,
+  method: 'batch' | 'sequence'
 ): Promise<NotEmptyArrayOfBatchResults> {
   const rightDestination = params.filter(m => m.pubkey === destination);
+
   const swarm = await getSwarmFor(destination);
 
   const withSigWhenRequired: Array<StoreOnNodeParams> = await Promise.all(
     rightDestination.map(async item => {
       // some namespaces require a signature to be added
-      let signOpts: SnodeSignatureResult | undefined;
-      if (SnodeNamespace.isUserConfigNamespace(item.namespace)) {
-        signOpts = await SnodeSignature.getSnodeSignatureParams({
-          method: 'store' as const,
-          namespace: item.namespace,
-          pubkey: destination,
-        });
-      }
+      const signOpts = await getSignatureParamsFromNamespace(item, destination);
+
       const store: StoreOnNodeParams = {
         data: item.data64,
         namespace: item.namespace,
         pubkey: item.pubkey,
-        timestamp: item.timestamp,
-        // sig_timestamp: item.timestamp,
-        // sig_timestamp is currently not forwarded from the receiving snode to the other swarm members, and so their sig verify fail.
-        // This timestamp is not really needed so we just don't send it in the meantime (the timestamp value is used if the sig_timestamp is not present)
+        timestamp: item.timestamp, // sig_timestamp is unused and uneeded
         ttl: item.ttl,
         ...signOpts,
       };
@@ -234,7 +261,8 @@ async function sendMessagesDataToSnode(
     const storeResults = await SnodeAPIStore.storeOnNode(
       snode,
       withSigWhenRequired,
-      signedDeleteOldHashesRequest
+      signedDeleteOldHashesRequest,
+      method
     );
 
     if (!isEmpty(storeResults)) {
@@ -397,7 +425,8 @@ async function sendMessagesToSnode(
             namespace: wrapped.namespace,
           })),
           recipient.key,
-          messagesHashesToDelete
+          messagesHashesToDelete,
+          messagesHashesToDelete?.size ? 'sequence' : 'batch'
         );
       },
       {
@@ -473,7 +502,8 @@ async function sendEncryptedDataToSnode(
             namespace: content.namespace,
           })),
           destination,
-          messagesHashesToDelete
+          messagesHashesToDelete,
+          'sequence'
         );
       },
       {

@@ -16,11 +16,11 @@ export const ERROR_CODE_NO_CONNECT = 'ENETUNREACH: No network connection.';
 // TODOLATER we should merge those two functions together as they are almost exactly the same
 const forceNetworkDeletion = async (): Promise<Array<string> | null> => {
   const sodium = await getSodiumRenderer();
-  const userX25519PublicKey = UserUtils.getOurPubKeyStrFromCache();
+  const usPk = UserUtils.getOurPubKeyStrFromCache();
 
-  const userED25519KeyPair = await UserUtils.getUserED25519KeyPair();
+  const usED25519KeyPair = await UserUtils.getUserED25519KeyPairBytes();
 
-  if (!userED25519KeyPair) {
+  if (!usED25519KeyPair) {
     window?.log?.warn('Cannot forceNetworkDeletion, did not find user ed25519 key.');
     return null;
   }
@@ -30,7 +30,7 @@ const forceNetworkDeletion = async (): Promise<Array<string> | null> => {
   try {
     const maliciousSnodes = await pRetry(
       async () => {
-        const userSwarm = await getSwarmFor(userX25519PublicKey);
+        const userSwarm = await getSwarmFor(usPk);
         const snodeToMakeRequestTo: Snode | undefined = sample(userSwarm);
 
         if (!snodeToMakeRequestTo) {
@@ -40,17 +40,16 @@ const forceNetworkDeletion = async (): Promise<Array<string> | null> => {
 
         return pRetry(
           async () => {
-            const signOpts = await SnodeSignature.getSnodeSignatureParams({
+            const signOpts = await SnodeSignature.getSnodeSignatureParamsUs({
               method,
               namespace,
-              pubkey: userX25519PublicKey,
             });
 
             const ret = await doSnodeBatchRequest(
               [{ method, params: { ...signOpts, namespace } }],
               snodeToMakeRequestTo,
               10000,
-              userX25519PublicKey
+              usPk
             );
 
             if (!ret || !ret?.[0].body || ret[0].code !== 200) {
@@ -124,9 +123,7 @@ const forceNetworkDeletion = async (): Promise<Array<string> | null> => {
                   const sortedHashes = hashes.sort();
                   const signatureSnode = snodeJson.signature as string;
                   // The signature format is (with sortedHashes accross all namespaces) ( PUBKEY_HEX || TIMESTAMP || DELETEDHASH[0] || ... || DELETEDHASH[N] )
-                  const dataToVerify = `${userX25519PublicKey}${
-                    signOpts.timestamp
-                  }${sortedHashes.join('')}`;
+                  const dataToVerify = `${usPk}${signOpts.timestamp}${sortedHashes.join('')}`;
 
                   const dataToVerifyUtf8 = StringUtils.encode(dataToVerify, 'utf8');
                   const isValid = sodium.crypto_sign_verify_detached(

@@ -1,6 +1,6 @@
 /* eslint-disable no-await-in-loop */
 /* eslint-disable more/no-then */
-import { ConvoVolatileType } from 'libsession_util_nodejs';
+import { ConvoVolatileType, GroupPubkeyType } from 'libsession_util_nodejs';
 import { isEmpty, isNil } from 'lodash';
 
 import { Data } from '../../data/data';
@@ -15,24 +15,24 @@ import { getOpenGroupManager } from '../apis/open_group_api/opengroupV2/OpenGrou
 import { getSwarmFor } from '../apis/snode_api/snodePool';
 import { PubKey } from '../types';
 
+import { getMessageQueue } from '..';
 import { deleteAllMessagesByConvoIdNoConfirmation } from '../../interactions/conversationInteractions';
 import { CONVERSATION_PRIORITIES, ConversationTypeEnum } from '../../models/conversationAttributes';
+import { removeAllClosedGroupEncryptionKeyPairs } from '../../receiver/closedGroups';
+import { getCurrentlySelectedConversationOutsideRedux } from '../../state/selectors/conversations';
 import { assertUnreachable } from '../../types/sqlSharedTypes';
 import { UserGroupsWrapperActions } from '../../webworker/workers/browser/libsession_worker_interface';
+import { OpenGroupUtils } from '../apis/open_group_api/utils';
+import { getSwarmPollingInstance } from '../apis/snode_api';
+import { GetNetworkTime } from '../apis/snode_api/getNetworkTime';
+import { SnodeNamespaces } from '../apis/snode_api/namespaces';
+import { ClosedGroupMemberLeftMessage } from '../messages/outgoing/controlMessage/group/ClosedGroupMemberLeftMessage';
+import { UserUtils } from '../utils';
 import { ConfigurationSync } from '../utils/job_runners/jobs/ConfigurationSyncJob';
 import { LibSessionUtil } from '../utils/libsession/libsession_utils';
 import { SessionUtilContact } from '../utils/libsession/libsession_utils_contacts';
 import { SessionUtilConvoInfoVolatile } from '../utils/libsession/libsession_utils_convo_info_volatile';
 import { SessionUtilUserGroups } from '../utils/libsession/libsession_utils_user_groups';
-import { GetNetworkTime } from '../apis/snode_api/getNetworkTime';
-import { getMessageQueue } from '..';
-import { getSwarmPollingInstance } from '../apis/snode_api';
-import { SnodeNamespaces } from '../apis/snode_api/namespaces';
-import { ClosedGroupMemberLeftMessage } from '../messages/outgoing/controlMessage/group/ClosedGroupMemberLeftMessage';
-import { UserUtils } from '../utils';
-import { getCurrentlySelectedConversationOutsideRedux } from '../../state/selectors/conversations';
-import { removeAllClosedGroupEncryptionKeyPairs } from '../../receiver/closedGroups';
-import { OpenGroupUtils } from '../apis/open_group_api/utils';
 
 let instance: ConversationController | null;
 
@@ -226,7 +226,11 @@ export class ConversationController {
     // if we were kicked or sent our left message, we have nothing to do more with that group.
     // Just delete everything related to it, not trying to add update message or send a left message.
     await this.removeGroupOrCommunityFromDBAndRedux(groupId);
-    await removeLegacyGroupFromWrappers(groupId);
+    if (PubKey.isClosedGroupV3(groupId)) {
+      await remove03GroupFromWrappers(groupId);
+    } else {
+      await removeLegacyGroupFromWrappers(groupId);
+    }
 
     if (!options.fromSyncMessage) {
       await ConfigurationSync.queueNewJobIfNeeded();
@@ -526,6 +530,14 @@ async function removeLegacyGroupFromWrappers(groupId: string) {
   await UserGroupsWrapperActions.eraseLegacyGroup(groupId);
   await SessionUtilConvoInfoVolatile.removeLegacyGroupFromWrapper(groupId);
   await removeAllClosedGroupEncryptionKeyPairs(groupId);
+}
+
+async function remove03GroupFromWrappers(groupId: GroupPubkeyType) {
+  getSwarmPollingInstance().removePubkey(groupId);
+
+  await UserGroupsWrapperActions.eraseGroup(groupId);
+  await SessionUtilConvoInfoVolatile.removeGroupFromWrapper(groupId);
+  window.log.warn('remove 03 from metagroup wrapper');
 }
 
 async function removeCommunityFromWrappers(conversationId: string) {

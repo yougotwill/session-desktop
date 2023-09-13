@@ -47,7 +47,8 @@ function buildDeleteByHashesSubRequest(
 async function storeOnNode(
   targetNode: Snode,
   params: Array<StoreOnNodeParams>,
-  toDeleteOnSequence: DeleteByHashesFromNodeParams | null
+  toDeleteOnSequence: DeleteByHashesFromNodeParams | null,
+  method: 'batch' | 'sequence'
 ): Promise<NotEmptyArrayOfBatchResults> {
   try {
     const subRequests = buildStoreRequests(params, toDeleteOnSequence);
@@ -56,7 +57,7 @@ async function storeOnNode(
       targetNode,
       4000,
       params[0].pubkey,
-      toDeleteOnSequence ? 'sequence' : 'batch'
+      method
     );
 
     if (!result || !result.length) {
