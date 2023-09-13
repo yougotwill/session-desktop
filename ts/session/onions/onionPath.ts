@@ -63,7 +63,8 @@ const pathFailureThreshold = 3;
 // some naming issue here it seems)
 export let guardNodes: Array<Snode> = [];
 
-export const ed25519Str = (ed25519Key: string) => `(...${ed25519Key.substr(58)})`;
+export const ed25519Str = (ed25519Key: string) =>
+  `(${ed25519Key.substr(0, 2)}...${ed25519Key.substr(60)})`;
 
 export async function buildNewOnionPathsOneAtATime() {
   // this function may be called concurrently make sure we only have one inflight

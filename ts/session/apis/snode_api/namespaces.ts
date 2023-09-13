@@ -52,14 +52,24 @@ export enum SnodeNamespaces {
   ClosedGroupMembers = 14,
 }
 
-export type SnodeNamespacesGroup = PickEnum<
+export type SnodeNamespacesLegacyGroup = PickEnum<
   SnodeNamespaces,
-  | SnodeNamespaces.LegacyClosedGroup
+  SnodeNamespaces.LegacyClosedGroup
+>;
+
+type SnodeNamespacesGroupConfig = PickEnum<
+  SnodeNamespaces,
   | SnodeNamespaces.ClosedGroupInfo
   | SnodeNamespaces.ClosedGroupMembers
   | SnodeNamespaces.ClosedGroupKeys
-  | SnodeNamespaces.Default
 >;
+
+/**
+ * the namespaces to which a 03-group can store/retrieve messages from/to
+ */
+export type SnodeNamespacesGroup =
+  | SnodeNamespacesGroupConfig
+  | PickEnum<SnodeNamespaces, SnodeNamespaces.ClosedGroupMessages>;
 
 export type SnodeNamespacesUser = PickEnum<
   SnodeNamespaces,
@@ -72,9 +82,6 @@ export type SnodeNamespacesUser = PickEnum<
 // eslint-disable-next-line consistent-return
 function isUserConfigNamespace(namespace: SnodeNamespaces) {
   switch (namespace) {
-    case SnodeNamespaces.Default:
-      // user messages is not hosting config based messages
-      return false;
     case SnodeNamespaces.UserContacts:
     case SnodeNamespaces.UserProfile:
     case SnodeNamespaces.UserGroups:
@@ -85,6 +92,8 @@ function isUserConfigNamespace(namespace: SnodeNamespaces) {
     case SnodeNamespaces.ClosedGroupMembers:
     case SnodeNamespaces.ClosedGroupMessages:
     case SnodeNamespaces.LegacyClosedGroup:
+    case SnodeNamespaces.Default:
+      // user messages is not hosting config based messages
       return false;
 
     default:
@@ -97,7 +106,12 @@ function isUserConfigNamespace(namespace: SnodeNamespaces) {
   }
 }
 
-function isGroupConfigNamespace(namespace: SnodeNamespaces) {
+/**
+ * Returns true if that namespace is one of the namespace used for the 03-group config messages
+ */
+function isGroupConfigNamespace(
+  namespace: SnodeNamespaces
+): namespace is SnodeNamespacesGroupConfig {
   switch (namespace) {
     case SnodeNamespaces.Default:
     case SnodeNamespaces.UserContacts:
@@ -122,8 +136,37 @@ function isGroupConfigNamespace(namespace: SnodeNamespaces) {
   }
 }
 
-// eslint-disable-next-line consistent-return
-function namespacePriority(namespace: SnodeNamespaces): number {
+/**
+ *
+ * @param namespace the namespace to check
+ * @returns true if that namespace is a valid namespace for a 03 group (either a config namespace or a message namespace)
+ */
+function isGroupNamespace(namespace: SnodeNamespaces): namespace is SnodeNamespacesGroup {
+  if (isGroupConfigNamespace(namespace)) {
+    return true;
+  }
+  if (namespace === SnodeNamespaces.ClosedGroupMessages) {
+    return true;
+  }
+  switch (namespace) {
+    case SnodeNamespaces.Default:
+    case SnodeNamespaces.UserContacts:
+    case SnodeNamespaces.UserProfile:
+    case SnodeNamespaces.UserGroups:
+    case SnodeNamespaces.ConvoInfoVolatile:
+    case SnodeNamespaces.LegacyClosedGroup:
+      return false;
+    default:
+      try {
+        assertUnreachable(namespace, `isGroupNamespace case not handled: ${namespace}`);
+      } catch (e) {
+        window.log.warn(`isGroupNamespace case not handled: ${namespace}: ${e.message}`);
+        return false;
+      }
+  }
+}
+
+function namespacePriority(namespace: SnodeNamespaces): 10 | 1 {
   switch (namespace) {
     case SnodeNamespaces.Default:
     case SnodeNamespaces.ClosedGroupMessages:
@@ -132,7 +175,6 @@ function namespacePriority(namespace: SnodeNamespaces): number {
     case SnodeNamespaces.ConvoInfoVolatile:
     case SnodeNamespaces.UserProfile:
     case SnodeNamespaces.UserContacts:
-      return 1;
     case SnodeNamespaces.LegacyClosedGroup:
     case SnodeNamespaces.ClosedGroupInfo:
     case SnodeNamespaces.ClosedGroupMembers:
@@ -176,5 +218,6 @@ function maxSizeMap(namespaces: Array<SnodeNamespaces>) {
 export const SnodeNamespace = {
   isUserConfigNamespace,
   isGroupConfigNamespace,
+  isGroupNamespace,
   maxSizeMap,
 };

@@ -9,9 +9,9 @@ import { ClosedGroupVisibleMessage } from '../../../../../session/messages/outgo
 import { VisibleMessage } from '../../../../../session/messages/outgoing/visibleMessage/VisibleMessage';
 
 describe('ClosedGroupVisibleMessage', () => {
-  let groupId: PubKey;
+  let groupId: string;
   beforeEach(() => {
-    groupId = TestUtils.generateFakePubKey();
+    groupId = TestUtils.generateFakePubKeyStr();
   });
   it('can create empty message with timestamp, groupId and chatMessage', () => {
     const chatMessage = new VisibleMessage({
@@ -28,7 +28,7 @@ describe('ClosedGroupVisibleMessage', () => {
       .to.have.property('group')
       .to.have.deep.property(
         'id',
-        new Uint8Array(StringUtils.encode(PubKey.PREFIX_GROUP_TEXTSECURE + groupId.key, 'utf8'))
+        new Uint8Array(StringUtils.encode(PubKey.PREFIX_GROUP_TEXTSECURE + groupId, 'utf8'))
       );
     expect(decoded.dataMessage)
       .to.have.property('group')

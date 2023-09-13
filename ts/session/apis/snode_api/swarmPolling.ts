@@ -27,6 +27,8 @@ import { SnodeAPIRetrieve } from './retrieveRequest';
 import { SwarmPollingGroupConfig } from './swarm_polling_config/SwarmPollingGroupConfig';
 import { SwarmPollingUserConfig } from './swarm_polling_config/SwarmPollingUserConfig';
 import { RetrieveMessageItem, RetrieveMessagesResultsBatched } from './types';
+import { GroupPubkeyType } from 'libsession_util_nodejs';
+import { assertUnreachable } from '../../../types/sqlSharedTypes';
 
 export function extractWebSocketContent(
   message: string,
@@ -61,6 +63,11 @@ export const getSwarmPollingInstance = () => {
   }
   return instance;
 };
+
+type PollForUs = [pubkey: string, type: ConversationTypeEnum.PRIVATE];
+type PollForLegacy = [pubkey: string, type: ConversationTypeEnum.GROUP];
+type PollForGroup = [pubkey: GroupPubkeyType, type: ConversationTypeEnum.GROUPV3];
+
 
 export class SwarmPolling {
   private groupPolling: Array<{ pubkey: PubKey; lastPolledTimestamp: number }>;
@@ -166,9 +173,8 @@ export class SwarmPolling {
     }
     // we always poll as often as possible for our pubkey
     const ourPubkey = UserUtils.getOurPubKeyStrFromCache();
-    const userNamespaces = await this.getUserNamespacesPolled();
     const directPromise = Promise.all([
-      this.pollOnceForKey(ourPubkey, ConversationTypeEnum.PRIVATE, userNamespaces),
+      this.pollOnceForKey([ourPubkey, ConversationTypeEnum.PRIVATE]),
     ]).then(() => undefined);
 
     const now = Date.now();
@@ -176,7 +182,6 @@ export class SwarmPolling {
       const convoPollingTimeout = this.getPollingTimeout(group.pubkey);
       const diff = now - group.lastPolledTimestamp;
       const { key } = group.pubkey;
-      const isV3 = PubKey.isClosedGroupV3(key);
 
       const loggingId =
         getConversationController()
@@ -186,17 +191,10 @@ export class SwarmPolling {
         window?.log?.debug(
           `Polling for ${loggingId}; timeout: ${convoPollingTimeout}; diff: ${diff} `
         );
-        if (isV3) {
-          return this.pollOnceForKey(key, ConversationTypeEnum.GROUPV3, [
-            SnodeNamespaces.Default,
-            SnodeNamespaces.ClosedGroupInfo,
-            SnodeNamespaces.ClosedGroupMembers,
-            SnodeNamespaces.ClosedGroupKeys, // keys are fetched last to avoid race conditions when someone deposits them
-          ]);
+        if (PubKey.isClosedGroupV3(key)) {
+          return this.pollOnceForKey([key, ConversationTypeEnum.GROUPV3]);
         }
-        return this.pollOnceForKey(key, ConversationTypeEnum.GROUP, [
-          SnodeNamespaces.LegacyClosedGroup,
-        ]);
+        return this.pollOnceForKey([key, ConversationTypeEnum.GROUP]);
       }
       window?.log?.debug(
         `Not polling for ${loggingId}; timeout: ${convoPollingTimeout} ; diff: ${diff}`
@@ -219,10 +217,10 @@ export class SwarmPolling {
    * Only exposed as public for testing
    */
   public async pollOnceForKey(
-    pubkey: string,
-    type: ConversationTypeEnum,
-    namespaces: Array<SnodeNamespaces>
+    [pubkey, type]:PollForUs | PollForLegacy | PollForGroup
   ) {
+    const namespaces = this.getNamespacesToPollFrom(type);
+
     const swarmSnodes = await snodePool.getSwarmFor(pubkey);
 
     // Select nodes for which we already have lastHashes
@@ -469,14 +467,31 @@ export class SwarmPolling {
     return newMessages;
   }
 
-  private async getUserNamespacesPolled() {
+
+  private getNamespacesToPollFrom(type: ConversationTypeEnum): Array<SnodeNamespaces> {
+    if(type === ConversationTypeEnum.PRIVATE) {
     return [
       SnodeNamespaces.Default,
       SnodeNamespaces.UserProfile,
       SnodeNamespaces.UserContacts,
       SnodeNamespaces.UserGroups,
       SnodeNamespaces.ConvoInfoVolatile,
-    ];
+    ] ;
+    }
+    if(type === ConversationTypeEnum.GROUP) {
+      return [
+        SnodeNamespaces.LegacyClosedGroup
+      ] ;
+    }
+    if(type === ConversationTypeEnum.GROUPV3) {
+      return [
+        SnodeNamespaces.ClosedGroupMessages,
+        SnodeNamespaces.ClosedGroupInfo,
+        SnodeNamespaces.ClosedGroupMembers,
+        SnodeNamespaces.ClosedGroupKeys, // keys are fetched last to avoid race conditions when someone deposits them
+      ] ;
+    }
+    assertUnreachable(type, `getNamespacesToPollFrom case should have been unreachable: type:${type}`)
   }
 
   private async updateLastHash({

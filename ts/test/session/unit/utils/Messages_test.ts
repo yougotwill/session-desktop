@@ -97,7 +97,7 @@ describe('Message Utils', () => {
 
     it('should set encryption to ClosedGroup if a ClosedGroupVisibleMessage is passed in', async () => {
       const device = TestUtils.generateFakePubKey();
-      const groupId = TestUtils.generateFakePubKey();
+      const groupId = TestUtils.generateFakePubKeyStr();
       const chatMessage = TestUtils.generateVisibleMessage();
       const message = new ClosedGroupVisibleMessage({ chatMessage, groupId });
 

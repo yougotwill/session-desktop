@@ -1,19 +1,129 @@
-import { omit } from 'lodash';
+import { isEmpty, isNil, omit } from 'lodash';
 import { Snode } from '../../../data/data';
 import { updateIsOnline } from '../../../state/ducks/onion';
 import { doSnodeBatchRequest } from './batchRequest';
 import { GetNetworkTime } from './getNetworkTime';
 import { SnodeNamespace, SnodeNamespaces } from './namespaces';
 
+import { GroupPubkeyType } from 'libsession_util_nodejs';
+import { UserGroupsWrapperActions } from '../../../webworker/workers/browser/libsession_worker_interface';
 import { DURATION } from '../../constants';
+import { PubKey } from '../../types';
 import { UserUtils } from '../../utils';
 import {
+  RetrieveGroupAdminSubRequestType,
   RetrieveLegacyClosedGroupSubRequestType,
   RetrieveSubRequestType,
   UpdateExpiryOnNodeSubRequest,
 } from './SnodeRequestTypes';
 import { SnodeSignature } from './snodeSignatures';
 import { RetrieveMessagesResultsBatched, RetrieveMessagesResultsContent } from './types';
+
+type RetrieveParams = {
+  pubkey: string;
+  last_hash: string;
+  timestamp: number;
+  max_size: number | undefined;
+};
+
+async function retrieveRequestForUs({
+  namespace,
+  ourPubkey,
+  retrieveParam,
+}: {
+  ourPubkey: string;
+  namespace: SnodeNamespaces;
+  retrieveParam: RetrieveParams;
+}) {
+  if (!SnodeNamespace.isUserConfigNamespace(namespace) && namespace !== SnodeNamespaces.Default) {
+    throw new Error(`retrieveRequestForUs not a valid namespace to retrieve as us:${namespace}`);
+  }
+  const signatureArgs = { ...retrieveParam, namespace, method: 'retrieve' as const, ourPubkey };
+  const signatureBuilt = await SnodeSignature.getSnodeSignatureParamsUs(signatureArgs);
+  const retrieveForUS: RetrieveSubRequestType = {
+    method: 'retrieve',
+    params: { ...retrieveParam, namespace, ...signatureBuilt },
+  };
+  return retrieveForUS;
+}
+
+/**
+ * Retrieve for legacy groups are not authenticated so no need to sign the request
+ */
+function retrieveRequestForLegacyGroup({
+  namespace,
+  ourPubkey,
+  pubkey,
+  retrieveParam,
+}: {
+  pubkey: string;
+  namespace: SnodeNamespaces.LegacyClosedGroup;
+  ourPubkey: string;
+  retrieveParam: RetrieveParams;
+}) {
+  if (pubkey === ourPubkey || !pubkey.startsWith('05')) {
+    throw new Error(
+      'namespace -10 can only be used to retrieve messages from a legacy closed group (prefix 05)'
+    );
+  }
+  if (namespace !== SnodeNamespaces.LegacyClosedGroup) {
+    throw new Error(`retrieveRequestForLegacyGroup namespace can only be -10`);
+  }
+  const retrieveLegacyClosedGroup = {
+    ...retrieveParam,
+    namespace,
+  };
+  const retrieveParamsLegacy: RetrieveLegacyClosedGroupSubRequestType = {
+    method: 'retrieve',
+    params: omit(retrieveLegacyClosedGroup, 'timestamp'), // if we give a timestamp, a signature will be required by the service node, and we don't want to provide one as this is an unauthenticated namespace
+  };
+
+  return retrieveParamsLegacy;
+}
+
+/**
+ * Retrieve for groups (03-prefixed) are authenticated with the admin key if we have it, or with our subkey auth
+ */
+async function retrieveRequestForGroup({
+  namespace,
+  groupPk,
+  retrieveParam,
+}: {
+  groupPk: GroupPubkeyType;
+  namespace: SnodeNamespaces;
+  retrieveParam: RetrieveParams;
+}) {
+  if (!PubKey.isClosedGroupV3(groupPk)) {
+    throw new Error('retrieveRequestForGroup: not a 03 group');
+  }
+  if (!SnodeNamespace.isGroupNamespace(namespace)) {
+    throw new Error(`retrieveRequestForGroup: not a groupNamespace: ${namespace}`);
+  }
+  const group = await UserGroupsWrapperActions.getGroup(groupPk);
+  const groupSecretKey = group?.secretKey;
+  if (isNil(groupSecretKey) || isEmpty(groupSecretKey)) {
+    throw new Error(`sendMessagesDataToSnode: failed to find group admin secret key in wrapper`);
+  }
+  const signatureBuilt = await SnodeSignature.getSnodeGroupSignatureParams({
+    ...retrieveParam,
+    namespace,
+    method: 'retrieve' as const,
+    groupPk,
+    groupIdentityPrivKey: groupSecretKey,
+  });
+
+  const retrieveGroup = {
+    ...retrieveParam,
+    ...signatureBuilt,
+    namespace,
+  };
+  const retrieveParamsGroup: RetrieveGroupAdminSubRequestType = {
+    method: 'retrieve',
+    params: retrieveGroup,
+  };
+
+  return retrieveParamsGroup;
+}
 
 async function buildRetrieveRequest(
   lastHashes: Array<string>,
@@ -29,47 +139,25 @@ async function buildRetrieveRequest(
       const retrieveParam = {
         pubkey,
         last_hash: lastHashes.at(index) || '',
-        namespace,
         timestamp: GetNetworkTime.getNowWithNetworkOffset(),
         max_size: foundMaxSize,
       };
 
       if (namespace === SnodeNamespaces.LegacyClosedGroup) {
-        if (pubkey === ourPubkey || !pubkey.startsWith('05')) {
-          throw new Error(
-            'namespace -10 can only be used to retrieve messages from a legacy closed group (prefix 05)'
-          );
-        }
-        const retrieveLegacyClosedGroup = {
-          ...retrieveParam,
-          namespace,
-        };
-        const retrieveParamsLegacy: RetrieveLegacyClosedGroupSubRequestType = {
-          method: 'retrieve',
-          params: omit(retrieveLegacyClosedGroup, 'timestamp'), // if we give a timestamp, a signature will be required by the service node, and we don't want to provide one as this is an unauthenticated namespace
-        };
+        return retrieveRequestForLegacyGroup({ namespace, ourPubkey, pubkey, retrieveParam });
+      }
 
-        return retrieveParamsLegacy;
+      if (PubKey.isClosedGroupV3(pubkey)) {
+        if (!SnodeNamespace.isGroupNamespace(namespace)) {
+          // either config or messages namespaces for 03 groups
+          throw new Error(`tried to poll from a non 03 group namespace ${namespace}`);
+        }
+        return retrieveRequestForGroup({ namespace, groupPk: pubkey, retrieveParam });
       }
 
       // all legacy closed group retrieves are unauthenticated and run above.
       // if we get here, this can only be a retrieve for our own swarm, which must be authenticated
-      if (
-        !SnodeNamespace.isUserConfigNamespace(namespace) &&
-        namespace !== SnodeNamespaces.Default
-      ) {
-        throw new Error(`not a legacy closed group. namespace can only be 0 and was ${namespace}`);
-      }
-      if (pubkey !== ourPubkey) {
-        throw new Error('not a legacy closed group. pubkey can only be ours');
-      }
-      const signatureArgs = { ...retrieveParam, method: 'retrieve' as const, ourPubkey };
-      const signatureBuilt = await SnodeSignature.getSnodeSignatureParamsUs(signatureArgs);
-      const retrieve: RetrieveSubRequestType = {
-        method: 'retrieve',
-        params: { ...retrieveParam, ...signatureBuilt },
-      };
-      return retrieve;
+      return retrieveRequestForUs({ namespace, ourPubkey, retrieveParam });
     })
   );
 

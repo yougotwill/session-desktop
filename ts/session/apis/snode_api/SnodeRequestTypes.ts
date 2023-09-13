@@ -1,12 +1,14 @@
 import { GroupPubkeyType } from 'libsession_util_nodejs';
 import { SharedUserConfigMessage } from '../../messages/outgoing/controlMessage/SharedConfigMessage';
-import { SnodeNamespaces } from './namespaces';
+import { SnodeNamespaces, SnodeNamespacesGroup } from './namespaces';
 
 export type SwarmForSubRequest = { method: 'get_swarm'; params: { pubkey: string } };
 
-type RetrieveMaxCountSize = { max_count?: number; max_size?: number };
+type WithMaxCountSize = { max_count?: number; max_size?: number };
+type WithPubkeyAsString = { pubkey: string };
+type WithPubkeyAsGroupPubkey = { pubkey: GroupPubkeyType };
+
 type RetrieveAlwaysNeeded = {
-  pubkey: string;
   namespace: number;
   last_hash: string;
   timestamp?: number;
@@ -19,7 +21,8 @@ export type RetrievePubkeySubRequestType = {
     pubkey_ed25519: string;
     namespace: number;
   } & RetrieveAlwaysNeeded &
-    RetrieveMaxCountSize;
+    WithMaxCountSize &
+    WithPubkeyAsString;
 };
 
 /** Those namespaces do not require to be authenticated for storing messages.
@@ -35,23 +38,24 @@ export type RetrieveLegacyClosedGroupSubRequestType = {
   params: {
     namespace: SnodeNamespaces.LegacyClosedGroup; // legacy closed groups retrieve are not authenticated because the clients do not have a shared key
   } & RetrieveAlwaysNeeded &
-    RetrieveMaxCountSize;
+    WithMaxCountSize &
+    WithPubkeyAsString;
 };
 
-export type RetrieveSubKeySubRequestType = {
+export type RetrieveGroupAdminSubRequestType = {
   method: 'retrieve';
   params: {
-    subkey: string; // 32-byte hex encoded string
     signature: string;
-    namespace: number;
+    namespace: SnodeNamespacesGroup;
   } & RetrieveAlwaysNeeded &
-    RetrieveMaxCountSize;
+    WithMaxCountSize &
+    WithPubkeyAsGroupPubkey;
 };
 
 export type RetrieveSubRequestType =
   | RetrieveLegacyClosedGroupSubRequestType
   | RetrievePubkeySubRequestType
-  | RetrieveSubKeySubRequestType
+  | RetrieveGroupAdminSubRequestType
   | UpdateExpiryOnNodeSubRequest;
 
 /**

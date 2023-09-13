@@ -6,7 +6,7 @@ import { ClosedGroupMessage } from '../controlMessage/group/ClosedGroupMessage';
 
 interface ClosedGroupVisibleMessageParams {
   identifier?: string;
-  groupId: string | PubKey;
+  groupId: string;
   chatMessage: VisibleMessage;
 }
 

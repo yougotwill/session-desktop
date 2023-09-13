@@ -27,7 +27,7 @@ import { OpenGroupMessageV2 } from '../apis/open_group_api/opengroupV2/OpenGroup
 import { sendSogsReactionOnionV4 } from '../apis/open_group_api/sogsv3/sogsV3SendReaction';
 import {
   SnodeNamespaces,
-  SnodeNamespacesGroup,
+  SnodeNamespacesLegacyGroup,
   SnodeNamespacesUser,
 } from '../apis/snode_api/namespaces';
 import { SharedConfigMessage } from '../messages/outgoing/controlMessage/SharedConfigMessage';
@@ -179,7 +179,7 @@ export class MessageQueue {
     sentCb,
   }: {
     message: ClosedGroupMessageType;
-    namespace: SnodeNamespacesGroup;
+    namespace: SnodeNamespacesLegacyGroup;
     sentCb?: (message: RawMessage) => Promise<void>;
     groupPubKey?: PubKey;
   }): Promise<void> {

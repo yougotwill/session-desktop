@@ -1691,7 +1691,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     try {
       const { body, attachments, preview, quote, fileIdsToLink } = await message.uploadData();
       const { id } = message;
-      const destination = this.id;
+      const destination = this.id as string;
 
       const sentAt = message.get('sent_at');
       if (!sentAt) {
