@@ -29,6 +29,7 @@ import {
   PersistedJob,
   RunJobResult,
 } from '../PersistedJob';
+import { stringify } from '../../../../types/sqlSharedTypes';
 
 const defaultMsBetweenRetries = 15000; // a long time between retries, to avoid running multiple jobs at the same time, when one was postponed at the same time as one already planned (5s)
 const defaultMaxAttempts = 2;
@@ -210,12 +211,14 @@ class GroupSyncJob extends PersistedJob<GroupSyncPersistedData> {
           data: item.data,
         };
       });
+      console.warn(`msgs ${stringify(msgs)}`);
 
       const result = await MessageSender.sendEncryptedDataToSnode(
         msgs,
         thisJobDestination,
         oldHashesToDelete
       );
+      console.warn(`result ${stringify(result)}`);
 
       const expectedReplyLength =
         singleDestChanges.messages.length + (oldHashesToDelete.size ? 1 : 0);

@@ -7,6 +7,10 @@ export type RetrieveMessageItem = {
   timestamp: number;
 };
 
+export type RetrieveMessageItemWithNamespace = RetrieveMessageItem & {
+  namespace: SnodeNamespaces; // the namespace from which this message was fetched
+};
+
 export type RetrieveMessagesResultsContent = {
   hf?: Array<number>;
   messages?: Array<RetrieveMessageItem>;

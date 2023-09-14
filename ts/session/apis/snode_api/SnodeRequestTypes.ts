@@ -4,6 +4,7 @@ import { SnodeNamespaces, SnodeNamespacesGroup } from './namespaces';
 
 export type SwarmForSubRequest = { method: 'get_swarm'; params: { pubkey: string } };
 
+type WithRetrieveMethod = { method: 'retrieve' };
 type WithMaxCountSize = { max_count?: number; max_size?: number };
 type WithPubkeyAsString = { pubkey: string };
 type WithPubkeyAsGroupPubkey = { pubkey: GroupPubkeyType };
@@ -14,8 +15,7 @@ type RetrieveAlwaysNeeded = {
   timestamp?: number;
 };
 
-export type RetrievePubkeySubRequestType = {
-  method: 'retrieve';
+export type RetrievePubkeySubRequestType = WithRetrieveMethod & {
   params: {
     signature: string;
     pubkey_ed25519: string;
@@ -33,8 +33,7 @@ export type RetrievePubkeySubRequestType = {
  */
 // type UnauthenticatedStoreNamespaces = -30 | -20 | -10 | 0 | 10 | 20 | 30;
 
-export type RetrieveLegacyClosedGroupSubRequestType = {
-  method: 'retrieve';
+export type RetrieveLegacyClosedGroupSubRequestType = WithRetrieveMethod & {
   params: {
     namespace: SnodeNamespaces.LegacyClosedGroup; // legacy closed groups retrieve are not authenticated because the clients do not have a shared key
   } & RetrieveAlwaysNeeded &
@@ -42,8 +41,7 @@ export type RetrieveLegacyClosedGroupSubRequestType = {
     WithPubkeyAsString;
 };
 
-export type RetrieveGroupAdminSubRequestType = {
-  method: 'retrieve';
+export type RetrieveGroupAdminSubRequestType = WithRetrieveMethod & {
   params: {
     signature: string;
     namespace: SnodeNamespacesGroup;

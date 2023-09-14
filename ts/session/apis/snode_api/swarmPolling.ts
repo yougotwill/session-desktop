@@ -26,7 +26,7 @@ import { SnodeNamespace, SnodeNamespaces } from './namespaces';
 import { SnodeAPIRetrieve } from './retrieveRequest';
 import { SwarmPollingGroupConfig } from './swarm_polling_config/SwarmPollingGroupConfig';
 import { SwarmPollingUserConfig } from './swarm_polling_config/SwarmPollingUserConfig';
-import { RetrieveMessageItem, RetrieveMessagesResultsBatched } from './types';
+import { RetrieveMessageItem, RetrieveMessageItemWithNamespace, RetrieveMessagesResultsBatched, RetrieveRequestResult } from './types';
 import { GroupPubkeyType } from 'libsession_util_nodejs';
 import { assertUnreachable } from '../../../types/sqlSharedTypes';
 
@@ -547,27 +547,28 @@ export class SwarmPolling {
   }
 }
 
+function retrieveItemWithNamespace(results: RetrieveRequestResult[] ) {
+  return flatten(
+    compact(results.map(result => result.messages.messages?.map(r => ({ ...r, namespace: result.namespace })))));
+}
+
 function filterMessagesPerTypeOfConvo<T extends ConversationTypeEnum>(
   type: T,
   retrieveResults: RetrieveMessagesResultsBatched
-): { confMessages: Array<RetrieveMessageItem> | null; otherMessages: Array<RetrieveMessageItem> } {
+): { confMessages: Array<RetrieveMessageItemWithNamespace> | null; otherMessages: Array<RetrieveMessageItemWithNamespace> } {
   switch (type) {
     case ConversationTypeEnum.PRIVATE: {
-      const confMessages = flatten(
-        compact(
-          retrieveResults
-            .filter(m => SnodeNamespace.isUserConfigNamespace(m.namespace))
-            .map(r => r.messages.messages)
-        )
-      );
+      const userConfs = retrieveResults
+        .filter(m => SnodeNamespace.isUserConfigNamespace(m.namespace));
+      const userOthers = retrieveResults
+        .filter(m => !SnodeNamespace.isUserConfigNamespace(m.namespace));
 
-      const otherMessages = flatten(
-        compact(
-          retrieveResults
-            .filter(m => !SnodeNamespace.isUserConfigNamespace(m.namespace))
-            .map(r => r.messages.messages)
-        )
-      );
+      const confMessages =
+          retrieveItemWithNamespace(userConfs)
+
+      const otherMessages =
+          retrieveItemWithNamespace(userOthers)
+
 
       return { confMessages, otherMessages: uniqBy(otherMessages, x => x.hash) };
     }
@@ -575,27 +576,25 @@ function filterMessagesPerTypeOfConvo<T extends ConversationTypeEnum>(
     case ConversationTypeEnum.GROUP:
       return {
         confMessages: null,
-        otherMessages: flatten(compact(retrieveResults.map(m => m.messages.messages))),
+        otherMessages: retrieveItemWithNamespace(retrieveResults),
       };
 
     case ConversationTypeEnum.GROUPV3: {
-      const confMessages = flatten(
-        compact(
-          retrieveResults
-            .filter(m => SnodeNamespace.isGroupConfigNamespace(m.namespace))
-            .map(r => r.messages.messages)
-        )
-      );
 
-      const otherMessages = flatten(
-        compact(
-          retrieveResults
-            .filter(m => !SnodeNamespace.isGroupConfigNamespace(m.namespace))
-            .map(r => r.messages.messages)
-        )
-      );
+      const groupConfs = retrieveResults
+      .filter(m => SnodeNamespace.isGroupConfigNamespace(m.namespace));
+    const groupOthers = retrieveResults
+      .filter(m => !SnodeNamespace.isGroupConfigNamespace(m.namespace));
 
-      return { confMessages, otherMessages: uniqBy(otherMessages, x => x.hash) };
+    const groupConfMessages =
+        retrieveItemWithNamespace(groupConfs)
+
+    const groupOtherMessages =
+        retrieveItemWithNamespace(groupOthers)
+
+
+    return { confMessages: groupConfMessages, otherMessages: uniqBy(groupOtherMessages, x => x.hash) };
+
     }
 
     default:

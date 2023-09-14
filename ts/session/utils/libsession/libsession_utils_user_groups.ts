@@ -10,6 +10,7 @@ import {
 } from '../../../types/sqlSharedTypes';
 import { UserGroupsWrapperActions } from '../../../webworker/workers/browser/libsession_worker_interface';
 import { getConversationController } from '../../conversations';
+import { PubKey } from '../../types';
 
 /**
  * Returns true if that conversation is an active group
@@ -31,6 +32,10 @@ function isLegacyGroupToStoreInWrapper(convo: ConversationModel): boolean {
     !convo.get('isKickedFromGroup') &&
     !convo.get('left')
   );
+}
+
+function isGroupToStoreInWrapper(convo: ConversationModel): boolean {
+  return convo.isGroup() && PubKey.isClosedGroupV3(convo.id) && convo.isActive(); // TODO should we filter by left/kicked or they are on the wrapper itself?
 }
 
 /**
@@ -73,6 +78,8 @@ async function insertGroupsFromDBIntoWrapperAndRefresh(convoId: string): Promise
 
   const convoType: UserGroupsType = isCommunityToStoreInWrapper(foundConvo)
     ? 'Community'
+    : PubKey.isClosedGroupV3(convoId)
+    ? 'Group'
     : 'LegacyGroup';
 
   switch (convoType) {
@@ -135,6 +142,9 @@ async function insertGroupsFromDBIntoWrapperAndRefresh(convoId: string): Promise
         // we still let this go through
       }
       break;
+    case 'Group':
+      // debugger;
+      break;
 
     default:
       assertUnreachable(
@@ -175,7 +185,7 @@ async function removeCommunityFromWrapper(_convoId: string, fullUrlWithOrWithout
  * whole other bunch of issues because it is a native node module.
  */
 function getUserGroupTypes(): Array<UserGroupsType> {
-  return ['Community', 'LegacyGroup'];
+  return ['Community', 'LegacyGroup', 'Group'];
 }
 
 export const SessionUtilUserGroups = {
@@ -193,4 +203,7 @@ export const SessionUtilUserGroups = {
   // legacy group
   isLegacyGroupToStoreInWrapper,
   isLegacyGroupToRemoveFromDBIfNotInWrapper,
+
+  // group 03
+  isGroupToStoreInWrapper,
 };

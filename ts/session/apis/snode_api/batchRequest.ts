@@ -23,8 +23,8 @@ export async function doSnodeBatchRequest(
 ): Promise<NotEmptyArrayOfBatchResults> {
   console.warn(
     `doSnodeBatchRequest "${method}":`,
-    JSON.stringify(subRequests.map(m => m.method)),
-    subRequests
+    JSON.stringify(subRequests.map(m => m.method))
+    // subRequests
   );
   const result = await snodeRpc({
     method,

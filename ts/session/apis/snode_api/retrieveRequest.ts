@@ -102,7 +102,7 @@ async function retrieveRequestForGroup({
   const group = await UserGroupsWrapperActions.getGroup(groupPk);
   const groupSecretKey = group?.secretKey;
   if (isNil(groupSecretKey) || isEmpty(groupSecretKey)) {
-    throw new Error(`sendMessagesDataToSnode: failed to find group admin secret key in wrapper`);
+    throw new Error(`retrieveRequestForGroup: failed to find group admin secret key in wrapper`);
   }
   const signatureBuilt = await SnodeSignature.getSnodeGroupSignatureParams({
     ...retrieveParam,

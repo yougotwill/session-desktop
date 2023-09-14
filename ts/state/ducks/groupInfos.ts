@@ -1,17 +1,17 @@
 import { createAsyncThunk, createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { GroupInfoGet, GroupInfoShared, GroupPubkeyType } from 'libsession_util_nodejs';
+import { uniq } from 'lodash';
 import { ConversationTypeEnum } from '../../models/conversationAttributes';
 import { HexString } from '../../node/hexStrings';
 import { ClosedGroup } from '../../session';
 import { getConversationController } from '../../session/conversations';
 import { UserUtils } from '../../session/utils';
+import { GroupSync } from '../../session/utils/job_runners/jobs/GroupConfigJob';
+import { toFixedUint8ArrayOfLength } from '../../types/sqlSharedTypes';
 import {
   MetaGroupWrapperActions,
   UserGroupsWrapperActions,
 } from '../../webworker/workers/browser/libsession_worker_interface';
-import { toFixedUint8ArrayOfLength } from '../../types/sqlSharedTypes';
-import { uniq } from 'lodash';
-import { GroupSync } from '../../session/utils/job_runners/jobs/GroupConfigJob';
 
 type GroupInfoGetWithId = GroupInfoGet & { id: GroupPubkeyType };
 
@@ -46,6 +46,9 @@ const initNewGroupInfoInWrapper = createAsyncThunk(
   }): Promise<GroupInfoGetWithId> => {
     try {
       const newGroup = await UserGroupsWrapperActions.createGroup();
+
+      await UserGroupsWrapperActions.setGroup(newGroup);
+
       const ourEd25519KeypairBytes = await UserUtils.getUserED25519KeyPairBytes();
       if (!ourEd25519KeypairBytes) {
         throw new Error('Current user has no priv ed25519 key?');
@@ -61,12 +64,28 @@ const initNewGroupInfoInWrapper = createAsyncThunk(
         groupEd25519Pubkey: toFixedUint8ArrayOfLength(groupEd2519Pk, 32),
       });
 
+      await Promise.all(
+        groupDetails.members.map(async member => {
+          const created = await MetaGroupWrapperActions.memberGetOrConstruct(
+            newGroup.pubkeyHex,
+            member
+          );
+          await MetaGroupWrapperActions.memberSetInvited(
+            newGroup.pubkeyHex,
+            created.pubkeyHex,
+            false
+          );
+        })
+      );
       const infos = await MetaGroupWrapperActions.infoGet(newGroup.pubkeyHex);
+
       if (!infos) {
         throw new Error(
           `getInfos of ${newGroup.pubkeyHex} returned empty result even if it was just init.`
         );
       }
+      infos.name = groupDetails.groupName;
+      await MetaGroupWrapperActions.infoSet(newGroup.pubkeyHex, infos);
 
       const convo = await getConversationController().getOrCreateAndWait(
         newGroup.pubkeyHex,

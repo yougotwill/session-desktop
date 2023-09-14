@@ -12,7 +12,7 @@ import { isArray, isEmpty, isEqual } from 'lodash';
 import { OpenGroupV2Room } from '../data/opengroups';
 import { ConversationAttributes } from '../models/conversationAttributes';
 import { OpenGroupRequestCommonType } from '../session/apis/open_group_api/opengroupV2/ApiUtil';
-import { fromHexToArray } from '../session/utils/String';
+import { fromHexToArray, toHex } from '../session/utils/String';
 import { ConfigWrapperObjectTypesMeta } from '../webworker/workers/browser/libsession_worker_functions';
 
 /**
@@ -279,5 +279,11 @@ export function toFixedUint8ArrayOfLength<T extends number>(
   if (data.length === length) return (data as any) as FixedSizeUint8Array<T>;
   throw new Error(
     `toFixedUint8ArrayOfLength invalid. Expected length ${length} but got: ${data.length}`
+  );
+}
+
+export function stringify(obj: unknown) {
+  return JSON.stringify(obj, (_key, value) =>
+    value instanceof Uint8Array ? `Uint8Array(${value.length}): ${toHex(value)}` : value
   );
 }

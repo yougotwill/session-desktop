@@ -24,7 +24,7 @@ import { SessionUtilConvoInfoVolatile } from '../session/utils/libsession/libses
 import { SessionUtilUserGroups } from '../session/utils/libsession/libsession_utils_user_groups';
 import { configurationMessageReceived, trigger } from '../shims/events';
 import { getCurrentlySelectedConversationOutsideRedux } from '../state/selectors/conversations';
-import { assertUnreachable } from '../types/sqlSharedTypes';
+import { assertUnreachable, stringify, toFixedUint8ArrayOfLength } from '../types/sqlSharedTypes';
 import { BlockedNumberController } from '../util';
 import { Storage, setLastProfileUpdateTimestamp } from '../util/storage';
 // eslint-disable-next-line import/no-unresolved, import/extensions
@@ -46,6 +46,7 @@ import {
 import { addKeyPairToCacheAndDBIfNeeded } from './closedGroups';
 import { HexKeyPair } from './keypairs';
 import { queueAllCachedFromSource } from './receiver';
+import { HexString } from '../node/hexStrings';
 
 type IncomingUserResult = {
   needsPush: boolean;
@@ -609,6 +610,42 @@ async function handleLegacyGroupUpdate(latestEnvelopeTimestamp: number) {
   }
 }
 
+async function handleGroupUpdate(latestEnvelopeTimestamp: number) {
+  // first let's check which groups needs to be joined or left by doing a diff of what is in the wrapper and what is in the DB
+  const allGoupsInWrapper = await UserGroupsWrapperActions.getAllGroups();
+
+  const allGoupsIdsInWrapper = allGoupsInWrapper.map(m => m.pubkeyHex);
+  console.warn('allGoupsIdsInWrapper', stringify(allGoupsIdsInWrapper));
+
+  const userEdKeypair = await UserUtils.getUserED25519KeyPairBytes();
+  if (!userEdKeypair) {
+    throw new Error('userEdKeypair is not set');
+  }
+
+  for (let index = 0; index < allGoupsInWrapper.length; index++) {
+    const groupInWrapper = allGoupsInWrapper[index];
+    if (!getConversationController().get(groupInWrapper.pubkeyHex)) {
+      // dump is always empty when creating a new groupInfo
+      await MetaGroupWrapperActions.init(groupInWrapper.pubkeyHex, {
+        metaDumped: null,
+        userEd25519Secretkey: toFixedUint8ArrayOfLength(userEdKeypair.privKeyBytes, 64),
+        groupEd25519Secretkey: groupInWrapper.secretKey,
+        groupEd25519Pubkey: toFixedUint8ArrayOfLength(
+          HexString.fromHexString(groupInWrapper.pubkeyHex.slice(2)),
+          32
+        ),
+      });
+      const created = await getConversationController().getOrCreateAndWait(
+        groupInWrapper.pubkeyHex,
+        ConversationTypeEnum.GROUPV3
+      );
+      created.set({ active_at: latestEnvelopeTimestamp });
+      await created.commit();
+      getSwarmPollingInstance().addGroupId(PubKey.cast(groupInWrapper.pubkeyHex));
+    }
+  }
+}
+
 async function handleUserGroupsUpdate(result: IncomingUserResult) {
   const toHandle = SessionUtilUserGroups.getUserGroupTypes();
   for (let index = 0; index < toHandle.length; index++) {
@@ -620,6 +657,9 @@ async function handleUserGroupsUpdate(result: IncomingUserResult) {
 
       case 'LegacyGroup':
         await handleLegacyGroupUpdate(result.latestEnvelopeTimestamp);
+        break;
+      case 'Group':
+        await handleGroupUpdate(result.latestEnvelopeTimestamp);
         break;
 
       default:
@@ -729,6 +769,10 @@ async function handleConvoInfoVolatileUpdate() {
             e.message
           );
         }
+        break;
+
+      case 'Group':
+        // debugger; // we need to update the current read messages of that group 03 with what we have in the wrapper // debugger
         break;
 
       default:

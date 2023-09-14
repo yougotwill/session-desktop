@@ -118,6 +118,9 @@ async function insertConvoFromDBIntoWrapperAndRefresh(convoId: string): Promise<
         );
       }
       break;
+    case 'Group':
+      // we need to keep track of the convo volatile info for the new group now. // TODO AUDRIC debugger
+      break;
     case 'Community':
       try {
         const asOpengroup = foundConvo.toOpenGroupV2();

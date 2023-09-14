@@ -14,6 +14,7 @@ import {
   UserConfigWrapperActionsCalls,
   UserGroupsWrapperActionsCalls,
   UserGroupsSet,
+  MergeSingle,
 } from 'libsession_util_nodejs';
 import { join } from 'path';
 
@@ -76,7 +77,7 @@ export const GenericWrapperActions: GenericWrapperActionsCalls = {
     >,
   dump: async (wrapperId: ConfigWrapperUser) =>
     callLibSessionWorker([wrapperId, 'dump']) as ReturnType<GenericWrapperActionsCalls['dump']>,
-  merge: async (wrapperId: ConfigWrapperUser, toMerge: Array<{ hash: string; data: Uint8Array }>) =>
+  merge: async (wrapperId: ConfigWrapperUser, toMerge: Array<MergeSingle>) =>
     callLibSessionWorker([wrapperId, 'merge', toMerge]) as ReturnType<
       GenericWrapperActionsCalls['merge']
     >,
@@ -103,8 +104,7 @@ export const UserConfigWrapperActions: UserConfigWrapperActionsCalls = {
   confirmPushed: async (seqno: number, hash: string) =>
     GenericWrapperActions.confirmPushed('UserConfig', seqno, hash),
   dump: async () => GenericWrapperActions.dump('UserConfig'),
-  merge: async (toMerge: Array<{ hash: string; data: Uint8Array }>) =>
-    GenericWrapperActions.merge('UserConfig', toMerge),
+  merge: async (toMerge: Array<MergeSingle>) => GenericWrapperActions.merge('UserConfig', toMerge),
   needsDump: async () => GenericWrapperActions.needsDump('UserConfig'),
   needsPush: async () => GenericWrapperActions.needsPush('UserConfig'),
   push: async () => GenericWrapperActions.push('UserConfig'),
@@ -149,7 +149,7 @@ export const ContactsWrapperActions: ContactsWrapperActionsCalls = {
   confirmPushed: async (seqno: number, hash: string) =>
     GenericWrapperActions.confirmPushed('ContactsConfig', seqno, hash),
   dump: async () => GenericWrapperActions.dump('ContactsConfig'),
-  merge: async (toMerge: Array<{ hash: string; data: Uint8Array }>) =>
+  merge: async (toMerge: Array<MergeSingle>) =>
     GenericWrapperActions.merge('ContactsConfig', toMerge),
   needsDump: async () => GenericWrapperActions.needsDump('ContactsConfig'),
   needsPush: async () => GenericWrapperActions.needsPush('ContactsConfig'),
@@ -184,7 +184,7 @@ export const UserGroupsWrapperActions: UserGroupsWrapperActionsCalls = {
   confirmPushed: async (seqno: number, hash: string) =>
     GenericWrapperActions.confirmPushed('UserGroupsConfig', seqno, hash),
   dump: async () => GenericWrapperActions.dump('UserGroupsConfig'),
-  merge: async (toMerge: Array<{ hash: string; data: Uint8Array }>) =>
+  merge: async (toMerge: Array<MergeSingle>) =>
     GenericWrapperActions.merge('UserGroupsConfig', toMerge),
   needsDump: async () => GenericWrapperActions.needsDump('UserGroupsConfig'),
   needsPush: async () => GenericWrapperActions.needsPush('UserGroupsConfig'),
@@ -281,7 +281,7 @@ export const ConvoInfoVolatileWrapperActions: ConvoInfoVolatileWrapperActionsCal
   confirmPushed: async (seqno: number, hash: string) =>
     GenericWrapperActions.confirmPushed('ConvoInfoVolatileConfig', seqno, hash),
   dump: async () => GenericWrapperActions.dump('ConvoInfoVolatileConfig'),
-  merge: async (toMerge: Array<{ hash: string; data: Uint8Array }>) =>
+  merge: async (toMerge: Array<MergeSingle>) =>
     GenericWrapperActions.merge('ConvoInfoVolatileConfig', toMerge),
   needsDump: async () => GenericWrapperActions.needsDump('ConvoInfoVolatileConfig'),
   needsPush: async () => GenericWrapperActions.needsPush('ConvoInfoVolatileConfig'),
@@ -395,6 +395,13 @@ export const MetaGroupWrapperActions: MetaGroupWrapperActionsCalls = {
   ) =>
     callLibSessionWorker([`MetaGroupConfig-${groupPk}`, 'metaConfirmPushed', args]) as Promise<
       ReturnType<MetaGroupWrapperActionsCalls['metaConfirmPushed']>
+    >,
+  metaMerge: async (
+    groupPk: GroupPubkeyType,
+    args: Parameters<MetaGroupWrapperActionsCalls['metaMerge']>[1]
+  ) =>
+    callLibSessionWorker([`MetaGroupConfig-${groupPk}`, 'metaMerge', args]) as Promise<
+      ReturnType<MetaGroupWrapperActionsCalls['metaMerge']>
     >,
 
   /** GroupInfo wrapper specific actions */
