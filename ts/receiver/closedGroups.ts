@@ -87,7 +87,7 @@ export async function handleClosedGroupControlMessage(
     }`
   );
 
-  if (PubKey.isClosedGroupV3(envelope.source)) {
+  if (PubKey.isClosedGroupV2(envelope.source)) {
     window?.log?.warn(
       'Message ignored; closed group v3 updates cannot come from SignalService.DataMessage.ClosedGroupControlMessage '
     );
@@ -168,7 +168,7 @@ function sanityCheckNewGroup(
     return false;
   }
 
-  if (PubKey.isClosedGroupV3(hexGroupPublicKey)) {
+  if (PubKey.isClosedGroupV2(hexGroupPublicKey)) {
     window?.log?.warn('sanityCheckNewGroup: got a v3 new group as a ClosedGroupControlMessage. ');
     return false;
   }
@@ -520,7 +520,7 @@ async function performIfValid(
   const groupPublicKey = envelope.source;
   const sender = envelope.senderIdentity;
 
-  if (PubKey.isClosedGroupV3(groupPublicKey)) {
+  if (PubKey.isClosedGroupV2(groupPublicKey)) {
     window?.log?.warn(
       'Message ignored; closed group v3 updates cannot come from SignalService.DataMessage.ClosedGroupControlMessage '
     );

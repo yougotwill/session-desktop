@@ -66,3 +66,17 @@ export class HTTPError extends Error {
     }
   }
 }
+
+class BaseError extends Error {
+  public readonly context?: Object;
+  constructor(message: string, context?: Object) {
+    super(message);
+    this.name = this.constructor.name;
+    this.context = context;
+  }
+}
+
+export class SigningFailed extends BaseError {}
+export class InvalidSigningType extends BaseError {}
+export class GroupV2SigningFailed extends SigningFailed {}
+export class PreConditionFailed extends BaseError {}

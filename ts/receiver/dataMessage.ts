@@ -195,7 +195,7 @@ export async function handleSwarmDataMessage(
   );
 
   const isGroupMessage = !!envelope.senderIdentity;
-  const isGroupV3Message = isGroupMessage && PubKey.isClosedGroupV3(envelope.source);
+  const isGroupV3Message = isGroupMessage && PubKey.isClosedGroupV2(envelope.source);
   let typeOfConvo = ConversationTypeEnum.PRIVATE;
   if (isGroupV3Message) {
     typeOfConvo = ConversationTypeEnum.GROUPV3;

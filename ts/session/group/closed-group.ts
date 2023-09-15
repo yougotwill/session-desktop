@@ -60,7 +60,7 @@ export async function initiateClosedGroupUpdate(
   groupName: string,
   members: Array<string>
 ) {
-  const isGroupV3 = PubKey.isClosedGroupV3(groupId);
+  const isGroupV3 = PubKey.isClosedGroupV2(groupId);
   const convo = await getConversationController().getOrCreateAndWait(
     groupId,
     isGroupV3 ? ConversationTypeEnum.GROUPV3 : ConversationTypeEnum.GROUP
@@ -206,7 +206,7 @@ function buildGroupDiff(convo: ConversationModel, update: GroupInfo): GroupDiff 
 export async function updateOrCreateClosedGroup(details: GroupInfo) {
   const { id, expireTimer } = details;
 
-  const isV3 = PubKey.isClosedGroupV3(id);
+  const isV3 = PubKey.isClosedGroupV2(id);
 
   const conversation = await getConversationController().getOrCreateAndWait(
     id,

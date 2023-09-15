@@ -227,7 +227,7 @@ async function pendingChangesForGroup(
   groupPk: GroupPubkeyType
 ): Promise<GroupSingleDestinationChanges> {
   const results = new Array<PendingChangesForGroup>();
-  if (!PubKey.isClosedGroupV3(groupPk)) {
+  if (!PubKey.isClosedGroupV2(groupPk)) {
     throw new Error(`pendingChangesForGroup only works for user or 03 group pubkeys`);
   }
   // one of the wrapper behind the metagroup needs a push
@@ -319,6 +319,22 @@ async function markAsPushed(variant: ConfigWrapperUser, seqno: number, hash: str
   return GenericWrapperActions.needsDump(variant);
 }
 
+/**
+ * If a dump is needed for that metagroup wrapper, dump it to the Database
+ */
+async function saveMetaGroupDumpToDb(groupPk: GroupPubkeyType) {
+  const metaNeedsDump = await MetaGroupWrapperActions.needsDump(groupPk);
+  // save the concatenated dumps as a single entry in the DB if any of the dumps had a need for dump
+  if (metaNeedsDump) {
+    const dump = await MetaGroupWrapperActions.metaDump(groupPk);
+    await ConfigDumpData.saveConfigDump({
+      data: dump,
+      publicKey: groupPk,
+      variant: `MetaGroupConfig-${groupPk}`,
+    });
+  }
+}
+
 export const LibSessionUtil = {
   initializeLibSessionUtilWrappers,
   userVariantToUserKind,
@@ -327,4 +343,5 @@ export const LibSessionUtil = {
   pendingChangesForGroup,
   userKindToVariant,
   markAsPushed,
+  saveMetaGroupDumpToDb,
 };

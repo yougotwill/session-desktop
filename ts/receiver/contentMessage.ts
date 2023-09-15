@@ -33,7 +33,11 @@ import { Storage } from '../util/storage';
 import { handleCallMessage } from './callMessage';
 import { getAllCachedECKeyPair, sentAtMoreRecentThanWrapper } from './closedGroups';
 import { ECKeyPair } from './keypairs';
-import { ContactsWrapperActions } from '../webworker/workers/browser/libsession_worker_interface';
+import {
+  ContactsWrapperActions,
+  MetaGroupWrapperActions,
+} from '../webworker/workers/browser/libsession_worker_interface';
+import { PreConditionFailed } from '../session/utils/errors';
 
 export async function handleSwarmContentMessage(envelope: EnvelopePlus, messageHash: string) {
   try {
@@ -52,6 +56,18 @@ export async function handleSwarmContentMessage(envelope: EnvelopePlus, messageH
   } catch (e) {
     window?.log?.warn(e.message);
   }
+}
+
+async function decryptForGroupV2(envelope: EnvelopePlus) {
+  window?.log?.info('received closed group message v2');
+  // try {
+  const groupPk = envelope.source;
+  if (!PubKey.isClosedGroupV2(groupPk)) {
+    throw new PreConditionFailed('decryptForGroupV2: not a 03 prefixed group');
+  }
+
+  return await MetaGroupWrapperActions.decryptMessage(groupPk, envelope.content);
+  // } catch (e) {}
 }
 
 async function decryptForClosedGroup(envelope: EnvelopePlus) {
@@ -266,7 +282,11 @@ async function decrypt(envelope: EnvelopePlus): Promise<any> {
       plaintext = await decryptEnvelopeWithOurKey(envelope);
       break;
     case SignalService.Envelope.Type.CLOSED_GROUP_MESSAGE:
-      plaintext = await decryptForClosedGroup(envelope);
+      if (PubKey.isClosedGroupV2(envelope.source)) {
+        plaintext = await decryptForGroupV2(envelope);
+      } else {
+        plaintext = await decryptForClosedGroup(envelope);
+      }
       break;
     default:
       assertUnreachable(envelope.type, `Unknown message type:${envelope.type}`);

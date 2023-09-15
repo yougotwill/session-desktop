@@ -35,7 +35,7 @@ function isLegacyGroupToStoreInWrapper(convo: ConversationModel): boolean {
 }
 
 function isGroupToStoreInWrapper(convo: ConversationModel): boolean {
-  return convo.isGroup() && PubKey.isClosedGroupV3(convo.id) && convo.isActive(); // TODO should we filter by left/kicked or they are on the wrapper itself?
+  return convo.isGroup() && PubKey.isClosedGroupV2(convo.id) && convo.isActive(); // TODO should we filter by left/kicked or they are on the wrapper itself?
 }
 
 /**
@@ -78,7 +78,7 @@ async function insertGroupsFromDBIntoWrapperAndRefresh(convoId: string): Promise
 
   const convoType: UserGroupsType = isCommunityToStoreInWrapper(foundConvo)
     ? 'Community'
-    : PubKey.isClosedGroupV3(convoId)
+    : PubKey.isClosedGroupV2(convoId)
     ? 'Group'
     : 'LegacyGroup';
 

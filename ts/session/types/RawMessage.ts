@@ -7,7 +7,7 @@ export type RawMessage = {
   device: string;
   ttl: number;
   encryption: SignalService.Envelope.Type;
-  namespace: SnodeNamespaces | null; // allowing null as when we upgrade, we might have messages awaiting sending which won't have a namespace
+  namespace: SnodeNamespaces;
 };
 
 // For building RawMessages from JSON

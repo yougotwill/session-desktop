@@ -2,7 +2,7 @@
 import { GroupPubkeyType } from 'libsession_util_nodejs';
 import { isArray, isEmpty, isNumber, isString } from 'lodash';
 import { UserUtils } from '../..';
-import { ConfigDumpData } from '../../../../data/configDump/configDump';
+import { stringify } from '../../../../types/sqlSharedTypes';
 import { ReleasedFeatures } from '../../../../util/releaseFeature';
 import { isSignInByLinking } from '../../../../util/storage';
 import { MetaGroupWrapperActions } from '../../../../webworker/workers/browser/libsession_worker_interface';
@@ -29,7 +29,6 @@ import {
   PersistedJob,
   RunJobResult,
 } from '../PersistedJob';
-import { stringify } from '../../../../types/sqlSharedTypes';
 
 const defaultMsBetweenRetries = 15000; // a long time between retries, to avoid running multiple jobs at the same time, when one was postponed at the same time as one already planned (5s)
 const defaultMaxAttempts = 2;
@@ -118,30 +117,7 @@ async function buildAndSaveDumpsToDB(
   }
 
   await MetaGroupWrapperActions.metaConfirmPushed(...toConfirm);
-  const metaNeedsDump = await MetaGroupWrapperActions.needsDump(groupPk);
-  // save the concatenated dumps as a single entry in the DB if any of the dumps had a need for dump
-  if (metaNeedsDump) {
-    const dump = await MetaGroupWrapperActions.metaDump(groupPk);
-    await ConfigDumpData.saveConfigDump({
-      data: dump,
-      publicKey: groupPk,
-      variant: `MetaGroupConfig-${groupPk}`,
-    });
-  }
-}
-
-async function saveDumpsNeededToDB(groupPk: GroupPubkeyType) {
-  const needsDump = await MetaGroupWrapperActions.needsDump(groupPk);
-
-  if (!needsDump) {
-    return;
-  }
-  const dump = await MetaGroupWrapperActions.metaDump(groupPk);
-  await ConfigDumpData.saveConfigDump({
-    data: dump,
-    publicKey: groupPk,
-    variant: `MetaGroupConfig-${groupPk}`,
-  });
+  return LibSessionUtil.saveMetaGroupDumpToDb(groupPk);
 }
 
 class GroupSyncJob extends PersistedJob<GroupSyncPersistedData> {
@@ -181,12 +157,12 @@ class GroupSyncJob extends PersistedJob<GroupSyncPersistedData> {
         return RunJobResult.PermanentFailure;
       }
 
-      if (!PubKey.isClosedGroupV3(thisJobDestination)) {
+      if (!PubKey.isClosedGroupV2(thisJobDestination)) {
         return RunJobResult.PermanentFailure;
       }
 
       // save the dumps to DB even before trying to push them, so at least we have an up to date dumps in the DB in case of crash, no network etc
-      await saveDumpsNeededToDB(thisJobDestination);
+      await LibSessionUtil.saveMetaGroupDumpToDb(thisJobDestination);
       const newGroupsReleased = await ReleasedFeatures.checkIsNewGroupsReleased();
 
       // if the feature flag is not enabled, we want to keep updating the dumps, but just not sync them.

@@ -191,7 +191,7 @@ export class SwarmPolling {
         window?.log?.debug(
           `Polling for ${loggingId}; timeout: ${convoPollingTimeout}; diff: ${diff} `
         );
-        if (PubKey.isClosedGroupV3(key)) {
+        if (PubKey.isClosedGroupV2(key)) {
           return this.pollOnceForKey([key, ConversationTypeEnum.GROUPV3]);
         }
         return this.pollOnceForKey([key, ConversationTypeEnum.GROUP]);
@@ -263,7 +263,7 @@ export class SwarmPolling {
     } else if (
       type === ConversationTypeEnum.GROUPV3 &&
       confMessages?.length &&
-      PubKey.isClosedGroupV3(pubkey)
+      PubKey.isClosedGroupV2(pubkey)
     ) {
       await SwarmPollingGroupConfig.handleGroupSharedConfigMessages(confMessages, pubkey);
     }

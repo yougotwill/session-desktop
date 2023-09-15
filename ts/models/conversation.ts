@@ -21,7 +21,10 @@ import { from_hex } from 'libsodium-wrappers-sumo';
 import { SignalService } from '../protobuf';
 import { getMessageQueue } from '../session';
 import { getConversationController } from '../session/conversations';
-import { ClosedGroupVisibleMessage } from '../session/messages/outgoing/visibleMessage/ClosedGroupVisibleMessage';
+import {
+  ClosedGroupV3VisibleMessage,
+  ClosedGroupVisibleMessage,
+} from '../session/messages/outgoing/visibleMessage/ClosedGroupVisibleMessage';
 import { PubKey } from '../session/types';
 import { ToastUtils, UserUtils } from '../session/utils';
 import { BlockedNumberController } from '../util';
@@ -221,7 +224,9 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
   }
 
   public isClosedGroupV3(): boolean {
-    return Boolean(this.get('type') === ConversationTypeEnum.GROUPV3 && this.id.startsWith('03'));
+    return Boolean(
+      this.get('type') === ConversationTypeEnum.GROUPV3 && PubKey.isClosedGroupV2(this.id)
+    );
   }
 
   public isPrivate() {
@@ -1701,6 +1706,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       // we are trying to send a message to someone. Make sure this convo is not hidden
       await this.unhideIfNeeded(true);
 
+      // TODO break down those functions  (sendMessage and retrySend into smaller functions and narrow the VisibleMessageParams to preview, etc. with checks of types)
       // an OpenGroupV2 message is just a visible message
       const chatMessageParams: VisibleMessageParams = {
         body,
@@ -1761,8 +1767,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
 
       if (this.isPrivate()) {
         if (this.isMe()) {
-          chatMessageParams.syncTarget = this.id;
-          const chatMessageMe = new VisibleMessage(chatMessageParams);
+          const chatMessageMe = new VisibleMessage({ ...chatMessageParams, syncTarget: this.id });
 
           await getMessageQueue().sendSyncMessage({
             namespace: SnodeNamespaces.Default,
@@ -1798,6 +1803,12 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
         return;
       }
 
+      if (this.isClosedGroupV3()) {
+        // we need the return await so that errors are caught in the catch {}
+        await this.sendMessageToGroupV3(chatMessageParams);
+        return;
+      }
+
       if (this.isClosedGroup()) {
         const chatMessageMediumGroup = new VisibleMessage(chatMessageParams);
         const closedGroupVisibleMessage = new ClosedGroupVisibleMessage({
@@ -1817,6 +1828,20 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     } catch (e) {
       await message.saveErrors(e);
     }
+  }
+
+  private async sendMessageToGroupV3(chatMessageParams: VisibleMessageParams) {
+    const visibleMessage = new VisibleMessage(chatMessageParams);
+    const groupVisibleMessage = new ClosedGroupV3VisibleMessage({
+      chatMessage: visibleMessage,
+      destination: this.id,
+      namespace: SnodeNamespaces.ClosedGroupMessages,
+    });
+
+    // we need the return await so that errors are caught in the catch {}
+    await getMessageQueue().sendToGroupV3({
+      message: groupVisibleMessage,
+    });
   }
 
   private async sendBlindedMessageRequest(messageParams: VisibleMessageParams) {

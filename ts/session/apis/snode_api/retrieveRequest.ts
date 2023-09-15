@@ -93,7 +93,7 @@ async function retrieveRequestForGroup({
   namespace: SnodeNamespaces;
   retrieveParam: RetrieveParams;
 }) {
-  if (!PubKey.isClosedGroupV3(groupPk)) {
+  if (!PubKey.isClosedGroupV2(groupPk)) {
     throw new Error('retrieveRequestForGroup: not a 03 group');
   }
   if (!SnodeNamespace.isGroupNamespace(namespace)) {
@@ -147,7 +147,7 @@ async function buildRetrieveRequest(
         return retrieveRequestForLegacyGroup({ namespace, ourPubkey, pubkey, retrieveParam });
       }
 
-      if (PubKey.isClosedGroupV3(pubkey)) {
+      if (PubKey.isClosedGroupV2(pubkey)) {
         if (!SnodeNamespace.isGroupNamespace(namespace)) {
           // either config or messages namespaces for 03 groups
           throw new Error(`tried to poll from a non 03 group namespace ${namespace}`);

@@ -26,6 +26,60 @@ export enum KeyPrefixType {
   groupV3 = '03',
 }
 
+// export type GroupV2PubKey = {
+//   key: GroupPubkeyType; // 03 prefix for groups v2
+//   isGroupV2: true;
+//   isLegacyGroup: false;
+//   isPrivate: false;
+//   isUS: false;
+//   isBlinded: false;
+// };
+
+// export type PrivatePubkey = {
+//   key: PubkeyType; // 05 prefix for private conversations
+//   isGroupV2: false;
+//   isLegacyGroup: false;
+//   isPrivate: true;
+//   isUS: false;
+//   isBlinded: false;
+// };
+
+// export type UsPubkey = {
+//   key: PubkeyType; // 05 prefix for note to self
+//   isGroupV2: false;
+//   isLegacyGroup: false;
+//   isPrivate: false;
+//   isUS: true;
+//   isBlinded: false;
+// };
+
+// export type PrivateBlindedPubkey = {
+//   key: BlindedPubkeyType; // 15 prefix for blinded pubkeys
+//   isGroupV2: false;
+//   isLegacyGroup: false;
+//   isPrivate: true;
+//   isUS: false;
+//   isBlinded: true;
+// };
+
+// export type LegacyGroupPubkey = {
+//   key: PubkeyType; // 05 prefix for legacy closed group
+//   isGroupV2: false;
+//   isLegacyGroup: true;
+//   isPrivate: false;
+//   isUS: false;
+//   isBlinded: false;
+// };
+
+// export type PubKeyRecord =
+//   | UsPubkey
+//   | PrivatePubkey
+//   | GroupV2PubKey
+//   | LegacyGroupPubkey
+//   | PrivateBlindedPubkey;
+
+// TODO make that Pubkey class more useful, add fields for what types of pubkey it is (group, legacy group, private)
+
 export class PubKey {
   public static readonly PUBKEY_LEN = 66;
   public static readonly PUBKEY_LEN_NO_PREFIX = PubKey.PUBKEY_LEN - 2;
@@ -233,31 +287,12 @@ export class PubKey {
     return fromHexToArray(this.key);
   }
 
-  public withoutPrefixToArray(): Uint8Array {
-    return fromHexToArray(PubKey.removePrefixIfNeeded(this.key));
-  }
-
   public static isBlinded(key: string) {
     return key.startsWith(KeyPrefixType.blinded15) || key.startsWith(KeyPrefixType.blinded25);
   }
 
-  public static isClosedGroupV3(key: string): key is GroupPubkeyType {
+  public static isClosedGroupV2(key: string): key is GroupPubkeyType {
     const regex = new RegExp(`^${KeyPrefixType.groupV3}${PubKey.HEX}{64}$`);
     return regex.test(key);
-  }
-
-  public static isHexOnly(str: string) {
-    return new RegExp(`^${PubKey.HEX}*$`).test(str);
-  }
-
-  /**
-   *
-   * @returns true if that string is a valid group (as in closed group) pubkey.
-   * i.e. returns true if length is 66, prefix is 05 only, and it's hex characters only
-   */
-  public static isValidGroupPubkey(pubkey: string): boolean {
-    return (
-      pubkey.length === 66 && pubkey.startsWith(KeyPrefixType.standard) && this.isHexOnly(pubkey)
-    );
   }
 }

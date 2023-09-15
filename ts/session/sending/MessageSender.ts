@@ -7,6 +7,7 @@ import _, { isEmpty, isNil, isString, sample, toNumber } from 'lodash';
 import pRetry from 'p-retry';
 import { Data } from '../../data/data';
 import { SignalService } from '../../protobuf';
+import { UserGroupsWrapperActions } from '../../webworker/workers/browser/libsession_worker_interface';
 import { OpenGroupRequestCommonType } from '../apis/open_group_api/opengroupV2/ApiUtil';
 import { OpenGroupMessageV2 } from '../apis/open_group_api/opengroupV2/OpenGroupMessageV2';
 import {
@@ -40,7 +41,6 @@ import { RawMessage } from '../types/RawMessage';
 import { UserUtils } from '../utils';
 import { fromUInt8ArrayToBase64 } from '../utils/String';
 import { EmptySwarmError } from '../utils/errors';
-import { UserGroupsWrapperActions } from '../../webworker/workers/browser/libsession_worker_interface';
 
 // ================ SNODE STORE ================
 
@@ -196,12 +196,15 @@ async function getSignatureParamsFromNamespace(item: StoreOnNodeParamsNoSig, des
     });
   }
 
-  if (SnodeNamespace.isGroupConfigNamespace(item.namespace)) {
-    if (!PubKey.isClosedGroupV3(destination)) {
+  if (
+    SnodeNamespace.isGroupConfigNamespace(item.namespace) ||
+    item.namespace === SnodeNamespaces.ClosedGroupMessages
+  ) {
+    if (!PubKey.isClosedGroupV2(destination)) {
       throw new Error('sendMessagesDataToSnode: groupconfig namespace required a 03 pubkey');
     }
     const group = await UserGroupsWrapperActions.getGroup(destination);
-    const groupSecretKey = group?.secretKey;
+    const groupSecretKey = group?.secretKey; // TODO we will need to the user auth at some point
     if (isNil(groupSecretKey) || isEmpty(groupSecretKey)) {
       throw new Error(`sendMessagesDataToSnode: failed to find group admin secret key in wrapper`);
     }
@@ -303,7 +306,7 @@ type SharedEncryptAndWrap = {
 type EncryptAndWrapMessage = {
   plainTextBuffer: Uint8Array;
   destination: string;
-  namespace: number | null;
+  namespace: number;
 } & SharedEncryptAndWrap;
 
 type EncryptAndWrapMessageResults = {
@@ -342,23 +345,11 @@ async function encryptMessageAndWrap(
   const data = wrapEnvelope(envelope);
   const data64 = ByteBuffer.wrap(data).toString('base64');
 
-  // override the namespaces if those are unset in the incoming messages
-  // right when we upgrade from not having namespaces stored in the outgoing cached messages our messages won't have a namespace associated.
-  // So we need to keep doing the lookup of where they should go if the namespace is not set.
-
-  const overridenNamespace = !isNil(namespace)
-    ? namespace
-    : getConversationController()
-        .get(recipient.key)
-        ?.isClosedGroup()
-    ? SnodeNamespaces.LegacyClosedGroup
-    : SnodeNamespaces.Default;
-
   return {
     data64,
     networkTimestamp,
     data,
-    namespace: overridenNamespace,
+    namespace,
     ttl,
     identifier,
     isSyncMessage: syncMessage,

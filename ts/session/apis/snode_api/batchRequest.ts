@@ -4,6 +4,12 @@ import { processOnionRequestErrorAtDestination, SnodeResponse } from './onions';
 import { snodeRpc } from './sessionRpc';
 import { NotEmptyArrayOfBatchResults, SnodeApiSubRequests } from './SnodeRequestTypes';
 
+function logSubRequests(requests: Array<SnodeApiSubRequests>) {
+  return requests.map(m =>
+    m.method === 'retrieve' || m.method === 'store' ? `${m.method}-${m.params.namespace}` : m.method
+  );
+}
+
 /**
  * This is the equivalent to the batch send on sogs. The target node runs each sub request and returns a list of all the sub status and bodies.
  * If the global status code is not 200, an exception is thrown.
@@ -23,7 +29,7 @@ export async function doSnodeBatchRequest(
 ): Promise<NotEmptyArrayOfBatchResults> {
   console.warn(
     `doSnodeBatchRequest "${method}":`,
-    JSON.stringify(subRequests.map(m => m.method))
+    JSON.stringify(logSubRequests(subRequests))
     // subRequests
   );
   const result = await snodeRpc({

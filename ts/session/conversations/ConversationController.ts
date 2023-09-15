@@ -96,7 +96,7 @@ export class ConversationController {
       throw new TypeError(`'type' must be 'private' or 'group' or 'groupv3' but got: '${type}'`);
     }
 
-    if (type === ConversationTypeEnum.GROUPV3 && !PubKey.isClosedGroupV3(id)) {
+    if (type === ConversationTypeEnum.GROUPV3 && !PubKey.isClosedGroupV2(id)) {
       throw new Error(
         'required v3 closed group` ` but the pubkey does not match the 03 prefix for them'
       );
@@ -226,7 +226,7 @@ export class ConversationController {
     // if we were kicked or sent our left message, we have nothing to do more with that group.
     // Just delete everything related to it, not trying to add update message or send a left message.
     await this.removeGroupOrCommunityFromDBAndRedux(groupId);
-    if (PubKey.isClosedGroupV3(groupId)) {
+    if (PubKey.isClosedGroupV2(groupId)) {
       await remove03GroupFromWrappers(groupId);
     } else {
       await removeLegacyGroupFromWrappers(groupId);

@@ -1,28 +1,28 @@
 import { AbortController } from 'abort-controller';
 
-import { PendingMessageCache } from './PendingMessageCache';
-import { JobQueue, MessageUtils, UserUtils } from '../utils';
-import { PubKey, RawMessage } from '../types';
 import { MessageSender } from '.';
-import { ClosedGroupMessage } from '../messages/outgoing/controlMessage/group/ClosedGroupMessage';
 import { ConfigurationMessage } from '../messages/outgoing/controlMessage/ConfigurationMessage';
+import { ClosedGroupMessage } from '../messages/outgoing/controlMessage/group/ClosedGroupMessage';
 import { ClosedGroupNameChangeMessage } from '../messages/outgoing/controlMessage/group/ClosedGroupNameChangeMessage';
+import { PubKey, RawMessage } from '../types';
+import { JobQueue, MessageUtils, UserUtils } from '../utils';
+import { PendingMessageCache } from './PendingMessageCache';
 
-import { ClosedGroupMemberLeftMessage } from '../messages/outgoing/controlMessage/group/ClosedGroupMemberLeftMessage';
-import { MessageSentHandler } from './MessageSentHandler';
 import { ContentMessage } from '../messages/outgoing';
 import { ExpirationTimerUpdateMessage } from '../messages/outgoing/controlMessage/ExpirationTimerUpdateMessage';
 import { ClosedGroupAddedMembersMessage } from '../messages/outgoing/controlMessage/group/ClosedGroupAddedMembersMessage';
 import { ClosedGroupEncryptionPairMessage } from '../messages/outgoing/controlMessage/group/ClosedGroupEncryptionPairMessage';
+import { ClosedGroupMemberLeftMessage } from '../messages/outgoing/controlMessage/group/ClosedGroupMemberLeftMessage';
 import { ClosedGroupNewMessage } from '../messages/outgoing/controlMessage/group/ClosedGroupNewMessage';
 import { ClosedGroupRemovedMembersMessage } from '../messages/outgoing/controlMessage/group/ClosedGroupRemovedMembersMessage';
-import { ClosedGroupVisibleMessage } from '../messages/outgoing/visibleMessage/ClosedGroupVisibleMessage';
+import {
+  ClosedGroupV3VisibleMessage,
+  ClosedGroupVisibleMessage,
+} from '../messages/outgoing/visibleMessage/ClosedGroupVisibleMessage';
 import { SyncMessageType } from '../utils/sync/syncUtils';
+import { MessageSentHandler } from './MessageSentHandler';
 
 import { OpenGroupRequestCommonType } from '../apis/open_group_api/opengroupV2/ApiUtil';
-import { OpenGroupVisibleMessage } from '../messages/outgoing/visibleMessage/OpenGroupVisibleMessage';
-import { UnsendMessage } from '../messages/outgoing/controlMessage/UnsendMessage';
-import { CallMessage } from '../messages/outgoing/controlMessage/CallMessage';
 import { OpenGroupMessageV2 } from '../apis/open_group_api/opengroupV2/OpenGroupMessageV2';
 import { sendSogsReactionOnionV4 } from '../apis/open_group_api/sogsv3/sogsV3SendReaction';
 import {
@@ -30,7 +30,10 @@ import {
   SnodeNamespacesLegacyGroup,
   SnodeNamespacesUser,
 } from '../apis/snode_api/namespaces';
+import { CallMessage } from '../messages/outgoing/controlMessage/CallMessage';
 import { SharedConfigMessage } from '../messages/outgoing/controlMessage/SharedConfigMessage';
+import { UnsendMessage } from '../messages/outgoing/controlMessage/UnsendMessage';
+import { OpenGroupVisibleMessage } from '../messages/outgoing/visibleMessage/OpenGroupVisibleMessage';
 
 type ClosedGroupMessageType =
   | ClosedGroupVisibleMessage
@@ -194,6 +197,26 @@ export class MessageQueue {
 
     // if groupId is set here, it means it's for a medium group. So send it as it
     return this.sendToPubKey(PubKey.cast(destinationPubKey), message, namespace, sentCb, true);
+  }
+
+  public async sendToGroupV3({
+    message,
+    sentCb,
+  }: {
+    message: ClosedGroupV3VisibleMessage;
+    sentCb?: (message: RawMessage) => Promise<void>;
+  }): Promise<void> {
+    if (!message.destination) {
+      throw new Error('Invalid group message passed in sendToGroupV3.');
+    }
+
+    return this.sendToPubKey(
+      PubKey.cast(message.destination),
+      message,
+      message.namespace,
+      sentCb,
+      true
+    );
   }
 
   public async sendSyncMessage({
