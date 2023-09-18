@@ -92,7 +92,7 @@ async function buildAndSaveDumpsToDB(
 ): Promise<void> {
   const toConfirm: Parameters<typeof MetaGroupWrapperActions.metaConfirmPushed> = [
     groupPk,
-    { groupInfo: null, groupKeys: null, groupMember: null },
+    { groupInfo: null, groupMember: null },
   ];
 
   for (let i = 0; i < changes.length; i++) {
@@ -107,10 +107,6 @@ async function buildAndSaveDumpsToDB(
       }
       case SnodeNamespaces.ClosedGroupMembers: {
         toConfirm[1].groupMember = [change.pushed.seqno.toNumber(), change.updatedHash];
-        break;
-      }
-      case SnodeNamespaces.ClosedGroupKeys: {
-        toConfirm[1].groupKeys = [change.pushed.data, change.updatedHash, change.pushed.timestamp];
         break;
       }
     }
