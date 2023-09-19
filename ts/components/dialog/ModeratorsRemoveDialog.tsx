@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
 import { compact } from 'lodash';
+import React, { useState } from 'react';
 import { useDispatch } from 'react-redux';
 
 import { getConversationController } from '../../session/conversations';
@@ -7,13 +7,18 @@ import { PubKey } from '../../session/types';
 import { ToastUtils } from '../../session/utils';
 import { Flex } from '../basic/Flex';
 
+import {
+  useConversationRealName,
+  useGroupAdmins,
+  useIsPublic,
+  useWeAreAdmin,
+} from '../../hooks/useParamSelector';
+import { sogsV3RemoveAdmins } from '../../session/apis/open_group_api/sogsv3/sogsV3AddRemoveMods';
 import { updateRemoveModeratorsModal } from '../../state/ducks/modalDialog';
+import { MemberListItem } from '../MemberListItem';
 import { SessionWrapperModal } from '../SessionWrapperModal';
 import { SessionButton, SessionButtonColor, SessionButtonType } from '../basic/SessionButton';
 import { SessionSpinner } from '../basic/SessionSpinner';
-import { MemberListItem } from '../MemberListItem';
-import { useConversationPropsById } from '../../hooks/useParamSelector';
-import { sogsV3RemoveAdmins } from '../../session/apis/open_group_api/sogsv3/sogsV3AddRemoveMods';
 
 type Props = {
   conversationId: string;
@@ -58,6 +63,11 @@ export const RemoveModeratorsDialog = (props: Props) => {
     dispatch(updateRemoveModeratorsModal(null));
   };
 
+  const weAreAdmin = useWeAreAdmin(conversationId);
+  const isPublic = useIsPublic(conversationId);
+  const displayName = useConversationRealName(conversationId);
+  const groupAdmins = useGroupAdmins(conversationId);
+
   const removeModsCall = async () => {
     if (modsToRemove.length) {
       setRemovingInProgress(true);
@@ -69,15 +79,14 @@ export const RemoveModeratorsDialog = (props: Props) => {
     }
   };
 
-  const convoProps = useConversationPropsById(conversationId);
-  if (!convoProps || !convoProps.isPublic || !convoProps.weAreAdmin) {
+  if (!isPublic || !weAreAdmin) {
     throw new Error('RemoveModeratorsDialog: convoProps invalid');
   }
 
-  const existingMods = convoProps.groupAdmins || [];
+  const existingMods = groupAdmins || [];
   const hasMods = existingMods.length !== 0;
 
-  const title = `${i18n('removeModerators')}: ${convoProps.displayNameInProfile}`;
+  const title = `${i18n('removeModerators')}: ${displayName}`;
   return (
     <SessionWrapperModal title={title} onClose={closeDialog}>
       <Flex container={true} flexDirection="column" alignItems="center">

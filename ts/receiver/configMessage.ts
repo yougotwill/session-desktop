@@ -86,10 +86,9 @@ async function printDumpForDebug(prefix: string, variant: ConfigWrapperObjectTyp
     window.log.info(prefix, StringUtils.toHex(await GenericWrapperActions.dump(variant)));
     return;
   }
-  const metaGroupDumps = await MetaGroupWrapperActions.metaDump(
+  const metaGroupDumps = await MetaGroupWrapperActions.metaDebugDump(
     getGroupPubkeyFromWrapperType(variant)
   );
-
   window.log.info(prefix, StringUtils.toHex(metaGroupDumps));
 }
 

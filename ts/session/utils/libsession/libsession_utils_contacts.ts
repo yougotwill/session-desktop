@@ -47,13 +47,13 @@ async function insertContactFromDBIntoWrapperAndRefresh(id: string): Promise<voi
     return;
   }
 
-  const dbName = foundConvo.get('displayNameInProfile') || undefined;
-  const dbNickname = foundConvo.get('nickname') || undefined;
+  const dbName = foundConvo.getRealSessionUsername() || undefined;
+  const dbNickname = foundConvo.getNickname();
   const dbProfileUrl = foundConvo.get('avatarPointer') || undefined;
   const dbProfileKey = foundConvo.get('profileKey') || undefined;
-  const dbApproved = !!foundConvo.get('isApproved') || false;
-  const dbApprovedMe = !!foundConvo.get('didApproveMe') || false;
-  const dbBlocked = !!foundConvo.isBlocked() || false;
+  const dbApproved = foundConvo.isApproved();
+  const dbApprovedMe = foundConvo.didApproveMe();
+  const dbBlocked = foundConvo.isBlocked();
   const priority = foundConvo.get('priority') || 0;
   // expiration timer is not tracked currently but will be once disappearing message is merged into userconfig
   // const expirationTimerSeconds = foundConvo.get('expireTimer') || 0;

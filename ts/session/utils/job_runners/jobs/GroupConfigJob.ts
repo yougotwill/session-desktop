@@ -2,7 +2,6 @@
 import { GroupPubkeyType } from 'libsession_util_nodejs';
 import { isArray, isEmpty, isNumber, isString } from 'lodash';
 import { UserUtils } from '../..';
-import { stringify } from '../../../../types/sqlSharedTypes';
 import { ReleasedFeatures } from '../../../../util/releaseFeature';
 import { isSignInByLinking } from '../../../../util/storage';
 import { MetaGroupWrapperActions } from '../../../../webworker/workers/browser/libsession_worker_interface';
@@ -183,14 +182,12 @@ class GroupSyncJob extends PersistedJob<GroupSyncPersistedData> {
           data: item.data,
         };
       });
-      console.warn(`msgs ${stringify(msgs)}`);
 
       const result = await MessageSender.sendEncryptedDataToSnode(
         msgs,
         thisJobDestination,
         oldHashesToDelete
       );
-      console.warn(`result ${stringify(result)}`);
 
       const expectedReplyLength =
         singleDestChanges.messages.length + (oldHashesToDelete.size ? 1 : 0);

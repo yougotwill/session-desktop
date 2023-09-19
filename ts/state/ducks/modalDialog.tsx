@@ -6,16 +6,19 @@ import { Noop } from '../../types/Util';
 export type BanType = 'ban' | 'unban';
 
 export type ConfirmModalState = SessionConfirmDialogProps | null;
-export type InviteContactModalState = { conversationId: string } | null;
-export type BanOrUnbanUserModalState = {
-  conversationId: string;
-  banType: BanType;
-  pubkey?: string;
-} | null;
+
+type WithConvoId = { conversationId: string };
+export type InviteContactModalState = WithConvoId | null;
+export type BanOrUnbanUserModalState =
+  | (WithConvoId & {
+      banType: BanType;
+      pubkey?: string;
+    })
+  | null;
 export type AddModeratorsModalState = InviteContactModalState;
 export type RemoveModeratorsModalState = InviteContactModalState;
 export type UpdateGroupMembersModalState = InviteContactModalState;
-export type UpdateGroupNameModalState = InviteContactModalState;
+export type UpdateGroupNameModalState = WithConvoId | null;
 export type ChangeNickNameModalState = InviteContactModalState;
 export type AdminLeaveClosedGroupModalState = InviteContactModalState;
 export type EditProfileModalState = object | null;

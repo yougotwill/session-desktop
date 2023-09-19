@@ -6,6 +6,7 @@ import { UserUtils } from '../../session/utils';
 import { StateType } from '../reducer';
 import { getCanWrite, getModerators, getSubscriberCount } from './sogsRoomInfo';
 import { getIsMessageSelectionMode, getSelectedConversation } from './conversations';
+import { getLibMembersPubkeys, useLibGroupName } from './groups';
 
 /**
  * Returns the formatted text for notification setting.
@@ -138,12 +139,27 @@ export const isClosedGroupConversation = (state: StateType): boolean => {
   );
 };
 
-const getSelectedGroupMembers = (state: StateType): Array<string> => {
+const getSelectedMembersCount = (state: StateType): number => {
+  const selected = getSelectedConversation(state);
+  if (!selected) {
+    return 0;
+  }
+  if (PubKey.isClosedGroupV2(selected.id)) {
+    return getLibMembersPubkeys(state, selected.id).length || 0;
+  }
+  if (selected.isPrivate || selected.isPublic) {
+    return 0;
+  }
+  return selected.members?.length || 0;
+};
+
+const getSelectedGroupAdmins = (state: StateType): Array<string> => {
   const selected = getSelectedConversation(state);
   if (!selected) {
     return [];
   }
-  return selected.members || [];
+
+  return selected.groupAdmins || [];
 };
 
 const getSelectedSubscriberCount = (state: StateType): number | undefined => {
@@ -221,8 +237,12 @@ export function useSelectedisNoteToSelf() {
   return useSelector(getIsSelectedNoteToSelf);
 }
 
-export function useSelectedMembers() {
-  return useSelector(getSelectedGroupMembers);
+export function useSelectedMembersCount() {
+  return useSelector(getSelectedMembersCount);
+}
+
+export function useSelectedGroupAdmins() {
+  return useSelector(getSelectedGroupAdmins);
 }
 
 export function useSelectedSubscriberCount() {
@@ -273,12 +293,17 @@ export function useSelectedShortenedPubkeyOrFallback() {
  * This also returns the localized "Note to Self" if the conversation is the note to self.
  */
 export function useSelectedNicknameOrProfileNameOrShortenedPubkey() {
+  const selectedId = useSelectedConversationKey();
   const nickname = useSelectedNickname();
   const profileName = useSelectedDisplayNameInProfile();
   const shortenedPubkey = useSelectedShortenedPubkeyOrFallback();
   const isMe = useSelectedisNoteToSelf();
+  const libGroupName = useLibGroupName(selectedId);
   if (isMe) {
     return window.i18n('noteToSelf');
+  }
+  if (selectedId && PubKey.isClosedGroupV2(selectedId)) {
+    return libGroupName;
   }
   return nickname || profileName || shortenedPubkey;
 }

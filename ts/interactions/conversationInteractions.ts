@@ -234,9 +234,7 @@ export function showLeaveGroupByConvoId(conversationId: string) {
 
   const title = window.i18n('leaveGroup');
   const message = window.i18n('leaveGroupConfirmation');
-  const isAdmin = (conversation.get('groupAdmins') || []).includes(
-    UserUtils.getOurPubKeyStrFromCache()
-  );
+  const isAdmin = conversation.getGroupAdmins().includes(UserUtils.getOurPubKeyStrFromCache());
   const isClosedGroup = conversation.isClosedGroup() || false;
   const isPublic = conversation.isPublic() || false;
 

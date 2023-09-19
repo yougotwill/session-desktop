@@ -4,6 +4,7 @@
 import {
   ContactInfoSet,
   FixedSizeUint8Array,
+  GroupPubkeyType,
   LegacyGroupInfo,
   LegacyGroupMemberInfo,
 } from 'libsession_util_nodejs';
@@ -66,6 +67,7 @@ export type ConfigDumpDataNode = {
   getAllDumpsWithData: () => Array<ConfigDumpRow>;
   getAllDumpsWithoutData: () => Array<ConfigDumpRowWithoutData>;
   getAllDumpsWithoutDataFor: (pk: string) => Array<ConfigDumpRowWithoutData>;
+  deleteDumpFor: (pk: GroupPubkeyType) => void;
 };
 
 // ========== unprocessed

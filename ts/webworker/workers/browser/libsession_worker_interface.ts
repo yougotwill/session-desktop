@@ -389,6 +389,10 @@ export const MetaGroupWrapperActions: MetaGroupWrapperActionsCalls = {
     callLibSessionWorker([`MetaGroupConfig-${groupPk}`, 'metaDump']) as Promise<
       ReturnType<MetaGroupWrapperActionsCalls['metaDump']>
     >,
+  metaDebugDump: async (groupPk: GroupPubkeyType) =>
+    callLibSessionWorker([`MetaGroupConfig-${groupPk}`, 'metaDebugDump']) as Promise<
+      ReturnType<MetaGroupWrapperActionsCalls['metaDebugDump']>
+    >,
   metaConfirmPushed: async (
     groupPk: GroupPubkeyType,
     args: Parameters<MetaGroupWrapperActionsCalls['metaConfirmPushed']>[1]

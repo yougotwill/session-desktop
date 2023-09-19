@@ -10,7 +10,13 @@ import { ToastUtils, UserUtils } from '../../session/utils';
 import { updateInviteContactModal } from '../../state/ducks/modalDialog';
 import { SpacerLG } from '../basic/Text';
 
-import { useConversationPropsById } from '../../hooks/useParamSelector';
+import {
+  useConversationUsername,
+  useIsPrivate,
+  useIsPublic,
+  useSortedGroupMembers,
+  useZombies,
+} from '../../hooks/useParamSelector';
 import { useSet } from '../../hooks/useSet';
 import { initiateClosedGroupUpdate } from '../../session/group/closed-group';
 import { SessionUtilUserGroups } from '../../session/utils/libsession/libsession_utils_user_groups';
@@ -104,27 +110,27 @@ const InviteContactsDialogInner = (props: Props) => {
   const privateContactPubkeys = useSelector(getPrivateContactsPubkeys);
   let validContactsForInvite = _.clone(privateContactPubkeys);
 
-  const convoProps = useConversationPropsById(conversationId);
+  const isPrivate = useIsPrivate(conversationId);
+  const isPublic = useIsPublic(conversationId);
+  const membersFromRedux = useSortedGroupMembers(conversationId);
+  const zombiesFromRedux = useZombies(conversationId);
+  const displayName = useConversationUsername(conversationId);
 
   const { uniqueValues: selectedContacts, addTo, removeFrom } = useSet<string>();
 
-  if (!convoProps) {
-    throw new Error('InviteContactsDialogInner not a valid convoId given');
-  }
-  if (convoProps.isPrivate) {
+  if (isPrivate) {
     throw new Error('InviteContactsDialogInner must be a group');
   }
-  if (!convoProps.isPublic) {
+  if (!isPublic) {
     // filter our zombies and current members from the list of contact we can add
-    const members = convoProps.members || [];
-    const zombies = convoProps.zombies || [];
+    const members = membersFromRedux || [];
+    const zombies = zombiesFromRedux || [];
     validContactsForInvite = validContactsForInvite.filter(
       d => !members.includes(d) && !zombies.includes(d)
     );
   }
 
-  const chatName = convoProps.displayNameInProfile || window.i18n('unknown');
-  const isPublicConvo = convoProps.isPublic;
+  const chatName = displayName || window.i18n('unknown');
 
   const closeDialog = () => {
     dispatch(updateInviteContactModal(null));
@@ -132,7 +138,7 @@ const InviteContactsDialogInner = (props: Props) => {
 
   const onClickOK = () => {
     if (selectedContacts.length > 0) {
-      if (isPublicConvo) {
+      if (isPublic) {
         void submitForOpenGroup(conversationId, selectedContacts);
       } else {
         void submitForClosedGroup(conversationId, selectedContacts);

@@ -39,7 +39,7 @@ import { useHasDeviceOutdatedSyncing } from '../state/selectors/settings';
 import { Storage } from '../util/storage';
 import { NoticeBanner } from './NoticeBanner';
 import { Flex } from './basic/Flex';
-import { initialGroupInfosState } from '../state/ducks/groupInfos';
+import { groupInfoActions, initialGroupState } from '../state/ducks/groups';
 
 function makeLookup<T>(items: Array<T>, key: string): { [key: string]: T } {
   // Yep, we can't index into item without knowing what it is. True. But we want to.
@@ -89,7 +89,7 @@ function createSessionInboxStore() {
     call: initialCallState,
     sogsRoomInfo: initialSogsRoomInfoState,
     settings: getSettingsInitialState(),
-    groupInfos: initialGroupInfosState,
+    groups: initialGroupState,
   };
 
   return createStore(initialState);
@@ -99,6 +99,7 @@ function setupLeftPane(forceUpdateInboxComponent: () => void) {
   window.openConversationWithMessages = openConversationWithMessages;
   window.inboxStore = createSessionInboxStore();
   window.inboxStore.dispatch(updateAllOnStorageReady());
+  window.inboxStore.dispatch(groupInfoActions.loadDumpsFromDB());
   forceUpdateInboxComponent();
 }
 

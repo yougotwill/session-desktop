@@ -182,7 +182,7 @@ const getValidClosedGroups = async (convos: Array<ConversationModel>) => {
         publicKey: groupPubKey,
         name: c.get('displayNameInProfile') || '',
         members: c.get('members') || [],
-        admins: c.get('groupAdmins') || [],
+        admins: c.getGroupAdmins(),
         encryptionKeyPair: ECKeyPair.fromHexKeyPair(fetchEncryptionKeyPair),
       });
     })

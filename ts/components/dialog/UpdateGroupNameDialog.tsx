@@ -1,18 +1,20 @@
 /* eslint-disable @typescript-eslint/no-misused-promises */
-import React from 'react';
-import classNames from 'classnames';
 import autoBind from 'auto-bind';
+import classNames from 'classnames';
+import React from 'react';
 
-import { Avatar, AvatarSize } from '../avatar/Avatar';
-import { SpacerMD } from '../basic/Text';
-import { updateGroupNameModal } from '../../state/ducks/modalDialog';
+import { clone } from 'lodash';
 import { ConversationModel } from '../../models/conversation';
 import { getConversationController } from '../../session/conversations';
-import { SessionWrapperModal } from '../SessionWrapperModal';
-import { SessionButton, SessionButtonColor, SessionButtonType } from '../basic/SessionButton';
-import { initiateOpenGroupUpdate } from '../../session/group/open-group';
 import { initiateClosedGroupUpdate } from '../../session/group/closed-group';
+import { initiateOpenGroupUpdate } from '../../session/group/open-group';
+import { updateGroupNameModal } from '../../state/ducks/modalDialog';
+import { getLibGroupNameOutsideRedux } from '../../state/selectors/groups';
 import { pickFileForAvatar } from '../../types/attachments/VisualAttachment';
+import { SessionWrapperModal } from '../SessionWrapperModal';
+import { Avatar, AvatarSize } from '../avatar/Avatar';
+import { SessionButton, SessionButtonColor, SessionButtonType } from '../basic/SessionButton';
+import { SpacerMD } from '../basic/Text';
 
 type Props = {
   conversationId: string;
@@ -20,12 +22,14 @@ type Props = {
 
 interface State {
   groupName: string | undefined;
+  originalGroupName: string;
   errorDisplayed: boolean;
   errorMessage: string;
   oldAvatarPath: string | null;
   newAvatarObjecturl: string | null;
 }
 
+// TODO break those last class bases components into functional ones (search for `extends React`)
 export class UpdateGroupNameDialog extends React.Component<Props, State> {
   private readonly convo: ConversationModel;
 
@@ -35,8 +39,13 @@ export class UpdateGroupNameDialog extends React.Component<Props, State> {
     autoBind(this);
     this.convo = getConversationController().get(props.conversationId);
 
+    const libGroupName = getLibGroupNameOutsideRedux(props.conversationId);
+    const groupNameFromConvo = this.convo.getRealSessionUsername();
+    const groupName = libGroupName || groupNameFromConvo;
+
     this.state = {
-      groupName: this.convo.getRealSessionUsername(),
+      groupName: clone(groupName),
+      originalGroupName: clone(groupName) || '',
       errorDisplayed: false,
       errorMessage: 'placeholder',
       oldAvatarPath: this.convo.getAvatarPath(),
@@ -61,10 +70,7 @@ export class UpdateGroupNameDialog extends React.Component<Props, State> {
       return;
     }
 
-    if (
-      trimmedGroupName !== this.convo.getRealSessionUsername() ||
-      newAvatarObjecturl !== oldAvatarPath
-    ) {
+    if (trimmedGroupName !== this.state.originalGroupName || newAvatarObjecturl !== oldAvatarPath) {
       if (this.convo.isPublic()) {
         void initiateOpenGroupUpdate(this.convo.id, trimmedGroupName, {
           objectUrl: newAvatarObjecturl,

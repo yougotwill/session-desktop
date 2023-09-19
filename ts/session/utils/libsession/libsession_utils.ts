@@ -9,7 +9,11 @@ import { ConfigDumpData } from '../../../data/configDump/configDump';
 import { HexString } from '../../../node/hexStrings';
 import { SignalService } from '../../../protobuf';
 import { UserConfigKind } from '../../../types/ProtobufKind';
-import { assertUnreachable, toFixedUint8ArrayOfLength } from '../../../types/sqlSharedTypes';
+import {
+  ConfigDumpRow,
+  assertUnreachable,
+  toFixedUint8ArrayOfLength,
+} from '../../../types/sqlSharedTypes';
 import {
   ConfigWrapperGroupDetailed,
   ConfigWrapperUser,
@@ -109,11 +113,15 @@ async function initializeLibSessionUtilWrappers() {
       `initializeLibSessionUtilWrappers: missingRequiredVariants "${missingVariant}" created`
     );
   }
+
+  await loadMetaGroupWrappers(dumps);
+}
+
+async function loadMetaGroupWrappers(dumps: Array<ConfigDumpRow>) {
   const ed25519KeyPairBytes = await getUserED25519KeyPairBytes();
   if (!ed25519KeyPairBytes?.privKeyBytes) {
     throw new Error('user has no ed25519KeyPairBytes.');
   }
-  // TODO then load the Group wrappers (not handled yet) into memory
   // load the dumps retrieved from the database into their corresponding wrappers
   for (let index = 0; index < dumps.length; index++) {
     const dump = dumps[index];
@@ -128,7 +136,23 @@ async function initializeLibSessionUtilWrappers() {
     try {
       const foundInUserGroups = await UserGroupsWrapperActions.getGroup(groupPk);
 
-      window.log.debug('initializeLibSessionUtilWrappers initing from dump', variant);
+      // remove it right away, and skip it entirely
+      if (!foundInUserGroups) {
+        try {
+          window.log.info(
+            'metaGroup not found in userGroups. Deleting the corresponding dumps:',
+            groupPk
+          );
+
+          await ConfigDumpData.deleteDumpFor(groupPk);
+        } catch (e) {
+          window.log.warn('deleteDumpFor failed with ', e.message);
+        }
+        // await UserGroupsWrapperActions.eraseGroup(groupPk);
+        continue;
+      }
+
+      window.log.debug('initializeLibSessionUtilWrappers initing from metagroup dump', variant);
       // TODO we need to fetch the admin key here if we have it, maybe from the usergroup wrapper?
       await MetaGroupWrapperActions.init(groupPk, {
         groupEd25519Pubkey: toFixedUint8ArrayOfLength(groupEd25519Pubkey, 32),
@@ -136,6 +160,9 @@ async function initializeLibSessionUtilWrappers() {
         userEd25519Secretkey: toFixedUint8ArrayOfLength(ed25519KeyPairBytes.privKeyBytes, 64),
         metaDumped: dump.data,
       });
+
+      // Annoyingly, the redux store is not initialized when this current funciton is called,
+      // so we need to init the group wrappers here, but load them in their redux slice later
     } catch (e) {
       // TODO should not throw in this case? we should probably just try to load what we manage to load
       window.log.warn(`initGroup of Group wrapper of variant ${variant} failed with ${e.message} `);
@@ -332,6 +359,9 @@ async function saveMetaGroupDumpToDb(groupPk: GroupPubkeyType) {
       publicKey: groupPk,
       variant: `MetaGroupConfig-${groupPk}`,
     });
+    window.log.debug(`Saved dumps for metagroup ${groupPk}`);
+  } else {
+    window.log.debug(`meta did not dumps saving for metagroup ${groupPk}`);
   }
 }
 

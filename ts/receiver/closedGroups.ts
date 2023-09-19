@@ -431,7 +431,7 @@ async function handleClosedGroupEncryptionKeyPair(
     await removeFromCache(envelope);
     return;
   }
-  if (!groupConvo.get('groupAdmins')?.includes(sender)) {
+  if (!groupConvo.getGroupAdmins().includes(sender)) {
     window?.log?.warn(
       `Ignoring closed group encryption key pair from non-admin. ${groupPublicKey}`
     );
@@ -684,7 +684,7 @@ async function areWeAdmin(groupConvo: ConversationModel) {
     throw new Error('areWeAdmin needs a convo');
   }
 
-  const groupAdmins = groupConvo.get('groupAdmins');
+  const groupAdmins = groupConvo.getGroupAdmins();
   const ourNumber = UserUtils.getOurPubKeyStrFromCache();
   return groupAdmins?.includes(ourNumber) || false;
 }
@@ -706,7 +706,7 @@ async function handleClosedGroupMembersRemoved(
   window?.log?.info(`Got a group update for group ${envelope.source}, type: MEMBERS_REMOVED`);
 
   const membersAfterUpdate = _.difference(currentMembers, removedMembers);
-  const groupAdmins = convo.get('groupAdmins');
+  const groupAdmins = convo.getGroupAdmins();
   if (!groupAdmins?.length) {
     throw new Error('No admins found for closed group member removed update.');
   }
@@ -837,7 +837,7 @@ async function handleClosedGroupMemberLeft(
 ) {
   const sender = envelope.senderIdentity;
   const groupPublicKey = envelope.source;
-  const didAdminLeave = convo.get('groupAdmins')?.includes(sender) || false;
+  const didAdminLeave = convo.getGroupAdmins().includes(sender) || false;
   // If the admin leaves the group is disbanded
   // otherwise, we remove the sender from the list of current members in this group
   const oldMembers = convo.get('members') || [];

@@ -249,7 +249,7 @@ const doDeleteSelectedMessagesInSOGS = async (
   }
   // #region open group v2 deletion
   // Get our Moderator status
-  const isAdmin = conversation.isAdmin(ourDevicePubkey);
+  const isAdmin = conversation.weAreAdminUnblinded();
   const isModerator = conversation.isModerator(ourDevicePubkey);
 
   if (!isAllOurs && !(isAdmin || isModerator)) {
@@ -302,16 +302,16 @@ const doDeleteSelectedMessages = async ({
     return;
   }
 
-  const isAllOurs = selectedMessages.every(message => ourDevicePubkey === message.getSource());
+  const areAllOurs = selectedMessages.every(message => ourDevicePubkey === message.getSource());
   if (conversation.isPublic()) {
-    await doDeleteSelectedMessagesInSOGS(selectedMessages, conversation, isAllOurs);
+    await doDeleteSelectedMessagesInSOGS(selectedMessages, conversation, areAllOurs);
     return;
   }
 
   // #region deletion for 1-1 and closed groups
 
   if (deleteForEveryone) {
-    if (!isAllOurs) {
+    if (!areAllOurs) {
       ToastUtils.pushMessageDeleteForbidden();
       window.inboxStore?.dispatch(resetSelectedMessageIds());
       return;

@@ -64,7 +64,7 @@ export const NoMessageInConversation = () => {
   const canWrite = useSelector(getSelectedCanWrite);
   const privateBlindedAndBlockingMsgReqs = useSelectedHasDisabledBlindedMsgRequests();
   // TODOLATER use this selector accross the whole application (left pane excluded)
-  const nameToRender = useSelectedNicknameOrProfileNameOrShortenedPubkey();
+  const nameToRender = useSelectedNicknameOrProfileNameOrShortenedPubkey() || '';
 
   if (!selectedConversation || hasMessage) {
     return null;

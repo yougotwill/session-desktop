@@ -2,7 +2,7 @@ import React, { useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 
 import { useFocusMount } from '../../hooks/useFocusMount';
-import { useConversationPropsById } from '../../hooks/useParamSelector';
+import { useConversationUsername } from '../../hooks/useParamSelector';
 import { ConversationModel } from '../../models/conversation';
 import {
   sogsV3BanUser,
@@ -73,16 +73,13 @@ export const BanOrUnBanUserDialog = (props: {
   const inputRef = useRef(null);
 
   useFocusMount(inputRef, true);
-  const wasGivenAPubkey = Boolean(pubkey?.length);
   const [inputBoxValue, setInputBoxValue] = useState('');
   const [inProgress, setInProgress] = useState(false);
 
-  const sourceConvoProps = useConversationPropsById(pubkey);
+  const displayName = useConversationUsername(pubkey);
 
   const inputTextToDisplay =
-    wasGivenAPubkey && sourceConvoProps
-      ? `${sourceConvoProps.displayNameInProfile} ${PubKey.shorten(sourceConvoProps.id)}`
-      : undefined;
+    !!pubkey && displayName ? `${displayName} ${PubKey.shorten(pubkey)}` : undefined;
 
   /**
    * Ban or Unban a user from an open group
@@ -97,7 +94,7 @@ export const BanOrUnBanUserDialog = (props: {
     if (isBanned) {
       // clear input box
       setInputBoxValue('');
-      if (wasGivenAPubkey) {
+      if (pubkey) {
         dispatch(updateBanOrUnbanUserModal(null));
       }
     }
@@ -137,8 +134,8 @@ export const BanOrUnBanUserDialog = (props: {
           placeholder={i18n('enterSessionID')}
           dir="auto"
           onChange={onPubkeyBoxChanges}
-          disabled={inProgress || wasGivenAPubkey}
-          value={wasGivenAPubkey ? inputTextToDisplay : inputBoxValue}
+          disabled={inProgress || !!pubkey}
+          value={pubkey ? inputTextToDisplay : inputBoxValue}
         />
         <Flex container={true}>
           <SessionButton

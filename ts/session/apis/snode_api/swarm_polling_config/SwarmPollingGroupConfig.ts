@@ -5,6 +5,8 @@ import { ed25519Str } from '../../../onions/onionPath';
 import { fromBase64ToArray } from '../../../utils/String';
 import { SnodeNamespaces } from '../namespaces';
 import { RetrieveMessageItemWithNamespace } from '../types';
+import { groupInfoActions } from '../../../../state/ducks/groups';
+import { LibSessionUtil } from '../../../utils/libsession/libsession_utils';
 
 async function handleGroupSharedConfigMessages(
   groupConfigMessagesMerged: Array<RetrieveMessageItemWithNamespace>,
@@ -40,18 +42,28 @@ async function handleGroupSharedConfigMessages(
       groupKeys: keys,
       groupMember: members,
     };
-    console.info(`About to merge ${stringify(toMerge)}`);
-    console.info(`dumps before ${stringify(await MetaGroupWrapperActions.metaDump(groupPk))}`);
     console.info(
       `groupInfo before merge: ${stringify(await MetaGroupWrapperActions.infoGet(groupPk))}`
     );
-    const countMerged = await MetaGroupWrapperActions.metaMerge(groupPk, toMerge);
-    console.info(
-      `countMerged ${countMerged}, groupInfo after merge: ${stringify(
-        await MetaGroupWrapperActions.infoGet(groupPk)
-      )}`
+
+    await MetaGroupWrapperActions.metaMerge(groupPk, toMerge);
+    await LibSessionUtil.saveMetaGroupDumpToDb(groupPk);
+
+    const updatedInfos = await MetaGroupWrapperActions.infoGet(groupPk);
+    const updatedMembers = await MetaGroupWrapperActions.memberGetAll(groupPk);
+    console.info(`groupInfo after merge: ${stringify(updatedInfos)}`);
+    console.info(`groupMembers after merge: ${stringify(updatedMembers)}`);
+    if (!updatedInfos || !updatedMembers) {
+      throw new Error('updatedInfos or updatedMembers is null but we just created them');
+    }
+
+    window.inboxStore.dispatch(
+      groupInfoActions.updateGroupDetailsAfterMerge({
+        groupPk,
+        infos: updatedInfos,
+        members: updatedMembers,
+      })
     );
-    console.info(`dumps after ${stringify(await MetaGroupWrapperActions.metaDump(groupPk))}`);
 
     // if (allDecryptedConfigMessages.length) {
     //   try {

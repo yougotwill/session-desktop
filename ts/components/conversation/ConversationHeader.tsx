@@ -39,7 +39,7 @@ import {
   useSelectedIsPrivate,
   useSelectedIsPrivateFriend,
   useSelectedIsPublic,
-  useSelectedMembers,
+  useSelectedMembersCount,
   useSelectedNotificationSetting,
   useSelectedSubscriberCount,
   useSelectedisNoteToSelf,
@@ -297,7 +297,7 @@ const ConversationHeaderTitle = () => {
   const isKickedFromGroup = useSelectedIsKickedFromGroup();
   const isMe = useSelectedisNoteToSelf();
   const isGroup = useSelectedIsGroup();
-  const members = useSelectedMembers();
+  let memberCount = useSelectedMembersCount();
 
   if (!selectedConvoKey) {
     return null;
@@ -309,13 +309,8 @@ const ConversationHeaderTitle = () => {
     return <div className="module-conversation-header__title">{i18n('noteToSelf')}</div>;
   }
 
-  let memberCount = 0;
-  if (isGroup) {
-    if (isPublic) {
-      memberCount = subscriberCount || 0;
-    } else {
-      memberCount = members.length;
-    }
+  if (isPublic) {
+    memberCount = subscriberCount || 0;
   }
 
   let memberCountText = '';

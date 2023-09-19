@@ -3,10 +3,10 @@ import { isEmpty } from 'lodash';
 import React from 'react';
 import { useSelector } from 'react-redux';
 import {
-  useConversationPropsById,
   useHasUnread,
   useIsPrivate,
   useIsTyping,
+  useLastMessage,
 } from '../../../hooks/useParamSelector';
 import { isSearching } from '../../../state/selectors/search';
 import { getIsMessageRequestOverlayShown } from '../../../state/selectors/section';
@@ -15,17 +15,9 @@ import { MessageBody } from '../../conversation/message/message-content/MessageB
 import { OutgoingMessageStatus } from '../../conversation/message/message-content/OutgoingMessageStatus';
 import { useConvoIdFromContext } from './ConvoIdContext';
 
-function useLastMessageFromConvo(convoId: string) {
-  const convoProps = useConversationPropsById(convoId);
-  if (!convoProps) {
-    return null;
-  }
-  return convoProps.lastMessage;
-}
-
 export const MessageItem = () => {
   const conversationId = useConvoIdFromContext();
-  const lastMessage = useLastMessageFromConvo(conversationId);
+  const lastMessage = useLastMessage(conversationId);
   const isGroup = !useIsPrivate(conversationId);
 
   const hasUnread = useHasUnread(conversationId);

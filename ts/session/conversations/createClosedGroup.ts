@@ -16,7 +16,7 @@ import { PubKey } from '../types';
 import { UserUtils } from '../utils';
 import { forceSyncConfigurationNowIfNeeded } from '../utils/sync/syncUtils';
 import { getConversationController } from './ConversationController';
-import { groupInfoActions } from '../../state/ducks/groupInfos';
+import { groupInfoActions } from '../../state/ducks/groups';
 
 /**
  * Creates a brand new closed group from user supplied details. This function generates a new identityKeyPair so cannot be used to restore a closed group.
@@ -29,7 +29,7 @@ export async function createClosedGroup(groupName: string, members: Array<string
     // we need to send a group info and encryption keys message to the batch endpoint with both seqno being 0
     console.error('isV3 send invite to group TODO'); // FIXME
     // FIXME we should save the key to the wrapper right away? or even to the DB idk
-    window.inboxStore.dispatch(groupInfoActions.initNewGroupInfoInWrapper({ members, groupName }));
+    window.inboxStore.dispatch(groupInfoActions.initNewGroupInWrapper({ members, groupName }));
     return;
   }
 

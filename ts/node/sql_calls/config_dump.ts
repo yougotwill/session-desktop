@@ -12,6 +12,7 @@ import {
 // eslint-disable-next-line import/no-unresolved, import/extensions
 import { ConfigWrapperObjectTypesMeta } from '../../webworker/workers/browser/libsession_worker_functions';
 import { assertGlobalInstance } from '../sqlInstance';
+import { GroupPubkeyType } from 'libsession_util_nodejs';
 
 function parseRow(
   row: Pick<ConfigDumpRow, 'data' | 'publicKey' | 'variant'>
@@ -113,5 +114,10 @@ export const configDumpData: ConfigDumpDataNode = {
         variant,
         data,
       });
+  },
+  deleteDumpFor: (publicKey: GroupPubkeyType) => {
+    assertGlobalInstance()
+      .prepare(`DELETE FROM ${CONFIG_DUMP_TABLE} WHERE publicKey=$publicKey;`)
+      .run({ publicKey });
   },
 };

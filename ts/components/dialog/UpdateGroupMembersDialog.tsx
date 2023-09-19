@@ -1,18 +1,26 @@
-import React from 'react';
 import _ from 'lodash';
+import React from 'react';
 import { useDispatch } from 'react-redux';
 import useKey from 'react-use/lib/useKey';
 import styled from 'styled-components';
 
 import { ToastUtils, UserUtils } from '../../session/utils';
 
-import { SpacerLG, Text } from '../basic/Text';
 import { updateGroupMembersModal } from '../../state/ducks/modalDialog';
-import { SessionButton, SessionButtonColor, SessionButtonType } from '../basic/SessionButton';
 import { MemberListItem } from '../MemberListItem';
 import { SessionWrapperModal } from '../SessionWrapperModal';
+import { SessionButton, SessionButtonColor, SessionButtonType } from '../basic/SessionButton';
+import { SpacerLG, Text } from '../basic/Text';
 
-import { useConversationPropsById, useWeAreAdmin } from '../../hooks/useParamSelector';
+import {
+  useConversationUsername,
+  useGroupAdmins,
+  useIsPrivate,
+  useIsPublic,
+  useSortedGroupMembers,
+  useWeAreAdmin,
+  useZombies,
+} from '../../hooks/useParamSelector';
 
 import { useSet } from '../../hooks/useSet';
 import { getConversationController } from '../../session/conversations';
@@ -38,12 +46,11 @@ const ClassicMemberList = (props: {
 }) => {
   const { onSelect, convoId, onUnselect, selectedMembers } = props;
   const weAreAdmin = useWeAreAdmin(convoId);
-  const convoProps = useConversationPropsById(convoId);
-  if (!convoProps) {
-    throw new Error('MemberList needs convoProps');
-  }
-  let currentMembers = convoProps.members || [];
-  const { groupAdmins } = convoProps;
+
+  const groupAdmins = useGroupAdmins(convoId);
+  const groupMembers = useSortedGroupMembers(convoId);
+
+  let currentMembers = groupMembers || [];
   currentMembers = [...currentMembers].sort(m => (groupAdmins?.includes(m) ? -1 : 0));
 
   return (
@@ -69,17 +76,17 @@ const ClassicMemberList = (props: {
 };
 
 const ZombiesList = ({ convoId }: { convoId: string }) => {
-  const convoProps = useConversationPropsById(convoId);
+  const weAreAdmin = useWeAreAdmin(convoId);
+  const zombies = useZombies(convoId);
 
   function onZombieClicked() {
-    if (!convoProps?.weAreAdmin) {
+    if (!weAreAdmin) {
       ToastUtils.pushOnlyAdminCanRemove();
     }
   }
-  if (!convoProps || !convoProps.zombies?.length) {
+  if (!zombies?.length) {
     return null;
   }
-  const { zombies, weAreAdmin } = convoProps;
 
   const zombieElements = zombies.map((zombie: string) => {
     const isSelected = weAreAdmin || false; // && !member.checkmarked;
@@ -116,7 +123,7 @@ async function onSubmit(convoId: string, membersAfterUpdate: Array<string>) {
   if (!convoFound || !convoFound.isGroup()) {
     throw new Error('Invalid convo for updateGroupMembersDialog');
   }
-  if (!convoFound.isAdmin(UserUtils.getOurPubKeyStrFromCache())) {
+  if (!convoFound.weAreAdminUnblinded()) {
     window.log.warn('Skipping update of members, we are not the admin');
     return;
   }
@@ -168,8 +175,12 @@ async function onSubmit(convoId: string, membersAfterUpdate: Array<string>) {
 
 export const UpdateGroupMembersDialog = (props: Props) => {
   const { conversationId } = props;
-  const convoProps = useConversationPropsById(conversationId);
-  const existingMembers = convoProps?.members || [];
+  const isPrivate = useIsPrivate(conversationId);
+  const isPublic = useIsPublic(conversationId);
+  const weAreAdmin = useWeAreAdmin(conversationId);
+  const existingMembers = useSortedGroupMembers(conversationId) || [];
+  const displayName = useConversationUsername(conversationId);
+  const groupAdmins = useGroupAdmins(conversationId);
 
   const { addTo, removeFrom, uniqueValues: membersToKeepWithUpdate } = useSet<string>(
     existingMembers
@@ -177,11 +188,9 @@ export const UpdateGroupMembersDialog = (props: Props) => {
 
   const dispatch = useDispatch();
 
-  if (!convoProps || convoProps.isPrivate || convoProps.isPublic) {
+  if (isPrivate || isPublic) {
     throw new Error('UpdateGroupMembersDialog invalid convoProps');
   }
-
-  const weAreAdmin = convoProps.weAreAdmin || false;
 
   const closeDialog = () => {
     dispatch(updateGroupMembersModal(null));
@@ -214,7 +223,7 @@ export const UpdateGroupMembersDialog = (props: Props) => {
       ToastUtils.pushOnlyAdminCanRemove();
       return;
     }
-    if (convoProps.groupAdmins?.includes(member)) {
+    if (groupAdmins?.includes(member)) {
       ToastUtils.pushCannotRemoveCreatorFromGroup();
       window?.log?.warn(
         `User ${member} cannot be removed as they are the creator of the closed group.`
@@ -228,7 +237,7 @@ export const UpdateGroupMembersDialog = (props: Props) => {
   const showNoMembersMessage = existingMembers.length === 0;
   const okText = window.i18n('ok');
   const cancelText = window.i18n('cancel');
-  const titleText = window.i18n('updateGroupDialogTitle', [convoProps.displayNameInProfile || '']);
+  const titleText = window.i18n('updateGroupDialogTitle', [displayName || '']);
 
   return (
     <SessionWrapperModal title={titleText} onClose={closeDialog}>

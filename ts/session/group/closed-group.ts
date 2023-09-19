@@ -86,7 +86,7 @@ export async function initiateClosedGroupUpdate(
     id: groupId,
     name: groupName,
     members,
-    admins: convo.get('groupAdmins'),
+    admins: convo.getGroupAdmins(),
     expireTimer: convo.get('expireTimer'),
   };
 
@@ -335,7 +335,7 @@ export async function sendRemovedMembers(
     return;
   }
   const ourNumber = UserUtils.getOurPubKeyFromCache();
-  const admins = convo.get('groupAdmins') || [];
+  const admins = convo.getGroupAdmins() || [];
   const groupId = convo.get('id');
 
   const isCurrentUserAdmin = admins.includes(ourNumber.key);
@@ -393,7 +393,7 @@ async function generateAndSendNewEncryptionKeyPair(
   }
 
   const ourNumber = UserUtils.getOurPubKeyStrFromCache();
-  if (!groupConvo.get('groupAdmins')?.includes(ourNumber)) {
+  if (!groupConvo.getGroupAdmins().includes(ourNumber)) {
     window?.log?.warn('generateAndSendNewEncryptionKeyPair: cannot send it as a non admin');
     return;
   }

@@ -459,7 +459,7 @@ async function leaveClosedGroup(groupId: string, fromSyncMessage: boolean) {
   }
 
   const ourNumber = UserUtils.getOurPubKeyStrFromCache();
-  const isCurrentUserAdmin = convo.get('groupAdmins')?.includes(ourNumber);
+  const isCurrentUserAdmin = convo.weAreAdminUnblinded();
 
   let members: Array<string> = [];
   let admins: Array<string> = [];
@@ -474,7 +474,7 @@ async function leaveClosedGroup(groupId: string, fromSyncMessage: boolean) {
     // otherwise, just the exclude ourself from the members and trigger an update with this
     convo.set({ left: true });
     members = (convo.get('members') || []).filter((m: string) => m !== ourNumber);
-    admins = convo.get('groupAdmins') || [];
+    admins = convo.getGroupAdmins();
   }
   convo.set({ members });
   await convo.updateGroupAdmins(admins, false);

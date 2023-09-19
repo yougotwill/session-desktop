@@ -4,13 +4,14 @@ import {
   hasValidIncomingRequestValues,
   hasValidOutgoingRequestValues,
 } from '../models/conversation';
+import { isUsAnySogsFromCache } from '../session/apis/open_group_api/sogsv3/knownBlindedkeys';
+import { CONVERSATION } from '../session/constants';
 import { PubKey } from '../session/types';
 import { UserUtils } from '../session/utils';
 import { StateType } from '../state/reducer';
 import { getMessageReactsProps } from '../state/selectors/conversations';
+import { useLibGroupAdmins, useLibGroupMembers, useLibGroupName } from '../state/selectors/groups';
 import { isPrivateAndFriend } from '../state/selectors/selectedConversation';
-import { CONVERSATION } from '../session/constants';
-import { isUsAnySogsFromCache } from '../session/apis/open_group_api/sogsv3/knownBlindedkeys';
 
 export function useAvatarPath(convoId: string | undefined) {
   const convoProps = useConversationPropsById(convoId);
@@ -27,7 +28,11 @@ export function useOurAvatarPath() {
  */
 export function useConversationUsername(convoId?: string) {
   const convoProps = useConversationPropsById(convoId);
+  const groupName = useLibGroupName(convoId);
 
+  if (convoId && PubKey.isClosedGroupV2(convoId)) {
+    return groupName;
+  }
   return convoProps?.nickname || convoProps?.displayNameInProfile || convoId;
 }
 
@@ -147,6 +152,18 @@ export function useWeAreAdmin(convoId?: string) {
   return Boolean(convoProps && convoProps.weAreAdmin);
 }
 
+export function useGroupAdmins(convoId?: string) {
+  const convoProps = useConversationPropsById(convoId);
+
+  const libMembers = useLibGroupAdmins(convoId);
+
+  if (convoId && PubKey.isClosedGroupV2(convoId)) {
+    return compact(libMembers?.slice()?.sort()) || [];
+  }
+
+  return convoProps?.groupAdmins || [];
+}
+
 export function useExpireTimer(convoId?: string) {
   const convoProps = useConversationPropsById(convoId);
   return convoProps && convoProps.expireTimer;
@@ -203,7 +220,12 @@ export function useIsOutgoingRequest(convoId?: string) {
   );
 }
 
-export function useConversationPropsById(convoId?: string) {
+/**
+ * Not to be exported: This selector is too generic and needs to be broken node in individual fields selectors.
+ * Make sure when writing a selector that you fetch the data from libsession if needed.
+ * (check useSortedGroupMembers() as an example)
+ */
+function useConversationPropsById(convoId?: string) {
   return useSelector((state: StateType) => {
     if (!convoId) {
       return null;
@@ -213,6 +235,32 @@ export function useConversationPropsById(convoId?: string) {
       return null;
     }
     return convo;
+  });
+}
+
+export function useZombies(convoId?: string) {
+  return useSelector((state: StateType) => {
+    if (!convoId) {
+      return null;
+    }
+    const convo = state.conversations.conversationLookup[convoId];
+    if (!convo) {
+      return null;
+    }
+    return convo.zombies;
+  });
+}
+
+export function useLastMessage(convoId?: string) {
+  return useSelector((state: StateType) => {
+    if (!convoId) {
+      return null;
+    }
+    const convo = state.conversations.conversationLookup[convoId];
+    if (!convo) {
+      return null;
+    }
+    return convo.lastMessage;
   });
 }
 
@@ -279,15 +327,26 @@ export function useQuoteAuthorName(
   return { authorName, isMe };
 }
 
+function useMembers(convoId: string | undefined) {
+  const props = useConversationPropsById(convoId);
+  return props?.members || undefined;
+}
+
 /**
  * Get the list of members of a closed group or []
  * @param convoId the closed group id to extract members from
  */
 export function useSortedGroupMembers(convoId: string | undefined): Array<string> {
-  const convoProps = useConversationPropsById(convoId);
-  if (!convoProps || convoProps.isPrivate || convoProps.isPublic) {
+  const members = useMembers(convoId);
+  const isPublic = useIsPublic(convoId);
+  const isPrivate = useIsPrivate(convoId);
+  const libMembers = useLibGroupMembers(convoId);
+  if (isPrivate || isPublic) {
     return [];
   }
+  if (convoId && PubKey.isClosedGroupV2(convoId)) {
+    return compact(libMembers?.slice()?.sort()) || [];
+  }
   // we need to clone the array before being able to call sort() it
-  return compact(convoProps.members?.slice()?.sort()) || [];
+  return compact(members?.slice()?.sort()) || [];
 }

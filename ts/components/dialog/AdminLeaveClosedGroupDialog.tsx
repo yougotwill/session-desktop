@@ -7,6 +7,7 @@ import { SessionWrapperModal } from '../SessionWrapperModal';
 import { SessionButton, SessionButtonColor, SessionButtonType } from '../basic/SessionButton';
 import { SpacerLG } from '../basic/Text';
 import { SessionSpinner } from '../basic/SessionSpinner';
+import { useConversationUsername } from '../../hooks/useParamSelector';
 
 const StyledWarning = styled.p`
   max-width: 500px;
@@ -15,9 +16,9 @@ const StyledWarning = styled.p`
 
 export const AdminLeaveClosedGroupDialog = (props: { conversationId: string }) => {
   const dispatch = useDispatch();
-  const convo = getConversationController().get(props.conversationId);
+  const displayName = useConversationUsername(props.conversationId);
   const [loading, setLoading] = useState(false);
-  const titleText = `${window.i18n('leaveGroup')} ${convo?.getRealSessionUsername() || ''}`;
+  const titleText = `${window.i18n('leaveGroup')} ${displayName || ''}`;
 
   const closeDialog = () => {
     dispatch(adminLeaveClosedGroup(null));

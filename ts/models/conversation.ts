@@ -1,5 +1,6 @@
 import autoBind from 'auto-bind';
 import Backbone from 'backbone';
+import { from_hex } from 'libsodium-wrappers-sumo';
 import {
   debounce,
   defaults,
@@ -16,7 +17,6 @@ import {
   uniq,
   xor,
 } from 'lodash';
-import { from_hex } from 'libsodium-wrappers-sumo';
 
 import { SignalService } from '../protobuf';
 import { getMessageQueue } from '../session';
@@ -116,11 +116,16 @@ import { LibSessionUtil } from '../session/utils/libsession/libsession_utils';
 import { SessionUtilUserProfile } from '../session/utils/libsession/libsession_utils_user_profile';
 import { ReduxSogsRoomInfos } from '../state/ducks/sogsRoomInfo';
 import {
+  getLibGroupAdminsOutsideRedux,
+  getLibGroupNameOutsideRedux,
+} from '../state/selectors/groups';
+import {
   getCanWriteOutsideRedux,
   getModeratorsOutsideRedux,
   getSubscriberCountOutsideRedux,
 } from '../state/selectors/sogsRoomInfo';
 import { markAttributesAsReadIfNeeded } from './messageFactory';
+import { PreConditionFailed } from '../session/utils/errors';
 
 type InMemoryConvoInfos = {
   mentionedUs: boolean;
@@ -276,19 +281,12 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     await deleteExternalFilesOfConversation(this.attributes);
   }
 
-  public getGroupAdmins(): Array<string> {
-    const groupAdmins = this.get('groupAdmins');
-
-    return groupAdmins && groupAdmins.length > 0 ? groupAdmins : [];
-  }
-
   public getConversationModelProps(): ReduxConversationType {
     const isPublic = this.isPublic();
 
-    const ourNumber = UserUtils.getOurPubKeyStrFromCache();
     const avatarPath = this.getAvatarPath();
     const isPrivate = this.isPrivate();
-    const weAreAdmin = this.isAdmin(ourNumber);
+    const weAreAdmin = this.weAreAdminUnblinded();
 
     const currentNotificationSetting = this.get('triggerNotificationsFor');
     const priorityFromDb = this.get('priority');
@@ -1120,7 +1118,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
    * @returns `displayNameInProfile` so the real username as defined by that user/group
    */
   public getRealSessionUsername(): string | undefined {
-    return this.get('displayNameInProfile');
+    return getLibGroupNameOutsideRedux(this.id) || this.get('displayNameInProfile');
   }
 
   /**
@@ -1161,8 +1159,16 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     if (!pubKey) {
       throw new Error('isAdmin() pubKey is falsy');
     }
-    const groupAdmins = this.getGroupAdmins();
+    const groupAdmins = getLibGroupAdminsOutsideRedux(this.id) || this.getGroupAdmins();
     return Array.isArray(groupAdmins) && groupAdmins.includes(pubKey);
+  }
+
+  public weAreAdminUnblinded() {
+    const us = UserUtils.getOurPubKeyStrFromCache();
+    if (!us) {
+      throw new PreConditionFailed('weAreAdminUnblinded: our pubkey is not set');
+    }
+    return this.isAdmin(us);
   }
 
   /**
@@ -1690,6 +1696,12 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
    */
   public async markReadFromConfigMessage(newestUnreadDate: number) {
     return this.markConversationReadBouncy(newestUnreadDate);
+  }
+
+  public getGroupAdmins(): Array<string> {
+    const groupAdmins = this.get('groupAdmins');
+
+    return groupAdmins && groupAdmins.length > 0 ? groupAdmins : [];
   }
 
   private async sendMessageJob(message: MessageModel, expireTimer: number | undefined) {
