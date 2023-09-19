@@ -42,9 +42,6 @@ async function handleGroupSharedConfigMessages(
       groupKeys: keys,
       groupMember: members,
     };
-    console.info(
-      `groupInfo before merge: ${stringify(await MetaGroupWrapperActions.infoGet(groupPk))}`
-    );
 
     await MetaGroupWrapperActions.metaMerge(groupPk, toMerge);
     await LibSessionUtil.saveMetaGroupDumpToDb(groupPk);

@@ -1,6 +1,6 @@
 import { PayloadAction, createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import { GroupInfoGet, GroupMemberGet, GroupPubkeyType } from 'libsession_util_nodejs';
-import { isEmpty } from 'lodash';
+import { isEmpty, uniq } from 'lodash';
 import { ConfigDumpData } from '../../data/configDump/configDump';
 import { ConversationTypeEnum } from '../../models/conversationAttributes';
 import { HexString } from '../../node/hexStrings';
@@ -16,6 +16,7 @@ import {
   MetaGroupWrapperActions,
   UserGroupsWrapperActions,
 } from '../../webworker/workers/browser/libsession_worker_interface';
+import { PreConditionFailed } from '../../session/utils/errors';
 
 export type GroupState = {
   infos: Record<GroupPubkeyType, GroupInfoGet>;
@@ -35,12 +36,23 @@ type GroupDetailsUpdate = {
 
 const initNewGroupInWrapper = createAsyncThunk(
   'group/initNewGroupInWrapper',
-  async (groupDetails: {
+  async ({
+    groupName,
+    members,
+    us,
+  }: {
     groupName: string;
     members: Array<string>;
+    us: string;
   }): Promise<GroupDetailsUpdate> => {
+    if (!members.includes(us)) {
+      throw new PreConditionFailed('initNewGroupInWrapper needs us to be a member');
+    }
+    const uniqMembers = uniq(members);
     try {
       const newGroup = await UserGroupsWrapperActions.createGroup();
+      const groupPk = newGroup.pubkeyHex;
+      newGroup.name = groupName; // this will be used by the linked devices until they fetch the info from the groups swarm
 
       await UserGroupsWrapperActions.setGroup(newGroup);
 
@@ -49,47 +61,42 @@ const initNewGroupInWrapper = createAsyncThunk(
         throw new Error('Current user has no priv ed25519 key?');
       }
       const userEd25519Secretkey = ourEd25519KeypairBytes.privKeyBytes;
-      const groupEd2519Pk = HexString.fromHexString(newGroup.pubkeyHex).slice(1); // remove the 03 prefix (single byte once in hex form)
+      const groupEd2519Pk = HexString.fromHexString(groupPk).slice(1); // remove the 03 prefix (single byte once in hex form)
 
       // dump is always empty when creating a new groupInfo
-      await MetaGroupWrapperActions.init(newGroup.pubkeyHex, {
+      await MetaGroupWrapperActions.init(groupPk, {
         metaDumped: null,
         userEd25519Secretkey: toFixedUint8ArrayOfLength(userEd25519Secretkey, 64),
         groupEd25519Secretkey: newGroup.secretKey,
         groupEd25519Pubkey: toFixedUint8ArrayOfLength(groupEd2519Pk, 32),
       });
 
-      await Promise.all(
-        groupDetails.members.map(async member => {
-          const created = await MetaGroupWrapperActions.memberGetOrConstruct(
-            newGroup.pubkeyHex,
-            member
-          );
-          await MetaGroupWrapperActions.memberSetInvited(
-            newGroup.pubkeyHex,
-            created.pubkeyHex,
-            false
-          );
-        })
-      );
-      const infos = await MetaGroupWrapperActions.infoGet(newGroup.pubkeyHex);
-      if (!infos) {
-        throw new Error(
-          `getInfos of ${newGroup.pubkeyHex} returned empty result even if it was just init.`
-        );
+      for (let index = 0; index < uniqMembers.length; index++) {
+        const member = uniqMembers[index];
+        const created = await MetaGroupWrapperActions.memberGetOrConstruct(groupPk, member);
+        if (created.pubkeyHex === us) {
+          await MetaGroupWrapperActions.memberSetPromoted(groupPk, created.pubkeyHex, false);
+        } else {
+          await MetaGroupWrapperActions.memberSetInvited(groupPk, created.pubkeyHex, false);
+        }
       }
-      infos.name = groupDetails.groupName;
-      await MetaGroupWrapperActions.infoSet(newGroup.pubkeyHex, infos);
 
-      const members = await MetaGroupWrapperActions.memberGetAll(newGroup.pubkeyHex);
-      if (!members || isEmpty(members)) {
+      const infos = await MetaGroupWrapperActions.infoGet(groupPk);
+      if (!infos) {
+        throw new Error(`getInfos of ${groupPk} returned empty result even if it was just init.`);
+      }
+      infos.name = groupName;
+      await MetaGroupWrapperActions.infoSet(groupPk, infos);
+
+      const membersFromWrapper = await MetaGroupWrapperActions.memberGetAll(groupPk);
+      if (!membersFromWrapper || isEmpty(membersFromWrapper)) {
         throw new Error(
-          `memberGetAll of ${newGroup.pubkeyHex} returned empty result even if it was just init.`
+          `memberGetAll of ${groupPk} returned empty result even if it was just init.`
         );
       }
 
       const convo = await getConversationController().getOrCreateAndWait(
-        newGroup.pubkeyHex,
+        groupPk,
         ConversationTypeEnum.GROUPV3
       );
 
@@ -99,11 +106,7 @@ const initNewGroupInWrapper = createAsyncThunk(
       // // the sync below will need the secretKey of the group to be saved in the wrapper. So save it!
       await UserGroupsWrapperActions.setGroup(newGroup);
 
-      await GroupSync.queueNewJobIfNeeded(newGroup.pubkeyHex);
-
-      // const us = UserUtils.getOurPubKeyStrFromCache();
-      // // Ensure the current user is a member and admin
-      // const members = uniq([...groupDetails.members, us]);
+      await GroupSync.queueNewJobIfNeeded(groupPk);
 
       // const updateGroupDetails: ClosedGroup.GroupInfo = {
       //   id: newGroup.pubkeyHex,
@@ -122,7 +125,7 @@ const initNewGroupInWrapper = createAsyncThunk(
       await convo.commit();
       convo.updateLastMessage();
 
-      return { groupPk: newGroup.pubkeyHex, infos, members };
+      return { groupPk: newGroup.pubkeyHex, infos, members: membersFromWrapper };
     } catch (e) {
       throw e;
     }

@@ -1,4 +1,4 @@
-import _ from 'lodash';
+import _, { concat } from 'lodash';
 import { ClosedGroup, getMessageQueue } from '..';
 import { ConversationTypeEnum } from '../../models/conversationAttributes';
 import { addKeyPairToCacheAndDBIfNeeded } from '../../receiver/closedGroups';
@@ -26,10 +26,14 @@ import { groupInfoActions } from '../../state/ducks/groups';
  */
 export async function createClosedGroup(groupName: string, members: Array<string>, isV3: boolean) {
   if (isV3) {
+    const us = UserUtils.getOurPubKeyStrFromCache();
+
     // we need to send a group info and encryption keys message to the batch endpoint with both seqno being 0
     console.error('isV3 send invite to group TODO'); // FIXME
     // FIXME we should save the key to the wrapper right away? or even to the DB idk
-    window.inboxStore.dispatch(groupInfoActions.initNewGroupInWrapper({ members, groupName }));
+    window.inboxStore.dispatch(
+      groupInfoActions.initNewGroupInWrapper({ members: concat(members, [us]), groupName, us })
+    );
     return;
   }
 

@@ -4,6 +4,7 @@ import { LocalizerType } from '../../types/Util';
 
 import { StateType } from '../reducer';
 import { UserStateType } from '../ducks/user';
+import { useSelector } from 'react-redux';
 
 export const getUser = (state: StateType): UserStateType => state.user;
 
@@ -13,3 +14,7 @@ export const getOurNumber = createSelector(
 );
 
 export const getIntl = createSelector(getUser, (): LocalizerType => window.i18n);
+
+export function useOurPkStr() {
+  return useSelector((state: StateType) => getOurNumber(state));
+}

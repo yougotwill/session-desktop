@@ -12,6 +12,7 @@ import { StateType } from '../state/reducer';
 import { getMessageReactsProps } from '../state/selectors/conversations';
 import { useLibGroupAdmins, useLibGroupMembers, useLibGroupName } from '../state/selectors/groups';
 import { isPrivateAndFriend } from '../state/selectors/selectedConversation';
+import { useOurPkStr } from '../state/selectors/user';
 
 export function useAvatarPath(convoId: string | undefined) {
   const convoProps = useConversationPropsById(convoId);
@@ -148,8 +149,9 @@ export function useIsKickedFromGroup(convoId?: string) {
 }
 
 export function useWeAreAdmin(convoId?: string) {
-  const convoProps = useConversationPropsById(convoId);
-  return Boolean(convoProps && convoProps.weAreAdmin);
+  const groupAdmins = useGroupAdmins(convoId);
+  const us = useOurPkStr();
+  return Boolean(groupAdmins.includes(us));
 }
 
 export function useGroupAdmins(convoId?: string) {
@@ -221,7 +223,8 @@ export function useIsOutgoingRequest(convoId?: string) {
 }
 
 /**
- * Not to be exported: This selector is too generic and needs to be broken node in individual fields selectors.
+ * Note: NOT to be exported:
+ * This selector is too generic and needs to be broken node in individual fields selectors.
  * Make sure when writing a selector that you fetch the data from libsession if needed.
  * (check useSortedGroupMembers() as an example)
  */
