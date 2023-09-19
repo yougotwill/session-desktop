@@ -103,10 +103,10 @@ export function getOurProfile(): LokiProfile | undefined {
     // in their primary device's conversation
     const ourNumber = Storage.get('primaryDevicePubKey') as string;
     const ourConversation = getConversationController().get(ourNumber);
-    const ourProfileKeyHex = ourConversation.get('profileKey');
+    const ourProfileKeyHex = ourConversation.getProfileKey();
     const profileKeyAsBytes = ourProfileKeyHex ? fromHexToArray(ourProfileKeyHex) : null;
 
-    const avatarPointer = ourConversation.get('avatarPointer');
+    const avatarPointer = ourConversation.getAvatarPointer();
     const displayName = ourConversation.getRealSessionUsername() || 'Anonymous';
     return {
       displayName,

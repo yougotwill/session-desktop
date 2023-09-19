@@ -18,10 +18,10 @@ async function insertUserProfileIntoWrapper(convoId: string) {
     throw new Error('insertUserProfileIntoWrapper needs a ourConvo to exist');
   }
 
-  const dbName = ourConvo.get('displayNameInProfile') || '';
-  const dbProfileUrl = ourConvo.get('avatarPointer') || '';
-  const dbProfileKey = fromHexToArray(ourConvo.get('profileKey') || '');
-  const priority = ourConvo.get('priority') || CONVERSATION_PRIORITIES.default;
+  const dbName = ourConvo.getRealSessionUsername() || '';
+  const dbProfileUrl = ourConvo.getAvatarPointer() || '';
+  const dbProfileKey = fromHexToArray(ourConvo.getProfileKey() || '');
+  const priority = ourConvo.getPriority() || CONVERSATION_PRIORITIES.default;
 
   const areBlindedMsgRequestEnabled = !!Storage.get(SettingsKey.hasBlindedMsgRequestsEnabled);
 

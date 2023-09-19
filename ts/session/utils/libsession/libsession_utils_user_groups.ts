@@ -29,8 +29,8 @@ function isLegacyGroupToStoreInWrapper(convo: ConversationModel): boolean {
     !convo.isPublic() &&
     convo.id.startsWith('05') && // new closed groups won't start with 05
     convo.isActive() &&
-    !convo.get('isKickedFromGroup') &&
-    !convo.get('left')
+    !convo.isKickedFromGroup() &&
+    !convo.isLeft()
   );
 }
 
@@ -99,7 +99,7 @@ async function insertGroupsFromDBIntoWrapperAndRefresh(convoId: string): Promise
       );
 
       const wrapperComm = getCommunityInfoFromDBValues({
-        priority: foundConvo.get('priority'),
+        priority: foundConvo.getPriority(),
         fullUrl,
       });
 
@@ -120,14 +120,14 @@ async function insertGroupsFromDBIntoWrapperAndRefresh(convoId: string): Promise
       const encryptionKeyPair = await Data.getLatestClosedGroupEncryptionKeyPair(convoId);
       const wrapperLegacyGroup = getLegacyGroupInfoFromDBValues({
         id: foundConvo.id,
-        priority: foundConvo.get('priority'),
-        members: foundConvo.get('members') || [],
+        priority: foundConvo.getPriority(),
+        members: foundConvo.getGroupMembers() || [],
         groupAdmins: foundConvo.getGroupAdmins(),
         // expireTimer: foundConvo.get('expireTimer'),
-        displayNameInProfile: foundConvo.get('displayNameInProfile'),
+        displayNameInProfile: foundConvo.getRealSessionUsername(),
         encPubkeyHex: encryptionKeyPair?.publicHex || '',
         encSeckeyHex: encryptionKeyPair?.privateHex || '',
-        lastJoinedTimestamp: foundConvo.get('lastJoinedTimestamp') || 0,
+        lastJoinedTimestamp: foundConvo.getLastJoinedTimestamp(),
       });
 
       try {

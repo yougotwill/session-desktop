@@ -138,7 +138,7 @@ const getActiveOpenGroupV2CompleteUrls = async (
 ): Promise<Array<string>> => {
   // Filter open groups v2
   const openGroupsV2ConvoIds = convos
-    .filter(c => !!c.get('active_at') && c.isOpenGroupV2() && !c.get('left'))
+    .filter(c => !!c.getActiveAt() && c.isOpenGroupV2() && !c.isLeft())
     .map(c => c.id) as Array<string>;
 
   const urls = await Promise.all(
@@ -161,13 +161,13 @@ const getValidClosedGroups = async (convos: Array<ConversationModel>) => {
   // Filter Closed/Medium groups
   const closedGroupModels = convos.filter(
     c =>
-      !!c.get('active_at') &&
+      !!c.getActiveAt() &&
       c.isClosedGroup() &&
-      c.get('members')?.includes(ourPubKey) &&
-      !c.get('left') &&
-      !c.get('isKickedFromGroup') &&
+      c.getGroupMembers()?.includes(ourPubKey) &&
+      !c.isLeft() &&
+      !c.isKickedFromGroup() &&
       !c.isBlocked() &&
-      c.get('displayNameInProfile')
+      c.getRealSessionUsername()
   );
 
   const closedGroups = await Promise.all(
@@ -180,8 +180,8 @@ const getValidClosedGroups = async (convos: Array<ConversationModel>) => {
 
       return new ConfigurationMessageClosedGroup({
         publicKey: groupPubKey,
-        name: c.get('displayNameInProfile') || '',
-        members: c.get('members') || [],
+        name: c.getRealSessionUsername() || '',
+        members: c.getGroupMembers() || [],
         admins: c.getGroupAdmins(),
         encryptionKeyPair: ECKeyPair.fromHexKeyPair(fetchEncryptionKeyPair),
       });
@@ -199,7 +199,7 @@ const getValidContacts = (convos: Array<ConversationModel>) => {
   // blindedId are synced with the outbox logic.
   const contactsModels = convos.filter(
     c =>
-      !!c.get('active_at') &&
+      !!c.getActiveAt() &&
       c.getRealSessionUsername() &&
       c.isPrivate() &&
       c.isApproved() &&
@@ -208,7 +208,7 @@ const getValidContacts = (convos: Array<ConversationModel>) => {
 
   const contacts = contactsModels.map(c => {
     try {
-      const profileKey = c.get('profileKey');
+      const profileKey = c.getProfileKey();
       let profileKeyForContact = null;
       if (typeof profileKey === 'string') {
         // this will throw if the profileKey is not in hex.
@@ -237,7 +237,7 @@ const getValidContacts = (convos: Array<ConversationModel>) => {
       return new ConfigurationMessageContact({
         publicKey: c.id as string,
         displayName: c.getRealSessionUsername() || 'Anonymous',
-        profilePictureURL: c.get('avatarPointer'),
+        profilePictureURL: c.getAvatarPointer(),
         profileKey: !profileKeyForContact?.length ? undefined : profileKeyForContact,
         isApproved: c.isApproved(),
         isBlocked: c.isBlocked(),
@@ -268,10 +268,10 @@ export const getCurrentConfigurationMessage = async (
   const ourProfileKeyHex =
     getConversationController()
       .get(UserUtils.getOurPubKeyStrFromCache())
-      ?.get('profileKey') || null;
+      ?.getProfileKey() || null;
   const profileKey = ourProfileKeyHex ? fromHexToArray(ourProfileKeyHex) : undefined;
 
-  const profilePicture = ourConvo?.get('avatarPointer') || undefined;
+  const profilePicture = ourConvo?.getAvatarPointer() || undefined;
   const displayName = ourConvo?.getRealSessionUsername() || 'Anonymous'; // this should never be undefined, but well...
 
   const activeOpenGroups = [...opengroupV2CompleteUrls];

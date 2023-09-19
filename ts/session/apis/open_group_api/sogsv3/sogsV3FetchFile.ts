@@ -92,7 +92,7 @@ export async function sogsV3FetchPreviewAndSaveIt(roomInfos: OpenGroupV2RoomWith
   if (!convo) {
     return;
   }
-  let existingImageId = convo.get('avatarImageId');
+  let existingImageId = convo.getAvatarImageId();
   if (existingImageId === imageIdNumber) {
     // return early as the imageID about to be downloaded the one already set as avatar is the same.
     return;
@@ -117,7 +117,7 @@ export async function sogsV3FetchPreviewAndSaveIt(roomInfos: OpenGroupV2RoomWith
   if (!convo) {
     return;
   }
-  existingImageId = convo.get('avatarImageId');
+  existingImageId = convo.getAvatarImageId();
   if (existingImageId !== imageIdNumber && isFinite(imageIdNumber)) {
     // we have to trigger an update
     // write the file to the disk (automatically encrypted),

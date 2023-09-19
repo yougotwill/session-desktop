@@ -695,7 +695,7 @@ async function handleMessageRequestResponse(
     unblindedConvoId,
     ConversationTypeEnum.PRIVATE
   );
-  let mostRecentActiveAt = Math.max(...compact(convosToMerge.map(m => m.get('active_at'))));
+  let mostRecentActiveAt = Math.max(...compact(convosToMerge.map(m => m.getActiveAt())));
   if (!isFinite(mostRecentActiveAt) || mostRecentActiveAt <= 0) {
     mostRecentActiveAt = toNumber(envelope.timestamp);
   }
@@ -710,11 +710,11 @@ async function handleMessageRequestResponse(
   if (convosToMerge.length) {
     // merge fields we care by hand
     conversationToApprove.set({
-      profileKey: convosToMerge[0].get('profileKey'),
-      displayNameInProfile: convosToMerge[0].get('displayNameInProfile'),
+      profileKey: convosToMerge[0].getProfileKey(),
+      displayNameInProfile: convosToMerge[0].getRealSessionUsername(),
 
       avatarInProfile: convosToMerge[0].get('avatarInProfile'),
-      avatarPointer: convosToMerge[0].get('avatarPointer'), // don't set the avatar pointer
+      avatarPointer: convosToMerge[0].getAvatarPointer(), // don't set the avatar pointer
       // nickname might be set already in conversationToApprove, so don't overwrite it
     });
 

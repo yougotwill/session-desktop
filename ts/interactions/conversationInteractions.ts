@@ -205,7 +205,7 @@ export async function showUpdateGroupNameByConvoId(conversationId: string) {
     // make sure all the members' convo exists so we can add or remove them
     await Promise.all(
       conversation
-        .get('members')
+        .getGroupMembers()
         .map(m => getConversationController().getOrCreateAndWait(m, ConversationTypeEnum.PRIVATE))
     );
   }
@@ -218,7 +218,7 @@ export async function showUpdateGroupMembersByConvoId(conversationId: string) {
     // make sure all the members' convo exists so we can add or remove them
     await Promise.all(
       conversation
-        .get('members')
+        .getGroupMembers()
         .map(m => getConversationController().getOrCreateAndWait(m, ConversationTypeEnum.PRIVATE))
     );
   }
@@ -310,7 +310,7 @@ export async function setNotificationForConvoId(
 ) {
   const conversation = getConversationController().get(conversationId);
 
-  const existingSettings = conversation.get('triggerNotificationsFor');
+  const existingSettings = conversation.getNotificationsFor();
   if (existingSettings !== selected) {
     conversation.set({ triggerNotificationsFor: selected });
     await conversation.commit();
@@ -403,7 +403,7 @@ export async function uploadOurAvatar(newAvatarDecrypted?: ArrayBuffer) {
     const ourConvoProfileKey =
       getConversationController()
         .get(UserUtils.getOurPubKeyStrFromCache())
-        ?.get('profileKey') || null;
+        ?.getProfileKey() || null;
 
     profileKey = ourConvoProfileKey ? fromHexToArray(ourConvoProfileKey) : null;
     if (!profileKey) {
@@ -452,7 +452,7 @@ export async function uploadOurAvatar(newAvatarDecrypted?: ArrayBuffer) {
   });
   // Replace our temporary image with the attachment pointer from the server:
   ourConvo.set('avatarInProfile', undefined);
-  const displayName = ourConvo.get('displayNameInProfile');
+  const displayName = ourConvo.getRealSessionUsername();
 
   // write the profileKey even if it did not change
   ourConvo.set({ profileKey: toHex(profileKey) });
@@ -480,8 +480,8 @@ export async function uploadOurAvatar(newAvatarDecrypted?: ArrayBuffer) {
     );
   }
   return {
-    avatarPointer: ourConvo.get('avatarPointer'),
-    profileKey: ourConvo.get('profileKey'),
+    avatarPointer: ourConvo.getAvatarPointer(),
+    profileKey: ourConvo.getProfileKey(),
   };
 }
 

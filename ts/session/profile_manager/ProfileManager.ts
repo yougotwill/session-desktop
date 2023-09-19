@@ -21,7 +21,7 @@ async function updateOurProfileSync(
   }
 
   await updateProfileOfContact(us, displayName, profileUrl, profileKey);
-  if (priority !== null && ourConvo.get('priority') !== priority) {
+  if (priority !== null && ourConvo.getPriority() !== priority) {
     ourConvo.set('priority', priority);
     await ourConvo.commit();
   }
@@ -43,7 +43,7 @@ async function updateProfileOfContact(
     return;
   }
   let changes = false;
-  const existingDisplayName = conversation.get('displayNameInProfile');
+  const existingDisplayName = conversation.getRealSessionUsername();
 
   // avoid setting the display name to an invalid value
   if (existingDisplayName !== displayName && !isEmpty(displayName)) {
@@ -55,8 +55,8 @@ async function updateProfileOfContact(
 
   let avatarChanged = false;
   // trust whatever we get as an update. It either comes from a shared config wrapper or one of that user's message. But in any case we should trust it, even if it gets resetted.
-  const prevPointer = conversation.get('avatarPointer');
-  const prevProfileKey = conversation.get('profileKey');
+  const prevPointer = conversation.getAvatarPointer();
+  const prevProfileKey = conversation.getProfileKey();
 
   // we have to set it right away and not in the async download job, as the next .commit will save it to the
   // database and wrapper (and we do not want to override anything in the wrapper's content

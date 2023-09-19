@@ -117,6 +117,7 @@ import { SessionUtilUserProfile } from '../session/utils/libsession/libsession_u
 import { ReduxSogsRoomInfos } from '../state/ducks/sogsRoomInfo';
 import {
   getLibGroupAdminsOutsideRedux,
+  getLibGroupMembersOutsideRedux,
   getLibGroupNameOutsideRedux,
 } from '../state/selectors/groups';
 import {
@@ -262,7 +263,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
    * For instance, all of the conversations created when receiving a community are not active, until we start directly talking with them (or they do).
    */
   public isActive() {
-    return Boolean(this.get('active_at'));
+    return Boolean(this.getActiveAt());
   }
 
   /**
@@ -273,12 +274,20 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
    *  - a legacy group is kept visible if we leave it, until we explicitely delete it. At that time, it is removed completely and not marked hidden
    */
   public isHidden() {
-    const priority = this.get('priority') || CONVERSATION_PRIORITIES.default;
+    const priority = this.getPriority();
     return this.isPrivate() && priority === CONVERSATION_PRIORITIES.hidden;
   }
 
   public async cleanup() {
     await deleteExternalFilesOfConversation(this.attributes);
+  }
+
+  public getPriority() {
+    return this.get('priority') || CONVERSATION_PRIORITIES.default;
+  }
+
+  public getNotificationsFor() {
+    return this.get('triggerNotificationsFor');
   }
 
   public getConversationModelProps(): ReduxConversationType {
@@ -288,14 +297,14 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     const isPrivate = this.isPrivate();
     const weAreAdmin = this.weAreAdminUnblinded();
 
-    const currentNotificationSetting = this.get('triggerNotificationsFor');
-    const priorityFromDb = this.get('priority');
+    const currentNotificationSetting = this.getNotificationsFor();
+    const priorityFromDb = this.getPriority();
 
     // To reduce the redux store size, only set fields which cannot be undefined.
     // For instance, a boolean can usually be not set if false, etc
     const toRet: ReduxConversationType = {
       id: this.id as string,
-      activeAt: this.get('active_at'),
+      activeAt: this.getActiveAt(),
       type: this.get('type'),
     };
 
@@ -347,8 +356,8 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       toRet.currentNotificationSetting = currentNotificationSetting;
     }
 
-    if (this.get('displayNameInProfile')) {
-      toRet.displayNameInProfile = this.get('displayNameInProfile');
+    if (this.getRealSessionUsername()) {
+      toRet.displayNameInProfile = this.getRealSessionUsername();
     }
     if (this.get('nickname')) {
       toRet.nickname = this.get('nickname');
@@ -367,7 +376,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     }
     // those are values coming only from both the DB or the wrapper. Currently we display the data from the DB
     if (this.isClosedGroup()) {
-      toRet.members = this.get('members') || [];
+      toRet.members = this.getGroupMembers() || [];
     }
 
     // those are values coming only from both the DB or the wrapper. Currently we display the data from the DB
@@ -378,14 +387,14 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
 
     // those are values coming only from the DB when this is a closed group
     if (this.isClosedGroup()) {
-      if (this.get('isKickedFromGroup')) {
-        toRet.isKickedFromGroup = this.get('isKickedFromGroup');
+      if (this.isKickedFromGroup()) {
+        toRet.isKickedFromGroup = this.isKickedFromGroup();
       }
-      if (this.get('left')) {
-        toRet.left = this.get('left');
+      if (this.isLeft()) {
+        toRet.left = this.isLeft();
       }
       // to be dropped once we get rid of the legacy closed groups
-      const zombies = this.get('zombies') || [];
+      const zombies = this.getGroupZombies() || [];
       if (zombies?.length) {
         toRet.zombies = uniq(zombies);
       }
@@ -656,7 +665,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       isApproved: this.isApproved(),
       isBlocked: this.isBlocked(),
       isPrivate: this.isPrivate(),
-      activeAt: this.get('active_at'),
+      activeAt: this.getActiveAt(),
       didApproveMe: this.didApproveMe(),
     });
   }
@@ -671,7 +680,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       didApproveMe: this.didApproveMe() || false,
       isBlocked: this.isBlocked() || false,
       isPrivate: this.isPrivate() || false,
-      activeAt: this.get('active_at') || 0,
+      activeAt: this.getActiveAt() || 0,
     });
   }
 
@@ -1094,7 +1103,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
         this.set({ avatarInProfile: newProfile.avatarPath });
         changes = true;
       }
-      const existingImageId = this.get('avatarImageId');
+      const existingImageId = this.getAvatarImageId();
 
       if (existingImageId !== newProfile.avatarImageId) {
         this.set({ avatarImageId: newProfile.avatarImageId });
@@ -1126,6 +1135,18 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
    */
   public getNickname(): string | undefined {
     return this.isPrivate() ? this.get('nickname') || undefined : undefined;
+  }
+
+  public getAvatarImageId(): number | undefined {
+    return this.isPublic() ? this.get('avatarImageId') || undefined : undefined;
+  }
+
+  public getProfileKey(): string | undefined {
+    return this.get('profileKey');
+  }
+
+  public getAvatarPointer(): string | undefined {
+    return this.get('avatarPointer');
   }
 
   /**
@@ -1196,7 +1217,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     priority: number,
     shouldCommit: boolean = true
   ): Promise<boolean> {
-    if (priority !== this.get('priority')) {
+    if (priority !== this.getPriority()) {
       this.set({
         priority,
       });
@@ -1229,7 +1250,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     if (!this.isPrivate()) {
       return;
     }
-    const priority = this.get('priority');
+    const priority = this.getPriority();
     if (priority >= CONVERSATION_PRIORITIES.default) {
       this.set({ priority: CONVERSATION_PRIORITIES.hidden });
       if (shouldCommit) {
@@ -1244,7 +1265,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
    * A pinned cannot be hidden, as the it is all based on the same priority values.
    */
   public async unhideIfNeeded(shouldCommit: boolean = true) {
-    const priority = this.get('priority');
+    const priority = this.getPriority();
     if (isFinite(priority) && priority < CONVERSATION_PRIORITIES.default) {
       this.set({ priority: CONVERSATION_PRIORITIES.default });
       if (shouldCommit) {
@@ -1445,7 +1466,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     const profileKeyHex = toHex(profileKey);
 
     // profileKey is a string so we can compare it directly
-    if (this.get('profileKey') !== profileKeyHex) {
+    if (this.getProfileKey() !== profileKeyHex) {
       this.set({
         profileKey: profileKeyHex,
       });
@@ -1457,7 +1478,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
   }
 
   public hasMember(pubkey: string) {
-    return includes(this.get('members'), pubkey);
+    return includes(this.getGroupMembers(), pubkey);
   }
 
   public hasReactions() {
@@ -1488,7 +1509,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
   }
 
   public isPinned() {
-    const priority = this.get('priority');
+    const priority = this.getPriority();
 
     return isFinite(priority) && priority > CONVERSATION_PRIORITIES.default;
   }
@@ -1519,7 +1540,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       return window.i18n('you');
     }
 
-    const profileName = this.get('displayNameInProfile');
+    const profileName = this.getRealSessionUsername();
 
     return profileName || PubKey.shorten(pubkey);
   }
@@ -1587,7 +1608,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     }
 
     // make sure the notifications are not muted for this convo (and not the source convo)
-    const convNotif = this.get('triggerNotificationsFor');
+    const convNotif = this.getNotificationsFor();
     if (convNotif === 'disabled') {
       window?.log?.info('notifications disabled for convo', this.idForLogging());
       return;
@@ -1644,7 +1665,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     const conversationId = this.id;
 
     // make sure the notifications are not muted for this convo (and not the source convo)
-    const convNotif = this.get('triggerNotificationsFor');
+    const convNotif = this.getNotificationsFor();
     if (convNotif === 'disabled') {
       window?.log?.info(
         'notifyIncomingCall: notifications disabled for convo',
@@ -1702,6 +1723,60 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     const groupAdmins = this.get('groupAdmins');
 
     return groupAdmins && groupAdmins.length > 0 ? groupAdmins : [];
+  }
+
+  public isKickedFromGroup(): boolean {
+    if (this.isClosedGroup()) {
+      if (this.isClosedGroupV3()) {
+        console.info('isKickedFromGroup using lib todo'); // debugger
+      }
+      return !!this.get('isKickedFromGroup');
+    }
+    return false;
+  }
+
+  public isLeft(): boolean {
+    if (this.isClosedGroup()) {
+      if (this.isClosedGroupV3()) {
+        console.info('isLeft using lib todo'); // debugger
+      }
+      return !!this.get('left');
+    }
+    return false;
+  }
+
+  public getActiveAt(): number | undefined {
+    return this.get('active_at');
+  }
+
+  public getLastJoinedTimestamp(): number {
+    if (this.isClosedGroup()) {
+      return this.get('lastJoinedTimestamp') || 0;
+    }
+    return 0;
+  }
+
+  public getGroupMembers(): Array<string> {
+    if (this.isClosedGroup()) {
+      if (this.isClosedGroupV3()) {
+        return getLibGroupMembersOutsideRedux(this.id);
+      }
+      const members = this.get('members');
+      return members && members.length > 0 ? members : [];
+    }
+    return [];
+  }
+
+  public getGroupZombies(): Array<string> {
+    if (this.isClosedGroup()) {
+      // closed group with 03 prefix does not have the concepts of zombies
+      if (this.isClosedGroupV3()) {
+        return [];
+      }
+      const zombies = this.get('zombies');
+      return zombies && zombies.length > 0 ? zombies : [];
+    }
+    return [];
   }
 
   private async sendMessageJob(message: MessageModel, expireTimer: number | undefined) {
@@ -1919,7 +1994,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
   }
 
   private async bouncyUpdateLastMessage() {
-    if (!this.id || !this.get('active_at') || this.isHidden()) {
+    if (!this.id || !this.getActiveAt() || this.isHidden()) {
       return;
     }
     const messages = await Data.getLastMessagesByConversation(this.id, 1, true);
@@ -2336,7 +2411,7 @@ export class ConversationCollection extends Backbone.Collection<ConversationMode
   constructor(models?: Array<ConversationModel>) {
     super(models);
     this.comparator = (m: ConversationModel) => {
-      return -(m.get('active_at') || 0);
+      return -(m.getActiveAt() || 0);
     };
   }
 }
@@ -2379,7 +2454,7 @@ export function hasValidIncomingRequestValues({
   isBlocked: boolean;
   isPrivate: boolean;
   didApproveMe: boolean;
-  activeAt: number;
+  activeAt: number | undefined;
 }): boolean {
   // if a convo is not active, it means we didn't get any messages nor sent any.
   const isActive = activeAt && isFinite(activeAt) && activeAt > 0;

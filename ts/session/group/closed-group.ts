@@ -73,7 +73,7 @@ export async function initiateClosedGroupUpdate(
     name: groupName,
     members,
     // remove from the zombies list the zombies not which are not in the group anymore
-    zombies: convo.get('zombies')?.filter(z => members.includes(z)),
+    zombies: convo.getGroupZombies()?.filter(z => members.includes(z)),
     activeAt: Date.now(),
     expireTimer: convo.get('expireTimer'),
   };
@@ -180,12 +180,12 @@ export async function addUpdateMessage(
 function buildGroupDiff(convo: ConversationModel, update: GroupInfo): GroupDiff {
   const groupDiff: GroupDiff = {};
 
-  if (convo.get('displayNameInProfile') !== update.name) {
+  if (convo.getRealSessionUsername() !== update.name) {
     groupDiff.newName = update.name;
   }
 
-  const oldMembers = convo.get('members');
-  const oldZombies = convo.get('zombies');
+  const oldMembers = convo.getGroupMembers();
+  const oldZombies = convo.getGroupZombies();
   const oldMembersWithZombies = _.uniq(oldMembers.concat(oldZombies));
 
   const newMembersWithZombiesLeft = _.uniq(update.members.concat(update.zombies || []));

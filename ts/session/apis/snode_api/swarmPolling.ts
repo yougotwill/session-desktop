@@ -143,7 +143,7 @@ export class SwarmPolling {
     if (!convo) {
       return SWARM_POLLING_TIMEOUT.INACTIVE;
     }
-    const activeAt = convo.get('active_at');
+    const activeAt = convo.getActiveAt();
     if (!activeAt) {
       return SWARM_POLLING_TIMEOUT.INACTIVE;
     }
@@ -437,10 +437,10 @@ export class SwarmPolling {
 
     const closedGroupsOnly = convos.filter(
       (c: ConversationModel) =>
-        c.isClosedGroup() && !c.isBlocked() && !c.get('isKickedFromGroup') && !c.get('left')
+        c.isClosedGroup() && !c.isBlocked() && !c.isKickedFromGroup() && !c.isLeft()
     );
 
-    closedGroupsOnly.forEach((c: any) => {
+    closedGroupsOnly.forEach((c) => {
       this.addGroupId(new PubKey(c.id));
     });
   }

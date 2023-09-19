@@ -76,7 +76,7 @@ export class UpdateGroupNameDialog extends React.Component<Props, State> {
           objectUrl: newAvatarObjecturl,
         });
       } else {
-        const members = this.convo.get('members') || [];
+        const members = this.convo.getGroupMembers() || [];
 
         void initiateClosedGroupUpdate(this.convo.id, trimmedGroupName, members);
       }

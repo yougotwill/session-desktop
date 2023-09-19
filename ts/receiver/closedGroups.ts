@@ -303,7 +303,7 @@ export async function handleNewClosedGroup(
 
   if (groupConvo) {
     // if we did not left this group, just add the keypair we got if not already there
-    if (!groupConvo.get('isKickedFromGroup') && !groupConvo.get('left')) {
+    if (!groupConvo.isKickedFromGroup() && !groupConvo.isLeft()) {
       const ecKeyPairAlreadyExistingConvo = new ECKeyPair(
         encryptionKeyPair!.publicKey,
         encryptionKeyPair!.privateKey
@@ -542,7 +542,7 @@ async function performIfValid(
   }
 
   // Check that the message isn't from before the group was created
-  let lastJoinedTimestamp = convo.get('lastJoinedTimestamp');
+  let lastJoinedTimestamp = convo.getLastJoinedTimestamp();
   // might happen for existing groups
   if (!lastJoinedTimestamp) {
     const aYearAgo = Date.now() - 1000 * 60 * 24 * 365;
@@ -562,7 +562,7 @@ async function performIfValid(
   }
 
   // Check that the sender is a member of the group (before the update)
-  const oldMembers = convo.get('members') || [];
+  const oldMembers = convo.getGroupMembers() || [];
   if (!oldMembers.includes(sender)) {
     window?.log?.error(
       `Error: closed group: ignoring closed group update message from non-member. ${sender} is not a current member.`
@@ -600,7 +600,7 @@ async function handleClosedGroupNameChanged(
   const newName = groupUpdate.name;
   window?.log?.info(`Got a group update for group ${envelope.source}, type: NAME_CHANGED`);
 
-  if (newName !== convo.get('displayNameInProfile')) {
+  if (newName !== convo.getRealSessionUsername()) {
     const groupDiff: ClosedGroup.GroupDiff = {
       newName,
     };
@@ -628,7 +628,7 @@ async function handleClosedGroupMembersAdded(
 ) {
   const { members: addedMembersBinary } = groupUpdate;
   const addedMembers = (addedMembersBinary || []).map(toHex);
-  const oldMembers = convo.get('members') || [];
+  const oldMembers = convo.getGroupMembers() || [];
   const membersNotAlreadyPresent = addedMembers.filter(m => !oldMembers.includes(m));
   window?.log?.info(`Got a group update for group ${envelope.source}, type: MEMBERS_ADDED`);
 
@@ -696,7 +696,7 @@ async function handleClosedGroupMembersRemoved(
   shouldOnlyAddUpdateMessage: boolean // set this to true to not apply the change to the convo itself, just add the update in the conversation
 ) {
   // Check that the admin wasn't removed
-  const currentMembers = convo.get('members');
+  const currentMembers = convo.getGroupMembers();
   // removedMembers are all members in the diff
   const removedMembers = groupUpdate.members.map(toHex);
   // effectivelyRemovedMembers are the members which where effectively on this group before the update
@@ -755,7 +755,7 @@ async function handleClosedGroupMembersRemoved(
     }
 
     // Update the group
-    const zombies = convo.get('zombies').filter(z => membersAfterUpdate.includes(z));
+    const zombies = convo.getGroupZombies().filter(z => membersAfterUpdate.includes(z));
 
     if (!shouldOnlyAddUpdateMessage) {
       convo.set({ members: membersAfterUpdate });
@@ -767,7 +767,7 @@ async function handleClosedGroupMembersRemoved(
 }
 
 function isUserAZombie(convo: ConversationModel, user: PubKey) {
-  return convo.get('zombies').includes(user.key);
+  return convo.getGroupZombies().includes(user.key);
 }
 
 /**
@@ -779,7 +779,7 @@ function addMemberToZombies(
   userToAdd: PubKey,
   convo: ConversationModel
 ): boolean {
-  const zombies = convo.get('zombies');
+  const zombies = convo.getGroupZombies();
   const isAlreadyZombie = isUserAZombie(convo, userToAdd);
 
   if (isAlreadyZombie) {
@@ -799,7 +799,7 @@ function removeMemberFromZombies(
   userToAdd: PubKey,
   convo: ConversationModel
 ): boolean {
-  const zombies = convo.get('zombies');
+  const zombies = convo.getGroupZombies();
   const isAlreadyAZombie = isUserAZombie(convo, userToAdd);
 
   if (!isAlreadyAZombie) {
@@ -840,7 +840,7 @@ async function handleClosedGroupMemberLeft(
   const didAdminLeave = convo.getGroupAdmins().includes(sender) || false;
   // If the admin leaves the group is disbanded
   // otherwise, we remove the sender from the list of current members in this group
-  const oldMembers = convo.get('members') || [];
+  const oldMembers = convo.getGroupMembers() || [];
   const newMembers = oldMembers.filter(s => s !== sender);
   window?.log?.info(`Got a group update for group ${envelope.source}, type: MEMBER_LEFT`);
 

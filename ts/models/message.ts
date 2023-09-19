@@ -436,7 +436,7 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
       return undefined;
     }
 
-    if (this.getConversation()?.get('left')) {
+    if (this.getConversation()?.isLeft()) {
       return 'sent';
     }
 

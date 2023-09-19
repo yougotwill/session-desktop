@@ -35,8 +35,8 @@ export function shouldAddAvatarDownloadJob({ conversationId }: { conversationId:
     window.log.warn('shouldAddAvatarDownloadJob can only be used for private convos currently');
     return false;
   }
-  const prevPointer = conversation.get('avatarPointer');
-  const profileKey = conversation.get('profileKey');
+  const prevPointer = conversation.getAvatarPointer();
+  const profileKey = conversation.getProfileKey();
   const hasNoAvatar = isEmpty(prevPointer) || isEmpty(profileKey);
 
   if (hasNoAvatar) {
@@ -116,8 +116,8 @@ class AvatarDownloadJob extends PersistedJob<AvatarDownloadPersistedData> {
       return RunJobResult.PermanentFailure;
     }
     let changes = false;
-    const toDownloadPointer = conversation.get('avatarPointer');
-    const toDownloadProfileKey = conversation.get('profileKey');
+    const toDownloadPointer = conversation.getAvatarPointer();
+    const toDownloadProfileKey = conversation.getProfileKey();
 
     // if there is an avatar and profileKey for that user ('', null and undefined excluded), download, decrypt and save the avatar locally.
     if (toDownloadPointer && toDownloadProfileKey) {

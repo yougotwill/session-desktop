@@ -138,8 +138,8 @@ async function onSubmit(convoId: string, membersAfterUpdate: Array<string>) {
   // We consider that the admin ALWAYS wants to remove zombies (actually they should be removed
   // automatically by him when the LEFT message is received)
 
-  const existingMembers = convoFound.get('members') || [];
-  const existingZombies = convoFound.get('zombies') || [];
+  const existingMembers = convoFound.getGroupMembers() || [];
+  const existingZombies = convoFound.getGroupZombies() || [];
 
   const allExistingMembersWithZombies = _.uniq(existingMembers.concat(existingZombies));
 
@@ -168,7 +168,7 @@ async function onSubmit(convoId: string, membersAfterUpdate: Array<string>) {
 
   void initiateClosedGroupUpdate(
     convoId,
-    convoFound.get('displayNameInProfile') || 'Unknown',
+    convoFound.getRealSessionUsername() || 'Unknown',
     filteredMembers
   );
 }

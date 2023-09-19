@@ -73,13 +73,13 @@ const submitForClosedGroup = async (convoId: string, pubkeys: Array<string>) => 
   // closed group chats
   const ourPK = UserUtils.getOurPubKeyStrFromCache();
   // we only care about real members. If a member is currently a zombie we have to be able to add him back
-  let existingMembers = convo.get('members') || [];
+  let existingMembers = convo.getGroupMembers() || [];
   // at least make sure it's an array
   if (!Array.isArray(existingMembers)) {
     existingMembers = [];
   }
   existingMembers = _.compact(existingMembers);
-  const existingZombies = convo.get('zombies') || [];
+  const existingZombies = convo.getGroupZombies() || [];
   const newMembers = pubkeys.filter(d => !existingMembers.includes(d));
 
   if (newMembers.length > 0) {

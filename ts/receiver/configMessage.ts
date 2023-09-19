@@ -320,7 +320,7 @@ async function handleContactsUpdate() {
         changes = true;
       }
 
-      const currentPriority = contactConvo.get('priority');
+      const currentPriority = contactConvo.getPriority();
       if (wrapperConvo.priority !== currentPriority) {
         if (wrapperConvo.priority === CONVERSATION_PRIORITIES.hidden) {
           window.log.info(
@@ -348,7 +348,7 @@ async function handleContactsUpdate() {
       // }
 
       // we want to set the active_at to the created_at timestamp if active_at is unset, so that it shows up in our list.
-      if (!contactConvo.get('active_at') && wrapperConvo.createdAtSeconds) {
+      if (!contactConvo.getActiveAt() && wrapperConvo.createdAtSeconds) {
         contactConvo.set({ active_at: wrapperConvo.createdAtSeconds * 1000 });
         changes = true;
       }
@@ -542,6 +542,7 @@ async function handleLegacyGroupUpdate(latestEnvelopeTimestamp: number) {
 
     const members = fromWrapper.members.map(m => m.pubkeyHex);
     const admins = fromWrapper.members.filter(m => m.isAdmin).map(m => m.pubkeyHex);
+    const activeAt = legacyGroupConvo.getActiveAt();
     // then for all the existing legacy group in the wrapper, we need to override the field of what we have in the DB with what is in the wrapper
     // We only set group admins on group creation
     const groupDetails: ClosedGroup.GroupInfo = {
@@ -550,9 +551,8 @@ async function handleLegacyGroupUpdate(latestEnvelopeTimestamp: number) {
       members,
       admins,
       activeAt:
-        !!legacyGroupConvo.get('active_at') &&
-        legacyGroupConvo.get('active_at') < latestEnvelopeTimestamp
-          ? legacyGroupConvo.get('active_at')
+        !!activeAt && activeAt < latestEnvelopeTimestamp
+          ? legacyGroupConvo.getActiveAt()
           : latestEnvelopeTimestamp,
     };
 
@@ -560,7 +560,7 @@ async function handleLegacyGroupUpdate(latestEnvelopeTimestamp: number) {
 
     let changes = await legacyGroupConvo.setPriorityFromWrapper(fromWrapper.priority, false);
 
-    const existingTimestampMs = legacyGroupConvo.get('lastJoinedTimestamp');
+    const existingTimestampMs = legacyGroupConvo.getLastJoinedTimestamp();
     const existingJoinedAtSeconds = Math.floor(existingTimestampMs / 1000);
     if (existingJoinedAtSeconds !== fromWrapper.joinedAtSeconds) {
       legacyGroupConvo.set({
@@ -581,7 +581,7 @@ async function handleLegacyGroupUpdate(latestEnvelopeTimestamp: number) {
     //   changes = true;
     // }
     // start polling for this group if we haven't left it yet. The wrapper does not store this info for legacy group so we check from the DB entry instead
-    if (!legacyGroupConvo.get('isKickedFromGroup') && !legacyGroupConvo.get('left')) {
+    if (!legacyGroupConvo.isKickedFromGroup() && !legacyGroupConvo.isLeft()) {
       getSwarmPollingInstance().addGroupId(PubKey.cast(fromWrapper.pubkeyHex));
 
       // save the encryption keypair if needed

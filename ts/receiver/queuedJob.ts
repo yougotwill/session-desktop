@@ -312,7 +312,7 @@ async function handleRegularMessage(
     }
   }
 
-  const conversationActiveAt = conversation.get('active_at');
+  const conversationActiveAt = conversation.getActiveAt();
   if (
     !conversationActiveAt ||
     conversation.isHidden() ||
@@ -422,7 +422,7 @@ export async function handleMessageJob(
     //   to their source message.
 
     conversation.set({
-      active_at: Math.max(conversation.get('active_at'), messageModel.get('sent_at') || 0),
+      active_at: Math.max(conversation.getActiveAt() || 0, messageModel.get('sent_at') || 0),
     });
     // this is a throttled call and will only run once every 1 sec at most
     conversation.updateLastMessage();

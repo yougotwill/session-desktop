@@ -63,7 +63,7 @@ export const MessageAvatar = (props: Props) => {
       // public chat but session id not blinded. disable showing user details if we do not have an active convo with that user.
       // an unactive convo with that user means that we never chatted with that id directyly, but only through a sogs
       const convoWithSender = getConversationController().get(sender);
-      if (!convoWithSender || !convoWithSender.get('active_at')) {
+      if (!convoWithSender || !convoWithSender.getActiveAt()) {
         // for some time, we might still get some unblinded messages, as in message sent unblinded because
         //    * older clients still send unblinded message and those are allowed by sogs if they doesn't enforce blinding
         //    * new clients still send unblinded message and those are allowed by sogs if it doesn't enforce blinding
