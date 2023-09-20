@@ -1,10 +1,10 @@
+import { GroupPubkeyType } from 'libsession_util_nodejs';
 import { SignalService } from '../../../../protobuf';
 import { PubKey } from '../../../types';
 import { StringUtils } from '../../../utils';
 import { VisibleMessage } from './VisibleMessage';
 import { ClosedGroupMessage } from '../controlMessage/group/ClosedGroupMessage';
 import { DataMessage } from '../DataMessage';
-import { GroupPubkeyType } from 'libsession_util_nodejs';
 import { SnodeNamespaces } from '../../../apis/snode_api/namespaces';
 
 interface ClosedGroupVisibleMessageParams {

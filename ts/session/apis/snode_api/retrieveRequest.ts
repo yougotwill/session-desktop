@@ -1,11 +1,11 @@
 import { isEmpty, isNil, omit } from 'lodash';
+import { GroupPubkeyType } from 'libsession_util_nodejs';
 import { Snode } from '../../../data/data';
 import { updateIsOnline } from '../../../state/ducks/onion';
 import { doSnodeBatchRequest } from './batchRequest';
 import { GetNetworkTime } from './getNetworkTime';
 import { SnodeNamespace, SnodeNamespaces } from './namespaces';
 
-import { GroupPubkeyType } from 'libsession_util_nodejs';
 import { UserGroupsWrapperActions } from '../../../webworker/workers/browser/libsession_worker_interface';
 import { DURATION } from '../../constants';
 import { PubKey } from '../../types';

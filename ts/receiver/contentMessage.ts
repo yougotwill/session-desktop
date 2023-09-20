@@ -60,14 +60,12 @@ export async function handleSwarmContentMessage(envelope: EnvelopePlus, messageH
 
 async function decryptForGroupV2(envelope: EnvelopePlus) {
   window?.log?.info('received closed group message v2');
-  // try {
   const groupPk = envelope.source;
   if (!PubKey.isClosedGroupV2(groupPk)) {
     throw new PreConditionFailed('decryptForGroupV2: not a 03 prefixed group');
   }
 
-  return await MetaGroupWrapperActions.decryptMessage(groupPk, envelope.content);
-  // } catch (e) {}
+  return MetaGroupWrapperActions.decryptMessage(groupPk, envelope.content);
 }
 
 async function decryptForClosedGroup(envelope: EnvelopePlus) {

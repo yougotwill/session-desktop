@@ -29,6 +29,7 @@ async function decryptSharedConfigMessages(
 
     try {
       const envelope: EnvelopePlus = SignalService.Envelope.decode(groupConfigMessage.body) as any;
+      // eslint-disable-next-line no-await-in-loop
       const decryptedEnvelope = await decryptEnvelope(envelope);
       if (!decryptedEnvelope?.byteLength) {
         continue;

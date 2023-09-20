@@ -1,4 +1,4 @@
-import _, { isNumber } from 'lodash';
+import _, { isFinite, isNumber } from 'lodash';
 import { v4 as uuidv4 } from 'uuid';
 
 import { PubKey } from '../types';

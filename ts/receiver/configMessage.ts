@@ -33,7 +33,7 @@ import {
   ConfigWrapperUser,
   getGroupPubkeyFromWrapperType,
   isUserConfigWrapperType,
-} from '../../ts/webworker/workers/browser/libsession_worker_functions';
+} from '../webworker/workers/browser/libsession_worker_functions';
 import { UserConfigKind, isUserKind } from '../types/ProtobufKind';
 import {
   ContactsWrapperActions,
@@ -115,7 +115,7 @@ async function mergeUserConfigsWithIncomingUpdates(
         hash: msg.messageHash,
       }));
       if (window.sessionFeatureFlags.debug.debugLibsessionDumps) {
-        printDumpForDebug(`printDumpsForDebugging: before merge of ${variant}:`, variant);
+        await printDumpForDebug(`printDumpsForDebugging: before merge of ${variant}:`, variant);
       }
 
       const mergedCount = await GenericWrapperActions.merge(variant, toMerge);
@@ -129,7 +129,7 @@ async function mergeUserConfigsWithIncomingUpdates(
       );
 
       if (window.sessionFeatureFlags.debug.debugLibsessionDumps) {
-        printDumpForDebug(`printDumpsForDebugging: after merge of ${variant}:`, variant);
+        await printDumpForDebug(`printDumpsForDebugging: after merge of ${variant}:`, variant);
       }
       const incomingConfResult: IncomingUserResult = {
         needsDump,

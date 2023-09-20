@@ -1,4 +1,5 @@
 import { FixedSizeUint8Array, GroupPubkeyType } from 'libsession_util_nodejs';
+import { isEmpty } from 'lodash';
 import { getSodiumRenderer } from '../../crypto';
 import { StringUtils, UserUtils } from '../../utils';
 import { fromHexToArray, fromUInt8ArrayToBase64 } from '../../utils/String';
@@ -7,7 +8,6 @@ import { SnodeNamespaces } from './namespaces';
 import { PubKey } from '../../types';
 import { toFixedUint8ArrayOfLength } from '../../../types/sqlSharedTypes';
 import { PreConditionFailed } from '../../utils/errors';
-import { isEmpty } from 'lodash';
 
 export type SnodeSignatureResult = {
   timestamp: number;
@@ -184,7 +184,7 @@ async function generateUpdateExpirySignature({
   const signature = sodium.crypto_sign_detached(message, ed25519Privkey as Uint8Array);
   const signatureBase64 = fromUInt8ArrayToBase64(signature);
 
-  if (!isEmpty(signatureBase64) || isEmpty(ed25519Pubkey)) {
+  if (isEmpty(signatureBase64) || isEmpty(ed25519Pubkey)) {
     throw new Error('generateUpdateExpirySignature: failed to build signature');
   }
 

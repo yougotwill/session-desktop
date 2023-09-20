@@ -68,11 +68,9 @@ export class HTTPError extends Error {
 }
 
 class BaseError extends Error {
-  public readonly context?: Object;
-  constructor(message: string, context?: Object) {
+  constructor(message: string) {
     super(message);
     this.name = this.constructor.name;
-    this.context = context;
   }
 }
 

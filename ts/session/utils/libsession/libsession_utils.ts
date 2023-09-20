@@ -308,6 +308,7 @@ async function pendingChangesForGroup(
   return { messages: results, allOldHashes };
 }
 
+// eslint-disable-next-line consistent-return
 function userKindToVariant(kind: UserConfigKind): ConfigWrapperUser {
   switch (kind) {
     case SignalService.SharedConfigMessage.Kind.USER_PROFILE:
@@ -323,6 +324,7 @@ function userKindToVariant(kind: UserConfigKind): ConfigWrapperUser {
   }
 }
 
+// eslint-disable-next-line consistent-return
 function userVariantToUserKind(variant: ConfigWrapperUser) {
   switch (variant) {
     case 'UserConfig':

@@ -28,6 +28,7 @@ import {
   PersistedJob,
   RunJobResult,
 } from '../PersistedJob';
+import { assertUnreachable } from '../../../../types/sqlSharedTypes';
 
 const defaultMsBetweenRetries = 15000; // a long time between retries, to avoid running multiple jobs at the same time, when one was postponed at the same time as one already planned (5s)
 const defaultMaxAttempts = 2;
@@ -96,8 +97,8 @@ async function buildAndSaveDumpsToDB(
 
   for (let i = 0; i < changes.length; i++) {
     const change = changes[i];
-
-    switch (change.pushed.namespace) {
+    const namespace = change.pushed.namespace;
+    switch (namespace) {
       case SnodeNamespaces.ClosedGroupInfo: {
         if ((change.pushed as any).seqno) {
           toConfirm[1].groupInfo = [change.pushed.seqno.toNumber(), change.updatedHash];
@@ -108,6 +109,11 @@ async function buildAndSaveDumpsToDB(
         toConfirm[1].groupMember = [change.pushed.seqno.toNumber(), change.updatedHash];
         break;
       }
+      case SnodeNamespaces.ClosedGroupKeys: {
+        break;
+      }
+      default:
+        assertUnreachable(namespace, 'buildAndSaveDumpsToDB assertUnreachable');
     }
   }
 

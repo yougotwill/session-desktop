@@ -131,9 +131,9 @@ function isGroupConfigNamespace(
         assertUnreachable(namespace, `isGroupConfigNamespace case not handled: ${namespace}`);
       } catch (e) {
         window.log.warn(`isGroupConfigNamespace case not handled: ${namespace}: ${e.message}`);
-        return false;
       }
   }
+  return false;
 }
 
 /**
@@ -164,6 +164,7 @@ function isGroupNamespace(namespace: SnodeNamespaces): namespace is SnodeNamespa
         return false;
       }
   }
+  return false;
 }
 
 function namespacePriority(namespace: SnodeNamespaces): 10 | 1 {
@@ -189,6 +190,7 @@ function namespacePriority(namespace: SnodeNamespaces): 10 | 1 {
         return 1;
       }
   }
+  return 1;
 }
 
 function maxSizeMap(namespaces: Array<SnodeNamespaces>) {

@@ -71,7 +71,7 @@ export function isMetaWrapperType(config: ConfigWrapperObjectTypesMeta): config 
 }
 
 export function getGroupPubkeyFromWrapperType(type: ConfigWrapperGroup): GroupPubkeyType {
-  if (!type.startsWith(MetaGroupConfigValue + '03')) {
+  if (!type.startsWith(`${MetaGroupConfigValue}03`)) {
     throw new Error(`not a metagroup variant: ${type}`);
   }
   return type.substring(type.indexOf('-03') + 1) as GroupPubkeyType; // typescript is not yet smart enough

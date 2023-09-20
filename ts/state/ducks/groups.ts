@@ -1,3 +1,4 @@
+/* eslint-disable no-await-in-loop */
 import { PayloadAction, createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import { GroupInfoGet, GroupMemberGet, GroupPubkeyType } from 'libsession_util_nodejs';
 import { isEmpty, uniq } from 'lodash';
@@ -49,86 +50,80 @@ const initNewGroupInWrapper = createAsyncThunk(
       throw new PreConditionFailed('initNewGroupInWrapper needs us to be a member');
     }
     const uniqMembers = uniq(members);
-    try {
-      const newGroup = await UserGroupsWrapperActions.createGroup();
-      const groupPk = newGroup.pubkeyHex;
-      newGroup.name = groupName; // this will be used by the linked devices until they fetch the info from the groups swarm
+    const newGroup = await UserGroupsWrapperActions.createGroup();
+    const groupPk = newGroup.pubkeyHex;
+    newGroup.name = groupName; // this will be used by the linked devices until they fetch the info from the groups swarm
 
-      await UserGroupsWrapperActions.setGroup(newGroup);
+    await UserGroupsWrapperActions.setGroup(newGroup);
 
-      const ourEd25519KeypairBytes = await UserUtils.getUserED25519KeyPairBytes();
-      if (!ourEd25519KeypairBytes) {
-        throw new Error('Current user has no priv ed25519 key?');
-      }
-      const userEd25519Secretkey = ourEd25519KeypairBytes.privKeyBytes;
-      const groupEd2519Pk = HexString.fromHexString(groupPk).slice(1); // remove the 03 prefix (single byte once in hex form)
-
-      // dump is always empty when creating a new groupInfo
-      await MetaGroupWrapperActions.init(groupPk, {
-        metaDumped: null,
-        userEd25519Secretkey: toFixedUint8ArrayOfLength(userEd25519Secretkey, 64),
-        groupEd25519Secretkey: newGroup.secretKey,
-        groupEd25519Pubkey: toFixedUint8ArrayOfLength(groupEd2519Pk, 32),
-      });
-
-      for (let index = 0; index < uniqMembers.length; index++) {
-        const member = uniqMembers[index];
-        const created = await MetaGroupWrapperActions.memberGetOrConstruct(groupPk, member);
-        if (created.pubkeyHex === us) {
-          await MetaGroupWrapperActions.memberSetPromoted(groupPk, created.pubkeyHex, false);
-        } else {
-          await MetaGroupWrapperActions.memberSetInvited(groupPk, created.pubkeyHex, false);
-        }
-      }
-
-      const infos = await MetaGroupWrapperActions.infoGet(groupPk);
-      if (!infos) {
-        throw new Error(`getInfos of ${groupPk} returned empty result even if it was just init.`);
-      }
-      infos.name = groupName;
-      await MetaGroupWrapperActions.infoSet(groupPk, infos);
-
-      const membersFromWrapper = await MetaGroupWrapperActions.memberGetAll(groupPk);
-      if (!membersFromWrapper || isEmpty(membersFromWrapper)) {
-        throw new Error(
-          `memberGetAll of ${groupPk} returned empty result even if it was just init.`
-        );
-      }
-
-      const convo = await getConversationController().getOrCreateAndWait(
-        groupPk,
-        ConversationTypeEnum.GROUPV3
-      );
-
-      await convo.setIsApproved(true, false);
-
-      // console.warn('store the v3 identityPrivatekeypair as part of the wrapper only?');
-      // // the sync below will need the secretKey of the group to be saved in the wrapper. So save it!
-      await UserGroupsWrapperActions.setGroup(newGroup);
-
-      await GroupSync.queueNewJobIfNeeded(groupPk);
-
-      // const updateGroupDetails: ClosedGroup.GroupInfo = {
-      //   id: newGroup.pubkeyHex,
-      //   name: groupDetails.groupName,
-      //   members,
-      //   admins: [us],
-      //   activeAt: Date.now(),
-      //   expireTimer: 0,
-      // };
-
-      // // be sure to call this before sending the message.
-      // // the sending pipeline needs to know from GroupUtils when a message is for a medium group
-      // await ClosedGroup.updateOrCreateClosedGroup(updateGroupDetails);
-      await convo.unhideIfNeeded();
-      convo.set({ active_at: Date.now() });
-      await convo.commit();
-      convo.updateLastMessage();
-
-      return { groupPk: newGroup.pubkeyHex, infos, members: membersFromWrapper };
-    } catch (e) {
-      throw e;
+    const ourEd25519KeypairBytes = await UserUtils.getUserED25519KeyPairBytes();
+    if (!ourEd25519KeypairBytes) {
+      throw new Error('Current user has no priv ed25519 key?');
     }
+    const userEd25519Secretkey = ourEd25519KeypairBytes.privKeyBytes;
+    const groupEd2519Pk = HexString.fromHexString(groupPk).slice(1); // remove the 03 prefix (single byte once in hex form)
+
+    // dump is always empty when creating a new groupInfo
+    await MetaGroupWrapperActions.init(groupPk, {
+      metaDumped: null,
+      userEd25519Secretkey: toFixedUint8ArrayOfLength(userEd25519Secretkey, 64),
+      groupEd25519Secretkey: newGroup.secretKey,
+      groupEd25519Pubkey: toFixedUint8ArrayOfLength(groupEd2519Pk, 32),
+    });
+
+    for (let index = 0; index < uniqMembers.length; index++) {
+      const member = uniqMembers[index];
+      const created = await MetaGroupWrapperActions.memberGetOrConstruct(groupPk, member);
+      if (created.pubkeyHex === us) {
+        await MetaGroupWrapperActions.memberSetPromoted(groupPk, created.pubkeyHex, false);
+      } else {
+        await MetaGroupWrapperActions.memberSetInvited(groupPk, created.pubkeyHex, false);
+      }
+    }
+
+    const infos = await MetaGroupWrapperActions.infoGet(groupPk);
+    if (!infos) {
+      throw new Error(`getInfos of ${groupPk} returned empty result even if it was just init.`);
+    }
+    infos.name = groupName;
+    await MetaGroupWrapperActions.infoSet(groupPk, infos);
+
+    const membersFromWrapper = await MetaGroupWrapperActions.memberGetAll(groupPk);
+    if (!membersFromWrapper || isEmpty(membersFromWrapper)) {
+      throw new Error(`memberGetAll of ${groupPk} returned empty result even if it was just init.`);
+    }
+
+    const convo = await getConversationController().getOrCreateAndWait(
+      groupPk,
+      ConversationTypeEnum.GROUPV3
+    );
+
+    await convo.setIsApproved(true, false);
+
+    // console.warn('store the v3 identityPrivatekeypair as part of the wrapper only?');
+    // // the sync below will need the secretKey of the group to be saved in the wrapper. So save it!
+    await UserGroupsWrapperActions.setGroup(newGroup);
+
+    await GroupSync.queueNewJobIfNeeded(groupPk);
+
+    // const updateGroupDetails: ClosedGroup.GroupInfo = {
+    //   id: newGroup.pubkeyHex,
+    //   name: groupDetails.groupName,
+    //   members,
+    //   admins: [us],
+    //   activeAt: Date.now(),
+    //   expireTimer: 0,
+    // };
+
+    // // be sure to call this before sending the message.
+    // // the sending pipeline needs to know from GroupUtils when a message is for a medium group
+    // await ClosedGroup.updateOrCreateClosedGroup(updateGroupDetails);
+    await convo.unhideIfNeeded();
+    convo.set({ active_at: Date.now() });
+    await convo.commit();
+    convo.updateLastMessage();
+
+    return { groupPk: newGroup.pubkeyHex, infos, members: membersFromWrapper };
   }
 );
 

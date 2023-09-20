@@ -54,6 +54,7 @@ async function encryptForLegacyGroup(destination: PubKey, plainText: Uint8Array)
  * @param encryptionType The type of encryption.
  * @returns The envelope type and the base64 encoded cipher text
  */
+// eslint-disable-next-line consistent-return
 export async function encrypt(
   destination: PubKey,
   plainTextBuffer: Uint8Array,
@@ -64,23 +65,11 @@ export async function encrypt(
 
   switch (encryptionType) {
     case SESSION_MESSAGE: {
-      // if (destination.isPrivate || destination.isUS) {
       const cipherText = await MessageEncrypter.encryptUsingSessionProtocol(
         PubKey.cast(destination.key),
         plainTextPadded
       );
       return { envelopeType: SESSION_MESSAGE, cipherText };
-      // }
-
-      // if (destination.isGroupV2 || destination.isLegacyGroup) {
-      //   throw new PreConditionFailed(
-      //     'Encryption with SESSION_MESSAGE only work with destination private or us'
-      //   );
-      // }
-      // assertUnreachable(
-      //   destination,
-      //   'Encryption with SESSION_MESSAGE only work with destination private or us'
-      // );
     }
 
     case CLOSED_GROUP_MESSAGE: {
@@ -92,26 +81,10 @@ export async function encrypt(
         };
       }
 
-      // if (destination.isLegacyGroup) {
       return encryptForLegacyGroup(destination, plainTextPadded); // not padding it again, it is already done by libsession
-      // }
-      // if (
-      //   destination.isBlinded ||
-      //   destination.isBlinded ||
-      //   destination.isPrivate ||
-      //   destination.isUS
-      // ) {
-      //   throw new PreConditionFailed(
-      //     'Encryption with CLOSED_GROUP_MESSAGE only work with destination groupv2 or legacy group'
-      //   );
-      // }
-      // assertUnreachable(
-      //   destination,
-      //   'Encryption with CLOSED_GROUP_MESSAGE only work with destination groupv2 or legacy group'
-      // );
     }
     default:
-      assertUnreachable(encryptionType, '');
+      assertUnreachable(encryptionType, 'MessageEncrypter encrypt unreachable case');
   }
 }
 

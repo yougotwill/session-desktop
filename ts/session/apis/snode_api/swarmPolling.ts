@@ -172,7 +172,6 @@ export class SwarmPolling {
       setTimeout(this.pollForAllKeys.bind(this), SWARM_POLLING_TIMEOUT.ACTIVE);
       return;
     }
-    window.log.warn('############################ pollForAllKeys ############################');
     // we always poll as often as possible for our pubkey
     const ourPubkey = UserUtils.getOurPubKeyStrFromCache();
     const directPromise = this.pollOnceForKey([ourPubkey, ConversationTypeEnum.PRIVATE]);
@@ -318,32 +317,30 @@ export class SwarmPolling {
       !allLegacyGroupsInWrapper.some(m => m.pubkeyHex === pubkey) // just check if a legacy group with that pubkey exists
     ) {
       // not tracked anymore in the wrapper. Discard messages and stop polling
-      this.notPollingForGroupAsNotInWrapper(pubkey, 'not in wrapper after poll');
+      await this.notPollingForGroupAsNotInWrapper(pubkey, 'not in wrapper after poll');
       return;
     }
     if (PubKey.isClosedGroupV2(pubkey) && allGroupsInWrapper.some(m => m.pubkeyHex === pubkey)) {
       // not tracked anymore in the wrapper. Discard messages and stop polling
-      this.notPollingForGroupAsNotInWrapper(pubkey, 'not in wrapper after poll');
+      await this.notPollingForGroupAsNotInWrapper(pubkey, 'not in wrapper after poll');
       return;
     }
 
-    {
-      // trigger the handling of all the other messages, not shared config related
-      newMessages.forEach(m => {
-        const content = extractWebSocketContent(m.data, m.hash);
-        if (!content) {
-          return;
-        }
+    // trigger the handling of all the other messages, not shared config related
+    newMessages.forEach(m => {
+      const content = extractWebSocketContent(m.data, m.hash);
+      if (!content) {
+        return;
+      }
 
-        Receiver.handleRequest(
-          content.body,
-          type === ConversationTypeEnum.GROUP || type === ConversationTypeEnum.GROUPV3
-            ? pubkey
-            : null,
-          content.messageHash
-        );
-      });
-    }
+      Receiver.handleRequest(
+        content.body,
+        type === ConversationTypeEnum.GROUP || type === ConversationTypeEnum.GROUPV3
+          ? pubkey
+          : null,
+        content.messageHash
+      );
+    });
   }
 
   private async getHashesToBump(
@@ -364,12 +361,12 @@ export class SwarmPolling {
           window.log.warn(`failed to get currentHashes for user variant ${variant}`);
         }
       }
-      window.log.debug(`configHashesToBump: ${configHashesToBump}`);
+      window.log.debug(`configHashesToBump private: ${configHashesToBump}`);
       return configHashesToBump;
     }
     if (type === ConversationTypeEnum.GROUPV3 && PubKey.isClosedGroupV2(pubkey)) {
       const toBump = await MetaGroupWrapperActions.currentHashes(pubkey);
-      window.log.debug(`configHashesToBump: ${toBump}`);
+      window.log.debug(`configHashesToBump group: ${toBump}`);
       return toBump;
     }
     return [];
@@ -498,6 +495,7 @@ export class SwarmPolling {
     return newMessages;
   }
 
+  // eslint-disable-next-line consistent-return
   private getNamespacesToPollFrom(type: ConversationTypeEnum): Array<SnodeNamespaces> {
     if (type === ConversationTypeEnum.PRIVATE) {
       return [
@@ -578,7 +576,7 @@ export class SwarmPolling {
   }
 }
 
-function retrieveItemWithNamespace(results: RetrieveRequestResult[]) {
+function retrieveItemWithNamespace(results: Array<RetrieveRequestResult>) {
   return flatten(
     compact(
       results.map(
