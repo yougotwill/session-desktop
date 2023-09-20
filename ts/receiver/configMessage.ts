@@ -623,24 +623,29 @@ async function handleGroupUpdate(latestEnvelopeTimestamp: number) {
 
   for (let index = 0; index < allGoupsInWrapper.length; index++) {
     const groupInWrapper = allGoupsInWrapper[index];
-    if (!getConversationController().get(groupInWrapper.pubkeyHex)) {
-      // dump is always empty when creating a new groupInfo
-      await MetaGroupWrapperActions.init(groupInWrapper.pubkeyHex, {
-        metaDumped: null,
-        userEd25519Secretkey: toFixedUint8ArrayOfLength(userEdKeypair.privKeyBytes, 64),
-        groupEd25519Secretkey: groupInWrapper.secretKey,
-        groupEd25519Pubkey: toFixedUint8ArrayOfLength(
-          HexString.fromHexString(groupInWrapper.pubkeyHex.slice(2)),
-          32
-        ),
-      });
+    const groupPk = groupInWrapper.pubkeyHex;
+    if (!getConversationController().get(groupPk)) {
+      try {
+        // dump is always empty when creating a new groupInfo
+        await MetaGroupWrapperActions.init(groupPk, {
+          metaDumped: null,
+          userEd25519Secretkey: toFixedUint8ArrayOfLength(userEdKeypair.privKeyBytes, 64),
+          groupEd25519Secretkey: groupInWrapper.secretKey,
+          groupEd25519Pubkey: toFixedUint8ArrayOfLength(
+            HexString.fromHexString(groupPk.slice(2)),
+            32
+          ),
+        });
+      } catch (e) {
+        window.log.warn(`MetaGroupWrapperActions.init of "${groupPk}" failed with`, e.message);
+      }
       const created = await getConversationController().getOrCreateAndWait(
-        groupInWrapper.pubkeyHex,
+        groupPk,
         ConversationTypeEnum.GROUPV3
       );
       created.set({ active_at: latestEnvelopeTimestamp });
       await created.commit();
-      getSwarmPollingInstance().addGroupId(PubKey.cast(groupInWrapper.pubkeyHex));
+      getSwarmPollingInstance().addGroupId(PubKey.cast(groupPk));
     }
   }
 }
@@ -653,7 +658,6 @@ async function handleUserGroupsUpdate(result: IncomingUserResult) {
       case 'Community':
         await handleCommunitiesUpdate();
         break;
-
       case 'LegacyGroup':
         await handleLegacyGroupUpdate(result.latestEnvelopeTimestamp);
         break;

@@ -16,7 +16,9 @@ type Props = {
 const StyledMessageReactBar = styled.div`
   background-color: var(--emoji-reaction-bar-background-color);
   border-radius: 25px;
-  box-shadow: 0 2px 16px 0 rgba(0, 0, 0, 0.2), 0 0px 20px 0 rgba(0, 0, 0, 0.19);
+  box-shadow:
+    0 2px 16px 0 rgba(0, 0, 0, 0.2),
+    0 0px 20px 0 rgba(0, 0, 0, 0.19);
 
   position: absolute;
   top: -56px;

@@ -37,9 +37,7 @@ describe('ClosedGroupVisibleMessage', () => {
     expect(decoded.dataMessage).to.have.deep.property('body', 'body');
 
     // we use the timestamp of the chatMessage as parent timestamp
-    expect(message)
-      .to.have.property('timestamp')
-      .to.be.equal(chatMessage.timestamp);
+    expect(message).to.have.property('timestamp').to.be.equal(chatMessage.timestamp);
   });
 
   it('correct ttl', () => {

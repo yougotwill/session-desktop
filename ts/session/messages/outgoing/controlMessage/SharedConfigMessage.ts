@@ -14,7 +14,7 @@ interface SharedConfigParams<KindsPicked extends UserConfigKind> extends Message
 }
 
 export abstract class SharedConfigMessage<
-  KindsPicked extends UserConfigKind
+  KindsPicked extends UserConfigKind,
 > extends ContentMessage {
   public readonly seqno: Long;
   public readonly kind: KindsPicked;

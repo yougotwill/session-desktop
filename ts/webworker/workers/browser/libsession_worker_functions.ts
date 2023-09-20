@@ -18,26 +18,19 @@ export const MetaGroupConfigValue = 'MetaGroupConfig-';
 type MetaGroupConfigType = typeof MetaGroupConfigValue;
 export type MetaGroupConfig = `${MetaGroupConfigType}${GroupPubkeyType}`;
 
-
 export type ConfigWrapperUser =
   | UserConfig
   | ContactsConfig
   | UserGroupsConfig
   | ConvoInfoVolatileConfig;
 
-
 export type ConfigWrapperGroup = MetaGroupConfig;
 
-export type ConfigWrapperObjectTypesMeta =
-  | ConfigWrapperUser
-  | ConfigWrapperGroup;
+export type ConfigWrapperObjectTypesMeta = ConfigWrapperUser | ConfigWrapperGroup;
 
+export type ConfigWrapperGroupDetailed = 'GroupInfo' | 'GroupMember' | 'GroupKeys';
 
-  export type ConfigWrapperGroupDetailed = 'GroupInfo' | 'GroupMember'| 'GroupKeys';
-
-  export type ConfigWrapperObjectTypesDetailed =
-  | ConfigWrapperUser
-  | ConfigWrapperGroupDetailed;
+export type ConfigWrapperObjectTypesDetailed = ConfigWrapperUser | ConfigWrapperGroupDetailed;
 
 type UserConfigFunctions =
   | [UserConfig, ...BaseConfigActions]
@@ -53,9 +46,7 @@ type ConvoInfoVolatileConfigFunctions =
   | [ConvoInfoVolatileConfig, ...ConvoInfoVolatileConfigActionsType];
 
 // Group-related calls
-type MetaGroupFunctions =
-  | [MetaGroupConfig, ...MetaGroupActionsType]
-
+type MetaGroupFunctions = [MetaGroupConfig, ...MetaGroupActionsType];
 
 export type LibSessionWorkerFunctions =
   | UserConfigFunctions
@@ -64,7 +55,9 @@ export type LibSessionWorkerFunctions =
   | ConvoInfoVolatileConfigFunctions
   | MetaGroupFunctions;
 
-export function isUserConfigWrapperType(config: ConfigWrapperObjectTypesMeta): config is ConfigWrapperUser {
+export function isUserConfigWrapperType(
+  config: ConfigWrapperObjectTypesMeta
+): config is ConfigWrapperUser {
   return (
     config === 'ContactsConfig' ||
     config === 'UserConfig' ||
@@ -77,12 +70,9 @@ export function isMetaWrapperType(config: ConfigWrapperObjectTypesMeta): config 
   return config.startsWith(MetaGroupConfigValue);
 }
 
-
 export function getGroupPubkeyFromWrapperType(type: ConfigWrapperGroup): GroupPubkeyType {
   if (!type.startsWith(MetaGroupConfigValue + '03')) {
-    throw new Error(`not a metagroup variant: ${type}`)
+    throw new Error(`not a metagroup variant: ${type}`);
   }
   return type.substring(type.indexOf('-03') + 1) as GroupPubkeyType; // typescript is not yet smart enough
 }
-
-

@@ -188,9 +188,8 @@ async function refreshConvoVolatileCached(
         refreshed = true;
         break;
       case 'LegacyGroup':
-        const fromWrapperLegacyGroup = await ConvoInfoVolatileWrapperActions.getLegacyGroup(
-          convoId
-        );
+        const fromWrapperLegacyGroup =
+          await ConvoInfoVolatileWrapperActions.getLegacyGroup(convoId);
         if (fromWrapperLegacyGroup) {
           mappedLegacyGroupWrapperValues.set(convoId, fromWrapperLegacyGroup);
         }
@@ -209,9 +208,7 @@ async function refreshConvoVolatileCached(
     }
 
     if (refreshed && !duringAppStart) {
-      getConversationController()
-        .get(convoId)
-        ?.triggerUIRefresh();
+      getConversationController().get(convoId)?.triggerUIRefresh();
     }
   } catch (e) {
     window.log.info(`refreshMappedValue for volatile convoID: ${convoId}`, e.message);

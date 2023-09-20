@@ -153,8 +153,9 @@ function handleLinkPreviews(messageBody: string, messagePreview: any, message: M
   );
   if (preview.length < incomingPreview.length) {
     window?.log?.info(
-      `${message.idForLogging()}: Eliminated ${preview.length -
-        incomingPreview.length} previews with invalid urls'`
+      `${message.idForLogging()}: Eliminated ${
+        preview.length - incomingPreview.length
+      } previews with invalid urls'`
     );
   }
 
@@ -379,9 +380,9 @@ export async function handleMessageJob(
   messageHash: string
 ) {
   window?.log?.info(
-    `Starting handleMessageJob for message ${messageModel.idForLogging()}, ${messageModel.get(
-      'serverTimestamp'
-    ) || messageModel.get('timestamp')} in conversation ${conversation.idForLogging()}`
+    `Starting handleMessageJob for message ${messageModel.idForLogging()}, ${
+      messageModel.get('serverTimestamp') || messageModel.get('timestamp')
+    } in conversation ${conversation.idForLogging()}`
   );
 
   const sendingDeviceConversation = await getConversationController().getOrCreateAndWait(

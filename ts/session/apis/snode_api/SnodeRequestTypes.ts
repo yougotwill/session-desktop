@@ -54,7 +54,8 @@ export type RetrieveSubRequestType =
   | RetrieveLegacyClosedGroupSubRequestType
   | RetrievePubkeySubRequestType
   | RetrieveGroupAdminSubRequestType
-  | UpdateExpiryOnNodeSubRequest;
+  | UpdateExpiryOnNodeUserSubRequest
+  | UpdateExpiryOnNodeGroupSubRequest;
 
 /**
  * OXEND_REQUESTS
@@ -142,9 +143,7 @@ export type DeleteFromNodeSubRequest = {
   params: DeleteByHashesFromNodeParams;
 };
 
-export type UpdateExpireNodeParams = {
-  pubkey: string;
-  pubkey_ed25519: string;
+type UpdateExpireAlwaysNeeded = {
   messages: Array<string>;
   expiry: number;
   signature: string;
@@ -152,9 +151,25 @@ export type UpdateExpireNodeParams = {
   shorten?: boolean;
 };
 
-export type UpdateExpiryOnNodeSubRequest = {
+export type UpdateExpireNodeUserParams = WithPubkeyAsString &
+  UpdateExpireAlwaysNeeded & {
+    pubkey_ed25519: string;
+  };
+
+export type UpdateExpireNodeGroupParams = WithPubkeyAsGroupPubkey & UpdateExpireAlwaysNeeded;
+
+type UpdateExpiryOnNodeSubRequest =
+  | UpdateExpiryOnNodeUserSubRequest
+  | UpdateExpiryOnNodeGroupSubRequest;
+
+export type UpdateExpiryOnNodeUserSubRequest = {
   method: 'expire';
-  params: UpdateExpireNodeParams;
+  params: UpdateExpireNodeUserParams;
+};
+
+export type UpdateExpiryOnNodeGroupSubRequest = {
+  method: 'expire';
+  params: UpdateExpireNodeGroupParams;
 };
 
 export type OxendSubRequest = OnsResolveSubRequest | GetServiceNodesSubRequest;

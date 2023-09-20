@@ -315,9 +315,10 @@ export function useIsTyping(conversationId?: string): boolean {
   return useConversationPropsById(conversationId)?.isTyping || false;
 }
 
-export function useQuoteAuthorName(
-  authorId?: string
-): { authorName: string | undefined; isMe: boolean } {
+export function useQuoteAuthorName(authorId?: string): {
+  authorName: string | undefined;
+  isMe: boolean;
+} {
   const convoProps = useConversationPropsById(authorId);
 
   const isMe = Boolean(authorId && isUsAnySogsFromCache(authorId));

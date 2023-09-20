@@ -8,9 +8,8 @@ async function handleUserSharedConfigMessages(
 ) {
   window.log.info(`received userConfigMessagesMerged count: ${userConfigMessagesMerged.length}`);
   try {
-    const extractedUserConfigMessage = SwarmPollingConfigShared.extractWebSocketContents(
-      userConfigMessagesMerged
-    );
+    const extractedUserConfigMessage =
+      SwarmPollingConfigShared.extractWebSocketContents(userConfigMessagesMerged);
 
     const allDecryptedConfigMessages = await SwarmPollingConfigShared.decryptSharedConfigMessages(
       extractedUserConfigMessage,

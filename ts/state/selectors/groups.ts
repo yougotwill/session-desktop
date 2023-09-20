@@ -1,9 +1,9 @@
 import { GroupPubkeyType } from 'libsession_util_nodejs';
 import { isEmpty } from 'lodash';
+import { useSelector } from 'react-redux';
 import { PubKey } from '../../session/types';
 import { GroupState } from '../ducks/groups';
 import { StateType } from '../reducer';
-import { useSelector } from 'react-redux';
 
 const getLibGroupsState = (state: StateType): GroupState => state.groups;
 

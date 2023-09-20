@@ -1,5 +1,6 @@
 /* eslint-disable import/extensions */
 /* eslint-disable import/no-unresolved */
+import { join } from 'path';
 import {
   GroupWrapperConstructor,
   ContactInfoSet,
@@ -16,7 +17,6 @@ import {
   UserGroupsSet,
   MergeSingle,
 } from 'libsession_util_nodejs';
-import { join } from 'path';
 
 import { getAppRootPath } from '../../../node/getRootPath';
 import { WorkerInterface } from '../../worker_interface';

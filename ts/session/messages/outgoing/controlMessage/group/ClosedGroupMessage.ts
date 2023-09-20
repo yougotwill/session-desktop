@@ -29,7 +29,8 @@ export abstract class ClosedGroupMessage extends DataMessage {
   public dataProto(): SignalService.DataMessage {
     const dataMessage = new SignalService.DataMessage();
 
-    dataMessage.closedGroupControlMessage = new SignalService.DataMessage.ClosedGroupControlMessage();
+    dataMessage.closedGroupControlMessage =
+      new SignalService.DataMessage.ClosedGroupControlMessage();
 
     return dataMessage;
   }

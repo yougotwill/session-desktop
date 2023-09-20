@@ -346,9 +346,7 @@ function getById(table: string, id: string, instance?: BetterSqlite3.Database) {
 
 function removeById(table: string, id: string) {
   if (!Array.isArray(id)) {
-    assertGlobalInstance()
-      .prepare(`DELETE FROM ${table} WHERE id = $id;`)
-      .run({ id });
+    assertGlobalInstance().prepare(`DELETE FROM ${table} WHERE id = $id;`).run({ id });
     return;
   }
 
@@ -396,9 +394,7 @@ function updateSwarmNodesForPubkey(pubkey: string, snodeEdKeys: Array<string>) {
 }
 
 function getConversationCount() {
-  const row = assertGlobalInstance()
-    .prepare(`SELECT count(*) from ${CONVERSATIONS_TABLE};`)
-    .get();
+  const row = assertGlobalInstance().prepare(`SELECT count(*) from ${CONVERSATIONS_TABLE};`).get();
   if (!row) {
     throw new Error(`getConversationCount: Unable to get count of ${CONVERSATIONS_TABLE}`);
   }
@@ -517,11 +513,9 @@ function fetchConvoMemoryDetails(convoId: string): SaveConversationReturn {
 
 function removeConversation(id: string | Array<string>) {
   if (!Array.isArray(id)) {
-    assertGlobalInstance()
-      .prepare(`DELETE FROM ${CONVERSATIONS_TABLE} WHERE id = $id;`)
-      .run({
-        id,
-      });
+    assertGlobalInstance().prepare(`DELETE FROM ${CONVERSATIONS_TABLE} WHERE id = $id;`).run({
+      id,
+    });
     return;
   }
 
@@ -748,9 +742,7 @@ function searchMessagesInConversation(query: string, conversationId: string, lim
 }
 
 function getMessageCount() {
-  const row = assertGlobalInstance()
-    .prepare(`SELECT count(*) from ${MESSAGES_TABLE};`)
-    .get();
+  const row = assertGlobalInstance().prepare(`SELECT count(*) from ${MESSAGES_TABLE};`).get();
 
   if (!row) {
     throw new Error(`getMessageCount: Unable to get count of ${MESSAGES_TABLE}`);
@@ -918,19 +910,15 @@ function saveSeenMessageHash(data: any) {
 }
 
 function cleanLastHashes() {
-  assertGlobalInstance()
-    .prepare(`DELETE FROM ${LAST_HASHES_TABLE} WHERE expiresAt <= $now;`)
-    .run({
-      now: Date.now(),
-    });
+  assertGlobalInstance().prepare(`DELETE FROM ${LAST_HASHES_TABLE} WHERE expiresAt <= $now;`).run({
+    now: Date.now(),
+  });
 }
 
 function cleanSeenMessages() {
-  assertGlobalInstance()
-    .prepare('DELETE FROM seenMessages WHERE expiresAt <= $now;')
-    .run({
-      now: Date.now(),
-    });
+  assertGlobalInstance().prepare('DELETE FROM seenMessages WHERE expiresAt <= $now;').run({
+    now: Date.now(),
+  });
 }
 
 function saveMessages(arrayOfMessages: Array<any>) {
@@ -1611,19 +1599,15 @@ const unprocessed: UnprocessedDataNode = {
   },
 
   getUnprocessedById: (id: string) => {
-    const row = assertGlobalInstance()
-      .prepare('SELECT * FROM unprocessed WHERE id = $id;')
-      .get({
-        id,
-      });
+    const row = assertGlobalInstance().prepare('SELECT * FROM unprocessed WHERE id = $id;').get({
+      id,
+    });
 
     return row;
   },
 
   getUnprocessedCount: () => {
-    const row = assertGlobalInstance()
-      .prepare('SELECT count(*) from unprocessed;')
-      .get();
+    const row = assertGlobalInstance().prepare('SELECT count(*) from unprocessed;').get();
 
     if (!row) {
       throw new Error('getMessageCount: Unable to get count of unprocessed');
@@ -1645,15 +1629,11 @@ const unprocessed: UnprocessedDataNode = {
       console.error('removeUnprocessed only supports single ids at a time');
       throw new Error('removeUnprocessed only supports single ids at a time');
     }
-    assertGlobalInstance()
-      .prepare('DELETE FROM unprocessed WHERE id = $id;')
-      .run({ id });
+    assertGlobalInstance().prepare('DELETE FROM unprocessed WHERE id = $id;').run({ id });
   },
 
   removeAllUnprocessed: () => {
-    assertGlobalInstance()
-      .prepare('DELETE FROM unprocessed;')
-      .run();
+    assertGlobalInstance().prepare('DELETE FROM unprocessed;').run();
   },
 };
 
@@ -1743,9 +1723,7 @@ function removeAll() {
 }
 
 function removeAllConversations() {
-  assertGlobalInstance()
-    .prepare(`DELETE FROM ${CONVERSATIONS_TABLE};`)
-    .run();
+  assertGlobalInstance().prepare(`DELETE FROM ${CONVERSATIONS_TABLE};`).run();
 }
 
 function getMessagesWithVisualMediaAttachments(conversationId: string, limit?: number) {
@@ -2093,9 +2071,7 @@ function removeV2OpenGroupRoom(conversationId: string) {
 
 function getEntriesCountInTable(tbl: string) {
   try {
-    const row = assertGlobalInstance()
-      .prepare(`SELECT count(*) from ${tbl};`)
-      .get();
+    const row = assertGlobalInstance().prepare(`SELECT count(*) from ${tbl};`).get();
     return row['count(*)'];
   } catch (e) {
     console.error(e);
@@ -2260,8 +2236,9 @@ function cleanUpOldOpengroupsOnStart() {
         const messagesInConvoAfter = getMessagesCountByConversation(convoId);
 
         console.info(
-          `Cleaning ${countToRemove} messages older than 6 months in public convo: ${convoId} took ${Date.now() -
-            start}ms. Old message count: ${messagesInConvoBefore}, new message count: ${messagesInConvoAfter}`
+          `Cleaning ${countToRemove} messages older than 6 months in public convo: ${convoId} took ${
+            Date.now() - start
+          }ms. Old message count: ${messagesInConvoBefore}, new message count: ${messagesInConvoAfter}`
         );
 
         // no need to update the `unreadCount` during the migration anymore.

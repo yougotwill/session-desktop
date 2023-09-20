@@ -30,9 +30,7 @@ export async function destroyMessagesAndUpdateRedux(
 
   // trigger a refresh the last message for all those uniq conversation
   conversationWithChanges.forEach(convoIdToUpdate => {
-    getConversationController()
-      .get(convoIdToUpdate)
-      ?.updateLastMessage();
+    getConversationController().get(convoIdToUpdate)?.updateLastMessage();
   });
 }
 

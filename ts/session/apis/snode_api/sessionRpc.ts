@@ -1,14 +1,14 @@
 import https from 'https';
 // eslint-disable-next-line import/no-named-default
-import { default as insecureNodeFetch } from 'node-fetch';
 import { clone } from 'lodash';
+import { default as insecureNodeFetch } from 'node-fetch';
 import pRetry from 'p-retry';
 
-import { HTTPError, NotFoundError } from '../../utils/errors';
 import { Snode } from '../../../data/data';
+import { HTTPError, NotFoundError } from '../../utils/errors';
 
-import { ERROR_421_HANDLED_RETRY_REQUEST, Onions, snodeHttpsAgent, SnodeResponse } from './onions';
 import { APPLICATION_JSON } from '../../../types/MIME';
+import { ERROR_421_HANDLED_RETRY_REQUEST, Onions, snodeHttpsAgent, SnodeResponse } from './onions';
 
 export interface LokiFetchOptions {
   method: 'GET' | 'POST';

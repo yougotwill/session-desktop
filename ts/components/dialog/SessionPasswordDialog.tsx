@@ -295,11 +295,8 @@ export class SessionPasswordDialog extends React.Component<Props, State> {
 
   private async setPassword() {
     const { passwordAction } = this.props;
-    const {
-      currentPasswordEntered,
-      currentPasswordConfirmEntered,
-      currentPasswordRetypeEntered,
-    } = this.state;
+    const { currentPasswordEntered, currentPasswordConfirmEntered, currentPasswordRetypeEntered } =
+      this.state;
 
     // Trim leading / trailing whitespace for UX
     const firstPasswordEntered = (currentPasswordEntered || '').trim();

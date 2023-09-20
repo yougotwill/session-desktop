@@ -42,9 +42,7 @@ import { SpacerLG } from '../basic/Text';
 import { MediaItemType } from '../lightbox/LightboxGallery';
 import { MediaGallery } from './media-gallery/MediaGallery';
 
-async function getMediaGalleryProps(
-  conversationId: string
-): Promise<{
+async function getMediaGalleryProps(conversationId: string): Promise<{
   documents: Array<MediaItemType>;
   media: Array<MediaItemType>;
 }> {

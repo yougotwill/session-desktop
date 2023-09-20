@@ -14,10 +14,12 @@ import {
   RetrieveGroupAdminSubRequestType,
   RetrieveLegacyClosedGroupSubRequestType,
   RetrieveSubRequestType,
-  UpdateExpiryOnNodeSubRequest,
+  UpdateExpiryOnNodeGroupSubRequest,
+  UpdateExpiryOnNodeUserSubRequest,
 } from './SnodeRequestTypes';
 import { SnodeSignature } from './snodeSignatures';
 import { RetrieveMessagesResultsBatched, RetrieveMessagesResultsContent } from './types';
+import { PreConditionFailed } from '../../utils/errors';
 
 type RetrieveParams = {
   pubkey: string;
@@ -102,7 +104,9 @@ async function retrieveRequestForGroup({
   const group = await UserGroupsWrapperActions.getGroup(groupPk);
   const groupSecretKey = group?.secretKey;
   if (isNil(groupSecretKey) || isEmpty(groupSecretKey)) {
-    throw new Error(`retrieveRequestForGroup: failed to find group admin secret key in wrapper`);
+    throw new PreConditionFailed(
+      `retrieveRequestForGroup: failed to find group admin secret key in wrapper`
+    );
   }
   const signatureBuilt = await SnodeSignature.getSnodeGroupSignatureParams({
     ...retrieveParam,
@@ -118,7 +122,7 @@ async function retrieveRequestForGroup({
     namespace,
   };
   const retrieveParamsGroup: RetrieveGroupAdminSubRequestType = {
-    method: 'retrieve',
+    method: 'retrieve' as const,
     params: retrieveGroup,
   };
 
@@ -132,6 +136,7 @@ async function buildRetrieveRequest(
   ourPubkey: string,
   configHashesToBump: Array<string> | null
 ): Promise<Array<RetrieveSubRequestType>> {
+  const isUs = pubkey === ourPubkey;
   const maxSizeMap = SnodeNamespace.maxSizeMap(namespaces);
   const retrieveRequestsParams: Array<RetrieveSubRequestType> = await Promise.all(
     namespaces.map(async (namespace, index) => {
@@ -163,17 +168,14 @@ async function buildRetrieveRequest(
 
   if (configHashesToBump?.length) {
     const expiry = GetNetworkTime.getNowWithNetworkOffset() + DURATION.DAYS * 30;
-    const signResult = await SnodeSignature.generateUpdateExpirySignature({
-      shortenOrExtend: '',
-      timestamp: expiry,
-      messageHashes: configHashesToBump,
-    });
-    if (!signResult) {
-      window.log.warn(
-        `SnodeSignature.generateUpdateExpirySignature returned result empty for hashes ${configHashesToBump}`
-      );
-    } else {
-      const expireParams: UpdateExpiryOnNodeSubRequest = {
+    if (isUs) {
+      const signResult = await SnodeSignature.generateUpdateExpiryOurSignature({
+        shortenOrExtend: '',
+        timestamp: expiry,
+        messageHashes: configHashesToBump,
+      });
+
+      const expireParams: UpdateExpiryOnNodeUserSubRequest = {
         method: 'expire',
         params: {
           messages: configHashesToBump,
@@ -181,6 +183,31 @@ async function buildRetrieveRequest(
           expiry,
           signature: signResult.signature,
           pubkey_ed25519: signResult.pubkey_ed25519,
+        },
+      };
+      retrieveRequestsParams.push(expireParams);
+    } else if (PubKey.isClosedGroupV2(pubkey)) {
+      const group = await UserGroupsWrapperActions.getGroup(pubkey);
+      if (!group || !group.secretKey || isEmpty(group.secretKey)) {
+        throw new PreConditionFailed(
+          'generateUpdateExpiryGroupSignature only handles when the group is in the userwrapper currently and we have the adminkey'
+        );
+      }
+      const signResult = await SnodeSignature.generateUpdateExpiryGroupSignature({
+        shortenOrExtend: '',
+        timestamp: expiry,
+        messageHashes: configHashesToBump,
+        groupPk: pubkey,
+        groupPrivKey: group.secretKey,
+      });
+
+      const expireParams: UpdateExpiryOnNodeGroupSubRequest = {
+        method: 'expire',
+        params: {
+          messages: configHashesToBump,
+          expiry,
+          signature: signResult.signature,
+          pubkey,
         },
       };
 

@@ -278,7 +278,7 @@ export function toFixedUint8ArrayOfLength<T extends number>(
   data: Uint8Array,
   length: T
 ): FixedSizeUint8Array<T> {
-  if (data.length === length) return (data as any) as FixedSizeUint8Array<T>;
+  if (data.length === length) return data as any as FixedSizeUint8Array<T>;
   throw new Error(
     `toFixedUint8ArrayOfLength invalid. Expected length ${length} but got: ${data.length}`
   );

@@ -5,7 +5,7 @@ import { getSodiumRenderer } from '../../crypto';
 import { StringUtils, UserUtils } from '../../utils';
 import { fromBase64ToArray, fromHexToArray } from '../../utils/String';
 import { EmptySwarmError } from '../../utils/errors';
-import { UpdateExpireNodeParams } from './SnodeRequestTypes';
+import { UpdateExpireNodeUserParams } from './SnodeRequestTypes';
 import { doSnodeBatchRequest } from './batchRequest';
 import { GetNetworkTime } from './getNetworkTime';
 import { getSwarmFor } from './snodePool';
@@ -89,9 +89,9 @@ async function processExpirationResults(
       const reason = 'Unknown';
       const statusCode = '404';
       window?.log?.warn(
-        `loki_message:::expireMessage - Couldn't delete data from: ${
-          targetNode.pubkey_ed25519
-        }${reason && statusCode && ` due to an error ${reason} (${statusCode})`}`
+        `loki_message:::expireMessage - Couldn't delete data from: ${targetNode.pubkey_ed25519}${
+          reason && statusCode && ` due to an error ${reason} (${statusCode})`
+        }`
       );
       // TODO This might be a redundant step
       results[nodeKey] = { hashes: [], expiry: 0 };
@@ -125,7 +125,7 @@ async function processExpirationResults(
   return results;
 }
 
-async function expireOnNodes(targetNode: Snode, params: UpdateExpireNodeParams) {
+async function expireOnNodes(targetNode: Snode, params: UpdateExpireNodeUserParams) {
   try {
     const result = await doSnodeBatchRequest(
       [
@@ -197,7 +197,7 @@ export async function expireMessageOnSnode(props: ExpireMessageOnSnodeProps) {
   const swarm = await getSwarmFor(ourPubKey);
 
   const expiry = GetNetworkTime.getNowWithNetworkOffset() + expireTimer;
-  const signResult = await SnodeSignature.generateUpdateExpirySignature({
+  const signResult = await SnodeSignature.generateUpdateExpiryOurSignature({
     shortenOrExtend,
     timestamp: expiry,
     messageHashes: [messageHash],
@@ -208,7 +208,7 @@ export async function expireMessageOnSnode(props: ExpireMessageOnSnodeProps) {
     return;
   }
 
-  const params: UpdateExpireNodeParams = {
+  const params: UpdateExpireNodeUserParams = {
     pubkey: ourPubKey,
     pubkey_ed25519: signResult.pubkey_ed25519.toUpperCase(),
     // TODO better testing for failed case

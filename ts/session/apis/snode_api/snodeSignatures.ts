@@ -6,6 +6,8 @@ import { GetNetworkTime } from './getNetworkTime';
 import { SnodeNamespaces } from './namespaces';
 import { PubKey } from '../../types';
 import { toFixedUint8ArrayOfLength } from '../../../types/sqlSharedTypes';
+import { PreConditionFailed } from '../../utils/errors';
+import { isEmpty } from 'lodash';
 
 export type SnodeSignatureResult = {
   timestamp: number;
@@ -163,44 +165,95 @@ async function generateUpdateExpirySignature({
   shortenOrExtend,
   timestamp,
   messageHashes,
+  ed25519Privkey,
+  ed25519Pubkey,
 }: {
   shortenOrExtend: 'extend' | 'shorten' | '';
   timestamp: number;
   messageHashes: Array<string>;
-}): Promise<{ signature: string; pubkey_ed25519: string } | null> {
-  const ourEd25519Key = await UserUtils.getUserED25519KeyPair();
-
-  if (!ourEd25519Key) {
-    const err = 'getSnodeSignatureParams "expiry": User has no getUserED25519KeyPair()';
-    window.log.warn(err);
-    throw new Error(err);
-  }
-
-  const edKeyPrivBytes = fromHexToArray(ourEd25519Key?.privKey);
-
+  ed25519Privkey: Uint8Array | FixedSizeUint8Array<64>;
+  ed25519Pubkey: string;
+}): Promise<{ signature: string; pubkey_ed25519: string }> {
   // "expire" || ShortenOrExtend || expiry || messages[0] || ... || messages[N]
   const verificationString = `expire${shortenOrExtend}${timestamp}${messageHashes.join('')}`;
   const verificationData = StringUtils.encode(verificationString, 'utf8');
   const message = new Uint8Array(verificationData);
 
   const sodium = await getSodiumRenderer();
-  try {
-    const signature = sodium.crypto_sign_detached(message, edKeyPrivBytes);
-    const signatureBase64 = fromUInt8ArrayToBase64(signature);
 
-    return {
-      signature: signatureBase64,
-      pubkey_ed25519: ourEd25519Key.pubKey,
-    };
-  } catch (e) {
-    window.log.warn('generateSignature failed with: ', e.message);
-    return null;
+  const signature = sodium.crypto_sign_detached(message, ed25519Privkey as Uint8Array);
+  const signatureBase64 = fromUInt8ArrayToBase64(signature);
+
+  if (!isEmpty(signatureBase64) || isEmpty(ed25519Pubkey)) {
+    throw new Error('generateUpdateExpirySignature: failed to build signature');
   }
+
+  return {
+    signature: signatureBase64,
+    pubkey_ed25519: ed25519Pubkey,
+  };
+}
+
+async function generateUpdateExpiryOurSignature({
+  shortenOrExtend,
+  timestamp,
+  messageHashes,
+}: {
+  shortenOrExtend: 'extend' | 'shorten' | '';
+  timestamp: number;
+  messageHashes: Array<string>;
+}) {
+  const ourEd25519Key = await UserUtils.getUserED25519KeyPair();
+
+  if (!ourEd25519Key) {
+    const err = 'getSnodeSignatureParams "expiry": User has no getUserED25519KeyPair()';
+    window.log.warn(err);
+    throw new PreConditionFailed(err);
+  }
+
+  const edKeyPrivBytes = fromHexToArray(ourEd25519Key?.privKey);
+
+  return generateUpdateExpirySignature({
+    messageHashes,
+    shortenOrExtend,
+    timestamp,
+    ed25519Privkey: edKeyPrivBytes,
+    ed25519Pubkey: ourEd25519Key.pubKey,
+  });
+}
+
+async function generateUpdateExpiryGroupSignature({
+  shortenOrExtend,
+  timestamp,
+  messageHashes,
+  groupPrivKey,
+  groupPk,
+}: {
+  shortenOrExtend: 'extend' | 'shorten' | '';
+  timestamp: number;
+  messageHashes: Array<string>;
+  groupPk: GroupPubkeyType;
+  groupPrivKey: FixedSizeUint8Array<64>;
+}) {
+  if (isEmpty(groupPrivKey) || isEmpty(groupPk)) {
+    throw new PreConditionFailed(
+      'generateUpdateExpiryGroupSignature groupPrivKey or groupPks is empty'
+    );
+  }
+
+  return generateUpdateExpirySignature({
+    messageHashes,
+    shortenOrExtend,
+    timestamp,
+    ed25519Privkey: groupPrivKey,
+    ed25519Pubkey: groupPk,
+  });
 }
 
 export const SnodeSignature = {
   getSnodeSignatureParamsUs,
   getSnodeGroupSignatureParams,
   getSnodeSignatureByHashesParams,
-  generateUpdateExpirySignature,
+  generateUpdateExpiryOurSignature,
+  generateUpdateExpiryGroupSignature,
 };

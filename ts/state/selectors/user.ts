@@ -1,10 +1,10 @@
 import { createSelector } from '@reduxjs/toolkit';
 
+import { useSelector } from 'react-redux';
 import { LocalizerType } from '../../types/Util';
 
 import { StateType } from '../reducer';
 import { UserStateType } from '../ducks/user';
-import { useSelector } from 'react-redux';
 
 export const getUser = (state: StateType): UserStateType => state.user;
 

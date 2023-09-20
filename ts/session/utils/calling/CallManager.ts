@@ -1050,9 +1050,7 @@ function getCachedMessageFromCallMessage(
 }
 
 async function isUserApprovedOrWeSentAMessage(user: string) {
-  const isApproved = getConversationController()
-    .get(user)
-    ?.isApproved();
+  const isApproved = getConversationController().get(user)?.isApproved();
 
   if (isApproved) {
     return true;
@@ -1381,10 +1379,7 @@ function pushCallMessageToCallCache(
   callMessage: CachedCallMessageType
 ) {
   createCallCacheForPubkeyAndUUID(sender, uuid);
-  callCache
-    .get(sender)
-    ?.get(uuid)
-    ?.push(callMessage);
+  callCache.get(sender)?.get(uuid)?.push(callMessage);
 }
 
 /**

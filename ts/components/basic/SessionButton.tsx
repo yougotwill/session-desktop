@@ -116,16 +116,8 @@ type Props = {
 };
 
 export const SessionButton = (props: Props) => {
-  const {
-    buttonType,
-    buttonShape,
-    dataTestId,
-    buttonColor,
-    text,
-    disabled,
-    onClick,
-    margin,
-  } = props;
+  const { buttonType, buttonShape, dataTestId, buttonColor, text, disabled, onClick, margin } =
+    props;
 
   const clickHandler = (e: any) => {
     if (onClick) {

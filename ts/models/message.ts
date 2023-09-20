@@ -232,9 +232,8 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
       (pubkeysInDesc || []).forEach((pubkeyWithAt: string) => {
         const pubkey = pubkeyWithAt.slice(1);
         const isUS = isUsAnySogsFromCache(pubkey);
-        const displayName = getConversationController().getContactProfileNameOrShortenedPubKey(
-          pubkey
-        );
+        const displayName =
+          getConversationController().getContactProfileNameOrShortenedPubKey(pubkey);
         if (isUS) {
           description = description?.replace(pubkeyWithAt, `@${window.i18n('you')}`);
         } else if (displayName && displayName.length) {
@@ -683,9 +682,8 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
     const quoteWithData = await loadQuoteData(this.get('quote'));
     const previewWithData = await loadPreviewData(this.get('preview'));
 
-    const { hasAttachments, hasVisualMediaAttachments, hasFileAttachments } = getAttachmentMetadata(
-      this
-    );
+    const { hasAttachments, hasVisualMediaAttachments, hasFileAttachments } =
+      getAttachmentMetadata(this);
     this.set({ hasAttachments, hasVisualMediaAttachments, hasFileAttachments });
     await this.commit();
 

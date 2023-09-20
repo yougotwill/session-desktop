@@ -182,9 +182,11 @@ export const UpdateGroupMembersDialog = (props: Props) => {
   const displayName = useConversationUsername(conversationId);
   const groupAdmins = useGroupAdmins(conversationId);
 
-  const { addTo, removeFrom, uniqueValues: membersToKeepWithUpdate } = useSet<string>(
-    existingMembers
-  );
+  const {
+    addTo,
+    removeFrom,
+    uniqueValues: membersToKeepWithUpdate,
+  } = useSet<string>(existingMembers);
 
   const dispatch = useDispatch();
 

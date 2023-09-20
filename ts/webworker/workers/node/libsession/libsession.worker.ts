@@ -195,14 +195,14 @@ function initGroupWrapper(options: Array<any>, wrapperType: ConfigWrapperGroup) 
 
   if (isMetaWrapperType(groupType)) {
     const pk = getGroupPubkeyFromWrapperType(groupType);
-    const wrapper = new MetaGroupWrapperNode({
+    const justCreated = new MetaGroupWrapperNode({
       groupEd25519Pubkey,
       groupEd25519Secretkey,
       metaDumped,
       userEd25519Secretkey,
     });
 
-    metaGroupWrappers.set(pk, wrapper);
+    metaGroupWrappers.set(pk, justCreated);
     return;
   }
   assertUnreachable(groupType, `initGroupWrapper: Missing case error "${groupType}"`);
@@ -217,12 +217,13 @@ onmessage = async (e: { data: [number, ConfigWrapperObjectTypesMeta, string, ...
         initUserWrapper(args, config);
         postMessage([jobId, null, null]);
         return;
-      } else if (isMetaWrapperType(config)) {
+      }
+      if (isMetaWrapperType(config)) {
         initGroupWrapper(args, config);
         postMessage([jobId, null, null]);
         return;
       }
-      throw new Error('Unhandled init wrapper type:' + config);
+      throw new Error(`Unhandled init wrapper type: ${config}`);
     }
 
     const wrapper = isUserConfigWrapperType(config)

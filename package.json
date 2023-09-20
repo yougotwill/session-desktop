@@ -189,7 +189,7 @@
     "node-loader": "^2.0.0",
     "patch-package": "^6.4.7",
     "postinstall-prepare": "^1.0.1",
-    "prettier": "1.19.0",
+    "prettier": "^3.0.3",
     "protobufjs-cli": "^1.1.1",
     "run-script-os": "^1.1.6",
     "sass": "^1.60.0",

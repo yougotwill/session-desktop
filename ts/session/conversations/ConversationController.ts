@@ -217,7 +217,7 @@ export class ConversationController {
       return;
     }
     window.log.info(`deleteClosedGroup: ${groupId}, sendLeaveMessage?:${options.sendLeaveMessage}`);
-    getSwarmPollingInstance().removePubkey(groupId); // we don't need to keep polling anymore.
+    getSwarmPollingInstance().removePubkey(groupId, 'deleteClosedGroup'); // we don't need to keep polling anymore.
 
     if (options.sendLeaveMessage) {
       await leaveClosedGroup(groupId, options.fromSyncMessage);
@@ -482,7 +482,7 @@ async function leaveClosedGroup(groupId: string, fromSyncMessage: boolean) {
 
   const networkTimestamp = GetNetworkTime.getNowWithNetworkOffset();
 
-  getSwarmPollingInstance().removePubkey(groupId);
+  getSwarmPollingInstance().removePubkey(groupId, 'leaveClosedGroup');
 
   if (fromSyncMessage) {
     // no need to send our leave message as our other device should already have sent it.
@@ -525,7 +525,7 @@ async function leaveClosedGroup(groupId: string, fromSyncMessage: boolean) {
 }
 
 async function removeLegacyGroupFromWrappers(groupId: string) {
-  getSwarmPollingInstance().removePubkey(groupId);
+  getSwarmPollingInstance().removePubkey(groupId, 'removeLegacyGroupFromWrappers');
 
   await UserGroupsWrapperActions.eraseLegacyGroup(groupId);
   await SessionUtilConvoInfoVolatile.removeLegacyGroupFromWrapper(groupId);
@@ -533,7 +533,7 @@ async function removeLegacyGroupFromWrappers(groupId: string) {
 }
 
 async function remove03GroupFromWrappers(groupId: GroupPubkeyType) {
-  getSwarmPollingInstance().removePubkey(groupId);
+  getSwarmPollingInstance().removePubkey(groupId, 'remove03GroupFromWrappers');
 
   await UserGroupsWrapperActions.eraseGroup(groupId);
   await SessionUtilConvoInfoVolatile.removeGroupFromWrapper(groupId);
