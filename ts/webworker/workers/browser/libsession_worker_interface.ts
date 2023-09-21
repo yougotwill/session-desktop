@@ -510,13 +510,10 @@ export const MetaGroupWrapperActions: MetaGroupWrapperActionsCalls = {
       data,
       timestampMs,
     ]) as Promise<ReturnType<MetaGroupWrapperActionsCalls['loadKeyMessage']>>,
-  encryptMessage: async (groupPk: GroupPubkeyType, plaintext: Uint8Array, compress: boolean) =>
-    callLibSessionWorker([
-      `MetaGroupConfig-${groupPk}`,
-      'encryptMessage',
-      plaintext,
-      compress,
-    ]) as Promise<ReturnType<MetaGroupWrapperActionsCalls['encryptMessage']>>,
+  encryptMessage: async (groupPk: GroupPubkeyType, plaintext: Uint8Array) =>
+    callLibSessionWorker([`MetaGroupConfig-${groupPk}`, 'encryptMessage', plaintext]) as Promise<
+      ReturnType<MetaGroupWrapperActionsCalls['encryptMessage']>
+    >,
   decryptMessage: async (groupPk: GroupPubkeyType, ciphertext: Uint8Array) =>
     callLibSessionWorker([`MetaGroupConfig-${groupPk}`, 'decryptMessage', ciphertext]) as Promise<
       ReturnType<MetaGroupWrapperActionsCalls['decryptMessage']>

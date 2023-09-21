@@ -679,8 +679,8 @@ async function handleGroupUpdate(latestEnvelopeTimestamp: number) {
 
   const allGoupsIdsInWrapper = allGoupsInWrapper.map(m => m.pubkeyHex);
   const allGoupsIdsInDb = allGoupsInDb.map(m => m.id as string);
-  console.warn('allGoupsIdsInWrapper', stringify(allGoupsIdsInWrapper));
-  console.warn('allGoupsIdsInDb', stringify(allGoupsIdsInDb));
+  window.log.debug('allGoupsIdsInWrapper', stringify(allGoupsIdsInWrapper));
+  window.log.debug('allGoupsIdsInDb', stringify(allGoupsIdsInDb));
 
   const userEdKeypair = await UserUtils.getUserED25519KeyPairBytes();
   if (!userEdKeypair) {

@@ -60,16 +60,26 @@ export async function handleSwarmContentMessage(envelope: EnvelopePlus, messageH
 
 async function decryptForGroupV2(envelope: EnvelopePlus) {
   window?.log?.info('received closed group message v2');
-  const groupPk = envelope.source;
-  if (!PubKey.isClosedGroupV2(groupPk)) {
-    throw new PreConditionFailed('decryptForGroupV2: not a 03 prefixed group');
-  }
+  try {
+    const groupPk = envelope.source;
+    if (!PubKey.isClosedGroupV2(groupPk)) {
+      throw new PreConditionFailed('decryptForGroupV2: not a 03 prefixed group');
+    }
 
-  return MetaGroupWrapperActions.decryptMessage(groupPk, envelope.content);
+    const decrypted = await MetaGroupWrapperActions.decryptMessage(groupPk, envelope.content);
+
+    // the receiving pipeline relies on the envelope.senderIdentity field to know who is the author of a message
+    // eslint-disable-next-line no-param-reassign
+    envelope.senderIdentity = decrypted.pubkeyHex;
+
+    return decrypted.plaintext;
+  } catch (e) {
+    window.log.warn('failed to decrypt message with error: ', e.message);
+    return null;
+  }
 }
 
 async function decryptForClosedGroup(envelope: EnvelopePlus) {
-  // case .closedGroupCiphertext: for ios
   window?.log?.info('received closed group message');
   try {
     const hexEncodedGroupPublicKey = envelope.source;

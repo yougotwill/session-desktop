@@ -26,58 +26,6 @@ export enum KeyPrefixType {
   groupV3 = '03',
 }
 
-// export type GroupV2PubKey = {
-//   key: GroupPubkeyType; // 03 prefix for groups v2
-//   isGroupV2: true;
-//   isLegacyGroup: false;
-//   isPrivate: false;
-//   isUS: false;
-//   isBlinded: false;
-// };
-
-// export type PrivatePubkey = {
-//   key: PubkeyType; // 05 prefix for private conversations
-//   isGroupV2: false;
-//   isLegacyGroup: false;
-//   isPrivate: true;
-//   isUS: false;
-//   isBlinded: false;
-// };
-
-// export type UsPubkey = {
-//   key: PubkeyType; // 05 prefix for note to self
-//   isGroupV2: false;
-//   isLegacyGroup: false;
-//   isPrivate: false;
-//   isUS: true;
-//   isBlinded: false;
-// };
-
-// export type PrivateBlindedPubkey = {
-//   key: BlindedPubkeyType; // 15 prefix for blinded pubkeys
-//   isGroupV2: false;
-//   isLegacyGroup: false;
-//   isPrivate: true;
-//   isUS: false;
-//   isBlinded: true;
-// };
-
-// export type LegacyGroupPubkey = {
-//   key: PubkeyType; // 05 prefix for legacy closed group
-//   isGroupV2: false;
-//   isLegacyGroup: true;
-//   isPrivate: false;
-//   isUS: false;
-//   isBlinded: false;
-// };
-
-// export type PubKeyRecord =
-//   | UsPubkey
-//   | PrivatePubkey
-//   | GroupV2PubKey
-//   | LegacyGroupPubkey
-//   | PrivateBlindedPubkey;
-
 // TODO make that Pubkey class more useful, add fields for what types of pubkey it is (group, legacy group, private)
 
 export class PubKey {
