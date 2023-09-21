@@ -200,7 +200,7 @@ export async function expireMessageOnSnode(props: ExpireMessageOnSnodeProps) {
   const signResult = await SnodeSignature.generateUpdateExpiryOurSignature({
     shortenOrExtend,
     timestamp: expiry,
-    messageHashes: [messageHash],
+    messagesHashes: [messageHash],
   });
 
   if (!signResult) {

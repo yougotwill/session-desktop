@@ -172,7 +172,7 @@ async function buildRetrieveRequest(
       const signResult = await SnodeSignature.generateUpdateExpiryOurSignature({
         shortenOrExtend: '',
         timestamp: expiry,
-        messageHashes: configHashesToBump,
+        messagesHashes: configHashesToBump,
       });
 
       const expireParams: UpdateExpiryOnNodeUserSubRequest = {
@@ -196,7 +196,7 @@ async function buildRetrieveRequest(
       const signResult = await SnodeSignature.generateUpdateExpiryGroupSignature({
         shortenOrExtend: '',
         timestamp: expiry,
-        messageHashes: configHashesToBump,
+        messagesHashes: configHashesToBump,
         groupPk: pubkey,
         groupPrivKey: group.secretKey,
       });

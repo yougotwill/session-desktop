@@ -249,7 +249,7 @@ async function sendMessagesDataToSnode(
     messagesHashesToDelete && messagesHashesToDelete.size
       ? await SnodeSignature.getSnodeSignatureByHashesParams({
           method: 'delete' as const,
-          messages: [...messagesHashesToDelete],
+          messagesHashes: [...messagesHashesToDelete],
           pubkey: destination,
         })
       : null;

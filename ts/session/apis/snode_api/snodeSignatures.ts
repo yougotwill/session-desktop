@@ -9,24 +9,28 @@ import { PubKey } from '../../types';
 import { toFixedUint8ArrayOfLength } from '../../../types/sqlSharedTypes';
 import { PreConditionFailed } from '../../utils/errors';
 
-export type SnodeSignatureResult = {
-  timestamp: number;
+type WithTimestamp = { timestamp: number };
+
+export type SnodeSignatureResult = WithTimestamp & {
   signature: string;
   pubkey_ed25519: string;
   pubkey: string; // this is the x25519 key of the pubkey we are doing the request to (ourself for our swarm usually)
 };
+
+type ShortenOrExtend = 'extend' | 'shorten' | '';
+type WithShortenOrExtend = { shortenOrExtend: ShortenOrExtend };
+type WithMessagesHashes = { messagesHashes: Array<string> };
 
 export type SnodeGroupSignatureResult = Pick<SnodeSignatureResult, 'signature' | 'timestamp'> & {
   pubkey: GroupPubkeyType; // this is the 03 pubkey of the corresponding group
 };
 
 async function getSnodeSignatureByHashesParams({
-  messages,
+  messagesHashes,
   method,
   pubkey,
-}: {
+}: WithMessagesHashes & {
   pubkey: string;
-  messages: Array<string>;
   method: 'delete';
 }): Promise<
   Pick<SnodeSignatureResult, 'pubkey_ed25519' | 'signature' | 'pubkey'> & {
@@ -41,7 +45,7 @@ async function getSnodeSignatureByHashesParams({
     throw new Error(err);
   }
   const edKeyPrivBytes = fromHexToArray(ourEd25519Key?.privKey);
-  const verificationData = StringUtils.encode(`${method}${messages.join('')}`, 'utf8');
+  const verificationData = StringUtils.encode(`${method}${messagesHashes.join('')}`, 'utf8');
   const message = new Uint8Array(verificationData);
 
   const sodium = await getSodiumRenderer();
@@ -53,7 +57,7 @@ async function getSnodeSignatureByHashesParams({
       signature: signatureBase64,
       pubkey_ed25519: ourEd25519Key.pubKey,
       pubkey,
-      messages,
+      messages: messagesHashes,
     };
   } catch (e) {
     window.log.warn('getSnodeSignatureParams failed with: ', e.message);
@@ -164,18 +168,17 @@ async function getSnodeGroupSignatureParams({
 async function generateUpdateExpirySignature({
   shortenOrExtend,
   timestamp,
-  messageHashes,
+  messagesHashes,
   ed25519Privkey,
   ed25519Pubkey,
-}: {
-  shortenOrExtend: 'extend' | 'shorten' | '';
-  timestamp: number;
-  messageHashes: Array<string>;
-  ed25519Privkey: Uint8Array | FixedSizeUint8Array<64>;
-  ed25519Pubkey: string;
-}): Promise<{ signature: string; pubkey_ed25519: string }> {
+}: WithMessagesHashes &
+  WithShortenOrExtend &
+  WithTimestamp & {
+    ed25519Privkey: Uint8Array | FixedSizeUint8Array<64>;
+    ed25519Pubkey: string;
+  }): Promise<{ signature: string; pubkey_ed25519: string }> {
   // "expire" || ShortenOrExtend || expiry || messages[0] || ... || messages[N]
-  const verificationString = `expire${shortenOrExtend}${timestamp}${messageHashes.join('')}`;
+  const verificationString = `expire${shortenOrExtend}${timestamp}${messagesHashes.join('')}`;
   const verificationData = StringUtils.encode(verificationString, 'utf8');
   const message = new Uint8Array(verificationData);
 
@@ -197,12 +200,8 @@ async function generateUpdateExpirySignature({
 async function generateUpdateExpiryOurSignature({
   shortenOrExtend,
   timestamp,
-  messageHashes,
-}: {
-  shortenOrExtend: 'extend' | 'shorten' | '';
-  timestamp: number;
-  messageHashes: Array<string>;
-}) {
+  messagesHashes,
+}: WithMessagesHashes & WithShortenOrExtend & WithTimestamp) {
   const ourEd25519Key = await UserUtils.getUserED25519KeyPair();
 
   if (!ourEd25519Key) {
@@ -214,7 +213,7 @@ async function generateUpdateExpiryOurSignature({
   const edKeyPrivBytes = fromHexToArray(ourEd25519Key?.privKey);
 
   return generateUpdateExpirySignature({
-    messageHashes,
+    messagesHashes,
     shortenOrExtend,
     timestamp,
     ed25519Privkey: edKeyPrivBytes,
@@ -225,16 +224,15 @@ async function generateUpdateExpiryOurSignature({
 async function generateUpdateExpiryGroupSignature({
   shortenOrExtend,
   timestamp,
-  messageHashes,
+  messagesHashes,
   groupPrivKey,
   groupPk,
-}: {
-  shortenOrExtend: 'extend' | 'shorten' | '';
-  timestamp: number;
-  messageHashes: Array<string>;
-  groupPk: GroupPubkeyType;
-  groupPrivKey: FixedSizeUint8Array<64>;
-}) {
+}: WithMessagesHashes &
+  WithShortenOrExtend &
+  WithTimestamp & {
+    groupPk: GroupPubkeyType;
+    groupPrivKey: FixedSizeUint8Array<64>;
+  }) {
   if (isEmpty(groupPrivKey) || isEmpty(groupPk)) {
     throw new PreConditionFailed(
       'generateUpdateExpiryGroupSignature groupPrivKey or groupPks is empty'
@@ -242,7 +240,7 @@ async function generateUpdateExpiryGroupSignature({
   }
 
   return generateUpdateExpirySignature({
-    messageHashes,
+    messagesHashes,
     shortenOrExtend,
     timestamp,
     ed25519Privkey: groupPrivKey,

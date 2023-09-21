@@ -207,7 +207,7 @@ const networkDeleteMessages = async (hashes: Array<string>): Promise<Array<strin
         return pRetry(
           async () => {
             const signOpts = await SnodeSignature.getSnodeSignatureByHashesParams({
-              messages: hashes,
+              messagesHashes: hashes,
               method,
               pubkey: userX25519PublicKey,
             });
