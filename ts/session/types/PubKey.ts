@@ -46,14 +46,10 @@ export class PubKey {
   /**
    * If you want to update this regex. Be sure that those are matches ;
    *  __textsecure_group__!05010203040506070809a0b0c0d0e0f0ff010203040506070809a0b0c0d0e0f0ff
-   *  __textsecure_group__!010203040506070809a0b0c0d0e0f0ff010203040506070809a0b0c0d0e0f0ff
    *  __textsecure_group__!05010203040506070809a0b0c0d0e0f0ff
-   *  __textsecure_group__!010203040506070809a0b0c0d0e0f0ff
    *  05010203040506070809a0b0c0d0e0f0ff010203040506070809a0b0c0d0e0f0ff
    *  03010203040506070809a0b0c0d0e0f0ff010203040506070809a0b0c0d0e0f0ff
-   *  010203040506070809a0b0c0d0e0f0ff010203040506070809a0B0c0d0e0f0FF
    *  05010203040506070809a0b0c0d0e0f0ff
-   *  010203040506070809a0b0c0d0e0f0ff
    *  030203040506070809a0b0c0d0e0f0ff
    */
 
@@ -67,7 +63,7 @@ export class PubKey {
    */
   constructor(pubkeyString: string) {
     if (!PubKey.validate(pubkeyString)) {
-      throw new Error(`Invalid pubkey string passed: ${pubkeyString}`);
+      throw new Error('Invalid pubkey string passed');
     }
     this.key = pubkeyString.toLowerCase();
   }
