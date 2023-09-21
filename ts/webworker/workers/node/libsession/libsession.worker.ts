@@ -178,7 +178,8 @@ function initGroupWrapper(options: Array<any>, wrapperType: ConfigWrapperGroup) 
 
   const wrapper = getGroupWrapper(wrapperType);
   if (wrapper) {
-    throw new Error(`group: "${wrapperType}" already init`);
+    // console.warn(`group: "${wrapperType}" already init`);
+    return;
   }
 
   if (options.length !== 1) {

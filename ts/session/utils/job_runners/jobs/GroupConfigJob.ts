@@ -2,7 +2,6 @@
 import { GroupPubkeyType } from 'libsession_util_nodejs';
 import { isArray, isEmpty, isNumber, isString } from 'lodash';
 import { UserUtils } from '../..';
-import { ReleasedFeatures } from '../../../../util/releaseFeature';
 import { isSignInByLinking } from '../../../../util/storage';
 import { MetaGroupWrapperActions } from '../../../../webworker/workers/browser/libsession_worker_interface';
 import {
@@ -69,10 +68,6 @@ function resultsToSuccessfulChange(
   for (let j = 0; j < result.length; j++) {
     const batchResult = result[j];
     const messagePostedHashes = batchResult?.body?.hash;
-    console.error(
-      'this might be wrong as the key message is first now messagePostedHashes',
-      messagePostedHashes
-    );
 
     if (batchResult.code === 200 && isString(messagePostedHashes) && request.messages?.[j].data) {
       // libsession keeps track of the hashes to push and pushed using the hashes now
@@ -121,6 +116,52 @@ async function buildAndSaveDumpsToDB(
   return LibSessionUtil.saveMetaGroupDumpToDb(groupPk);
 }
 
+async function pushChangesToGroupSwarmIfNeeded(groupPk: GroupPubkeyType): Promise<RunJobResult> {
+  // save the dumps to DB even before trying to push them, so at least we have an up to date dumps in the DB in case of crash, no network etc
+  await LibSessionUtil.saveMetaGroupDumpToDb(groupPk);
+
+  const singleDestChanges = await LibSessionUtil.pendingChangesForGroup(groupPk);
+
+  // If there are no pending changes then the job can just complete (next time something
+  // is updated we want to try and run immediately so don't scuedule another run in this case)
+  if (isEmpty(singleDestChanges?.messages)) {
+    return RunJobResult.Success;
+  }
+  const oldHashesToDelete = new Set(singleDestChanges.allOldHashes);
+
+  const msgs: Array<StoreOnNodeData> = singleDestChanges.messages.map(item => {
+    return {
+      namespace: item.namespace,
+      pubkey: groupPk,
+      networkTimestamp: GetNetworkTime.getNowWithNetworkOffset(),
+      ttl: TTL_DEFAULT.TTL_CONFIG,
+      data: item.data,
+    };
+  });
+
+  const result = await MessageSender.sendEncryptedDataToSnode(msgs, groupPk, oldHashesToDelete);
+
+  const expectedReplyLength = singleDestChanges.messages.length + (oldHashesToDelete.size ? 1 : 0);
+  // we do a sequence call here. If we do not have the right expected number of results, consider it a failure
+  if (!isArray(result) || result.length !== expectedReplyLength) {
+    window.log.info(
+      `GroupSyncJob: unexpected result length: expected ${expectedReplyLength} but got ${result?.length}`
+    );
+    // this might be a 421 error (already handled) so let's retry this request a little bit later
+    return RunJobResult.RetryJobIfPossible;
+  }
+
+  const changes = resultsToSuccessfulChange(result, singleDestChanges);
+  if (isEmpty(changes)) {
+    return RunJobResult.RetryJobIfPossible;
+  }
+  // Now that we have the successful changes, we need to mark them as pushed and
+  // generate any config dumps which need to be stored
+
+  await buildAndSaveDumpsToDB(changes, groupPk);
+  return RunJobResult.Success;
+}
+
 class GroupSyncJob extends PersistedJob<GroupSyncPersistedData> {
   constructor({
     identifier, // this has to be the pubkey to which we
@@ -162,59 +203,8 @@ class GroupSyncJob extends PersistedJob<GroupSyncPersistedData> {
         return RunJobResult.PermanentFailure;
       }
 
-      // save the dumps to DB even before trying to push them, so at least we have an up to date dumps in the DB in case of crash, no network etc
-      await LibSessionUtil.saveMetaGroupDumpToDb(thisJobDestination);
-      const newGroupsReleased = await ReleasedFeatures.checkIsNewGroupsReleased();
+      return await pushChangesToGroupSwarmIfNeeded(thisJobDestination);
 
-      // if the feature flag is not enabled, we want to keep updating the dumps, but just not sync them.
-      if (!newGroupsReleased) {
-        return RunJobResult.Success;
-      }
-      const singleDestChanges = await LibSessionUtil.pendingChangesForGroup(thisJobDestination);
-
-      // If there are no pending changes then the job can just complete (next time something
-      // is updated we want to try and run immediately so don't scuedule another run in this case)
-      if (isEmpty(singleDestChanges?.messages)) {
-        return RunJobResult.Success;
-      }
-      const oldHashesToDelete = new Set(singleDestChanges.allOldHashes);
-
-      const msgs: Array<StoreOnNodeData> = singleDestChanges.messages.map(item => {
-        return {
-          namespace: item.namespace,
-          pubkey: thisJobDestination,
-          networkTimestamp: GetNetworkTime.getNowWithNetworkOffset(),
-          ttl: TTL_DEFAULT.TTL_CONFIG,
-          data: item.data,
-        };
-      });
-
-      const result = await MessageSender.sendEncryptedDataToSnode(
-        msgs,
-        thisJobDestination,
-        oldHashesToDelete
-      );
-
-      const expectedReplyLength =
-        singleDestChanges.messages.length + (oldHashesToDelete.size ? 1 : 0);
-      // we do a sequence call here. If we do not have the right expected number of results, consider it a failure
-      if (!isArray(result) || result.length !== expectedReplyLength) {
-        window.log.info(
-          `GroupSyncJob: unexpected result length: expected ${expectedReplyLength} but got ${result?.length}`
-        );
-        // this might be a 421 error (already handled) so let's retry this request a little bit later
-        return RunJobResult.RetryJobIfPossible;
-      }
-
-      const changes = resultsToSuccessfulChange(result, singleDestChanges);
-      if (isEmpty(changes)) {
-        return RunJobResult.RetryJobIfPossible;
-      }
-      // Now that we have the successful changes, we need to mark them as pushed and
-      // generate any config dumps which need to be stored
-
-      await buildAndSaveDumpsToDB(changes, thisJobDestination);
-      return RunJobResult.Success;
       // eslint-disable-next-line no-useless-catch
     } catch (e) {
       throw e;
@@ -289,6 +279,7 @@ async function queueNewJobIfNeeded(groupPk: GroupPubkeyType) {
 
 export const GroupSync = {
   GroupSyncJob,
+  pushChangesToGroupSwarmIfNeeded,
   queueNewJobIfNeeded: (groupPk: GroupPubkeyType) =>
     allowOnlyOneAtATime(`GroupSyncJob-oneAtAtTime-${groupPk}`, () => queueNewJobIfNeeded(groupPk)),
 };

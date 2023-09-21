@@ -19,6 +19,7 @@ import { getMessageQueue } from '..';
 import { deleteAllMessagesByConvoIdNoConfirmation } from '../../interactions/conversationInteractions';
 import { CONVERSATION_PRIORITIES, ConversationTypeEnum } from '../../models/conversationAttributes';
 import { removeAllClosedGroupEncryptionKeyPairs } from '../../receiver/closedGroups';
+import { groupInfoActions } from '../../state/ducks/groups';
 import { getCurrentlySelectedConversationOutsideRedux } from '../../state/selectors/conversations';
 import { assertUnreachable } from '../../types/sqlSharedTypes';
 import { UserGroupsWrapperActions } from '../../webworker/workers/browser/libsession_worker_interface';
@@ -27,6 +28,7 @@ import { getSwarmPollingInstance } from '../apis/snode_api';
 import { GetNetworkTime } from '../apis/snode_api/getNetworkTime';
 import { SnodeNamespaces } from '../apis/snode_api/namespaces';
 import { ClosedGroupMemberLeftMessage } from '../messages/outgoing/controlMessage/group/ClosedGroupMemberLeftMessage';
+import { ed25519Str } from '../onions/onionPath';
 import { UserUtils } from '../utils';
 import { ConfigurationSync } from '../utils/job_runners/jobs/ConfigurationSyncJob';
 import { LibSessionUtil } from '../utils/libsession/libsession_utils';
@@ -532,12 +534,13 @@ async function removeLegacyGroupFromWrappers(groupId: string) {
   await removeAllClosedGroupEncryptionKeyPairs(groupId);
 }
 
-async function remove03GroupFromWrappers(groupId: GroupPubkeyType) {
-  getSwarmPollingInstance().removePubkey(groupId, 'remove03GroupFromWrappers');
+async function remove03GroupFromWrappers(groupPk: GroupPubkeyType) {
+  getSwarmPollingInstance().removePubkey(groupPk, 'remove03GroupFromWrappers');
 
-  await UserGroupsWrapperActions.eraseGroup(groupId);
-  await SessionUtilConvoInfoVolatile.removeGroupFromWrapper(groupId);
-  window.log.warn('remove 03 from metagroup wrapper');
+  await UserGroupsWrapperActions.eraseGroup(groupPk);
+  await SessionUtilConvoInfoVolatile.removeGroupFromWrapper(groupPk);
+  window?.inboxStore?.dispatch(groupInfoActions.destroyGroupDetails({ groupPk }));
+  window.log.info(`removed 03 from metagroup wrapper ${ed25519Str(groupPk)}`);
 }
 
 async function removeCommunityFromWrappers(conversationId: string) {

@@ -99,7 +99,7 @@ function setupLeftPane(forceUpdateInboxComponent: () => void) {
   window.openConversationWithMessages = openConversationWithMessages;
   window.inboxStore = createSessionInboxStore();
   window.inboxStore.dispatch(updateAllOnStorageReady());
-  window.inboxStore.dispatch(groupInfoActions.loadDumpsFromDB());
+  window.inboxStore.dispatch(groupInfoActions.loadMetaDumpsFromDB()); // this loads the dumps from DB and fills the 03-groups slice with the corresponding details
   forceUpdateInboxComponent();
 }
 

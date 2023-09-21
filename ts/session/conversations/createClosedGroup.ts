@@ -1,4 +1,4 @@
-import _, { concat } from 'lodash';
+import _ from 'lodash';
 import { ClosedGroup, getMessageQueue } from '..';
 import { ConversationTypeEnum } from '../../models/conversationAttributes';
 import { addKeyPairToCacheAndDBIfNeeded } from '../../receiver/closedGroups';
@@ -16,27 +16,13 @@ import { PubKey } from '../types';
 import { UserUtils } from '../utils';
 import { forceSyncConfigurationNowIfNeeded } from '../utils/sync/syncUtils';
 import { getConversationController } from './ConversationController';
-import { groupInfoActions } from '../../state/ducks/groups';
 
 /**
  * Creates a brand new closed group from user supplied details. This function generates a new identityKeyPair so cannot be used to restore a closed group.
  * @param groupName the name of this closed group
  * @param members the initial members of this closed group
- * @param isV3 if this closed group is a v3 closed group or not (has a 03 prefix in the identity keypair)
  */
-export async function createClosedGroup(groupName: string, members: Array<string>, isV3: boolean) {
-  if (isV3) {
-    const us = UserUtils.getOurPubKeyStrFromCache();
-
-    // we need to send a group info and encryption keys message to the batch endpoint with both seqno being 0
-    console.error('isV3 send invite to group TODO'); // FIXME
-    // FIXME we should save the key to the wrapper right away? or even to the DB idk
-    window.inboxStore.dispatch(
-      groupInfoActions.initNewGroupInWrapper({ members: concat(members, [us]), groupName, us })
-    );
-    return;
-  }
-
+export async function createClosedGroup(groupName: string, members: Array<string>) {
   // this is all legacy group logic.
   // TODO: To be removed
 
@@ -63,8 +49,6 @@ export async function createClosedGroup(groupName: string, members: Array<string
   );
 
   await convo.setIsApproved(true, false);
-
-  console.warn('store the v3 identityPriatekeypair as part of the wrapper only?');
 
   // Ensure the current user is a member
   setOfMembers.add(us);

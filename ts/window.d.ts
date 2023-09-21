@@ -33,7 +33,7 @@ declare global {
     sessionFeatureFlags: {
       useOnionRequests: boolean;
       useTestNet: boolean;
-      useClosedGroupV3: boolean;
+      useClosedGroupV2: boolean;
       integrationTestEnv: boolean;
       debug: {
         debugLogging: boolean;

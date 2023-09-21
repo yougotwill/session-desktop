@@ -1728,7 +1728,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
   public isKickedFromGroup(): boolean {
     if (this.isClosedGroup()) {
       if (this.isClosedGroupV3()) {
-        console.info('isKickedFromGroup using lib todo'); // debugger
+        // console.info('isKickedFromGroup using lib todo'); // debugger
       }
       return !!this.get('isKickedFromGroup');
     }
@@ -1738,7 +1738,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
   public isLeft(): boolean {
     if (this.isClosedGroup()) {
       if (this.isClosedGroupV3()) {
-        console.info('isLeft using lib todo'); // debugger
+        // console.info('isLeft using lib todo'); // debugger
       }
       return !!this.get('left');
     }
@@ -2339,9 +2339,6 @@ export async function commitConversationAndRefreshWrapper(id: string) {
   if (!convo) {
     return;
   }
-
-  // TODOLATER remove duplicates between db and wrapper (and move search by name or nickname to wrapper)
-  // TODOLATER insertConvoFromDBIntoWrapperAndRefresh and insertContactFromDBIntoWrapperAndRefresh both fetches the same data from the DB. Might be worth fetching it and providing it to both?
 
   // write to db
   const savedDetails = await Data.saveConversation(convo.attributes);

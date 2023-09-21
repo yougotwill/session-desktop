@@ -31,7 +31,10 @@ export function useConversationUsername(convoId?: string) {
   const convoProps = useConversationPropsById(convoId);
   const groupName = useLibGroupName(convoId);
 
-  if (convoId && PubKey.isClosedGroupV2(convoId)) {
+  if (convoId && PubKey.isClosedGroupV2(convoId) && groupName) {
+    // when getting a new 03 group from the usergroup wrapper,
+    // we set the displayNameInProfile with the name from the wrapper.
+    // So let's keep falling back to convoProps?.displayNameInProfile if groupName is not set yet (it comes later through the groupInfos namespace)
     return groupName;
   }
   return convoProps?.nickname || convoProps?.displayNameInProfile || convoId;

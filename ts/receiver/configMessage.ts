@@ -1,5 +1,5 @@
 /* eslint-disable no-await-in-loop */
-import { ContactInfo } from 'libsession_util_nodejs';
+import { ContactInfo, UserGroupsGet } from 'libsession_util_nodejs';
 import { compact, difference, isEmpty, isNil, isNumber, toNumber } from 'lodash';
 import { ConfigDumpData } from '../data/configDump/configDump';
 import { SettingsKey } from '../data/settings-key';
@@ -47,6 +47,7 @@ import { addKeyPairToCacheAndDBIfNeeded } from './closedGroups';
 import { HexKeyPair } from './keypairs';
 import { queueAllCachedFromSource } from './receiver';
 import { HexString } from '../node/hexStrings';
+import { groupInfoActions } from '../state/ducks/groups';
 
 type IncomingUserResult = {
   needsPush: boolean;
@@ -125,7 +126,7 @@ async function mergeUserConfigsWithIncomingUpdates(
       const latestEnvelopeTimestamp = Math.max(...sameVariant.map(m => m.envelopeTimestamp));
 
       window.log.debug(
-        `${variant}: "${publicKey}" needsPush:${needsPush} needsDump:${needsDump}; mergedCount:${mergedCount} `
+        `${variant}: needsPush:${needsPush} needsDump:${needsDump}; mergedCount:${mergedCount} `
       );
 
       if (window.sessionFeatureFlags.debug.debugLibsessionDumps) {
@@ -609,12 +610,77 @@ async function handleLegacyGroupUpdate(latestEnvelopeTimestamp: number) {
   }
 }
 
+async function handleSingleGroupUpdate({
+  groupInWrapper,
+  userEdKeypair,
+}: {
+  groupInWrapper: UserGroupsGet;
+  latestEnvelopeTimestamp: number;
+  userEdKeypair: UserUtils.ByteKeyPair;
+}) {
+  const groupPk = groupInWrapper.pubkeyHex;
+  try {
+    // dump is always empty when creating a new groupInfo
+    await MetaGroupWrapperActions.init(groupPk, {
+      metaDumped: null,
+      userEd25519Secretkey: toFixedUint8ArrayOfLength(userEdKeypair.privKeyBytes, 64),
+      groupEd25519Secretkey: groupInWrapper.secretKey,
+      groupEd25519Pubkey: toFixedUint8ArrayOfLength(HexString.fromHexString(groupPk.slice(2)), 32),
+    });
+  } catch (e) {
+    window.log.warn(
+      `handleSingleGroupUpdate metawrapper init of "${groupPk}" failed with`,
+      e.message
+    );
+  }
+
+  if (!getConversationController().get(groupPk)) {
+    const created = await getConversationController().getOrCreateAndWait(
+      groupPk,
+      ConversationTypeEnum.GROUPV3
+    );
+    const joinedAt = groupInWrapper.joinedAtSeconds * 1000 || Date.now();
+    created.set({
+      active_at: joinedAt,
+      displayNameInProfile: groupInWrapper.name || undefined,
+      priority: groupInWrapper.priority,
+      lastJoinedTimestamp: joinedAt,
+    });
+    await created.commit();
+    getSwarmPollingInstance().addGroupId(PubKey.cast(groupPk));
+  }
+}
+
+async function handleSingleGroupUpdateToLeave(toLeave: string) {
+  // that group is not in the wrapper but in our local DB. it must be removed and cleaned
+  try {
+    window.log.debug(
+      `About to deleteGroup ${toLeave} via handleSingleGroupUpdateToLeave as in DB but not in wrapper`
+    );
+
+    await getConversationController().deleteClosedGroup(toLeave, {
+      fromSyncMessage: true,
+      sendLeaveMessage: false,
+    });
+  } catch (e) {
+    window.log.info('Failed to deleteClosedGroup with: ', e.message);
+  }
+}
+
+/**
+ * Called when we just got a userGroups merge from the network. We need to apply the changes to our local state. (i.e. DB and redux slice of 03 groups)
+ */
 async function handleGroupUpdate(latestEnvelopeTimestamp: number) {
   // first let's check which groups needs to be joined or left by doing a diff of what is in the wrapper and what is in the DB
   const allGoupsInWrapper = await UserGroupsWrapperActions.getAllGroups();
+  const allGoupsInDb = getConversationController()
+    .getConversations()
+    .filter(m => PubKey.isClosedGroupV2(m.id));
 
   const allGoupsIdsInWrapper = allGoupsInWrapper.map(m => m.pubkeyHex);
+  const allGoupsIdsInDb = allGoupsInDb.map(m => m.id as string);
   console.warn('allGoupsIdsInWrapper', stringify(allGoupsIdsInWrapper));
+  console.warn('allGoupsIdsInDb', stringify(allGoupsIdsInDb));
 
   const userEdKeypair = await UserUtils.getUserED25519KeyPairBytes();
   if (!userEdKeypair) {
@@ -623,30 +689,19 @@ async function handleGroupUpdate(latestEnvelopeTimestamp: number) {
 
   for (let index = 0; index < allGoupsInWrapper.length; index++) {
     const groupInWrapper = allGoupsInWrapper[index];
-    const groupPk = groupInWrapper.pubkeyHex;
-    if (!getConversationController().get(groupPk)) {
-      try {
-        // dump is always empty when creating a new groupInfo
-        await MetaGroupWrapperActions.init(groupPk, {
-          metaDumped: null,
-          userEd25519Secretkey: toFixedUint8ArrayOfLength(userEdKeypair.privKeyBytes, 64),
-          groupEd25519Secretkey: groupInWrapper.secretKey,
-          groupEd25519Pubkey: toFixedUint8ArrayOfLength(
-            HexString.fromHexString(groupPk.slice(2)),
-            32
-          ),
-        });
-      } catch (e) {
-        window.log.warn(`MetaGroupWrapperActions.init of "${groupPk}" failed with`, e.message);
-      }
-      const created = await getConversationController().getOrCreateAndWait(
-        groupPk,
-        ConversationTypeEnum.GROUPV3
-      );
-      created.set({ active_at: latestEnvelopeTimestamp });
-      await created.commit();
-      getSwarmPollingInstance().addGroupId(PubKey.cast(groupPk));
-    }
+    window.inboxStore.dispatch(groupInfoActions.handleUserGroupUpdate(groupInWrapper));
+
+    await handleSingleGroupUpdate({ groupInWrapper, latestEnvelopeTimestamp, userEdKeypair });
+  }
+
+  const groupsInDbButNotInWrapper = difference(allGoupsIdsInDb, allGoupsIdsInWrapper);
+  window.log.info(
+    `we have to leave ${groupsInDbButNotInWrapper.length} 03 groups in DB compared to what is in the wrapper`
+  );
+
+  for (let index = 0; index < groupsInDbButNotInWrapper.length; index++) {
+    const toRemove = groupsInDbButNotInWrapper[index];
+    await handleSingleGroupUpdateToLeave(toRemove);
   }
 }
 

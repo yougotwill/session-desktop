@@ -1,12 +1,11 @@
 import { GroupPubkeyType } from 'libsession_util_nodejs';
-import { stringify } from '../../../../types/sqlSharedTypes';
+import { groupInfoActions } from '../../../../state/ducks/groups';
 import { MetaGroupWrapperActions } from '../../../../webworker/workers/browser/libsession_worker_interface';
 import { ed25519Str } from '../../../onions/onionPath';
 import { fromBase64ToArray } from '../../../utils/String';
+import { LibSessionUtil } from '../../../utils/libsession/libsession_utils';
 import { SnodeNamespaces } from '../namespaces';
 import { RetrieveMessageItemWithNamespace } from '../types';
-import { groupInfoActions } from '../../../../state/ducks/groups';
-import { LibSessionUtil } from '../../../utils/libsession/libsession_utils';
 
 async function handleGroupSharedConfigMessages(
   groupConfigMessagesMerged: Array<RetrieveMessageItemWithNamespace>,
@@ -43,41 +42,17 @@ async function handleGroupSharedConfigMessages(
       groupMember: members,
     };
 
+    // do the merge with our current state
     await MetaGroupWrapperActions.metaMerge(groupPk, toMerge);
+    // save updated dumps to the DB right away
     await LibSessionUtil.saveMetaGroupDumpToDb(groupPk);
 
-    const updatedInfos = await MetaGroupWrapperActions.infoGet(groupPk);
-    const updatedMembers = await MetaGroupWrapperActions.memberGetAll(groupPk);
-    console.info(`groupInfo after merge: ${stringify(updatedInfos)}`);
-    console.info(`groupMembers after merge: ${stringify(updatedMembers)}`);
-    if (!updatedInfos || !updatedMembers) {
-      throw new Error('updatedInfos or updatedMembers is null but we just created them');
-    }
-
+    // refresh the redux slice with the merged result
     window.inboxStore.dispatch(
-      groupInfoActions.updateGroupDetailsAfterMerge({
+      groupInfoActions.refreshGroupDetailsFromWrapper({
         groupPk,
-        infos: updatedInfos,
-        members: updatedMembers,
       })
     );
-
-    // if (allDecryptedConfigMessages.length) {
-    //   try {
-    //     window.log.info(
-    //       `handleGroupSharedConfigMessages of "${allDecryptedConfigMessages.length}" messages with libsession`
-    //     );
-    //     console.warn('HANDLING OF INCOMING GROUP TODO ');
-    //     // await ConfigMessageHandler.handleUserConfigMessagesViaLibSession(
-    //     //   allDecryptedConfigMessages
-    //     // );
-    //   } catch (e) {
-    //     const allMessageHases = allDecryptedConfigMessages.map(m => m.messageHash).join(',');
-    //     window.log.warn(
-    //       `failed to handle group messages hashes "${allMessageHases}" with libsession. Error: "${e.message}"`
-    //     );
-    //   }
-    // }
   } catch (e) {
     window.log.warn(
       `handleGroupSharedConfigMessages of ${groupConfigMessagesMerged.length} failed with ${e.message}`

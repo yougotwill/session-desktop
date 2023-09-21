@@ -320,7 +320,7 @@ export class SwarmPolling {
       await this.notPollingForGroupAsNotInWrapper(pubkey, 'not in wrapper after poll');
       return;
     }
-    if (PubKey.isClosedGroupV2(pubkey) && allGroupsInWrapper.some(m => m.pubkeyHex === pubkey)) {
+    if (PubKey.isClosedGroupV2(pubkey) && !allGroupsInWrapper.some(m => m.pubkeyHex === pubkey)) {
       // not tracked anymore in the wrapper. Discard messages and stop polling
       await this.notPollingForGroupAsNotInWrapper(pubkey, 'not in wrapper after poll');
       return;
@@ -456,7 +456,13 @@ export class SwarmPolling {
   }
 
   private async notPollingForGroupAsNotInWrapper(pubkey: string, reason: string) {
-    this.removePubkey(pubkey, reason);
+    window.log.debug(
+      `notPollingForGroupAsNotInWrapper ${ed25519Str(pubkey)} with reason:"${reason}"`
+    );
+    await getConversationController().deleteClosedGroup(pubkey, {
+      fromSyncMessage: true,
+      sendLeaveMessage: false,
+    });
     return Promise.resolve();
   }
 

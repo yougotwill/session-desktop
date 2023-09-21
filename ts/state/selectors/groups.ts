@@ -23,6 +23,10 @@ export function getLibMembersPubkeys(state: StateType, convo?: string): Array<st
   return members.map(m => m.pubkeyHex);
 }
 
+function getIsCreatingGroupFromUI(state: StateType): boolean {
+  return getLibGroupsState(state).creationFromUIPending;
+}
+
 export function getLibAdminsPubkeys(state: StateType, convo?: string): Array<string> {
   if (!convo) {
     return [];
@@ -80,4 +84,8 @@ export function getLibGroupMembersOutsideRedux(convoId: string): Array<string> {
 export function getLibGroupAdminsOutsideRedux(convoId: string): Array<string> {
   const state = window.inboxStore?.getState();
   return state ? getLibAdminsPubkeys(state, convoId) : [];
+}
+
+export function useIsCreatingGroupFromUIPending() {
+  return useSelector(getIsCreatingGroupFromUI);
 }

@@ -101,17 +101,11 @@ async function checkIsUserConfigFeatureReleased() {
   return checkIsFeatureReleased('user_config_libsession');
 }
 
-// TODO AUDRIC maybe we want this, maybe we don't?
-async function checkIsNewGroupsReleased() {
-  return true;
-}
-
 function isUserConfigFeatureReleasedCached(): boolean {
   return !!isUserConfigLibsessionFeatureReleased;
 }
 
 export const ReleasedFeatures = {
   checkIsUserConfigFeatureReleased,
-  checkIsNewGroupsReleased,
   isUserConfigFeatureReleasedCached,
 };

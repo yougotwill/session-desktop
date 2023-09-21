@@ -6,25 +6,17 @@ import { compact, difference, omit } from 'lodash';
 import Long from 'long';
 import { UserUtils } from '..';
 import { ConfigDumpData } from '../../../data/configDump/configDump';
-import { HexString } from '../../../node/hexStrings';
 import { SignalService } from '../../../protobuf';
 import { UserConfigKind } from '../../../types/ProtobufKind';
-import {
-  ConfigDumpRow,
-  assertUnreachable,
-  toFixedUint8ArrayOfLength,
-} from '../../../types/sqlSharedTypes';
+import { assertUnreachable } from '../../../types/sqlSharedTypes';
 import {
   ConfigWrapperGroupDetailed,
   ConfigWrapperUser,
-  getGroupPubkeyFromWrapperType,
-  isMetaWrapperType,
   isUserConfigWrapperType,
 } from '../../../webworker/workers/browser/libsession_worker_functions';
 import {
   GenericWrapperActions,
   MetaGroupWrapperActions,
-  UserGroupsWrapperActions,
 } from '../../../webworker/workers/browser/libsession_worker_interface';
 import { GetNetworkTime } from '../../apis/snode_api/getNetworkTime';
 import { SnodeNamespaces } from '../../apis/snode_api/namespaces';
@@ -34,7 +26,6 @@ import {
 } from '../../messages/outgoing/controlMessage/SharedConfigMessage';
 import { ed25519Str } from '../../onions/onionPath';
 import { PubKey } from '../../types';
-import { getUserED25519KeyPairBytes } from '../User';
 import { ConfigurationSync } from '../job_runners/jobs/ConfigurationSyncJob';
 
 const requiredUserVariants: Array<ConfigWrapperUser> = [
@@ -114,61 +105,7 @@ async function initializeLibSessionUtilWrappers() {
     );
   }
 
-  await loadMetaGroupWrappers(dumps);
-}
-
-async function loadMetaGroupWrappers(dumps: Array<ConfigDumpRow>) {
-  const ed25519KeyPairBytes = await getUserED25519KeyPairBytes();
-  if (!ed25519KeyPairBytes?.privKeyBytes) {
-    throw new Error('user has no ed25519KeyPairBytes.');
-  }
-  // load the dumps retrieved from the database into their corresponding wrappers
-  for (let index = 0; index < dumps.length; index++) {
-    const dump = dumps[index];
-    const { variant } = dump;
-    if (!isMetaWrapperType(variant)) {
-      continue;
-    }
-    const groupPk = getGroupPubkeyFromWrapperType(variant);
-    const groupPkNoPrefix = groupPk.substring(2);
-    const groupEd25519Pubkey = HexString.fromHexString(groupPkNoPrefix);
-
-    try {
-      const foundInUserGroups = await UserGroupsWrapperActions.getGroup(groupPk);
-
-      // remove it right away, and skip it entirely
-      if (!foundInUserGroups) {
-        try {
-          window.log.info(
-            'metaGroup not found in userGroups. Deleting the corresponding dumps:',
-            groupPk
-          );
-
-          await ConfigDumpData.deleteDumpFor(groupPk);
-        } catch (e) {
-          window.log.warn('deleteDumpFor failed with ', e.message);
-        }
-        // await UserGroupsWrapperActions.eraseGroup(groupPk);
-        continue;
-      }
-
-      window.log.debug('initializeLibSessionUtilWrappers initing from metagroup dump', variant);
-      // TODO we need to fetch the admin key here if we have it, maybe from the usergroup wrapper?
-      await MetaGroupWrapperActions.init(groupPk, {
-        groupEd25519Pubkey: toFixedUint8ArrayOfLength(groupEd25519Pubkey, 32),
-        groupEd25519Secretkey: foundInUserGroups?.secretKey || null,
-        userEd25519Secretkey: toFixedUint8ArrayOfLength(ed25519KeyPairBytes.privKeyBytes, 64),
-        metaDumped: dump.data,
-      });
-
-      // Annoyingly, the redux store is not initialized when this current funciton is called,
-      // so we need to init the group wrappers here, but load them in their redux slice later
-    } catch (e) {
-      // TODO should not throw in this case? we should probably just try to load what we manage to load
-      window.log.warn(`initGroup of Group wrapper of variant ${variant} failed with ${e.message} `);
-      // throw new Error(`initializeLibSessionUtilWrappers failed with ${e.message}`);
-    }
-  }
+  // No need to load the meta group wrapper here. We will load them once the SessionInbox is loaded with a redux action
 }
 
 async function pendingChangesForUs(): Promise<
@@ -304,7 +241,6 @@ async function pendingChangesForGroup(
   const infoHashes = compact(groupInfo?.hashes) || [];
   const allOldHashes = new Set([...infoHashes, ...memberHashes]);
 
-  console.error('compactedHashes', [...allOldHashes]);
   return { messages: results, allOldHashes };
 }
 
@@ -361,9 +297,9 @@ async function saveMetaGroupDumpToDb(groupPk: GroupPubkeyType) {
       publicKey: groupPk,
       variant: `MetaGroupConfig-${groupPk}`,
     });
-    window.log.debug(`Saved dumps for metagroup ${groupPk}`);
+    window.log.debug(`Saved dumps for metagroup ${ed25519Str(groupPk)}`);
   } else {
-    window.log.debug(`meta did not dumps saving for metagroup ${groupPk}`);
+    window.log.debug(`No need to update local dumps for metagroup ${ed25519Str(groupPk)}`);
   }
 }
 
