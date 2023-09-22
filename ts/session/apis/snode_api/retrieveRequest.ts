@@ -4,7 +4,7 @@ import { Snode } from '../../../data/data';
 import { updateIsOnline } from '../../../state/ducks/onion';
 import { doSnodeBatchRequest } from './batchRequest';
 import { GetNetworkTime } from './getNetworkTime';
-import { SnodeNamespace, SnodeNamespaces } from './namespaces';
+import { SnodeNamespace, SnodeNamespaces, SnodeNamespacesGroup } from './namespaces';
 
 import { UserGroupsWrapperActions } from '../../../webworker/workers/browser/libsession_worker_interface';
 import { DURATION } from '../../constants';
@@ -92,7 +92,7 @@ async function retrieveRequestForGroup({
   retrieveParam,
 }: {
   groupPk: GroupPubkeyType;
-  namespace: SnodeNamespaces;
+  namespace: SnodeNamespacesGroup;
   retrieveParam: RetrieveParams;
 }) {
   if (!PubKey.isClosedGroupV2(groupPk)) {
@@ -182,7 +182,7 @@ async function buildRetrieveRequest(
           pubkey: UserUtils.getOurPubKeyStrFromCache(),
           expiry,
           signature: signResult.signature,
-          pubkey_ed25519: signResult.pubkey_ed25519,
+          pubkey_ed25519: signResult.pubkey,
         },
       };
       retrieveRequestsParams.push(expireParams);

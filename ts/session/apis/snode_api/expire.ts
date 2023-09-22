@@ -210,7 +210,7 @@ export async function expireMessageOnSnode(props: ExpireMessageOnSnodeProps) {
 
   const params: UpdateExpireNodeUserParams = {
     pubkey: ourPubKey,
-    pubkey_ed25519: signResult.pubkey_ed25519.toUpperCase(),
+    pubkey_ed25519: signResult.pubkey.toUpperCase(),
     // TODO better testing for failed case
     messages: [messageHash],
     expiry,

@@ -1,13 +1,13 @@
 import { FixedSizeUint8Array, GroupPubkeyType } from 'libsession_util_nodejs';
 import { isEmpty } from 'lodash';
+import { toFixedUint8ArrayOfLength } from '../../../types/sqlSharedTypes';
 import { getSodiumRenderer } from '../../crypto';
+import { PubKey } from '../../types';
 import { StringUtils, UserUtils } from '../../utils';
 import { fromHexToArray, fromUInt8ArrayToBase64 } from '../../utils/String';
-import { GetNetworkTime } from './getNetworkTime';
-import { SnodeNamespaces } from './namespaces';
-import { PubKey } from '../../types';
-import { toFixedUint8ArrayOfLength } from '../../../types/sqlSharedTypes';
 import { PreConditionFailed } from '../../utils/errors';
+import { GetNetworkTime } from './getNetworkTime';
+import { SnodeNamespacesGroup } from './namespaces';
 
 type WithTimestamp = { timestamp: number };
 
@@ -86,7 +86,7 @@ function isSigParamsForGroupAdmin(
   return PubKey.isClosedGroupV2(asGr.groupPk) && !!asGr.privKey;
 }
 
-async function getSnodeShared(params: SnodeSigParamsAdminGroup | SnodeSigParamsUs) {
+async function getSnodeSignatureShared(params: SnodeSigParamsAdminGroup | SnodeSigParamsUs) {
   const signatureTimestamp = GetNetworkTime.getNowWithNetworkOffset();
   const verificationData = StringUtils.encode(
     `${params.method}${params.namespace === 0 ? '' : params.namespace}${signatureTimestamp}`,
@@ -130,7 +130,7 @@ async function getSnodeSignatureParamsUs({
   const edKeyPrivBytes = ourEd25519Key.privKeyBytes;
 
   const lengthCheckedPrivKey = toFixedUint8ArrayOfLength(edKeyPrivBytes, 64);
-  const sigData = await getSnodeShared({
+  const sigData = await getSnodeSignatureShared({
     pubKey: UserUtils.getOurPubKeyStrFromCache(),
     method,
     namespace,
@@ -149,14 +149,14 @@ async function getSnodeGroupSignatureParams({
   groupIdentityPrivKey,
   groupPk,
   method,
-  namespace = 0,
+  namespace,
 }: {
   groupPk: GroupPubkeyType;
   groupIdentityPrivKey: FixedSizeUint8Array<64>;
-  namespace: SnodeNamespaces;
+  namespace: SnodeNamespacesGroup;
   method: 'retrieve' | 'store';
 }): Promise<SnodeGroupSignatureResult> {
-  const sigData = await getSnodeShared({
+  const sigData = await getSnodeSignatureShared({
     pubKey: groupPk,
     method,
     namespace,
@@ -176,7 +176,7 @@ async function generateUpdateExpirySignature({
   WithTimestamp & {
     ed25519Privkey: Uint8Array | FixedSizeUint8Array<64>;
     ed25519Pubkey: string;
-  }): Promise<{ signature: string; pubkey_ed25519: string }> {
+  }): Promise<{ signature: string; pubkey: string }> {
   // "expire" || ShortenOrExtend || expiry || messages[0] || ... || messages[N]
   const verificationString = `expire${shortenOrExtend}${timestamp}${messagesHashes.join('')}`;
   const verificationData = StringUtils.encode(verificationString, 'utf8');
@@ -193,7 +193,7 @@ async function generateUpdateExpirySignature({
 
   return {
     signature: signatureBase64,
-    pubkey_ed25519: ed25519Pubkey,
+    pubkey: ed25519Pubkey,
   };
 }
 
@@ -235,7 +235,7 @@ async function generateUpdateExpiryGroupSignature({
   }) {
   if (isEmpty(groupPrivKey) || isEmpty(groupPk)) {
     throw new PreConditionFailed(
-      'generateUpdateExpiryGroupSignature groupPrivKey or groupPks is empty'
+      'generateUpdateExpiryGroupSignature groupPrivKey or groupPk is empty'
     );
   }
 
