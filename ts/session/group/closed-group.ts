@@ -15,7 +15,7 @@ import {
 import { ECKeyPair } from '../../receiver/keypairs';
 import { GetNetworkTime } from '../apis/snode_api/getNetworkTime';
 import { SnodeNamespaces } from '../apis/snode_api/namespaces';
-import { getConversationController } from '../conversations';
+import { ConvoHub } from '../conversations';
 import { generateCurve25519KeyPairWithoutPrefix } from '../crypto';
 import { encryptUsingSessionProtocol } from '../crypto/MessageEncrypter';
 import { ClosedGroupAddedMembersMessage } from '../messages/outgoing/controlMessage/group/ClosedGroupAddedMembersMessage';
@@ -61,7 +61,7 @@ export async function initiateClosedGroupUpdate(
   members: Array<string>
 ) {
   const isGroupV3 = PubKey.isClosedGroupV2(groupId);
-  const convo = await getConversationController().getOrCreateAndWait(
+  const convo = await ConvoHub.use().getOrCreateAndWait(
     groupId,
     isGroupV3 ? ConversationTypeEnum.GROUPV3 : ConversationTypeEnum.GROUP
   );
@@ -208,7 +208,7 @@ export async function updateOrCreateClosedGroup(details: GroupInfo) {
 
   const isV3 = PubKey.isClosedGroupV2(id);
 
-  const conversation = await getConversationController().getOrCreateAndWait(
+  const conversation = await ConvoHub.use().getOrCreateAndWait(
     id,
     isV3 ? ConversationTypeEnum.GROUPV3 : ConversationTypeEnum.GROUP
   );
@@ -313,7 +313,7 @@ async function sendAddedMembers(
   });
 
   const promises = addedMembers.map(async m => {
-    await getConversationController().getOrCreateAndWait(m, ConversationTypeEnum.PRIVATE);
+    await ConvoHub.use().getOrCreateAndWait(m, ConversationTypeEnum.PRIVATE);
     const memberPubKey = PubKey.cast(m);
     await getMessageQueue().sendToPubKey(
       memberPubKey,
@@ -374,7 +374,7 @@ async function generateAndSendNewEncryptionKeyPair(
   groupPublicKey: string,
   targetMembers: Array<string>
 ) {
-  const groupConvo = getConversationController().get(groupPublicKey);
+  const groupConvo = ConvoHub.use().get(groupPublicKey);
   const groupId = fromHexToArray(groupPublicKey);
 
   if (!groupConvo) {

@@ -3,7 +3,7 @@ import { animation, Item, Menu } from 'react-contexify';
 
 import { useSelector } from 'react-redux';
 import { useIsPinned, useIsPrivate, useIsPrivateAndFriend } from '../../hooks/useParamSelector';
-import { getConversationController } from '../../session/conversations';
+import { ConvoHub } from '../../session/conversations';
 import { getIsMessageSection } from '../../state/selectors/section';
 import { useConvoIdFromContext } from '../leftpane/conversation-list-item/ConvoIdContext';
 import { SessionContextMenuContainer } from '../SessionContextMenuContainer';
@@ -86,7 +86,7 @@ export const PinConversationMenuItem = (): JSX.Element | null => {
   const isPinned = useIsPinned(conversationId);
 
   if (isMessagesSection && (!isPrivate || (isPrivate && isPrivateAndFriend))) {
-    const conversation = getConversationController().get(conversationId);
+    const conversation = ConvoHub.use().get(conversationId);
 
     const togglePinConversation = () => {
       void conversation?.togglePinned();

@@ -7,7 +7,7 @@ import useInterval from 'react-use/lib/useInterval';
 import useTimeoutFn from 'react-use/lib/useTimeoutFn';
 
 import { Data } from '../../data/data';
-import { getConversationController } from '../../session/conversations';
+import { ConvoHub } from '../../session/conversations';
 import { getMessageQueue } from '../../session/sending';
 import { syncConfigurationIfNeeded } from '../../session/utils/sync/syncUtils';
 
@@ -162,8 +162,8 @@ const setupTheme = async () => {
 // Do this only if we created a new Session ID, or if we already received the initial configuration message
 const triggerSyncIfNeeded = async () => {
   const us = UserUtils.getOurPubKeyStrFromCache();
-  await getConversationController().get(us).setDidApproveMe(true, true);
-  await getConversationController().get(us).setIsApproved(true, true);
+  await ConvoHub.use().get(us).setDidApproveMe(true, true);
+  await ConvoHub.use().get(us).setIsApproved(true, true);
   const didWeHandleAConfigurationMessageAlready =
     (await Data.getItemById(SettingsKey.hasSyncedInitialConfigurationItem))?.value || false;
   if (didWeHandleAConfigurationMessageAlready) {

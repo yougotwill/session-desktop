@@ -6,7 +6,7 @@ import autoBind from 'auto-bind';
 
 import { OpenGroupData, OpenGroupV2Room } from '../../../../data/opengroups';
 import { ConversationModel } from '../../../../models/conversation';
-import { getConversationController } from '../../../conversations';
+import { ConvoHub } from '../../../conversations';
 import { allowOnlyOneAtATime } from '../../../utils/Promise';
 import { getOpenGroupV2ConversationId } from '../utils/OpenGroupUtils';
 import {
@@ -156,7 +156,7 @@ export class OpenGroupManagerV2 {
 
             await OpenGroupData.removeV2OpenGroupRoom(roomConvoId);
             getOpenGroupManager().removeRoomFromPolledRooms(infos);
-            await getConversationController().deleteCommunity(roomConvoId, {
+            await ConvoHub.use().deleteCommunity(roomConvoId, {
               fromSyncMessage: false,
             });
           }
@@ -185,7 +185,7 @@ export class OpenGroupManagerV2 {
   ): Promise<ConversationModel | undefined> {
     let conversationId = getOpenGroupV2ConversationId(serverUrl, roomId);
 
-    if (getConversationController().get(conversationId)) {
+    if (ConvoHub.use().get(conversationId)) {
       // Url incorrect or server not compatible
       throw new Error(window.i18n('publicChatExists'));
     }
@@ -233,7 +233,7 @@ export class OpenGroupManagerV2 {
         await OpenGroupData.saveV2OpenGroupRoom(updatedRoom);
       }
 
-      const conversation = await getConversationController().getOrCreateAndWait(
+      const conversation = await ConvoHub.use().getOrCreateAndWait(
         conversationId,
         ConversationTypeEnum.GROUP
       );

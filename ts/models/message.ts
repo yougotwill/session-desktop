@@ -17,7 +17,7 @@ import {
 import filesize from 'filesize';
 import { SignalService } from '../protobuf';
 import { getMessageQueue } from '../session';
-import { getConversationController } from '../session/conversations';
+import { ConvoHub } from '../session/conversations';
 import { DataMessage } from '../session/messages/outgoing';
 import { PubKey } from '../session/types';
 import {
@@ -232,8 +232,7 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
       (pubkeysInDesc || []).forEach((pubkeyWithAt: string) => {
         const pubkey = pubkeyWithAt.slice(1);
         const isUS = isUsAnySogsFromCache(pubkey);
-        const displayName =
-          getConversationController().getContactProfileNameOrShortenedPubKey(pubkey);
+        const displayName = ConvoHub.use().getContactProfileNameOrShortenedPubKey(pubkey);
         if (isUS) {
           description = description?.replace(pubkeyWithAt, `@${window.i18n('you')}`);
         } else if (displayName && displayName.length) {
@@ -879,7 +878,7 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
     // This needs to be an unsafe call, because this method is called during
     //   initial module setup. We may be in the middle of the initial fetch to
     //   the database.
-    return getConversationController().getUnsafe(this.get('conversationId'));
+    return ConvoHub.use().getUnsafe(this.get('conversationId'));
   }
 
   public getQuoteContact() {
@@ -892,7 +891,7 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
       return null;
     }
 
-    return getConversationController().get(author);
+    return ConvoHub.use().get(author);
   }
 
   public getSource() {
@@ -1096,7 +1095,7 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
       }
       // check the convo from this user
       // we want the convo of the sender of this message
-      const senderConvo = getConversationController().get(senderConvoId);
+      const senderConvo = ConvoHub.use().get(senderConvoId);
       if (!senderConvo) {
         return false;
       }
@@ -1166,7 +1165,7 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
 
       if (groupUpdate.left && groupUpdate.left.length === 1) {
         return window.i18n('leftTheGroup', [
-          getConversationController().getContactProfileNameOrShortenedPubKey(groupUpdate.left[0]),
+          ConvoHub.use().getContactProfileNameOrShortenedPubKey(groupUpdate.left[0]),
         ]);
       }
 
@@ -1178,9 +1177,7 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
         return window.i18n('titleIsNow', [groupUpdate.name]);
       }
       if (groupUpdate.joined && groupUpdate.joined.length) {
-        const names = groupUpdate.joined.map(
-          getConversationController().getContactProfileNameOrShortenedPubKey
-        );
+        const names = groupUpdate.joined.map(ConvoHub.use().getContactProfileNameOrShortenedPubKey);
 
         if (names.length > 1) {
           messages.push(window.i18n('multipleJoinedTheGroup', [names.join(', ')]));
@@ -1193,7 +1190,7 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
       if (groupUpdate.kicked && groupUpdate.kicked.length) {
         const names = map(
           groupUpdate.kicked,
-          getConversationController().getContactProfileNameOrShortenedPubKey
+          ConvoHub.use().getContactProfileNameOrShortenedPubKey
         );
 
         if (names.length > 1) {
@@ -1217,16 +1214,16 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
       ) as DataExtractionNotificationMsg;
       if (dataExtraction.type === SignalService.DataExtractionNotification.Type.SCREENSHOT) {
         return window.i18n('tookAScreenshot', [
-          getConversationController().getContactProfileNameOrShortenedPubKey(dataExtraction.source),
+          ConvoHub.use().getContactProfileNameOrShortenedPubKey(dataExtraction.source),
         ]);
       }
 
       return window.i18n('savedTheFile', [
-        getConversationController().getContactProfileNameOrShortenedPubKey(dataExtraction.source),
+        ConvoHub.use().getContactProfileNameOrShortenedPubKey(dataExtraction.source),
       ]);
     }
     if (this.get('callNotificationType')) {
-      const displayName = getConversationController().getContactProfileNameOrShortenedPubKey(
+      const displayName = ConvoHub.use().getContactProfileNameOrShortenedPubKey(
         this.get('conversationId')
       );
       const callNotificationType = this.get('callNotificationType');
@@ -1268,7 +1265,7 @@ export class MessageCollection extends Backbone.Collection<MessageModel> {}
 MessageCollection.prototype.model = MessageModel;
 
 export function findAndFormatContact(pubkey: string): FindAndFormatContactType {
-  const contactModel = getConversationController().get(pubkey);
+  const contactModel = ConvoHub.use().get(pubkey);
   let profileName: string | null = null;
   let isMe = false;
 

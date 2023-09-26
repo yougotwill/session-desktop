@@ -10,7 +10,7 @@ import useMount from 'react-use/lib/useMount';
 
 import { LeftPane } from './leftpane/LeftPane';
 // moment does not support es-419 correctly (and cause white screen on app start)
-import { getConversationController } from '../session/conversations';
+import { ConvoHub } from '../session/conversations';
 import { UserUtils } from '../session/utils';
 import { createStore } from '../state/createStore';
 import { initialCallState } from '../state/ducks/call';
@@ -61,7 +61,7 @@ const StyledGutter = styled.div`
 
 function createSessionInboxStore() {
   // Here we set up a full redux store with initial state for our LeftPane Root
-  const conversations = getConversationController()
+  const conversations = ConvoHub.use()
     .getConversations()
     .map(conversation => conversation.getConversationModelProps());
 

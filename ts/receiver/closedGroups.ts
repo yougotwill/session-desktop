@@ -3,7 +3,7 @@ import _, { isNumber, toNumber } from 'lodash';
 import { Data } from '../data/data';
 import { SignalService } from '../protobuf';
 import { getMessageQueue } from '../session';
-import { getConversationController } from '../session/conversations';
+import { ConvoHub } from '../session/conversations';
 import * as ClosedGroup from '../session/group/closed-group';
 import { PubKey } from '../session/types';
 import { toHex } from '../session/utils/String';
@@ -110,7 +110,7 @@ export async function handleClosedGroupControlMessage(
   }
   if (type === Type.NEW) {
     if (
-      !getConversationController()
+      !ConvoHub.use()
         .get(envelope.senderIdentity || envelope.source)
         ?.isApproved()
     ) {
@@ -298,7 +298,7 @@ export async function handleNewClosedGroup(
     await removeFromCache(envelope);
     return;
   }
-  const groupConvo = getConversationController().get(groupId);
+  const groupConvo = ConvoHub.use().get(groupId);
   const expireTimer = groupUpdate.expireTimer;
 
   if (groupConvo) {
@@ -341,8 +341,7 @@ export async function handleNewClosedGroup(
   }
 
   const convo =
-    groupConvo ||
-    (await getConversationController().getOrCreateAndWait(groupId, ConversationTypeEnum.GROUP));
+    groupConvo || (await ConvoHub.use().getOrCreateAndWait(groupId, ConversationTypeEnum.GROUP));
   // ***** Creating a new group *****
   window?.log?.info('Received a new ClosedGroup of id:', groupId);
 
@@ -416,7 +415,7 @@ async function handleClosedGroupEncryptionKeyPair(
     return;
   }
 
-  const groupConvo = getConversationController().get(groupPublicKey);
+  const groupConvo = ConvoHub.use().get(groupPublicKey);
   if (!groupConvo) {
     window?.log?.warn(
       `Ignoring closed group encryption key pair for nonexistent group. ${groupPublicKey}`
@@ -528,7 +527,7 @@ async function performIfValid(
     return;
   }
 
-  const convo = getConversationController().get(groupPublicKey);
+  const convo = ConvoHub.use().get(groupPublicKey);
   if (!convo) {
     window?.log?.warn('dropping message for nonexistent group');
     await removeFromCache(envelope);
@@ -571,7 +570,7 @@ async function performIfValid(
     return;
   }
   // make sure the conversation with this user exist (even if it's just hidden)
-  await getConversationController().getOrCreateAndWait(sender, ConversationTypeEnum.PRIVATE);
+  await ConvoHub.use().getOrCreateAndWait(sender, ConversationTypeEnum.PRIVATE);
 
   const moreRecentOrNah = await sentAtMoreRecentThanWrapper(envelopeTimestamp, 'UserGroupsConfig');
   const shouldNotApplyGroupChange = moreRecentOrNah === 'wrapper_more_recent';
@@ -655,9 +654,7 @@ async function handleClosedGroupMembersAdded(
   const members = [...oldMembers, ...membersNotAlreadyPresent];
   // make sure the conversation with those members (even if it's just hidden)
   await Promise.all(
-    members.map(async m =>
-      getConversationController().getOrCreateAndWait(m, ConversationTypeEnum.PRIVATE)
-    )
+    members.map(async m => ConvoHub.use().getOrCreateAndWait(m, ConversationTypeEnum.PRIVATE))
   );
 
   const groupDiff: ClosedGroup.GroupDiff = {
@@ -732,7 +729,7 @@ async function handleClosedGroupMembersRemoved(
   const wasCurrentUserKicked = !membersAfterUpdate.includes(ourPubKey.key);
   if (wasCurrentUserKicked) {
     // we now want to remove everything related to a group when we get kicked from it.
-    await getConversationController().deleteClosedGroup(groupPubKey, {
+    await ConvoHub.use().deleteClosedGroup(groupPubKey, {
       fromSyncMessage: false,
       sendLeaveMessage: false,
     });
@@ -814,7 +811,7 @@ function removeMemberFromZombies(
 
 async function handleClosedGroupAdminMemberLeft(groupPublicKey: string, envelope: EnvelopePlus) {
   // if the admin was remove and we are the admin, it can only be voluntary
-  await getConversationController().deleteClosedGroup(groupPublicKey, {
+  await ConvoHub.use().deleteClosedGroup(groupPublicKey, {
     fromSyncMessage: false,
     sendLeaveMessage: false,
   });
@@ -823,7 +820,7 @@ async function handleClosedGroupAdminMemberLeft(groupPublicKey: string, envelope
 
 async function handleClosedGroupLeftOurself(groupId: string, envelope: EnvelopePlus) {
   // if we ourself left. It can only mean that another of our device left the group and we just synced that message through the swarm
-  await getConversationController().deleteClosedGroup(groupId, {
+  await ConvoHub.use().deleteClosedGroup(groupId, {
     fromSyncMessage: false,
     sendLeaveMessage: false,
   });
@@ -909,7 +906,7 @@ async function sendLatestKeyPairToUsers(
   await Promise.all(
     targetUsers.map(async member => {
       window?.log?.info(`Sending latest closed group encryption key pair to: ${member}`);
-      await getConversationController().getOrCreateAndWait(member, ConversationTypeEnum.PRIVATE);
+      await ConvoHub.use().getOrCreateAndWait(member, ConversationTypeEnum.PRIVATE);
 
       const wrappers = await ClosedGroup.buildEncryptionKeyPairWrappers([member], keyPairToUse);
 

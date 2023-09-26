@@ -20,7 +20,7 @@ import {
 
 import { SignalService } from '../protobuf';
 import { getMessageQueue } from '../session';
-import { getConversationController } from '../session/conversations';
+import { ConvoHub } from '../session/conversations';
 import {
   ClosedGroupV3VisibleMessage,
   ClosedGroupVisibleMessage,
@@ -155,7 +155,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
   constructor(attributes: ConversationAttributes) {
     super(fillConvoAttributesWithDefaults(attributes));
 
-    // This may be overridden by getConversationController().getOrCreate, and signify
+    // This may be overridden by ConvoHub.use().getOrCreate, and signify
     //   our first save to the database. Or first fetch from the database.
     this.initialPromise = Promise.resolve();
     autoBind(this);
@@ -1584,7 +1584,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     if (!this.isApproved()) {
       window?.log?.info('notification cancelled for unapproved convo', this.idForLogging());
       const hadNoRequestsPrior =
-        getConversationController()
+        ConvoHub.use()
           .getConversations()
           .filter(conversation => {
             return (
@@ -1634,7 +1634,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       }
     }
 
-    const convo = await getConversationController().getOrCreateAndWait(
+    const convo = await ConvoHub.use().getOrCreateAndWait(
       message.get('source'),
       ConversationTypeEnum.PRIVATE
     );
@@ -2335,7 +2335,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
 }
 
 export async function commitConversationAndRefreshWrapper(id: string) {
-  const convo = getConversationController().get(id);
+  const convo = ConvoHub.use().get(id);
   if (!convo) {
     return;
   }

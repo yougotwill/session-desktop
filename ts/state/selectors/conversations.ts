@@ -26,7 +26,7 @@ import { GenericReadableMessageSelectorProps } from '../../components/conversati
 import { LightBoxOptions } from '../../components/conversation/SessionConversation';
 import { hasValidIncomingRequestValues } from '../../models/conversation';
 import { CONVERSATION_PRIORITIES, isOpenOrClosedGroup } from '../../models/conversationAttributes';
-import { getConversationController } from '../../session/conversations';
+import { ConvoHub } from '../../session/conversations';
 import { UserUtils } from '../../session/utils';
 import { LocalizerType } from '../../types/Util';
 import { BlockedNumberController } from '../../util';
@@ -73,7 +73,7 @@ export const getSortedMessagesOfSelectedConversation = createSelector(
     }
 
     const convoId = messages[0].propsForMessage.convoId;
-    const convo = getConversationController().get(convoId);
+    const convo = ConvoHub.use().get(convoId);
 
     if (!convo) {
       return [];

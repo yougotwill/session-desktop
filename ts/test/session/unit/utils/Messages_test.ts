@@ -15,7 +15,7 @@ import { ConversationTypeEnum } from '../../../../models/conversationAttributes'
 import { SignalService } from '../../../../protobuf';
 import { getOpenGroupV2ConversationId } from '../../../../session/apis/open_group_api/utils/OpenGroupUtils';
 import { SnodeNamespaces } from '../../../../session/apis/snode_api/namespaces';
-import { getConversationController } from '../../../../session/conversations';
+import { ConvoHub } from '../../../../session/conversations';
 import { ClosedGroupAddedMembersMessage } from '../../../../session/messages/outgoing/controlMessage/group/ClosedGroupAddedMembersMessage';
 import { ClosedGroupEncryptionPairMessage } from '../../../../session/messages/outgoing/controlMessage/group/ClosedGroupEncryptionPairMessage';
 import { ClosedGroupEncryptionPairReplyMessage } from '../../../../session/messages/outgoing/controlMessage/group/ClosedGroupEncryptionPairReplyMessage';
@@ -233,9 +233,9 @@ describe('Message Utils', () => {
       TestUtils.stubData('getItemById').callsFake(async () => {
         return { value: '[]' };
       });
-      getConversationController().reset();
+      ConvoHub.use().reset();
 
-      await getConversationController().load();
+      await ConvoHub.use().load();
     });
 
     afterEach(() => {
@@ -244,23 +244,14 @@ describe('Message Utils', () => {
 
     // open groups are actually removed when we leave them so this doesn't make much sense, but just in case we break something later
     it('filter out non active open groups', async () => {
-      await getConversationController().getOrCreateAndWait(
-        '05123456789',
-        ConversationTypeEnum.PRIVATE
-      );
-      await getConversationController().getOrCreateAndWait(
-        '0512345678',
-        ConversationTypeEnum.PRIVATE
-      );
+      await ConvoHub.use().getOrCreateAndWait('05123456789', ConversationTypeEnum.PRIVATE);
+      await ConvoHub.use().getOrCreateAndWait('0512345678', ConversationTypeEnum.PRIVATE);
 
       const convoId3 = getOpenGroupV2ConversationId('http://chat-dev2.lokinet.org', 'fish');
       const convoId4 = getOpenGroupV2ConversationId('http://chat-dev3.lokinet.org', 'fish2');
       const convoId5 = getOpenGroupV2ConversationId('http://chat-dev3.lokinet.org', 'fish3');
 
-      const convo3 = await getConversationController().getOrCreateAndWait(
-        convoId3,
-        ConversationTypeEnum.GROUP
-      );
+      const convo3 = await ConvoHub.use().getOrCreateAndWait(convoId3, ConversationTypeEnum.GROUP);
       convo3.set({ active_at: Date.now() });
 
       stubOpenGroupData('getV2OpenGroupRoom')
@@ -272,24 +263,15 @@ describe('Message Utils', () => {
           serverPublicKey: 'serverPublicKey',
         } as OpenGroupV2Room);
 
-      const convo4 = await getConversationController().getOrCreateAndWait(
-        convoId4,
-        ConversationTypeEnum.GROUP
-      );
+      const convo4 = await ConvoHub.use().getOrCreateAndWait(convoId4, ConversationTypeEnum.GROUP);
       convo4.set({ active_at: undefined });
 
       await OpenGroupData.opengroupRoomsLoad();
-      const convo5 = await getConversationController().getOrCreateAndWait(
-        convoId5,
-        ConversationTypeEnum.GROUP
-      );
+      const convo5 = await ConvoHub.use().getOrCreateAndWait(convoId5, ConversationTypeEnum.GROUP);
       convo5.set({ active_at: 0 });
 
-      await getConversationController().getOrCreateAndWait(
-        '051234567',
-        ConversationTypeEnum.PRIVATE
-      );
-      const convos = getConversationController().getConversations();
+      await ConvoHub.use().getOrCreateAndWait('051234567', ConversationTypeEnum.PRIVATE);
+      const convos = ConvoHub.use().getConversations();
 
       // convoID3 is active but 4 and 5 are not
       const configMessage = await getCurrentConfigurationMessage(convos);

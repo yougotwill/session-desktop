@@ -1,5 +1,5 @@
 import { isEmpty } from 'lodash';
-import { getConversationController } from '../conversations';
+import { ConvoHub } from '../conversations';
 import { UserUtils } from '../utils';
 import { toHex } from '../utils/String';
 import { AvatarDownload } from '../utils/job_runners/jobs/AvatarDownloadJob';
@@ -14,7 +14,7 @@ async function updateOurProfileSync(
   priority: number | null
 ) {
   const us = UserUtils.getOurPubKeyStrFromCache();
-  const ourConvo = getConversationController().get(us);
+  const ourConvo = ConvoHub.use().get(us);
   if (!ourConvo?.id) {
     window?.log?.warn('[profileupdate] Cannot update our profile without convo associated');
     return;
@@ -36,7 +36,7 @@ async function updateProfileOfContact(
   profileUrl: string | null | undefined,
   profileKey: Uint8Array | null | undefined
 ) {
-  const conversation = getConversationController().get(pubkey);
+  const conversation = ConvoHub.use().get(pubkey);
 
   if (!conversation || !conversation.isPrivate()) {
     window.log.warn('updateProfileOfContact can only be used for existing and private convos');

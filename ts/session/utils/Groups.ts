@@ -1,9 +1,9 @@
 import { PubKey } from '../types';
-import { getConversationController } from '../conversations';
+import { ConvoHub } from '../conversations';
 import { fromHexToArray } from './String';
 
 export function isClosedGroup(groupId: PubKey): boolean {
-  const conversation = getConversationController().get(groupId.key);
+  const conversation = ConvoHub.use().get(groupId.key);
 
   if (!conversation) {
     return false;

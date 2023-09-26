@@ -6,7 +6,7 @@ import { LocalizerKeys } from '../types/LocalizerKeys';
 import { initWallClockListener } from './wallClockListener';
 
 import { Data } from '../data/data';
-import { getConversationController } from '../session/conversations';
+import { ConvoHub } from '../session/conversations';
 
 export async function destroyMessagesAndUpdateRedux(
   messages: Array<{
@@ -30,7 +30,7 @@ export async function destroyMessagesAndUpdateRedux(
 
   // trigger a refresh the last message for all those uniq conversation
   conversationWithChanges.forEach(convoIdToUpdate => {
-    getConversationController().get(convoIdToUpdate)?.updateLastMessage();
+    ConvoHub.use().get(convoIdToUpdate)?.updateLastMessage();
   });
 }
 

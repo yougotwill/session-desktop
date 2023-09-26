@@ -3,7 +3,7 @@ import { UserUtils } from '.';
 import { Data } from '../../data/data';
 import { PubKey } from '../types';
 import { fromHexToArray, toHex } from './String';
-import { getConversationController } from '../conversations';
+import { ConvoHub } from '../conversations';
 import { LokiProfile } from '../../types/Message';
 import { getOurPubKeyStrFromStorage, Storage } from '../../util/storage';
 import { SessionKeyPair } from '../../receiver/keypairs';
@@ -102,7 +102,7 @@ export function getOurProfile(): LokiProfile | undefined {
     // Secondary devices have their profile stored
     // in their primary device's conversation
     const ourNumber = Storage.get('primaryDevicePubKey') as string;
-    const ourConversation = getConversationController().get(ourNumber);
+    const ourConversation = ConvoHub.use().get(ourNumber);
     const ourProfileKeyHex = ourConversation.getProfileKey();
     const profileKeyAsBytes = ourProfileKeyHex ? fromHexToArray(ourProfileKeyHex) : null;
 

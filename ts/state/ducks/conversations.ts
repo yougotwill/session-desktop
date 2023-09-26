@@ -15,7 +15,7 @@ import {
   PropsForDataExtractionNotification,
   PropsForMessageRequestResponse,
 } from '../../models/messageType';
-import { getConversationController } from '../../session/conversations';
+import { ConvoHub } from '../../session/conversations';
 import { ReactionList } from '../../types/Reaction';
 
 export type CallNotificationType = 'missed-call' | 'started-call' | 'answered-a-call';
@@ -346,7 +346,7 @@ async function getMessages({
 }> {
   const beforeTimestamp = Date.now();
 
-  const conversation = getConversationController().get(conversationKey);
+  const conversation = ConvoHub.use().get(conversationKey);
   if (!conversation) {
     // no valid conversation, early return
     window?.log?.error('Failed to get convo on reducer.');
@@ -1093,7 +1093,7 @@ export const {
 } = actions;
 
 async function unmarkAsForcedUnread(convoId: string) {
-  const convo = getConversationController().get(convoId);
+  const convo = ConvoHub.use().get(convoId);
   if (convo && convo.isMarkedUnread()) {
     // we just opened it and it was forced "Unread", so we reset the unread state here
     await convo.markAsUnread(false, true);

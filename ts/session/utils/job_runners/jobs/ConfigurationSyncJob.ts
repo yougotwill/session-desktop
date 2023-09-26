@@ -8,7 +8,7 @@ import { ReleasedFeatures } from '../../../../util/releaseFeature';
 import { isSignInByLinking } from '../../../../util/storage';
 import { GenericWrapperActions } from '../../../../webworker/workers/browser/libsession_worker_interface';
 import { NotEmptyArrayOfBatchResults } from '../../../apis/snode_api/SnodeRequestTypes';
-import { getConversationController } from '../../../conversations';
+import { ConvoHub } from '../../../conversations';
 import { SharedUserConfigMessage } from '../../../messages/outgoing/controlMessage/SharedConfigMessage';
 import { MessageSender } from '../../../sending/MessageSender';
 import { allowOnlyOneAtATime } from '../../Promise';
@@ -173,7 +173,7 @@ class ConfigurationSyncJob extends PersistedJob<ConfigurationSyncPersistedData> 
 
       const us = UserUtils.getOurPubKeyStrFromCache();
       const ed25519Key = await UserUtils.getUserED25519KeyPairBytes();
-      const conversation = getConversationController().get(us);
+      const conversation = ConvoHub.use().get(us);
       if (!us || !conversation || !ed25519Key) {
         // we check for ed25519Key because it is needed for authenticated requests
         window.log.warn('did not find our own conversation');

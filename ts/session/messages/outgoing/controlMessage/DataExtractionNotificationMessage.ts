@@ -5,7 +5,7 @@ import { MessageParams } from '../Message';
 import { ContentMessage } from '..';
 import { PubKey } from '../../../types';
 import { getMessageQueue } from '../../..';
-import { getConversationController } from '../../../conversations';
+import { ConvoHub } from '../../../conversations';
 import { UserUtils } from '../../../utils';
 import { SettingsKey } from '../../../../data/settings-key';
 import { Storage } from '../../../../util/storage';
@@ -53,7 +53,7 @@ export const sendDataExtractionNotification = async (
   attachmentSender: string,
   referencedAttachmentTimestamp: number
 ) => {
-  const convo = getConversationController().get(conversationId);
+  const convo = ConvoHub.use().get(conversationId);
   if (
     !convo ||
     !convo.isPrivate() ||

@@ -1,12 +1,14 @@
 /* eslint-disable func-names */
 import { expect } from 'chai';
 import Sinon from 'sinon';
+import { UserGroupsWrapperActionsCalls } from 'libsession_util_nodejs';
+import { ConfigDumpData } from '../../../data/configDump/configDump';
 import { Data } from '../../../data/data';
 import { OpenGroupData } from '../../../data/opengroups';
-import { ConfigDumpData } from '../../../data/configDump/configDump';
 
-import * as utilWorker from '../../../webworker/workers/browser/util_worker_interface';
+import { BlockedNumberController } from '../../../util';
 import * as libsessionWorker from '../../../webworker/workers/browser/libsession_worker_interface';
+import * as utilWorker from '../../../webworker/workers/browser/util_worker_interface';
 
 const globalAny: any = global;
 
@@ -41,8 +43,20 @@ export function stubUtilWorker(fnName: string, returnedValue: any): sinon.SinonS
     .resolves(returnedValue);
 }
 
-export function stubLibSessionWorker(value: any) {
-  Sinon.stub(libsessionWorker, 'callLibSessionWorker').resolves(value);
+export function stubLibSessionWorker(resolveValue: any) {
+  Sinon.stub(libsessionWorker, 'callLibSessionWorker').resolves(resolveValue);
+}
+
+export function stubBlockedNumberController() {
+  Sinon.stub(BlockedNumberController, 'getNumbersFromDB').resolves();
+  Sinon.stub(BlockedNumberController, 'isBlocked').resolves();
+}
+
+export function stubUserGroupWrapper<T extends keyof UserGroupsWrapperActionsCalls>(
+  fn: T,
+  value: Awaited<ReturnType<UserGroupsWrapperActionsCalls[T]>>
+) {
+  Sinon.stub(libsessionWorker.UserGroupsWrapperActions, fn).resolves(value);
 }
 
 export function stubCreateObjectUrl() {

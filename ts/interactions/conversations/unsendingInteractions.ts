@@ -3,7 +3,7 @@ import { Data } from '../../data/data';
 import { ConversationModel } from '../../models/conversation';
 import { MessageModel } from '../../models/message';
 import { getMessageQueue } from '../../session';
-import { getConversationController } from '../../session/conversations';
+import { ConvoHub } from '../../session/conversations';
 import { UnsendMessage } from '../../session/messages/outgoing/controlMessage/UnsendMessage';
 import { ed25519Str } from '../../session/onions/onionPath';
 import { SnodeAPI } from '../../session/apis/snode_api/SNodeAPI';
@@ -339,7 +339,7 @@ export async function deleteMessagesByIdForEveryone(
   messageIds: Array<string>,
   conversationId: string
 ) {
-  const conversation = getConversationController().getOrThrow(conversationId);
+  const conversation = ConvoHub.use().getOrThrow(conversationId);
   const isMe = conversation.isMe();
   const selectedMessages = compact(
     await Promise.all(messageIds.map(m => Data.getMessageById(m, false)))
@@ -368,7 +368,7 @@ export async function deleteMessagesByIdForEveryone(
 }
 
 export async function deleteMessagesById(messageIds: Array<string>, conversationId: string) {
-  const conversation = getConversationController().getOrThrow(conversationId);
+  const conversation = ConvoHub.use().getOrThrow(conversationId);
   const selectedMessages = compact(
     await Promise.all(messageIds.map(m => Data.getMessageById(m, false)))
   );

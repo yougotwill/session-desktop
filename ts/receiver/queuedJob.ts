@@ -5,7 +5,7 @@ import { queueAttachmentDownloads } from './attachments';
 import { Data } from '../data/data';
 import { ConversationModel } from '../models/conversation';
 import { MessageModel } from '../models/message';
-import { getConversationController } from '../session/conversations';
+import { ConvoHub } from '../session/conversations';
 import { Quote } from './types';
 
 import { ConversationTypeEnum, READ_MESSAGE_STATE } from '../models/conversationAttributes';
@@ -385,7 +385,7 @@ export async function handleMessageJob(
     } in conversation ${conversation.idForLogging()}`
   );
 
-  const sendingDeviceConversation = await getConversationController().getOrCreateAndWait(
+  const sendingDeviceConversation = await ConvoHub.use().getOrCreateAndWait(
     source,
     ConversationTypeEnum.PRIVATE
   );

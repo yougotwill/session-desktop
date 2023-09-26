@@ -14,7 +14,7 @@ import { SessionRecording } from '../SessionRecording';
 
 import { SettingsKey } from '../../../data/settings-key';
 import { showLinkSharingConfirmationModalDialog } from '../../../interactions/conversationInteractions';
-import { getConversationController } from '../../../session/conversations';
+import { ConvoHub } from '../../../session/conversations';
 import { ToastUtils } from '../../../session/utils';
 import { ReduxConversationType } from '../../../state/ducks/conversations';
 import { removeAllStagedAttachmentsInConversation } from '../../../state/ducks/stagedAttachments';
@@ -598,7 +598,7 @@ class CompositionBoxInner extends React.Component<Props, State> {
     }
 
     const allMembers = allPubKeys.map(pubKey => {
-      const conv = getConversationController().get(pubKey);
+      const conv = ConvoHub.use().get(pubKey);
       const profileName =
         conv?.getNicknameOrRealUsernameOrPlaceholder() || window.i18n('anonymous');
 
@@ -855,7 +855,7 @@ class CompositionBoxInner extends React.Component<Props, State> {
     // Also, check for a message length change before firing it up, to avoid
     // catching ESC, tab, or whatever which is not typing
     if (draft && draft.length && draft.length !== this.lastBumpTypingMessageLength) {
-      const conversationModel = getConversationController().get(this.props.selectedConversationKey);
+      const conversationModel = ConvoHub.use().get(this.props.selectedConversationKey);
       if (!conversationModel) {
         return;
       }

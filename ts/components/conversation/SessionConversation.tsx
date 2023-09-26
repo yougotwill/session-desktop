@@ -21,7 +21,7 @@ import { SessionFileDropzone } from './SessionFileDropzone';
 import { Data } from '../../data/data';
 import { markAllReadByConvoId } from '../../interactions/conversationInteractions';
 import { MAX_ATTACHMENT_FILESIZE_BYTES } from '../../session/constants';
-import { getConversationController } from '../../session/conversations';
+import { ConvoHub } from '../../session/conversations';
 import { ToastUtils } from '../../session/utils';
 import {
   ReduxConversationType,
@@ -187,7 +187,7 @@ export class SessionConversation extends React.Component<Props, State> {
 
   public sendMessageFn(msg: SendMessageType) {
     const { selectedConversationKey } = this.props;
-    const conversationModel = getConversationController().get(selectedConversationKey);
+    const conversationModel = ConvoHub.use().get(selectedConversationKey);
 
     if (!conversationModel) {
       return;
@@ -524,7 +524,7 @@ export class SessionConversation extends React.Component<Props, State> {
     );
 
     const allMembers = allPubKeys.map((pubKey: string) => {
-      const conv = getConversationController().get(pubKey);
+      const conv = ConvoHub.use().get(pubKey);
       const profileName = conv?.getNicknameOrRealUsernameOrPlaceholder();
 
       return {

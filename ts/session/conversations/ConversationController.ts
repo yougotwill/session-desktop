@@ -38,7 +38,7 @@ import { SessionUtilUserGroups } from '../utils/libsession/libsession_utils_user
 
 let instance: ConversationController | null;
 
-export const getConversationController = () => {
+const getConversationController = () => {
   if (instance) {
     return instance;
   }
@@ -47,13 +47,13 @@ export const getConversationController = () => {
   return instance;
 };
 
-export class ConversationController {
+class ConversationController {
   private readonly conversations: ConversationCollection;
   private _initialFetchComplete: boolean = false;
   private _initialPromise?: Promise<any>;
 
   /**
-   * Do not call this constructor. You get the ConversationController through getConversationController() only
+   * Do not call this constructor. You get the ConversationController through ConvoHub.use() only
    */
   constructor() {
     this.conversations = new ConversationCollection();
@@ -62,7 +62,7 @@ export class ConversationController {
   // FIXME this could return | undefined
   public get(id: string): ConversationModel {
     if (!this._initialFetchComplete) {
-      throw new Error('getConversationController().get() needs complete initial fetch');
+      throw new Error('ConvoHub.use().get() needs complete initial fetch');
     }
 
     return this.conversations.get(id);
@@ -70,7 +70,7 @@ export class ConversationController {
 
   public getOrThrow(id: string): ConversationModel {
     if (!this._initialFetchComplete) {
-      throw new Error('getConversationController().get() needs complete initial fetch');
+      throw new Error('ConvoHub.use().get() needs complete initial fetch');
     }
 
     const convo = this.conversations.get(id);
@@ -78,7 +78,7 @@ export class ConversationController {
     if (convo) {
       return convo;
     }
-    throw new Error(`Conversation ${id} does not exist on getConversationController().get()`);
+    throw new Error(`Conversation ${id} does not exist on ConvoHub.use().get()`);
   }
   // Needed for some model setup which happens during the initial fetch() call below
   public getUnsafe(id: string): ConversationModel | undefined {
@@ -100,12 +100,12 @@ export class ConversationController {
 
     if (type === ConversationTypeEnum.GROUPV3 && !PubKey.isClosedGroupV2(id)) {
       throw new Error(
-        'required v3 closed group` ` but the pubkey does not match the 03 prefix for them'
+        'required v3 closed group but the pubkey does not match the 03 prefix for them'
       );
     }
 
     if (!this._initialFetchComplete) {
-      throw new Error('getConversationController().get() needs complete initial fetch');
+      throw new Error('ConvoHub.use().get() needs complete initial fetch');
     }
 
     if (this.conversations.get(id)) {
@@ -153,7 +153,7 @@ export class ConversationController {
   }
 
   public getContactProfileNameOrShortenedPubKey(pubKey: string): string {
-    const conversation = getConversationController().get(pubKey);
+    const conversation = ConvoHub.use().get(pubKey);
     if (!conversation) {
       return pubKey;
     }
@@ -188,9 +188,7 @@ export class ConversationController {
    */
   public async deleteBlindedContact(blindedId: string) {
     if (!this._initialFetchComplete) {
-      throw new Error(
-        'getConversationController().deleteBlindedContact() needs complete initial fetch'
-      );
+      throw new Error('ConvoHub.use().deleteBlindedContact() needs complete initial fetch');
     }
     if (!PubKey.isBlinded(blindedId)) {
       throw new Error('deleteBlindedContact allow accepts blinded id');
@@ -314,12 +312,17 @@ export class ConversationController {
   }
 
   public async load() {
+    window.log.warn(`plop1`);
+
     if (this.conversations.length) {
       throw new Error('ConversationController: Already loaded!');
     }
+    window.log.warn(`plop1`);
 
     const load = async () => {
       try {
+        window.log.warn(`plop2`);
+
         const startLoad = Date.now();
 
         const convoModels = await Data.getAllConversations();
@@ -375,7 +378,6 @@ export class ConversationController {
         throw error;
       }
     };
-    await BlockedNumberController.load();
 
     this._initialPromise = load();
 
@@ -397,7 +399,7 @@ export class ConversationController {
 
   private async deleteConvoInitialChecks(convoId: string, deleteType: ConvoVolatileType) {
     if (!this._initialFetchComplete) {
-      throw new Error(`getConversationController.${deleteType}  needs complete initial fetch`);
+      throw new Error(`ConvoHub.${deleteType}  needs complete initial fetch`);
     }
 
     window.log.info(`${deleteType} with ${convoId}`);
@@ -453,7 +455,7 @@ export class ConversationController {
  * So if the user made the action on this device, fromSyncMessage should be false, but if it happened from a linked device polled update, set this to true.
  */
 async function leaveClosedGroup(groupId: string, fromSyncMessage: boolean) {
-  const convo = getConversationController().get(groupId);
+  const convo = ConvoHub.use().get(groupId);
 
   if (!convo || !convo.isClosedGroup()) {
     window?.log?.error('Cannot leave non-existing group');
@@ -566,3 +568,5 @@ async function removeCommunityFromWrappers(conversationId: string) {
     window?.log?.info('SessionUtilUserGroups.removeCommunityFromWrapper failed:', e.message);
   }
 }
+
+export const ConvoHub = { use: getConversationController };

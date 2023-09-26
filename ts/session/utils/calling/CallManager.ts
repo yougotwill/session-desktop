@@ -16,7 +16,7 @@ import {
   setFullScreenCall,
   startingCallWith,
 } from '../../../state/ducks/call';
-import { getConversationController } from '../../conversations';
+import { ConvoHub } from '../../conversations';
 import { CallMessage } from '../../messages/outgoing/controlMessage/CallMessage';
 import { ed25519Str } from '../../onions/onionPath';
 import { PubKey } from '../../types';
@@ -505,7 +505,7 @@ export async function USER_callRecipient(recipient: string) {
   });
 
   window.log.info('Sending preOffer message to ', ed25519Str(recipient));
-  const calledConvo = getConversationController().get(recipient);
+  const calledConvo = ConvoHub.use().get(recipient);
   calledConvo.set('active_at', Date.now()); // addSingleOutgoingMessage does the commit for us on the convo
   await calledConvo.unhideIfNeeded(false);
   weAreCallerOnCurrentCall = true;
@@ -857,7 +857,7 @@ export async function USER_acceptIncomingCallRequest(fromSender: string) {
     }
   }
   const networkTimestamp = GetNetworkTime.getNowWithNetworkOffset();
-  const callerConvo = getConversationController().get(fromSender);
+  const callerConvo = ConvoHub.use().get(fromSender);
   callerConvo.set('active_at', networkTimestamp);
   await callerConvo.unhideIfNeeded(false);
 
@@ -1050,7 +1050,7 @@ function getCachedMessageFromCallMessage(
 }
 
 async function isUserApprovedOrWeSentAMessage(user: string) {
-  const isApproved = getConversationController().get(user)?.isApproved();
+  const isApproved = ConvoHub.use().get(user)?.isApproved();
 
   if (isApproved) {
     return true;
@@ -1141,7 +1141,7 @@ export async function handleCallTypeOffer(
       window.inboxStore?.dispatch(incomingCall({ pubkey: sender }));
 
       // show a notification
-      const callerConvo = getConversationController().get(sender);
+      const callerConvo = ConvoHub.use().get(sender);
       const convNotif = callerConvo?.getNotificationsFor() || 'disabled';
       if (convNotif === 'disabled') {
         window?.log?.info('notifications disabled for convo', ed25519Str(sender));
@@ -1162,7 +1162,7 @@ export async function handleMissedCall(
   incomingOfferTimestamp: number,
   reason: 'not-approved' | 'permissions' | 'another-call-ongoing' | 'too-old-timestamp'
 ) {
-  const incomingCallConversation = getConversationController().get(sender);
+  const incomingCallConversation = ConvoHub.use().get(sender);
 
   const displayname =
     incomingCallConversation?.getNickname() ||
@@ -1189,7 +1189,7 @@ export async function handleMissedCall(
 }
 
 async function addMissedCallMessage(callerPubkey: string, sentAt: number) {
-  const incomingCallConversation = getConversationController().get(callerPubkey);
+  const incomingCallConversation = ConvoHub.use().get(callerPubkey);
 
   if (incomingCallConversation.isActive() || incomingCallConversation.isHidden()) {
     incomingCallConversation.set('active_at', GetNetworkTime.getNowWithNetworkOffset());

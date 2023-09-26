@@ -11,7 +11,7 @@ import {
 import { GetNetworkTime } from '../../../apis/snode_api/getNetworkTime';
 import { SnodeNamespaces } from '../../../apis/snode_api/namespaces';
 import { TTL_DEFAULT } from '../../../constants';
-import { getConversationController } from '../../../conversations';
+import { ConvoHub } from '../../../conversations';
 import { MessageSender } from '../../../sending/MessageSender';
 import { PubKey } from '../../../types';
 import { allowOnlyOneAtATime } from '../../Promise';
@@ -192,7 +192,7 @@ class GroupSyncJob extends PersistedJob<GroupSyncPersistedData> {
 
       const us = UserUtils.getOurPubKeyStrFromCache();
       const ed25519Key = await UserUtils.getUserED25519KeyPairBytes();
-      const conversation = getConversationController().get(us);
+      const conversation = ConvoHub.use().get(us);
       if (!us || !conversation || !ed25519Key) {
         // we check for ed25519Key because it is needed for authenticated requests
         window.log.warn('did not find our own conversation');

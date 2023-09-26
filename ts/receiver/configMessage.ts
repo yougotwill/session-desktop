@@ -11,7 +11,7 @@ import { getOpenGroupManager } from '../session/apis/open_group_api/opengroupV2/
 import { OpenGroupUtils } from '../session/apis/open_group_api/utils';
 import { getOpenGroupV2ConversationId } from '../session/apis/open_group_api/utils/OpenGroupUtils';
 import { getSwarmPollingInstance } from '../session/apis/snode_api';
-import { getConversationController } from '../session/conversations';
+import { ConvoHub } from '../session/conversations';
 import { IncomingMessage } from '../session/messages/incoming/IncomingMessage';
 import { ProfileManager } from '../session/profile_manager/ProfileManager';
 import { PubKey } from '../session/types';
@@ -234,14 +234,14 @@ async function handleUserProfileUpdate(result: IncomingUserResult) {
 }
 
 function getContactsToRemoveFromDB(contactsInWrapper: Array<ContactInfo>) {
-  const allContactsInDBWhichShouldBeInWrapperIds = getConversationController()
+  const allContactsInDBWhichShouldBeInWrapperIds = ConvoHub.use()
     .getConversations()
     .filter(SessionUtilContact.isContactToStoreInWrapper)
     .map(m => m.id as string);
 
   const currentlySelectedConversationId = getCurrentlySelectedConversationOutsideRedux();
   const currentlySelectedConvo = currentlySelectedConversationId
-    ? getConversationController().get(currentlySelectedConversationId)
+    ? ConvoHub.use().get(currentlySelectedConversationId)
     : undefined;
 
   // we might have some contacts not in the wrapper anymore, so let's clean things up.
@@ -280,7 +280,7 @@ async function deleteContactsFromDB(contactsToRemove: Array<string>) {
   for (let index = 0; index < contactsToRemove.length; index++) {
     const contactToRemove = contactsToRemove[index];
     try {
-      await getConversationController().delete1o1(contactToRemove, {
+      await ConvoHub.use().delete1o1(contactToRemove, {
         fromSyncMessage: true,
         justHidePrivate: false,
       });
@@ -308,7 +308,7 @@ async function handleContactsUpdate() {
       // our profile update comes from our userProfile, not from the contacts wrapper.
       continue;
     }
-    const contactConvo = await getConversationController().getOrCreateAndWait(
+    const contactConvo = await ConvoHub.use().getOrCreateAndWait(
       wrapperConvo.id,
       ConversationTypeEnum.PRIVATE
     );
@@ -381,7 +381,7 @@ async function handleCommunitiesUpdate() {
     'allCommunitiesInWrapper',
     allCommunitiesInWrapper.map(m => m.fullUrlWithPubkey)
   );
-  const allCommunitiesConversation = getConversationController()
+  const allCommunitiesConversation = ConvoHub.use()
     .getConversations()
     .filter(SessionUtilUserGroups.isCommunityToStoreInWrapper);
 
@@ -425,7 +425,7 @@ async function handleCommunitiesUpdate() {
   for (let index = 0; index < communitiesToLeaveInDB.length; index++) {
     const toLeave = communitiesToLeaveInDB[index];
     window.log.info('leaving community with convoId ', toLeave.id);
-    await getConversationController().deleteCommunity(toLeave.id, {
+    await ConvoHub.use().deleteCommunity(toLeave.id, {
       fromSyncMessage: true,
     });
   }
@@ -457,7 +457,7 @@ async function handleCommunitiesUpdate() {
       fromWrapper.roomCasePreserved
     );
 
-    const communityConvo = getConversationController().get(convoId);
+    const communityConvo = ConvoHub.use().get(convoId);
     if (fromWrapper && communityConvo) {
       let changes = false;
 
@@ -475,7 +475,7 @@ async function handleCommunitiesUpdate() {
 async function handleLegacyGroupUpdate(latestEnvelopeTimestamp: number) {
   // first let's check which closed groups needs to be joined or left by doing a diff of what is in the wrapper and what is in the DB
   const allLegacyGroupsInWrapper = await UserGroupsWrapperActions.getAllLegacyGroups();
-  const allLegacyGroupsInDb = getConversationController()
+  const allLegacyGroupsInDb = ConvoHub.use()
     .getConversations()
     .filter(SessionUtilUserGroups.isLegacyGroupToRemoveFromDBIfNotInWrapper);
 
@@ -506,9 +506,9 @@ async function handleLegacyGroupUpdate(latestEnvelopeTimestamp: number) {
       'leaving legacy group from configuration sync message with convoId ',
       toLeave.id
     );
-    const toLeaveFromDb = getConversationController().get(toLeave.id);
+    const toLeaveFromDb = ConvoHub.use().get(toLeave.id);
     // the wrapper told us that this group is not tracked, so even if we left/got kicked from it, remove it from the DB completely
-    await getConversationController().deleteClosedGroup(toLeaveFromDb.id, {
+    await ConvoHub.use().deleteClosedGroup(toLeaveFromDb.id, {
       fromSyncMessage: true,
       sendLeaveMessage: false, // this comes from the wrapper, so we must have left/got kicked from that group already and our device already handled it.
     });
@@ -522,16 +522,13 @@ async function handleLegacyGroupUpdate(latestEnvelopeTimestamp: number) {
     );
 
     // let's just create the required convo here, as we update the fields right below
-    await getConversationController().getOrCreateAndWait(
-      toJoin.pubkeyHex,
-      ConversationTypeEnum.GROUP
-    );
+    await ConvoHub.use().getOrCreateAndWait(toJoin.pubkeyHex, ConversationTypeEnum.GROUP);
   }
 
   for (let index = 0; index < allLegacyGroupsInWrapper.length; index++) {
     const fromWrapper = allLegacyGroupsInWrapper[index];
 
-    const legacyGroupConvo = getConversationController().get(fromWrapper.pubkeyHex);
+    const legacyGroupConvo = ConvoHub.use().get(fromWrapper.pubkeyHex);
     if (!legacyGroupConvo) {
       // this should not happen as we made sure to create them before
       window.log.warn(
@@ -634,11 +631,8 @@ async function handleSingleGroupUpdate({
     );
   }
 
-  if (!getConversationController().get(groupPk)) {
-    const created = await getConversationController().getOrCreateAndWait(
-      groupPk,
-      ConversationTypeEnum.GROUPV3
-    );
+  if (!ConvoHub.use().get(groupPk)) {
+    const created = await ConvoHub.use().getOrCreateAndWait(groupPk, ConversationTypeEnum.GROUPV3);
     const joinedAt = groupInWrapper.joinedAtSeconds * 1000 || Date.now();
     created.set({
       active_at: joinedAt,
@@ -658,7 +652,7 @@ async function handleSingleGroupUpdateToLeave(toLeave: string) {
       `About to deleteGroup ${toLeave} via handleSingleGroupUpdateToLeave as in DB but not in wrapper`
     );
 
-    await getConversationController().deleteClosedGroup(toLeave, {
+    await ConvoHub.use().deleteClosedGroup(toLeave, {
       fromSyncMessage: true,
       sendLeaveMessage: false,
     });
@@ -673,7 +667,7 @@ async function handleSingleGroupUpdateToLeave(toLeave: string) {
 async function handleGroupUpdate(latestEnvelopeTimestamp: number) {
   // first let's check which groups needs to be joined or left by doing a diff of what is in the wrapper and what is in the DB
   const allGoupsInWrapper = await UserGroupsWrapperActions.getAllGroups();
-  const allGoupsInDb = getConversationController()
+  const allGoupsInDb = ConvoHub.use()
     .getConversations()
     .filter(m => PubKey.isClosedGroupV2(m.id));
 
@@ -731,7 +725,7 @@ async function applyConvoVolatileUpdateFromWrapper(
   forcedUnread: boolean,
   lastReadMessageTimestamp: number
 ) {
-  const foundConvo = getConversationController().get(convoId);
+  const foundConvo = ConvoHub.use().get(convoId);
   if (!foundConvo) {
     return;
   }

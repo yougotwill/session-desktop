@@ -8,7 +8,7 @@ import { EnvelopePlus } from './types';
 
 import { Data } from '../data/data';
 import { ConversationModel } from '../models/conversation';
-import { getConversationController } from '../session/conversations';
+import { ConvoHub } from '../session/conversations';
 import { PubKey } from '../session/types';
 import { StringUtils, UserUtils } from '../session/utils';
 import { handleClosedGroupControlMessage } from './closedGroups';
@@ -208,7 +208,7 @@ export async function handleSwarmDataMessage(
   );
 
   // remove the prefix from the source object so this is correct for all other
-  const convoToAddMessageTo = await getConversationController().getOrCreateAndWait(
+  const convoToAddMessageTo = await ConvoHub.use().getOrCreateAndWait(
     convoIdToAddTheMessageTo,
     typeOfConvo
   );

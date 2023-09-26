@@ -2,7 +2,7 @@ import { compact } from 'lodash';
 import React, { useState } from 'react';
 import { useDispatch } from 'react-redux';
 
-import { getConversationController } from '../../session/conversations';
+import { ConvoHub } from '../../session/conversations';
 import { PubKey } from '../../session/types';
 import { ToastUtils } from '../../session/utils';
 import { Flex } from '../basic/Flex';
@@ -32,7 +32,7 @@ async function removeMods(convoId: string, modsToRemove: Array<string>) {
   window?.log?.info(`asked to remove moderators: ${modsToRemove}`);
 
   try {
-    const convo = getConversationController().get(convoId);
+    const convo = ConvoHub.use().get(convoId);
 
     const roomInfos = convo.toOpenGroupV2();
     const modsToRemovePubkey = compact(modsToRemove.map(m => PubKey.from(m)));

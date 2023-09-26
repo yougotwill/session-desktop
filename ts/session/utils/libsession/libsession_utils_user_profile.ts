@@ -1,7 +1,7 @@
 import { isEmpty } from 'lodash';
 import { UserUtils } from '..';
 import { UserConfigWrapperActions } from '../../../webworker/workers/browser/libsession_worker_interface';
-import { getConversationController } from '../../conversations';
+import { ConvoHub } from '../../conversations';
 import { fromHexToArray } from '../String';
 import { CONVERSATION_PRIORITIES } from '../../../models/conversationAttributes';
 import { Storage } from '../../../util/storage';
@@ -12,7 +12,7 @@ async function insertUserProfileIntoWrapper(convoId: string) {
     return;
   }
   const us = UserUtils.getOurPubKeyStrFromCache();
-  const ourConvo = getConversationController().get(us);
+  const ourConvo = ConvoHub.use().get(us);
 
   if (!ourConvo) {
     throw new Error('insertUserProfileIntoWrapper needs a ourConvo to exist');

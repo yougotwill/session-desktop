@@ -3,7 +3,7 @@ import { useDispatch } from 'react-redux';
 import styled from 'styled-components';
 import { useMessageReactsPropsById } from '../../hooks/useParamSelector';
 import { clearSogsReactionByServerId } from '../../session/apis/open_group_api/sogsv3/sogsV3ClearReaction';
-import { getConversationController } from '../../session/conversations';
+import { ConvoHub } from '../../session/conversations';
 import { updateReactClearAllModal } from '../../state/ducks/modalDialog';
 import { Flex } from '../basic/Flex';
 import { SessionButton, SessionButtonColor, SessionButtonType } from '../basic/SessionButton';
@@ -59,7 +59,7 @@ export const ReactClearAllModal = (props: Props): ReactElement => {
   }
 
   const { convoId, serverId } = msgProps;
-  const roomInfos = getConversationController().get(convoId).toOpenGroupV2();
+  const roomInfos = ConvoHub.use().get(convoId).toOpenGroupV2();
 
   const handleClose = () => {
     dispatch(updateReactClearAllModal(null));

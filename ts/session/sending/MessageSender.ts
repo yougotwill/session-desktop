@@ -26,7 +26,7 @@ import { SnodeNamespace, SnodeNamespaces } from '../apis/snode_api/namespaces';
 import { getSwarmFor } from '../apis/snode_api/snodePool';
 import { SnodeSignature } from '../apis/snode_api/snodeSignatures';
 import { SnodeAPIStore } from '../apis/snode_api/storeMessage';
-import { getConversationController } from '../conversations';
+import { ConvoHub } from '../conversations';
 import { MessageEncrypter } from '../crypto';
 import { addMessagePadding } from '../crypto/BufferPadding';
 import { ContentMessage } from '../messages/outgoing';
@@ -146,9 +146,7 @@ async function send(
         'batch'
       );
 
-      const isDestinationClosedGroup = getConversationController()
-        .get(recipient.key)
-        ?.isClosedGroup();
+      const isDestinationClosedGroup = ConvoHub.use().get(recipient.key)?.isClosedGroup();
       // If message also has a sync message, save that hash. Otherwise save the hash from the regular message send i.e. only closed groups in this case.
       if (
         encryptedAndWrapped.identifier &&
@@ -287,7 +285,7 @@ async function sendMessagesDataToSnode(
 }
 
 function encryptionBasedOnConversation(destination: PubKey) {
-  if (getConversationController().get(destination.key)?.isClosedGroup()) {
+  if (ConvoHub.use().get(destination.key)?.isClosedGroup()) {
     return SignalService.Envelope.Type.CLOSED_GROUP_MESSAGE;
   }
   return SignalService.Envelope.Type.SESSION_MESSAGE;
@@ -426,9 +424,7 @@ async function sendMessagesToSnode(
       throw new Error('result is empty for sendMessagesToSnode');
     }
 
-    const isDestinationClosedGroup = getConversationController()
-      .get(recipient.key)
-      ?.isClosedGroup();
+    const isDestinationClosedGroup = ConvoHub.use().get(recipient.key)?.isClosedGroup();
 
     await Promise.all(
       encryptedAndWrapped.map(async (message, index) => {

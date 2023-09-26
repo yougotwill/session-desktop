@@ -4,7 +4,7 @@ import { InView } from 'react-intersection-observer';
 import { useDispatch, useSelector } from 'react-redux';
 import { Data } from '../../../../data/data';
 import { useHasUnread } from '../../../../hooks/useParamSelector';
-import { getConversationController } from '../../../../session/conversations';
+import { ConvoHub } from '../../../../session/conversations';
 import {
   fetchBottomMessagesForConversation,
   fetchTopMessagesForConversation,
@@ -104,7 +104,7 @@ export const ReadableMessage = (props: ReadableMessageProps) => {
         // make sure the app is focused, because we mark message as read here
         if (inView === true && isAppFocused) {
           dispatch(showScrollToBottomButton(false));
-          getConversationController()
+          ConvoHub.use()
             .get(selectedConversationKey)
             ?.markConversationRead(receivedAt || 0); // TODOLATER this should be `sentAt || serverTimestamp` I think
 
@@ -149,7 +149,7 @@ export const ReadableMessage = (props: ReadableMessageProps) => {
             // mark the whole conversation as read until this point.
             // this will trigger the expire timer.
             if (foundSentAt) {
-              getConversationController()
+              ConvoHub.use()
                 .get(selectedConversationKey)
                 ?.markConversationRead(foundSentAt, Date.now());
             }

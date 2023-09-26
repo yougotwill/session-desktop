@@ -41,7 +41,7 @@ import {
   ConversationNotificationSetting,
   ConversationNotificationSettingType,
 } from '../../models/conversationAttributes';
-import { getConversationController } from '../../session/conversations';
+import { ConvoHub } from '../../session/conversations';
 import { PubKey } from '../../session/types';
 import {
   changeNickNameModal,
@@ -81,7 +81,7 @@ export const MarkConversationUnreadMenuItem = (): JSX.Element | null => {
   const isPrivateAndFriend = useIsPrivateAndFriend(conversationId);
 
   if (isMessagesSection && (!isPrivate || (isPrivate && isPrivateAndFriend))) {
-    const conversation = getConversationController().get(conversationId);
+    const conversation = ConvoHub.use().get(conversationId);
 
     const markUnread = () => {
       void conversation?.markAsUnread(true);
@@ -118,7 +118,7 @@ export const DeletePrivateContactMenuItem = () => {
           onClickClose,
           okTheme: SessionButtonColor.Danger,
           onClickOk: async () => {
-            await getConversationController().delete1o1(convoId, {
+            await ConvoHub.use().delete1o1(convoId, {
               fromSyncMessage: false,
               justHidePrivate: false,
             });
@@ -159,11 +159,11 @@ export const DeleteGroupOrCommunityMenuItem = () => {
           okTheme: SessionButtonColor.Danger,
           onClickOk: async () => {
             if (isPublic) {
-              await getConversationController().deleteCommunity(convoId, {
+              await ConvoHub.use().deleteCommunity(convoId, {
                 fromSyncMessage: false,
               });
             } else {
-              await getConversationController().deleteClosedGroup(convoId, {
+              await ConvoHub.use().deleteClosedGroup(convoId, {
                 fromSyncMessage: false,
                 sendLeaveMessage: true,
               });
@@ -463,7 +463,7 @@ export const DeletePrivateConversationMenuItem = () => {
   return (
     <Item
       onClick={() => {
-        void getConversationController().delete1o1(convoId, {
+        void ConvoHub.use().delete1o1(convoId, {
           fromSyncMessage: false,
           justHidePrivate: true,
         });
@@ -477,7 +477,7 @@ export const DeletePrivateConversationMenuItem = () => {
 export const AcceptMsgRequestMenuItem = () => {
   const convoId = useConvoIdFromContext();
   const isRequest = useIsIncomingRequest(convoId);
-  const convo = getConversationController().get(convoId);
+  const convo = ConvoHub.use().get(convoId);
   const isPrivate = useIsPrivate(convoId);
 
   if (isRequest && isPrivate) {

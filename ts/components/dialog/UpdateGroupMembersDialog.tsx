@@ -23,7 +23,7 @@ import {
 } from '../../hooks/useParamSelector';
 
 import { useSet } from '../../hooks/useSet';
-import { getConversationController } from '../../session/conversations';
+import { ConvoHub } from '../../session/conversations';
 import { initiateClosedGroupUpdate } from '../../session/group/closed-group';
 
 type Props = {
@@ -119,7 +119,7 @@ const ZombiesList = ({ convoId }: { convoId: string }) => {
 };
 
 async function onSubmit(convoId: string, membersAfterUpdate: Array<string>) {
-  const convoFound = getConversationController().get(convoId);
+  const convoFound = ConvoHub.use().get(convoId);
   if (!convoFound || !convoFound.isGroup()) {
     throw new Error('Invalid convo for updateGroupMembersDialog');
   }

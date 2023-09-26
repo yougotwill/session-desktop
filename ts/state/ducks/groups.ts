@@ -10,7 +10,7 @@ import { isEmpty, uniq } from 'lodash';
 import { ConfigDumpData } from '../../data/configDump/configDump';
 import { ConversationTypeEnum } from '../../models/conversationAttributes';
 import { HexString } from '../../node/hexStrings';
-import { getConversationController } from '../../session/conversations';
+import { ConvoHub } from '../../session/conversations';
 import { UserUtils } from '../../session/utils';
 import { getUserED25519KeyPairBytes } from '../../session/utils/User';
 import { PreConditionFailed } from '../../session/utils/errors';
@@ -73,67 +73,81 @@ const initNewGroupInWrapper = createAsyncThunk(
     const uniqMembers = uniq(members);
     const newGroup = await UserGroupsWrapperActions.createGroup();
     const groupPk = newGroup.pubkeyHex;
-    newGroup.name = groupName; // this will be used by the linked devices until they fetch the info from the groups swarm
 
-    // the `GroupSync` below will need the secretKey of the group to be saved in the wrapper. So save it!
-    await UserGroupsWrapperActions.setGroup(newGroup);
-    const ourEd25519KeypairBytes = await UserUtils.getUserED25519KeyPairBytes();
-    if (!ourEd25519KeypairBytes) {
-      throw new Error('Current user has no priv ed25519 key?');
-    }
-    const userEd25519Secretkey = ourEd25519KeypairBytes.privKeyBytes;
-    const groupEd2519Pk = HexString.fromHexString(groupPk).slice(1); // remove the 03 prefix (single byte once in hex form)
+    try {
+      newGroup.name = groupName; // this will be used by the linked devices until they fetch the info from the groups swarm
 
-    // dump is always empty when creating a new groupInfo
-    await MetaGroupWrapperActions.init(groupPk, {
-      metaDumped: null,
-      userEd25519Secretkey: toFixedUint8ArrayOfLength(userEd25519Secretkey, 64),
-      groupEd25519Secretkey: newGroup.secretKey,
-      groupEd25519Pubkey: toFixedUint8ArrayOfLength(groupEd2519Pk, 32),
-    });
-
-    for (let index = 0; index < uniqMembers.length; index++) {
-      const member = uniqMembers[index];
-      const created = await MetaGroupWrapperActions.memberGetOrConstruct(groupPk, member);
-      if (created.pubkeyHex === us) {
-        await MetaGroupWrapperActions.memberSetPromoted(groupPk, created.pubkeyHex, false);
-      } else {
-        await MetaGroupWrapperActions.memberSetInvited(groupPk, created.pubkeyHex, false);
+      // the `GroupSync` below will need the secretKey of the group to be saved in the wrapper. So save it!
+      await UserGroupsWrapperActions.setGroup(newGroup);
+      const ourEd25519KeypairBytes = await UserUtils.getUserED25519KeyPairBytes();
+      if (!ourEd25519KeypairBytes) {
+        throw new Error('Current user has no priv ed25519 key?');
       }
+      const userEd25519Secretkey = ourEd25519KeypairBytes.privKeyBytes;
+      const groupEd2519Pk = HexString.fromHexString(groupPk).slice(1); // remove the 03 prefix (single byte once in hex form)
+
+      // dump is always empty when creating a new groupInfo
+      await MetaGroupWrapperActions.init(groupPk, {
+        metaDumped: null,
+        userEd25519Secretkey: toFixedUint8ArrayOfLength(userEd25519Secretkey, 64),
+        groupEd25519Secretkey: newGroup.secretKey,
+        groupEd25519Pubkey: toFixedUint8ArrayOfLength(groupEd2519Pk, 32),
+      });
+
+      for (let index = 0; index < uniqMembers.length; index++) {
+        const member = uniqMembers[index];
+        const created = await MetaGroupWrapperActions.memberGetOrConstruct(groupPk, member);
+        if (created.pubkeyHex === us) {
+          await MetaGroupWrapperActions.memberSetPromoted(groupPk, created.pubkeyHex, false);
+        } else {
+          await MetaGroupWrapperActions.memberSetInvited(groupPk, created.pubkeyHex, false);
+        }
+      }
+
+      const infos = await MetaGroupWrapperActions.infoGet(groupPk);
+      if (!infos) {
+        throw new Error(`getInfos of ${groupPk} returned empty result even if it was just init.`);
+      }
+      infos.name = groupName;
+      await MetaGroupWrapperActions.infoSet(groupPk, infos);
+
+      const membersFromWrapper = await MetaGroupWrapperActions.memberGetAll(groupPk);
+      if (!membersFromWrapper || isEmpty(membersFromWrapper)) {
+        throw new Error(
+          `memberGetAll of ${groupPk} returned empty result even if it was just init.`
+        );
+      }
+
+      const convo = await ConvoHub.use().getOrCreateAndWait(groupPk, ConversationTypeEnum.GROUPV3);
+
+      await convo.setIsApproved(true, false);
+
+      const result = await GroupSync.pushChangesToGroupSwarmIfNeeded(groupPk);
+      if (result !== RunJobResult.Success) {
+        window.log.warn('GroupSync.pushChangesToGroupSwarmIfNeeded during create failed');
+      }
+
+      await convo.unhideIfNeeded();
+      convo.set({ active_at: Date.now() });
+      await convo.commit();
+      convo.updateLastMessage();
+      dispatch(resetOverlayMode());
+      await openConversationWithMessages({ conversationKey: groupPk, messageId: null });
+
+      return { groupPk: newGroup.pubkeyHex, infos, members: membersFromWrapper };
+    } catch (e) {
+      window.log.warn('group creation failed. Deleting already saved datas: ', e.message);
+      await UserGroupsWrapperActions.eraseGroup(groupPk);
+      await MetaGroupWrapperActions.infoDestroy(groupPk);
+      const foundConvo = ConvoHub.use().get(groupPk);
+      if (foundConvo) {
+        await ConvoHub.use().deleteClosedGroup(groupPk, {
+          fromSyncMessage: false,
+          sendLeaveMessage: false,
+        });
+      }
+      throw e;
     }
-
-    const infos = await MetaGroupWrapperActions.infoGet(groupPk);
-    if (!infos) {
-      throw new Error(`getInfos of ${groupPk} returned empty result even if it was just init.`);
-    }
-    infos.name = groupName;
-    await MetaGroupWrapperActions.infoSet(groupPk, infos);
-
-    const membersFromWrapper = await MetaGroupWrapperActions.memberGetAll(groupPk);
-    if (!membersFromWrapper || isEmpty(membersFromWrapper)) {
-      throw new Error(`memberGetAll of ${groupPk} returned empty result even if it was just init.`);
-    }
-
-    const convo = await getConversationController().getOrCreateAndWait(
-      groupPk,
-      ConversationTypeEnum.GROUPV3
-    );
-
-    await convo.setIsApproved(true, false);
-
-    const result = await GroupSync.pushChangesToGroupSwarmIfNeeded(groupPk);
-    if (result !== RunJobResult.Success) {
-      window.log.warn('GroupSync.pushChangesToGroupSwarmIfNeeded during create failed');
-    }
-
-    await convo.unhideIfNeeded();
-    convo.set({ active_at: Date.now() });
-    await convo.commit();
-    convo.updateLastMessage();
-    dispatch(resetOverlayMode());
-    await openConversationWithMessages({ conversationKey: groupPk, messageId: null });
-
-    return { groupPk: newGroup.pubkeyHex, infos, members: membersFromWrapper };
   }
 );
 
@@ -171,10 +185,7 @@ const handleUserGroupUpdate = createAsyncThunk(
       window.log.warn(`failed to init metawrapper ${groupPk}`);
     }
 
-    const convo = await getConversationController().getOrCreateAndWait(
-      groupPk,
-      ConversationTypeEnum.GROUPV3
-    );
+    const convo = await ConvoHub.use().getOrCreateAndWait(groupPk, ConversationTypeEnum.GROUPV3);
 
     await convo.setIsApproved(true, false);
 

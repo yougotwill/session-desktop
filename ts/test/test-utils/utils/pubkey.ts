@@ -3,6 +3,7 @@ import _ from 'lodash';
 import { Snode } from '../../../data/data';
 import { ECKeyPair } from '../../../receiver/keypairs';
 import { PubKey } from '../../../session/types';
+import { GroupPubkeyType } from 'libsession_util_nodejs';
 
 export function generateFakePubKey(): PubKey {
   // Generates a mock pubkey for testing
@@ -22,11 +23,11 @@ export function generateFakePubKeyStr(): string {
   return pubkeyString;
 }
 
-export function generateFakeClosedGroupV3PkStr(): string {
+export function generateFakeClosedGroupV3PkStr(): GroupPubkeyType {
   // Generates a mock pubkey for testing
   const numBytes = PubKey.PUBKEY_LEN / 2 - 1;
   const hexBuffer = crypto.randomBytes(numBytes).toString('hex');
-  const pubkeyString = `03${hexBuffer}`;
+  const pubkeyString: GroupPubkeyType = `03${hexBuffer}`;
 
   return pubkeyString;
 }

@@ -1,7 +1,8 @@
 /* eslint-disable no-await-in-loop */
 /* eslint-disable more/no-then */
 /* eslint-disable @typescript-eslint/no-misused-promises */
-import { compact, concat, difference, flatten, last, sample, uniqBy } from 'lodash';
+import { GroupPubkeyType } from 'libsession_util_nodejs';
+import { compact, concat, difference, flatten, isArray, last, sample, uniqBy } from 'lodash';
 import { Data, Snode } from '../../../data/data';
 import { SignalService } from '../../../protobuf';
 import * as Receiver from '../../../receiver/receiver';
@@ -19,7 +20,7 @@ import {
   UserGroupsWrapperActions,
 } from '../../../webworker/workers/browser/libsession_worker_interface';
 import { DURATION, SWARM_POLLING_TIMEOUT } from '../../constants';
-import { getConversationController } from '../../conversations';
+import { ConvoHub } from '../../conversations';
 import { ed25519Str } from '../../onions/onionPath';
 import { StringUtils, UserUtils } from '../../utils';
 import { perfEnd, perfStart } from '../../utils/Performance';
@@ -70,8 +71,18 @@ export const getSwarmPollingInstance = () => {
   return instance;
 };
 
+type GroupPollingEntry = { pubkey: PubKey; lastPolledTimestamp: number };
+
+function entryToKey(entry: GroupPollingEntry) {
+  return entry.pubkey.key;
+}
+
 export class SwarmPolling {
-  private groupPolling: Array<{ pubkey: PubKey; lastPolledTimestamp: number }>;
+  private groupPolling: Array<GroupPollingEntry>;
+
+  /**
+   * lastHashes[snode_edkey][pubkey_polled][namespace_polled] = last_hash
+   */
   private readonly lastHashes: Record<string, Record<string, Record<number, string>>>;
   private hasStarted = false;
 
@@ -104,22 +115,21 @@ export class SwarmPolling {
     this.hasStarted = false;
   }
 
-  public forcePolledTimestamp(pubkey: PubKey, lastPoll: number) {
-    this.groupPolling = this.groupPolling.map(group => {
-      if (PubKey.isEqual(pubkey, group.pubkey)) {
-        return {
-          ...group,
-          lastPolledTimestamp: lastPoll,
-        };
-      }
-      return group;
+  public forcePolledTimestamp(pubkey: string, lastPoll: number) {
+    const foundAt = this.groupPolling.findIndex(group => {
+      return PubKey.isEqual(pubkey, group.pubkey);
     });
+
+    if (foundAt > -1) {
+      this.groupPolling[foundAt].lastPolledTimestamp = lastPoll;
+    }
   }
 
-  public addGroupId(pubkey: PubKey) {
-    if (this.groupPolling.findIndex(m => m.pubkey.key === pubkey.key) === -1) {
-      window?.log?.info('Swarm addGroupId: adding pubkey to polling', pubkey.key);
-      this.groupPolling.push({ pubkey, lastPolledTimestamp: 0 });
+  public addGroupId(pubkey: PubKey | string) {
+    const pk = PubKey.cast(pubkey);
+    if (this.groupPolling.findIndex(m => m.pubkey.key === pk.key) === -1) {
+      window?.log?.info('Swarm addGroupId: adding pubkey to polling', pk.key);
+      this.groupPolling.push({ pubkey: pk, lastPolledTimestamp: 0 });
     }
   }
 
@@ -140,7 +150,7 @@ export class SwarmPolling {
    *  -> an activeAt more than a week old is considered inactive, and not polled much (every 2 minutes)
    */
   public getPollingTimeout(convoId: PubKey) {
-    const convo = getConversationController().get(convoId.key);
+    const convo = ConvoHub.use().get(convoId.key);
     if (!convo) {
       return SWARM_POLLING_TIMEOUT.INACTIVE;
     }
@@ -150,16 +160,74 @@ export class SwarmPolling {
     }
 
     const currentTimestamp = Date.now();
+    const diff = currentTimestamp - activeAt;
 
     // consider that this is an active group if activeAt is less than two days old
-    if (currentTimestamp - activeAt <= DURATION.DAYS * 2) {
+    if (diff <= DURATION.DAYS * 2) {
       return SWARM_POLLING_TIMEOUT.ACTIVE;
     }
 
-    if (currentTimestamp - activeAt <= DURATION.DAYS * 7) {
+    if (diff <= DURATION.DAYS * 7) {
       return SWARM_POLLING_TIMEOUT.MEDIUM_ACTIVE;
     }
     return SWARM_POLLING_TIMEOUT.INACTIVE;
+  }
+
+  public shouldPollByTimeout(entry: GroupPollingEntry) {
+    const convoPollingTimeout = this.getPollingTimeout(entry.pubkey);
+    const diff = Date.now() - entry.lastPolledTimestamp;
+    return diff >= convoPollingTimeout;
+  }
+
+  public async getPollingDetails(pollingEntries: Array<GroupPollingEntry>) {
+    let toPollDetails: Array<PollForUs | PollForLegacy | PollForGroup> = [];
+    const ourPubkey = UserUtils.getOurPubKeyStrFromCache();
+
+    if (pollingEntries.some(m => m.pubkey.key === ourPubkey)) {
+      throw new Error(
+        'pollingEntries should only contain group swarm (legacy or not), but not ourself'
+      );
+    }
+
+    // First, make sure we do poll for our own swarm. Note: we always poll as often as possible for our swarm
+    toPollDetails.push([ourPubkey, ConversationTypeEnum.PRIVATE]);
+
+    const allGroupsLegacyInWrapper = await UserGroupsWrapperActions.getAllLegacyGroups();
+    const allGroupsInWrapper = await UserGroupsWrapperActions.getAllGroups();
+    if (!isArray(allGroupsLegacyInWrapper) || !isArray(allGroupsInWrapper)) {
+      throw new Error('getAllLegacyGroups or getAllGroups returned unknown result');
+    }
+
+    // only groups NOT starting with 03
+    const legacyGroups = pollingEntries.filter(m => !PubKey.isClosedGroupV2(m.pubkey.key));
+
+    // only groups starting with 03
+    const groups = pollingEntries.filter(m => PubKey.isClosedGroupV2(m.pubkey.key));
+
+    // let's grab the groups and legacy groups which should be left as they are not in their corresponding wrapper
+    const legacyGroupsToLeave = legacyGroups
+      .filter(m => !allGroupsLegacyInWrapper.some(w => w.pubkeyHex === m.pubkey.key))
+      .map(entryToKey);
+    const groupsToLeave = groups
+      .filter(m => !allGroupsInWrapper.some(w => w.pubkeyHex === m.pubkey.key))
+      .map(entryToKey);
+
+    const allLegacyGroupsTracked = legacyGroups
+      .filter(m => this.shouldPollByTimeout(m)) // should we poll from it depending on this group activity?
+      .filter(m => allGroupsLegacyInWrapper.some(w => w.pubkeyHex === m.pubkey.key)) // we don't poll from legacygroups which are not in the usergroup wrapper
+      .map(m => m.pubkey.key) // extract the pubkey
+      .map(m => [m, ConversationTypeEnum.GROUP] as PollForLegacy); //
+    toPollDetails = concat(toPollDetails, allLegacyGroupsTracked);
+
+    const allGroupsTracked = groups
+      .filter(m => this.shouldPollByTimeout(m)) // should we poll from it depending on this group activity?
+      .filter(m => allGroupsInWrapper.some(w => w.pubkeyHex === m.pubkey.key)) // we don't poll from groups which are not in the usergroup wrapper
+      .map(m => m.pubkey.key as GroupPubkeyType) // extract the pubkey
+      .map(m => [m, ConversationTypeEnum.GROUPV3] as PollForGroup);
+
+    toPollDetails = concat(toPollDetails, allGroupsTracked);
+
+    return { toPollDetails, legacyGroupsToLeave, groupsToLeave };
   }
 
   /**
@@ -172,44 +240,20 @@ export class SwarmPolling {
       setTimeout(this.pollForAllKeys.bind(this), SWARM_POLLING_TIMEOUT.ACTIVE);
       return;
     }
-    // we always poll as often as possible for our pubkey
-    const ourPubkey = UserUtils.getOurPubKeyStrFromCache();
-    const directPromise = this.pollOnceForKey([ourPubkey, ConversationTypeEnum.PRIVATE]);
 
-    const now = Date.now();
-    const allGroupsInWrapper = await UserGroupsWrapperActions.getAllGroups();
-    const allGroupsLegacyInWrapper = await UserGroupsWrapperActions.getAllLegacyGroups();
-    const groupPromises = this.groupPolling.map(async group => {
-      const convoPollingTimeout = this.getPollingTimeout(group.pubkey);
-      const diff = now - group.lastPolledTimestamp;
-      const { key } = group.pubkey;
+    const { toPollDetails, groupsToLeave, legacyGroupsToLeave } = await this.getPollingDetails(
+      this.groupPolling
+    );
 
-      const loggingId = ed25519Str(key);
-      if (diff >= convoPollingTimeout) {
-        window?.log?.debug(
-          `Polling for ${loggingId}; timeout: ${convoPollingTimeout}; diff: ${diff} `
-        );
-        if (PubKey.isClosedGroupV2(key)) {
-          const isInWrapper = allGroupsInWrapper.some(m => m.pubkeyHex === key);
-
-          return isInWrapper
-            ? this.pollOnceForKey([key, ConversationTypeEnum.GROUPV3])
-            : this.notPollingForGroupAsNotInWrapper(key, 'not in wrapper before poll');
-        }
-        const isLegacyInWrapper = allGroupsLegacyInWrapper.some(m => m.pubkeyHex === key);
-        return isLegacyInWrapper
-          ? this.pollOnceForKey([key, ConversationTypeEnum.GROUP])
-          : this.notPollingForGroupAsNotInWrapper(key, 'not in wrapper before poll');
-      }
-      window?.log?.debug(
-        `Not polling for ${loggingId}; timeout: ${convoPollingTimeout} ; diff: ${diff}`
-      );
-
-      return Promise.resolve();
-    });
+    // first, leave anything which shouldn't be there anymore
+    await Promise.all(
+      concat(groupsToLeave, legacyGroupsToLeave).map(m =>
+        this.notPollingForGroupAsNotInWrapper(m, 'not in wrapper before poll')
+      )
+    );
 
     try {
-      await Promise.all(concat([directPromise], groupPromises));
+      await Promise.all(toPollDetails.map(toPoll => this.pollOnceForKey(toPoll)));
     } catch (e) {
       window?.log?.warn('pollForAllKeys exception: ', e);
       throw e;
@@ -459,7 +503,7 @@ export class SwarmPolling {
     window.log.debug(
       `notPollingForGroupAsNotInWrapper ${ed25519Str(pubkey)} with reason:"${reason}"`
     );
-    await getConversationController().deleteClosedGroup(pubkey, {
+    await ConvoHub.use().deleteClosedGroup(pubkey, {
       fromSyncMessage: true,
       sendLeaveMessage: false,
     });
@@ -467,7 +511,7 @@ export class SwarmPolling {
   }
 
   private loadGroupIds() {
-    const convos = getConversationController().getConversations();
+    const convos = ConvoHub.use().getConversations();
 
     const closedGroupsOnly = convos.filter(
       (c: ConversationModel) =>
@@ -502,7 +546,7 @@ export class SwarmPolling {
   }
 
   // eslint-disable-next-line consistent-return
-  private getNamespacesToPollFrom(type: ConversationTypeEnum): Array<SnodeNamespaces> {
+  public getNamespacesToPollFrom(type: ConversationTypeEnum): Array<SnodeNamespaces> {
     if (type === ConversationTypeEnum.PRIVATE) {
       return [
         SnodeNamespaces.Default,

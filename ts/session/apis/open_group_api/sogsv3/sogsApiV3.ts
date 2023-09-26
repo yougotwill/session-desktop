@@ -14,7 +14,7 @@ import {
 } from '../opengroupV2/OpenGroupServerPoller';
 import { getOpenGroupV2ConversationId } from '../utils/OpenGroupUtils';
 import { handleCapabilities } from './sogsCapabilities';
-import { getConversationController } from '../../../conversations';
+import { ConvoHub } from '../../../conversations';
 import { ConversationModel } from '../../../../models/conversation';
 import { filterDuplicatesFromDbAndIncomingV4 } from '../opengroupV2/SogsFilterDuplicate';
 import { callUtilsWorker } from '../../../../webworker/workers/browser/util_worker_interface';
@@ -54,7 +54,7 @@ function getSogsConvoOrReturnEarly(serverUrl: string, roomId: string): Conversat
     return null;
   }
 
-  const foundConvo = getConversationController().get(convoId);
+  const foundConvo = ConvoHub.use().get(convoId);
   if (!foundConvo) {
     window.log.info('getSogsConvoOrReturnEarly: convo not found: ', convoId);
     return null;
@@ -174,7 +174,7 @@ const handleSogsV3DeletedMessages = async (
 
   try {
     const convoId = getOpenGroupV2ConversationId(serverUrl, roomId);
-    const convo = getConversationController().get(convoId);
+    const convo = ConvoHub.use().get(convoId);
     const messageIds = await Data.getMessageIdsFromServerIds(allIdsRemoved, convo.id);
 
     allIdsRemoved.forEach(removedId => {
@@ -319,7 +319,7 @@ const handleMessagesResponseV4 = async (
 
     if (messagesWithReactions.length > 0) {
       const conversationId = getOpenGroupV2ConversationId(serverUrl, roomId);
-      const groupConvo = getConversationController().get(conversationId);
+      const groupConvo = ConvoHub.use().get(conversationId);
       if (groupConvo && groupConvo.isOpenGroupV2()) {
         for (const messageWithReaction of messagesWithReactions) {
           if (isEmpty(messageWithReaction.reactions)) {
@@ -422,7 +422,7 @@ async function handleInboxOutboxMessages(
           (await findCachedBlindedMatchOrLookItUp(recipient, serverPubkey, sodium)) || recipient;
 
         if (contentDecoded.dataMessage) {
-          const outboxConversationModel = await getConversationController().getOrCreateAndWait(
+          const outboxConversationModel = await ConvoHub.use().getOrCreateAndWait(
             unblindedIDOrBlinded,
             ConversationTypeEnum.PRIVATE
           );

@@ -13,7 +13,7 @@ import { Storage } from '../../../util/storage';
 import { getCompleteUrlFromRoom } from '../../apis/open_group_api/utils/OpenGroupUtils';
 import { SnodeNamespaces } from '../../apis/snode_api/namespaces';
 import { DURATION } from '../../constants';
-import { getConversationController } from '../../conversations';
+import { ConvoHub } from '../../conversations';
 import {
   ConfigurationMessage,
   ConfigurationMessageClosedGroup,
@@ -57,7 +57,7 @@ export const syncConfigurationIfNeeded = async () => {
       return;
     }
 
-    const allConvos = getConversationController().getConversations();
+    const allConvos = ConvoHub.use().getConversations();
 
     const configMessage = await getCurrentConfigurationMessage(allConvos);
     try {
@@ -102,7 +102,7 @@ export const forceSyncConfigurationNowIfNeeded = async (waitForMessageSent = fal
       resolve(true);
       return;
     }
-    const allConvos = getConversationController().getConversations();
+    const allConvos = ConvoHub.use().getConversations();
 
     // eslint-disable-next-line more/no-then
     void getCurrentConfigurationMessage(allConvos)
@@ -266,7 +266,7 @@ export const getCurrentConfigurationMessage = async (
   }
 
   const ourProfileKeyHex =
-    getConversationController().get(UserUtils.getOurPubKeyStrFromCache())?.getProfileKey() || null;
+    ConvoHub.use().get(UserUtils.getOurPubKeyStrFromCache())?.getProfileKey() || null;
   const profileKey = ourProfileKeyHex ? fromHexToArray(ourProfileKeyHex) : undefined;
 
   const profilePicture = ourConvo?.getAvatarPointer() || undefined;

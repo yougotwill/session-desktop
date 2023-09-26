@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useDispatch } from 'react-redux';
 import styled from 'styled-components';
-import { getConversationController } from '../../session/conversations';
+import { ConvoHub } from '../../session/conversations';
 import { adminLeaveClosedGroup } from '../../state/ducks/modalDialog';
 import { SessionWrapperModal } from '../SessionWrapperModal';
 import { SessionButton, SessionButtonColor, SessionButtonType } from '../basic/SessionButton';
@@ -30,7 +30,7 @@ export const AdminLeaveClosedGroupDialog = (props: { conversationId: string }) =
     }
     setLoading(true);
     // we know want to delete a closed group right after we've left it, so we can call the deleteContact which takes care of it all
-    await getConversationController().deleteClosedGroup(props.conversationId, {
+    await ConvoHub.use().deleteClosedGroup(props.conversationId, {
       fromSyncMessage: false,
       sendLeaveMessage: true,
     });

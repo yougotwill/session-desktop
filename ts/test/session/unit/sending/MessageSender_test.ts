@@ -9,7 +9,7 @@ import { SogsBlinding } from '../../../../session/apis/open_group_api/sogsv3/sog
 import { GetNetworkTime } from '../../../../session/apis/snode_api/getNetworkTime';
 import { SnodeNamespaces } from '../../../../session/apis/snode_api/namespaces';
 import { Onions } from '../../../../session/apis/snode_api/onions';
-import { getConversationController } from '../../../../session/conversations/ConversationController';
+import { ConvoHub } from '../../../../session/conversations/ConversationController';
 import { MessageEncrypter } from '../../../../session/crypto';
 import { OnionSending } from '../../../../session/onions/onionSend';
 import { OnionV4 } from '../../../../session/onions/onionv4';
@@ -29,12 +29,12 @@ describe('MessageSender', () => {
   beforeEach(async () => {
     TestUtils.stubWindowLog();
     TestUtils.stubWindowFeatureFlags();
-    getConversationController().reset();
+    ConvoHub.use().reset();
     TestUtils.stubData('getItemById').resolves();
 
     stubData('getAllConversations').resolves([]);
     stubData('saveConversation').resolves();
-    await getConversationController().load();
+    await ConvoHub.use().load();
   });
 
   describe('send', () => {
@@ -106,7 +106,7 @@ describe('MessageSender', () => {
       it('should pass the correct values to lokiMessageAPI', async () => {
         const device = TestUtils.generateFakePubKey();
         const visibleMessage = TestUtils.generateVisibleMessage();
-        Sinon.stub(getConversationController(), 'get').returns(undefined as any);
+        Sinon.stub(ConvoHub.use(), 'get').returns(undefined as any);
 
         const rawMessage = await MessageUtils.toRawMessage(
           device,
@@ -131,7 +131,7 @@ describe('MessageSender', () => {
 
         // This test assumes the encryption stub returns the plainText passed into it.
         const device = TestUtils.generateFakePubKey();
-        Sinon.stub(getConversationController(), 'get').returns(undefined as any);
+        Sinon.stub(ConvoHub.use(), 'get').returns(undefined as any);
         const visibleMessage = TestUtils.generateVisibleMessage();
         const rawMessage = await MessageUtils.toRawMessage(
           device,
@@ -183,7 +183,7 @@ describe('MessageSender', () => {
       describe('SESSION_MESSAGE', () => {
         it('should set the envelope source to be empty', async () => {
           messageEncyrptReturnEnvelopeType = SignalService.Envelope.Type.SESSION_MESSAGE;
-          Sinon.stub(getConversationController(), 'get').returns(undefined as any);
+          Sinon.stub(ConvoHub.use(), 'get').returns(undefined as any);
 
           // This test assumes the encryption stub returns the plainText passed into it.
           const device = TestUtils.generateFakePubKey();

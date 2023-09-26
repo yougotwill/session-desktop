@@ -103,7 +103,7 @@ export class BlockedNumberController {
     this.blockedNumbers = new Set();
   }
 
-  private static async getNumbersFromDB(id: string): Promise<Set<string>> {
+  public static async getNumbersFromDB(id: string): Promise<Set<string>> {
     const data = await Data.getItemById(id);
     if (!data || !data.value) {
       return new Set();

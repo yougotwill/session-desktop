@@ -12,7 +12,7 @@ import { ConversationModel } from '../../models/conversation';
 import { uploadOurAvatar } from '../../interactions/conversationInteractions';
 import { ConversationTypeEnum } from '../../models/conversationAttributes';
 import { MAX_USERNAME_BYTES } from '../../session/constants';
-import { getConversationController } from '../../session/conversations';
+import { ConvoHub } from '../../session/conversations';
 import { sanitizeSessionUsername } from '../../session/utils/String';
 import { editProfileModal } from '../../state/ducks/modalDialog';
 import { pickFileForAvatar } from '../../types/attachments/VisualAttachment';
@@ -67,7 +67,7 @@ export class EditProfileDialog extends React.Component<object, State> {
 
     autoBind(this);
 
-    this.convo = getConversationController().get(UserUtils.getOurPubKeyStrFromCache());
+    this.convo = ConvoHub.use().get(UserUtils.getOurPubKeyStrFromCache());
 
     this.state = {
       profileName: this.convo.getRealSessionUsername() || '',
@@ -327,7 +327,7 @@ export class EditProfileDialog extends React.Component<object, State> {
 
 async function commitProfileEdits(newName: string, scaledAvatarUrl: string | null) {
   const ourNumber = UserUtils.getOurPubKeyStrFromCache();
-  const conversation = await getConversationController().getOrCreateAndWait(
+  const conversation = await ConvoHub.use().getOrCreateAndWait(
     ourNumber,
     ConversationTypeEnum.PRIVATE
   );

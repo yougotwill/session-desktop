@@ -10,7 +10,7 @@ import {
   UserGroupsWrapperActions,
 } from '../../../webworker/workers/browser/libsession_worker_interface';
 import { OpenGroupUtils } from '../../apis/open_group_api/utils';
-import { getConversationController } from '../../conversations';
+import { ConvoHub } from '../../conversations';
 import { SessionUtilContact } from './libsession_utils_contacts';
 import { SessionUtilUserGroups } from './libsession_utils_user_groups';
 import { SessionUtilUserProfile } from './libsession_utils_user_profile';
@@ -69,7 +69,7 @@ function getConvoType(convo: ConversationModel): ConvoVolatileType {
  */
 async function insertConvoFromDBIntoWrapperAndRefresh(convoId: string): Promise<void> {
   // this is too slow to fetch from the database the up to date data here. Let's hope that what we have in memory is up to date enough
-  const foundConvo = getConversationController().get(convoId);
+  const foundConvo = ConvoHub.use().get(convoId);
   if (!foundConvo || !isConvoToStoreInWrapper(foundConvo)) {
     return;
   }
@@ -208,7 +208,7 @@ async function refreshConvoVolatileCached(
     }
 
     if (refreshed && !duringAppStart) {
-      getConversationController().get(convoId)?.triggerUIRefresh();
+      ConvoHub.use().get(convoId)?.triggerUIRefresh();
     }
   } catch (e) {
     window.log.info(`refreshMappedValue for volatile convoID: ${convoId}`, e.message);

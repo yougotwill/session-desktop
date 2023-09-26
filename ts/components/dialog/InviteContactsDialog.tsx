@@ -5,7 +5,7 @@ import _ from 'lodash';
 import { useDispatch, useSelector } from 'react-redux';
 import { ConversationTypeEnum } from '../../models/conversationAttributes';
 import { VALIDATION } from '../../session/constants';
-import { getConversationController } from '../../session/conversations';
+import { ConvoHub } from '../../session/conversations';
 import { ToastUtils, UserUtils } from '../../session/utils';
 import { updateInviteContactModal } from '../../state/ducks/modalDialog';
 import { SpacerLG } from '../basic/Text';
@@ -30,7 +30,7 @@ type Props = {
 };
 
 async function submitForOpenGroup(convoId: string, pubkeys: Array<string>) {
-  const convo = getConversationController().get(convoId);
+  const convo = ConvoHub.use().get(convoId);
   if (!convo || !convo.isPublic()) {
     throw new Error('submitForOpenGroup group not found');
   }
@@ -45,7 +45,7 @@ async function submitForOpenGroup(convoId: string, pubkeys: Array<string>) {
     };
     // eslint-disable-next-line @typescript-eslint/no-misused-promises
     pubkeys.forEach(async pubkeyStr => {
-      const privateConvo = await getConversationController().getOrCreateAndWait(
+      const privateConvo = await ConvoHub.use().getOrCreateAndWait(
         pubkeyStr,
         ConversationTypeEnum.PRIVATE
       );
@@ -66,7 +66,7 @@ async function submitForOpenGroup(convoId: string, pubkeys: Array<string>) {
 }
 
 const submitForClosedGroup = async (convoId: string, pubkeys: Array<string>) => {
-  const convo = getConversationController().get(convoId);
+  const convo = ConvoHub.use().get(convoId);
   if (!convo || !convo.isGroup()) {
     throw new Error('submitForClosedGroup group not found');
   }

@@ -9,7 +9,7 @@ import useMount from 'react-use/lib/useMount';
 
 import { Data } from '../../../../data/data';
 import { MessageRenderingProps } from '../../../../models/messageType';
-import { getConversationController } from '../../../../session/conversations';
+import { ConvoHub } from '../../../../session/conversations';
 import { messagesExpired } from '../../../../state/ducks/conversations';
 import {
   getGenericReadableMessageSelectorProps,
@@ -78,7 +78,7 @@ function useIsExpired(props: ExpiringProps) {
             },
           ])
         );
-        const convo = getConversationController().get(convoId);
+        const convo = ConvoHub.use().get(convoId);
         convo?.updateLastMessage();
       }
     }
@@ -195,7 +195,7 @@ export const GenericReadableMessage = (props: Props) => {
 
   useEffect(() => {
     if (msgProps?.convoId) {
-      const conversationModel = getConversationController().get(msgProps?.convoId);
+      const conversationModel = ConvoHub.use().get(msgProps?.convoId);
       if (conversationModel) {
         setEnableReactions(conversationModel.hasReactions());
       }

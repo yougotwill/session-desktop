@@ -5,7 +5,7 @@ import React from 'react';
 
 import { clone } from 'lodash';
 import { ConversationModel } from '../../models/conversation';
-import { getConversationController } from '../../session/conversations';
+import { ConvoHub } from '../../session/conversations';
 import { initiateClosedGroupUpdate } from '../../session/group/closed-group';
 import { initiateOpenGroupUpdate } from '../../session/group/open-group';
 import { updateGroupNameModal } from '../../state/ducks/modalDialog';
@@ -37,7 +37,7 @@ export class UpdateGroupNameDialog extends React.Component<Props, State> {
     super(props);
 
     autoBind(this);
-    this.convo = getConversationController().get(props.conversationId);
+    this.convo = ConvoHub.use().get(props.conversationId);
 
     const libGroupName = getLibGroupNameOutsideRedux(props.conversationId);
     const groupNameFromConvo = this.convo.getRealSessionUsername();

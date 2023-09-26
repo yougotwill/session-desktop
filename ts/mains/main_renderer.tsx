@@ -8,7 +8,7 @@ import nativeEmojiData from '@emoji-mart/data';
 import { MessageModel } from '../models/message';
 import { isMacOS } from '../OS';
 import { queueAllCached } from '../receiver/receiver';
-import { getConversationController } from '../session/conversations';
+import { ConvoHub } from '../session/conversations';
 import { AttachmentDownloads, ToastUtils } from '../session/utils';
 import { getOurPubKeyStrFromCache } from '../session/utils/User';
 import { BlockedNumberController } from '../util';
@@ -202,9 +202,9 @@ Storage.onready(async () => {
     await initialiseEmojiData(nativeEmojiData);
     await AttachmentDownloads.initAttachmentPaths();
 
+    await BlockedNumberController.load();
     await Promise.all([
-      getConversationController().load(),
-      BlockedNumberController.load(),
+      ConvoHub.use().load(),
       OpenGroupData.opengroupRoomsLoad(),
       loadKnownBlindedKeys(),
     ]);
@@ -284,7 +284,7 @@ async function start() {
     window.setAutoHideMenuBar(hideMenuBar);
     window.setMenuBarVisibility(!hideMenuBar);
     // eslint-disable-next-line more/no-then
-    void getConversationController()
+    void ConvoHub.use()
       .loadPromise()
       ?.then(() => {
         ReactDOM.render(<SessionInboxView />, document.getElementById('root'));

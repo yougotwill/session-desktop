@@ -6,7 +6,7 @@ import {
   approveConvoAndSendResponse,
   declineConversationWithConfirm,
 } from '../../interactions/conversationInteractions';
-import { getConversationController } from '../../session/conversations';
+import { ConvoHub } from '../../session/conversations';
 import { hasSelectedConversationIncomingMessages } from '../../state/selectors/conversations';
 import { useSelectedConversationKey } from '../../state/selectors/selectedConversation';
 import { SessionButton, SessionButtonColor } from '../basic/SessionButton';
@@ -62,7 +62,7 @@ const handleDeclineAndBlockConversationRequest = (
 };
 
 const handleAcceptConversationRequest = async (convoId: string) => {
-  const convo = getConversationController().get(convoId);
+  const convo = ConvoHub.use().get(convoId);
   if (!convo) {
     return;
   }

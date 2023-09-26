@@ -8,7 +8,7 @@ import {
   sogsV3BanUser,
   sogsV3UnbanUser,
 } from '../../session/apis/open_group_api/sogsv3/sogsV3BanUnban';
-import { getConversationController } from '../../session/conversations/ConversationController';
+import { ConvoHub } from '../../session/conversations/ConversationController';
 import { PubKey } from '../../session/types';
 import { ToastUtils } from '../../session/utils';
 import { BanType, updateBanOrUnbanUserModal } from '../../state/ducks/modalDialog';
@@ -69,7 +69,7 @@ export const BanOrUnBanUserDialog = (props: {
   const isBan = banType === 'ban';
   const dispatch = useDispatch();
   const darkMode = useSelector(isDarkTheme);
-  const convo = getConversationController().get(conversationId);
+  const convo = ConvoHub.use().get(conversationId);
   const inputRef = useRef(null);
 
   useFocusMount(inputRef, true);

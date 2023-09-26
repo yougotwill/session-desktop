@@ -19,7 +19,7 @@ import {
   READ_MESSAGE_STATE,
 } from '../models/conversationAttributes';
 import { findCachedBlindedMatchOrLookupOnAllServers } from '../session/apis/open_group_api/sogsv3/knownBlindedkeys';
-import { getConversationController } from '../session/conversations';
+import { ConvoHub } from '../session/conversations';
 import { concatUInt8Array, getSodiumRenderer } from '../session/crypto';
 import { removeMessagePadding } from '../session/crypto/BufferPadding';
 import { ProfileManager } from '../session/profile_manager/ProfileManager';
@@ -365,7 +365,7 @@ function shouldDropBlockedUserMessage(
     return true;
   }
 
-  const groupConvo = getConversationController().get(groupPubkey);
+  const groupConvo = ConvoHub.use().get(groupPubkey);
   if (!groupConvo || !groupConvo.isClosedGroup()) {
     return true;
   }
@@ -446,7 +446,7 @@ export async function innerHandleSwarmContentMessage(
      * For a closed group message, this holds the conversation with that specific user outside of the closed group.
      * For a private conversation message, this is just the conversation with that user
      */
-    const senderConversationModel = await getConversationController().getOrCreateAndWait(
+    const senderConversationModel = await ConvoHub.use().getOrCreateAndWait(
       isPrivateConversationMessage ? envelope.source : envelope.senderIdentity,
       ConversationTypeEnum.PRIVATE
     );
@@ -457,10 +457,7 @@ export async function innerHandleSwarmContentMessage(
      */
     if (!isPrivateConversationMessage) {
       // this is a closed group message, we have a second conversation to make sure exists
-      await getConversationController().getOrCreateAndWait(
-        envelope.source,
-        ConversationTypeEnum.GROUP
-      );
+      await ConvoHub.use().getOrCreateAndWait(envelope.source, ConversationTypeEnum.GROUP);
     }
 
     if (content.dataMessage) {
@@ -598,7 +595,7 @@ async function handleTypingMessage(
   }
 
   // typing message are only working with direct chats/ not groups
-  const conversation = getConversationController().get(source);
+  const conversation = ConvoHub.use().get(source);
 
   const started = action === SignalService.TypingMessage.Action.STARTED;
 
@@ -653,7 +650,7 @@ async function handleUnsendMessage(envelope: EnvelopePlus, unsendMessage: Signal
   // #region executing deletion
   if (messageHash && messageToDelete) {
     window.log.info('handleUnsendMessage: got a request to delete ', messageHash);
-    const conversation = getConversationController().get(messageToDelete.get('conversationId'));
+    const conversation = ConvoHub.use().get(messageToDelete.get('conversationId'));
     if (!conversation) {
       await removeFromCache(envelope);
 
@@ -699,7 +696,7 @@ async function handleMessageRequestResponse(
   const convosToMerge = findCachedBlindedMatchOrLookupOnAllServers(envelope.source, sodium);
   const unblindedConvoId = envelope.source;
 
-  const conversationToApprove = await getConversationController().getOrCreateAndWait(
+  const conversationToApprove = await ConvoHub.use().getOrCreateAndWait(
     unblindedConvoId,
     ConversationTypeEnum.PRIVATE
   );
@@ -757,7 +754,7 @@ async function handleMessageRequestResponse(
     for (let index = 0; index < convosToMerge.length; index++) {
       const element = convosToMerge[index];
       // eslint-disable-next-line no-await-in-loop
-      await getConversationController().deleteBlindedContact(element.id);
+      await ConvoHub.use().deleteBlindedContact(element.id);
     }
   }
 
@@ -805,7 +802,7 @@ export async function handleDataExtractionNotification(
   const { source, timestamp } = envelope;
   await removeFromCache(envelope);
 
-  const convo = getConversationController().get(source);
+  const convo = ConvoHub.use().get(source);
   if (!convo || !convo.isPrivate() || !Storage.get(SettingsKey.settingsReadReceipt)) {
     window?.log?.info(
       'Got DataNotification for unknown or non private convo or read receipt not enabled'

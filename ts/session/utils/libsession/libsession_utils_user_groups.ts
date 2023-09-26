@@ -9,7 +9,7 @@ import {
   getLegacyGroupInfoFromDBValues,
 } from '../../../types/sqlSharedTypes';
 import { UserGroupsWrapperActions } from '../../../webworker/workers/browser/libsession_worker_interface';
-import { getConversationController } from '../../conversations';
+import { ConvoHub } from '../../conversations';
 import { PubKey } from '../../types';
 
 /**
@@ -67,7 +67,7 @@ function isLegacyGroupToRemoveFromDBIfNotInWrapper(convo: ConversationModel): bo
  * Same applies for a legacy group.
  */
 async function insertGroupsFromDBIntoWrapperAndRefresh(convoId: string): Promise<void> {
-  const foundConvo = getConversationController().get(convoId);
+  const foundConvo = ConvoHub.use().get(convoId);
   if (!foundConvo) {
     return;
   }

@@ -15,7 +15,7 @@ import {
 import { PubKey } from '../types';
 import { UserUtils } from '../utils';
 import { forceSyncConfigurationNowIfNeeded } from '../utils/sync/syncUtils';
-import { getConversationController } from './ConversationController';
+import { ConvoHub } from './ConversationController';
 
 /**
  * Creates a brand new closed group from user supplied details. This function generates a new identityKeyPair so cannot be used to restore a closed group.
@@ -43,10 +43,7 @@ export async function createClosedGroup(groupName: string, members: Array<string
   }
 
   // Create the group
-  const convo = await getConversationController().getOrCreateAndWait(
-    groupPublicKey,
-    ConversationTypeEnum.GROUP
-  );
+  const convo = await ConvoHub.use().getOrCreateAndWait(groupPublicKey, ConversationTypeEnum.GROUP);
 
   await convo.setIsApproved(true, false);
 

@@ -2,7 +2,7 @@ import { ContactInfo } from 'libsession_util_nodejs';
 import { ConversationModel } from '../../../models/conversation';
 import { getContactInfoFromDBValues } from '../../../types/sqlSharedTypes';
 import { ContactsWrapperActions } from '../../../webworker/workers/browser/libsession_worker_interface';
-import { getConversationController } from '../../conversations';
+import { ConvoHub } from '../../conversations';
 import { PubKey } from '../../types';
 
 /**
@@ -38,7 +38,7 @@ function isContactToStoreInWrapper(convo: ConversationModel): boolean {
  */
 
 async function insertContactFromDBIntoWrapperAndRefresh(id: string): Promise<void> {
-  const foundConvo = getConversationController().get(id);
+  const foundConvo = ConvoHub.use().get(id);
   if (!foundConvo) {
     return;
   }
@@ -91,11 +91,11 @@ async function refreshMappedValue(id: string, duringAppStart = false) {
   if (fromWrapper) {
     setMappedValue(fromWrapper);
     if (!duringAppStart) {
-      getConversationController().get(id)?.triggerUIRefresh();
+      ConvoHub.use().get(id)?.triggerUIRefresh();
     }
   } else if (mappedContactWrapperValues.delete(id)) {
     if (!duringAppStart) {
-      getConversationController().get(id)?.triggerUIRefresh();
+      ConvoHub.use().get(id)?.triggerUIRefresh();
     }
   }
 }

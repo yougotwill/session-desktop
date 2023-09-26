@@ -3,7 +3,7 @@ import { SignUpMode, SignUpTab } from './SignUpTab';
 import { SignInMode, SignInTab } from './SignInTab';
 import { Data } from '../../data/data';
 import { getSwarmPollingInstance } from '../../session/apis/snode_api';
-import { getConversationController } from '../../session/conversations';
+import { ConvoHub } from '../../session/conversations';
 import { mnDecode } from '../../session/crypto/mnemonic';
 import { PromiseUtils, StringUtils, ToastUtils } from '../../session/utils';
 import { TaskTimedOutError } from '../../session/utils/Promise';
@@ -22,8 +22,8 @@ export async function resetRegistration() {
   await Data.removeAll();
   Storage.reset();
   await Storage.fetch();
-  getConversationController().reset();
-  await getConversationController().load();
+  ConvoHub.use().reset();
+  await ConvoHub.use().load();
 }
 
 /**
