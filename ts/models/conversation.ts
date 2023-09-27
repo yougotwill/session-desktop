@@ -144,7 +144,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
   public throttledBumpTyping: () => void;
   public throttledNotify: (message: MessageModel) => void;
   public markConversationRead: (newestUnreadDate: number, readAt?: number) => void;
-  public initialPromise: any;
+  public initialPromise: Promise<ConversationModel | void>;
 
   private typingRefreshTimer?: NodeJS.Timeout | null;
   private typingPauseTimer?: NodeJS.Timeout | null;
@@ -918,7 +918,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
 
   public async commit() {
     perfStart(`conversationCommit-${this.id}`);
-    await commitConversationAndRefreshWrapper(this.id);
+    await Convo.commitConversationAndRefreshWrapper(this.id);
     perfEnd(`conversationCommit-${this.id}`, 'conversationCommit');
   }
 
@@ -2334,7 +2334,9 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
   }
 }
 
-export async function commitConversationAndRefreshWrapper(id: string) {
+export const Convo = { commitConversationAndRefreshWrapper };
+
+async function commitConversationAndRefreshWrapper(id: string) {
   const convo = ConvoHub.use().get(id);
   if (!convo) {
     return;

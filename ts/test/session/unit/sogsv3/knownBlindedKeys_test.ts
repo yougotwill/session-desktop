@@ -514,12 +514,12 @@ describe('knownBlindedKeys', () => {
       it('does iterate over all the conversations and find the first one matching (passes)', async () => {
         await loadKnownBlindedKeys();
         // adding a private conversation with a known match of the blinded pubkey we have
-        await ConvoHub.use().getOrCreateAndWait(realSessionId, ConversationTypeEnum.PRIVATE);
+        ConvoHub.use().getOrCreate(realSessionId, ConversationTypeEnum.PRIVATE);
         const convo = await ConvoHub.use().getOrCreateAndWait(
           knownBlindingMatch.realSessionId,
           ConversationTypeEnum.PRIVATE
         );
-        await ConvoHub.use().getOrCreateAndWait(realSessionId2, ConversationTypeEnum.PRIVATE);
+        ConvoHub.use().getOrCreate(realSessionId2, ConversationTypeEnum.PRIVATE);
         convo.set({ isApproved: true });
         const real = await findCachedBlindedMatchOrLookItUp(
           knownBlindingMatch.blindedId,

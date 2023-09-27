@@ -12,7 +12,6 @@ import {
 } from '../../state/ducks/conversations';
 import { BlockedNumberController } from '../../util';
 import { getOpenGroupManager } from '../apis/open_group_api/opengroupV2/OpenGroupManagerV2';
-import { getSwarmFor } from '../apis/snode_api/snodePool';
 import { PubKey } from '../types';
 
 import { getMessageQueue } from '..';
@@ -36,24 +35,24 @@ import { SessionUtilContact } from '../utils/libsession/libsession_utils_contact
 import { SessionUtilConvoInfoVolatile } from '../utils/libsession/libsession_utils_convo_info_volatile';
 import { SessionUtilUserGroups } from '../utils/libsession/libsession_utils_user_groups';
 
-let instance: ConversationController | null;
+let instance: ConvoController | null;
 
-const getConversationController = () => {
+const getConvoHub = () => {
   if (instance) {
     return instance;
   }
-  instance = new ConversationController();
+  instance = new ConvoController();
 
   return instance;
 };
 
-class ConversationController {
+class ConvoController {
   private readonly conversations: ConversationCollection;
   private _initialFetchComplete: boolean = false;
-  private _initialPromise?: Promise<any>;
+  private _convoHubInitialPromise?: Promise<any>;
 
   /**
-   * Do not call this constructor. You get the ConversationController through ConvoHub.use() only
+   * Do not call this constructor. You get the ConvoHub through ConvoHub.use() only
    */
   constructor() {
     this.conversations = new ConversationCollection();
@@ -139,11 +138,6 @@ class ConversationController {
         })
       );
 
-      if (!conversation.isPublic() && conversation.isActive()) {
-        // NOTE: we request snodes updating the cache, but ignore the result
-
-        void getSwarmFor(id);
-      }
       return conversation;
     };
 
@@ -164,21 +158,21 @@ class ConversationController {
     id: string | PubKey,
     type: ConversationTypeEnum
   ): Promise<ConversationModel> {
-    const initialPromise =
-      this._initialPromise !== undefined ? this._initialPromise : Promise.resolve();
-    return initialPromise.then(() => {
-      if (!id) {
-        return Promise.reject(new Error('getOrCreateAndWait: invalid id passed.'));
-      }
-      const pubkey = id && (id as any).key ? (id as any).key : id;
-      const conversation = this.getOrCreate(pubkey, type);
+    const convoHubInitialPromise =
+      this._convoHubInitialPromise !== undefined ? this._convoHubInitialPromise : Promise.resolve();
+    await convoHubInitialPromise;
 
-      if (conversation) {
-        return conversation.initialPromise.then(() => conversation);
-      }
+    if (!id) {
+      throw new Error('getOrCreateAndWait: invalid id passed.');
+    }
+    const pubkey = id && (id as any).key ? (id as any).key : id;
+    const conversation = this.getOrCreate(pubkey, type);
 
-      return Promise.reject(new Error('getOrCreateAndWait: did not get conversation'));
-    });
+    if (conversation) {
+      return conversation.initialPromise.then(() => conversation);
+    }
+
+    return Promise.reject(new Error('getOrCreateAndWait: did not get conversation'));
   }
 
   /**
@@ -312,17 +306,12 @@ class ConversationController {
   }
 
   public async load() {
-    window.log.warn(`plop1`);
-
     if (this.conversations.length) {
       throw new Error('ConversationController: Already loaded!');
     }
-    window.log.warn(`plop1`);
 
     const load = async () => {
       try {
-        window.log.warn(`plop2`);
-
         const startLoad = Date.now();
 
         const convoModels = await Data.getAllConversations();
@@ -379,17 +368,17 @@ class ConversationController {
       }
     };
 
-    this._initialPromise = load();
+    this._convoHubInitialPromise = load();
 
-    return this._initialPromise;
+    return this._convoHubInitialPromise;
   }
 
   public loadPromise() {
-    return this._initialPromise;
+    return this._convoHubInitialPromise;
   }
 
   public reset() {
-    this._initialPromise = Promise.resolve();
+    this._convoHubInitialPromise = Promise.resolve();
     this._initialFetchComplete = false;
     if (window?.inboxStore) {
       window.inboxStore?.dispatch(conversationActions.removeAllConversations());
@@ -569,4 +558,4 @@ async function removeCommunityFromWrappers(conversationId: string) {
   }
 }
 
-export const ConvoHub = { use: getConversationController };
+export const ConvoHub = { use: getConvoHub };

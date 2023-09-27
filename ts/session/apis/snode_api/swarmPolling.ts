@@ -244,7 +244,6 @@ export class SwarmPolling {
     const { toPollDetails, groupsToLeave, legacyGroupsToLeave } = await this.getPollingDetails(
       this.groupPolling
     );
-
     // first, leave anything which shouldn't be there anymore
     await Promise.all(
       concat(groupsToLeave, legacyGroupsToLeave).map(m =>
@@ -262,12 +261,61 @@ export class SwarmPolling {
     }
   }
 
+  public async updateLastPollTimestampForPubkey({
+    countMessages,
+    pubkey,
+    type,
+  }: {
+    type: ConversationTypeEnum;
+    countMessages: number;
+    pubkey: string;
+  }) {
+    // if all snodes returned an error (null), no need to update the lastPolledTimestamp
+    if (type === ConversationTypeEnum.GROUP || type === ConversationTypeEnum.GROUPV3) {
+      window?.log?.debug(
+        `Polled for group(${ed25519Str(pubkey)}):, got ${countMessages} messages back.`
+      );
+      let lastPolledTimestamp = Date.now();
+      if (countMessages >= 95) {
+        // if we get 95 messages or more back, it means there are probably more than this
+        // so make sure to retry the polling in the next 5sec by marking the last polled timestamp way before that it is really
+        // this is a kind of hack
+        lastPolledTimestamp = Date.now() - SWARM_POLLING_TIMEOUT.INACTIVE - 5 * 1000;
+      } // update the last fetched timestamp
+
+      this.forcePolledTimestamp(pubkey, lastPolledTimestamp);
+    }
+  }
+
+  public async handleUserOrGroupConfMessages({
+    confMessages,
+    pubkey,
+    type,
+  }: {
+    type: ConversationTypeEnum;
+    pubkey: string;
+    confMessages: Array<RetrieveMessageItemWithNamespace> | null;
+  }) {
+    if (!confMessages) {
+      return;
+    }
+
+    // first make sure to handle the shared user config message first
+    if (type === ConversationTypeEnum.PRIVATE && UserUtils.isUsFromCache(pubkey)) {
+      // this does not throw, no matter what happens
+      await SwarmPollingUserConfig.handleUserSharedConfigMessages(confMessages);
+      return;
+    }
+    if (type === ConversationTypeEnum.GROUPV3 && PubKey.isClosedGroupV2(pubkey)) {
+      await SwarmPollingGroupConfig.handleGroupSharedConfigMessages(confMessages, pubkey);
+    }
+  }
+
   /**
    * Only exposed as public for testing
    */
   public async pollOnceForKey([pubkey, type]: PollForUs | PollForLegacy | PollForGroup) {
     const namespaces = this.getNamespacesToPollFrom(type);
-
     const swarmSnodes = await snodePool.getSwarmFor(pubkey);
 
     // Select nodes for which we already have lastHashes
@@ -291,59 +339,32 @@ export class SwarmPolling {
     }
 
     if (!resultsFromAllNamespaces?.length) {
-      // not a single message from any of the polled namespace was retrieve. nothing else to do
+      // Not a single message from any of the polled namespace was retrieve.
+      // We must still mark the current pubkey as "was just polled"
+      await this.updateLastPollTimestampForPubkey({
+        countMessages: 0,
+        pubkey,
+        type,
+      });
       return;
     }
     const { confMessages, otherMessages } = filterMessagesPerTypeOfConvo(
       type,
       resultsFromAllNamespaces
     );
-
-    // first make sure to handle the shared user config message first
-    if (
-      type === ConversationTypeEnum.PRIVATE &&
-      confMessages?.length &&
-      UserUtils.isUsFromCache(pubkey)
-    ) {
-      // this does not throw, no matter what happens
-      await SwarmPollingUserConfig.handleUserSharedConfigMessages(confMessages);
-    } else if (
-      type === ConversationTypeEnum.GROUPV3 &&
-      confMessages?.length &&
-      PubKey.isClosedGroupV2(pubkey)
-    ) {
-      await SwarmPollingGroupConfig.handleGroupSharedConfigMessages(confMessages, pubkey);
-    }
+    // We always handle the config messages first (for groups 03 or our own messages)
+    await this.handleUserOrGroupConfMessages({ confMessages, pubkey, type });
 
     // Merge results into one list of unique messages
     const uniqOtherMsgs = uniqBy(otherMessages, x => x.hash);
     if (uniqOtherMsgs.length) {
       window.log.debug(`received otherMessages: ${otherMessages.length} for type: ${type}`);
     }
-
-    // if all snodes returned an error (null), no need to update the lastPolledTimestamp
-    if (type === ConversationTypeEnum.GROUP || type === ConversationTypeEnum.GROUPV3) {
-      window?.log?.debug(
-        `Polled for group(${ed25519Str(pubkey)}):, got ${uniqOtherMsgs.length} messages back.`
-      );
-      let lastPolledTimestamp = Date.now();
-      if (uniqOtherMsgs.length >= 95) {
-        // if we get 95 messages or more back, it means there are probably more than this
-        // so make sure to retry the polling in the next 5sec by marking the last polled timestamp way before that it is really
-        // this is a kind of hack
-        lastPolledTimestamp = Date.now() - SWARM_POLLING_TIMEOUT.INACTIVE - 5 * 1000;
-      }
-      // update the last fetched timestamp
-      this.groupPolling = this.groupPolling.map(group => {
-        if (PubKey.isEqual(pubkey, group.pubkey)) {
-          return {
-            ...group,
-            lastPolledTimestamp,
-          };
-        }
-        return group;
-      });
-    }
+    await this.updateLastPollTimestampForPubkey({
+      countMessages: uniqOtherMsgs.length,
+      pubkey,
+      type,
+    });
 
     perfStart(`handleSeenMessages-${pubkey}`);
     const newMessages = await this.handleSeenMessages(uniqOtherMsgs);

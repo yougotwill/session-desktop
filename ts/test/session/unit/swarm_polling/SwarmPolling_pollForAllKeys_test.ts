@@ -2,8 +2,8 @@ import chai from 'chai';
 import { describe } from 'mocha';
 import Sinon, * as sinon from 'sinon';
 
-import { UserGroupsGet } from 'libsession_util_nodejs';
-import { ConversationModel } from '../../../../models/conversation';
+import { GroupPubkeyType, LegacyGroupInfo, UserGroupsGet } from 'libsession_util_nodejs';
+import { ConversationModel, Convo } from '../../../../models/conversation';
 import { ConversationTypeEnum } from '../../../../models/conversationAttributes';
 import { SnodePool, getSwarmPollingInstance } from '../../../../session/apis/snode_api';
 import { resetHardForkCachedValues } from '../../../../session/apis/snode_api/hfHandling';
@@ -24,6 +24,16 @@ const pollOnceForGroupLegacyArgs = (groupLegacy: string) => [
   [groupLegacy, ConversationTypeEnum.GROUP],
 ];
 
+function stubWithLegacyGroups(pubkeys: Array<string>) {
+  const groups = pubkeys.map(m => ({ pubkeyHex: m }) as LegacyGroupInfo);
+  TestUtils.stubUserGroupWrapper('getAllLegacyGroups', groups);
+}
+
+function stubWithGroups(pubkeys: Array<GroupPubkeyType>) {
+  const groups = pubkeys.map(m => ({ pubkeyHex: m }) as UserGroupsGet);
+  TestUtils.stubUserGroupWrapper('getAllGroups', groups);
+}
+
 describe('SwarmPolling:pollForAllKeys', () => {
   const ourPubkey = TestUtils.generateFakePubKey();
   const ourNumber = ourPubkey.key;
@@ -39,6 +49,7 @@ describe('SwarmPolling:pollForAllKeys', () => {
   beforeEach(async () => {
     ConvoHub.use().reset();
     TestUtils.stubWindowFeatureFlags();
+    TestUtils.stubWindowLog();
     Sinon.stub(ConfigurationSync, 'queueNewJobIfNeeded').resolves();
 
     // Utils Stubs
@@ -50,13 +61,16 @@ describe('SwarmPolling:pollForAllKeys', () => {
     stubData('getSwarmNodesForPubkey').resolves();
     stubData('getLastHashBySnode').resolves();
 
+    Sinon.stub(Convo, 'commitConversationAndRefreshWrapper').resolves();
+
+    TestUtils.stubLibSessionWorker(undefined);
+
     Sinon.stub(SnodePool, 'getSwarmFor').resolves(generateFakeSnodes(5));
     Sinon.stub(SnodeAPIRetrieve, 'retrieveNextMessages').resolves([]);
+
     TestUtils.stubWindow('inboxStore', undefined);
     TestUtils.stubWindow('getGlobalOnlineStatus', () => true);
     TestUtils.stubWindowLog();
-    TestUtils.stubUserGroupWrapper('getAllLegacyGroups', []);
-    TestUtils.stubUserGroupWrapper('getAllGroups', []);
 
     const convoController = ConvoHub.use();
     await convoController.load();
@@ -78,8 +92,8 @@ describe('SwarmPolling:pollForAllKeys', () => {
   });
 
   it('does run for our pubkey even if activeAt is really old ', async () => {
-    TestUtils.stubLibSessionWorker(undefined);
-
+    stubWithGroups([]);
+    stubWithLegacyGroups([]);
     const convo = ConvoHub.use().getOrCreate(ourNumber, ConversationTypeEnum.PRIVATE);
     convo.set('active_at', Date.now() - 1000 * 3600 * 25);
     await swarmPolling.start(true);
@@ -89,8 +103,8 @@ describe('SwarmPolling:pollForAllKeys', () => {
   });
 
   it('does run for our pubkey even if activeAt is recent ', async () => {
-    TestUtils.stubLibSessionWorker(undefined);
-
+    stubWithGroups([]);
+    stubWithLegacyGroups([]);
     const convo = ConvoHub.use().getOrCreate(ourNumber, ConversationTypeEnum.PRIVATE);
     convo.set('active_at', Date.now());
     await swarmPolling.start(true);
@@ -103,10 +117,8 @@ describe('SwarmPolling:pollForAllKeys', () => {
     it('does run for group pubkey on start no matter the recent timestamp', async () => {
       const groupPk = TestUtils.generateFakePubKeyStr();
       const convo = ConvoHub.use().getOrCreate(groupPk, ConversationTypeEnum.GROUP);
-      const group = {
-        pubkeyHex: groupPk,
-      } as UserGroupsGet;
-      TestUtils.stubLibSessionWorker([group]);
+      stubWithLegacyGroups([groupPk]);
+      stubWithGroups([]);
       convo.set('active_at', Date.now());
       const groupConvoPubkey = PubKey.cast(groupPk);
       swarmPolling.addGroupId(groupConvoPubkey);
@@ -122,11 +134,9 @@ describe('SwarmPolling:pollForAllKeys', () => {
     it('does only poll from -10 for closed groups', async () => {
       const groupPk = TestUtils.generateFakePubKeyStr();
       const convo = ConvoHub.use().getOrCreate(groupPk, ConversationTypeEnum.GROUP);
-      const group = {
-        pubkeyHex: groupPk,
-      } as UserGroupsGet;
-      TestUtils.stubLibSessionWorker([group]);
 
+      stubWithLegacyGroups([groupPk]);
+      stubWithGroups([]);
       convo.set('active_at', 1);
       swarmPolling.addGroupId(PubKey.cast(groupPk));
 
@@ -144,36 +154,31 @@ describe('SwarmPolling:pollForAllKeys', () => {
 
     it('does run for group pubkey on start but not another time if activeAt is old ', async () => {
       const groupPk = TestUtils.generateFakePubKeyStr();
-      const convo = ConvoHub.use().getOrCreate(groupPk, ConversationTypeEnum.GROUP);
+      const groupConvo = ConvoHub.use().getOrCreate(groupPk, ConversationTypeEnum.GROUP);
 
-      const group = {
-        pubkeyHex: groupPk,
-      } as UserGroupsGet;
-      TestUtils.stubLibSessionWorker([group]);
-      convo.set('active_at', 1); // really old, but active
+      stubWithLegacyGroups([groupPk]);
+      stubWithGroups([]);
+
+      groupConvo.set('active_at', 1); // really old, but active
       swarmPolling.addGroupId(groupPk);
-
       // this calls the stub 2 times, one for our direct pubkey and one for the group
       await swarmPolling.start(true);
-
-      // this should only call the stub one more time: for our direct pubkey but not for the group pubkey
-      await swarmPolling.pollForAllKeys();
-
-      expect(pollOnceForKeySpy.callCount).to.eq(3);
+      expect(pollOnceForKeySpy.callCount).to.eq(2);
       expect(pollOnceForKeySpy.firstCall.args).to.deep.eq(pollOnceForUsArgs(ourPubkey.key));
       expect(pollOnceForKeySpy.secondCall.args).to.deep.eq(pollOnceForGroupLegacyArgs(groupPk));
+      // this should only call the stub one more time: for our direct pubkey but not for the group pubkey
+      await swarmPolling.pollForAllKeys();
+      expect(pollOnceForKeySpy.callCount).to.eq(3);
       expect(pollOnceForKeySpy.thirdCall.args).to.deep.eq(pollOnceForUsArgs(ourPubkey.key));
     });
 
     it('does run twice if activeAt less than one hour ', async () => {
       const groupPk = TestUtils.generateFakePubKeyStr();
-      const convo = ConvoHub.use().getOrCreate(groupPk, ConversationTypeEnum.GROUP);
 
+      const convo = ConvoHub.use().getOrCreate(groupPk, ConversationTypeEnum.GROUP);
       // fake that the group is part of the wrapper otherwise we stop tracking it after the first polling event
-      const group = {
-        pubkeyHex: groupPk,
-      } as UserGroupsGet;
-      TestUtils.stubLibSessionWorker([group]);
+      stubWithLegacyGroups([groupPk]);
+      stubWithGroups([]);
 
       convo.set('active_at', Date.now());
       swarmPolling.addGroupId(groupPk);
@@ -203,10 +208,9 @@ describe('SwarmPolling:pollForAllKeys', () => {
 
       const convo = ConvoHub.use().getOrCreate(groupPk, ConversationTypeEnum.GROUP);
       // fake that the group is part of the wrapper otherwise we stop tracking it after the first polling event
-      const group = {
-        pubkeyHex: groupPk,
-      } as UserGroupsGet;
-      TestUtils.stubLibSessionWorker([group]);
+
+      stubWithLegacyGroups([groupPk]);
+      stubWithGroups([]);
       pollOnceForKeySpy.resetHistory();
       convo.set('active_at', Date.now());
       swarmPolling.addGroupId(groupPk);
@@ -236,10 +240,10 @@ describe('SwarmPolling:pollForAllKeys', () => {
 
       const convo = ConvoHub.use().getOrCreate(groupPk, ConversationTypeEnum.GROUP);
       pollOnceForKeySpy.resetHistory();
-      const group = {
-        pubkeyHex: groupPk,
-      } as UserGroupsGet;
-      TestUtils.stubLibSessionWorker([group]);
+
+      stubWithLegacyGroups([groupPk]);
+      stubWithGroups([]);
+
       convo.set('active_at', Date.now());
       swarmPolling.addGroupId(groupPk);
       await swarmPolling.start(true);
@@ -265,7 +269,9 @@ describe('SwarmPolling:pollForAllKeys', () => {
           TestUtils.generateFakePubKeyStr(),
           ConversationTypeEnum.GROUP
         );
-        TestUtils.stubLibSessionWorker({});
+
+        stubWithLegacyGroups([convo.id]);
+        stubWithGroups([]);
 
         convo.set('active_at', Date.now());
         groupConvoPubkey = PubKey.cast(convo.id as string);
@@ -334,4 +340,6 @@ describe('SwarmPolling:pollForAllKeys', () => {
       });
     });
   });
+
+  it.skip('do the same for neww groups');
 });
