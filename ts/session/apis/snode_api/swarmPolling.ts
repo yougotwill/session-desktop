@@ -366,30 +366,14 @@ export class SwarmPolling {
       type,
     });
 
+    const shouldDiscardMessages = await this.shouldLeaveNotPolledGroup({ type, pubkey });
+    if (shouldDiscardMessages) {
+      return;
+    }
+
     perfStart(`handleSeenMessages-${pubkey}`);
     const newMessages = await this.handleSeenMessages(uniqOtherMsgs);
     perfEnd(`handleSeenMessages-${pubkey}`, 'handleSeenMessages');
-
-    const allLegacyGroupsInWrapper = await UserGroupsWrapperActions.getAllLegacyGroups();
-    const allGroupsInWrapper = await UserGroupsWrapperActions.getAllGroups();
-
-    // don't handle incoming messages from group when the group is not tracked.
-    // this can happen when a group is removed from the wrapper while we were polling
-
-    if (
-      type === ConversationTypeEnum.GROUP &&
-      pubkey.startsWith('05') &&
-      !allLegacyGroupsInWrapper.some(m => m.pubkeyHex === pubkey) // just check if a legacy group with that pubkey exists
-    ) {
-      // not tracked anymore in the wrapper. Discard messages and stop polling
-      await this.notPollingForGroupAsNotInWrapper(pubkey, 'not in wrapper after poll');
-      return;
-    }
-    if (PubKey.isClosedGroupV2(pubkey) && !allGroupsInWrapper.some(m => m.pubkeyHex === pubkey)) {
-      // not tracked anymore in the wrapper. Discard messages and stop polling
-      await this.notPollingForGroupAsNotInWrapper(pubkey, 'not in wrapper after poll');
-      return;
-    }
 
     // trigger the handling of all the other messages, not shared config related
     newMessages.forEach(m => {
@@ -406,6 +390,34 @@ export class SwarmPolling {
         content.messageHash
       );
     });
+  }
+
+  private async shouldLeaveNotPolledGroup({
+    pubkey,
+    type,
+  }: {
+    type: ConversationTypeEnum;
+    pubkey: string;
+  }) {
+    const allLegacyGroupsInWrapper = await UserGroupsWrapperActions.getAllLegacyGroups();
+    const allGroupsInWrapper = await UserGroupsWrapperActions.getAllGroups();
+
+    // don't handle incoming messages from group when the group is not tracked.
+    // this can happen when a group is removed from the wrapper while we were polling
+
+    const newGroupButNotInWrapper =
+      PubKey.isClosedGroupV2(pubkey) && !allGroupsInWrapper.some(m => m.pubkeyHex === pubkey);
+    const legacyGroupButNoInWrapper =
+      type === ConversationTypeEnum.GROUP &&
+      pubkey.startsWith('05') &&
+      !allLegacyGroupsInWrapper.some(m => m.pubkeyHex === pubkey);
+
+    if (newGroupButNotInWrapper || legacyGroupButNoInWrapper) {
+      // not tracked anymore in the wrapper. Discard messages and stop polling
+      await this.notPollingForGroupAsNotInWrapper(pubkey, 'not in wrapper after poll');
+      return true;
+    }
+    return false;
   }
 
   private async getHashesToBump(
