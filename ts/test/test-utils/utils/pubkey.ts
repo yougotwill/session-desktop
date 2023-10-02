@@ -1,9 +1,11 @@
 import * as crypto from 'crypto';
+import { GroupPubkeyType, UserGroupsWrapperNode } from 'libsession_util_nodejs';
+import { KeyPair, to_hex } from 'libsodium-wrappers-sumo';
 import _ from 'lodash';
 import { Snode } from '../../../data/data';
+import { getSodiumNode } from '../../../node/sodiumNode';
 import { ECKeyPair } from '../../../receiver/keypairs';
 import { PubKey } from '../../../session/types';
-import { GroupPubkeyType } from 'libsession_util_nodejs';
 
 export function generateFakePubKey(): PubKey {
   // Generates a mock pubkey for testing
@@ -21,6 +23,46 @@ export function generateFakePubKeyStr(): string {
   const pubkeyString = `05${hexBuffer}`;
 
   return pubkeyString;
+}
+
+export type TestUserKeyPairs = {
+  x25519KeyPair: {
+    pubkeyHex: string;
+    pubKey: Uint8Array;
+    privKey: Uint8Array;
+  };
+  ed25519KeyPair: KeyPair;
+};
+
+export async function generateUserKeyPairs(): Promise<TestUserKeyPairs> {
+  const sodium = await getSodiumNode();
+  const ed25519KeyPair = sodium.crypto_sign_seed_keypair(
+    sodium.randombytes_buf(sodium.crypto_sign_SEEDBYTES)
+  );
+  const x25519PublicKey = sodium.crypto_sign_ed25519_pk_to_curve25519(ed25519KeyPair.publicKey);
+  // prepend version byte (coming from `processKeys(raw_keys)`)
+  const origPub = new Uint8Array(x25519PublicKey);
+  const prependedX25519PublicKey = new Uint8Array(33);
+  prependedX25519PublicKey.set(origPub, 1);
+  prependedX25519PublicKey[0] = 5;
+  const x25519SecretKey = sodium.crypto_sign_ed25519_sk_to_curve25519(ed25519KeyPair.privateKey);
+
+  // prepend with 05 the public key
+  const userKeys = {
+    x25519KeyPair: {
+      pubkeyHex: to_hex(prependedX25519PublicKey),
+      pubKey: prependedX25519PublicKey,
+      privKey: x25519SecretKey,
+    },
+    ed25519KeyPair,
+  };
+
+  return userKeys;
+}
+
+export async function generateGroupV2(privateEd25519: Uint8Array) {
+  const groupWrapper = new UserGroupsWrapperNode(privateEd25519, null);
+  return groupWrapper.createGroup();
 }
 
 export function generateFakeClosedGroupV3PkStr(): GroupPubkeyType {
