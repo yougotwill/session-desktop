@@ -119,9 +119,7 @@ async function buildAndSaveDumpsToDB(
 async function pushChangesToGroupSwarmIfNeeded(groupPk: GroupPubkeyType): Promise<RunJobResult> {
   // save the dumps to DB even before trying to push them, so at least we have an up to date dumps in the DB in case of crash, no network etc
   await LibSessionUtil.saveMetaGroupDumpToDb(groupPk);
-
   const singleDestChanges = await LibSessionUtil.pendingChangesForGroup(groupPk);
-
   // If there are no pending changes then the job can just complete (next time something
   // is updated we want to try and run immediately so don't scuedule another run in this case)
   if (isEmpty(singleDestChanges?.messages)) {

@@ -202,7 +202,6 @@ async function pendingChangesForGroup(
   if (!needsPush) {
     return { messages: results, allOldHashes: new Set() };
   }
-
   const { groupInfo, groupMember, groupKeys } = await MetaGroupWrapperActions.push(groupPk);
 
   // Note: We need the keys to be pushed first to avoid a race condition
