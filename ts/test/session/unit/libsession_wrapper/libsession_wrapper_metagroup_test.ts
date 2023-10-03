@@ -1,5 +1,9 @@
 import { expect } from 'chai';
-import { MetaGroupWrapperNode, UserGroupsWrapperNode } from 'libsession_util_nodejs';
+import {
+  GroupMemberGet,
+  MetaGroupWrapperNode,
+  UserGroupsWrapperNode,
+} from 'libsession_util_nodejs';
 import Sinon from 'sinon';
 import { range } from 'lodash';
 import { HexString } from '../../../../node/hexStrings';
@@ -7,10 +11,32 @@ import { toFixedUint8ArrayOfLength } from '../../../../types/sqlSharedTypes';
 import { TestUtils } from '../../../test-utils';
 import { TestUserKeyPairs } from '../../../test-utils/utils';
 
+function profilePicture() {
+  return { key: new Uint8Array(range(0, 32)), url: `${Math.random()}` };
+}
+
+function emptyMember(pubkeyHex: string): GroupMemberGet {
+  return {
+    inviteFailed: false,
+    invitePending: false,
+    name: '',
+    profilePicture: {
+      key: null,
+      url: null,
+    },
+    promoted: false,
+    promotionFailed: false,
+    promotionPending: false,
+    pubkeyHex,
+  };
+}
+
 describe('libsession_metagroup', () => {
   let us: TestUserKeyPairs;
   let groupCreated: ReturnType<UserGroupsWrapperNode['createGroup']>;
   let metaGroupWrapper: MetaGroupWrapperNode;
+  let member: string;
+  let member2: string;
 
   beforeEach(async () => {
     us = await TestUtils.generateUserKeyPairs();
@@ -26,6 +52,8 @@ describe('libsession_metagroup', () => {
       metaDumped: null,
       userEd25519Secretkey: toFixedUint8ArrayOfLength(us.ed25519KeyPair.privateKey, 64),
     });
+    member = TestUtils.generateFakePubKeyStr();
+    member2 = TestUtils.generateFakePubKeyStr();
   });
   afterEach(() => {
     Sinon.restore();
@@ -120,6 +148,106 @@ describe('libsession_metagroup', () => {
       info.profilePicture = expected;
       metaGroupWrapper.infoSet(info);
       expect(metaGroupWrapper.infoGet().profilePicture).to.be.deep.eq(expected);
+    });
+  });
+
+  describe('members', () => {
+    it('all fields are accounted for', () => {
+      const memberCreated = metaGroupWrapper.memberGetOrConstruct(member);
+      expect(Object.keys(memberCreated).length).to.be.eq(
+        8, // if you change this value, also make sure you add a test, testing that new field, below
+        'this test is designed to fail if you need to add tests to test a new field of libsession'
+      );
+    });
+
+    it('can add member by setting its promoted state', () => {
+      metaGroupWrapper.memberSetPromoted(member, false);
+      expect(metaGroupWrapper.memberGetAll().length).to.be.deep.eq(1);
+      expect(metaGroupWrapper.memberGetAll()[0]).to.be.deep.eq({
+        ...emptyMember(member),
+        promoted: true,
+        promotionPending: true,
+      });
+
+      metaGroupWrapper.memberSetPromoted(member2, true);
+      expect(metaGroupWrapper.memberGetAll().length).to.be.deep.eq(2);
+      // the list is sorted by member pk, which means that index based test do not work
+      expect(metaGroupWrapper.memberGet(member2)).to.be.deep.eq({
+        ...emptyMember(member2),
+        promoted: true,
+        promotionFailed: true,
+        promotionPending: true,
+      });
+    });
+
+    it('can add member by setting its invited state', () => {
+      metaGroupWrapper.memberSetInvited(member, false); // with invite success
+      expect(metaGroupWrapper.memberGetAll().length).to.be.deep.eq(1);
+      expect(metaGroupWrapper.memberGetAll()[0]).to.be.deep.eq({
+        ...emptyMember(member),
+        invitePending: true,
+      });
+
+      metaGroupWrapper.memberSetInvited(member2, true); // with invite failed
+      expect(metaGroupWrapper.memberGetAll().length).to.be.deep.eq(2);
+      expect(metaGroupWrapper.memberGet(member2)).to.be.deep.eq({
+        ...emptyMember(member2),
+        invitePending: true,
+        inviteFailed: true,
+      });
+    });
+
+    it('can add member by setting its accepted state', () => {
+      metaGroupWrapper.memberSetAccepted(member);
+      expect(metaGroupWrapper.memberGetAll().length).to.be.deep.eq(1);
+      expect(metaGroupWrapper.memberGetAll()[0]).to.be.deep.eq({
+        ...emptyMember(member),
+      });
+
+      metaGroupWrapper.memberSetAccepted(member2);
+      expect(metaGroupWrapper.memberGetAll().length).to.be.deep.eq(2);
+      expect(metaGroupWrapper.memberGet(member2)).to.be.deep.eq({
+        ...emptyMember(member2),
+      });
+    });
+
+    it('can erase member', () => {
+      metaGroupWrapper.memberSetAccepted(member);
+      metaGroupWrapper.memberSetPromoted(member2, false);
+      expect(metaGroupWrapper.memberGetAll().length).to.be.deep.eq(2);
+
+      expect(metaGroupWrapper.memberGet(member)).to.be.deep.eq({
+        ...emptyMember(member),
+      });
+      expect(metaGroupWrapper.memberGet(member2)).to.be.deep.eq({
+        ...emptyMember(member2),
+        promoted: true,
+        promotionPending: true,
+      });
+
+      metaGroupWrapper.memberErase(member2);
+      expect(metaGroupWrapper.memberGetAll().length).to.be.deep.eq(1);
+      expect(metaGroupWrapper.memberGetAll()[0]).to.be.deep.eq({
+        ...emptyMember(member),
+      });
+    });
+
+    it('can add via name set', () => {
+      metaGroupWrapper.memberSetName(member, 'member name');
+      expect(metaGroupWrapper.memberGetAll().length).to.be.deep.eq(1);
+      expect(metaGroupWrapper.memberGetAll()[0]).to.be.deep.eq({
+        ...emptyMember(member),
+        name: 'member name',
+      });
+    });
+
+    it('can add via profile picture set', () => {
+      const pic = profilePicture();
+      metaGroupWrapper.memberSetProfilePicture(member, pic);
+      expect(metaGroupWrapper.memberGetAll().length).to.be.deep.eq(1);
+      const expected = { ...emptyMember(member), profilePicture: pic };
+
+      expect(metaGroupWrapper.memberGetAll()[0]).to.be.deep.eq(expected);
     });
   });
 });
