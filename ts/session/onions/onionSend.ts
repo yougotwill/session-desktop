@@ -236,7 +236,7 @@ const sendViaOnionV4ToNonSnodeWithRetries = async (
       },
       {
         retries: 2, // retry 3 (2+1) times at most
-        minTimeout: 100,
+        minTimeout: OnionSending.getMinTimeoutForSogs(),
         onFailedAttempt: e => {
           window?.log?.warn(
             `sendViaOnionV4ToNonSnodeRetryable attempt #${e.attemptNumber} failed. ${e.retriesLeft} retries left...: ${e.message}`
@@ -525,6 +525,10 @@ async function sendJsonViaOnionV4ToFileServer(sendOptions: {
   return res as OnionV4JSONSnodeResponse;
 }
 
+function getMinTimeoutForSogs() {
+  return 100;
+}
+
 // we export these methods for stubbing during testing
 export const OnionSending = {
   endpointRequiresDecoding,
@@ -536,4 +540,5 @@ export const OnionSending = {
   sendBinaryViaOnionV4ToSogs,
   getBinaryViaOnionV4FromFileServer,
   sendJsonViaOnionV4ToFileServer,
+  getMinTimeoutForSogs,
 };

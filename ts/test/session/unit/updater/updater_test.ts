@@ -18,6 +18,7 @@ describe('Updater', () => {
       );
     }
   });
+
   it('stubWindowLog is set to false before pushing', () => {
     expect(enableLogRedirect).to.be.eq(
       false,

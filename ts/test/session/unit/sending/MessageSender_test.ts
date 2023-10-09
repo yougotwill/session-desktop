@@ -267,6 +267,7 @@ describe('MessageSender', () => {
         bodyBinary: new Uint8Array(),
         bodyContentType: 'a',
       });
+      Sinon.stub(OnionSending, 'getMinTimeoutForSogs').returns(5);
       const message = TestUtils.generateOpenGroupVisibleMessage();
       const roomInfos = TestUtils.generateOpenGroupV2RoomInfos();
 
@@ -278,6 +279,8 @@ describe('MessageSender', () => {
       const message = TestUtils.generateOpenGroupVisibleMessage();
       const roomInfos = TestUtils.generateOpenGroupV2RoomInfos();
       Sinon.stub(Onions, 'sendOnionRequestHandlingSnodeEject').resolves({} as any);
+
+      Sinon.stub(OnionSending, 'getMinTimeoutForSogs').returns(5);
 
       const decodev4responseStub = Sinon.stub(OnionV4, 'decodeV4Response');
       decodev4responseStub.throws('whate');
@@ -296,6 +299,7 @@ describe('MessageSender', () => {
       const message = TestUtils.generateOpenGroupVisibleMessage();
       const roomInfos = TestUtils.generateOpenGroupV2RoomInfos();
       Sinon.stub(Onions, 'sendOnionRequestHandlingSnodeEject').resolves({} as any);
+      Sinon.stub(OnionSending, 'getMinTimeoutForSogs').returns(5);
 
       const decodev4responseStub = Sinon.stub(OnionV4, 'decodeV4Response');
       decodev4responseStub.throws('whate');

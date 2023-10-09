@@ -134,7 +134,4 @@ describe('DecryptedAttachmentsManager', () => {
       });
     });
   });
-
-  it.skip('cleanUpOldDecryptedMedias', () => {});
-  it.skip('getDecryptedBlob', () => {});
 });

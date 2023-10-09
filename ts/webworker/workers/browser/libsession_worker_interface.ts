@@ -488,10 +488,6 @@ export const MetaGroupWrapperActions: MetaGroupWrapperActionsCalls = {
     callLibSessionWorker([`MetaGroupConfig-${groupPk}`, 'keysNeedsRekey']) as Promise<
       ReturnType<MetaGroupWrapperActionsCalls['keysNeedsRekey']>
     >,
-  groupKeys: async (groupPk: GroupPubkeyType) =>
-    callLibSessionWorker([`MetaGroupConfig-${groupPk}`, 'groupKeys']) as Promise<
-      ReturnType<MetaGroupWrapperActionsCalls['groupKeys']>
-    >,
   currentHashes: async (groupPk: GroupPubkeyType) =>
     callLibSessionWorker([`MetaGroupConfig-${groupPk}`, 'currentHashes']) as Promise<
       ReturnType<MetaGroupWrapperActionsCalls['currentHashes']>
