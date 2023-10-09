@@ -190,7 +190,6 @@ export type GroupSingleDestinationChanges = {
 async function pendingChangesForGroup(
   groupPk: GroupPubkeyType
 ): Promise<GroupSingleDestinationChanges> {
-  const results = new Array<PendingChangesForGroup>();
   if (!PubKey.isClosedGroupV2(groupPk)) {
     throw new Error(`pendingChangesForGroup only works for user or 03 group pubkeys`);
   }
@@ -200,9 +199,10 @@ async function pendingChangesForGroup(
   // we probably need to add the GROUP_KEYS check here
 
   if (!needsPush) {
-    return { messages: results, allOldHashes: new Set() };
+    return { messages: [], allOldHashes: new Set() };
   }
   const { groupInfo, groupMember, groupKeys } = await MetaGroupWrapperActions.push(groupPk);
+  const results = new Array<PendingChangesForGroup>();
 
   // Note: We need the keys to be pushed first to avoid a race condition
   if (groupKeys) {

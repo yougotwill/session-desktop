@@ -6,6 +6,7 @@ import { Snode } from '../../../data/data';
 import { getSodiumNode } from '../../../node/sodiumNode';
 import { ECKeyPair } from '../../../receiver/keypairs';
 import { PubKey } from '../../../session/types';
+import { ByteKeyPair } from '../../../session/utils/User';
 
 export function generateFakePubKey(): PubKey {
   // Generates a mock pubkey for testing
@@ -31,7 +32,7 @@ export type TestUserKeyPairs = {
     pubKey: Uint8Array;
     privKey: Uint8Array;
   };
-  ed25519KeyPair: KeyPair;
+  ed25519KeyPair: KeyPair & ByteKeyPair;
 };
 
 export async function generateUserKeyPairs(): Promise<TestUserKeyPairs> {
@@ -54,7 +55,11 @@ export async function generateUserKeyPairs(): Promise<TestUserKeyPairs> {
       pubKey: prependedX25519PublicKey,
       privKey: x25519SecretKey,
     },
-    ed25519KeyPair,
+    ed25519KeyPair: {
+      ...ed25519KeyPair,
+      pubKeyBytes: ed25519KeyPair.publicKey,
+      privKeyBytes: ed25519KeyPair.privateKey,
+    },
   };
 
   return userKeys;

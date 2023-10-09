@@ -38,7 +38,7 @@ const defaultMaxAttempts = 2;
  */
 const lastRunConfigSyncJobTimestamps = new Map<string, number | null>();
 
-type SuccessfulChange = {
+export type GroupSuccessfulChange = {
   pushed: PendingChangesForGroup;
   updatedHash: string;
 };
@@ -49,8 +49,8 @@ type SuccessfulChange = {
 function resultsToSuccessfulChange(
   result: NotEmptyArrayOfBatchResults | null,
   request: GroupSingleDestinationChanges
-): Array<SuccessfulChange> {
-  const successfulChanges: Array<SuccessfulChange> = [];
+): Array<GroupSuccessfulChange> {
+  const successfulChanges: Array<GroupSuccessfulChange> = [];
 
   /**
    * For each batch request, we get as result
@@ -82,20 +82,19 @@ function resultsToSuccessfulChange(
 }
 
 async function buildAndSaveDumpsToDB(
-  changes: Array<SuccessfulChange>,
+  changes: Array<GroupSuccessfulChange>,
   groupPk: GroupPubkeyType
 ): Promise<void> {
   const toConfirm: Parameters<typeof MetaGroupWrapperActions.metaConfirmPushed> = [
     groupPk,
     { groupInfo: null, groupMember: null },
   ];
-
   for (let i = 0; i < changes.length; i++) {
     const change = changes[i];
     const namespace = change.pushed.namespace;
     switch (namespace) {
       case SnodeNamespaces.ClosedGroupInfo: {
-        if ((change.pushed as any).seqno) {
+        if (change.pushed.seqno) {
           toConfirm[1].groupInfo = [change.pushed.seqno.toNumber(), change.updatedHash];
         }
         break;
@@ -140,16 +139,18 @@ async function pushChangesToGroupSwarmIfNeeded(groupPk: GroupPubkeyType): Promis
   const result = await MessageSender.sendEncryptedDataToSnode(msgs, groupPk, oldHashesToDelete);
 
   const expectedReplyLength = singleDestChanges.messages.length + (oldHashesToDelete.size ? 1 : 0);
+
   // we do a sequence call here. If we do not have the right expected number of results, consider it a failure
   if (!isArray(result) || result.length !== expectedReplyLength) {
     window.log.info(
       `GroupSyncJob: unexpected result length: expected ${expectedReplyLength} but got ${result?.length}`
     );
+
     // this might be a 421 error (already handled) so let's retry this request a little bit later
     return RunJobResult.RetryJobIfPossible;
   }
 
-  const changes = resultsToSuccessfulChange(result, singleDestChanges);
+  const changes = GroupSync.resultsToSuccessfulChange(result, singleDestChanges);
   if (isEmpty(changes)) {
     return RunJobResult.RetryJobIfPossible;
   }
@@ -185,6 +186,9 @@ class GroupSyncJob extends PersistedJob<GroupSyncPersistedData> {
 
     try {
       const thisJobDestination = this.persistedData.identifier;
+      if (!PubKey.isClosedGroupV2(thisJobDestination)) {
+        return RunJobResult.PermanentFailure;
+      }
 
       window.log.debug(`GroupSyncJob starting ${thisJobDestination}`);
 
@@ -197,11 +201,8 @@ class GroupSyncJob extends PersistedJob<GroupSyncPersistedData> {
         return RunJobResult.PermanentFailure;
       }
 
-      if (!PubKey.isClosedGroupV2(thisJobDestination)) {
-        return RunJobResult.PermanentFailure;
-      }
-
-      return await pushChangesToGroupSwarmIfNeeded(thisJobDestination);
+      // return await so we catch exceptions in here
+      return await GroupSync.pushChangesToGroupSwarmIfNeeded(thisJobDestination);
 
       // eslint-disable-next-line no-useless-catch
     } catch (e) {
@@ -278,6 +279,7 @@ async function queueNewJobIfNeeded(groupPk: GroupPubkeyType) {
 export const GroupSync = {
   GroupSyncJob,
   pushChangesToGroupSwarmIfNeeded,
+  resultsToSuccessfulChange,
   queueNewJobIfNeeded: (groupPk: GroupPubkeyType) =>
     allowOnlyOneAtATime(`GroupSyncJob-oneAtAtTime-${groupPk}`, () => queueNewJobIfNeeded(groupPk)),
 };
