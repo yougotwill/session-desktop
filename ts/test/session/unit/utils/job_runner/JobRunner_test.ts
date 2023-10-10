@@ -236,27 +236,22 @@ describe('JobRunner', () => {
       expect(runnerMulti.getCurrentJobIdentifier()).to.be.equal(job.persistedData.identifier);
 
       clock.tick(5000);
-      console.info('=========== awaiting first job ==========');
 
       await runnerMulti.waitCurrentJob();
       // just give some time for the runnerMulti to pick up a new job
       await sleepFor(10);
       expect(runnerMulti.getJobList()).to.deep.eq([]);
       expect(runnerMulti.getCurrentJobIdentifier()).to.be.equal(null);
-      console.info('=========== awaited first job ==========');
 
       // the first job should already be finished now
       result = await runnerMulti.addJob(job2);
       expect(result).to.eq('job_started');
       expect(runnerMulti.getJobList()).to.deep.eq([job2.serializeJob()]);
 
-      console.info('=========== awaiting second job ==========');
-
       // each job takes 5s to finish, so let's tick once the first one should be done
       clock.tick(5010);
       await runnerMulti.waitCurrentJob();
       await sleepFor(10);
-      console.info('=========== awaited second job ==========');
 
       expect(runnerMulti.getJobList()).to.deep.eq([]);
     });

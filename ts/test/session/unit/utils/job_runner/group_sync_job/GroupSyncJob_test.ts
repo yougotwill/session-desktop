@@ -1,6 +1,6 @@
 import { expect } from 'chai';
 import { GroupPubkeyType } from 'libsession_util_nodejs';
-import { omit, pick } from 'lodash';
+import { omit } from 'lodash';
 import Long from 'long';
 import Sinon from 'sinon';
 import { ConfigDumpData } from '../../../../../../data/configDump/configDump';
@@ -8,29 +8,27 @@ import { getSodiumNode } from '../../../../../../node/sodiumNode';
 import { NotEmptyArrayOfBatchResults } from '../../../../../../session/apis/snode_api/SnodeRequestTypes';
 import { GetNetworkTime } from '../../../../../../session/apis/snode_api/getNetworkTime';
 import { SnodeNamespaces } from '../../../../../../session/apis/snode_api/namespaces';
+import { TTL_DEFAULT } from '../../../../../../session/constants';
 import { ConvoHub } from '../../../../../../session/conversations';
 import { LibSodiumWrappers } from '../../../../../../session/crypto';
+import { MessageSender } from '../../../../../../session/sending';
 import { UserUtils } from '../../../../../../session/utils';
 import { RunJobResult } from '../../../../../../session/utils/job_runners/PersistedJob';
+import { GroupSync } from '../../../../../../session/utils/job_runners/jobs/GroupConfigJob';
 import {
+  GroupDestinationChanges,
   GroupSuccessfulChange,
-  GroupSync,
-} from '../../../../../../session/utils/job_runners/jobs/GroupConfigJob';
-import {
-  GroupSingleDestinationChanges,
   LibSessionUtil,
   PendingChangesForGroup,
 } from '../../../../../../session/utils/libsession/libsession_utils';
 import { MetaGroupWrapperActions } from '../../../../../../webworker/workers/browser/libsession_worker_interface';
 import { TestUtils } from '../../../../../test-utils';
-import { MessageSender } from '../../../../../../session/sending';
 import { TypedStub } from '../../../../../test-utils/utils';
-import { TTL_DEFAULT } from '../../../../../../session/constants';
 
 function validInfo(sodium: LibSodiumWrappers) {
   return {
     type: 'GroupInfo',
-    data: sodium.randombytes_buf(12),
+    ciphertext: sodium.randombytes_buf(12),
     seqno: Long.fromNumber(123),
     namespace: SnodeNamespaces.ClosedGroupInfo,
     timestamp: 1234,
@@ -39,7 +37,7 @@ function validInfo(sodium: LibSodiumWrappers) {
 function validMembers(sodium: LibSodiumWrappers) {
   return {
     type: 'GroupMember',
-    data: sodium.randombytes_buf(12),
+    ciphertext: sodium.randombytes_buf(12),
     seqno: Long.fromNumber(321),
     namespace: SnodeNamespaces.ClosedGroupMembers,
     timestamp: 4321,
@@ -49,13 +47,13 @@ function validMembers(sodium: LibSodiumWrappers) {
 function validKeys(sodium: LibSodiumWrappers) {
   return {
     type: 'GroupKeys',
-    data: sodium.randombytes_buf(12),
+    ciphertext: sodium.randombytes_buf(12),
     namespace: SnodeNamespaces.ClosedGroupKeys,
     timestamp: 3333,
   } as const;
 }
 
-describe('GroupSyncJob saveMetaGroupDumpToDb', () => {
+describe('GroupSyncJob saveDumpsToDb', () => {
   let groupPk: GroupPubkeyType;
 
   beforeEach(async () => {});
@@ -71,7 +69,7 @@ describe('GroupSyncJob saveMetaGroupDumpToDb', () => {
     Sinon.stub(MetaGroupWrapperActions, 'needsDump').resolves(false);
     const metaDump = Sinon.stub(MetaGroupWrapperActions, 'metaDump').resolves(new Uint8Array());
     const saveConfigDump = Sinon.stub(ConfigDumpData, 'saveConfigDump').resolves();
-    await LibSessionUtil.saveMetaGroupDumpToDb(groupPk);
+    await LibSessionUtil.saveDumpsToDb(groupPk);
     expect(saveConfigDump.callCount).to.be.equal(0);
     expect(metaDump.callCount).to.be.equal(0);
   });
@@ -81,7 +79,7 @@ describe('GroupSyncJob saveMetaGroupDumpToDb', () => {
     const dump = [1, 2, 3, 4, 5];
     const metaDump = Sinon.stub(MetaGroupWrapperActions, 'metaDump').resolves(new Uint8Array(dump));
     const saveConfigDump = Sinon.stub(ConfigDumpData, 'saveConfigDump').resolves();
-    await LibSessionUtil.saveMetaGroupDumpToDb(groupPk);
+    await LibSessionUtil.saveDumpsToDb(groupPk);
     expect(saveConfigDump.callCount).to.be.equal(1);
     expect(metaDump.callCount).to.be.equal(1);
     expect(metaDump.firstCall.args).to.be.deep.eq([groupPk]);
@@ -143,20 +141,20 @@ describe('GroupSyncJob pendingChangesForGroup', () => {
     // check for the keys push content
     expect(result.messages[0]).to.be.deep.eq({
       type: 'GroupKeys',
-      data: new Uint8Array([3, 2, 1]),
+      ciphertext: new Uint8Array([3, 2, 1]),
       namespace: 13,
     });
     // check for the info push content
     expect(result.messages[1]).to.be.deep.eq({
       type: 'GroupInfo',
-      data: new Uint8Array([1, 2, 3]),
+      ciphertext: new Uint8Array([1, 2, 3]),
       namespace: 12,
       seqno: Long.fromInt(pushResults.groupInfo.seqno),
     });
     // check for the members pusu content
     expect(result.messages[2]).to.be.deep.eq({
       type: 'GroupMember',
-      data: new Uint8Array([1, 2]),
+      ciphertext: new Uint8Array([1, 2]),
       namespace: 14,
       seqno: Long.fromInt(pushResults.groupMember.seqno),
     });
@@ -247,11 +245,14 @@ describe('GroupSyncJob resultsToSuccessfulChange', () => {
   });
   it('no or empty results return empty array', () => {
     expect(
-      GroupSync.resultsToSuccessfulChange(null, { allOldHashes: new Set(), messages: [] })
+      LibSessionUtil.batchResultsToGroupSuccessfulChange(null, {
+        allOldHashes: new Set(),
+        messages: [],
+      })
     ).to.be.deep.eq([]);
 
     expect(
-      GroupSync.resultsToSuccessfulChange([] as any as NotEmptyArrayOfBatchResults, {
+      LibSessionUtil.batchResultsToGroupSuccessfulChange([] as any as NotEmptyArrayOfBatchResults, {
         allOldHashes: new Set(),
         messages: [],
       })
@@ -262,11 +263,11 @@ describe('GroupSyncJob resultsToSuccessfulChange', () => {
     const member = validMembers(sodium);
     const info = validInfo(sodium);
     const batchResults: NotEmptyArrayOfBatchResults = [{ code: 200, body: { hash: 'hash1' } }];
-    const request: GroupSingleDestinationChanges = {
+    const request: GroupDestinationChanges = {
       allOldHashes: new Set(),
       messages: [info, member],
     };
-    const results = GroupSync.resultsToSuccessfulChange(batchResults, request);
+    const results = LibSessionUtil.batchResultsToGroupSuccessfulChange(batchResults, request);
     expect(results).to.be.deep.eq([
       {
         updatedHash: 'hash1',
@@ -282,11 +283,11 @@ describe('GroupSyncJob resultsToSuccessfulChange', () => {
       { code: 200, body: { hash: 'hash1' } },
       { code: 200, body: { hash: 'hash2' } },
     ];
-    const request: GroupSingleDestinationChanges = {
+    const request: GroupDestinationChanges = {
       allOldHashes: new Set(),
       messages: [info, member],
     };
-    const results = GroupSync.resultsToSuccessfulChange(batchResults, request);
+    const results = LibSessionUtil.batchResultsToGroupSuccessfulChange(batchResults, request);
     expect(results).to.be.deep.eq([
       {
         updatedHash: 'hash1',
@@ -306,11 +307,11 @@ describe('GroupSyncJob resultsToSuccessfulChange', () => {
       { code: 200, body: { hash: 123 as any as string } },
       { code: 200, body: { hash: 'hash2' } },
     ];
-    const request: GroupSingleDestinationChanges = {
+    const request: GroupDestinationChanges = {
       allOldHashes: new Set(),
       messages: [info, member],
     };
-    const results = GroupSync.resultsToSuccessfulChange(batchResults, request);
+    const results = LibSessionUtil.batchResultsToGroupSuccessfulChange(batchResults, request);
     expect(results).to.be.deep.eq([
       {
         updatedHash: 'hash2',
@@ -322,16 +323,16 @@ describe('GroupSyncJob resultsToSuccessfulChange', () => {
   it('skip request item without data', () => {
     const member = validMembers(sodium);
     const info = validInfo(sodium);
-    const infoNoData = omit(info, 'data');
+    const infoNoData = omit(info, 'ciphertext');
     const batchResults: NotEmptyArrayOfBatchResults = [
       { code: 200, body: { hash: 'hash1' } },
       { code: 200, body: { hash: 'hash2' } },
     ];
-    const request: GroupSingleDestinationChanges = {
+    const request: GroupDestinationChanges = {
       allOldHashes: new Set(),
       messages: [infoNoData as any as PendingChangesForGroup, member],
     };
-    const results = GroupSync.resultsToSuccessfulChange(batchResults, request);
+    const results = LibSessionUtil.batchResultsToGroupSuccessfulChange(batchResults, request);
     expect(results).to.be.deep.eq([
       {
         updatedHash: 'hash2',
@@ -347,11 +348,11 @@ describe('GroupSyncJob resultsToSuccessfulChange', () => {
       { code: 200, body: { hash: 'hash1' } },
       { code: 401, body: { hash: 'hash2' } },
     ];
-    const request: GroupSingleDestinationChanges = {
+    const request: GroupDestinationChanges = {
       allOldHashes: new Set(),
       messages: [info, member],
     };
-    const results = GroupSync.resultsToSuccessfulChange(batchResults, request);
+    const results = LibSessionUtil.batchResultsToGroupSuccessfulChange(batchResults, request);
     expect(results).to.be.deep.eq([
       {
         updatedHash: 'hash1',
@@ -362,7 +363,7 @@ describe('GroupSyncJob resultsToSuccessfulChange', () => {
     // another test swapping the results
     batchResults[0].code = 401;
     batchResults[1].code = 200;
-    const results2 = GroupSync.resultsToSuccessfulChange(batchResults, request);
+    const results2 = LibSessionUtil.batchResultsToGroupSuccessfulChange(batchResults, request);
     expect(results2).to.be.deep.eq([
       {
         updatedHash: 'hash2',
@@ -379,7 +380,7 @@ describe('GroupSyncJob pushChangesToGroupSwarmIfNeeded', () => {
 
   let sendStub: TypedStub<typeof MessageSender, 'sendEncryptedDataToSnode'>;
   let pendingChangesForGroupStub: TypedStub<typeof LibSessionUtil, 'pendingChangesForGroup'>;
-  let saveMetaGroupDumpToDbStub: TypedStub<typeof LibSessionUtil, 'saveMetaGroupDumpToDb'>;
+  let saveDumpsToDbStub: TypedStub<typeof LibSessionUtil, 'saveDumpsToDb'>;
 
   beforeEach(async () => {
     sodium = await getSodiumNode();
@@ -389,7 +390,7 @@ describe('GroupSyncJob pushChangesToGroupSwarmIfNeeded', () => {
     Sinon.stub(UserUtils, 'getUserED25519KeyPairBytes').resolves(userkeys.ed25519KeyPair);
 
     pendingChangesForGroupStub = Sinon.stub(LibSessionUtil, 'pendingChangesForGroup');
-    saveMetaGroupDumpToDbStub = Sinon.stub(LibSessionUtil, 'saveMetaGroupDumpToDb');
+    saveDumpsToDbStub = Sinon.stub(LibSessionUtil, 'saveDumpsToDb');
     sendStub = Sinon.stub(MessageSender, 'sendEncryptedDataToSnode');
   });
   afterEach(() => {
@@ -402,8 +403,8 @@ describe('GroupSyncJob pushChangesToGroupSwarmIfNeeded', () => {
     expect(result).to.be.eq(RunJobResult.Success);
     expect(sendStub.callCount).to.be.eq(0);
     expect(pendingChangesForGroupStub.callCount).to.be.eq(1);
-    expect(saveMetaGroupDumpToDbStub.callCount).to.be.eq(1);
-    expect(saveMetaGroupDumpToDbStub.firstCall.args).to.be.deep.eq([groupPk]);
+    expect(saveDumpsToDbStub.callCount).to.be.eq(1);
+    expect(saveDumpsToDbStub.firstCall.args).to.be.deep.eq([groupPk]);
   });
 
   it('calls sendEncryptedDataToSnode with the right data and retry if network returned nothing', async () => {
@@ -422,11 +423,18 @@ describe('GroupSyncJob pushChangesToGroupSwarmIfNeeded', () => {
     expect(result).to.be.eq(RunJobResult.RetryJobIfPossible); // not returning anything in the sendstub so network issue happened
     expect(sendStub.callCount).to.be.eq(1);
     expect(pendingChangesForGroupStub.callCount).to.be.eq(1);
-    expect(saveMetaGroupDumpToDbStub.callCount).to.be.eq(1);
-    expect(saveMetaGroupDumpToDbStub.firstCall.args).to.be.deep.eq([groupPk]);
+    expect(saveDumpsToDbStub.callCount).to.be.eq(1);
+    expect(saveDumpsToDbStub.firstCall.args).to.be.deep.eq([groupPk]);
 
     function expected(details: any) {
-      return { ...pick(details, 'data', 'namespace'), ttl, networkTimestamp, pubkey: groupPk };
+      console.warn('details', details);
+      return {
+        namespace: details.namespace,
+        data: details.ciphertext,
+        ttl,
+        networkTimestamp,
+        pubkey: groupPk,
+      };
     }
 
     const expectedInfo = expected(info);
@@ -438,7 +446,7 @@ describe('GroupSyncJob pushChangesToGroupSwarmIfNeeded', () => {
     ]);
   });
 
-  it('calls sendEncryptedDataToSnode with the right data and retry if network returned nothing', async () => {
+  it('calls sendEncryptedDataToSnode with the right data (and keys) and retry if network returned nothing', async () => {
     const info = validInfo(sodium);
     const member = validMembers(sodium);
     const keys = validKeys(sodium);
@@ -460,7 +468,7 @@ describe('GroupSyncJob pushChangesToGroupSwarmIfNeeded', () => {
         updatedHash: 'hash2',
       },
     ];
-    Sinon.stub(GroupSync, 'resultsToSuccessfulChange').returns(changes);
+    Sinon.stub(LibSessionUtil, 'batchResultsToGroupSuccessfulChange').returns(changes);
     const metaConfirmPushed = Sinon.stub(MetaGroupWrapperActions, 'metaConfirmPushed').resolves();
 
     sendStub.resolves([
@@ -473,9 +481,9 @@ describe('GroupSyncJob pushChangesToGroupSwarmIfNeeded', () => {
 
     expect(sendStub.callCount).to.be.eq(1);
     expect(pendingChangesForGroupStub.callCount).to.be.eq(1);
-    expect(saveMetaGroupDumpToDbStub.callCount).to.be.eq(2);
-    expect(saveMetaGroupDumpToDbStub.firstCall.args).to.be.deep.eq([groupPk]);
-    expect(saveMetaGroupDumpToDbStub.secondCall.args).to.be.deep.eq([groupPk]);
+    expect(saveDumpsToDbStub.callCount).to.be.eq(2);
+    expect(saveDumpsToDbStub.firstCall.args).to.be.deep.eq([groupPk]);
+    expect(saveDumpsToDbStub.secondCall.args).to.be.deep.eq([groupPk]);
     expect(metaConfirmPushed.callCount).to.be.eq(1);
     expect(metaConfirmPushed.firstCall.args).to.be.deep.eq([
       groupPk,

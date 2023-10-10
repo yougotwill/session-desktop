@@ -57,7 +57,7 @@ export type SnodeNamespacesLegacyGroup = PickEnum<
   SnodeNamespaces.LegacyClosedGroup
 >;
 
-type SnodeNamespacesGroupConfig = PickEnum<
+export type SnodeNamespacesGroupConfig = PickEnum<
   SnodeNamespaces,
   | SnodeNamespaces.ClosedGroupInfo
   | SnodeNamespaces.ClosedGroupMembers
@@ -71,10 +71,7 @@ export type SnodeNamespacesGroup =
   | SnodeNamespacesGroupConfig
   | PickEnum<SnodeNamespaces, SnodeNamespaces.ClosedGroupMessages>;
 
-export type SnodeNamespacesUser = PickEnum<
-  SnodeNamespaces,
-  SnodeNamespaces.UserContacts | SnodeNamespaces.UserProfile | SnodeNamespaces.Default
->;
+export type SnodeNamespacesUser = PickEnum<SnodeNamespaces, SnodeNamespaces.Default>;
 
 export type UserConfigNamespaces = PickEnum<
   SnodeNamespaces,

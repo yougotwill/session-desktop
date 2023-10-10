@@ -1,8 +1,8 @@
 /* eslint-disable no-await-in-loop */
 /* eslint-disable import/extensions */
 /* eslint-disable import/no-unresolved */
-import { GroupPubkeyType } from 'libsession_util_nodejs';
-import { compact, difference, omit } from 'lodash';
+import { GroupPubkeyType, PubkeyType } from 'libsession_util_nodejs';
+import { compact, difference, isString, omit } from 'lodash';
 import Long from 'long';
 import { UserUtils } from '..';
 import { ConfigDumpData } from '../../../data/configDump/configDump';
@@ -20,6 +20,10 @@ import { SnodeNamespaces, UserConfigNamespaces } from '../../apis/snode_api/name
 import { ed25519Str } from '../../onions/onionPath';
 import { PubKey } from '../../types';
 import { ConfigurationSync } from '../job_runners/jobs/ConfigurationSyncJob';
+import {
+  BatchResultEntry,
+  NotEmptyArrayOfBatchResults,
+} from '../../apis/snode_api/SnodeRequestTypes';
 
 const requiredUserVariants: Array<ConfigWrapperUser> = [
   'UserConfig',
@@ -95,88 +99,85 @@ async function initializeLibSessionUtilWrappers() {
   // No need to load the meta group wrapper here. We will load them once the SessionInbox is loaded with a redux action
 }
 
-export type PendingChangesForUs = {
+type PendingChangesShared = {
   ciphertext: Uint8Array;
+};
+
+export type PendingChangesForUs = PendingChangesShared & {
   seqno: Long;
   namespace: UserConfigNamespaces;
 };
 
-type PendingChangesForGroupNonKey = {
-  data: Uint8Array;
+type PendingChangesForGroupNonKey = PendingChangesShared & {
   seqno: Long;
   namespace: SnodeNamespaces.ClosedGroupInfo | SnodeNamespaces.ClosedGroupMembers;
   type: Extract<ConfigWrapperGroupDetailed, 'GroupInfo' | 'GroupMember'>;
 };
 
 type PendingChangesForGroupKey = {
-  data: Uint8Array;
+  ciphertext: Uint8Array;
   namespace: SnodeNamespaces.ClosedGroupKeys;
   type: Extract<ConfigWrapperGroupDetailed, 'GroupKeys'>;
 };
 
 export type PendingChangesForGroup = PendingChangesForGroupNonKey | PendingChangesForGroupKey;
 
-type SingleDestinationChanges<T extends PendingChangesForGroup | PendingChangesForUs> = {
+type DestinationChanges<T extends PendingChangesForGroup | PendingChangesForUs> = {
   messages: Array<T>;
   allOldHashes: Set<string>;
 };
 
-export type UserSingleDestinationChanges = SingleDestinationChanges<PendingChangesForUs>;
-export type GroupSingleDestinationChanges = SingleDestinationChanges<PendingChangesForGroup>;
+export type UserDestinationChanges = DestinationChanges<PendingChangesForUs>;
+export type GroupDestinationChanges = DestinationChanges<PendingChangesForGroup>;
 
-async function pendingChangesForUs(): Promise<UserSingleDestinationChanges> {
-  const us = UserUtils.getOurPubKeyStrFromCache();
-  const dumps = await ConfigDumpData.getAllDumpsWithoutDataFor(us);
+export type UserSuccessfulChange = {
+  pushed: PendingChangesForUs;
+  updatedHash: string;
+};
 
-  // Ensure we always check the required user config types for changes even if there is no dump
-  // data yet (to deal with first launch cases)
-  LibSessionUtil.requiredUserVariants.forEach(requiredVariant => {
-    if (!dumps.some(m => m.publicKey === us && m.variant === requiredVariant)) {
-      dumps.push({
-        publicKey: us,
-        variant: requiredVariant,
-      });
-    }
-  });
+export type GroupSuccessfulChange = {
+  pushed: PendingChangesForGroup;
+  updatedHash: string;
+};
 
-  const results: UserSingleDestinationChanges = { messages: [], allOldHashes: new Set() };
+/**
+ * Fetch what needs to be pushed for all of the current user's wrappers.
+ */
+async function pendingChangesForUs(): Promise<UserDestinationChanges> {
+  const results: UserDestinationChanges = { messages: [], allOldHashes: new Set() };
   const variantsNeedingPush = new Set<ConfigWrapperUser>();
+  const userVariants = LibSessionUtil.requiredUserVariants;
 
-  for (let index = 0; index < dumps.length; index++) {
-    const dump = dumps[index];
-    const variant = dump.variant;
-    if (!isUserConfigWrapperType(variant)) {
-      // this shouldn't happen for our pubkey.
-      continue;
-    }
+  for (let index = 0; index < userVariants.length; index++) {
+    const variant = userVariants[index];
+
     const needsPush = await GenericWrapperActions.needsPush(variant);
     if (!needsPush) {
       continue;
     }
 
-    variantsNeedingPush.add(variant);
     const { data, seqno, hashes, namespace } = await GenericWrapperActions.push(variant);
+    variantsNeedingPush.add(variant);
 
     results.messages.push({
       ciphertext: data,
       seqno: Long.fromNumber(seqno),
-      namespace,
+      namespace, // we only use the namespace to know to wha
     });
 
-    hashes.forEach(hash => {
-      results.allOldHashes.add(hash);
-    });
+    hashes.forEach(results.allOldHashes.add); // add all the hashes to the set
   }
-  window.log.info(`those variants needs push: "${[...variantsNeedingPush]}"`);
+  window.log.info(`those user variants needs push: "${[...variantsNeedingPush]}"`);
 
   return results;
 }
 
-// we link the namespace to the type of what each wrapper needs
-
-async function pendingChangesForGroup(
-  groupPk: GroupPubkeyType
-): Promise<GroupSingleDestinationChanges> {
+/**
+ * Fetch what needs to be pushed for the specified group public key.
+ * @param groupPk the public key of the group to fetch the details off
+ * @returns an object with a list of messages to be pushed and the list of hashes to bump expiry, server side
+ */
+async function pendingChangesForGroup(groupPk: GroupPubkeyType): Promise<GroupDestinationChanges> {
   if (!PubKey.isClosedGroupV2(groupPk)) {
     throw new Error(`pendingChangesForGroup only works for user or 03 group pubkeys`);
   }
@@ -195,7 +196,7 @@ async function pendingChangesForGroup(
   if (groupKeys) {
     results.push({
       type: 'GroupKeys',
-      data: groupKeys.data,
+      ciphertext: groupKeys.data,
       namespace: groupKeys.namespace,
     });
   }
@@ -203,7 +204,7 @@ async function pendingChangesForGroup(
   if (groupInfo) {
     results.push({
       type: 'GroupInfo',
-      data: groupInfo.data,
+      ciphertext: groupInfo.data,
       seqno: Long.fromNumber(groupInfo.seqno),
       namespace: groupInfo.namespace,
     });
@@ -211,7 +212,7 @@ async function pendingChangesForGroup(
   if (groupMember) {
     results.push({
       type: 'GroupMember',
-      data: groupMember.data,
+      ciphertext: groupMember.data,
       seqno: Long.fromNumber(groupMember.seqno),
       namespace: groupMember.namespace,
     });
@@ -227,7 +228,12 @@ async function pendingChangesForGroup(
   return { messages: results, allOldHashes };
 }
 
+/**
+ * Return the wrapperId associated with a specific namespace.
+ * WrapperIds are what we use in the database and with the libsession workers calls, and namespace is what we push to.
+ */
 function userNamespaceToVariant(namespace: UserConfigNamespaces) {
+  // TODO Might be worth migrating them to use directly the namespaces?
   switch (namespace) {
     case SnodeNamespaces.UserProfile:
       return 'UserConfig';
@@ -239,34 +245,141 @@ function userNamespaceToVariant(namespace: UserConfigNamespaces) {
       return 'ConvoInfoVolatileConfig';
     default:
       assertUnreachable(namespace, `userNamespaceToVariant: Unsupported namespace: "${namespace}"`);
-      throw new Error('userNamespaceToVariant: Unsupported namespace:');
+      throw new Error('userNamespaceToVariant: Unsupported namespace:'); // ts is not happy without this
   }
 }
 
-/**
- * Returns true if the config needs to be dumped afterwards
- */
-async function markAsPushed(variant: ConfigWrapperUser, seqno: number, hash: string) {
-  await GenericWrapperActions.confirmPushed(variant, seqno, hash);
-  return GenericWrapperActions.needsDump(variant);
+function resultShouldBeIncluded<T extends PendingChangesForGroup | PendingChangesForUs>(
+  msgPushed: T,
+  batchResult: BatchResultEntry
+) {
+  const hash = batchResult.body?.hash;
+  if (batchResult.code === 200 && isString(hash) && msgPushed.ciphertext) {
+    return {
+      hash,
+      pushed: msgPushed,
+    };
+  }
+  return null;
 }
 
 /**
- * If a dump is needed for that metagroup wrapper, dump it to the Database
+ * This function is run once we get the results from the multiple batch-send for the group push.
+ * Note: the logic is the same as `batchResultsToUserSuccessfulChange` but I couldn't make typescript happy.
  */
-async function saveMetaGroupDumpToDb(groupPk: GroupPubkeyType) {
-  const metaNeedsDump = await MetaGroupWrapperActions.needsDump(groupPk);
-  // save the concatenated dumps as a single entry in the DB if any of the dumps had a need for dump
-  if (metaNeedsDump) {
-    const dump = await MetaGroupWrapperActions.metaDump(groupPk);
+function batchResultsToGroupSuccessfulChange(
+  result: NotEmptyArrayOfBatchResults | null,
+  request: GroupDestinationChanges
+): Array<GroupSuccessfulChange> {
+  const successfulChanges: Array<GroupSuccessfulChange> = [];
+
+  /**
+   * For each batch request, we get as result
+   * - status code + hash of the new config message
+   * - status code of the delete of all messages as given by the request hashes.
+   *
+   * As it is a sequence, the delete might have failed but the new config message might still be posted.
+   * So we need to check which request failed, and if it is the delete by hashes, we need to add the hash of the posted message to the list of hashes
+   */
+
+  if (!result?.length) {
+    return successfulChanges;
+  }
+
+  for (let j = 0; j < result.length; j++) {
+    const msgPushed = request.messages?.[j];
+    const shouldBe = resultShouldBeIncluded(msgPushed, result[j]);
+
+    if (shouldBe) {
+      // libsession keeps track of the hashes to push and the one pushed
+      successfulChanges.push({
+        updatedHash: shouldBe.hash,
+        pushed: shouldBe.pushed,
+      });
+    }
+  }
+
+  return successfulChanges;
+}
+
+/**
+ * This function is run once we get the results from the multiple batch-send for the user push.
+ * Note: the logic is the same as `batchResultsToGroupSuccessfulChange` but I couldn't make typescript happy.
+ */
+function batchResultsToUserSuccessfulChange(
+  result: NotEmptyArrayOfBatchResults | null,
+  request: UserDestinationChanges
+): Array<UserSuccessfulChange> {
+  const successfulChanges: Array<UserSuccessfulChange> = [];
+
+  /**
+   * For each batch request, we get as result
+   * - status code + hash of the new config message
+   * - status code of the delete of all messages as given by the request hashes.
+   *
+   * As it is a sequence, the delete might have failed but the new config message might still be posted.
+   * So we need to check which request failed, and if it is the delete by hashes, we need to add the hash of the posted message to the list of hashes
+   */
+
+  if (!result?.length) {
+    return successfulChanges;
+  }
+
+  for (let j = 0; j < result.length; j++) {
+    const msgPushed = request.messages?.[j];
+    const shouldBe = resultShouldBeIncluded(msgPushed, result[j]);
+
+    if (shouldBe) {
+      // libsession keeps track of the hashes to push and the one pushed
+      successfulChanges.push({
+        updatedHash: shouldBe.hash,
+        pushed: shouldBe.pushed,
+      });
+    }
+  }
+
+  return successfulChanges;
+}
+
+/**
+ * Check if the wrappers related to that pubkeys need to be dumped to the DB, and if yes, do it.
+ */
+async function saveDumpsToDb(pubkey: PubkeyType | GroupPubkeyType) {
+  // first check if this is relating a group
+  if (PubKey.isClosedGroupV2(pubkey)) {
+    const metaNeedsDump = await MetaGroupWrapperActions.needsDump(pubkey);
+    // save the concatenated dumps as a single entry in the DB if any of the dumps had a need for dump
+    if (metaNeedsDump) {
+      const dump = await MetaGroupWrapperActions.metaDump(pubkey);
+      await ConfigDumpData.saveConfigDump({
+        data: dump,
+        publicKey: pubkey,
+        variant: `MetaGroupConfig-${pubkey}`,
+      });
+      window.log.debug(`Saved dumps for metagroup ${ed25519Str(pubkey)}`);
+    } else {
+      window.log.debug(`No need to update local dumps for metagroup ${ed25519Str(pubkey)}`);
+    }
+    return;
+  }
+  // here, we can only be called with our current user pubkey
+  if (pubkey !== UserUtils.getOurPubKeyStrFromCache()) {
+    throw new Error('saveDumpsToDb only supports groupv2 and us pubkeys');
+  }
+
+  for (let i = 0; i < LibSessionUtil.requiredUserVariants.length; i++) {
+    const variant = LibSessionUtil.requiredUserVariants[i];
+    const needsDump = await GenericWrapperActions.needsDump(variant);
+
+    if (!needsDump) {
+      continue;
+    }
+    const dump = await GenericWrapperActions.dump(variant);
     await ConfigDumpData.saveConfigDump({
       data: dump,
-      publicKey: groupPk,
-      variant: `MetaGroupConfig-${groupPk}`,
+      publicKey: pubkey,
+      variant,
     });
-    window.log.debug(`Saved dumps for metagroup ${ed25519Str(groupPk)}`);
-  } else {
-    window.log.debug(`No need to update local dumps for metagroup ${ed25519Str(groupPk)}`);
   }
 }
 
@@ -276,6 +389,7 @@ export const LibSessionUtil = {
   requiredUserVariants,
   pendingChangesForUs,
   pendingChangesForGroup,
-  markAsPushed,
-  saveMetaGroupDumpToDb,
+  saveDumpsToDb,
+  batchResultsToGroupSuccessfulChange,
+  batchResultsToUserSuccessfulChange,
 };

@@ -1,26 +1,19 @@
 /* eslint-disable no-await-in-loop */
 import { PubkeyType } from 'libsession_util_nodejs';
-import { isArray, isEmpty, isNumber, isString } from 'lodash';
+import { isArray, isEmpty, isNumber } from 'lodash';
 import { v4 } from 'uuid';
 import { UserUtils } from '../..';
 import { ConfigDumpData } from '../../../../data/configDump/configDump';
 import { ConfigurationSyncJobDone } from '../../../../shims/events';
 import { isSignInByLinking } from '../../../../util/storage';
 import { GenericWrapperActions } from '../../../../webworker/workers/browser/libsession_worker_interface';
-import {
-  NotEmptyArrayOfBatchResults,
-  StoreOnNodeData,
-} from '../../../apis/snode_api/SnodeRequestTypes';
+import { StoreOnNodeData } from '../../../apis/snode_api/SnodeRequestTypes';
 import { GetNetworkTime } from '../../../apis/snode_api/getNetworkTime';
 import { TTL_DEFAULT } from '../../../constants';
 import { ConvoHub } from '../../../conversations';
 import { MessageSender } from '../../../sending/MessageSender';
 import { allowOnlyOneAtATime } from '../../Promise';
-import {
-  LibSessionUtil,
-  PendingChangesForUs,
-  UserSingleDestinationChanges,
-} from '../../libsession/libsession_utils';
+import { LibSessionUtil, UserSuccessfulChange } from '../../libsession/libsession_utils';
 import { runners } from '../JobRunner';
 import {
   AddJobCheckReturn,
@@ -38,78 +31,18 @@ const defaultMaxAttempts = 2;
  */
 let lastRunConfigSyncJobTimestamp: number | null = null;
 
-type UserSuccessfulChange = {
-  pushed: PendingChangesForUs;
-  updatedHash: string;
-};
-
-/**
- * This function is run once we get the results from the multiple batch-send.
- */
-function resultsToSuccessfulChange(
-  result: NotEmptyArrayOfBatchResults | null,
-  request: UserSingleDestinationChanges
-): Array<UserSuccessfulChange> {
-  const successfulChanges: Array<UserSuccessfulChange> = [];
-
-  /**
-   * For each batch request, we get as result
-   * - status code + hash of the new config message
-   * - status code of the delete of all messages as given by the request hashes.
-   *
-   * As it is a sequence, the delete might have failed but the new config message might still be posted.
-   * So we need to check which request failed, and if it is the delete by hashes, we need to add the hash of the posted message to the list of hashes
-   */
-
-  if (!result?.length) {
-    return successfulChanges;
-  }
-
-  for (let j = 0; j < result.length; j++) {
-    const batchResult = result[j];
-    const messagePostedHashes = batchResult?.body?.hash;
-
-    if (batchResult.code === 200 && isString(messagePostedHashes) && request.messages?.[j]) {
-      // the library keeps track of the hashes to push and pushed using the hashes now
-      successfulChanges.push({
-        updatedHash: messagePostedHashes,
-        pushed: request.messages?.[j],
-      });
-    }
-  }
-
-  return successfulChanges;
-}
-
-async function buildAndSaveDumpsToDB(
+async function confirmPushedAndDump(
   changes: Array<UserSuccessfulChange>,
   us: string
 ): Promise<void> {
   for (let i = 0; i < changes.length; i++) {
     const change = changes[i];
     const variant = LibSessionUtil.userNamespaceToVariant(change.pushed.namespace);
-
-    const needsDump = await LibSessionUtil.markAsPushed(
+    await GenericWrapperActions.confirmPushed(
       variant,
       change.pushed.seqno.toNumber(),
       change.updatedHash
     );
-
-    if (!needsDump) {
-      continue;
-    }
-    const dump = await GenericWrapperActions.dump(variant);
-    await ConfigDumpData.saveConfigDump({
-      data: dump,
-      publicKey: us,
-      variant,
-    });
-  }
-}
-
-async function saveDumpsNeededToDB(us: string) {
-  for (let i = 0; i < LibSessionUtil.requiredUserVariants.length; i++) {
-    const variant = LibSessionUtil.requiredUserVariants[i];
     const needsDump = await GenericWrapperActions.needsDump(variant);
 
     if (!needsDump) {
@@ -139,16 +72,16 @@ async function pushChangesToUserSwarmIfNeeded() {
   }
 
   // save the dumps to DB even before trying to push them, so at least we have an up to date dumps in the DB in case of crash, no network etc
-  await saveDumpsNeededToDB(us);
-  const singleDestChanges = await LibSessionUtil.pendingChangesForUs();
+  await LibSessionUtil.saveDumpsToDb(us);
+  const changesToPush = await LibSessionUtil.pendingChangesForUs();
 
   // If there are no pending changes then the job can just complete (next time something
   // is updated we want to try and run immediately so don't scuedule another run in this case)
-  if (isEmpty(singleDestChanges?.messages)) {
+  if (isEmpty(changesToPush?.messages)) {
     triggerConfSyncJobDone();
     return RunJobResult.Success;
   }
-  const msgs: Array<StoreOnNodeData> = singleDestChanges.messages.map(item => {
+  const msgs: Array<StoreOnNodeData> = changesToPush.messages.map(item => {
     return {
       namespace: item.namespace,
       pubkey: us,
@@ -158,14 +91,10 @@ async function pushChangesToUserSwarmIfNeeded() {
     };
   });
 
-  const result = await MessageSender.sendEncryptedDataToSnode(
-    msgs,
-    us,
-    singleDestChanges.allOldHashes
-  );
+  const result = await MessageSender.sendEncryptedDataToSnode(msgs, us, changesToPush.allOldHashes);
 
   const expectedReplyLength =
-    singleDestChanges.messages.length + (singleDestChanges.allOldHashes.size ? 1 : 0);
+    changesToPush.messages.length + (changesToPush.allOldHashes.size ? 1 : 0);
   // we do a sequence call here. If we do not have the right expected number of results, consider it a failure
   if (!isArray(result) || result.length !== expectedReplyLength) {
     window.log.info(
@@ -175,14 +104,14 @@ async function pushChangesToUserSwarmIfNeeded() {
     return RunJobResult.RetryJobIfPossible;
   }
 
-  const changes = resultsToSuccessfulChange(result, singleDestChanges);
+  const changes = LibSessionUtil.batchResultsToUserSuccessfulChange(result, changesToPush);
   if (isEmpty(changes)) {
     return RunJobResult.RetryJobIfPossible;
   }
   // Now that we have the successful changes, we need to mark them as pushed and
   // generate any config dumps which need to be stored
 
-  await buildAndSaveDumpsToDB(changes, us);
+  await confirmPushedAndDump(changes, us);
   triggerConfSyncJobDone();
   return RunJobResult.Success;
 }

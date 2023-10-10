@@ -1,5 +1,10 @@
 import { GroupPubkeyType, PubkeyType } from 'libsession_util_nodejs';
-import { SnodeNamespaces, SnodeNamespacesGroup } from './namespaces';
+import {
+  SnodeNamespaces,
+  SnodeNamespacesGroup,
+  SnodeNamespacesGroupConfig,
+  UserConfigNamespaces,
+} from './namespaces';
 
 export type SwarmForSubRequest = { method: 'get_swarm'; params: { pubkey: string } };
 
@@ -108,13 +113,23 @@ export type DeleteFromNodeWithTimestampParams = {
 } & DeleteSigParameters;
 export type DeleteByHashesFromNodeParams = { messages: Array<string> } & DeleteSigParameters;
 
-export type StoreOnNodeData = {
-  pubkey: GroupPubkeyType | PubkeyType;
+type StoreOnNodeShared = {
   networkTimestamp: number;
-  namespace: number;
   data: Uint8Array;
   ttl: number;
 };
+
+type StoreOnNodeGroupConfig = StoreOnNodeShared & {
+  pubkey: GroupPubkeyType;
+  namespace: SnodeNamespacesGroupConfig;
+};
+
+type StoreOnNodeUserConfig = StoreOnNodeShared & {
+  pubkey: PubkeyType;
+  namespace: UserConfigNamespaces;
+};
+
+export type StoreOnNodeData = StoreOnNodeGroupConfig | StoreOnNodeUserConfig;
 
 export type StoreOnNodeSubRequest = { method: 'store'; params: StoreOnNodeParams };
 export type NetworkTimeSubRequest = { method: 'info'; params: object };
@@ -179,7 +194,8 @@ export type SnodeApiSubRequests =
 // eslint-disable-next-line @typescript-eslint/array-type
 export type NonEmptyArray<T> = [T, ...T[]];
 
-export type NotEmptyArrayOfBatchResults = NonEmptyArray<{
+export type BatchResultEntry = {
   code: number;
   body: Record<string, any>;
-}>;
+};
+export type NotEmptyArrayOfBatchResults = NonEmptyArray<BatchResultEntry>;

@@ -1,13 +1,11 @@
 /* eslint-disable no-await-in-loop */
 import { GroupPubkeyType } from 'libsession_util_nodejs';
-import { isArray, isEmpty, isNumber, isString } from 'lodash';
+import { isArray, isEmpty, isNumber } from 'lodash';
 import { UserUtils } from '../..';
+import { assertUnreachable } from '../../../../types/sqlSharedTypes';
 import { isSignInByLinking } from '../../../../util/storage';
 import { MetaGroupWrapperActions } from '../../../../webworker/workers/browser/libsession_worker_interface';
-import {
-  NotEmptyArrayOfBatchResults,
-  StoreOnNodeData,
-} from '../../../apis/snode_api/SnodeRequestTypes';
+import { StoreOnNodeData } from '../../../apis/snode_api/SnodeRequestTypes';
 import { GetNetworkTime } from '../../../apis/snode_api/getNetworkTime';
 import { SnodeNamespaces } from '../../../apis/snode_api/namespaces';
 import { TTL_DEFAULT } from '../../../constants';
@@ -15,11 +13,7 @@ import { ConvoHub } from '../../../conversations';
 import { MessageSender } from '../../../sending/MessageSender';
 import { PubKey } from '../../../types';
 import { allowOnlyOneAtATime } from '../../Promise';
-import {
-  GroupSingleDestinationChanges,
-  LibSessionUtil,
-  PendingChangesForGroup,
-} from '../../libsession/libsession_utils';
+import { GroupSuccessfulChange, LibSessionUtil } from '../../libsession/libsession_utils';
 import { runners } from '../JobRunner';
 import {
   AddJobCheckReturn,
@@ -27,7 +21,6 @@ import {
   PersistedJob,
   RunJobResult,
 } from '../PersistedJob';
-import { assertUnreachable } from '../../../../types/sqlSharedTypes';
 
 const defaultMsBetweenRetries = 15000; // a long time between retries, to avoid running multiple jobs at the same time, when one was postponed at the same time as one already planned (5s)
 const defaultMaxAttempts = 2;
@@ -38,50 +31,7 @@ const defaultMaxAttempts = 2;
  */
 const lastRunConfigSyncJobTimestamps = new Map<string, number | null>();
 
-export type GroupSuccessfulChange = {
-  pushed: PendingChangesForGroup;
-  updatedHash: string;
-};
-
-/**
- * This function is run once we get the results from the multiple batch-send.
- */
-function resultsToSuccessfulChange(
-  result: NotEmptyArrayOfBatchResults | null,
-  request: GroupSingleDestinationChanges
-): Array<GroupSuccessfulChange> {
-  const successfulChanges: Array<GroupSuccessfulChange> = [];
-
-  /**
-   * For each batch request, we get as result
-   * - status code + hash of the new config message
-   * - status code of the delete of all messages as given by the request hashes.
-   *
-   * As it is a sequence, the delete might have failed but the new config message might still be posted.
-   * So we need to check which request failed, and if it is the delete by hashes, we need to add the hash of the posted message to the list of hashes
-   */
-
-  if (!result?.length) {
-    return successfulChanges;
-  }
-
-  for (let j = 0; j < result.length; j++) {
-    const batchResult = result[j];
-    const messagePostedHashes = batchResult?.body?.hash;
-
-    if (batchResult.code === 200 && isString(messagePostedHashes) && request.messages?.[j].data) {
-      // libsession keeps track of the hashes to push and pushed using the hashes now
-      successfulChanges.push({
-        updatedHash: messagePostedHashes,
-        pushed: request.messages?.[j],
-      });
-    }
-  }
-
-  return successfulChanges;
-}
-
-async function buildAndSaveDumpsToDB(
+async function confirmPushedAndDump(
   changes: Array<GroupSuccessfulChange>,
   groupPk: GroupPubkeyType
 ): Promise<void> {
@@ -112,37 +62,37 @@ async function buildAndSaveDumpsToDB(
   }
 
   await MetaGroupWrapperActions.metaConfirmPushed(...toConfirm);
-  return LibSessionUtil.saveMetaGroupDumpToDb(groupPk);
+  return LibSessionUtil.saveDumpsToDb(groupPk);
 }
 
 async function pushChangesToGroupSwarmIfNeeded(groupPk: GroupPubkeyType): Promise<RunJobResult> {
   // save the dumps to DB even before trying to push them, so at least we have an up to date dumps in the DB in case of crash, no network etc
-  await LibSessionUtil.saveMetaGroupDumpToDb(groupPk);
-  const singleDestChanges = await LibSessionUtil.pendingChangesForGroup(groupPk);
+  await LibSessionUtil.saveDumpsToDb(groupPk);
+  const changesToPush = await LibSessionUtil.pendingChangesForGroup(groupPk);
   // If there are no pending changes then the job can just complete (next time something
   // is updated we want to try and run immediately so don't scuedule another run in this case)
-  if (isEmpty(singleDestChanges?.messages)) {
+  if (isEmpty(changesToPush?.messages)) {
     return RunJobResult.Success;
   }
 
-  const msgs: Array<StoreOnNodeData> = singleDestChanges.messages.map(item => {
+  const msgs: Array<StoreOnNodeData> = changesToPush.messages.map(item => {
     return {
       namespace: item.namespace,
       pubkey: groupPk,
       networkTimestamp: GetNetworkTime.getNowWithNetworkOffset(),
       ttl: TTL_DEFAULT.TTL_CONFIG,
-      data: item.data,
+      data: item.ciphertext,
     };
   });
 
   const result = await MessageSender.sendEncryptedDataToSnode(
     msgs,
     groupPk,
-    singleDestChanges.allOldHashes
+    changesToPush.allOldHashes
   );
 
   const expectedReplyLength =
-    singleDestChanges.messages.length + (singleDestChanges.allOldHashes.size ? 1 : 0);
+    changesToPush.messages.length + (changesToPush.allOldHashes.size ? 1 : 0);
 
   // we do a sequence call here. If we do not have the right expected number of results, consider it a failure
   if (!isArray(result) || result.length !== expectedReplyLength) {
@@ -154,14 +104,14 @@ async function pushChangesToGroupSwarmIfNeeded(groupPk: GroupPubkeyType): Promis
     return RunJobResult.RetryJobIfPossible;
   }
 
-  const changes = GroupSync.resultsToSuccessfulChange(result, singleDestChanges);
+  const changes = LibSessionUtil.batchResultsToGroupSuccessfulChange(result, changesToPush);
   if (isEmpty(changes)) {
     return RunJobResult.RetryJobIfPossible;
   }
   // Now that we have the successful changes, we need to mark them as pushed and
   // generate any config dumps which need to be stored
 
-  await buildAndSaveDumpsToDB(changes, groupPk);
+  await confirmPushedAndDump(changes, groupPk);
   return RunJobResult.Success;
 }
 
@@ -283,7 +233,6 @@ async function queueNewJobIfNeeded(groupPk: GroupPubkeyType) {
 export const GroupSync = {
   GroupSyncJob,
   pushChangesToGroupSwarmIfNeeded,
-  resultsToSuccessfulChange,
   queueNewJobIfNeeded: (groupPk: GroupPubkeyType) =>
     allowOnlyOneAtATime(`GroupSyncJob-oneAtAtTime-${groupPk}`, () => queueNewJobIfNeeded(groupPk)),
 };
