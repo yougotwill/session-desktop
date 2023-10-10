@@ -1,4 +1,5 @@
 import * as wrappers from 'libsodium-wrappers-sumo';
+
 type LibSodiumWrappers = typeof wrappers;
 
 export async function getSodiumNode() {

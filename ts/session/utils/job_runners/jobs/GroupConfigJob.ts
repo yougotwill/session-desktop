@@ -124,7 +124,6 @@ async function pushChangesToGroupSwarmIfNeeded(groupPk: GroupPubkeyType): Promis
   if (isEmpty(singleDestChanges?.messages)) {
     return RunJobResult.Success;
   }
-  const oldHashesToDelete = new Set(singleDestChanges.allOldHashes);
 
   const msgs: Array<StoreOnNodeData> = singleDestChanges.messages.map(item => {
     return {
@@ -136,9 +135,14 @@ async function pushChangesToGroupSwarmIfNeeded(groupPk: GroupPubkeyType): Promis
     };
   });
 
-  const result = await MessageSender.sendEncryptedDataToSnode(msgs, groupPk, oldHashesToDelete);
+  const result = await MessageSender.sendEncryptedDataToSnode(
+    msgs,
+    groupPk,
+    singleDestChanges.allOldHashes
+  );
 
-  const expectedReplyLength = singleDestChanges.messages.length + (oldHashesToDelete.size ? 1 : 0);
+  const expectedReplyLength =
+    singleDestChanges.messages.length + (singleDestChanges.allOldHashes.size ? 1 : 0);
 
   // we do a sequence call here. If we do not have the right expected number of results, consider it a failure
   if (!isArray(result) || result.length !== expectedReplyLength) {

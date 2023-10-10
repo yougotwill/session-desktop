@@ -25,7 +25,7 @@ import { ed25519Str } from '../../onions/onionPath';
 import { StringUtils, UserUtils } from '../../utils';
 import { perfEnd, perfStart } from '../../utils/Performance';
 import { LibSessionUtil } from '../../utils/libsession/libsession_utils';
-import { SnodeNamespace, SnodeNamespaces } from './namespaces';
+import { SnodeNamespace, SnodeNamespaces, UserConfigNamespaces } from './namespaces';
 import { PollForGroup, PollForLegacy, PollForUs } from './pollingTypes';
 import { SnodeAPIRetrieve } from './retrieveRequest';
 import { SwarmPollingGroupConfig } from './swarm_polling_config/SwarmPollingGroupConfig';
@@ -579,15 +579,16 @@ export class SwarmPolling {
   }
 
   // eslint-disable-next-line consistent-return
-  public getNamespacesToPollFrom(type: ConversationTypeEnum): Array<SnodeNamespaces> {
+  public getNamespacesToPollFrom(type: ConversationTypeEnum) {
     if (type === ConversationTypeEnum.PRIVATE) {
-      return [
+      const toRet: Array<UserConfigNamespaces | SnodeNamespaces.Default> = [
         SnodeNamespaces.Default,
         SnodeNamespaces.UserProfile,
         SnodeNamespaces.UserContacts,
         SnodeNamespaces.UserGroups,
         SnodeNamespaces.ConvoInfoVolatile,
       ];
+      return toRet;
     }
     if (type === ConversationTypeEnum.GROUP) {
       return [SnodeNamespaces.LegacyClosedGroup];

@@ -40,6 +40,7 @@ export function getOurPubKeyStrFromCache(): string {
   if (!ourNumber) {
     throw new Error('ourNumber is not set');
   }
+
   return ourNumber;
 }
 

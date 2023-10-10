@@ -1,18 +1,17 @@
 /* eslint-disable no-await-in-loop */
 import { ContactInfo, UserGroupsGet } from 'libsession_util_nodejs';
+import { base64_variants, from_base64 } from 'libsodium-wrappers-sumo';
 import { compact, difference, isEmpty, isNil, isNumber, toNumber } from 'lodash';
 import { ConfigDumpData } from '../data/configDump/configDump';
 import { SettingsKey } from '../data/settings-key';
 import { deleteAllMessagesByConvoIdNoConfirmation } from '../interactions/conversationInteractions';
 import { CONVERSATION_PRIORITIES, ConversationTypeEnum } from '../models/conversationAttributes';
-import { SignalService } from '../protobuf';
 import { ClosedGroup } from '../session';
 import { getOpenGroupManager } from '../session/apis/open_group_api/opengroupV2/OpenGroupManagerV2';
 import { OpenGroupUtils } from '../session/apis/open_group_api/utils';
 import { getOpenGroupV2ConversationId } from '../session/apis/open_group_api/utils/OpenGroupUtils';
 import { getSwarmPollingInstance } from '../session/apis/snode_api';
 import { ConvoHub } from '../session/conversations';
-import { IncomingMessage } from '../session/messages/incoming/IncomingMessage';
 import { ProfileManager } from '../session/profile_manager/ProfileManager';
 import { PubKey } from '../session/types';
 import { StringUtils, UserUtils } from '../session/utils';
@@ -28,13 +27,20 @@ import { assertUnreachable, stringify, toFixedUint8ArrayOfLength } from '../type
 import { BlockedNumberController } from '../util';
 import { Storage, setLastProfileUpdateTimestamp } from '../util/storage';
 // eslint-disable-next-line import/no-unresolved, import/extensions
+import { HexString } from '../node/hexStrings';
+import {
+  SnodeNamespace,
+  SnodeNamespaces,
+  UserConfigNamespaces,
+} from '../session/apis/snode_api/namespaces';
+import { RetrieveMessageItemWithNamespace } from '../session/apis/snode_api/types';
+import { groupInfoActions } from '../state/ducks/groups';
 import {
   ConfigWrapperObjectTypesMeta,
   ConfigWrapperUser,
   getGroupPubkeyFromWrapperType,
   isUserConfigWrapperType,
 } from '../webworker/workers/browser/libsession_worker_functions';
-import { UserConfigKind, isUserKind } from '../types/ProtobufKind';
 import {
   ContactsWrapperActions,
   ConvoInfoVolatileWrapperActions,
@@ -46,87 +52,87 @@ import {
 import { addKeyPairToCacheAndDBIfNeeded } from './closedGroups';
 import { HexKeyPair } from './keypairs';
 import { queueAllCachedFromSource } from './receiver';
-import { HexString } from '../node/hexStrings';
-import { groupInfoActions } from '../state/ducks/groups';
 
 type IncomingUserResult = {
   needsPush: boolean;
   needsDump: boolean;
-  kind: UserConfigKind;
   publicKey: string;
   latestEnvelopeTimestamp: number;
+  namespace: UserConfigNamespaces;
 };
 
-function byUserVariant(
-  incomingConfigs: Array<IncomingMessage<SignalService.ISharedConfigMessage>>
-) {
+function byUserNamespace(incomingConfigs: Array<RetrieveMessageItemWithNamespace>) {
   const groupedByVariant: Map<
-    ConfigWrapperUser,
-    Array<IncomingMessage<SignalService.ISharedConfigMessage>>
+    UserConfigNamespaces,
+    Array<RetrieveMessageItemWithNamespace>
   > = new Map();
 
   incomingConfigs.forEach(incomingConfig => {
-    const { kind } = incomingConfig.message;
-    if (!isUserKind(kind)) {
-      throw new Error(`Invalid kind when handling userkinds: ${kind}`);
+    const { namespace } = incomingConfig;
+    if (!SnodeNamespace.isUserConfigNamespace(namespace)) {
+      throw new Error(`Invalid namespace on byUserNamespace: ${namespace}`);
     }
 
-    const wrapperId = LibSessionUtil.userKindToVariant(kind);
-
-    if (!groupedByVariant.has(wrapperId)) {
-      groupedByVariant.set(wrapperId, []);
+    if (!groupedByVariant.has(namespace)) {
+      groupedByVariant.set(namespace, []);
     }
 
-    groupedByVariant.get(wrapperId)?.push(incomingConfig);
+    groupedByVariant.get(namespace)?.push(incomingConfig);
   });
   return groupedByVariant;
 }
 
 async function printDumpForDebug(prefix: string, variant: ConfigWrapperObjectTypesMeta) {
   if (isUserConfigWrapperType(variant)) {
-    window.log.info(prefix, StringUtils.toHex(await GenericWrapperActions.dump(variant)));
+    window.log.info(prefix, StringUtils.toHex(await GenericWrapperActions.makeDump(variant)));
     return;
   }
-  const metaGroupDumps = await MetaGroupWrapperActions.metaDebugDump(
+  const metaGroupDumps = await MetaGroupWrapperActions.metaMakeDump(
     getGroupPubkeyFromWrapperType(variant)
   );
   window.log.info(prefix, StringUtils.toHex(metaGroupDumps));
 }
 
 async function mergeUserConfigsWithIncomingUpdates(
-  incomingConfigs: Array<IncomingMessage<SignalService.ISharedConfigMessage>>
+  incomingConfigs: Array<RetrieveMessageItemWithNamespace>
 ): Promise<Map<ConfigWrapperUser, IncomingUserResult>> {
-  // first, group by variant so we do a single merge call
-  // Note: this call throws if given a non user kind as this functio should only handle user variants/kinds
-  const groupedByVariant = byUserVariant(incomingConfigs);
+  // first, group by namesapces so we do a single merge call
+  // Note: this call throws if given a non user kind as this function should only handle user variants/kinds
+  const groupedByNamespaces = byUserNamespace(incomingConfigs);
 
   const groupedResults: Map<ConfigWrapperUser, IncomingUserResult> = new Map();
 
-  const publicKey = UserUtils.getOurPubKeyStrFromCache();
+  const us = UserUtils.getOurPubKeyStrFromCache();
 
   try {
-    for (let index = 0; index < groupedByVariant.size; index++) {
-      const variant = [...groupedByVariant.keys()][index];
-      const sameVariant = groupedByVariant.get(variant);
+    for (let index = 0; index < groupedByNamespaces.size; index++) {
+      const namespace = [...groupedByNamespaces.keys()][index];
+      const sameVariant = groupedByNamespaces.get(namespace);
       if (!sameVariant?.length) {
         continue;
       }
       const toMerge = sameVariant.map(msg => ({
-        data: msg.message.data,
-        hash: msg.messageHash,
+        data: from_base64(msg.data, base64_variants.ORIGINAL),
+        hash: msg.hash,
       }));
+
+      const variant = LibSessionUtil.userNamespaceToVariant(namespace);
+
       if (window.sessionFeatureFlags.debug.debugLibsessionDumps) {
         await printDumpForDebug(`printDumpsForDebugging: before merge of ${variant}:`, variant);
       }
 
-      const mergedCount = await GenericWrapperActions.merge(variant, toMerge);
+      const hashesMerged = await GenericWrapperActions.merge(variant, toMerge);
 
       const needsDump = await GenericWrapperActions.needsDump(variant);
       const needsPush = await GenericWrapperActions.needsPush(variant);
-      const latestEnvelopeTimestamp = Math.max(...sameVariant.map(m => m.envelopeTimestamp));
+      const mergedTimestamps = sameVariant
+        .filter(m => hashesMerged.includes(m.hash))
+        .map(m => m.timestamp);
+      const latestEnvelopeTimestamp = Math.max(...mergedTimestamps);
 
       window.log.debug(
-        `${variant}: needsPush:${needsPush} needsDump:${needsDump}; mergedCount:${mergedCount} `
+        `${variant}: needsPush:${needsPush} needsDump:${needsDump}; mergedCount:${hashesMerged.length} `
       );
 
       if (window.sessionFeatureFlags.debug.debugLibsessionDumps) {
@@ -135,8 +141,8 @@ async function mergeUserConfigsWithIncomingUpdates(
       const incomingConfResult: IncomingUserResult = {
         needsDump,
         needsPush,
-        kind: LibSessionUtil.userVariantToUserKind(variant),
-        publicKey,
+        publicKey: us,
+        namespace,
         latestEnvelopeTimestamp: latestEnvelopeTimestamp || Date.now(),
       };
       groupedResults.set(variant, incomingConfResult);
@@ -848,29 +854,32 @@ async function processUserMergingResults(results: Map<ConfigWrapperUser, Incomin
     }
 
     try {
-      const { kind } = incomingResult;
-      switch (kind) {
-        case SignalService.SharedConfigMessage.Kind.USER_PROFILE:
+      const { namespace } = incomingResult;
+      switch (namespace) {
+        case SnodeNamespaces.UserProfile:
           await handleUserProfileUpdate(incomingResult);
           break;
-        case SignalService.SharedConfigMessage.Kind.CONTACTS:
+        case SnodeNamespaces.UserContacts:
           await handleContactsUpdate();
           break;
-        case SignalService.SharedConfigMessage.Kind.USER_GROUPS:
+        case SnodeNamespaces.UserGroups:
           await handleUserGroupsUpdate(incomingResult);
           break;
-        case SignalService.SharedConfigMessage.Kind.CONVO_INFO_VOLATILE:
+        case SnodeNamespaces.ConvoInfoVolatile:
           await handleConvoInfoVolatileUpdate();
           break;
         default:
           try {
             // we catch errors here because an old client knowing about a new type of config coming from the network should not just crash
-            assertUnreachable(kind, `processUserMergingResults unsupported kind: "${kind}"`);
+            assertUnreachable(
+              namespace,
+              `processUserMergingResults unsupported namespace: "${namespace}"`
+            );
           } catch (e) {
             window.log.warn('assertUnreachable failed', e.message);
           }
       }
-      const variant = LibSessionUtil.userKindToVariant(kind);
+      const variant = LibSessionUtil.userNamespaceToVariant(namespace);
       try {
         await updateLibsessionLatestProcessedUserTimestamp(
           variant,
@@ -906,7 +915,7 @@ async function processUserMergingResults(results: Map<ConfigWrapperUser, Incomin
 }
 
 async function handleUserConfigMessagesViaLibSession(
-  configMessages: Array<IncomingMessage<SignalService.ISharedConfigMessage>>
+  configMessages: Array<RetrieveMessageItemWithNamespace>
 ) {
   if (isEmpty(configMessages)) {
     return;
@@ -915,9 +924,8 @@ async function handleUserConfigMessagesViaLibSession(
   window?.log?.debug(
     `Handling our sharedConfig message via libsession_util ${JSON.stringify(
       configMessages.map(m => ({
-        kind: m.message.kind,
-        hash: m.messageHash,
-        seqno: (m.message.seqno as Long).toNumber(),
+        hash: m.hash,
+        namespace: m.namespace,
       }))
     )}`
   );

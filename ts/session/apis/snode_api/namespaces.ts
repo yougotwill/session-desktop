@@ -76,14 +76,22 @@ export type SnodeNamespacesUser = PickEnum<
   SnodeNamespaces.UserContacts | SnodeNamespaces.UserProfile | SnodeNamespaces.Default
 >;
 
+export type UserConfigNamespaces = PickEnum<
+  SnodeNamespaces,
+  | SnodeNamespaces.UserProfile
+  | SnodeNamespaces.UserContacts
+  | SnodeNamespaces.UserGroups
+  | SnodeNamespaces.ConvoInfoVolatile
+>;
+
 /**
  * Returns true if that namespace is associated with the config of a user (not his messages, only configs)
  */
 // eslint-disable-next-line consistent-return
-function isUserConfigNamespace(namespace: SnodeNamespaces) {
+function isUserConfigNamespace(namespace: SnodeNamespaces): namespace is UserConfigNamespaces {
   switch (namespace) {
-    case SnodeNamespaces.UserContacts:
     case SnodeNamespaces.UserProfile:
+    case SnodeNamespaces.UserContacts:
     case SnodeNamespaces.UserGroups:
     case SnodeNamespaces.ConvoInfoVolatile:
       return true;

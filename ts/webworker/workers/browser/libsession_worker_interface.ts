@@ -55,6 +55,7 @@ type GenericWrapperActionsCalls = {
   ) => Promise<void>;
   confirmPushed: GenericWrapperActionsCall<ConfigWrapperUser, 'confirmPushed'>;
   dump: GenericWrapperActionsCall<ConfigWrapperUser, 'dump'>;
+  makeDump: GenericWrapperActionsCall<ConfigWrapperUser, 'makeDump'>;
   merge: GenericWrapperActionsCall<ConfigWrapperUser, 'merge'>;
   needsDump: GenericWrapperActionsCall<ConfigWrapperUser, 'needsDump'>;
   needsPush: GenericWrapperActionsCall<ConfigWrapperUser, 'needsPush'>;
@@ -77,6 +78,10 @@ export const GenericWrapperActions: GenericWrapperActionsCalls = {
     >,
   dump: async (wrapperId: ConfigWrapperUser) =>
     callLibSessionWorker([wrapperId, 'dump']) as ReturnType<GenericWrapperActionsCalls['dump']>,
+  makeDump: async (wrapperId: ConfigWrapperUser) =>
+    callLibSessionWorker([wrapperId, 'makeDump']) as ReturnType<
+      GenericWrapperActionsCalls['makeDump']
+    >,
   merge: async (wrapperId: ConfigWrapperUser, toMerge: Array<MergeSingle>) =>
     callLibSessionWorker([wrapperId, 'merge', toMerge]) as ReturnType<
       GenericWrapperActionsCalls['merge']
@@ -97,18 +102,26 @@ export const GenericWrapperActions: GenericWrapperActionsCalls = {
     >,
 };
 
+function createBaseActionsFor(wrapperType: ConfigWrapperUser) {
+  return {
+    /* Reuse the GenericWrapperActions with the UserConfig argument */
+    init: async (ed25519Key: Uint8Array, dump: Uint8Array | null) =>
+      GenericWrapperActions.init(wrapperType, ed25519Key, dump),
+    confirmPushed: async (seqno: number, hash: string) =>
+      GenericWrapperActions.confirmPushed(wrapperType, seqno, hash),
+    dump: async () => GenericWrapperActions.dump(wrapperType),
+    makeDump: async () => GenericWrapperActions.makeDump(wrapperType),
+    merge: async (toMerge: Array<MergeSingle>) => GenericWrapperActions.merge(wrapperType, toMerge),
+    needsDump: async () => GenericWrapperActions.needsDump(wrapperType),
+    needsPush: async () => GenericWrapperActions.needsPush(wrapperType),
+    push: async () => GenericWrapperActions.push(wrapperType),
+    currentHashes: async () => GenericWrapperActions.currentHashes(wrapperType),
+  };
+}
+
 export const UserConfigWrapperActions: UserConfigWrapperActionsCalls = {
   /* Reuse the GenericWrapperActions with the UserConfig argument */
-  init: async (ed25519Key: Uint8Array, dump: Uint8Array | null) =>
-    GenericWrapperActions.init('UserConfig', ed25519Key, dump),
-  confirmPushed: async (seqno: number, hash: string) =>
-    GenericWrapperActions.confirmPushed('UserConfig', seqno, hash),
-  dump: async () => GenericWrapperActions.dump('UserConfig'),
-  merge: async (toMerge: Array<MergeSingle>) => GenericWrapperActions.merge('UserConfig', toMerge),
-  needsDump: async () => GenericWrapperActions.needsDump('UserConfig'),
-  needsPush: async () => GenericWrapperActions.needsPush('UserConfig'),
-  push: async () => GenericWrapperActions.push('UserConfig'),
-  currentHashes: async () => GenericWrapperActions.currentHashes('UserConfig'),
+  ...createBaseActionsFor('UserConfig'),
 
   /** UserConfig wrapper specific actions */
   getUserInfo: async () =>
@@ -144,17 +157,7 @@ export const UserConfigWrapperActions: UserConfigWrapperActionsCalls = {
 
 export const ContactsWrapperActions: ContactsWrapperActionsCalls = {
   /* Reuse the GenericWrapperActions with the ContactConfig argument */
-  init: async (ed25519Key: Uint8Array, dump: Uint8Array | null) =>
-    GenericWrapperActions.init('ContactsConfig', ed25519Key, dump),
-  confirmPushed: async (seqno: number, hash: string) =>
-    GenericWrapperActions.confirmPushed('ContactsConfig', seqno, hash),
-  dump: async () => GenericWrapperActions.dump('ContactsConfig'),
-  merge: async (toMerge: Array<MergeSingle>) =>
-    GenericWrapperActions.merge('ContactsConfig', toMerge),
-  needsDump: async () => GenericWrapperActions.needsDump('ContactsConfig'),
-  needsPush: async () => GenericWrapperActions.needsPush('ContactsConfig'),
-  push: async () => GenericWrapperActions.push('ContactsConfig'),
-  currentHashes: async () => GenericWrapperActions.currentHashes('ContactsConfig'),
+  ...createBaseActionsFor('ContactsConfig'),
 
   /** ContactsConfig wrapper specific actions */
   get: async (pubkeyHex: string) =>
@@ -178,18 +181,8 @@ export const ContactsWrapperActions: ContactsWrapperActionsCalls = {
 };
 
 export const UserGroupsWrapperActions: UserGroupsWrapperActionsCalls = {
-  /* Reuse the GenericWrapperActions with the ContactConfig argument */
-  init: async (ed25519Key: Uint8Array, dump: Uint8Array | null) =>
-    GenericWrapperActions.init('UserGroupsConfig', ed25519Key, dump),
-  confirmPushed: async (seqno: number, hash: string) =>
-    GenericWrapperActions.confirmPushed('UserGroupsConfig', seqno, hash),
-  dump: async () => GenericWrapperActions.dump('UserGroupsConfig'),
-  merge: async (toMerge: Array<MergeSingle>) =>
-    GenericWrapperActions.merge('UserGroupsConfig', toMerge),
-  needsDump: async () => GenericWrapperActions.needsDump('UserGroupsConfig'),
-  needsPush: async () => GenericWrapperActions.needsPush('UserGroupsConfig'),
-  push: async () => GenericWrapperActions.push('UserGroupsConfig'),
-  currentHashes: async () => GenericWrapperActions.currentHashes('UserGroupsConfig'),
+  /* Reuse the GenericWrapperActions with the UserGroupsConfig argument */
+  ...createBaseActionsFor('UserGroupsConfig'),
 
   /** UserGroups wrapper specific actions */
 
@@ -275,18 +268,8 @@ export const UserGroupsWrapperActions: UserGroupsWrapperActionsCalls = {
 };
 
 export const ConvoInfoVolatileWrapperActions: ConvoInfoVolatileWrapperActionsCalls = {
-  /* Reuse the GenericWrapperActions with the ContactConfig argument */
-  init: async (ed25519Key: Uint8Array, dump: Uint8Array | null) =>
-    GenericWrapperActions.init('ConvoInfoVolatileConfig', ed25519Key, dump),
-  confirmPushed: async (seqno: number, hash: string) =>
-    GenericWrapperActions.confirmPushed('ConvoInfoVolatileConfig', seqno, hash),
-  dump: async () => GenericWrapperActions.dump('ConvoInfoVolatileConfig'),
-  merge: async (toMerge: Array<MergeSingle>) =>
-    GenericWrapperActions.merge('ConvoInfoVolatileConfig', toMerge),
-  needsDump: async () => GenericWrapperActions.needsDump('ConvoInfoVolatileConfig'),
-  needsPush: async () => GenericWrapperActions.needsPush('ConvoInfoVolatileConfig'),
-  push: async () => GenericWrapperActions.push('ConvoInfoVolatileConfig'),
-  currentHashes: async () => GenericWrapperActions.currentHashes('ConvoInfoVolatileConfig'),
+  /* Reuse the GenericWrapperActions with the ConvoInfoVolatileConfig argument */
+  ...createBaseActionsFor('ConvoInfoVolatileConfig'),
 
   /** ConvoInfoVolatile wrapper specific actions */
   // 1o1
@@ -389,9 +372,9 @@ export const MetaGroupWrapperActions: MetaGroupWrapperActionsCalls = {
     callLibSessionWorker([`MetaGroupConfig-${groupPk}`, 'metaDump']) as Promise<
       ReturnType<MetaGroupWrapperActionsCalls['metaDump']>
     >,
-  metaDebugDump: async (groupPk: GroupPubkeyType) =>
-    callLibSessionWorker([`MetaGroupConfig-${groupPk}`, 'metaDebugDump']) as Promise<
-      ReturnType<MetaGroupWrapperActionsCalls['metaDebugDump']>
+  metaMakeDump: async (groupPk: GroupPubkeyType) =>
+    callLibSessionWorker([`MetaGroupConfig-${groupPk}`, 'metaMakeDump']) as Promise<
+      ReturnType<MetaGroupWrapperActionsCalls['metaMakeDump']>
     >,
   metaConfirmPushed: async (
     groupPk: GroupPubkeyType,

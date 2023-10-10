@@ -1,18 +1,26 @@
 /* eslint-disable no-await-in-loop */
-import { compact, isArray, isEmpty, isNumber, isString } from 'lodash';
+import { PubkeyType } from 'libsession_util_nodejs';
+import { isArray, isEmpty, isNumber, isString } from 'lodash';
 import { v4 } from 'uuid';
 import { UserUtils } from '../..';
 import { ConfigDumpData } from '../../../../data/configDump/configDump';
 import { ConfigurationSyncJobDone } from '../../../../shims/events';
-import { ReleasedFeatures } from '../../../../util/releaseFeature';
 import { isSignInByLinking } from '../../../../util/storage';
 import { GenericWrapperActions } from '../../../../webworker/workers/browser/libsession_worker_interface';
-import { NotEmptyArrayOfBatchResults } from '../../../apis/snode_api/SnodeRequestTypes';
+import {
+  NotEmptyArrayOfBatchResults,
+  StoreOnNodeData,
+} from '../../../apis/snode_api/SnodeRequestTypes';
+import { GetNetworkTime } from '../../../apis/snode_api/getNetworkTime';
+import { TTL_DEFAULT } from '../../../constants';
 import { ConvoHub } from '../../../conversations';
-import { SharedUserConfigMessage } from '../../../messages/outgoing/controlMessage/SharedConfigMessage';
 import { MessageSender } from '../../../sending/MessageSender';
 import { allowOnlyOneAtATime } from '../../Promise';
-import { LibSessionUtil, OutgoingConfResult } from '../../libsession/libsession_utils';
+import {
+  LibSessionUtil,
+  PendingChangesForUs,
+  UserSingleDestinationChanges,
+} from '../../libsession/libsession_utils';
 import { runners } from '../JobRunner';
 import {
   AddJobCheckReturn,
@@ -20,7 +28,6 @@ import {
   PersistedJob,
   RunJobResult,
 } from '../PersistedJob';
-import { UserConfigKind } from '../../../../types/ProtobufKind';
 
 const defaultMsBetweenRetries = 15000; // a long time between retries, to avoid running multiple jobs at the same time, when one was postponed at the same time as one already planned (5s)
 const defaultMaxAttempts = 2;
@@ -31,41 +38,19 @@ const defaultMaxAttempts = 2;
  */
 let lastRunConfigSyncJobTimestamp: number | null = null;
 
-type SingleDestinationChanges = {
-  messages: Array<OutgoingConfResult<UserConfigKind, SharedUserConfigMessage>>;
-  allOldHashes: Array<string>;
-};
-
-type SuccessfulChange = {
-  message: SharedUserConfigMessage;
+type UserSuccessfulChange = {
+  pushed: PendingChangesForUs;
   updatedHash: string;
 };
-
-/**
- * Later in the syncing logic, we want to batch-send all the updates for a pubkey in a single batch call.
- * To make this easier, this function prebuilds and merges together all the changes for each pubkey.
- */
-async function retrieveSingleDestinationChanges(
-  destination: string
-): Promise<SingleDestinationChanges> {
-  if (destination !== UserUtils.getOurPubKeyStrFromCache()) {
-    throw new Error('retrieveSingleDestinationChanges can only be us for ConfigurationSyncJob');
-  }
-  const outgoingConfResults = await LibSessionUtil.pendingChangesForUs();
-
-  const compactedHashes = compact(outgoingConfResults.map(m => m.oldMessageHashes)).flat();
-
-  return { messages: outgoingConfResults, allOldHashes: compactedHashes };
-}
 
 /**
  * This function is run once we get the results from the multiple batch-send.
  */
 function resultsToSuccessfulChange(
   result: NotEmptyArrayOfBatchResults | null,
-  request: SingleDestinationChanges
-): Array<SuccessfulChange> {
-  const successfulChanges: Array<SuccessfulChange> = [];
+  request: UserSingleDestinationChanges
+): Array<UserSuccessfulChange> {
+  const successfulChanges: Array<UserSuccessfulChange> = [];
 
   /**
    * For each batch request, we get as result
@@ -84,15 +69,11 @@ function resultsToSuccessfulChange(
     const batchResult = result[j];
     const messagePostedHashes = batchResult?.body?.hash;
 
-    if (
-      batchResult.code === 200 &&
-      isString(messagePostedHashes) &&
-      request.messages?.[j].message
-    ) {
+    if (batchResult.code === 200 && isString(messagePostedHashes) && request.messages?.[j]) {
       // the library keeps track of the hashes to push and pushed using the hashes now
       successfulChanges.push({
         updatedHash: messagePostedHashes,
-        message: request.messages?.[j].message,
+        pushed: request.messages?.[j],
       });
     }
   }
@@ -101,16 +82,16 @@ function resultsToSuccessfulChange(
 }
 
 async function buildAndSaveDumpsToDB(
-  changes: Array<SuccessfulChange>,
-  destination: string
+  changes: Array<UserSuccessfulChange>,
+  us: string
 ): Promise<void> {
   for (let i = 0; i < changes.length; i++) {
     const change = changes[i];
-    const variant = LibSessionUtil.userKindToVariant(change.message.kind);
+    const variant = LibSessionUtil.userNamespaceToVariant(change.pushed.namespace);
 
     const needsDump = await LibSessionUtil.markAsPushed(
       variant,
-      change.message.seqno.toNumber(),
+      change.pushed.seqno.toNumber(),
       change.updatedHash
     );
 
@@ -120,13 +101,13 @@ async function buildAndSaveDumpsToDB(
     const dump = await GenericWrapperActions.dump(variant);
     await ConfigDumpData.saveConfigDump({
       data: dump,
-      publicKey: destination,
+      publicKey: us,
       variant,
     });
   }
 }
 
-async function saveDumpsNeededToDB(destination: string) {
+async function saveDumpsNeededToDB(us: string) {
   for (let i = 0; i < LibSessionUtil.requiredUserVariants.length; i++) {
     const variant = LibSessionUtil.requiredUserVariants[i];
     const needsDump = await GenericWrapperActions.needsDump(variant);
@@ -137,10 +118,73 @@ async function saveDumpsNeededToDB(destination: string) {
     const dump = await GenericWrapperActions.dump(variant);
     await ConfigDumpData.saveConfigDump({
       data: dump,
-      publicKey: destination,
+      publicKey: us,
       variant,
     });
   }
+}
+
+function triggerConfSyncJobDone() {
+  window.Whisper.events.trigger(ConfigurationSyncJobDone);
+}
+
+function isPubkey(us: string): us is PubkeyType {
+  return us.startsWith('05');
+}
+
+async function pushChangesToUserSwarmIfNeeded() {
+  const us = UserUtils.getOurPubKeyStrFromCache();
+  if (!isPubkey(us)) {
+    throw new Error('invalid user pubkey, not right prefix');
+  }
+
+  // save the dumps to DB even before trying to push them, so at least we have an up to date dumps in the DB in case of crash, no network etc
+  await saveDumpsNeededToDB(us);
+  const singleDestChanges = await LibSessionUtil.pendingChangesForUs();
+
+  // If there are no pending changes then the job can just complete (next time something
+  // is updated we want to try and run immediately so don't scuedule another run in this case)
+  if (isEmpty(singleDestChanges?.messages)) {
+    triggerConfSyncJobDone();
+    return RunJobResult.Success;
+  }
+  const msgs: Array<StoreOnNodeData> = singleDestChanges.messages.map(item => {
+    return {
+      namespace: item.namespace,
+      pubkey: us,
+      networkTimestamp: GetNetworkTime.getNowWithNetworkOffset(),
+      ttl: TTL_DEFAULT.TTL_CONFIG,
+      data: item.ciphertext,
+    };
+  });
+
+  const result = await MessageSender.sendEncryptedDataToSnode(
+    msgs,
+    us,
+    singleDestChanges.allOldHashes
+  );
+
+  const expectedReplyLength =
+    singleDestChanges.messages.length + (singleDestChanges.allOldHashes.size ? 1 : 0);
+  // we do a sequence call here. If we do not have the right expected number of results, consider it a failure
+  if (!isArray(result) || result.length !== expectedReplyLength) {
+    window.log.info(
+      `ConfigurationSyncJob: unexpected result length: expected ${expectedReplyLength} but got ${result?.length}`
+    );
+    // this might be a 421 error (already handled) so let's retry this request a little bit later
+    return RunJobResult.RetryJobIfPossible;
+  }
+
+  const changes = resultsToSuccessfulChange(result, singleDestChanges);
+  if (isEmpty(changes)) {
+    return RunJobResult.RetryJobIfPossible;
+  }
+  // Now that we have the successful changes, we need to mark them as pushed and
+  // generate any config dumps which need to be stored
+
+  await buildAndSaveDumpsToDB(changes, us);
+  triggerConfSyncJobDone();
+  return RunJobResult.Success;
 }
 
 class ConfigurationSyncJob extends PersistedJob<ConfigurationSyncPersistedData> {
@@ -180,64 +224,7 @@ class ConfigurationSyncJob extends PersistedJob<ConfigurationSyncPersistedData> 
         return RunJobResult.PermanentFailure;
       }
 
-      // TODOLATER add a way to have a few configuration sync jobs running at the same time, but only a single one per pubkey
-      const thisJobDestination = us;
-
-      // save the dumps to DB even before trying to push them, so at least we have an up to date dumps in the DB in case of crash, no network etc
-      await saveDumpsNeededToDB(thisJobDestination);
-      const userConfigLibsession = await ReleasedFeatures.checkIsUserConfigFeatureReleased();
-
-      // if the feature flag is not enabled, we want to keep updating the dumps, but just not sync them.
-      if (!userConfigLibsession) {
-        this.triggerConfSyncJobDone();
-        return RunJobResult.Success;
-      }
-      const singleDestChanges = await retrieveSingleDestinationChanges(thisJobDestination);
-
-      // If there are no pending changes then the job can just complete (next time something
-      // is updated we want to try and run immediately so don't scuedule another run in this case)
-      if (isEmpty(singleDestChanges?.messages)) {
-        this.triggerConfSyncJobDone();
-        return RunJobResult.Success;
-      }
-      const oldHashesToDelete = new Set(singleDestChanges.allOldHashes);
-      const msgs = singleDestChanges.messages.map(item => {
-        return {
-          namespace: item.namespace,
-          pubkey: thisJobDestination,
-          timestamp: item.message.timestamp,
-          ttl: item.message.ttl(),
-          message: item.message,
-        };
-      });
-
-      const result = await MessageSender.sendMessagesToSnode(
-        msgs,
-        thisJobDestination,
-        oldHashesToDelete
-      );
-
-      const expectedReplyLength =
-        singleDestChanges.messages.length + (oldHashesToDelete.size ? 1 : 0);
-      // we do a sequence call here. If we do not have the right expected number of results, consider it a failure
-      if (!isArray(result) || result.length !== expectedReplyLength) {
-        window.log.info(
-          `ConfigurationSyncJob: unexpected result length: expected ${expectedReplyLength} but got ${result?.length}`
-        );
-        // this might be a 421 error (already handled) so let's retry this request a little bit later
-        return RunJobResult.RetryJobIfPossible;
-      }
-
-      const changes = resultsToSuccessfulChange(result, singleDestChanges);
-      if (isEmpty(changes)) {
-        return RunJobResult.RetryJobIfPossible;
-      }
-      // Now that we have the successful changes, we need to mark them as pushed and
-      // generate any config dumps which need to be stored
-
-      await buildAndSaveDumpsToDB(changes, thisJobDestination);
-      this.triggerConfSyncJobDone();
-      return RunJobResult.Success;
+      return await pushChangesToUserSwarmIfNeeded();
       // eslint-disable-next-line no-useless-catch
     } catch (e) {
       throw e;
@@ -274,10 +261,6 @@ class ConfigurationSyncJob extends PersistedJob<ConfigurationSyncPersistedData> 
 
   private updateLastTickTimestamp() {
     lastRunConfigSyncJobTimestamp = Date.now();
-  }
-
-  private triggerConfSyncJobDone() {
-    window.Whisper.events.trigger(ConfigurationSyncJobDone);
   }
 }
 

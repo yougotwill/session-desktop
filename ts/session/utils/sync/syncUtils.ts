@@ -21,7 +21,6 @@ import {
 } from '../../messages/outgoing/controlMessage/ConfigurationMessage';
 import { ExpirationTimerUpdateMessage } from '../../messages/outgoing/controlMessage/ExpirationTimerUpdateMessage';
 import { MessageRequestResponse } from '../../messages/outgoing/controlMessage/MessageRequestResponse';
-import { SharedUserConfigMessage } from '../../messages/outgoing/controlMessage/SharedConfigMessage';
 import { UnsendMessage } from '../../messages/outgoing/controlMessage/UnsendMessage';
 import {
   AttachmentPointerWithUrl,
@@ -351,8 +350,7 @@ export type SyncMessageType =
   | ExpirationTimerUpdateMessage
   | ConfigurationMessage
   | MessageRequestResponse
-  | UnsendMessage
-  | SharedUserConfigMessage;
+  | UnsendMessage;
 
 export const buildSyncMessage = (
   identifier: string,

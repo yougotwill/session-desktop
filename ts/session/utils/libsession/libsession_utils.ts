@@ -6,8 +6,6 @@ import { compact, difference, omit } from 'lodash';
 import Long from 'long';
 import { UserUtils } from '..';
 import { ConfigDumpData } from '../../../data/configDump/configDump';
-import { SignalService } from '../../../protobuf';
-import { UserConfigKind } from '../../../types/ProtobufKind';
 import { assertUnreachable } from '../../../types/sqlSharedTypes';
 import {
   ConfigWrapperGroupDetailed,
@@ -18,12 +16,7 @@ import {
   GenericWrapperActions,
   MetaGroupWrapperActions,
 } from '../../../webworker/workers/browser/libsession_worker_interface';
-import { GetNetworkTime } from '../../apis/snode_api/getNetworkTime';
-import { SnodeNamespaces } from '../../apis/snode_api/namespaces';
-import {
-  SharedConfigMessage,
-  SharedUserConfigMessage,
-} from '../../messages/outgoing/controlMessage/SharedConfigMessage';
+import { SnodeNamespaces, UserConfigNamespaces } from '../../apis/snode_api/namespaces';
 import { ed25519Str } from '../../onions/onionPath';
 import { PubKey } from '../../types';
 import { ConfigurationSync } from '../job_runners/jobs/ConfigurationSyncJob';
@@ -34,12 +27,6 @@ const requiredUserVariants: Array<ConfigWrapperUser> = [
   'UserGroupsConfig',
   'ConvoInfoVolatileConfig',
 ];
-
-export type OutgoingConfResult<K extends UserConfigKind, T extends SharedConfigMessage<K>> = {
-  message: T;
-  namespace: SnodeNamespaces;
-  oldMessageHashes: Array<string>;
-};
 
 async function initializeLibSessionUtilWrappers() {
   const keypair = await UserUtils.getUserED25519KeyPairBytes();
@@ -108,17 +95,43 @@ async function initializeLibSessionUtilWrappers() {
   // No need to load the meta group wrapper here. We will load them once the SessionInbox is loaded with a redux action
 }
 
-async function pendingChangesForUs(): Promise<
-  Array<OutgoingConfResult<UserConfigKind, SharedUserConfigMessage>>
-> {
-  const us = UserUtils.getOurPubKeyStrFromCache();
+export type PendingChangesForUs = {
+  ciphertext: Uint8Array;
+  seqno: Long;
+  namespace: UserConfigNamespaces;
+};
 
+type PendingChangesForGroupNonKey = {
+  data: Uint8Array;
+  seqno: Long;
+  namespace: SnodeNamespaces.ClosedGroupInfo | SnodeNamespaces.ClosedGroupMembers;
+  type: Extract<ConfigWrapperGroupDetailed, 'GroupInfo' | 'GroupMember'>;
+};
+
+type PendingChangesForGroupKey = {
+  data: Uint8Array;
+  namespace: SnodeNamespaces.ClosedGroupKeys;
+  type: Extract<ConfigWrapperGroupDetailed, 'GroupKeys'>;
+};
+
+export type PendingChangesForGroup = PendingChangesForGroupNonKey | PendingChangesForGroupKey;
+
+type SingleDestinationChanges<T extends PendingChangesForGroup | PendingChangesForUs> = {
+  messages: Array<T>;
+  allOldHashes: Set<string>;
+};
+
+export type UserSingleDestinationChanges = SingleDestinationChanges<PendingChangesForUs>;
+export type GroupSingleDestinationChanges = SingleDestinationChanges<PendingChangesForGroup>;
+
+async function pendingChangesForUs(): Promise<UserSingleDestinationChanges> {
+  const us = UserUtils.getOurPubKeyStrFromCache();
   const dumps = await ConfigDumpData.getAllDumpsWithoutDataFor(us);
 
   // Ensure we always check the required user config types for changes even if there is no dump
   // data yet (to deal with first launch cases)
   LibSessionUtil.requiredUserVariants.forEach(requiredVariant => {
-    if (!dumps.find(m => m.publicKey === us && m.variant === requiredVariant)) {
+    if (!dumps.some(m => m.publicKey === us && m.variant === requiredVariant)) {
       dumps.push({
         publicKey: us,
         variant: requiredVariant,
@@ -126,7 +139,7 @@ async function pendingChangesForUs(): Promise<
     }
   });
 
-  const results: Array<OutgoingConfResult<UserConfigKind, SharedUserConfigMessage>> = [];
+  const results: UserSingleDestinationChanges = { messages: [], allOldHashes: new Set() };
   const variantsNeedingPush = new Set<ConfigWrapperUser>();
 
   for (let index = 0; index < dumps.length; index++) {
@@ -137,7 +150,6 @@ async function pendingChangesForUs(): Promise<
       continue;
     }
     const needsPush = await GenericWrapperActions.needsPush(variant);
-
     if (!needsPush) {
       continue;
     }
@@ -145,17 +157,14 @@ async function pendingChangesForUs(): Promise<
     variantsNeedingPush.add(variant);
     const { data, seqno, hashes, namespace } = await GenericWrapperActions.push(variant);
 
-    const kind = userVariantToUserKind(variant);
-
-    results.push({
-      message: new SharedUserConfigMessage({
-        data,
-        kind,
-        seqno: Long.fromNumber(seqno),
-        timestamp: GetNetworkTime.getNowWithNetworkOffset(),
-      }),
-      oldMessageHashes: hashes,
+    results.messages.push({
+      ciphertext: data,
+      seqno: Long.fromNumber(seqno),
       namespace,
+    });
+
+    hashes.forEach(hash => {
+      results.allOldHashes.add(hash);
     });
   }
   window.log.info(`those variants needs push: "${[...variantsNeedingPush]}"`);
@@ -164,28 +173,6 @@ async function pendingChangesForUs(): Promise<
 }
 
 // we link the namespace to the type of what each wrapper needs
-
-type PendingChangesForGroupNonKey = {
-  data: Uint8Array;
-  seqno: Long;
-  timestamp: number;
-  namespace: SnodeNamespaces.ClosedGroupInfo | SnodeNamespaces.ClosedGroupMembers;
-  type: Extract<ConfigWrapperGroupDetailed, 'GroupInfo' | 'GroupMember'>;
-};
-
-type PendingChangesForGroupKey = {
-  data: Uint8Array;
-  timestamp: number;
-  namespace: SnodeNamespaces.ClosedGroupKeys;
-  type: Extract<ConfigWrapperGroupDetailed, 'GroupKeys'>;
-};
-
-export type PendingChangesForGroup = PendingChangesForGroupNonKey | PendingChangesForGroupKey;
-
-export type GroupSingleDestinationChanges = {
-  messages: Array<PendingChangesForGroup>;
-  allOldHashes: Set<string>;
-};
 
 async function pendingChangesForGroup(
   groupPk: GroupPubkeyType
@@ -210,7 +197,6 @@ async function pendingChangesForGroup(
       type: 'GroupKeys',
       data: groupKeys.data,
       namespace: groupKeys.namespace,
-      timestamp: GetNetworkTime.getNowWithNetworkOffset(),
     });
   }
 
@@ -219,7 +205,6 @@ async function pendingChangesForGroup(
       type: 'GroupInfo',
       data: groupInfo.data,
       seqno: Long.fromNumber(groupInfo.seqno),
-      timestamp: GetNetworkTime.getNowWithNetworkOffset(),
       namespace: groupInfo.namespace,
     });
   }
@@ -228,7 +213,6 @@ async function pendingChangesForGroup(
       type: 'GroupMember',
       data: groupMember.data,
       seqno: Long.fromNumber(groupMember.seqno),
-      timestamp: GetNetworkTime.getNowWithNetworkOffset(),
       namespace: groupMember.namespace,
     });
   }
@@ -243,35 +227,19 @@ async function pendingChangesForGroup(
   return { messages: results, allOldHashes };
 }
 
-// eslint-disable-next-line consistent-return
-function userKindToVariant(kind: UserConfigKind): ConfigWrapperUser {
-  switch (kind) {
-    case SignalService.SharedConfigMessage.Kind.USER_PROFILE:
+function userNamespaceToVariant(namespace: UserConfigNamespaces) {
+  switch (namespace) {
+    case SnodeNamespaces.UserProfile:
       return 'UserConfig';
-    case SignalService.SharedConfigMessage.Kind.CONTACTS:
+    case SnodeNamespaces.UserContacts:
       return 'ContactsConfig';
-    case SignalService.SharedConfigMessage.Kind.USER_GROUPS:
+    case SnodeNamespaces.UserGroups:
       return 'UserGroupsConfig';
-    case SignalService.SharedConfigMessage.Kind.CONVO_INFO_VOLATILE:
+    case SnodeNamespaces.ConvoInfoVolatile:
       return 'ConvoInfoVolatileConfig';
     default:
-      assertUnreachable(kind, `userKindToVariant: Unsupported variant: "${kind}"`);
-  }
-}
-
-// eslint-disable-next-line consistent-return
-function userVariantToUserKind(variant: ConfigWrapperUser) {
-  switch (variant) {
-    case 'UserConfig':
-      return SignalService.SharedConfigMessage.Kind.USER_PROFILE;
-    case 'ContactsConfig':
-      return SignalService.SharedConfigMessage.Kind.CONTACTS;
-    case 'UserGroupsConfig':
-      return SignalService.SharedConfigMessage.Kind.USER_GROUPS;
-    case 'ConvoInfoVolatileConfig':
-      return SignalService.SharedConfigMessage.Kind.CONVO_INFO_VOLATILE;
-    default:
-      assertUnreachable(variant, `userVariantToKind: Unsupported kind: "${variant}"`);
+      assertUnreachable(namespace, `userNamespaceToVariant: Unsupported namespace: "${namespace}"`);
+      throw new Error('userNamespaceToVariant: Unsupported namespace:');
   }
 }
 
@@ -304,11 +272,10 @@ async function saveMetaGroupDumpToDb(groupPk: GroupPubkeyType) {
 
 export const LibSessionUtil = {
   initializeLibSessionUtilWrappers,
-  userVariantToUserKind,
+  userNamespaceToVariant,
   requiredUserVariants,
   pendingChangesForUs,
   pendingChangesForGroup,
-  userKindToVariant,
   markAsPushed,
   saveMetaGroupDumpToDb,
 };

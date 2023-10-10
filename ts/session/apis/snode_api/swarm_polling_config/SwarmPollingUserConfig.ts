@@ -1,31 +1,19 @@
 import { ConfigMessageHandler } from '../../../../receiver/configMessage';
-import { decryptEnvelopeWithOurKey } from '../../../../receiver/contentMessage';
-import { RetrieveMessageItem } from '../types';
-import { SwarmPollingConfigShared } from './SwarmPollingConfigShared';
+import { RetrieveMessageItemWithNamespace } from '../types';
 
 async function handleUserSharedConfigMessages(
-  userConfigMessagesMerged: Array<RetrieveMessageItem>
+  userConfigMessagesMerged: Array<RetrieveMessageItemWithNamespace>
 ) {
   window.log.info(`received userConfigMessagesMerged count: ${userConfigMessagesMerged.length}`);
   try {
-    const extractedUserConfigMessage =
-      SwarmPollingConfigShared.extractWebSocketContents(userConfigMessagesMerged);
-
-    const allDecryptedConfigMessages = await SwarmPollingConfigShared.decryptSharedConfigMessages(
-      extractedUserConfigMessage,
-      decryptEnvelopeWithOurKey
-    );
-
-    if (allDecryptedConfigMessages.length) {
+    if (userConfigMessagesMerged.length) {
       try {
         window.log.info(
-          `handleConfigMessagesViaLibSession of "${allDecryptedConfigMessages.length}" messages with libsession`
+          `handleConfigMessagesViaLibSession of "${userConfigMessagesMerged.length}" messages with libsession`
         );
-        await ConfigMessageHandler.handleUserConfigMessagesViaLibSession(
-          allDecryptedConfigMessages
-        );
+        await ConfigMessageHandler.handleUserConfigMessagesViaLibSession(userConfigMessagesMerged);
       } catch (e) {
-        const allMessageHases = allDecryptedConfigMessages.map(m => m.messageHash).join(',');
+        const allMessageHases = userConfigMessagesMerged.map(m => m.hash).join(',');
         window.log.warn(
           `failed to handle messages hashes "${allMessageHases}" with libsession. Error: "${e.message}"`
         );

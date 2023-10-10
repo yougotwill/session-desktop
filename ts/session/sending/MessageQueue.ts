@@ -31,7 +31,6 @@ import {
   SnodeNamespacesUser,
 } from '../apis/snode_api/namespaces';
 import { CallMessage } from '../messages/outgoing/controlMessage/CallMessage';
-import { SharedConfigMessage } from '../messages/outgoing/controlMessage/SharedConfigMessage';
 import { UnsendMessage } from '../messages/outgoing/controlMessage/UnsendMessage';
 import { OpenGroupVisibleMessage } from '../messages/outgoing/visibleMessage/OpenGroupVisibleMessage';
 
@@ -234,7 +233,6 @@ export class MessageQueue {
     if (
       !(message instanceof ConfigurationMessage) &&
       !(message instanceof UnsendMessage) &&
-      !(message instanceof SharedConfigMessage) &&
       !(message as any)?.syncTarget
     ) {
       throw new Error('Invalid message given to sendSyncMessage');

@@ -2,8 +2,8 @@
 
 import { AbortController } from 'abort-controller';
 import ByteBuffer from 'bytebuffer';
-import { GroupPubkeyType } from 'libsession_util_nodejs';
-import _, { isEmpty, isNil, isString, sample, toNumber } from 'lodash';
+import { GroupPubkeyType, PubkeyType } from 'libsession_util_nodejs';
+import _, { isEmpty, isNil, sample, toNumber } from 'lodash';
 import pRetry from 'p-retry';
 import { Data } from '../../data/data';
 import { SignalService } from '../../protobuf';
@@ -17,7 +17,6 @@ import {
 import {
   NotEmptyArrayOfBatchResults,
   StoreOnNodeData,
-  StoreOnNodeMessage,
   StoreOnNodeParams,
   StoreOnNodeParamsNoSig,
 } from '../apis/snode_api/SnodeRequestTypes';
@@ -31,7 +30,6 @@ import { MessageEncrypter } from '../crypto';
 import { addMessagePadding } from '../crypto/BufferPadding';
 import { ContentMessage } from '../messages/outgoing';
 import { ConfigurationMessage } from '../messages/outgoing/controlMessage/ConfigurationMessage';
-import { SharedConfigMessage } from '../messages/outgoing/controlMessage/SharedConfigMessage';
 import { UnsendMessage } from '../messages/outgoing/controlMessage/UnsendMessage';
 import { ClosedGroupNewMessage } from '../messages/outgoing/controlMessage/group/ClosedGroupNewMessage';
 import { OpenGroupVisibleMessage } from '../messages/outgoing/visibleMessage/OpenGroupVisibleMessage';
@@ -84,7 +82,6 @@ function isSyncMessage(message: ContentMessage) {
     message instanceof ConfigurationMessage ||
     message instanceof ClosedGroupNewMessage ||
     message instanceof UnsendMessage ||
-    message instanceof SharedConfigMessage ||
     (message as any).syncTarget?.length > 0
   ) {
     return true;
@@ -268,7 +265,7 @@ async function sendMessagesDataToSnode(
 
     if (!isEmpty(storeResults)) {
       window?.log?.info(
-        `sendMessagesToSnode - Successfully stored messages to ${ed25519Str(destination)} via ${
+        `sendMessagesDataToSnode - Successfully stored messages to ${ed25519Str(destination)} via ${
           snode.ip
         }:${snode.port} on namespaces: ${rightDestination.map(m => m.namespace).join(',')}`
       );
@@ -278,7 +275,7 @@ async function sendMessagesDataToSnode(
   } catch (e) {
     const snodeStr = snode ? `${snode.ip}:${snode.port}` : 'null';
     window?.log?.warn(
-      `sendMessagesToSnode - "${e.code}:${e.message}" to ${destination} via snode:${snodeStr}`
+      `sendMessagesDataToSnode - "${e.code}:${e.message}" to ${destination} via snode:${snodeStr}`
     );
     throw e;
   }
@@ -355,110 +352,6 @@ async function encryptMessagesAndWrap(
 }
 
 /**
- * Send a list of messages to a single service node.
- * Used currently only for sending SharedConfigMessage to multiple messages at a time.
- *
- * @param params the messages to deposit
- * @param destination the pubkey we should deposit those message for
- * @returns the hashes of successful deposit
- */
-async function sendMessagesToSnode(
-  params: Array<StoreOnNodeMessage>,
-  destination: string,
-  messagesHashesToDelete: Set<string> | null
-): Promise<NotEmptyArrayOfBatchResults | null> {
-  try {
-    const recipient = PubKey.cast(destination);
-
-    const encryptedAndWrapped = await encryptMessagesAndWrap(
-      params.map(m => ({
-        destination: m.pubkey,
-        plainTextBuffer: m.message.plainTextBuffer(),
-        namespace: m.namespace,
-        ttl: m.message.ttl(),
-        identifier: m.message.identifier,
-        isSyncMessage: MessageSender.isSyncMessage(m.message),
-      }))
-    );
-
-    // first update all the associated timestamps of our messages in DB, if the outgoing messages are associated with one.
-    await Promise.all(
-      encryptedAndWrapped.map(async (m, index) => {
-        // make sure to update the local sent_at timestamp, because sometimes, we will get the just pushed message in the receiver side
-        // before we return from the await below.
-        // and the isDuplicate messages relies on sent_at timestamp to be valid.
-        const found = await Data.getMessageById(m.identifier);
-
-        // make sure to not update the sent timestamp if this a currently syncing message
-        if (found && !found.get('sentSync')) {
-          found.set({ sent_at: encryptedAndWrapped[index].networkTimestamp });
-          await found.commit();
-        }
-      })
-    );
-
-    const batchResults = await pRetry(
-      async () => {
-        return MessageSender.sendMessagesDataToSnode(
-          encryptedAndWrapped.map(wrapped => ({
-            pubkey: recipient.key,
-            data64: wrapped.data64,
-            ttl: wrapped.ttl,
-            timestamp: wrapped.networkTimestamp,
-            namespace: wrapped.namespace,
-          })),
-          recipient.key,
-          messagesHashesToDelete,
-          messagesHashesToDelete?.size ? 'sequence' : 'batch'
-        );
-      },
-      {
-        retries: 2,
-        factor: 1,
-        minTimeout: MessageSender.getMinRetryTimeout(),
-        maxTimeout: 1000,
-      }
-    );
-
-    if (!batchResults || isEmpty(batchResults)) {
-      throw new Error('result is empty for sendMessagesToSnode');
-    }
-
-    const isDestinationClosedGroup = ConvoHub.use().get(recipient.key)?.isClosedGroup();
-
-    await Promise.all(
-      encryptedAndWrapped.map(async (message, index) => {
-        // If message also has a sync message, save that hash. Otherwise save the hash from the regular message send i.e. only closed groups in this case.
-        if (
-          message.identifier &&
-          (message.isSyncMessage || isDestinationClosedGroup) &&
-          batchResults[index] &&
-          !isEmpty(batchResults[index]) &&
-          isString(batchResults[index].body.hash)
-        ) {
-          const hashFoundInResponse = batchResults[index].body.hash;
-          const foundMessage = await Data.getMessageById(message.identifier);
-          if (foundMessage) {
-            await foundMessage.updateMessageHash(hashFoundInResponse);
-            await foundMessage.commit();
-            window?.log?.info(
-              `updated message ${foundMessage.get('id')} with hash: ${foundMessage.get(
-                'messageHash'
-              )}`
-            );
-          }
-        }
-      })
-    );
-
-    return batchResults;
-  } catch (e) {
-    window.log.warn(`sendMessagesToSnode failed with ${e.message}`);
-    return null;
-  }
-}
-
-/**
  * Send an array of preencrypted data to the corresponding swarm.
  * Used currently only for sending libsession GroupInfo, GroupMembers and groupKeys config updates.
  *
@@ -468,7 +361,7 @@ async function sendMessagesToSnode(
  */
 async function sendEncryptedDataToSnode(
   encryptedData: Array<StoreOnNodeData>,
-  destination: GroupPubkeyType,
+  destination: GroupPubkeyType | PubkeyType,
   messagesHashesToDelete: Set<string> | null
 ): Promise<NotEmptyArrayOfBatchResults | null> {
   try {
@@ -602,7 +495,6 @@ async function sendToOpenGroupV2BlindedRequest(
 export const MessageSender = {
   sendToOpenGroupV2BlindedRequest,
   sendMessagesDataToSnode,
-  sendMessagesToSnode,
   sendEncryptedDataToSnode,
   getMinRetryTimeout,
   sendToOpenGroupV2,

@@ -1,5 +1,4 @@
-import { GroupPubkeyType } from 'libsession_util_nodejs';
-import { SharedUserConfigMessage } from '../../messages/outgoing/controlMessage/SharedConfigMessage';
+import { GroupPubkeyType, PubkeyType } from 'libsession_util_nodejs';
 import { SnodeNamespaces, SnodeNamespacesGroup } from './namespaces';
 
 export type SwarmForSubRequest = { method: 'get_swarm'; params: { pubkey: string } };
@@ -109,15 +108,8 @@ export type DeleteFromNodeWithTimestampParams = {
 } & DeleteSigParameters;
 export type DeleteByHashesFromNodeParams = { messages: Array<string> } & DeleteSigParameters;
 
-export type StoreOnNodeMessage = {
-  pubkey: string;
-  timestamp: number;
-  namespace: number;
-  message: SharedUserConfigMessage;
-};
-
 export type StoreOnNodeData = {
-  pubkey: GroupPubkeyType;
+  pubkey: GroupPubkeyType | PubkeyType;
   networkTimestamp: number;
   namespace: number;
   data: Uint8Array;

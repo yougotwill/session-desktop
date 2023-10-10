@@ -145,7 +145,6 @@ describe('GroupSyncJob pendingChangesForGroup', () => {
       type: 'GroupKeys',
       data: new Uint8Array([3, 2, 1]),
       namespace: 13,
-      timestamp: 1234,
     });
     // check for the info push content
     expect(result.messages[1]).to.be.deep.eq({
@@ -153,7 +152,6 @@ describe('GroupSyncJob pendingChangesForGroup', () => {
       data: new Uint8Array([1, 2, 3]),
       namespace: 12,
       seqno: Long.fromInt(pushResults.groupInfo.seqno),
-      timestamp: 1234,
     });
     // check for the members pusu content
     expect(result.messages[2]).to.be.deep.eq({
@@ -161,7 +159,6 @@ describe('GroupSyncJob pendingChangesForGroup', () => {
       data: new Uint8Array([1, 2]),
       namespace: 14,
       seqno: Long.fromInt(pushResults.groupMember.seqno),
-      timestamp: 1234,
     });
   });
 
@@ -332,7 +329,7 @@ describe('GroupSyncJob resultsToSuccessfulChange', () => {
     ];
     const request: GroupSingleDestinationChanges = {
       allOldHashes: new Set(),
-      messages: [infoNoData as PendingChangesForGroup, member],
+      messages: [infoNoData as any as PendingChangesForGroup, member],
     };
     const results = GroupSync.resultsToSuccessfulChange(batchResults, request);
     expect(results).to.be.deep.eq([
