@@ -14,7 +14,7 @@ import { ConvoHub } from '../../session/conversations';
 import { UserUtils } from '../../session/utils';
 import { getUserED25519KeyPairBytes } from '../../session/utils/User';
 import { PreConditionFailed } from '../../session/utils/errors';
-import { GroupSync } from '../../session/utils/job_runners/jobs/GroupConfigJob';
+import { GroupSync } from '../../session/utils/job_runners/jobs/GroupSyncJob';
 import { stringify, toFixedUint8ArrayOfLength } from '../../types/sqlSharedTypes';
 import {
   getGroupPubkeyFromWrapperType,

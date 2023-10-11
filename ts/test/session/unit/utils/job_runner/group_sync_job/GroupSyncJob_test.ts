@@ -14,7 +14,7 @@ import { LibSodiumWrappers } from '../../../../../../session/crypto';
 import { MessageSender } from '../../../../../../session/sending';
 import { UserUtils } from '../../../../../../session/utils';
 import { RunJobResult } from '../../../../../../session/utils/job_runners/PersistedJob';
-import { GroupSync } from '../../../../../../session/utils/job_runners/jobs/GroupConfigJob';
+import { GroupSync } from '../../../../../../session/utils/job_runners/jobs/GroupSyncJob';
 import {
   GroupDestinationChanges,
   GroupSuccessfulChange,
