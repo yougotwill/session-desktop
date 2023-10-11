@@ -16,14 +16,14 @@ import {
   GenericWrapperActions,
   MetaGroupWrapperActions,
 } from '../../../webworker/workers/browser/libsession_worker_interface';
-import { SnodeNamespaces, UserConfigNamespaces } from '../../apis/snode_api/namespaces';
-import { ed25519Str } from '../../onions/onionPath';
-import { PubKey } from '../../types';
-import { UserSync } from '../job_runners/jobs/UserSyncJob';
 import {
   BatchResultEntry,
   NotEmptyArrayOfBatchResults,
 } from '../../apis/snode_api/SnodeRequestTypes';
+import { SnodeNamespaces, UserConfigNamespaces } from '../../apis/snode_api/namespaces';
+import { ed25519Str } from '../../onions/onionPath';
+import { PubKey } from '../../types';
+import { UserSync } from '../job_runners/jobs/UserSyncJob';
 
 const requiredUserVariants: Array<ConfigWrapperUser> = [
   'UserConfig',
@@ -165,7 +165,7 @@ async function pendingChangesForUs(): Promise<UserDestinationChanges> {
       namespace, // we only use the namespace to know to wha
     });
 
-    hashes.forEach(results.allOldHashes.add); // add all the hashes to the set
+    hashes.forEach(h => results.allOldHashes.add(h)); // add all the hashes to the set
   }
   window.log.info(`those user variants needs push: "${[...variantsNeedingPush]}"`);
 

@@ -1,5 +1,5 @@
 import * as crypto from 'crypto';
-import { GroupPubkeyType, UserGroupsWrapperNode } from 'libsession_util_nodejs';
+import { GroupPubkeyType, PubkeyType, UserGroupsWrapperNode } from 'libsession_util_nodejs';
 import { KeyPair, to_hex } from 'libsodium-wrappers-sumo';
 import _ from 'lodash';
 import { Snode } from '../../../data/data';
@@ -28,7 +28,7 @@ export function generateFakePubKeyStr(): string {
 
 export type TestUserKeyPairs = {
   x25519KeyPair: {
-    pubkeyHex: string;
+    pubkeyHex: PubkeyType;
     pubKey: Uint8Array;
     privKey: Uint8Array;
   };
@@ -51,7 +51,7 @@ export async function generateUserKeyPairs(): Promise<TestUserKeyPairs> {
   // prepend with 05 the public key
   const userKeys = {
     x25519KeyPair: {
-      pubkeyHex: to_hex(prependedX25519PublicKey),
+      pubkeyHex: to_hex(prependedX25519PublicKey) as PubkeyType,
       pubKey: prependedX25519PublicKey,
       privKey: x25519SecretKey,
     },
