@@ -4,7 +4,7 @@ import { isArray, isEmpty, isNumber } from 'lodash';
 import { v4 } from 'uuid';
 import { UserUtils } from '../..';
 import { ConfigDumpData } from '../../../../data/configDump/configDump';
-import { ConfigurationSyncJobDone } from '../../../../shims/events';
+import { UserSyncJobDone } from '../../../../shims/events';
 import { isSignInByLinking } from '../../../../util/storage';
 import { GenericWrapperActions } from '../../../../webworker/workers/browser/libsession_worker_interface';
 import { StoreOnNodeData } from '../../../apis/snode_api/SnodeRequestTypes';
@@ -17,7 +17,7 @@ import { LibSessionUtil, UserSuccessfulChange } from '../../libsession/libsessio
 import { runners } from '../JobRunner';
 import {
   AddJobCheckReturn,
-  ConfigurationSyncPersistedData,
+  UserSyncPersistedData,
   PersistedJob,
   RunJobResult,
 } from '../PersistedJob';
@@ -58,7 +58,7 @@ async function confirmPushedAndDump(
 }
 
 function triggerConfSyncJobDone() {
-  window.Whisper.events.trigger(ConfigurationSyncJobDone);
+  window.Whisper.events.trigger(UserSyncJobDone);
 }
 
 function isPubkey(us: string): us is PubkeyType {
@@ -98,7 +98,7 @@ async function pushChangesToUserSwarmIfNeeded() {
   // we do a sequence call here. If we do not have the right expected number of results, consider it a failure
   if (!isArray(result) || result.length !== expectedReplyLength) {
     window.log.info(
-      `ConfigurationSyncJob: unexpected result length: expected ${expectedReplyLength} but got ${result?.length}`
+      `UserSyncJob: unexpected result length: expected ${expectedReplyLength} but got ${result?.length}`
     );
     // this might be a 421 error (already handled) so let's retry this request a little bit later
     return RunJobResult.RetryJobIfPossible;
@@ -116,7 +116,7 @@ async function pushChangesToUserSwarmIfNeeded() {
   return RunJobResult.Success;
 }
 
-class ConfigurationSyncJob extends PersistedJob<ConfigurationSyncPersistedData> {
+class UserSyncJob extends PersistedJob<UserSyncPersistedData> {
   constructor({
     identifier,
     nextAttemptTimestamp,
@@ -124,12 +124,12 @@ class ConfigurationSyncJob extends PersistedJob<ConfigurationSyncPersistedData> 
     currentRetry,
   }: Partial<
     Pick<
-      ConfigurationSyncPersistedData,
+      UserSyncPersistedData,
       'identifier' | 'nextAttemptTimestamp' | 'currentRetry' | 'maxAttempts'
     >
   >) {
     super({
-      jobType: 'ConfigurationSyncJobType',
+      jobType: 'UserSyncJobType',
       identifier: identifier || v4(),
       delayBetweenRetries: defaultMsBetweenRetries,
       maxAttempts: isNumber(maxAttempts) ? maxAttempts : defaultMaxAttempts,
@@ -142,7 +142,7 @@ class ConfigurationSyncJob extends PersistedJob<ConfigurationSyncPersistedData> 
     const start = Date.now();
 
     try {
-      window.log.debug(`ConfigurationSyncJob starting ${this.persistedData.identifier}`);
+      window.log.debug(`UserSyncJob starting ${this.persistedData.identifier}`);
 
       const us = UserUtils.getOurPubKeyStrFromCache();
       const ed25519Key = await UserUtils.getUserED25519KeyPairBytes();
@@ -158,7 +158,7 @@ class ConfigurationSyncJob extends PersistedJob<ConfigurationSyncPersistedData> 
     } catch (e) {
       throw e;
     } finally {
-      window.log.debug(`ConfigurationSyncJob run() took ${Date.now() - start}ms`);
+      window.log.debug(`UserSyncJob run() took ${Date.now() - start}ms`);
 
       // this is a simple way to make sure whatever happens here, we update the lastest timestamp.
       // (a finally statement is always executed (no matter if exception or returns in other try/catch block)
@@ -166,12 +166,12 @@ class ConfigurationSyncJob extends PersistedJob<ConfigurationSyncPersistedData> 
     }
   }
 
-  public serializeJob(): ConfigurationSyncPersistedData {
+  public serializeJob(): UserSyncPersistedData {
     const fromParent = super.serializeBase();
     return fromParent;
   }
 
-  public addJobCheck(jobs: Array<ConfigurationSyncPersistedData>): AddJobCheckReturn {
+  public addJobCheck(jobs: Array<UserSyncPersistedData>): AddJobCheckReturn {
     return this.addJobCheckSameTypePresent(jobs);
   }
 
@@ -180,7 +180,7 @@ class ConfigurationSyncJob extends PersistedJob<ConfigurationSyncPersistedData> 
    * We never want to add a new sync configuration job if there is already one in the queue.
    * This is done by the `addJobCheck` method above
    */
-  public nonRunningJobsToRemove(_jobs: Array<ConfigurationSyncPersistedData>) {
+  public nonRunningJobsToRemove(_jobs: Array<UserSyncPersistedData>) {
     return [];
   }
 
@@ -195,7 +195,7 @@ class ConfigurationSyncJob extends PersistedJob<ConfigurationSyncPersistedData> 
 
 /**
  * Queue a new Sync Configuration if needed job.
- * A ConfigurationSyncJob can only be added if there is none of the same type queued already.
+ * A UserSyncJob can only be added if there is none of the same type queued already.
  */
 async function queueNewJobIfNeeded() {
   if (isSignInByLinking()) {
@@ -210,8 +210,8 @@ async function queueNewJobIfNeeded() {
     // window.log.debug('Scheduling ConfSyncJob: ASAP');
     // we postpone by 1000ms to make sure whoever is adding this job is done with what is needs to do first
     // this call will make sure that there is only one configuration sync job at all times
-    await runners.configurationSyncRunner.addJob(
-      new ConfigurationSyncJob({ nextAttemptTimestamp: Date.now() + 1000 })
+    await runners.userSyncRunner.addJob(
+      new UserSyncJob({ nextAttemptTimestamp: Date.now() + 1000 })
     );
   } else {
     // if we did run at t=100, and it is currently t=110, the difference is 10
@@ -220,14 +220,13 @@ async function queueNewJobIfNeeded() {
     const leftBeforeNextTick = Math.max(defaultMsBetweenRetries - diff, 1000);
     // window.log.debug('Scheduling ConfSyncJob: LATER');
 
-    await runners.configurationSyncRunner.addJob(
-      new ConfigurationSyncJob({ nextAttemptTimestamp: Date.now() + leftBeforeNextTick })
+    await runners.userSyncRunner.addJob(
+      new UserSyncJob({ nextAttemptTimestamp: Date.now() + leftBeforeNextTick })
     );
   }
 }
 
-export const ConfigurationSync = {
-  ConfigurationSyncJob,
-  queueNewJobIfNeeded: () =>
-    allowOnlyOneAtATime('ConfigurationSyncJob-oneAtAtTime', queueNewJobIfNeeded),
+export const UserSync = {
+  UserSyncJob,
+  queueNewJobIfNeeded: () => allowOnlyOneAtATime('UserSyncJob-oneAtAtTime', queueNewJobIfNeeded),
 };

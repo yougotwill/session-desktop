@@ -29,7 +29,7 @@ import { SnodeNamespaces } from '../apis/snode_api/namespaces';
 import { ClosedGroupMemberLeftMessage } from '../messages/outgoing/controlMessage/group/ClosedGroupMemberLeftMessage';
 import { ed25519Str } from '../onions/onionPath';
 import { UserUtils } from '../utils';
-import { ConfigurationSync } from '../utils/job_runners/jobs/ConfigurationSyncJob';
+import { UserSync } from '../utils/job_runners/jobs/UserSyncJob';
 import { LibSessionUtil } from '../utils/libsession/libsession_utils';
 import { SessionUtilContact } from '../utils/libsession/libsession_utils_contacts';
 import { SessionUtilConvoInfoVolatile } from '../utils/libsession/libsession_utils_convo_info_volatile';
@@ -227,7 +227,7 @@ class ConvoController {
     }
 
     if (!options.fromSyncMessage) {
-      await ConfigurationSync.queueNewJobIfNeeded();
+      await UserSync.queueNewJobIfNeeded();
     }
   }
 
@@ -246,7 +246,7 @@ class ConvoController {
     await this.removeGroupOrCommunityFromDBAndRedux(conversation.id);
 
     if (!options.fromSyncMessage) {
-      await ConfigurationSync.queueNewJobIfNeeded();
+      await UserSync.queueNewJobIfNeeded();
     }
   }
 
@@ -291,7 +291,7 @@ class ConvoController {
     }
 
     if (!options.fromSyncMessage) {
-      await ConfigurationSync.queueNewJobIfNeeded();
+      await UserSync.queueNewJobIfNeeded();
     }
   }
 

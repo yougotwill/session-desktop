@@ -1,5 +1,5 @@
 export type JobRunnerType =
-  | 'ConfigurationSyncJob'
+  | 'UserSyncJob'
   | 'GroupSyncJob'
   | 'FakeSleepForJob'
   | 'FakeSleepForMultiJob'

@@ -45,7 +45,7 @@ import {
 import { isDarkTheme } from '../../state/selectors/theme';
 import { ThemeStateType } from '../../themes/constants/colors';
 import { switchThemeTo } from '../../themes/switchTheme';
-import { ConfigurationSync } from '../../session/utils/job_runners/jobs/ConfigurationSyncJob';
+import { UserSync } from '../../session/utils/job_runners/jobs/UserSyncJob';
 
 const Section = (props: { type: SectionType }) => {
   const ourNumber = useSelector(getOurNumber);
@@ -212,7 +212,7 @@ const doAppStartUp = async () => {
 
   global.setTimeout(() => {
     // Schedule a confSyncJob in some time to let anything incoming from the network be applied and see if there is a push needed
-    void ConfigurationSync.queueNewJobIfNeeded();
+    void UserSync.queueNewJobIfNeeded();
   }, 20000);
 };
 

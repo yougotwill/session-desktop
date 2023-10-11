@@ -16,7 +16,7 @@ import { ProfileManager } from '../session/profile_manager/ProfileManager';
 import { PubKey } from '../session/types';
 import { StringUtils, UserUtils } from '../session/utils';
 import { toHex } from '../session/utils/String';
-import { ConfigurationSync } from '../session/utils/job_runners/jobs/ConfigurationSyncJob';
+import { UserSync } from '../session/utils/job_runners/jobs/UserSyncJob';
 import { LibSessionUtil } from '../session/utils/libsession/libsession_utils';
 import { SessionUtilContact } from '../session/utils/libsession/libsession_utils_contacts';
 import { SessionUtilConvoInfoVolatile } from '../session/utils/libsession/libsession_utils_convo_info_volatile';
@@ -910,7 +910,7 @@ async function processUserMergingResults(results: Map<ConfigWrapperUser, Incomin
   // Now that the local state has been updated, trigger a config sync (this will push any
   // pending updates and properly update the state)
   if (anyNeedsPush) {
-    await ConfigurationSync.queueNewJobIfNeeded();
+    await UserSync.queueNewJobIfNeeded();
   }
 }
 

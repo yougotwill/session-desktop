@@ -13,7 +13,7 @@ import { ConvoHub } from '../../../../session/conversations';
 import { PubKey } from '../../../../session/types';
 import { UserUtils } from '../../../../session/utils';
 import { sleepFor } from '../../../../session/utils/Promise';
-import { ConfigurationSync } from '../../../../session/utils/job_runners/jobs/ConfigurationSyncJob';
+import { UserSync } from '../../../../session/utils/job_runners/jobs/UserSyncJob';
 import { TestUtils } from '../../../test-utils';
 import { generateFakeSnodes, stubData } from '../../../test-utils/utils';
 
@@ -52,7 +52,7 @@ describe('SwarmPolling:pollForAllKeys', () => {
     ConvoHub.use().reset();
     TestUtils.stubWindowFeatureFlags();
     TestUtils.stubWindowLog();
-    Sinon.stub(ConfigurationSync, 'queueNewJobIfNeeded').resolves();
+    Sinon.stub(UserSync, 'queueNewJobIfNeeded').resolves();
 
     // Utils Stubs
     Sinon.stub(UserUtils, 'getOurPubKeyStrFromCache').returns(ourNumber);

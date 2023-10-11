@@ -7,7 +7,7 @@ import { OpenGroupData } from '../../../data/opengroups';
 import { ConversationModel } from '../../../models/conversation';
 import { SignalService } from '../../../protobuf';
 import { ECKeyPair } from '../../../receiver/keypairs';
-import { ConfigurationSyncJobDone } from '../../../shims/events';
+import { UserSyncJobDone } from '../../../shims/events';
 import { ReleasedFeatures } from '../../../util/releaseFeature';
 import { Storage } from '../../../util/storage';
 import { getCompleteUrlFromRoom } from '../../apis/open_group_api/utils/OpenGroupUtils';
@@ -30,7 +30,7 @@ import {
 } from '../../messages/outgoing/visibleMessage/VisibleMessage';
 import { PubKey } from '../../types';
 import { fromBase64ToArray, fromHexToArray } from '../String';
-import { ConfigurationSync } from '../job_runners/jobs/ConfigurationSyncJob';
+import { UserSync } from '../job_runners/jobs/UserSyncJob';
 
 const ITEM_ID_LAST_SYNC_TIMESTAMP = 'lastSyncedTimestamp';
 
@@ -44,7 +44,7 @@ const writeLastSyncTimestampToDb = async (timestamp: number) =>
  * Conditionally Syncs user configuration with other devices linked.
  */
 export const syncConfigurationIfNeeded = async () => {
-  await ConfigurationSync.queueNewJobIfNeeded();
+  await UserSync.queueNewJobIfNeeded();
 
   const userConfigLibsession = await ReleasedFeatures.checkIsUserConfigFeatureReleased();
   if (!userConfigLibsession) {
@@ -84,16 +84,16 @@ export const forceSyncConfigurationNowIfNeeded = async (waitForMessageSent = fal
       resolve(false);
     }, 20000);
 
-    // the ConfigurationSync also handles dumping in to the DB if we do not need to push the data, but the dumping needs to be done even before the feature flag is true.
-    void ConfigurationSync.queueNewJobIfNeeded().catch(e => {
+    // the UserSync also handles dumping in to the DB if we do not need to push the data, but the dumping needs to be done even before the feature flag is true.
+    void UserSync.queueNewJobIfNeeded().catch(e => {
       window.log.warn(
-        'forceSyncConfigurationNowIfNeeded scheduling of jobs ConfigurationSync.queueNewJobIfNeeded failed with: ',
+        'forceSyncConfigurationNowIfNeeded scheduling of jobs UserSync.queueNewJobIfNeeded failed with: ',
         e.message
       );
     });
     if (ReleasedFeatures.isUserConfigFeatureReleasedCached()) {
       if (waitForMessageSent) {
-        window.Whisper.events.once(ConfigurationSyncJobDone, () => {
+        window.Whisper.events.once(UserSyncJobDone, () => {
           resolve(true);
         });
         return;

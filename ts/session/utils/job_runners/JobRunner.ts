@@ -1,17 +1,17 @@
 import { cloneDeep, compact, isArray, isString } from 'lodash';
 import { Data } from '../../../data/data';
+import { Storage } from '../../../util/storage';
 import { timeout } from '../Promise';
 import { persistedJobFromData } from './JobDeserialization';
-import { JobRunnerType } from './jobs/JobRunnerType';
 import {
   AvatarDownloadPersistedData,
-  ConfigurationSyncPersistedData,
   GroupSyncPersistedData,
   PersistedJob,
   RunJobResult,
   TypeOfPersistedData,
+  UserSyncPersistedData,
 } from './PersistedJob';
-import { Storage } from '../../../util/storage';
+import { JobRunnerType } from './jobs/JobRunnerType';
 
 /**
  * 'job_in_progress' if there is already a job in progress
@@ -351,10 +351,7 @@ export class PersistedJobRunner<T extends TypeOfPersistedData> {
   }
 }
 
-const configurationSyncRunner = new PersistedJobRunner<ConfigurationSyncPersistedData>(
-  'ConfigurationSyncJob',
-  null
-);
+const userSyncRunner = new PersistedJobRunner<UserSyncPersistedData>('UserSyncJob', null);
 const groupSyncRunner = new PersistedJobRunner<GroupSyncPersistedData>('GroupSyncJob', null);
 
 const avatarDownloadRunner = new PersistedJobRunner<AvatarDownloadPersistedData>(
@@ -363,7 +360,7 @@ const avatarDownloadRunner = new PersistedJobRunner<AvatarDownloadPersistedData>
 );
 
 export const runners = {
-  configurationSyncRunner,
+  userSyncRunner,
   groupSyncRunner,
   avatarDownloadRunner,
 };

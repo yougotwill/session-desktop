@@ -15,7 +15,7 @@ import { getSodiumRenderer } from '../session/crypto';
 import { getDecryptedMediaUrl } from '../session/crypto/DecryptedAttachmentsManager';
 import { perfEnd, perfStart } from '../session/utils/Performance';
 import { fromHexToArray, toHex } from '../session/utils/String';
-import { ConfigurationSync } from '../session/utils/job_runners/jobs/ConfigurationSyncJob';
+import { UserSync } from '../session/utils/job_runners/jobs/UserSyncJob';
 import { SessionUtilContact } from '../session/utils/libsession/libsession_utils_contacts';
 import { forceSyncConfigurationNowIfNeeded } from '../session/utils/sync/syncUtils';
 import {
@@ -466,7 +466,7 @@ export async function uploadOurAvatar(newAvatarDecrypted?: ArrayBuffer) {
 
   if (newAvatarDecrypted) {
     await setLastProfileUpdateTimestamp(Date.now());
-    await ConfigurationSync.queueNewJobIfNeeded();
+    await UserSync.queueNewJobIfNeeded();
     const userConfigLibsession = await ReleasedFeatures.checkIsUserConfigFeatureReleased();
 
     if (!userConfigLibsession) {

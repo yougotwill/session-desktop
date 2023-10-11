@@ -162,7 +162,7 @@ class GroupSyncJob extends PersistedJob<GroupSyncPersistedData> {
     } catch (e) {
       throw e;
     } finally {
-      window.log.debug(`ConfigurationSyncJob run() took ${Date.now() - start}ms`);
+      window.log.debug(`UserSyncJob run() took ${Date.now() - start}ms`);
 
       // this is a simple way to make sure whatever happens here, we update the lastest timestamp.
       // (a finally statement is always executed (no matter if exception or returns in other try/catch block)

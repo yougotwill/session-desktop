@@ -1,5 +1,5 @@
 import { GetNetworkTime } from '../session/apis/snode_api/getNetworkTime';
-import { ConfigurationSync } from '../session/utils/job_runners/jobs/ConfigurationSyncJob';
+import { UserSync } from '../session/utils/job_runners/jobs/UserSyncJob';
 import { assertUnreachable } from '../types/sqlSharedTypes';
 import { Storage } from './storage';
 
@@ -87,7 +87,7 @@ async function checkIsFeatureReleased(featureName: FeatureNameTracked): Promise<
     await Storage.put(featureStorageItemId(featureName), true);
     setIsFeatureReleasedCached(featureName, true);
     // trigger a sync right away so our user data is online
-    await ConfigurationSync.queueNewJobIfNeeded();
+    await UserSync.queueNewJobIfNeeded();
   }
 
   const isReleased = Boolean(getIsFeatureReleasedCached(featureName));

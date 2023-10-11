@@ -18,7 +18,7 @@ import { PubKey } from '../../types';
  *
  * Also, to make sure that our wrapper is up to date, we schedule jobs to be run and fetch all contacts and update all the wrappers entries.
  * This is done in the
- *    - `ConfigurationSyncJob` (sending data to the network) and the
+ *    - `UserSyncJob` (sending data to the network) and the
  *
  */
 const mappedContactWrapperValues = new Map<string, ContactInfo>();

@@ -1,7 +1,7 @@
 import { cloneDeep, isEmpty } from 'lodash';
 
 export type PersistedJobType =
-  | 'ConfigurationSyncJobType'
+  | 'UserSyncJobType'
   | 'GroupSyncJobType'
   | 'AvatarDownloadJobType'
   | 'FakeSleepForJobType'
@@ -32,15 +32,15 @@ export interface AvatarDownloadPersistedData extends PersistedJobData {
   conversationId: string;
 }
 
-export interface ConfigurationSyncPersistedData extends PersistedJobData {
-  jobType: 'ConfigurationSyncJobType';
+export interface UserSyncPersistedData extends PersistedJobData {
+  jobType: 'UserSyncJobType';
 }
 export interface GroupSyncPersistedData extends PersistedJobData {
   jobType: 'GroupSyncJobType';
 }
 
 export type TypeOfPersistedData =
-  | ConfigurationSyncPersistedData
+  | UserSyncPersistedData
   | AvatarDownloadPersistedData
   | FakeSleepJobData
   | FakeSleepForMultiJobData

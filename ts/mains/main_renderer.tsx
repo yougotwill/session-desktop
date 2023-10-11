@@ -114,8 +114,8 @@ async function startJobRunners() {
   // start the job runners
   await runners.avatarDownloadRunner.loadJobsFromDb();
   runners.avatarDownloadRunner.startProcessing();
-  await runners.configurationSyncRunner.loadJobsFromDb();
-  runners.configurationSyncRunner.startProcessing();
+  await runners.userSyncRunner.loadJobsFromDb();
+  runners.userSyncRunner.startProcessing();
   await runners.groupSyncRunner.loadJobsFromDb();
   runners.groupSyncRunner.startProcessing();
 }

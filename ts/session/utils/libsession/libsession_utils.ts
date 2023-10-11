@@ -19,7 +19,7 @@ import {
 import { SnodeNamespaces, UserConfigNamespaces } from '../../apis/snode_api/namespaces';
 import { ed25519Str } from '../../onions/onionPath';
 import { PubKey } from '../../types';
-import { ConfigurationSync } from '../job_runners/jobs/ConfigurationSyncJob';
+import { UserSync } from '../job_runners/jobs/UserSyncJob';
 import {
   BatchResultEntry,
   NotEmptyArrayOfBatchResults,
@@ -39,7 +39,7 @@ async function initializeLibSessionUtilWrappers() {
   }
   const privateKeyEd25519 = keypair.privKeyBytes;
   // let's plan a sync on start with some room for the app to be ready
-  setTimeout(() => ConfigurationSync.queueNewJobIfNeeded, 20000);
+  setTimeout(() => UserSync.queueNewJobIfNeeded, 20000);
 
   // fetch the dumps we already have from the database
   const dumps = await ConfigDumpData.getAllDumpsWithData();
