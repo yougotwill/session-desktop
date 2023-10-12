@@ -43,6 +43,11 @@ async function confirmPushedAndDump(
       change.pushed.seqno.toNumber(),
       change.updatedHash
     );
+  }
+
+  const { requiredUserVariants } = LibSessionUtil;
+  for (let index = 0; index < requiredUserVariants.length; index++) {
+    const variant = requiredUserVariants[index];
     const needsDump = await GenericWrapperActions.needsDump(variant);
 
     if (!needsDump) {

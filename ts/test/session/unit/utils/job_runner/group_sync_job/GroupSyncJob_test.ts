@@ -281,7 +281,6 @@ describe('GroupSyncJob pushChangesToGroupSwarmIfNeeded', () => {
   });
 
   it('calls sendEncryptedDataToSnode with the right data and retry if network returned nothing', async () => {
-    throw null; // this test might not be right
     const info = validInfo(sodium);
     const member = validMembers(sodium);
     const networkTimestamp = 4444;
@@ -320,7 +319,6 @@ describe('GroupSyncJob pushChangesToGroupSwarmIfNeeded', () => {
   });
 
   it('calls sendEncryptedDataToSnode with the right data (and keys) and retry if network returned nothing', async () => {
-    throw null; // this test might not be right
     const info = validInfo(sodium);
     const member = validMembers(sodium);
     const keys = validKeys(sodium);
@@ -335,11 +333,11 @@ describe('GroupSyncJob pushChangesToGroupSwarmIfNeeded', () => {
       },
       {
         pushed: info,
-        updatedHash: 'hash1',
+        updatedHash: 'hashinfo',
       },
       {
         pushed: member,
-        updatedHash: 'hash2',
+        updatedHash: 'hashmember',
       },
     ];
     Sinon.stub(LibSessionUtil, 'batchResultsToGroupSuccessfulChange').returns(changes);
@@ -347,25 +345,28 @@ describe('GroupSyncJob pushChangesToGroupSwarmIfNeeded', () => {
 
     sendStub.resolves([
       { code: 200, body: { hash: 'hashkeys' } },
-      { code: 200, body: { hash: 'hash1' } },
-      { code: 200, body: { hash: 'hash2' } },
+      { code: 200, body: { hash: 'hashinfo' } },
+      { code: 200, body: { hash: 'hashmember' } },
       { code: 200, body: {} }, // because we are giving a set of allOldHashes
     ]);
     const result = await GroupSync.pushChangesToGroupSwarmIfNeeded(groupPk);
 
     expect(sendStub.callCount).to.be.eq(1);
     expect(pendingChangesForGroupStub.callCount).to.be.eq(1);
-    expect(saveDumpsToDbStub.callCount).to.be.eq(2);
+
     expect(saveDumpsToDbStub.firstCall.args).to.be.deep.eq([groupPk]);
     expect(saveDumpsToDbStub.secondCall.args).to.be.deep.eq([groupPk]);
-    expect(metaConfirmPushed.callCount).to.be.eq(1);
+    expect(saveDumpsToDbStub.callCount).to.be.eq(2);
+
     expect(metaConfirmPushed.firstCall.args).to.be.deep.eq([
       groupPk,
       {
-        groupInfo: [123, 'hash1'],
-        groupMember: [321, 'hash2'],
+        groupInfo: [123, 'hashinfo'],
+        groupMember: [321, 'hashmember'],
       },
     ]);
+    expect(metaConfirmPushed.callCount).to.be.eq(1);
+
     expect(result).to.be.eq(RunJobResult.Success);
   });
 });

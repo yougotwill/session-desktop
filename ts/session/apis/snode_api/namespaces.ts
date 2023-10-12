@@ -1,6 +1,6 @@
 import { last, orderBy } from 'lodash';
-import { assertUnreachable } from '../../../types/sqlSharedTypes';
 import { PickEnum } from '../../../types/Enums';
+import { assertUnreachable } from '../../../types/sqlSharedTypes';
 
 export enum SnodeNamespaces {
   /**
@@ -32,7 +32,7 @@ export enum SnodeNamespaces {
   UserGroups = 5,
 
   /**
-   * This is the namespace used to sync the closed group details for each closed group
+   * This is the namespace used to sync the closed group messages for each closed group
    */
   ClosedGroupMessages = 11,
 

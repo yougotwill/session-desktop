@@ -275,13 +275,14 @@ describe('UserSyncJob pushChangesToUserSwarmIfNeeded', () => {
   });
 
   it('calls sendEncryptedDataToSnode with the right data x2 and retry if network returned nothing', async () => {
-    Sinon.stub(GenericWrapperActions, 'needsDump').resolves(false);
+    Sinon.stub(GenericWrapperActions, 'needsDump').resolves(false).onSecondCall().resolves(true);
 
     const profile = userChange(sodium, SnodeNamespaces.UserProfile, 321);
     const contact = userChange(sodium, SnodeNamespaces.UserContacts, 123);
     const networkTimestamp = 4444;
     const ttl = TTL_DEFAULT.TTL_CONFIG;
     Sinon.stub(GetNetworkTime, 'getNowWithNetworkOffset').returns(networkTimestamp);
+
     pendingChangesForUsStub.resolves({
       messages: [profile, contact],
       allOldHashes: new Set('123'),
@@ -292,7 +293,8 @@ describe('UserSyncJob pushChangesToUserSwarmIfNeeded', () => {
     expect(result).to.be.eq(RunJobResult.RetryJobIfPossible); // not returning anything in the sendstub so network issue happened
     expect(sendStub.callCount).to.be.eq(1);
     expect(pendingChangesForUsStub.callCount).to.be.eq(1);
-    expect(dump.callCount).to.be.eq(0);
+    expect(dump.callCount).to.be.eq(1);
+    expect(dump.firstCall.args).to.be.deep.eq(['ContactsConfig']);
 
     function expected(details: any) {
       return {
@@ -303,8 +305,6 @@ describe('UserSyncJob pushChangesToUserSwarmIfNeeded', () => {
         pubkey: sessionId,
       };
     }
-    throw null; //
-    //   this test is not right. check for dump logic and make sure this matches
 
     const expectedProfile = expected(profile);
     const expectedContact = expected(contact);
@@ -320,8 +320,6 @@ describe('UserSyncJob pushChangesToUserSwarmIfNeeded', () => {
     const contact = userChange(sodium, SnodeNamespaces.UserContacts, 123);
     const groups = userChange(sodium, SnodeNamespaces.UserGroups, 111);
 
-    throw null; //
-    //   this test is not right. check for dump logic and make sure this matches
     pendingChangesForUsStub.resolves({
       messages: [profile, contact, groups],
       allOldHashes: new Set('123'),
@@ -343,25 +341,88 @@ describe('UserSyncJob pushChangesToUserSwarmIfNeeded', () => {
     Sinon.stub(LibSessionUtil, 'batchResultsToUserSuccessfulChange').returns(changes);
     const confirmPushed = Sinon.stub(GenericWrapperActions, 'confirmPushed').resolves();
 
-    const needsDump = Sinon.stub(GenericWrapperActions, 'needsDump').resolves();
+    // all 4 need to be dumped
+    const needsDump = Sinon.stub(GenericWrapperActions, 'needsDump').resolves(true);
 
+    // ============ 1st try, let's say we didn't get as much entries in the result as expected. This should be a fail
     sendStub.resolves([
       { code: 200, body: { hash: 'hashprofile' } },
       { code: 200, body: { hash: 'hashcontact' } },
       { code: 200, body: { hash: 'hashgroup' } },
-      { code: 200, body: {} }, // because we are giving a set of allOldHashes
     ]);
-    const result = await UserSync.pushChangesToUserSwarmIfNeeded();
+    let result = await UserSync.pushChangesToUserSwarmIfNeeded();
 
     expect(sendStub.callCount).to.be.eq(1);
     expect(pendingChangesForUsStub.callCount).to.be.eq(1);
-    expect(dump.callCount).to.be.eq(2);
-    expect(dump.firstCall.args).to.be.deep.eq([sessionId]);
-    expect(needsDump.callCount).to.be.eq(4);
-    expect(needsDump.getCalls().map(m => m.args)).to.be.deep.eq([[sessionId, []]]);
+    expect(dump.getCalls().map(m => m.args)).to.be.deep.eq([
+      ['UserConfig'],
+      ['ContactsConfig'],
+      ['UserGroupsConfig'],
+      ['ConvoInfoVolatileConfig'],
+    ]);
+    expect(dump.callCount).to.be.eq(4);
 
-    expect(confirmPushed.callCount).to.be.eq(4);
-    expect(confirmPushed.getCalls().map(m => m.args)).to.be.deep.eq([[sessionId, [123, 'hash1']]]);
+    expect(needsDump.getCalls().map(m => m.args)).to.be.deep.eq([
+      ['UserConfig'],
+      ['ContactsConfig'],
+      ['UserGroupsConfig'],
+      ['ConvoInfoVolatileConfig'],
+    ]);
+    expect(needsDump.callCount).to.be.eq(4);
+
+    expect(confirmPushed.callCount).to.be.eq(0); // first send failed, shouldn't confirm pushed
+    expect(result).to.be.eq(RunJobResult.RetryJobIfPossible);
+
+    // ============= second try: we now should get a success
+    sendStub.resetHistory();
+    sendStub.resolves([
+      { code: 200, body: { hash: 'hashprofile2' } },
+      { code: 200, body: { hash: 'hashcontact2' } },
+      { code: 200, body: { hash: 'hashgroup2' } },
+      { code: 200, body: {} }, // because we are giving a set of allOldHashes
+    ]);
+    changes.forEach(change => {
+      // eslint-disable-next-line no-param-reassign
+      change.updatedHash += '2';
+    });
+
+    pendingChangesForUsStub.resetHistory();
+    dump.resetHistory();
+    needsDump.resetHistory();
+    confirmPushed.resetHistory();
+    result = await UserSync.pushChangesToUserSwarmIfNeeded();
+
+    expect(sendStub.callCount).to.be.eq(1);
+    expect(pendingChangesForUsStub.callCount).to.be.eq(1);
+    expect(dump.getCalls().map(m => m.args)).to.be.deep.eq([
+      ['UserConfig'],
+      ['ContactsConfig'],
+      ['UserGroupsConfig'],
+      ['ConvoInfoVolatileConfig'],
+      ['UserConfig'],
+      ['ContactsConfig'],
+      ['UserGroupsConfig'],
+      ['ConvoInfoVolatileConfig'],
+    ]);
+
+    expect(needsDump.getCalls().map(m => m.args)).to.be.deep.eq([
+      ['UserConfig'],
+      ['ContactsConfig'],
+      ['UserGroupsConfig'],
+      ['ConvoInfoVolatileConfig'],
+      ['UserConfig'],
+      ['ContactsConfig'],
+      ['UserGroupsConfig'],
+      ['ConvoInfoVolatileConfig'],
+    ]);
+
+    expect(confirmPushed.getCalls().map(m => m.args)).to.be.deep.eq([
+      ['UserConfig', 321, 'hashprofile2'],
+      ['ContactsConfig', 123, 'hashcontact2'],
+      ['UserGroupsConfig', 111, 'hashgroup2'],
+    ]);
+    expect(confirmPushed.callCount).to.be.eq(3); // second send success, we should confirm the pushes of the 3 pushed messages
+
     expect(result).to.be.eq(RunJobResult.Success);
   });
 });

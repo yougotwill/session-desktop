@@ -10,10 +10,12 @@ import { isEmpty, uniq } from 'lodash';
 import { ConfigDumpData } from '../../data/configDump/configDump';
 import { ConversationTypeEnum } from '../../models/conversationAttributes';
 import { HexString } from '../../node/hexStrings';
+import { getSwarmPollingInstance } from '../../session/apis/snode_api';
 import { ConvoHub } from '../../session/conversations';
 import { UserUtils } from '../../session/utils';
 import { getUserED25519KeyPairBytes } from '../../session/utils/User';
 import { PreConditionFailed } from '../../session/utils/errors';
+import { RunJobResult } from '../../session/utils/job_runners/PersistedJob';
 import { GroupSync } from '../../session/utils/job_runners/jobs/GroupSyncJob';
 import { stringify, toFixedUint8ArrayOfLength } from '../../types/sqlSharedTypes';
 import {
@@ -24,11 +26,9 @@ import {
   MetaGroupWrapperActions,
   UserGroupsWrapperActions,
 } from '../../webworker/workers/browser/libsession_worker_interface';
-import { getSwarmPollingInstance } from '../../session/apis/snode_api';
 import { StateType } from '../reducer';
-import { RunJobResult } from '../../session/utils/job_runners/PersistedJob';
-import { resetOverlayMode } from './section';
 import { openConversationWithMessages } from './conversations';
+import { resetOverlayMode } from './section';
 
 export type GroupState = {
   infos: Record<GroupPubkeyType, GroupInfoGet>;
