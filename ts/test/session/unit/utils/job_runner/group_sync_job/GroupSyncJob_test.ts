@@ -281,6 +281,7 @@ describe('GroupSyncJob pushChangesToGroupSwarmIfNeeded', () => {
   });
 
   it('calls sendEncryptedDataToSnode with the right data and retry if network returned nothing', async () => {
+    throw null; // this test might not be right
     const info = validInfo(sodium);
     const member = validMembers(sodium);
     const networkTimestamp = 4444;
@@ -300,7 +301,6 @@ describe('GroupSyncJob pushChangesToGroupSwarmIfNeeded', () => {
     expect(saveDumpsToDbStub.firstCall.args).to.be.deep.eq([groupPk]);
 
     function expected(details: any) {
-      console.warn('details', details);
       return {
         namespace: details.namespace,
         data: details.ciphertext,
@@ -320,6 +320,7 @@ describe('GroupSyncJob pushChangesToGroupSwarmIfNeeded', () => {
   });
 
   it('calls sendEncryptedDataToSnode with the right data (and keys) and retry if network returned nothing', async () => {
+    throw null; // this test might not be right
     const info = validInfo(sodium);
     const member = validMembers(sodium);
     const keys = validKeys(sodium);

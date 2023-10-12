@@ -3,6 +3,7 @@
 /* eslint-disable @typescript-eslint/no-misused-promises */
 import { GroupPubkeyType } from 'libsession_util_nodejs';
 import { compact, concat, difference, flatten, isArray, last, sample, uniqBy } from 'lodash';
+import { v4 } from 'uuid';
 import { Data, Snode } from '../../../data/data';
 import { SignalService } from '../../../protobuf';
 import * as Receiver from '../../../receiver/receiver';
@@ -12,6 +13,8 @@ import * as snodePool from './snodePool';
 
 import { ConversationModel } from '../../../models/conversation';
 import { ConversationTypeEnum } from '../../../models/conversationAttributes';
+import { signalservice } from '../../../protobuf/compiled';
+import { EnvelopePlus } from '../../../receiver/types';
 import { updateIsOnline } from '../../../state/ducks/onion';
 import { assertUnreachable } from '../../../types/sqlSharedTypes';
 import {
@@ -24,6 +27,7 @@ import { ConvoHub } from '../../conversations';
 import { ed25519Str } from '../../onions/onionPath';
 import { StringUtils, UserUtils } from '../../utils';
 import { perfEnd, perfStart } from '../../utils/Performance';
+import { PreConditionFailed } from '../../utils/errors';
 import { LibSessionUtil } from '../../utils/libsession/libsession_utils';
 import { SnodeNamespace, SnodeNamespaces, UserConfigNamespaces } from './namespaces';
 import { PollForGroup, PollForLegacy, PollForUs } from './pollingTypes';
@@ -37,13 +41,7 @@ import {
   RetrieveRequestResult,
 } from './types';
 
-export function extractWebSocketContent(
-  message: string,
-  messageHash: string
-): null | {
-  body: Uint8Array;
-  messageHash: string;
-} {
+export function extractWebSocketContent(message: string): null | Uint8Array {
   try {
     const dataPlaintext = new Uint8Array(StringUtils.encode(message, 'base64'));
     const messageBuf = SignalService.WebSocketMessage.decode(dataPlaintext);
@@ -51,11 +49,9 @@ export function extractWebSocketContent(
       messageBuf.type === SignalService.WebSocketMessage.Type.REQUEST &&
       messageBuf.request?.body?.length
     ) {
-      return {
-        body: messageBuf.request.body,
-        messageHash,
-      };
+      return messageBuf.request.body;
     }
+
     return null;
   } catch (error) {
     window?.log?.warn('extractWebSocketContent from message failed with:', error.message);
@@ -374,21 +370,38 @@ export class SwarmPolling {
     perfStart(`handleSeenMessages-${pubkey}`);
     const newMessages = await this.handleSeenMessages(uniqOtherMsgs);
     perfEnd(`handleSeenMessages-${pubkey}`, 'handleSeenMessages');
+    if (type === ConversationTypeEnum.GROUPV3) {
+      for (let index = 0; index < newMessages.length; index++) {
+        const msg = newMessages[index];
+        const retrieveResult = new Uint8Array(StringUtils.encode(msg.data, 'base64'));
+        try {
+          const envelopePlus = await decryptForGroupV2({
+            content: retrieveResult,
+            groupPk: pubkey,
+            sentTimestamp: msg.timestamp,
+          });
+          if (!envelopePlus) {
+            throw new Error('decryptForGroupV2 returned empty envelope');
+          }
+
+          // this is the processing of the message itself, which can be long.
+          Receiver.handleRequest(envelopePlus.content, envelopePlus.source, msg.hash);
+        } catch (e) {
+          window.log.warn('failed to handle groupv2 otherMessage because of: ', e.message);
+        }
+      }
+      return;
+    }
 
     // trigger the handling of all the other messages, not shared config related
     newMessages.forEach(m => {
-      const content = extractWebSocketContent(m.data, m.hash);
+      const content = extractWebSocketContent(m.data);
+
       if (!content) {
         return;
       }
 
-      Receiver.handleRequest(
-        content.body,
-        type === ConversationTypeEnum.GROUP || type === ConversationTypeEnum.GROUPV3
-          ? pubkey
-          : null,
-        content.messageHash
-      );
+      Receiver.handleRequest(content, type === ConversationTypeEnum.GROUP ? pubkey : null, m.hash);
     });
   }
 
@@ -719,5 +732,36 @@ function filterMessagesPerTypeOfConvo<T extends ConversationTypeEnum>(
 
     default:
       return { confMessages: null, otherMessages: [] };
+  }
+}
+
+async function decryptForGroupV2(retrieveResult: {
+  groupPk: string;
+  content: Uint8Array;
+  sentTimestamp: number;
+}): Promise<EnvelopePlus | null> {
+  window?.log?.info('received closed group message v2');
+  try {
+    const groupPk = retrieveResult.groupPk;
+    if (!PubKey.isClosedGroupV2(groupPk)) {
+      throw new PreConditionFailed('decryptForGroupV2: not a 03 prefixed group');
+    }
+
+    const decrypted = await MetaGroupWrapperActions.decryptMessage(groupPk, retrieveResult.content);
+    const envelopePlus: EnvelopePlus = {
+      id: v4(),
+      senderIdentity: decrypted.pubkeyHex,
+      receivedAt: Date.now(),
+      content: decrypted.plaintext,
+      source: groupPk,
+      type: signalservice.Envelope.Type.CLOSED_GROUP_MESSAGE,
+      timestamp: retrieveResult.sentTimestamp,
+    };
+    // the receiving pipeline relies on the envelope.senderIdentity field to know who is the author of a message
+
+    return envelopePlus;
+  } catch (e) {
+    window.log.warn('failed to decrypt message with error: ', e.message);
+    return null;
   }
 }

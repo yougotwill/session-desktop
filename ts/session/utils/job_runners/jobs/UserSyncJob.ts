@@ -1,6 +1,6 @@
 /* eslint-disable no-await-in-loop */
 import { PubkeyType } from 'libsession_util_nodejs';
-import { isArray, isEmpty, isNumber } from 'lodash';
+import { isArray, isEmpty, isNumber, isString } from 'lodash';
 import { v4 } from 'uuid';
 import { UserUtils } from '../..';
 import { ConfigDumpData } from '../../../../data/configDump/configDump';
@@ -17,9 +17,9 @@ import { LibSessionUtil, UserSuccessfulChange } from '../../libsession/libsessio
 import { runners } from '../JobRunner';
 import {
   AddJobCheckReturn,
-  UserSyncPersistedData,
   PersistedJob,
   RunJobResult,
+  UserSyncPersistedData,
 } from '../PersistedJob';
 
 const defaultMsBetweenRetries = 15000; // a long time between retries, to avoid running multiple jobs at the same time, when one was postponed at the same time as one already planned (5s)
@@ -61,8 +61,8 @@ function triggerConfSyncJobDone() {
   window.Whisper.events.trigger(UserSyncJobDone);
 }
 
-function isPubkey(us: string): us is PubkeyType {
-  return us.startsWith('05');
+function isPubkey(us: unknown): us is PubkeyType {
+  return isString(us) && us.startsWith('05');
 }
 
 async function pushChangesToUserSwarmIfNeeded() {
@@ -153,7 +153,7 @@ class UserSyncJob extends PersistedJob<UserSyncPersistedData> {
         return RunJobResult.PermanentFailure;
       }
 
-      return await pushChangesToUserSwarmIfNeeded();
+      return await UserSync.pushChangesToUserSwarmIfNeeded();
       // eslint-disable-next-line no-useless-catch
     } catch (e) {
       throw e;
@@ -228,5 +228,6 @@ async function queueNewJobIfNeeded() {
 
 export const UserSync = {
   UserSyncJob,
+  pushChangesToUserSwarmIfNeeded,
   queueNewJobIfNeeded: () => allowOnlyOneAtATime('UserSyncJob-oneAtAtTime', queueNewJobIfNeeded),
 };

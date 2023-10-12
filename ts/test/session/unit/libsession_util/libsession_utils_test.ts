@@ -215,7 +215,7 @@ describe('LibSessionUtil pendingChangesForGroup', () => {
   });
 });
 
-describe('LibSessionUtil pendingChangesForUser', () => {
+describe('LibSessionUtil pendingChangesForUs', () => {
   beforeEach(async () => {});
 
   afterEach(() => {

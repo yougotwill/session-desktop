@@ -1,6 +1,6 @@
 /* eslint-disable more/no-then */
+import _, { isEmpty, last } from 'lodash';
 import { v4 as uuidv4 } from 'uuid';
-import _ from 'lodash';
 
 import { EnvelopePlus } from './types';
 
@@ -70,18 +70,22 @@ function queueSwarmEnvelope(envelope: EnvelopePlus, messageHash: string) {
   }
 }
 
+function contentIsEnvelope(content: Uint8Array | EnvelopePlus): content is EnvelopePlus {
+  return !isEmpty((content as EnvelopePlus).content);
+}
+
 async function handleRequestDetail(
-  plaintext: Uint8Array,
+  data: Uint8Array | EnvelopePlus,
   inConversation: string | null,
   lastPromise: Promise<any>,
   messageHash: string
 ): Promise<void> {
-  const envelope: any = SignalService.Envelope.decode(plaintext);
+  const envelope: any = contentIsEnvelope(data) ? data : SignalService.Envelope.decode(data);
 
   // After this point, decoding errors are not the server's
   //   fault, and we should handle them gracefully and tell the
   //   user they received an invalid message
-  // The message is for a medium size group
+  // The message is for a group
   if (inConversation) {
     const ourNumber = UserUtils.getOurPubKeyStrFromCache();
     const senderIdentity = envelope.source;
@@ -95,7 +99,7 @@ async function handleRequestDetail(
     envelope.source = inConversation;
 
     // eslint-disable-next-line no-param-reassign
-    plaintext = SignalService.Envelope.encode(envelope).finish();
+    data = SignalService.Envelope.encode(envelope).finish();
     envelope.senderIdentity = senderIdentity;
   }
 
@@ -109,7 +113,7 @@ async function handleRequestDetail(
     // need to handle senderIdentity separately)...
     perfStart(`addToCache-${envelope.id}`);
 
-    await addToCache(envelope, plaintext, messageHash);
+    await addToCache(envelope, contentIsEnvelope(data) ? data.content : data, messageHash);
     perfEnd(`addToCache-${envelope.id}`, 'addToCache');
 
     // To ensure that we queue in the same order we receive messages
@@ -133,7 +137,7 @@ export function handleRequest(
   inConversation: string | null,
   messageHash: string
 ): void {
-  const lastPromise = _.last(incomingMessagePromises) || Promise.resolve();
+  const lastPromise = last(incomingMessagePromises) || Promise.resolve();
 
   const promise = handleRequestDetail(plaintext, inConversation, lastPromise, messageHash).catch(
     e => {

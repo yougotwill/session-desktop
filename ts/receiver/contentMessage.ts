@@ -30,14 +30,10 @@ import { assertUnreachable } from '../types/sqlSharedTypes';
 import { BlockedNumberController } from '../util';
 import { ReadReceipts } from '../util/readReceipts';
 import { Storage } from '../util/storage';
+import { ContactsWrapperActions } from '../webworker/workers/browser/libsession_worker_interface';
 import { handleCallMessage } from './callMessage';
 import { getAllCachedECKeyPair, sentAtMoreRecentThanWrapper } from './closedGroups';
 import { ECKeyPair } from './keypairs';
-import {
-  ContactsWrapperActions,
-  MetaGroupWrapperActions,
-} from '../webworker/workers/browser/libsession_worker_interface';
-import { PreConditionFailed } from '../session/utils/errors';
 
 export async function handleSwarmContentMessage(envelope: EnvelopePlus, messageHash: string) {
   try {
@@ -55,27 +51,6 @@ export async function handleSwarmContentMessage(envelope: EnvelopePlus, messageH
     await innerHandleSwarmContentMessage(envelope, sentAtTimestamp, plaintext, messageHash);
   } catch (e) {
     window?.log?.warn(e.message);
-  }
-}
-
-async function decryptForGroupV2(envelope: EnvelopePlus) {
-  window?.log?.info('received closed group message v2');
-  try {
-    const groupPk = envelope.source;
-    if (!PubKey.isClosedGroupV2(groupPk)) {
-      throw new PreConditionFailed('decryptForGroupV2: not a 03 prefixed group');
-    }
-
-    const decrypted = await MetaGroupWrapperActions.decryptMessage(groupPk, envelope.content);
-
-    // the receiving pipeline relies on the envelope.senderIdentity field to know who is the author of a message
-    // eslint-disable-next-line no-param-reassign
-    envelope.senderIdentity = decrypted.pubkeyHex;
-
-    return decrypted.plaintext;
-  } catch (e) {
-    window.log.warn('failed to decrypt message with error: ', e.message);
-    return null;
   }
 }
 
@@ -291,10 +266,11 @@ async function decrypt(envelope: EnvelopePlus): Promise<any> {
       break;
     case SignalService.Envelope.Type.CLOSED_GROUP_MESSAGE:
       if (PubKey.isClosedGroupV2(envelope.source)) {
-        plaintext = await decryptForGroupV2(envelope);
-      } else {
-        plaintext = await decryptForClosedGroup(envelope);
+        // groupv2 messages are decrypted way earlier than this via libsession, and what we get here is already decrypted
+        return envelope.content;
       }
+      plaintext = await decryptForClosedGroup(envelope);
+
       break;
     default:
       assertUnreachable(envelope.type, `Unknown message type:${envelope.type}`);

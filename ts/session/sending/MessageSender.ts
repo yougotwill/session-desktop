@@ -307,6 +307,50 @@ type EncryptAndWrapMessageResults = {
   namespace: number;
 } & SharedEncryptAndWrap;
 
+async function encryptForGroupV2(
+  params: EncryptAndWrapMessage
+): Promise<EncryptAndWrapMessageResults> {
+  // Group v2 encryption works a bit differently: we encrypt the envelope itself through libsession.
+  // We essentially need to do the opposite of the usual encryption which is send envelope unencrypted with content encrypted.
+  const {
+    destination,
+    identifier,
+    isSyncMessage: syncMessage,
+    namespace,
+    plainTextBuffer,
+    ttl,
+  } = params;
+
+  const { overRiddenTimestampBuffer, networkTimestamp } =
+    overwriteOutgoingTimestampWithNetworkTimestamp({ plainTextBuffer });
+  const envelope = await buildEnvelope(
+    SignalService.Envelope.Type.CLOSED_GROUP_MESSAGE,
+    destination,
+    networkTimestamp,
+    overRiddenTimestampBuffer
+  );
+
+  const recipient = PubKey.cast(destination);
+
+  const { cipherText } = await MessageEncrypter.encrypt(
+    recipient,
+    SignalService.Envelope.encode(envelope).finish(),
+    encryptionBasedOnConversation(recipient)
+  );
+
+  const data64 = ByteBuffer.wrap(cipherText).toString('base64');
+
+  return {
+    data64,
+    networkTimestamp,
+    data: cipherText,
+    namespace,
+    ttl,
+    identifier,
+    isSyncMessage: syncMessage,
+  };
+}
+
 async function encryptMessageAndWrap(
   params: EncryptAndWrapMessage
 ): Promise<EncryptAndWrapMessageResults> {
@@ -319,6 +363,10 @@ async function encryptMessageAndWrap(
     ttl,
   } = params;
 
+  if (PubKey.isClosedGroupV2(destination)) {
+    return encryptForGroupV2(params);
+  }
+
   const { overRiddenTimestampBuffer, networkTimestamp } =
     overwriteOutgoingTimestampWithNetworkTimestamp({ plainTextBuffer });
   const recipient = PubKey.cast(destination);
@@ -330,8 +378,7 @@ async function encryptMessageAndWrap(
   );
 
   const envelope = await buildEnvelope(envelopeType, recipient.key, networkTimestamp, cipherText);
-
-  const data = wrapEnvelope(envelope);
+  const data = wrapEnvelopeInWebSocketMessage(envelope);
   const data64 = ByteBuffer.wrap(data).toString('base64');
 
   return {
@@ -423,7 +470,7 @@ async function buildEnvelope(
  * This is an outdated practice and we should probably just send the envelope data directly.
  * Something to think about in the future.
  */
-function wrapEnvelope(envelope: SignalService.Envelope): Uint8Array {
+function wrapEnvelopeInWebSocketMessage(envelope: SignalService.Envelope): Uint8Array {
   const request = SignalService.WebSocketRequestMessage.create({
     id: 0,
     body: SignalService.Envelope.encode(envelope).finish(),
