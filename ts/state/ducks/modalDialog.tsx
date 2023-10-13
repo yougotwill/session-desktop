@@ -1,6 +1,7 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { SessionConfirmDialogProps } from '../../components/dialog/SessionConfirm';
 import { PasswordAction } from '../../components/dialog/SessionPasswordDialog';
+import { EditProfilePictureModalProps } from '../../components/dialog/EditProfilePictureModal';
 import { Noop } from '../../types/Util';
 
 export type BanType = 'ban' | 'unban';
@@ -39,6 +40,8 @@ export type ReactModalsState = {
   messageId: string;
 } | null;
 
+export type EditProfilePictureModalState = EditProfilePictureModalProps | null;
+
 export type ModalState = {
   confirmModal: ConfirmModalState;
   inviteContactModal: InviteContactModalState;
@@ -57,6 +60,7 @@ export type ModalState = {
   deleteAccountModal: DeleteAccountModalState;
   reactListModalState: ReactModalsState;
   reactClearAllModalState: ReactModalsState;
+  editProfilePictureModalState: EditProfilePictureModalState;
 };
 
 export const initialModalState: ModalState = {
@@ -77,6 +81,7 @@ export const initialModalState: ModalState = {
   deleteAccountModal: null,
   reactListModalState: null,
   reactClearAllModalState: null,
+  editProfilePictureModalState: null,
 };
 
 const ModalSlice = createSlice({
@@ -134,6 +139,9 @@ const ModalSlice = createSlice({
     updateReactClearAllModal(state, action: PayloadAction<ReactModalsState>) {
       return { ...state, reactClearAllModalState: action.payload };
     },
+    updateEditProfilePictureModel(state, action: PayloadAction<EditProfilePictureModalState>) {
+      return { ...state, editProfilePictureModalState: action.payload };
+    },
   },
 });
 
@@ -156,5 +164,6 @@ export const {
   updateBanOrUnbanUserModal,
   updateReactListModal,
   updateReactClearAllModal,
+  updateEditProfilePictureModel,
 } = actions;
 export const modalReducer = reducer;

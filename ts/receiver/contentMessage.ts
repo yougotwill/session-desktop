@@ -26,6 +26,7 @@ import { ProfileManager } from '../session/profile_manager/ProfileManager';
 import { GroupUtils, UserUtils } from '../session/utils';
 import { perfEnd, perfStart } from '../session/utils/Performance';
 import { fromHexToArray, toHex } from '../session/utils/String';
+import { isUsFromCache } from '../session/utils/User';
 import { assertUnreachable } from '../types/sqlSharedTypes';
 import { BlockedNumberController } from '../util';
 import { ReadReceipts } from '../util/readReceipts';
@@ -295,27 +296,42 @@ async function decrypt(envelope: EnvelopePlus): Promise<any> {
   return plaintext;
 }
 
-async function shouldDropIncomingPrivateMessage(sentAtTimestamp: number, envelope: EnvelopePlus) {
+async function shouldDropIncomingPrivateMessage(
+  sentAtTimestamp: number,
+  envelope: EnvelopePlus,
+  content: SignalService.Content
+) {
   // sentAtMoreRecentThanWrapper is going to be true, if the latest contact wrapper we processed was roughly more recent that this message timestamp
   const moreRecentOrNah = await sentAtMoreRecentThanWrapper(sentAtTimestamp, 'ContactsConfig');
+  const isSyncedMessage = isUsFromCache(envelope.source);
 
   if (moreRecentOrNah === 'wrapper_more_recent') {
-    // we need to check if that conversation is already in the wrapper, and if yes
+    // we need to check if that conversation is already in the wrapper
     try {
-      const privateConvoInWrapper = await ContactsWrapperActions.get(envelope.source);
+      // let's check if the corresponding conversation is hidden in the contacts wrapper or not.
+      // the corresponding conversation is syncTarget when this is a synced message only, so we need to rely on it first, then the envelope.source.
+      const syncTargetOrSource = isSyncedMessage
+        ? content.dataMessage?.syncTarget || undefined
+        : envelope.source;
+
+      if (!syncTargetOrSource) {
+        return false;
+      }
+
+      const privateConvoInWrapper = await ContactsWrapperActions.get(syncTargetOrSource);
       if (
         !privateConvoInWrapper ||
         privateConvoInWrapper.priority <= CONVERSATION_PRIORITIES.hidden
       ) {
         // the wrapper is more recent that this message and there is no such private conversation. Just drop this incoming message.
         window.log.info(
-          `received message from contact ${envelope.source} which appears to be hidden/removed in our most recent libsession contactconfig, sentAt: ${sentAtTimestamp}. Dropping it`
+          `received message on conversation ${syncTargetOrSource} which appears to be hidden/removed in our most recent libsession contactconfig, sentAt: ${sentAtTimestamp}. Dropping it`
         );
         return true;
       }
 
       window.log.info(
-        `received message from contact ${envelope.source} which appears to NOT be hidden/removed in our most recent libsession contactconfig, sentAt: ${sentAtTimestamp}. `
+        `received message on conversation ${syncTargetOrSource} which appears to NOT be hidden/removed in our most recent libsession contactconfig, sentAt: ${sentAtTimestamp}. `
       );
     } catch (e) {
       window.log.warn(
@@ -412,7 +428,7 @@ export async function innerHandleSwarmContentMessage(
     const isPrivateConversationMessage = !envelope.senderIdentity;
 
     if (isPrivateConversationMessage) {
-      if (await shouldDropIncomingPrivateMessage(sentAtTimestamp, envelope)) {
+      if (await shouldDropIncomingPrivateMessage(sentAtTimestamp, envelope, content)) {
         await removeFromCache(envelope);
         return;
       }

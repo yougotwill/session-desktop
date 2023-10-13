@@ -239,6 +239,9 @@ const data = require('./ts/data/dataInit');
 const { setupi18n } = require('./ts/util/i18n');
 window.Signal = data.initData();
 
+const { ConvoHub } = require('./ts/session/conversations/ConversationController');
+window.getConversationController = ConvoHub.use;
+
 // Linux seems to periodically let the event loop stop, so this is a global workaround
 setInterval(() => {
   window.nodeSetImmediate(() => {});
