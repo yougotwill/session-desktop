@@ -92,7 +92,7 @@ describe('UserSyncJob run()', () => {
   });
 });
 
-describe('UserSyncJob resultsToSuccessfulChange', () => {
+describe('UserSyncJob batchResultsToUserSuccessfulChange', () => {
   let sodium: LibSodiumWrappers;
   beforeEach(async () => {
     sodium = await getSodiumNode();
