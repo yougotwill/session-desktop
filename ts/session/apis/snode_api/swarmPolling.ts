@@ -219,7 +219,7 @@ export class SwarmPolling {
       .filter(m => this.shouldPollByTimeout(m)) // should we poll from it depending on this group activity?
       .filter(m => allGroupsInWrapper.some(w => w.pubkeyHex === m.pubkey.key)) // we don't poll from groups which are not in the usergroup wrapper
       .map(m => m.pubkey.key as GroupPubkeyType) // extract the pubkey
-      .map(m => [m, ConversationTypeEnum.GROUPV3] as PollForGroup);
+      .map(m => [m, ConversationTypeEnum.GROUPV2] as PollForGroup);
 
     toPollDetails = concat(toPollDetails, allGroupsTracked);
 
@@ -267,7 +267,7 @@ export class SwarmPolling {
     pubkey: string;
   }) {
     // if all snodes returned an error (null), no need to update the lastPolledTimestamp
-    if (type === ConversationTypeEnum.GROUP || type === ConversationTypeEnum.GROUPV3) {
+    if (type === ConversationTypeEnum.GROUP || type === ConversationTypeEnum.GROUPV2) {
       window?.log?.debug(
         `Polled for group(${ed25519Str(pubkey)}):, got ${countMessages} messages back.`
       );
@@ -302,7 +302,7 @@ export class SwarmPolling {
       await SwarmPollingUserConfig.handleUserSharedConfigMessages(confMessages);
       return;
     }
-    if (type === ConversationTypeEnum.GROUPV3 && PubKey.isClosedGroupV2(pubkey)) {
+    if (type === ConversationTypeEnum.GROUPV2 && PubKey.isClosedGroupV2(pubkey)) {
       await SwarmPollingGroupConfig.handleGroupSharedConfigMessages(confMessages, pubkey);
     }
   }
@@ -370,7 +370,7 @@ export class SwarmPolling {
     perfStart(`handleSeenMessages-${pubkey}`);
     const newMessages = await this.handleSeenMessages(uniqOtherMsgs);
     perfEnd(`handleSeenMessages-${pubkey}`, 'handleSeenMessages');
-    if (type === ConversationTypeEnum.GROUPV3) {
+    if (type === ConversationTypeEnum.GROUPV2) {
       for (let index = 0; index < newMessages.length; index++) {
         const msg = newMessages[index];
         const retrieveResult = new Uint8Array(StringUtils.encode(msg.data, 'base64'));
@@ -454,7 +454,7 @@ export class SwarmPolling {
       window.log.debug(`configHashesToBump private: ${configHashesToBump}`);
       return configHashesToBump;
     }
-    if (type === ConversationTypeEnum.GROUPV3 && PubKey.isClosedGroupV2(pubkey)) {
+    if (type === ConversationTypeEnum.GROUPV2 && PubKey.isClosedGroupV2(pubkey)) {
       const toBump = await MetaGroupWrapperActions.currentHashes(pubkey);
       window.log.debug(`configHashesToBump group: ${toBump}`);
       return toBump;
@@ -606,7 +606,7 @@ export class SwarmPolling {
     if (type === ConversationTypeEnum.GROUP) {
       return [SnodeNamespaces.LegacyClosedGroup];
     }
-    if (type === ConversationTypeEnum.GROUPV3) {
+    if (type === ConversationTypeEnum.GROUPV2) {
       return [
         SnodeNamespaces.ClosedGroupMessages,
         SnodeNamespaces.ClosedGroupInfo,
@@ -712,7 +712,7 @@ function filterMessagesPerTypeOfConvo<T extends ConversationTypeEnum>(
         otherMessages: retrieveItemWithNamespace(retrieveResults),
       };
 
-    case ConversationTypeEnum.GROUPV3: {
+    case ConversationTypeEnum.GROUPV2: {
       const groupConfs = retrieveResults.filter(m =>
         SnodeNamespace.isGroupConfigNamespace(m.namespace)
       );

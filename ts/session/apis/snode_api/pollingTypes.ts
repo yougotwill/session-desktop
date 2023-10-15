@@ -5,4 +5,4 @@ import { ConversationTypeEnum } from '../../../models/conversationAttributes';
 
 export type PollForUs = [pubkey: string, type: ConversationTypeEnum.PRIVATE];
 export type PollForLegacy = [pubkey: string, type: ConversationTypeEnum.GROUP];
-export type PollForGroup = [pubkey: GroupPubkeyType, type: ConversationTypeEnum.GROUPV3];
+export type PollForGroup = [pubkey: GroupPubkeyType, type: ConversationTypeEnum.GROUPV2];

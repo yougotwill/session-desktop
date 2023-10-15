@@ -1,11 +1,11 @@
 import { GroupPubkeyType } from 'libsession_util_nodejs';
 import { SignalService } from '../../../../protobuf';
+import { SnodeNamespaces } from '../../../apis/snode_api/namespaces';
 import { PubKey } from '../../../types';
 import { StringUtils } from '../../../utils';
-import { VisibleMessage } from './VisibleMessage';
-import { ClosedGroupMessage } from '../controlMessage/group/ClosedGroupMessage';
 import { DataMessage } from '../DataMessage';
-import { SnodeNamespaces } from '../../../apis/snode_api/namespaces';
+import { ClosedGroupMessage } from '../controlMessage/group/ClosedGroupMessage';
+import { VisibleMessage } from './VisibleMessage';
 
 interface ClosedGroupVisibleMessageParams {
   identifier?: string;
@@ -52,7 +52,7 @@ export class ClosedGroupVisibleMessage extends ClosedGroupMessage {
 type WithDestinationGroupPk = { destination: GroupPubkeyType };
 type WithGroupMessageNamespace = { namespace: SnodeNamespaces.ClosedGroupMessages };
 
-export class ClosedGroupV3VisibleMessage extends DataMessage {
+export class ClosedGroupV2VisibleMessage extends DataMessage {
   private readonly chatMessage: VisibleMessage;
   public readonly destination: GroupPubkeyType;
   public readonly namespace: SnodeNamespaces.ClosedGroupMessages;
@@ -69,7 +69,7 @@ export class ClosedGroupV3VisibleMessage extends DataMessage {
     this.chatMessage = params.chatMessage;
 
     if (!PubKey.isClosedGroupV2(params.destination)) {
-      throw new Error('ClosedGroupV3VisibleMessage only work with 03-groups destination');
+      throw new Error('ClosedGroupV2VisibleMessage only work with 03-groups destination');
     }
     this.destination = params.destination;
     this.namespace = params.namespace;

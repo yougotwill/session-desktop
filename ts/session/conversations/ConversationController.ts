@@ -92,12 +92,12 @@ class ConvoController {
     if (
       type !== ConversationTypeEnum.PRIVATE &&
       type !== ConversationTypeEnum.GROUP &&
-      type !== ConversationTypeEnum.GROUPV3
+      type !== ConversationTypeEnum.GROUPV2
     ) {
-      throw new TypeError(`'type' must be 'private' or 'group' or 'groupv3' but got: '${type}'`);
+      throw new TypeError(`'type' must be 'private' or 'group' or 'groupv2' but got: '${type}'`);
     }
 
-    if (type === ConversationTypeEnum.GROUPV3 && !PubKey.isClosedGroupV2(id)) {
+    if (type === ConversationTypeEnum.GROUPV2 && !PubKey.isClosedGroupV2(id)) {
       throw new Error(
         'required v3 closed group but the pubkey does not match the 03 prefix for them'
       );

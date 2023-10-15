@@ -13,14 +13,14 @@ import { LastMessageStatusType } from '../state/ducks/conversations';
  */
 export enum ConversationTypeEnum {
   GROUP = 'group',
-  GROUPV3 = 'groupv3',
+  GROUPV2 = 'groupv2',
   PRIVATE = 'private',
 }
 
 export function isOpenOrClosedGroup(conversationType: ConversationTypeEnum) {
   return (
     conversationType === ConversationTypeEnum.GROUP ||
-    conversationType === ConversationTypeEnum.GROUPV3
+    conversationType === ConversationTypeEnum.GROUPV2
   );
 }
 
@@ -50,7 +50,7 @@ export type ConversationAttributesWithNotSavedOnes = ConversationAttributes &
 
 export interface ConversationAttributes {
   id: string;
-  type: ConversationTypeEnum.PRIVATE | ConversationTypeEnum.GROUPV3 | ConversationTypeEnum.GROUP;
+  type: ConversationTypeEnum.PRIVATE | ConversationTypeEnum.GROUPV2 | ConversationTypeEnum.GROUP;
 
   // 0 means inactive (undefined and null too but we try to get rid of them and only have 0 = inactive)
   active_at: number; // this field is the one used to sort conversations in the left pane from most recent

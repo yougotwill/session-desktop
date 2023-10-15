@@ -19,7 +19,7 @@ describe('LibSessionUtil saveDumpsToDb', () => {
     let groupPk: GroupPubkeyType;
 
     beforeEach(() => {
-      groupPk = TestUtils.generateFakeClosedGroupV3PkStr();
+      groupPk = TestUtils.generateFakeClosedGroupV2PkStr();
     });
 
     afterEach(() => {
@@ -132,7 +132,7 @@ describe('LibSessionUtil saveDumpsToDb', () => {
 describe('LibSessionUtil pendingChangesForGroup', () => {
   let groupPk: GroupPubkeyType;
   beforeEach(() => {
-    groupPk = TestUtils.generateFakeClosedGroupV3PkStr();
+    groupPk = TestUtils.generateFakeClosedGroupV2PkStr();
   });
 
   afterEach(() => {

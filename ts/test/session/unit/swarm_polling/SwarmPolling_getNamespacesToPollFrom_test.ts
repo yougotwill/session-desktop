@@ -1,10 +1,10 @@
 import { expect } from 'chai';
 import Sinon from 'sinon';
 import { ConversationTypeEnum } from '../../../../models/conversationAttributes';
-import { SnodeNamespaces } from '../../../../session/apis/snode_api/namespaces';
-import { TestUtils } from '../../../test-utils';
 import { getSwarmPollingInstance } from '../../../../session/apis/snode_api';
+import { SnodeNamespaces } from '../../../../session/apis/snode_api/namespaces';
 import { SwarmPolling } from '../../../../session/apis/snode_api/swarmPolling';
+import { TestUtils } from '../../../test-utils';
 
 describe('SwarmPolling:getNamespacesToPollFrom', () => {
   let swarmPolling: SwarmPolling;
@@ -31,7 +31,7 @@ describe('SwarmPolling:getNamespacesToPollFrom', () => {
   });
 
   it('for group v2 (03 prefix) ', () => {
-    expect(swarmPolling.getNamespacesToPollFrom(ConversationTypeEnum.GROUPV3)).to.deep.equal([
+    expect(swarmPolling.getNamespacesToPollFrom(ConversationTypeEnum.GROUPV2)).to.deep.equal([
       SnodeNamespaces.ClosedGroupMessages,
       SnodeNamespaces.ClosedGroupInfo,
       SnodeNamespaces.ClosedGroupMembers,

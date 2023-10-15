@@ -118,7 +118,7 @@ const initNewGroupInWrapper = createAsyncThunk(
         );
       }
 
-      const convo = await ConvoHub.use().getOrCreateAndWait(groupPk, ConversationTypeEnum.GROUPV3);
+      const convo = await ConvoHub.use().getOrCreateAndWait(groupPk, ConversationTypeEnum.GROUPV2);
 
       await convo.setIsApproved(true, false);
 
@@ -185,7 +185,7 @@ const handleUserGroupUpdate = createAsyncThunk(
       window.log.warn(`failed to init metawrapper ${groupPk}`);
     }
 
-    const convo = await ConvoHub.use().getOrCreateAndWait(groupPk, ConversationTypeEnum.GROUPV3);
+    const convo = await ConvoHub.use().getOrCreateAndWait(groupPk, ConversationTypeEnum.GROUPV2);
 
     await convo.setIsApproved(true, false);
 

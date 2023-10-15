@@ -23,7 +23,7 @@ export enum KeyPrefixType {
   /**
    * used for participants in open groups
    */
-  groupV3 = '03',
+  groupV2 = '03',
 }
 
 // TODO make that Pubkey class more useful, add fields for what types of pubkey it is (group, legacy group, private)
@@ -41,7 +41,7 @@ export class PubKey {
   public static readonly PREFIX_GROUP_TEXTSECURE = '__textsecure_group__!';
   // prettier-ignore
   private static readonly regex: RegExp = new RegExp(
-    `^(${PubKey.PREFIX_GROUP_TEXTSECURE})?(${KeyPrefixType.standard}|${KeyPrefixType.blinded15}|${KeyPrefixType.blinded25}|${KeyPrefixType.unblinded}|${KeyPrefixType.groupV3})?(${PubKey.HEX}{64}|${PubKey.HEX}{32})$`
+    `^(${PubKey.PREFIX_GROUP_TEXTSECURE})?(${KeyPrefixType.standard}|${KeyPrefixType.blinded15}|${KeyPrefixType.blinded25}|${KeyPrefixType.unblinded}|${KeyPrefixType.groupV2})?(${PubKey.HEX}{64}|${PubKey.HEX}{32})$`
   );
   /**
    * If you want to update this regex. Be sure that those are matches ;
@@ -236,7 +236,7 @@ export class PubKey {
   }
 
   public static isClosedGroupV2(key: string): key is GroupPubkeyType {
-    const regex = new RegExp(`^${KeyPrefixType.groupV3}${PubKey.HEX}{64}$`);
+    const regex = new RegExp(`^${KeyPrefixType.groupV2}${PubKey.HEX}{64}$`);
     return regex.test(key);
   }
 }

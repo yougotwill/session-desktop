@@ -1,7 +1,6 @@
 import _, { isFinite, isNumber } from 'lodash';
 import { v4 as uuidv4 } from 'uuid';
 
-import { PubKey } from '../types';
 import { getMessageQueue } from '..';
 import { Data } from '../../data/data';
 import { ConversationModel } from '../../models/conversation';
@@ -23,6 +22,7 @@ import { ClosedGroupEncryptionPairMessage } from '../messages/outgoing/controlMe
 import { ClosedGroupNameChangeMessage } from '../messages/outgoing/controlMessage/group/ClosedGroupNameChangeMessage';
 import { ClosedGroupNewMessage } from '../messages/outgoing/controlMessage/group/ClosedGroupNewMessage';
 import { ClosedGroupRemovedMembersMessage } from '../messages/outgoing/controlMessage/group/ClosedGroupRemovedMembersMessage';
+import { PubKey } from '../types';
 import { UserUtils } from '../utils';
 import { fromHexToArray, toHex } from '../utils/String';
 
@@ -60,10 +60,10 @@ export async function initiateClosedGroupUpdate(
   groupName: string,
   members: Array<string>
 ) {
-  const isGroupV3 = PubKey.isClosedGroupV2(groupId);
+  const isGroupV2 = PubKey.isClosedGroupV2(groupId);
   const convo = await ConvoHub.use().getOrCreateAndWait(
     groupId,
-    isGroupV3 ? ConversationTypeEnum.GROUPV3 : ConversationTypeEnum.GROUP
+    isGroupV2 ? ConversationTypeEnum.GROUPV2 : ConversationTypeEnum.GROUP
   );
 
   // do not give an admins field here. We don't want to be able to update admins and
@@ -210,7 +210,7 @@ export async function updateOrCreateClosedGroup(details: GroupInfo) {
 
   const conversation = await ConvoHub.use().getOrCreateAndWait(
     id,
-    isV3 ? ConversationTypeEnum.GROUPV3 : ConversationTypeEnum.GROUP
+    isV3 ? ConversationTypeEnum.GROUPV2 : ConversationTypeEnum.GROUP
   );
 
   const updates: Pick<
@@ -219,7 +219,7 @@ export async function updateOrCreateClosedGroup(details: GroupInfo) {
   > = {
     displayNameInProfile: details.name,
     members: details.members,
-    type: isV3 ? ConversationTypeEnum.GROUPV3 : ConversationTypeEnum.GROUP,
+    type: isV3 ? ConversationTypeEnum.GROUPV2 : ConversationTypeEnum.GROUP,
     active_at: details.activeAt ? details.activeAt : 0,
     left: !details.activeAt,
   };

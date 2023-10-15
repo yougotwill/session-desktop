@@ -108,7 +108,7 @@ describe('libsession_groups', () => {
         SessionUtilUserGroups.isUserGroupToStoreInWrapper(
           new ConversationModel({
             ...validArgs,
-            type: ConversationTypeEnum.GROUPV3,
+            type: ConversationTypeEnum.GROUPV2,
             id: '03123456564',
           } as any)
         )

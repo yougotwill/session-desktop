@@ -24,7 +24,7 @@ const pollOnceForGroupLegacyArgs = (groupLegacy: string) => [
   [groupLegacy, ConversationTypeEnum.GROUP],
 ];
 
-const pollOnceForGroupArgs = (group: GroupPubkeyType) => [[group, ConversationTypeEnum.GROUPV3]];
+const pollOnceForGroupArgs = (group: GroupPubkeyType) => [[group, ConversationTypeEnum.GROUPV2]];
 
 function stubWithLegacyGroups(pubkeys: Array<string>) {
   const groups = pubkeys.map(m => ({ pubkeyHex: m }) as LegacyGroupInfo);
@@ -345,8 +345,8 @@ describe('SwarmPolling:pollForAllKeys', () => {
 
   describe('03 group', () => {
     it('does run for group pubkey on start no matter the recent timestamp', async () => {
-      const groupPk = TestUtils.generateFakeClosedGroupV3PkStr();
-      const convo = ConvoHub.use().getOrCreate(groupPk, ConversationTypeEnum.GROUPV3);
+      const groupPk = TestUtils.generateFakeClosedGroupV2PkStr();
+      const convo = ConvoHub.use().getOrCreate(groupPk, ConversationTypeEnum.GROUPV2);
       stubWithLegacyGroups([]);
       stubWithGroups([groupPk]);
       convo.set('active_at', Date.now());
@@ -362,8 +362,8 @@ describe('SwarmPolling:pollForAllKeys', () => {
     });
 
     it('does only poll from -10 for closed groups', async () => {
-      const groupPk = TestUtils.generateFakeClosedGroupV3PkStr();
-      const convo = ConvoHub.use().getOrCreate(groupPk, ConversationTypeEnum.GROUPV3);
+      const groupPk = TestUtils.generateFakeClosedGroupV2PkStr();
+      const convo = ConvoHub.use().getOrCreate(groupPk, ConversationTypeEnum.GROUPV2);
       stubWithLegacyGroups([]);
       stubWithGroups([groupPk]);
       convo.set('active_at', 1);
@@ -382,8 +382,8 @@ describe('SwarmPolling:pollForAllKeys', () => {
     });
 
     it('does run for group pubkey on start but not another time if activeAt is old ', async () => {
-      const groupPk = TestUtils.generateFakeClosedGroupV3PkStr();
-      const convo = ConvoHub.use().getOrCreate(groupPk, ConversationTypeEnum.GROUPV3);
+      const groupPk = TestUtils.generateFakeClosedGroupV2PkStr();
+      const convo = ConvoHub.use().getOrCreate(groupPk, ConversationTypeEnum.GROUPV2);
       stubWithLegacyGroups([]);
       stubWithGroups([groupPk]);
 
@@ -401,8 +401,8 @@ describe('SwarmPolling:pollForAllKeys', () => {
     });
 
     it('does run twice if activeAt less than one hour ', async () => {
-      const groupPk = TestUtils.generateFakeClosedGroupV3PkStr();
-      const convo = ConvoHub.use().getOrCreate(groupPk, ConversationTypeEnum.GROUPV3);
+      const groupPk = TestUtils.generateFakeClosedGroupV2PkStr();
+      const convo = ConvoHub.use().getOrCreate(groupPk, ConversationTypeEnum.GROUPV2);
       stubWithLegacyGroups([]);
       stubWithGroups([groupPk]);
 
@@ -430,8 +430,8 @@ describe('SwarmPolling:pollForAllKeys', () => {
     });
 
     it('does run twice if activeAt is inactive and we tick longer than 2 minutes', async () => {
-      const groupPk = TestUtils.generateFakeClosedGroupV3PkStr();
-      const convo = ConvoHub.use().getOrCreate(groupPk, ConversationTypeEnum.GROUPV3);
+      const groupPk = TestUtils.generateFakeClosedGroupV2PkStr();
+      const convo = ConvoHub.use().getOrCreate(groupPk, ConversationTypeEnum.GROUPV2);
       stubWithLegacyGroups([]);
       stubWithGroups([groupPk]);
 
@@ -460,8 +460,8 @@ describe('SwarmPolling:pollForAllKeys', () => {
     });
 
     it('does run once only if group is inactive and we tick less than 2 minutes ', async () => {
-      const groupPk = TestUtils.generateFakeClosedGroupV3PkStr();
-      const convo = ConvoHub.use().getOrCreate(groupPk, ConversationTypeEnum.GROUPV3);
+      const groupPk = TestUtils.generateFakeClosedGroupV2PkStr();
+      const convo = ConvoHub.use().getOrCreate(groupPk, ConversationTypeEnum.GROUPV2);
       stubWithLegacyGroups([]);
       stubWithGroups([groupPk]);
 
@@ -487,8 +487,8 @@ describe('SwarmPolling:pollForAllKeys', () => {
 
       beforeEach(async () => {
         convo = ConvoHub.use().getOrCreate(
-          TestUtils.generateFakeClosedGroupV3PkStr(),
-          ConversationTypeEnum.GROUPV3
+          TestUtils.generateFakeClosedGroupV2PkStr(),
+          ConversationTypeEnum.GROUPV2
         );
 
         stubWithLegacyGroups([]);

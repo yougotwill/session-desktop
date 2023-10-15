@@ -22,8 +22,8 @@ import {
 import { ConvoHub } from '../../../../session/conversations';
 import { LibSodiumWrappers } from '../../../../session/crypto';
 import { UserUtils } from '../../../../session/utils';
-import { expectAsyncToThrow, stubData, stubWindowLog } from '../../../test-utils/utils';
 import { TestUtils } from '../../../test-utils';
+import { expectAsyncToThrow, stubData, stubWindowLog } from '../../../test-utils/utils';
 
 const serverPublicKey = 'serverPublicKey';
 const blindedId = '151111';
@@ -572,8 +572,8 @@ describe('knownBlindedKeys', () => {
 
         expect(real).to.eq(undefined);
       });
-      it('does iterate over all the conversations but is not private so must fail: groupv3', () => {
-        // we actually cannot test this one as we would need to create  a conversation with groupv3 as type but 05 as prefix, and the conversation controller denies it, as expected
+      it('does iterate over all the conversations but is not private so must fail: groupv2', () => {
+        // we actually cannot test this one as we would need to create  a conversation with groupv2 as type but 05 as prefix, and the conversation controller denies it, as expected
       });
     });
   });

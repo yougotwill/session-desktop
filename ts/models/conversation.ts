@@ -22,7 +22,7 @@ import { SignalService } from '../protobuf';
 import { getMessageQueue } from '../session';
 import { ConvoHub } from '../session/conversations';
 import {
-  ClosedGroupV3VisibleMessage,
+  ClosedGroupV2VisibleMessage,
   ClosedGroupVisibleMessage,
 } from '../session/messages/outgoing/visibleMessage/ClosedGroupVisibleMessage';
 import { PubKey } from '../session/types';
@@ -112,6 +112,7 @@ import {
   READ_MESSAGE_STATE,
 } from './conversationAttributes';
 
+import { PreConditionFailed } from '../session/utils/errors';
 import { LibSessionUtil } from '../session/utils/libsession/libsession_utils';
 import { SessionUtilUserProfile } from '../session/utils/libsession/libsession_utils_user_profile';
 import { ReduxSogsRoomInfos } from '../state/ducks/sogsRoomInfo';
@@ -126,7 +127,6 @@ import {
   getSubscriberCountOutsideRedux,
 } from '../state/selectors/sogsRoomInfo';
 import { markAttributesAsReadIfNeeded } from './messageFactory';
-import { PreConditionFailed } from '../session/utils/errors';
 
 type InMemoryConvoInfos = {
   mentionedUs: boolean;
@@ -186,7 +186,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     switch (type) {
       case ConversationTypeEnum.PRIVATE:
         return this.id;
-      case ConversationTypeEnum.GROUPV3:
+      case ConversationTypeEnum.GROUPV2:
         return `group(${ed25519Str(this.id)})`;
       case ConversationTypeEnum.GROUP: {
         if (this.isPublic()) {
@@ -225,13 +225,13 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
   public isClosedGroup(): boolean {
     return Boolean(
       (this.get('type') === ConversationTypeEnum.GROUP && this.id.startsWith('05')) ||
-        this.isClosedGroupV3()
+        this.isClosedGroupV2()
     );
   }
 
-  public isClosedGroupV3(): boolean {
+  public isClosedGroupV2(): boolean {
     return Boolean(
-      this.get('type') === ConversationTypeEnum.GROUPV3 && PubKey.isClosedGroupV2(this.id)
+      this.get('type') === ConversationTypeEnum.GROUPV2 && PubKey.isClosedGroupV2(this.id)
     );
   }
 
@@ -1728,7 +1728,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
 
   public isKickedFromGroup(): boolean {
     if (this.isClosedGroup()) {
-      if (this.isClosedGroupV3()) {
+      if (this.isClosedGroupV2()) {
         // console.info('isKickedFromGroup using lib todo'); // debugger
       }
       return !!this.get('isKickedFromGroup');
@@ -1738,7 +1738,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
 
   public isLeft(): boolean {
     if (this.isClosedGroup()) {
-      if (this.isClosedGroupV3()) {
+      if (this.isClosedGroupV2()) {
         // console.info('isLeft using lib todo'); // debugger
       }
       return !!this.get('left');
@@ -1759,7 +1759,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
 
   public getGroupMembers(): Array<string> {
     if (this.isClosedGroup()) {
-      if (this.isClosedGroupV3()) {
+      if (this.isClosedGroupV2()) {
         return getLibGroupMembersOutsideRedux(this.id);
       }
       const members = this.get('members');
@@ -1771,7 +1771,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
   public getGroupZombies(): Array<string> {
     if (this.isClosedGroup()) {
       // closed group with 03 prefix does not have the concepts of zombies
-      if (this.isClosedGroupV3()) {
+      if (this.isClosedGroupV2()) {
         return [];
       }
       const zombies = this.get('zombies');
@@ -1891,9 +1891,9 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
         return;
       }
 
-      if (this.isClosedGroupV3()) {
+      if (this.isClosedGroupV2()) {
         // we need the return await so that errors are caught in the catch {}
-        await this.sendMessageToGroupV3(chatMessageParams);
+        await this.sendMessageToGroupV2(chatMessageParams);
         return;
       }
 
@@ -1918,16 +1918,16 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     }
   }
 
-  private async sendMessageToGroupV3(chatMessageParams: VisibleMessageParams) {
+  private async sendMessageToGroupV2(chatMessageParams: VisibleMessageParams) {
     const visibleMessage = new VisibleMessage(chatMessageParams);
-    const groupVisibleMessage = new ClosedGroupV3VisibleMessage({
+    const groupVisibleMessage = new ClosedGroupV2VisibleMessage({
       chatMessage: visibleMessage,
       destination: this.id,
       namespace: SnodeNamespaces.ClosedGroupMessages,
     });
 
     // we need the return await so that errors are caught in the catch {}
-    await getMessageQueue().sendToGroupV3({
+    await getMessageQueue().sendToGroupV2({
       message: groupVisibleMessage,
     });
   }

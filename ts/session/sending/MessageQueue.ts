@@ -15,10 +15,7 @@ import { ClosedGroupEncryptionPairMessage } from '../messages/outgoing/controlMe
 import { ClosedGroupMemberLeftMessage } from '../messages/outgoing/controlMessage/group/ClosedGroupMemberLeftMessage';
 import { ClosedGroupNewMessage } from '../messages/outgoing/controlMessage/group/ClosedGroupNewMessage';
 import { ClosedGroupRemovedMembersMessage } from '../messages/outgoing/controlMessage/group/ClosedGroupRemovedMembersMessage';
-import {
-  ClosedGroupV3VisibleMessage,
-  ClosedGroupVisibleMessage,
-} from '../messages/outgoing/visibleMessage/ClosedGroupVisibleMessage';
+import { ClosedGroupVisibleMessage } from '../messages/outgoing/visibleMessage/ClosedGroupVisibleMessage';
 import { SyncMessageType } from '../utils/sync/syncUtils';
 import { MessageSentHandler } from './MessageSentHandler';
 
@@ -198,15 +195,15 @@ export class MessageQueue {
     return this.sendToPubKey(PubKey.cast(destinationPubKey), message, namespace, sentCb, true);
   }
 
-  public async sendToGroupV3({
+  public async sendToGroupV2({
     message,
     sentCb,
   }: {
-    message: ClosedGroupV3VisibleMessage;
+    message: ClosedGroupV2VisibleMessage;
     sentCb?: (message: RawMessage) => Promise<void>;
   }): Promise<void> {
     if (!message.destination) {
-      throw new Error('Invalid group message passed in sendToGroupV3.');
+      throw new Error('Invalid group message passed in sendToGroupV2.');
     }
 
     return this.sendToPubKey(

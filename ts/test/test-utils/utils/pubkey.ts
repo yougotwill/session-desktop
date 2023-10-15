@@ -70,7 +70,7 @@ export async function generateGroupV2(privateEd25519: Uint8Array) {
   return groupWrapper.createGroup();
 }
 
-export function generateFakeClosedGroupV3PkStr(): GroupPubkeyType {
+export function generateFakeClosedGroupV2PkStr(): GroupPubkeyType {
   // Generates a mock pubkey for testing
   const numBytes = PubKey.PUBKEY_LEN / 2 - 1;
   const hexBuffer = crypto.randomBytes(numBytes).toString('hex');

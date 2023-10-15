@@ -4,9 +4,9 @@ import { ConversationTypeEnum, isOpenOrClosedGroup } from '../../models/conversa
 import { PubKey } from '../../session/types';
 import { UserUtils } from '../../session/utils';
 import { StateType } from '../reducer';
-import { getCanWrite, getModerators, getSubscriberCount } from './sogsRoomInfo';
 import { getIsMessageSelectionMode, getSelectedConversation } from './conversations';
 import { getLibMembersPubkeys, useLibGroupName } from './groups';
+import { getCanWrite, getModerators, getSubscriberCount } from './sogsRoomInfo';
 
 /**
  * Returns the formatted text for notification setting.
@@ -134,7 +134,7 @@ export const isClosedGroupConversation = (state: StateType): boolean => {
   }
   return (
     (selected.type === ConversationTypeEnum.GROUP && !selected.isPublic) ||
-    selected.type === ConversationTypeEnum.GROUPV3 ||
+    selected.type === ConversationTypeEnum.GROUPV2 ||
     false
   );
 };

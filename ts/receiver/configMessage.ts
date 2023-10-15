@@ -638,7 +638,7 @@ async function handleSingleGroupUpdate({
   }
 
   if (!ConvoHub.use().get(groupPk)) {
-    const created = await ConvoHub.use().getOrCreateAndWait(groupPk, ConversationTypeEnum.GROUPV3);
+    const created = await ConvoHub.use().getOrCreateAndWait(groupPk, ConversationTypeEnum.GROUPV2);
     const joinedAt = groupInWrapper.joinedAtSeconds * 1000 || Date.now();
     created.set({
       active_at: joinedAt,

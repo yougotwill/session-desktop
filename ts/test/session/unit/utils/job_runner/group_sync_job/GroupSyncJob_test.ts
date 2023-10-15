@@ -58,7 +58,7 @@ describe('GroupSyncJob run()', () => {
   });
   it('throws if no user keys', async () => {
     const job = new GroupSync.GroupSyncJob({
-      identifier: TestUtils.generateFakeClosedGroupV3PkStr(),
+      identifier: TestUtils.generateFakeClosedGroupV2PkStr(),
     });
 
     const func = async () => job.run();
@@ -67,7 +67,7 @@ describe('GroupSyncJob run()', () => {
 
   it('permanent failure if group is not a 03 one', async () => {
     const job = new GroupSync.GroupSyncJob({
-      identifier: TestUtils.generateFakeClosedGroupV3PkStr().slice(2),
+      identifier: TestUtils.generateFakeClosedGroupV2PkStr().slice(2),
     });
     const result = await job.run();
     expect(result).to.be.eq(RunJobResult.PermanentFailure);
@@ -78,7 +78,7 @@ describe('GroupSyncJob run()', () => {
     Sinon.stub(UserUtils, 'getUserED25519KeyPairBytes').resolves(undefined);
     Sinon.stub(ConvoHub.use(), 'get').resolves({}); // anything not falsy
     const job = new GroupSync.GroupSyncJob({
-      identifier: TestUtils.generateFakeClosedGroupV3PkStr(),
+      identifier: TestUtils.generateFakeClosedGroupV2PkStr(),
     });
     const result = await job.run();
     expect(result).to.be.eq(RunJobResult.PermanentFailure);
@@ -89,7 +89,7 @@ describe('GroupSyncJob run()', () => {
     Sinon.stub(UserUtils, 'getUserED25519KeyPairBytes').resolves({} as any); // anything not falsy
     Sinon.stub(ConvoHub.use(), 'get').returns(undefined as any);
     const job = new GroupSync.GroupSyncJob({
-      identifier: TestUtils.generateFakeClosedGroupV3PkStr(),
+      identifier: TestUtils.generateFakeClosedGroupV2PkStr(),
     });
     const result = await job.run();
     expect(result).to.be.eq(RunJobResult.PermanentFailure);
@@ -103,7 +103,7 @@ describe('GroupSyncJob run()', () => {
     );
     Sinon.stub(ConvoHub.use(), 'get').returns({} as any); // anything not falsy
     const job = new GroupSync.GroupSyncJob({
-      identifier: TestUtils.generateFakeClosedGroupV3PkStr(),
+      identifier: TestUtils.generateFakeClosedGroupV2PkStr(),
     });
     const result = await job.run();
     expect(result).to.be.eq(RunJobResult.Success);
@@ -257,7 +257,7 @@ describe('GroupSyncJob pushChangesToGroupSwarmIfNeeded', () => {
 
   beforeEach(async () => {
     sodium = await getSodiumNode();
-    groupPk = TestUtils.generateFakeClosedGroupV3PkStr();
+    groupPk = TestUtils.generateFakeClosedGroupV2PkStr();
     userkeys = await TestUtils.generateUserKeyPairs();
     Sinon.stub(UserUtils, 'getOurPubKeyStrFromCache').returns(userkeys.x25519KeyPair.pubkeyHex);
     Sinon.stub(UserUtils, 'getUserED25519KeyPairBytes').resolves(userkeys.ed25519KeyPair);
