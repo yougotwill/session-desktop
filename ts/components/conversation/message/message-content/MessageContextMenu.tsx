@@ -39,10 +39,10 @@ import {
 import {
   useSelectedConversationKey,
   useSelectedIsBlocked,
+  useSelectedIsNoteToSelf,
   useSelectedIsPublic,
   useSelectedWeAreAdmin,
   useSelectedWeAreModerator,
-  useSelectedisNoteToSelf,
 } from '../../../../state/selectors/selectedConversation';
 import { saveAttachmentToDisk } from '../../../../util/attachmentsUtil';
 import { Reactions } from '../../../../util/reactions';
@@ -89,7 +89,7 @@ const StyledEmojiPanelContainer = styled.div<{ x: number; y: number }>`
 
 const DeleteForEveryone = ({ messageId }: { messageId: string }) => {
   const convoId = useSelectedConversationKey();
-  const isMe = useSelectedisNoteToSelf();
+  const isMe = useSelectedIsNoteToSelf();
   const isDeletableForEveryone = useMessageIsDeletableForEveryone(messageId);
   if (!convoId || !isDeletableForEveryone) {
     return null;

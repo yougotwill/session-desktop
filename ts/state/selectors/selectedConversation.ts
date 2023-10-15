@@ -233,7 +233,7 @@ export function useSelectedIsActive() {
   return useSelector(getIsSelectedActive);
 }
 
-export function useSelectedisNoteToSelf() {
+export function useSelectedIsNoteToSelf() {
   return useSelector(getIsSelectedNoteToSelf);
 }
 
@@ -297,7 +297,7 @@ export function useSelectedNicknameOrProfileNameOrShortenedPubkey() {
   const nickname = useSelectedNickname();
   const profileName = useSelectedDisplayNameInProfile();
   const shortenedPubkey = useSelectedShortenedPubkeyOrFallback();
-  const isMe = useSelectedisNoteToSelf();
+  const isMe = useSelectedIsNoteToSelf();
   const libGroupName = useLibGroupName(selectedId);
   if (isMe) {
     return window.i18n('noteToSelf');

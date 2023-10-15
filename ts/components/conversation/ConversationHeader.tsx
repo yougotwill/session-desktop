@@ -36,13 +36,13 @@ import {
   useSelectedIsBlocked,
   useSelectedIsGroup,
   useSelectedIsKickedFromGroup,
+  useSelectedIsNoteToSelf,
   useSelectedIsPrivate,
   useSelectedIsPrivateFriend,
   useSelectedIsPublic,
   useSelectedMembersCount,
   useSelectedNotificationSetting,
   useSelectedSubscriberCount,
-  useSelectedisNoteToSelf,
 } from '../../state/selectors/selectedConversation';
 import { ExpirationTimerOptions } from '../../util/expiringMessages';
 import { Flex } from '../basic/Flex';
@@ -65,7 +65,7 @@ const SelectionOverlay = () => {
   const selectedConversationKey = useSelectedConversationKey();
   const isPublic = useSelectedIsPublic();
   const dispatch = useDispatch();
-  const isMe = useSelectedisNoteToSelf();
+  const isMe = useSelectedIsNoteToSelf();
 
   const { i18n } = window;
 
@@ -216,7 +216,7 @@ const CallButton = () => {
   const isPrivate = useSelectedIsPrivate();
   const isBlocked = useSelectedIsBlocked();
   const isActive = useSelectedIsActive();
-  const isMe = useSelectedisNoteToSelf();
+  const isMe = useSelectedIsNoteToSelf();
   const selectedConvoKey = useSelectedConversationKey();
 
   const hasIncomingCall = useSelector(getHasIncomingCall);
@@ -295,7 +295,7 @@ const ConversationHeaderTitle = () => {
 
   const isPublic = useSelectedIsPublic();
   const isKickedFromGroup = useSelectedIsKickedFromGroup();
-  const isMe = useSelectedisNoteToSelf();
+  const isMe = useSelectedIsNoteToSelf();
   const isGroup = useSelectedIsGroup();
   let memberCount = useSelectedMembersCount();
 
