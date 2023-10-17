@@ -52,6 +52,7 @@ export class ClosedGroupVisibleMessage extends ClosedGroupMessage {
 type WithDestinationGroupPk = { destination: GroupPubkeyType };
 type WithGroupMessageNamespace = { namespace: SnodeNamespaces.ClosedGroupMessages };
 
+// TODO audric This will need to extend ExpirableMessage after Disappearing Messages V2 is merged
 export class ClosedGroupV2VisibleMessage extends DataMessage {
   private readonly chatMessage: VisibleMessage;
   public readonly destination: GroupPubkeyType;

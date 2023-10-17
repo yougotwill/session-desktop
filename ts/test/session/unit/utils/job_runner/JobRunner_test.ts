@@ -2,15 +2,15 @@ import { expect } from 'chai';
 import { isUndefined } from 'lodash';
 import Sinon from 'sinon';
 import { v4 } from 'uuid';
+import { sleepFor } from '../../../../../session/utils/Promise';
 import { PersistedJobRunner } from '../../../../../session/utils/job_runners/JobRunner';
-import { FakeSleepForJob, FakeSleepForMultiJob } from './FakeSleepForJob';
 import {
   FakeSleepForMultiJobData,
   FakeSleepJobData,
 } from '../../../../../session/utils/job_runners/PersistedJob';
-import { sleepFor } from '../../../../../session/utils/Promise';
-import { stubData } from '../../../../test-utils/utils';
 import { TestUtils } from '../../../../test-utils';
+import { stubData } from '../../../../test-utils/utils';
+import { FakeSleepForJob, FakeSleepForMultiJob } from './FakeSleepForJob';
 
 function getFakeSleepForJob(timestamp: number): FakeSleepForJob {
   const job = new FakeSleepForJob({
@@ -198,12 +198,6 @@ describe('JobRunner', () => {
       expect(result).to.eq('job_deferred');
       expect(runnerMulti.getJobList()).to.deep.eq([job.serializeJob(), job2.serializeJob()]);
       expect(runnerMulti.getCurrentJobIdentifier()).to.be.equal(job.persistedData.identifier);
-
-      // console.info(
-      //   'runnerMulti.getJobList() initial',
-      //   runnerMulti.getJobList().map(m => m.identifier),
-      //   Date.now()
-      // );
 
       // each job takes 5s to finish, so let's tick once the first one should be done
       clock.tick(5000);

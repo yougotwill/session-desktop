@@ -1,8 +1,17 @@
+import { AbortSignal } from 'abort-controller';
 import { toNumber } from 'lodash';
 import pRetry from 'p-retry';
-import { AbortSignal } from 'abort-controller';
 
 import { OnionPaths } from '.';
+import { Snode } from '../../data/data';
+import { fileServerPubKey, fileServerURL } from '../apis/file_server_api/FileServerApi';
+import { OpenGroupPollingUtils } from '../apis/open_group_api/opengroupV2/OpenGroupPollingUtils';
+import { invalidAuthRequiresBlinding } from '../apis/open_group_api/opengroupV2/OpenGroupServerPoller';
+import {
+  addBinaryContentTypeToHeaders,
+  addJsonContentTypeToHeaders,
+} from '../apis/open_group_api/sogsv3/sogsV3SendMessage';
+import { pnServerPubkeyHex, pnServerUrl } from '../apis/push_notification_api/PnServer';
 import {
   buildErrorMessageWithFailedCode,
   FinalDestNonSnodeOptions,
@@ -12,16 +21,7 @@ import {
   STATUS_NO_STATUS,
 } from '../apis/snode_api/onions';
 import { PROTOCOLS } from '../constants';
-import { Snode } from '../../data/data';
 import { OnionV4 } from './onionv4';
-import { OpenGroupPollingUtils } from '../apis/open_group_api/opengroupV2/OpenGroupPollingUtils';
-import {
-  addBinaryContentTypeToHeaders,
-  addJsonContentTypeToHeaders,
-} from '../apis/open_group_api/sogsv3/sogsV3SendMessage';
-import { pnServerPubkeyHex, pnServerUrl } from '../apis/push_notification_api/PnServer';
-import { fileServerPubKey, fileServerURL } from '../apis/file_server_api/FileServerApi';
-import { invalidAuthRequiresBlinding } from '../apis/open_group_api/opengroupV2/OpenGroupServerPoller';
 
 export type OnionFetchOptions = {
   method: string;
@@ -525,6 +525,9 @@ async function sendJsonViaOnionV4ToFileServer(sendOptions: {
   return res as OnionV4JSONSnodeResponse;
 }
 
+/**
+ * This is used during stubbing so we can override the time between retries (so the unit tests are faster)
+ */
 function getMinTimeoutForSogs() {
   return 100;
 }

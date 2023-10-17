@@ -41,6 +41,8 @@ import {
   RetrieveRequestResult,
 } from './types';
 
+const minMsgCountShouldRetry = 95;
+
 export function extractWebSocketContent(message: string): null | Uint8Array {
   try {
     const dataPlaintext = new Uint8Array(StringUtils.encode(message, 'base64'));
@@ -272,8 +274,8 @@ export class SwarmPolling {
         `Polled for group(${ed25519Str(pubkey)}):, got ${countMessages} messages back.`
       );
       let lastPolledTimestamp = Date.now();
-      if (countMessages >= 95) {
-        // if we get 95 messages or more back, it means there are probably more than this
+      if (countMessages >= minMsgCountShouldRetry) {
+        // if we get `minMsgCountShouldRetry` messages or more back, it means there are probably more than this
         // so make sure to retry the polling in the next 5sec by marking the last polled timestamp way before that it is really
         // this is a kind of hack
         lastPolledTimestamp = Date.now() - SWARM_POLLING_TIMEOUT.INACTIVE - 5 * 1000;
@@ -335,7 +337,7 @@ export class SwarmPolling {
     }
 
     if (!resultsFromAllNamespaces?.length) {
-      // Not a single message from any of the polled namespace was retrieve.
+      // Not a single message from any of the polled namespace was retrieved.
       // We must still mark the current pubkey as "was just polled"
       await this.updateLastPollTimestampForPubkey({
         countMessages: 0,

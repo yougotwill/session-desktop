@@ -26,7 +26,7 @@ const defaultMsBetweenRetries = 15000; // a long time between retries, to avoid 
 const defaultMaxAttempts = 2;
 
 /**
- * We want to run each of those jobs at least 3seconds apart.
+ * We want to run each of those jobs at least 3 seconds apart.
  * So every time one of that job finishes, update this timestamp, so we know when adding a new job, what is the next minimun date to run it.
  */
 let lastRunConfigSyncJobTimestamp: number | null = null;
@@ -81,7 +81,7 @@ async function pushChangesToUserSwarmIfNeeded() {
   const changesToPush = await LibSessionUtil.pendingChangesForUs();
 
   // If there are no pending changes then the job can just complete (next time something
-  // is updated we want to try and run immediately so don't scuedule another run in this case)
+  // is updated we want to try and run immediately so don't schedule another run in this case)
   if (isEmpty(changesToPush?.messages)) {
     triggerConfSyncJobDone();
     return RunJobResult.Success;

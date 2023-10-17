@@ -119,7 +119,10 @@ async function mergeUserConfigsWithIncomingUpdates(
       const variant = LibSessionUtil.userNamespaceToVariant(namespace);
 
       if (window.sessionFeatureFlags.debug.debugLibsessionDumps) {
-        await printDumpForDebug(`printDumpsForDebugging: before merge of ${variant}:`, variant);
+        await printDumpForDebug(
+          `printDumpsForDebugging: before merge of ${toMerge.length}, ${variant}:`,
+          variant
+        );
       }
 
       const hashesMerged = await GenericWrapperActions.merge(variant, toMerge);
@@ -672,13 +675,13 @@ async function handleSingleGroupUpdateToLeave(toLeave: string) {
  */
 async function handleGroupUpdate(latestEnvelopeTimestamp: number) {
   // first let's check which groups needs to be joined or left by doing a diff of what is in the wrapper and what is in the DB
-  const allGoupsInWrapper = await UserGroupsWrapperActions.getAllGroups();
-  const allGoupsInDb = ConvoHub.use()
+  const allGroupsInWrapper = await UserGroupsWrapperActions.getAllGroups();
+  const allGroupsInDb = ConvoHub.use()
     .getConversations()
     .filter(m => PubKey.isClosedGroupV2(m.id));
 
-  const allGoupsIdsInWrapper = allGoupsInWrapper.map(m => m.pubkeyHex);
-  const allGoupsIdsInDb = allGoupsInDb.map(m => m.id as string);
+  const allGoupsIdsInWrapper = allGroupsInWrapper.map(m => m.pubkeyHex);
+  const allGoupsIdsInDb = allGroupsInDb.map(m => m.id as string);
   window.log.debug('allGoupsIdsInWrapper', stringify(allGoupsIdsInWrapper));
   window.log.debug('allGoupsIdsInDb', stringify(allGoupsIdsInDb));
 
@@ -687,8 +690,8 @@ async function handleGroupUpdate(latestEnvelopeTimestamp: number) {
     throw new Error('userEdKeypair is not set');
   }
 
-  for (let index = 0; index < allGoupsInWrapper.length; index++) {
-    const groupInWrapper = allGoupsInWrapper[index];
+  for (let index = 0; index < allGroupsInWrapper.length; index++) {
+    const groupInWrapper = allGroupsInWrapper[index];
     window.inboxStore.dispatch(groupInfoActions.handleUserGroupUpdate(groupInWrapper));
 
     await handleSingleGroupUpdate({ groupInWrapper, latestEnvelopeTimestamp, userEdKeypair });

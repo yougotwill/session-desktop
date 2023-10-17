@@ -61,3 +61,5 @@ export const UI = {
 export const DEFAULT_RECENT_REACTS = ['😂', '🥰', '😢', '😡', '😮', '😈'];
 
 export const MAX_USERNAME_BYTES = 64;
+
+export const UPDATER_INTERVAL_MS = 10 * DURATION.MINUTES;

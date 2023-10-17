@@ -82,9 +82,6 @@ async function handleRequestDetail(
 ): Promise<void> {
   const envelope: any = contentIsEnvelope(data) ? data : SignalService.Envelope.decode(data);
 
-  // After this point, decoding errors are not the server's
-  //   fault, and we should handle them gracefully and tell the
-  //   user they received an invalid message
   // The message is for a group
   if (inConversation) {
     const ourNumber = UserUtils.getOurPubKeyStrFromCache();
