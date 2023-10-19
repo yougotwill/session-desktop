@@ -22,10 +22,10 @@ import { perfEnd, perfStart } from '../session/utils/Performance';
 import { ReleasedFeatures } from '../util/releaseFeature';
 import { Storage } from '../util/storage';
 // eslint-disable-next-line import/no-unresolved, import/extensions
+import { ConfigWrapperUser } from '../webworker/workers/browser/libsession_worker_functions';
 import { getSettingsKeyFromLibsessionWrapper } from './configMessage';
 import { ECKeyPair, HexKeyPair } from './keypairs';
 import { queueAllCachedFromSource } from './receiver';
-import { ConfigWrapperUser } from '../webworker/workers/browser/libsession_worker_functions';
 
 export const distributingClosedGroupEncryptionKeyPairs = new Map<string, ECKeyPair>();
 
@@ -101,7 +101,7 @@ export async function handleClosedGroupControlMessage(
     return;
   }
 
-  // We drop New closed group message from our other devices, as they will come as ConfigurationMessage instead
+  // We drop New closed group message from our other devices, as they will come through libsession instead
   if (type === Type.ENCRYPTION_KEY_PAIR) {
     const isComingFromGroupPubkey =
       envelope.type === SignalService.Envelope.Type.CLOSED_GROUP_MESSAGE;

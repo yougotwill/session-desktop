@@ -9,7 +9,6 @@ import useTimeoutFn from 'react-use/lib/useTimeoutFn';
 import { Data } from '../../data/data';
 import { ConvoHub } from '../../session/conversations';
 import { getMessageQueue } from '../../session/sending';
-import { syncConfigurationIfNeeded } from '../../session/utils/sync/syncUtils';
 
 import { clearSearch } from '../../state/ducks/search';
 import { resetOverlayMode, SectionType, showLeftPaneSection } from '../../state/ducks/section';
@@ -42,10 +41,11 @@ import {
   forceRefreshRandomSnodePool,
   getFreshSwarmFor,
 } from '../../session/apis/snode_api/snodePool';
+import { UserSync } from '../../session/utils/job_runners/jobs/UserSyncJob';
+import { forceSyncConfigurationNowIfNeeded } from '../../session/utils/sync/syncUtils';
 import { isDarkTheme } from '../../state/selectors/theme';
 import { ThemeStateType } from '../../themes/constants/colors';
 import { switchThemeTo } from '../../themes/switchTheme';
-import { UserSync } from '../../session/utils/job_runners/jobs/UserSyncJob';
 
 const Section = (props: { type: SectionType }) => {
   const ourNumber = useSelector(getOurNumber);
@@ -167,7 +167,7 @@ const triggerSyncIfNeeded = async () => {
   const didWeHandleAConfigurationMessageAlready =
     (await Data.getItemById(SettingsKey.hasSyncedInitialConfigurationItem))?.value || false;
   if (didWeHandleAConfigurationMessageAlready) {
-    await syncConfigurationIfNeeded();
+    await forceSyncConfigurationNowIfNeeded();
   }
 };
 
@@ -267,7 +267,7 @@ export const ActionsPanel = () => {
     if (!ourPrimaryConversation) {
       return;
     }
-    void syncConfigurationIfNeeded();
+    void forceSyncConfigurationNowIfNeeded();
   }, DURATION.DAYS * 2);
 
   useInterval(() => {

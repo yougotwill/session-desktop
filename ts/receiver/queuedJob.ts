@@ -12,13 +12,13 @@ import { ConversationTypeEnum, READ_MESSAGE_STATE } from '../models/conversation
 import { MessageDirection } from '../models/messageType';
 import { SignalService } from '../protobuf';
 import { ProfileManager } from '../session/profile_manager/ProfileManager';
+import { PubKey } from '../session/types';
+import { PropsForMessageWithoutConvoProps, lookupQuote } from '../state/ducks/conversations';
 import { showMessageRequestBannerOutsideRedux } from '../state/ducks/userConfig';
 import { getHideMessageRequestBannerOutsideRedux } from '../state/selectors/userConfig';
 import { GoogleChrome } from '../util';
 import { LinkPreviews } from '../util/linkPreviews';
 import { ReleasedFeatures } from '../util/releaseFeature';
-import { PropsForMessageWithoutConvoProps, lookupQuote } from '../state/ducks/conversations';
-import { PubKey } from '../session/types';
 
 function contentTypeSupported(type: string): boolean {
   const Chrome = GoogleChrome;
@@ -436,7 +436,7 @@ export async function handleMessageJob(
     void queueAttachmentDownloads(messageModel, conversation);
     // Check if we need to update any profile names
     // the only profile we don't update with what is coming here is ours,
-    // as our profile is shared across our devices with a ConfigurationMessage
+    // as our profile is shared across our devices with libsession
     if (messageModel.isIncoming() && regularDataMessage.profile) {
       await ProfileManager.updateProfileOfContact(
         sendingDeviceConversation.id,

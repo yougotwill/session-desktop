@@ -1,12 +1,12 @@
 import _ from 'lodash';
 import { UserUtils } from '.';
 import { Data } from '../../data/data';
+import { SessionKeyPair } from '../../receiver/keypairs';
+import { LokiProfile } from '../../types/Message';
+import { getOurPubKeyStrFromStorage } from '../../util/storage';
+import { ConvoHub } from '../conversations';
 import { PubKey } from '../types';
 import { fromHexToArray, toHex } from './String';
-import { ConvoHub } from '../conversations';
-import { LokiProfile } from '../../types/Message';
-import { getOurPubKeyStrFromStorage, Storage } from '../../util/storage';
-import { SessionKeyPair } from '../../receiver/keypairs';
 
 export type HexKeyPair = {
   pubKey: string;
@@ -100,9 +100,7 @@ export const getUserED25519KeyPairBytes = async (): Promise<ByteKeyPair | undefi
 
 export function getOurProfile(): LokiProfile | undefined {
   try {
-    // Secondary devices have their profile stored
-    // in their primary device's conversation
-    const ourNumber = Storage.get('primaryDevicePubKey') as string;
+    const ourNumber = UserUtils.getOurPubKeyStrFromCache();
     const ourConversation = ConvoHub.use().get(ourNumber);
     const ourProfileKeyHex = ourConversation.getProfileKey();
     const profileKeyAsBytes = ourProfileKeyHex ? fromHexToArray(ourProfileKeyHex) : null;

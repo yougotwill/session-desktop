@@ -29,7 +29,6 @@ import { ConvoHub } from '../conversations';
 import { MessageEncrypter } from '../crypto';
 import { addMessagePadding } from '../crypto/BufferPadding';
 import { ContentMessage } from '../messages/outgoing';
-import { ConfigurationMessage } from '../messages/outgoing/controlMessage/ConfigurationMessage';
 import { UnsendMessage } from '../messages/outgoing/controlMessage/UnsendMessage';
 import { ClosedGroupNewMessage } from '../messages/outgoing/controlMessage/group/ClosedGroupNewMessage';
 import { OpenGroupVisibleMessage } from '../messages/outgoing/visibleMessage/OpenGroupVisibleMessage';
@@ -79,7 +78,6 @@ function getMinRetryTimeout() {
 
 function isSyncMessage(message: ContentMessage) {
   if (
-    message instanceof ConfigurationMessage ||
     message instanceof ClosedGroupNewMessage ||
     message instanceof UnsendMessage ||
     (message as any).syncTarget?.length > 0

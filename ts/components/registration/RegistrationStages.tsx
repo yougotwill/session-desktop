@@ -1,12 +1,12 @@
 import React, { createContext, useEffect, useState } from 'react';
-import { SignUpMode, SignUpTab } from './SignUpTab';
-import { SignInMode, SignInTab } from './SignInTab';
 import { Data } from '../../data/data';
+import { SettingsKey } from '../../data/settings-key';
 import { getSwarmPollingInstance } from '../../session/apis/snode_api';
 import { ConvoHub } from '../../session/conversations';
 import { mnDecode } from '../../session/crypto/mnemonic';
 import { PromiseUtils, StringUtils, ToastUtils } from '../../session/utils';
 import { TaskTimedOutError } from '../../session/utils/Promise';
+import { fromHex } from '../../session/utils/String';
 import { trigger } from '../../shims/events';
 import {
   generateMnemonic,
@@ -14,9 +14,9 @@ import {
   sessionGenerateKeyPair,
   signInByLinkingDevice,
 } from '../../util/accountManager';
-import { fromHex } from '../../session/utils/String';
-import { setSignInByLinking, setSignWithRecoveryPhrase, Storage } from '../../util/storage';
-import { SettingsKey } from '../../data/settings-key';
+import { Storage, setSignInByLinking, setSignWithRecoveryPhrase } from '../../util/storage';
+import { SignInMode, SignInTab } from './SignInTab';
+import { SignUpMode, SignUpTab } from './SignUpTab';
 
 export async function resetRegistration() {
   await Data.removeAll();
@@ -71,8 +71,7 @@ export async function signUp(signUpDetails: {
 
 /**
  * Sign in/restore from seed.
- * Ask for a display name, as we will drop incoming ConfigurationMessages if any are saved on the swarm.
- * We will handle a ConfigurationMessage
+ * Ask for a display name, as we will drop incoming libsession updates if any are saved on the swarm.
  */
 export async function signInWithRecovery(signInDetails: {
   displayName: string;
@@ -102,7 +101,7 @@ export async function signInWithRecovery(signInDetails: {
 
 /**
  * This is will try to sign in with the user recovery phrase.
- * If no ConfigurationMessage is received in 60seconds, the loading will be canceled.
+ * If no libsession updates is received in 60seconds, the loading will be canceled.
  */
 export async function signInWithLinking(signInDetails: { userRecoveryPhrase: string }) {
   const { userRecoveryPhrase } = signInDetails;

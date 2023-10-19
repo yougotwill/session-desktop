@@ -483,11 +483,7 @@ export async function innerHandleSwarmContentMessage(
       perfEnd(`handleTypingMessage-${envelope.id}`, 'handleTypingMessage');
       return;
     }
-    if (content.configurationMessage) {
-      // we drop support for legacy configuration message
-      await removeFromCache(envelope);
-      return;
-    }
+
     if (content.sharedConfigMessage) {
       window.log.warn('content.sharedConfigMessage are handled outside of the receiving pipeline');
       // this should never happen, but remove it from cache just in case something is messed up
@@ -509,16 +505,23 @@ export async function innerHandleSwarmContentMessage(
     }
     if (content.unsendMessage) {
       await handleUnsendMessage(envelope, content.unsendMessage as SignalService.Unsend);
+      return;
     }
     if (content.callMessage) {
       await handleCallMessage(envelope, content.callMessage as SignalService.CallMessage);
+      return;
     }
     if (content.messageRequestResponse) {
       await handleMessageRequestResponse(
         envelope,
         content.messageRequestResponse as SignalService.MessageRequestResponse
       );
+      return;
     }
+
+    // If we get here, we don't know how to handle that envelope. probably a very old type of message, or something we don't support.
+    // There is not much we can do expect drop it
+    await removeFromCache(envelope);
   } catch (e) {
     window?.log?.warn(e.message);
   }

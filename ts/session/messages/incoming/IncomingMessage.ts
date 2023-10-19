@@ -6,7 +6,6 @@ type IncomingMessageAvailableTypes =
   | SignalService.CallMessage
   | SignalService.ReceiptMessage
   | SignalService.TypingMessage
-  | SignalService.ConfigurationMessage
   | SignalService.DataExtractionNotification
   | SignalService.Unsend
   | SignalService.MessageRequestResponse

@@ -1,7 +1,6 @@
 import { AbortController } from 'abort-controller';
 
 import { MessageSender } from '.';
-import { ConfigurationMessage } from '../messages/outgoing/controlMessage/ConfigurationMessage';
 import { ClosedGroupMessage } from '../messages/outgoing/controlMessage/group/ClosedGroupMessage';
 import { ClosedGroupNameChangeMessage } from '../messages/outgoing/controlMessage/group/ClosedGroupNameChangeMessage';
 import { PubKey, RawMessage } from '../types';
@@ -62,7 +61,7 @@ export class MessageQueue {
     sentCb?: (message: RawMessage) => Promise<void>,
     isGroup = false
   ): Promise<void> {
-    if (message instanceof ConfigurationMessage || !!(message as any).syncTarget) {
+    if ((message as any).syncTarget) {
       throw new Error('SyncMessage needs to be sent with sendSyncMessage');
     }
     await this.process(destinationPubKey, message, namespace, sentCb, isGroup);
@@ -230,11 +229,7 @@ export class MessageQueue {
     if (!message) {
       return;
     }
-    if (
-      !(message instanceof ConfigurationMessage) &&
-      !(message instanceof UnsendMessage) &&
-      !(message as any)?.syncTarget
-    ) {
+    if (!(message instanceof UnsendMessage) && !(message as any)?.syncTarget) {
       throw new Error('Invalid message given to sendSyncMessage');
     }
 
@@ -347,7 +342,7 @@ export class MessageQueue {
     const us = UserUtils.getOurPubKeyFromCache();
     let isSyncMessage = false;
     if (us && destinationPk.isEqual(us)) {
-      // We allow a message for ourselves only if it's a ConfigurationMessage, a ClosedGroupNewMessage,
+      // We allow a message for ourselves only if it's a ClosedGroupNewMessage,
       // or a message with a syncTarget set.
 
       if (MessageSender.isSyncMessage(message)) {

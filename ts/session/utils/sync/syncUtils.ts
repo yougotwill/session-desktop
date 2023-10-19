@@ -1,24 +1,8 @@
 import _ from 'lodash';
-import { v4 as uuidv4 } from 'uuid';
-import { UserUtils } from '..';
-import { getMessageQueue } from '../..';
-import { Data } from '../../../data/data';
-import { OpenGroupData } from '../../../data/opengroups';
-import { ConversationModel } from '../../../models/conversation';
 import { SignalService } from '../../../protobuf';
-import { ECKeyPair } from '../../../receiver/keypairs';
 import { UserSyncJobDone } from '../../../shims/events';
 import { ReleasedFeatures } from '../../../util/releaseFeature';
-import { Storage } from '../../../util/storage';
-import { getCompleteUrlFromRoom } from '../../apis/open_group_api/utils/OpenGroupUtils';
-import { SnodeNamespaces } from '../../apis/snode_api/namespaces';
-import { DURATION } from '../../constants';
-import { ConvoHub } from '../../conversations';
-import {
-  ConfigurationMessage,
-  ConfigurationMessageClosedGroup,
-  ConfigurationMessageContact,
-} from '../../messages/outgoing/controlMessage/ConfigurationMessage';
+
 import { ExpirationTimerUpdateMessage } from '../../messages/outgoing/controlMessage/ExpirationTimerUpdateMessage';
 import { MessageRequestResponse } from '../../messages/outgoing/controlMessage/MessageRequestResponse';
 import { UnsendMessage } from '../../messages/outgoing/controlMessage/UnsendMessage';
@@ -28,53 +12,7 @@ import {
   Quote,
   VisibleMessage,
 } from '../../messages/outgoing/visibleMessage/VisibleMessage';
-import { PubKey } from '../../types';
-import { fromBase64ToArray, fromHexToArray } from '../String';
 import { UserSync } from '../job_runners/jobs/UserSyncJob';
-
-const ITEM_ID_LAST_SYNC_TIMESTAMP = 'lastSyncedTimestamp';
-
-const getLastSyncTimestampFromDb = async (): Promise<number | undefined> =>
-  (await Data.getItemById(ITEM_ID_LAST_SYNC_TIMESTAMP))?.value;
-
-const writeLastSyncTimestampToDb = async (timestamp: number) =>
-  Storage.put(ITEM_ID_LAST_SYNC_TIMESTAMP, timestamp);
-
-/**
- * Conditionally Syncs user configuration with other devices linked.
- */
-export const syncConfigurationIfNeeded = async () => {
-  await UserSync.queueNewJobIfNeeded();
-
-  const userConfigLibsession = await ReleasedFeatures.checkIsUserConfigFeatureReleased();
-  if (!userConfigLibsession) {
-    const lastSyncedTimestamp = (await getLastSyncTimestampFromDb()) || 0;
-    const now = Date.now();
-
-    // if the last sync was less than 2 days before, return early.
-    if (Math.abs(now - lastSyncedTimestamp) < DURATION.DAYS * 2) {
-      return;
-    }
-
-    const allConvos = ConvoHub.use().getConversations();
-
-    const configMessage = await getCurrentConfigurationMessage(allConvos);
-    try {
-      // window?.log?.info('syncConfigurationIfNeeded with', configMessage);
-
-      await getMessageQueue().sendSyncMessage({
-        namespace: SnodeNamespaces.Default,
-        message: configMessage,
-      });
-    } catch (e) {
-      window?.log?.warn('Caught an error while sending our ConfigurationMessage:', e);
-      // we do return early so that next time we use the old timestamp again
-      // and so try again to trigger a sync
-      return;
-    }
-    await writeLastSyncTimestampToDb(now);
-  }
-};
 
 export const forceSyncConfigurationNowIfNeeded = async (waitForMessageSent = false) => {
   await ReleasedFeatures.checkIsUserConfigFeatureReleased();
@@ -91,197 +29,14 @@ export const forceSyncConfigurationNowIfNeeded = async (waitForMessageSent = fal
         e.message
       );
     });
-    if (ReleasedFeatures.isUserConfigFeatureReleasedCached()) {
-      if (waitForMessageSent) {
-        window.Whisper.events.once(UserSyncJobDone, () => {
-          resolve(true);
-        });
-        return;
-      }
-      resolve(true);
+
+    if (waitForMessageSent) {
+      window.Whisper.events.once(UserSyncJobDone, () => {
+        resolve(true);
+      });
       return;
     }
-    const allConvos = ConvoHub.use().getConversations();
-
-    // eslint-disable-next-line more/no-then
-    void getCurrentConfigurationMessage(allConvos)
-      .then(configMessage => {
-        // this just adds the message to the sending queue.
-        // if waitForMessageSent is set, we need to effectively wait until then
-
-        const callback = waitForMessageSent
-          ? () => {
-              resolve(true);
-            }
-          : undefined;
-        void getMessageQueue().sendSyncMessage({
-          namespace: SnodeNamespaces.Default,
-          message: configMessage,
-          sentCb: callback as any,
-        });
-        // either we resolve from the callback if we need to wait for it,
-        // or we don't want to wait, we resolve it here.
-        if (!waitForMessageSent) {
-          resolve(true);
-        }
-      })
-      .catch(e => {
-        window?.log?.warn('Caught an error while building our ConfigurationMessage:', e);
-        resolve(false);
-      });
-  });
-};
-
-const getActiveOpenGroupV2CompleteUrls = async (
-  convos: Array<ConversationModel>
-): Promise<Array<string>> => {
-  // Filter open groups v2
-  const openGroupsV2ConvoIds = convos
-    .filter(c => !!c.getActiveAt() && c.isOpenGroupV2() && !c.isLeft())
-    .map(c => c.id) as Array<string>;
-
-  const urls = await Promise.all(
-    openGroupsV2ConvoIds.map(async opengroupConvoId => {
-      const roomInfos = OpenGroupData.getV2OpenGroupRoom(opengroupConvoId);
-
-      if (roomInfos) {
-        return getCompleteUrlFromRoom(roomInfos);
-      }
-      return null;
-    })
-  );
-
-  return _.compact(urls) || [];
-};
-
-const getValidClosedGroups = async (convos: Array<ConversationModel>) => {
-  const ourPubKey = UserUtils.getOurPubKeyStrFromCache();
-
-  // Filter Closed/Medium groups
-  const closedGroupModels = convos.filter(
-    c =>
-      !!c.getActiveAt() &&
-      c.isClosedGroup() &&
-      c.getGroupMembers()?.includes(ourPubKey) &&
-      !c.isLeft() &&
-      !c.isKickedFromGroup() &&
-      !c.isBlocked() &&
-      c.getRealSessionUsername()
-  );
-
-  const closedGroups = await Promise.all(
-    closedGroupModels.map(async c => {
-      const groupPubKey = c.get('id');
-      const fetchEncryptionKeyPair = await Data.getLatestClosedGroupEncryptionKeyPair(groupPubKey);
-      if (!fetchEncryptionKeyPair) {
-        return null;
-      }
-
-      return new ConfigurationMessageClosedGroup({
-        publicKey: groupPubKey,
-        name: c.getRealSessionUsername() || '',
-        members: c.getGroupMembers() || [],
-        admins: c.getGroupAdmins(),
-        encryptionKeyPair: ECKeyPair.fromHexKeyPair(fetchEncryptionKeyPair),
-      });
-    })
-  );
-
-  const onlyValidClosedGroup = closedGroups.filter(
-    m => m !== null
-  ) as Array<ConfigurationMessageClosedGroup>;
-  return onlyValidClosedGroup;
-};
-
-const getValidContacts = (convos: Array<ConversationModel>) => {
-  // Filter contacts
-  // blindedId are synced with the outbox logic.
-  const contactsModels = convos.filter(
-    c =>
-      !!c.getActiveAt() &&
-      c.getRealSessionUsername() &&
-      c.isPrivate() &&
-      c.isApproved() &&
-      !PubKey.isBlinded(c.get('id'))
-  );
-
-  const contacts = contactsModels.map(c => {
-    try {
-      const profileKey = c.getProfileKey();
-      let profileKeyForContact = null;
-      if (typeof profileKey === 'string') {
-        // this will throw if the profileKey is not in hex.
-        try {
-          // for some reason, at some point, the saved profileKey is a string in base64 format
-          // this hack is here to update existing conversations with a non-hex profileKey to a hex format and save them
-
-          if (!/^[0-9a-fA-F]+$/.test(profileKey)) {
-            throw new Error('Not Hex');
-          }
-          profileKeyForContact = fromHexToArray(profileKey);
-        } catch (e) {
-          // if not hex, try to decode it as base64
-          profileKeyForContact = fromBase64ToArray(profileKey);
-          // if the line above does not fail, update the stored profileKey for this convo
-          void c.setProfileKey(profileKeyForContact);
-        }
-      } else if (profileKey) {
-        window.log.warn(
-          'Got a profileKey for a contact in another format than string. Contact: ',
-          c.id
-        );
-        return null;
-      }
-
-      return new ConfigurationMessageContact({
-        publicKey: c.id as string,
-        displayName: c.getRealSessionUsername() || 'Anonymous',
-        profilePictureURL: c.getAvatarPointer(),
-        profileKey: !profileKeyForContact?.length ? undefined : profileKeyForContact,
-        isApproved: c.isApproved(),
-        isBlocked: c.isBlocked(),
-        didApproveMe: c.didApproveMe(),
-      });
-    } catch (e) {
-      window?.log.warn('getValidContacts', e);
-      return null;
-    }
-  });
-  return _.compact(contacts);
-};
-
-export const getCurrentConfigurationMessage = async (
-  convos: Array<ConversationModel>
-): Promise<ConfigurationMessage> => {
-  const ourPubKey = UserUtils.getOurPubKeyStrFromCache();
-  const ourConvo = convos.find(convo => convo.id === ourPubKey);
-
-  const opengroupV2CompleteUrls = await getActiveOpenGroupV2CompleteUrls(convos);
-  const onlyValidClosedGroup = await getValidClosedGroups(convos);
-  const validContacts = getValidContacts(convos);
-
-  if (!ourConvo) {
-    window?.log?.error('Could not find our convo while building a configuration message.');
-  }
-
-  const ourProfileKeyHex =
-    ConvoHub.use().get(UserUtils.getOurPubKeyStrFromCache())?.getProfileKey() || null;
-  const profileKey = ourProfileKeyHex ? fromHexToArray(ourProfileKeyHex) : undefined;
-
-  const profilePicture = ourConvo?.getAvatarPointer() || undefined;
-  const displayName = ourConvo?.getRealSessionUsername() || 'Anonymous'; // this should never be undefined, but well...
-
-  const activeOpenGroups = [...opengroupV2CompleteUrls];
-
-  return new ConfigurationMessage({
-    identifier: uuidv4(),
-    timestamp: Date.now(),
-    activeOpenGroups,
-    activeClosedGroups: onlyValidClosedGroup,
-    displayName,
-    profilePicture,
-    profileKey,
-    contacts: validContacts,
+    resolve(true);
   });
 };
 
@@ -348,7 +103,6 @@ const buildSyncExpireTimerMessage = (
 export type SyncMessageType =
   | VisibleMessage
   | ExpirationTimerUpdateMessage
-  | ConfigurationMessage
   | MessageRequestResponse
   | UnsendMessage;
 
@@ -368,7 +122,7 @@ export const buildSyncMessage = (
   if (!sentTimestamp || !_.isNumber(sentTimestamp)) {
     throw new Error('Tried to build a sync message without a sentTimestamp');
   }
-  // don't include our profileKey on syncing message. This is to be done by a ConfigurationMessage now
+  // don't include our profileKey on syncing message. This is to be done through libsession now
   const timestamp = _.toNumber(sentTimestamp);
   if (dataMessage.flags === SignalService.DataMessage.Flags.EXPIRATION_TIMER_UPDATE) {
     return buildSyncExpireTimerMessage(identifier, dataMessage, timestamp, syncTarget);
