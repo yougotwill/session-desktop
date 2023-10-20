@@ -238,12 +238,34 @@
   "autoUpdateDownloadInstructions": "Would you like to download the update?",
   "leftTheGroup": "$name$ has left the group.",
   "multipleLeftTheGroup": "$name$ left the group",
-  "updatedTheGroup": "Group updated",
   "titleIsNow": "Group name is now '$name$'.",
+  "groupNameChange": "Group name is now <b>$name$</b>.",
+  "groupNameChangeFallback": "Group name updated.",
+  "groupAvatarChange": "Group display picture updated.",
+
+  "groupOneJoined": "<b>name</b> joined the group.",
+  "groupYouJoined": "<b>You</b> joined the group.",
+  "groupTwoJoined": "<b>$first$</b> and <b>$second$</b> joined the group.",
+  "groupOthersJoined": "<b>$name$</b> and <b>$count$ others</b> joined the group.",
+
+  "groupOneRemoved": "<b>name</b> was removed from the group.",
+  "groupYouRemoved": "<b>You</b> were removed from the group.",
+  "groupTwoRemoved": "<b>$first$</b> and <b>$second$</b> were removed from the group.",
+  "groupOthersRemoved": "<b>$name$</b> and <b>$count$ others</b> were removed from the group.",
+
+  "groupOnePromoted": "<b>name</b> was promoted to Admin.",
+  "groupYouPromoted": "<b>You</b> were promoted to Admin.",
+  "groupTwoPromoted": "<b>$first$</b> and <b>$second$</b> were promoted to Admin.",
+  "groupOthersPromoted": "<b>$name$</b> and <b>$count$ others</b> were promoted to Admin.",
+
+  "groupOneLeft": "<b>$name$</b> left the group.",
+  "groupYouLeft": "<b>You</b> left the group.",
+
   "joinedTheGroup": "$name$ joined the group.",
   "multipleJoinedTheGroup": "$name$ joined the group.",
   "kickedFromTheGroup": "$name$ was removed from the group.",
   "multipleKickedFromTheGroup": "$name$ were removed from the group.",
+
   "block": "Block",
   "unblock": "Unblock",
   "unblocked": "Unblocked",

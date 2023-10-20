@@ -1,11 +1,12 @@
 import { isEmpty } from 'lodash';
 import { UserUtils } from '..';
+import { SettingsKey } from '../../../data/settings-key';
+import { CONVERSATION_PRIORITIES } from '../../../models/conversationAttributes';
+import { toFixedUint8ArrayOfLength } from '../../../types/sqlSharedTypes';
+import { Storage } from '../../../util/storage';
 import { UserConfigWrapperActions } from '../../../webworker/workers/browser/libsession_worker_interface';
 import { ConvoHub } from '../../conversations';
 import { fromHexToArray } from '../String';
-import { CONVERSATION_PRIORITIES } from '../../../models/conversationAttributes';
-import { Storage } from '../../../util/storage';
-import { SettingsKey } from '../../../data/settings-key';
 
 async function insertUserProfileIntoWrapper(convoId: string) {
   if (!isUserProfileToStoreInWrapper(convoId)) {
@@ -32,15 +33,18 @@ async function insertUserProfileIntoWrapper(convoId: string) {
   );
   // const expirySeconds = ourConvo.get('expireTimer') || 0;
   if (dbProfileUrl && !isEmpty(dbProfileKey)) {
-    await UserConfigWrapperActions.setUserInfo(
-      dbName,
-      priority,
-      {
-        url: dbProfileUrl,
-        key: dbProfileKey,
-      }
-      // expirySeconds
-    );
+    if (dbProfileKey.length === 32) {
+      const fixedLen = toFixedUint8ArrayOfLength(dbProfileKey, 32);
+      await UserConfigWrapperActions.setUserInfo(
+        dbName,
+        priority,
+        {
+          url: dbProfileUrl,
+          key: fixedLen.buffer, // TODO make this use the fixed length array
+        }
+        // expirySeconds
+      );
+    }
   } else {
     await UserConfigWrapperActions.setUserInfo(dbName, priority, null); // expirySeconds
   }

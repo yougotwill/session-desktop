@@ -9,18 +9,14 @@ import { SnodeSignature } from '../../../../session/apis/snode_api/snodeSignatur
 import { concatUInt8Array } from '../../../../session/crypto';
 import { UserUtils } from '../../../../session/utils';
 import { fromBase64ToArray, fromHexToArray } from '../../../../session/utils/String';
-import { toFixedUint8ArrayOfLength } from '../../../../types/sqlSharedTypes';
 
 use(chaiAsPromised);
 
 const validGroupPk = '03eef710fcaaa73fd50c4311333f5c496e0fdbbe9e8a70fdfa95e7ec62d5032f5c';
-const privKeyUint = toFixedUint8ArrayOfLength(
-  concatUInt8Array(
-    fromHexToArray('cd8488c39bf9972739046d627e7796b2bc0e38e2fa99fc4edd59205c28f2cdb1'),
-    fromHexToArray(validGroupPk.slice(2))
-  ),
-  64
-);
+const privKeyUint = concatUInt8Array(
+  fromHexToArray('cd8488c39bf9972739046d627e7796b2bc0e38e2fa99fc4edd59205c28f2cdb1'),
+  fromHexToArray(validGroupPk.slice(2))
+); // len 64
 
 const userEd25519Keypair = {
   pubKey: '37e1631b002de498caf7c5c1712718bde7f257c6dadeed0c21abf5e939e6c309',

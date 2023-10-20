@@ -1,4 +1,4 @@
-import { FixedSizeUint8Array, GroupPubkeyType } from 'libsession_util_nodejs';
+import { GroupPubkeyType } from 'libsession_util_nodejs';
 import { isEmpty } from 'lodash';
 import { toFixedUint8ArrayOfLength } from '../../../types/sqlSharedTypes';
 import { getSodiumRenderer } from '../../crypto';
@@ -72,11 +72,11 @@ type SnodeSigParamsShared = {
 
 type SnodeSigParamsAdminGroup = SnodeSigParamsShared & {
   groupPk: GroupPubkeyType;
-  privKey: Uint8Array; // our ed25519 key when we are signing with our pubkey
+  privKey: Uint8Array; // len 64
 };
 type SnodeSigParamsUs = SnodeSigParamsShared & {
   pubKey: string;
-  privKey: FixedSizeUint8Array<64>;
+  privKey: Uint8Array; // len 64
 };
 
 function isSigParamsForGroupAdmin(
@@ -95,7 +95,7 @@ async function getSnodeSignatureShared(params: SnodeSigParamsAdminGroup | SnodeS
   try {
     const message = new Uint8Array(verificationData);
     const sodium = await getSodiumRenderer();
-    const signature = sodium.crypto_sign_detached(message, params.privKey as Uint8Array);
+    const signature = sodium.crypto_sign_detached(message, params.privKey);
     const signatureBase64 = fromUInt8ArrayToBase64(signature);
     if (isSigParamsForGroupAdmin(params)) {
       return {
@@ -134,7 +134,7 @@ async function getSnodeSignatureParamsUs({
     pubKey: UserUtils.getOurPubKeyStrFromCache(),
     method,
     namespace,
-    privKey: lengthCheckedPrivKey,
+    privKey: lengthCheckedPrivKey.buffer,
   });
 
   const us = UserUtils.getOurPubKeyStrFromCache();
@@ -152,7 +152,7 @@ async function getSnodeGroupSignatureParams({
   namespace,
 }: {
   groupPk: GroupPubkeyType;
-  groupIdentityPrivKey: FixedSizeUint8Array<64>;
+  groupIdentityPrivKey: Uint8Array; // len 64
   namespace: SnodeNamespacesGroup;
   method: 'retrieve' | 'store';
 }): Promise<SnodeGroupSignatureResult> {
@@ -174,7 +174,7 @@ async function generateUpdateExpirySignature({
 }: WithMessagesHashes &
   WithShortenOrExtend &
   WithTimestamp & {
-    ed25519Privkey: Uint8Array | FixedSizeUint8Array<64>;
+    ed25519Privkey: Uint8Array; // len 64
     ed25519Pubkey: string;
   }): Promise<{ signature: string; pubkey: string }> {
   // "expire" || ShortenOrExtend || expiry || messages[0] || ... || messages[N]
@@ -184,7 +184,7 @@ async function generateUpdateExpirySignature({
 
   const sodium = await getSodiumRenderer();
 
-  const signature = sodium.crypto_sign_detached(message, ed25519Privkey as Uint8Array);
+  const signature = sodium.crypto_sign_detached(message, ed25519Privkey);
   const signatureBase64 = fromUInt8ArrayToBase64(signature);
 
   if (isEmpty(signatureBase64) || isEmpty(ed25519Pubkey)) {
@@ -216,7 +216,7 @@ async function generateUpdateExpiryOurSignature({
     messagesHashes,
     shortenOrExtend,
     timestamp,
-    ed25519Privkey: edKeyPrivBytes,
+    ed25519Privkey: toFixedUint8ArrayOfLength(edKeyPrivBytes, 64).buffer,
     ed25519Pubkey: ourEd25519Key.pubKey,
   });
 }
@@ -231,7 +231,7 @@ async function generateUpdateExpiryGroupSignature({
   WithShortenOrExtend &
   WithTimestamp & {
     groupPk: GroupPubkeyType;
-    groupPrivKey: FixedSizeUint8Array<64>;
+    groupPrivKey: Uint8Array; // len 64
   }) {
   if (isEmpty(groupPrivKey) || isEmpty(groupPk)) {
     throw new PreConditionFailed(

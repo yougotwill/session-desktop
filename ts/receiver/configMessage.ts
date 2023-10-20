@@ -219,14 +219,17 @@ async function handleUserProfileUpdate(result: IncomingUserResult) {
     await window.setSettingValue(SettingsKey.hasBlindedMsgRequestsEnabled, newBlindedMsgRequest); // this does the dispatch to redux
   }
 
-  const picUpdate = !isEmpty(updateUserInfo.key) && !isEmpty(updateUserInfo.url);
+  const picUpdate =
+    !isEmpty(updateUserInfo.key) &&
+    !isEmpty(updateUserInfo.url) &&
+    updateUserInfo.key.length === 32;
 
   // NOTE: if you do any changes to the settings of a user which are synced, it should be done above the `updateOurProfileViaLibSession` call
   await updateOurProfileViaLibSession(
     result.latestEnvelopeTimestamp,
     updateUserInfo.name,
     picUpdate ? updateUserInfo.url : null,
-    picUpdate ? updateUserInfo.key : null,
+    picUpdate ? updateUserInfo.key : null, // TODO make the whole logic of handling profileKeys used the UInt8ArrayFixedLength
     updateUserInfo.priority
   );
 
@@ -629,9 +632,10 @@ async function handleSingleGroupUpdate({
     // dump is always empty when creating a new groupInfo
     await MetaGroupWrapperActions.init(groupPk, {
       metaDumped: null,
-      userEd25519Secretkey: toFixedUint8ArrayOfLength(userEdKeypair.privKeyBytes, 64),
+      userEd25519Secretkey: toFixedUint8ArrayOfLength(userEdKeypair.privKeyBytes, 64).buffer,
       groupEd25519Secretkey: groupInWrapper.secretKey,
-      groupEd25519Pubkey: toFixedUint8ArrayOfLength(HexString.fromHexString(groupPk.slice(2)), 32),
+      groupEd25519Pubkey: toFixedUint8ArrayOfLength(HexString.fromHexString(groupPk.slice(2)), 32)
+        .buffer,
     });
   } catch (e) {
     window.log.warn(

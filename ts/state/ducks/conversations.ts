@@ -1,5 +1,6 @@
 /* eslint-disable no-restricted-syntax */
 import { createAsyncThunk, createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { PubkeyType } from 'libsession_util_nodejs';
 import { omit, toNumber } from 'lodash';
 import { ReplyingToMessageProps } from '../../components/conversation/composition/CompositionBox';
 import { QuotedAttachmentType } from '../../components/conversation/message/message-content/quote/Quote';
@@ -83,23 +84,24 @@ export type PropsForExpirationTimer = {
   receivedAt: number | undefined;
 };
 
-export type PropsForGroupUpdateGeneral = {
-  type: 'general';
-};
-
 export type PropsForGroupUpdateAdd = {
   type: 'add';
-  added: Array<string>;
+  added: Array<PubkeyType>;
 };
 
 export type PropsForGroupUpdateKicked = {
   type: 'kicked';
-  kicked: Array<string>;
+  kicked: Array<PubkeyType>;
+};
+
+export type PropsForGroupUpdatePromoted = {
+  type: 'promoted';
+  promoted: Array<PubkeyType>;
 };
 
 export type PropsForGroupUpdateLeft = {
   type: 'left';
-  left: Array<string>;
+  left: Array<PubkeyType>;
 };
 
 export type PropsForGroupUpdateName = {
@@ -108,9 +110,9 @@ export type PropsForGroupUpdateName = {
 };
 
 export type PropsForGroupUpdateType =
-  | PropsForGroupUpdateGeneral
   | PropsForGroupUpdateAdd
   | PropsForGroupUpdateKicked
+  | PropsForGroupUpdatePromoted
   | PropsForGroupUpdateName
   | PropsForGroupUpdateLeft;
 

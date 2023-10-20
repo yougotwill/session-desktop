@@ -1,0 +1,39 @@
+import { GroupPubkeyType } from 'libsession_util_nodejs';
+import { SignalService } from '../../../../../../protobuf';
+import { GroupUpdateMessage, GroupUpdateMessageParams } from '../GroupUpdateMessage';
+
+interface Params extends GroupUpdateMessageParams {
+  groupPk: GroupPubkeyType;
+  groupIdentitySeed: Uint8Array;
+}
+
+/**
+ * GroupUpdateDeleteMessage is sent as a 1o1 message to the recipient, not through the group's swarm.
+ */
+export class GroupUpdatePromoteMessage extends GroupUpdateMessage {
+  public readonly groupIdentitySeed: Params['groupIdentitySeed'];
+
+  constructor(params: Params) {
+    super(params);
+
+    this.groupIdentitySeed = params.groupIdentitySeed;
+    if (!this.groupIdentitySeed || this.groupIdentitySeed.length !== 32) {
+      throw new Error('groupIdentitySeed must be set');
+    }
+  }
+
+  protected updateProto(): SignalService.GroupUpdateMessage {
+    const promoteMessage = new SignalService.GroupUpdatePromoteMessage({
+      groupIdentitySeed: this.groupIdentitySeed,
+    });
+
+    return new SignalService.GroupUpdateMessage({ promoteMessage });
+  }
+
+  public isForGroupSwarm(): boolean {
+    return false;
+  }
+  public isFor1o1Swarm(): boolean {
+    return true;
+  }
+}

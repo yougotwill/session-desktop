@@ -2,7 +2,12 @@ import chai from 'chai';
 import { describe } from 'mocha';
 import Sinon, * as sinon from 'sinon';
 
-import { GroupPubkeyType, LegacyGroupInfo, UserGroupsGet } from 'libsession_util_nodejs';
+import {
+  GroupPubkeyType,
+  LegacyGroupInfo,
+  PubkeyType,
+  UserGroupsGet,
+} from 'libsession_util_nodejs';
 import { ConversationModel, Convo } from '../../../../models/conversation';
 import { ConversationTypeEnum } from '../../../../models/conversationAttributes';
 import { SnodePool, getSwarmPollingInstance } from '../../../../session/apis/snode_api';
@@ -38,7 +43,7 @@ function stubWithGroups(pubkeys: Array<GroupPubkeyType>) {
 
 describe('SwarmPolling:pollForAllKeys', () => {
   const ourPubkey = TestUtils.generateFakePubKey();
-  const ourNumber = ourPubkey.key;
+  const ourNumber = ourPubkey.key as PubkeyType;
 
   let pollOnceForKeySpy: Sinon.SinonSpy<
     Parameters<SwarmPolling['pollOnceForKey']>,

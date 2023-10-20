@@ -1,3 +1,4 @@
+import { PubkeyType } from 'libsession_util_nodejs';
 import _ from 'lodash';
 import { UserUtils } from '.';
 import { Data } from '../../data/data';
@@ -35,13 +36,13 @@ export function isUsFromCache(pubKey: string | PubKey | undefined): boolean {
 /**
  * Returns the public key of this current device as a STRING, or throws an error
  */
-export function getOurPubKeyStrFromCache(): string {
+export function getOurPubKeyStrFromCache(): PubkeyType {
   const ourNumber = getOurPubKeyStrFromStorage();
   if (!ourNumber) {
     throw new Error('ourNumber is not set');
   }
 
-  return ourNumber;
+  return ourNumber as PubkeyType;
 }
 
 /**

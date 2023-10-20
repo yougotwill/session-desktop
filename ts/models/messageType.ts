@@ -1,3 +1,4 @@
+import { PubkeyType } from 'libsession_util_nodejs';
 import { defaultsDeep } from 'lodash';
 import { v4 as uuidv4 } from 'uuid';
 import {
@@ -155,6 +156,7 @@ export type MessageGroupUpdate = {
   left?: Array<string>;
   joined?: Array<string>;
   kicked?: Array<string>;
+  promoted?: Array<PubkeyType>;
   name?: string;
 };
 
@@ -177,7 +179,6 @@ export interface MessageAttributesOptionals {
   group_update?: MessageGroupUpdate;
   groupInvitation?: any;
   attachments?: any;
-  contact?: any;
   conversationId: string;
   errors?: any;
   flags?: number;

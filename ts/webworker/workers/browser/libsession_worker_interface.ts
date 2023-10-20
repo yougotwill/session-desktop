@@ -1,22 +1,23 @@
 /* eslint-disable import/extensions */
 /* eslint-disable import/no-unresolved */
-import { join } from 'path';
 import {
-  GroupWrapperConstructor,
   ContactInfoSet,
   ContactsWrapperActionsCalls,
   ConvoInfoVolatileWrapperActionsCalls,
   GenericWrapperActionsCall,
   GroupInfoSet,
   GroupPubkeyType,
+  GroupWrapperConstructor,
   LegacyGroupInfo,
+  MergeSingle,
   MetaGroupWrapperActionsCalls,
   ProfilePicture,
   UserConfigWrapperActionsCalls,
-  UserGroupsWrapperActionsCalls,
   UserGroupsSet,
-  MergeSingle,
+  UserGroupsWrapperActionsCalls,
 } from 'libsession_util_nodejs';
+// eslint-disable-next-line import/order
+import { join } from 'path';
 
 import { getAppRootPath } from '../../../node/getRootPath';
 import { WorkerInterface } from '../../worker_interface';

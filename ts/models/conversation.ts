@@ -929,7 +929,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       'conversationId' | 'source' | 'type' | 'direction' | 'received_at' | 'unread'
     >
   ) {
-    let sender = UserUtils.getOurPubKeyStrFromCache();
+    let sender: string = UserUtils.getOurPubKeyStrFromCache();
     if (this.isPublic()) {
       const openGroup = OpenGroupData.getV2OpenGroupRoom(this.id);
       if (openGroup && openGroup.serverPublicKey && roomHasBlindEnabled(openGroup)) {

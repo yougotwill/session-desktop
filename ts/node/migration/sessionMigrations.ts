@@ -19,6 +19,7 @@ import {
   getCommunityInfoFromDBValues,
   getContactInfoFromDBValues,
   getLegacyGroupInfoFromDBValues,
+  toFixedUint8ArrayOfLength,
 } from '../../types/sqlSharedTypes';
 import {
   CLOSED_GROUP_V2_KEY_PAIRS_TABLE,
@@ -34,9 +35,9 @@ import {
   toSqliteBoolean,
 } from '../database_utility';
 
-import { getIdentityKeys, sqlNode } from '../sql';
-import { sleepFor } from '../../session/utils/Promise';
 import { SettingsKey } from '../../data/settings-key';
+import { sleepFor } from '../../session/utils/Promise';
+import { getIdentityKeys, sqlNode } from '../sql';
 
 const hasDebugEnvVariable = Boolean(process.env.SESSION_DEBUG);
 
@@ -1643,15 +1644,18 @@ function updateToSessionSchemaVersion31(currentVersion: number, db: BetterSqlite
       const ourConvoPriority = ourConversation.priority;
       // const ourConvoExpire = ourConversation.expireTimer || 0;
       if (ourDbProfileUrl && !isEmpty(ourDbProfileKey)) {
-        userProfileWrapper.setUserInfo(
-          ourDbName,
-          ourConvoPriority,
-          {
-            url: ourDbProfileUrl,
-            key: ourDbProfileKey,
-          }
-          // ourConvoExpire,
-        );
+        if (ourDbProfileKey.length === 32) {
+          const ourKeyFixedLen = toFixedUint8ArrayOfLength(ourDbProfileKey, 32);
+          userProfileWrapper.setUserInfo(
+            ourDbName,
+            ourConvoPriority,
+            {
+              url: ourDbProfileUrl,
+              key: ourKeyFixedLen.buffer, // TODO make this use the fixed length array
+            }
+            // ourConvoExpire,
+          );
+        }
       }
 
       insertContactIntoContactWrapper(

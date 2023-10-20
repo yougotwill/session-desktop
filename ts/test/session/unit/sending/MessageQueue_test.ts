@@ -13,6 +13,7 @@ import chaiAsPromised from 'chai-as-promised';
 import { describe } from 'mocha';
 import Sinon, * as sinon from 'sinon';
 
+import { PubkeyType } from 'libsession_util_nodejs';
 import { ContentMessage } from '../../../../session/messages/outgoing';
 import { ClosedGroupMessage } from '../../../../session/messages/outgoing/controlMessage/group/ClosedGroupMessage';
 import { MessageSender } from '../../../../session/sending';
@@ -34,7 +35,7 @@ const { expect } = chai;
 describe('MessageQueue', () => {
   // Initialize new stubbed cache
   const ourDevice = TestUtils.generateFakePubKey();
-  const ourNumber = ourDevice.key;
+  const ourNumber = ourDevice.key as PubkeyType;
 
   // Initialize new stubbed queue
   let pendingMessageCache: PendingMessageCacheStub;

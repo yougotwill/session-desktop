@@ -3,10 +3,10 @@
 // eslint-disable-next-line camelcase
 import {
   ContactInfoSet,
-  FixedSizeUint8Array,
   GroupPubkeyType,
   LegacyGroupInfo,
   LegacyGroupMemberInfo,
+  Uint8ArrayFixedLength,
 } from 'libsession_util_nodejs';
 import { from_hex } from 'libsodium-wrappers-sumo';
 import { isArray, isEmpty, isEqual } from 'lodash';
@@ -277,9 +277,12 @@ export function roomHasReactionsEnabled(openGroup?: OpenGroupV2Room) {
 export function toFixedUint8ArrayOfLength<T extends number>(
   data: Uint8Array,
   length: T
-): FixedSizeUint8Array<T> {
+): Uint8ArrayFixedLength<T> {
   if (data.length === length) {
-    return data as any as FixedSizeUint8Array<T>;
+    return {
+      buffer: data,
+      length,
+    };
   }
   throw new Error(
     `toFixedUint8ArrayOfLength invalid. Expected length ${length} but got: ${data.length}`

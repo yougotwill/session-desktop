@@ -125,6 +125,20 @@ const getSelectedConversationIsGroup = (state: StateType): boolean => {
 };
 
 /**
+ * Returns true if the current conversation selected is a group conversation.
+ * Returns false if the current conversation selected is not a group conversation, or none are selected
+ */
+const getSelectedConversationIsGroupV2 = (state: StateType): boolean => {
+  const selected = getSelectedConversation(state);
+  if (!selected || !selected.type) {
+    return false;
+  }
+  return selected.type
+    ? selected.type === ConversationTypeEnum.GROUPV2 && PubKey.isClosedGroupV2(selected.id)
+    : false;
+};
+
+/**
  * Returns true if the current conversation selected is a closed group and false otherwise.
  */
 export const isClosedGroupConversation = (state: StateType): boolean => {
@@ -178,6 +192,9 @@ export function useSelectedConversationKey() {
 
 export function useSelectedIsGroup() {
   return useSelector(getSelectedConversationIsGroup);
+}
+export function useSelectedIsGroupV2() {
+  return useSelector(getSelectedConversationIsGroupV2);
 }
 
 export function useSelectedIsPublic() {

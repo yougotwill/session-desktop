@@ -13,8 +13,7 @@ import { stubData } from '../../../test-utils/utils';
 
 describe('getPollingDetails', () => {
   // Initialize new stubbed cache
-  const ourPubkey = TestUtils.generateFakePubKey();
-  const ourNumber = ourPubkey.key;
+  const ourNumber = TestUtils.generateFakePubKeyStr();
 
   let swarmPolling: SwarmPolling;
 
@@ -54,7 +53,7 @@ describe('getPollingDetails', () => {
     swarmPolling.resetSwarmPolling();
 
     const fn = async () =>
-      swarmPolling.getPollingDetails([{ pubkey: PubKey.cast(ourPubkey), lastPolledTimestamp: 0 }]);
+      swarmPolling.getPollingDetails([{ pubkey: PubKey.cast(ourNumber), lastPolledTimestamp: 0 }]);
     await expect(fn()).to.be.rejectedWith('');
   });
 

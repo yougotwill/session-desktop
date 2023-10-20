@@ -1,5 +1,6 @@
-import * as crypto from 'crypto';
 import { expect } from 'chai';
+// eslint-disable-next-line import/order
+import * as crypto from 'crypto';
 import _ from 'lodash';
 import Sinon, * as sinon from 'sinon';
 import { SignalService } from '../../../../protobuf';
@@ -16,10 +17,10 @@ import { OnionV4 } from '../../../../session/onions/onionv4';
 import { MessageSender } from '../../../../session/sending';
 import { PubKey, RawMessage } from '../../../../session/types';
 import { MessageUtils, UserUtils } from '../../../../session/utils';
+import { fromBase64ToArrayBuffer } from '../../../../session/utils/String';
 import { TestUtils } from '../../../test-utils';
 import { stubCreateObjectUrl, stubData, stubUtilWorker } from '../../../test-utils/utils';
 import { TEST_identityKeyPair } from '../crypto/MessageEncrypter_test';
-import { fromBase64ToArrayBuffer } from '../../../../session/utils/String';
 
 describe('MessageSender', () => {
   afterEach(() => {
@@ -38,7 +39,7 @@ describe('MessageSender', () => {
   });
 
   describe('send', () => {
-    const ourNumber = '0123456789abcdef';
+    const ourNumber = TestUtils.generateFakePubKeyStr();
     let sessionMessageAPISendStub: sinon.SinonStub<any>;
     let encryptStub: sinon.SinonStub<[PubKey, Uint8Array, SignalService.Envelope.Type]>;
 

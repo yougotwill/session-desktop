@@ -1,6 +1,8 @@
 import Backbone from 'backbone';
 
 import autoBind from 'auto-bind';
+import filesize from 'filesize';
+import { PubkeyType } from 'libsession_util_nodejs';
 import {
   cloneDeep,
   debounce,
@@ -14,28 +16,27 @@ import {
   sortBy,
   uniq,
 } from 'lodash';
-import filesize from 'filesize';
 import { SignalService } from '../protobuf';
 import { getMessageQueue } from '../session';
 import { ConvoHub } from '../session/conversations';
 import { DataMessage } from '../session/messages/outgoing';
+import { ClosedGroupVisibleMessage } from '../session/messages/outgoing/visibleMessage/ClosedGroupVisibleMessage';
 import { PubKey } from '../session/types';
 import {
+  UserUtils,
   uploadAttachmentsToFileServer,
   uploadLinkPreviewToFileServer,
   uploadQuoteThumbnailsToFileServer,
-  UserUtils,
 } from '../session/utils';
-import { ClosedGroupVisibleMessage } from '../session/messages/outgoing/visibleMessage/ClosedGroupVisibleMessage';
 import {
   DataExtractionNotificationMsg,
-  fillMessageAttributesWithDefaults,
   MessageAttributes,
   MessageAttributesOptionals,
   MessageGroupUpdate,
   MessageModelType,
   PropsForDataExtractionNotification,
   PropsForMessageRequestResponse,
+  fillMessageAttributesWithDefaults,
 } from './messageType';
 
 import { Data } from '../data/data';
@@ -55,28 +56,27 @@ import {
   uploadQuoteThumbnailsV3,
 } from '../session/utils/AttachmentsV2';
 import { perfEnd, perfStart } from '../session/utils/Performance';
-import { buildSyncMessage } from '../session/utils/sync/syncUtils';
 import { isUsFromCache } from '../session/utils/User';
+import { buildSyncMessage } from '../session/utils/sync/syncUtils';
 import {
   FindAndFormatContactType,
   LastMessageStatusType,
   MessageModelPropsWithoutConvoProps,
   MessagePropsDetails,
-  messagesChanged,
   PropsForAttachment,
   PropsForExpirationTimer,
   PropsForGroupInvitation,
   PropsForGroupUpdate,
   PropsForGroupUpdateAdd,
-  PropsForGroupUpdateGeneral,
   PropsForGroupUpdateKicked,
   PropsForGroupUpdateLeft,
   PropsForGroupUpdateName,
+  PropsForGroupUpdatePromoted,
   PropsForMessageWithoutConvoProps,
   PropsForQuote,
+  messagesChanged,
 } from '../state/ducks/conversations';
 import { AttachmentTypeWithPath, isVoiceMessage } from '../types/Attachment';
-import { getAttachmentMetadata } from '../types/message/initializeAttachmentMetadata';
 import {
   deleteExternalMessageFiles,
   getAbsoluteAttachmentPath,
@@ -85,6 +85,7 @@ import {
   loadQuoteData,
 } from '../types/MessageAttachment';
 import { ReactionList } from '../types/Reaction';
+import { getAttachmentMetadata } from '../types/message/initializeAttachmentMetadata';
 import { roomHasBlindEnabled } from '../types/sqlSharedTypes';
 import { ExpirationTimerOptions } from '../util/expiringMessages';
 import { LinkPreviews } from '../util/linkPreviews';
@@ -384,7 +385,7 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
     if (groupUpdate.joined?.length) {
       const change: PropsForGroupUpdateAdd = {
         type: 'add',
-        added: groupUpdate.joined,
+        added: groupUpdate.joined as Array<PubkeyType>,
       };
       return { change, ...sharedProps };
     }
@@ -392,7 +393,7 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
     if (groupUpdate.kicked?.length) {
       const change: PropsForGroupUpdateKicked = {
         type: 'kicked',
-        kicked: groupUpdate.kicked,
+        kicked: groupUpdate.kicked as Array<PubkeyType>,
       };
       return { change, ...sharedProps };
     }
@@ -400,11 +401,18 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
     if (groupUpdate.left?.length) {
       const change: PropsForGroupUpdateLeft = {
         type: 'left',
-        left: groupUpdate.left,
+        left: groupUpdate.left as Array<PubkeyType>,
       };
       return { change, ...sharedProps };
     }
 
+    if (groupUpdate.promoted?.length) {
+      const change: PropsForGroupUpdatePromoted = {
+        type: 'promoted',
+        promoted: groupUpdate.promoted as Array<PubkeyType>,
+      };
+      return { change, ...sharedProps };
+    }
     if (groupUpdate.name) {
       const change: PropsForGroupUpdateName = {
         type: 'name',
@@ -413,11 +421,7 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
       return { change, ...sharedProps };
     }
 
-    // Just show a "Group Updated" message, not sure what was changed
-    const changeGeneral: PropsForGroupUpdateGeneral = {
-      type: 'general',
-    };
-    return { change: changeGeneral, ...sharedProps };
+    return null;
   }
 
   public getMessagePropStatus(): LastMessageStatusType {
@@ -1162,6 +1166,9 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
       if (arrayContainsUsOnly(groupUpdate.left)) {
         return window.i18n('youLeftTheGroup');
       }
+      if (groupUpdate.name) {
+        return window.i18n('titleIsNow', [groupUpdate.name]);
+      }
 
       if (groupUpdate.left && groupUpdate.left.length === 1) {
         return window.i18n('leftTheGroup', [
@@ -1169,15 +1176,9 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
         ]);
       }
 
-      const messages = [];
-      if (!groupUpdate.name && !groupUpdate.joined && !groupUpdate.kicked && !groupUpdate.kicked) {
-        return window.i18n('updatedTheGroup'); // Group Updated
-      }
-      if (groupUpdate.name) {
-        return window.i18n('titleIsNow', [groupUpdate.name]);
-      }
       if (groupUpdate.joined && groupUpdate.joined.length) {
         const names = groupUpdate.joined.map(ConvoHub.use().getContactProfileNameOrShortenedPubKey);
+        const messages = [];
 
         if (names.length > 1) {
           messages.push(window.i18n('multipleJoinedTheGroup', [names.join(', ')]));
@@ -1192,14 +1193,16 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
           groupUpdate.kicked,
           ConvoHub.use().getContactProfileNameOrShortenedPubKey
         );
+        const messages = [];
 
         if (names.length > 1) {
           messages.push(window.i18n('multipleKickedFromTheGroup', [names.join(', ')]));
         } else {
           messages.push(window.i18n('kickedFromTheGroup', names));
         }
+        return messages.join(' ');
       }
-      return messages.join(' ');
+      return null;
     }
     if (this.isIncoming() && this.hasErrors()) {
       return window.i18n('incomingError');

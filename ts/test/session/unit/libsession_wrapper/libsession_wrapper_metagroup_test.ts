@@ -4,8 +4,8 @@ import {
   MetaGroupWrapperNode,
   UserGroupsWrapperNode,
 } from 'libsession_util_nodejs';
-import Sinon from 'sinon';
 import { range } from 'lodash';
+import Sinon from 'sinon';
 import { HexString } from '../../../../node/hexStrings';
 import { toFixedUint8ArrayOfLength } from '../../../../types/sqlSharedTypes';
 import { TestUtils } from '../../../test-utils';
@@ -47,10 +47,10 @@ describe('libsession_metagroup', () => {
       groupEd25519Pubkey: toFixedUint8ArrayOfLength(
         HexString.fromHexString(groupCreated.pubkeyHex.slice(2)),
         32
-      ),
+      ).buffer,
       groupEd25519Secretkey: groupCreated.secretKey,
       metaDumped: null,
-      userEd25519Secretkey: toFixedUint8ArrayOfLength(us.ed25519KeyPair.privateKey, 64),
+      userEd25519Secretkey: toFixedUint8ArrayOfLength(us.ed25519KeyPair.privateKey, 64).buffer,
     });
     member = TestUtils.generateFakePubKeyStr();
     member2 = TestUtils.generateFakePubKeyStr();
@@ -264,10 +264,10 @@ describe('libsession_metagroup', () => {
         groupEd25519Pubkey: toFixedUint8ArrayOfLength(
           HexString.fromHexString(groupCreated.pubkeyHex.slice(2)),
           32
-        ),
+        ).buffer,
         groupEd25519Secretkey: groupCreated.secretKey,
         metaDumped: null,
-        userEd25519Secretkey: toFixedUint8ArrayOfLength(us.ed25519KeyPair.privateKey, 64),
+        userEd25519Secretkey: toFixedUint8ArrayOfLength(us.ed25519KeyPair.privateKey, 64).buffer,
       });
 
       // mark current user as admin

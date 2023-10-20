@@ -89,9 +89,9 @@ const initNewGroupInWrapper = createAsyncThunk(
       // dump is always empty when creating a new groupInfo
       await MetaGroupWrapperActions.init(groupPk, {
         metaDumped: null,
-        userEd25519Secretkey: toFixedUint8ArrayOfLength(userEd25519Secretkey, 64),
+        userEd25519Secretkey: toFixedUint8ArrayOfLength(userEd25519Secretkey, 64).buffer,
         groupEd25519Secretkey: newGroup.secretKey,
-        groupEd25519Pubkey: toFixedUint8ArrayOfLength(groupEd2519Pk, 32),
+        groupEd25519Pubkey: toFixedUint8ArrayOfLength(groupEd2519Pk, 32).buffer,
       });
 
       for (let index = 0; index < uniqMembers.length; index++) {
@@ -177,9 +177,9 @@ const handleUserGroupUpdate = createAsyncThunk(
     try {
       await MetaGroupWrapperActions.init(groupPk, {
         metaDumped: null,
-        userEd25519Secretkey: toFixedUint8ArrayOfLength(userEd25519Secretkey, 64),
+        userEd25519Secretkey: toFixedUint8ArrayOfLength(userEd25519Secretkey, 64).buffer,
         groupEd25519Secretkey: userGroup.secretKey,
-        groupEd25519Pubkey: toFixedUint8ArrayOfLength(groupEd2519Pk, 32),
+        groupEd25519Pubkey: toFixedUint8ArrayOfLength(groupEd2519Pk, 32).buffer,
       });
     } catch (e) {
       window.log.warn(`failed to init metawrapper ${groupPk}`);
@@ -246,9 +246,10 @@ const loadMetaDumpsFromDB = createAsyncThunk(
         window.log.debug('loadMetaDumpsFromDB initing from metagroup dump', variant);
 
         await MetaGroupWrapperActions.init(groupPk, {
-          groupEd25519Pubkey: toFixedUint8ArrayOfLength(groupEd25519Pubkey, 32),
+          groupEd25519Pubkey: toFixedUint8ArrayOfLength(groupEd25519Pubkey, 32).buffer,
           groupEd25519Secretkey: foundInUserWrapper?.secretKey || null,
-          userEd25519Secretkey: toFixedUint8ArrayOfLength(ed25519KeyPairBytes.privKeyBytes, 64),
+          userEd25519Secretkey: toFixedUint8ArrayOfLength(ed25519KeyPairBytes.privKeyBytes, 64)
+            .buffer,
           metaDumped: data,
         });
 
