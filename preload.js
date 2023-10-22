@@ -237,7 +237,7 @@ window.nodeSetImmediate = setImmediate;
 
 const data = require('./ts/data/dataInit');
 const { setupi18n } = require('./ts/util/i18n');
-window.Signal = data.initData();
+data.initData();
 
 const { ConvoHub } = require('./ts/session/conversations/ConversationController');
 window.getConversationController = ConvoHub.use;
