@@ -1,4 +1,5 @@
 import { SignalService } from '../../../../../../protobuf';
+import { Preconditions } from '../../../preconditions';
 import { GroupUpdateMessage, GroupUpdateMessageParams } from '../GroupUpdateMessage';
 
 interface Params extends GroupUpdateMessageParams {
@@ -15,6 +16,13 @@ export class GroupUpdateDeleteMessage extends GroupUpdateMessage {
     super(params);
 
     this.adminSignature = params.adminSignature;
+
+    Preconditions.checkUin8tArrayOrThrow({
+      data: this.adminSignature,
+      expectedLength: 64,
+      varName: 'adminSignature',
+      context: this.constructor.toString(),
+    });
   }
 
   public dataProto(): SignalService.DataMessage {

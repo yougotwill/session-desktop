@@ -12,6 +12,7 @@ import {
   MergeSingle,
   MetaGroupWrapperActionsCalls,
   ProfilePicture,
+  PubkeyType,
   UserConfigWrapperActionsCalls,
   UserGroupsSet,
   UserGroupsWrapperActionsCalls,
@@ -407,11 +408,11 @@ export const MetaGroupWrapperActions: MetaGroupWrapperActionsCalls = {
     >,
 
   /** GroupMembers wrapper specific actions */
-  memberGet: async (groupPk: GroupPubkeyType, pubkeyHex: string) =>
+  memberGet: async (groupPk: GroupPubkeyType, pubkeyHex: PubkeyType) =>
     callLibSessionWorker([`MetaGroupConfig-${groupPk}`, 'memberGet', pubkeyHex]) as Promise<
       ReturnType<MetaGroupWrapperActionsCalls['memberGet']>
     >,
-  memberGetOrConstruct: async (groupPk: GroupPubkeyType, pubkeyHex: string) =>
+  memberGetOrConstruct: async (groupPk: GroupPubkeyType, pubkeyHex: PubkeyType) =>
     callLibSessionWorker([
       `MetaGroupConfig-${groupPk}`,
       'memberGetOrConstruct',
@@ -421,29 +422,29 @@ export const MetaGroupWrapperActions: MetaGroupWrapperActionsCalls = {
     callLibSessionWorker([`MetaGroupConfig-${groupPk}`, 'memberGetAll']) as Promise<
       ReturnType<MetaGroupWrapperActionsCalls['memberGetAll']>
     >,
-  memberErase: async (groupPk: GroupPubkeyType, pubkeyHex: string) =>
+  memberErase: async (groupPk: GroupPubkeyType, pubkeyHex: PubkeyType) =>
     callLibSessionWorker([`MetaGroupConfig-${groupPk}`, 'memberErase', pubkeyHex]) as Promise<
       ReturnType<MetaGroupWrapperActionsCalls['memberErase']>
     >,
-  memberSetAccepted: async (groupPk: GroupPubkeyType, pubkeyHex: string) =>
+  memberSetAccepted: async (groupPk: GroupPubkeyType, pubkeyHex: PubkeyType) =>
     callLibSessionWorker([`MetaGroupConfig-${groupPk}`, 'memberSetAccepted', pubkeyHex]) as Promise<
       ReturnType<MetaGroupWrapperActionsCalls['memberSetAccepted']>
     >,
-  memberSetPromoted: async (groupPk: GroupPubkeyType, pubkeyHex: string, failed: boolean) =>
+  memberSetPromoted: async (groupPk: GroupPubkeyType, pubkeyHex: PubkeyType, failed: boolean) =>
     callLibSessionWorker([
       `MetaGroupConfig-${groupPk}`,
       'memberSetPromoted',
       pubkeyHex,
       failed,
     ]) as Promise<ReturnType<MetaGroupWrapperActionsCalls['memberSetPromoted']>>,
-  memberSetInvited: async (groupPk: GroupPubkeyType, pubkeyHex: string, failed: boolean) =>
+  memberSetInvited: async (groupPk: GroupPubkeyType, pubkeyHex: PubkeyType, failed: boolean) =>
     callLibSessionWorker([
       `MetaGroupConfig-${groupPk}`,
       'memberSetInvited',
       pubkeyHex,
       failed,
     ]) as Promise<ReturnType<MetaGroupWrapperActionsCalls['memberSetInvited']>>,
-  memberSetName: async (groupPk: GroupPubkeyType, pubkeyHex: string, name: string) =>
+  memberSetName: async (groupPk: GroupPubkeyType, pubkeyHex: PubkeyType, name: string) =>
     callLibSessionWorker([
       `MetaGroupConfig-${groupPk}`,
       'memberSetName',
@@ -452,7 +453,7 @@ export const MetaGroupWrapperActions: MetaGroupWrapperActionsCalls = {
     ]) as Promise<ReturnType<MetaGroupWrapperActionsCalls['memberSetName']>>,
   memberSetProfilePicture: async (
     groupPk: GroupPubkeyType,
-    pubkeyHex: string,
+    pubkeyHex: PubkeyType,
     profilePicture: ProfilePicture
   ) =>
     callLibSessionWorker([
@@ -498,6 +499,12 @@ export const MetaGroupWrapperActions: MetaGroupWrapperActionsCalls = {
     callLibSessionWorker([`MetaGroupConfig-${groupPk}`, 'decryptMessage', ciphertext]) as Promise<
       ReturnType<MetaGroupWrapperActionsCalls['decryptMessage']>
     >,
+  makeSwarmSubAccount: async (groupPk: GroupPubkeyType, memberPubkeyHex: PubkeyType) =>
+    callLibSessionWorker([
+      `MetaGroupConfig-${groupPk}`,
+      'makeSwarmSubAccount',
+      memberPubkeyHex,
+    ]) as Promise<ReturnType<MetaGroupWrapperActionsCalls['makeSwarmSubAccount']>>,
 };
 
 export const callLibSessionWorker = async (

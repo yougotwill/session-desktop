@@ -75,11 +75,18 @@ const initNewGroupInWrapper = createAsyncThunk(
     if (!members.includes(us)) {
       throw new PreConditionFailed('initNewGroupInWrapper needs us to be a member');
     }
-    const uniqMembers = uniq(members);
+    if (members.some(k => !PubKey.is05Pubkey(k))) {
+      throw new PreConditionFailed('initNewGroupInWrapper only works with members being pubkeys');
+    }
+    const uniqMembers = uniq(members) as Array<PubkeyType>; // the if just above ensures that this is fine
     const newGroup = await UserGroupsWrapperActions.createGroup();
     const groupPk = newGroup.pubkeyHex;
 
     try {
+      const groupSecretKey = newGroup.secretKey;
+      if (!groupSecretKey) {
+        throw new Error('groupSecretKey was empty just after creation.');
+      }
       newGroup.name = groupName; // this will be used by the linked devices until they fetch the info from the groups swarm
 
       // the `GroupSync` below will need the secretKey of the group to be saved in the wrapper. So save it!
@@ -130,6 +137,7 @@ const initNewGroupInWrapper = createAsyncThunk(
       const result = await GroupSync.pushChangesToGroupSwarmIfNeeded(groupPk);
       if (result !== RunJobResult.Success) {
         window.log.warn('GroupSync.pushChangesToGroupSwarmIfNeeded during create failed');
+        throw new Error('failed to pushChangesToGroupSwarmIfNeeded');
       }
 
       await convo.unhideIfNeeded();
@@ -138,6 +146,23 @@ const initNewGroupInWrapper = createAsyncThunk(
       convo.updateLastMessage();
       dispatch(resetOverlayMode());
       await openConversationWithMessages({ conversationKey: groupPk, messageId: null });
+      // everything is setup for this group, we now need to send the invites to every members, privately and asynchronously, and gracefully handle errors with toasts.
+
+      const inviteDetails = await getGroupInvitesMessages({
+        groupName,
+        membersFromWrapper,
+        secretKey: groupSecretKey,
+        groupPk,
+      });
+
+      void inviteDetails.map(async detail => {
+        await getMessageQueue().sendToPubKeyNonDurably({
+          message: detail.invite,
+          namespace: SnodeNamespaces.Default,
+          pubkey: PubKey.cast(detail.member),
+        });
+        console.log(`sending invite message to ${detail.member}`);
+      });
 
       return { groupPk: newGroup.pubkeyHex, infos, members: membersFromWrapper };
     } catch (e) {
@@ -328,18 +353,19 @@ const groupSlice = createSlice({
       state.infos[groupPk] = infos;
       state.members[groupPk] = members;
       state.creationFromUIPending = false;
+      return state;
     });
     builder.addCase(initNewGroupInWrapper.rejected, state => {
       window.log.error('a initNewGroupInWrapper was rejected');
       state.creationFromUIPending = false;
-      throw new Error('initNewGroupInWrapper.rejected');
-
+      return state;
       // FIXME delete the wrapper completely & corresponding dumps, and usergroups entry?
     });
     builder.addCase(initNewGroupInWrapper.pending, (state, _action) => {
       state.creationFromUIPending = true;
 
       window.log.error('a initNewGroupInWrapper is pending');
+      return state;
     });
     builder.addCase(loadMetaDumpsFromDB.fulfilled, (state, action) => {
       const loaded = action.payload;
@@ -347,9 +373,11 @@ const groupSlice = createSlice({
         state.infos[element.groupPk] = element.infos;
         state.members[element.groupPk] = element.members;
       });
+      return state;
     });
-    builder.addCase(loadMetaDumpsFromDB.rejected, () => {
+    builder.addCase(loadMetaDumpsFromDB.rejected, state => {
       window.log.error('a loadMetaDumpsFromDB was rejected');
+      return state;
     });
     builder.addCase(refreshGroupDetailsFromWrapper.fulfilled, (state, action) => {
       const { infos, members, groupPk } = action.payload;
@@ -367,6 +395,7 @@ const groupSlice = createSlice({
         delete state.infos[groupPk];
         delete state.members[groupPk];
       }
+      return state;
     });
     builder.addCase(refreshGroupDetailsFromWrapper.rejected, () => {
       window.log.error('a refreshGroupDetailsFromWrapper was rejected');

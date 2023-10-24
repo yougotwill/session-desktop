@@ -25,18 +25,19 @@ export class GroupUpdateInviteMessage extends GroupUpdateMessage {
     this.groupName = groupName; // not sure if getting an invite with an empty group name should make us drop an incoming group invite (and the keys associated to it too)
     this.adminSignature = adminSignature;
     this.memberAuthData = memberAuthData;
-    Preconditions.checkUin8tArrayOrThrow(
-      memberAuthData,
-      100,
-      'memberAuthData',
-      'GroupUpdateInviteMessage'
-    );
-    Preconditions.checkUin8tArrayOrThrow(
-      adminSignature,
-      32,
-      'adminSignature',
-      'GroupUpdateInviteMessage'
-    );
+
+    Preconditions.checkUin8tArrayOrThrow({
+      data: adminSignature,
+      expectedLength: 64,
+      varName: 'adminSignature',
+      context: this.constructor.toString(),
+    });
+    Preconditions.checkUin8tArrayOrThrow({
+      data: memberAuthData,
+      expectedLength: 100,
+      varName: 'memberAuthData',
+      context: this.constructor.toString(),
+    });
   }
 
   public dataProto(): SignalService.DataMessage {

@@ -1,6 +1,7 @@
 import { PubkeyType } from 'libsession_util_nodejs';
 import { isEmpty } from 'lodash';
 import { SignalService } from '../../../../../../protobuf';
+import { Preconditions } from '../../../preconditions';
 import { GroupUpdateMessage, GroupUpdateMessageParams } from '../GroupUpdateMessage';
 
 type Params = GroupUpdateMessageParams & {
@@ -23,6 +24,18 @@ export class GroupUpdateDeleteMemberContentMessage extends GroupUpdateMessage {
     if (isEmpty(this.memberSessionIds)) {
       throw new Error('GroupUpdateDeleteMemberContentMessage needs members in list');
     }
+    Preconditions.checkUin8tArrayOrThrow({
+      data: this.adminSignature,
+      expectedLength: 64,
+      varName: 'adminSignature',
+      context: this.constructor.toString(),
+    });
+
+    Preconditions.checkArrayHaveOnly05Pubkeys({
+      arr: this.memberSessionIds,
+      context: this.constructor.toString(),
+      varName: 'memberSessionIds',
+    });
   }
 
   public dataProto(): SignalService.DataMessage {

@@ -2,6 +2,7 @@ import { expect } from 'chai';
 import {
   GroupMemberGet,
   MetaGroupWrapperNode,
+  PubkeyType,
   UserGroupsWrapperNode,
 } from 'libsession_util_nodejs';
 import { range } from 'lodash';
@@ -15,7 +16,7 @@ function profilePicture() {
   return { key: new Uint8Array(range(0, 32)), url: `${Math.random()}` };
 }
 
-function emptyMember(pubkeyHex: string): GroupMemberGet {
+function emptyMember(pubkeyHex: PubkeyType): GroupMemberGet {
   return {
     inviteFailed: false,
     invitePending: false,
@@ -35,8 +36,8 @@ describe('libsession_metagroup', () => {
   let us: TestUserKeyPairs;
   let groupCreated: ReturnType<UserGroupsWrapperNode['createGroup']>;
   let metaGroupWrapper: MetaGroupWrapperNode;
-  let member: string;
-  let member2: string;
+  let member: PubkeyType;
+  let member2: PubkeyType;
 
   beforeEach(async () => {
     us = await TestUtils.generateUserKeyPairs();
