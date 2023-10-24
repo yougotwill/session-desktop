@@ -22,12 +22,14 @@ export class GroupUpdatePromoteMessage extends GroupUpdateMessage {
     }
   }
 
-  protected updateProto(): SignalService.GroupUpdateMessage {
+  public dataProto(): SignalService.DataMessage {
     const promoteMessage = new SignalService.GroupUpdatePromoteMessage({
       groupIdentitySeed: this.groupIdentitySeed,
     });
 
-    return new SignalService.GroupUpdateMessage({ promoteMessage });
+    return new SignalService.DataMessage({
+      groupUpdateMessage: { promoteMessage },
+    });
   }
 
   public isForGroupSwarm(): boolean {

@@ -7,12 +7,10 @@ import { GroupUpdateMessage } from '../GroupUpdateMessage';
  *
  */
 export class GroupUpdateMemberLeftMessage extends GroupUpdateMessage {
-  protected updateProto(): SignalService.GroupUpdateMessage {
+  public dataProto(): SignalService.DataMessage {
     const memberLeftMessage = new SignalService.GroupUpdateMemberLeftMessage({});
 
-    return new SignalService.GroupUpdateMessage({
-      memberLeftMessage,
-    });
+    return new SignalService.DataMessage({ groupUpdateMessage: { memberLeftMessage } });
   }
 
   public isForGroupSwarm(): boolean {

@@ -19,12 +19,7 @@ export abstract class GroupUpdateMessage extends DataMessage {
     }
   }
 
-  protected abstract updateProto(): SignalService.GroupUpdateMessage;
-
-  public dataProto(): SignalService.DataMessage {
-    const groupUpdateMessage = this.updateProto();
-    return new SignalService.DataMessage({ groupUpdateMessage });
-  }
+  public abstract dataProto(): SignalService.DataMessage;
 
   public abstract isFor1o1Swarm(): boolean;
   public abstract isForGroupSwarm(): boolean;

@@ -31,6 +31,7 @@ import {
 } from '../apis/snode_api/namespaces';
 import { CallMessage } from '../messages/outgoing/controlMessage/CallMessage';
 import { UnsendMessage } from '../messages/outgoing/controlMessage/UnsendMessage';
+import { GroupUpdateInviteMessage } from '../messages/outgoing/controlMessage/group_v2/to_user/GroupUpdateInviteMessage';
 import { OpenGroupVisibleMessage } from '../messages/outgoing/visibleMessage/OpenGroupVisibleMessage';
 
 type ClosedGroupMessageType =
@@ -249,7 +250,11 @@ export class MessageQueue {
     pubkey,
   }: {
     pubkey: PubKey;
-    message: ClosedGroupNewMessage | CallMessage | ClosedGroupMemberLeftMessage;
+    message:
+      | ClosedGroupNewMessage
+      | CallMessage
+      | ClosedGroupMemberLeftMessage
+      | GroupUpdateInviteMessage;
     namespace: SnodeNamespaces;
   }): Promise<boolean | number> {
     let rawMessage;

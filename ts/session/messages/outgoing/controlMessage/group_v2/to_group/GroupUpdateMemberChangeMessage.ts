@@ -62,15 +62,13 @@ export class GroupUpdateMemberChangeMessage extends GroupUpdateMessage {
     }
   }
 
-  protected updateProto(): SignalService.GroupUpdateMessage {
+  public dataProto(): SignalService.DataMessage {
     const memberChangeMessage = new SignalService.GroupUpdateMemberChangeMessage({
       type: this.typeOfChange,
       memberSessionIds: this.memberSessionIds,
     });
 
-    return new SignalService.GroupUpdateMessage({
-      memberChangeMessage,
-    });
+    return new SignalService.DataMessage({ groupUpdateMessage: { memberChangeMessage } });
   }
 
   public isForGroupSwarm(): boolean {

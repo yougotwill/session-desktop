@@ -49,8 +49,15 @@ function overwriteOutgoingTimestampWithNetworkTimestamp(message: { plainTextBuff
 
   const { dataMessage, dataExtractionNotification, typingMessage } = contentDecoded;
   if (dataMessage && dataMessage.timestamp && toNumber(dataMessage.timestamp) > 0) {
-    // this is a sync message, do not overwrite the message timestamp
-    if (dataMessage.syncTarget) {
+    // for a few message types, we cannot override the timestamp when sending it.
+    // - for a sync message
+    // - groupv2InviteMessage, groupUpdateDeleteMemberContentMessage, groupUpdateDeleteMessage as the embedded signature depends on the timestamp inside
+    if (
+      dataMessage.syncTarget ||
+      dataMessage.groupUpdateMessage?.inviteMessage ||
+      dataMessage.groupUpdateMessage?.deleteMemberContent ||
+      dataMessage.groupUpdateMessage?.deleteMessage
+    ) {
       return {
         overRiddenTimestampBuffer: plainTextBuffer,
         networkTimestamp: _.toNumber(dataMessage.timestamp),

@@ -25,15 +25,13 @@ export class GroupUpdateDeleteMemberContentMessage extends GroupUpdateMessage {
     }
   }
 
-  protected updateProto(): SignalService.GroupUpdateMessage {
+  public dataProto(): SignalService.DataMessage {
     const deleteMemberContent = new SignalService.GroupUpdateDeleteMemberContentMessage({
       adminSignature: this.adminSignature,
       memberSessionIds: this.memberSessionIds,
     });
 
-    return new SignalService.GroupUpdateMessage({
-      deleteMemberContent,
-    });
+    return new SignalService.DataMessage({ groupUpdateMessage: { deleteMemberContent } });
   }
 
   public isForGroupSwarm(): boolean {

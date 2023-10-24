@@ -1,5 +1,6 @@
 import { SignalService } from '../../../../../../protobuf';
 import { UserUtils } from '../../../../../utils';
+import { Preconditions } from '../../../preconditions';
 import { GroupUpdateMessage, GroupUpdateMessageParams } from '../GroupUpdateMessage';
 
 interface Params extends GroupUpdateMessageParams {
@@ -16,31 +17,44 @@ export class GroupUpdateInviteMessage extends GroupUpdateMessage {
   public readonly adminSignature: Params['adminSignature'];
   public readonly memberAuthData: Params['memberAuthData'];
 
-  constructor(params: Params) {
+  constructor({ adminSignature, groupName, memberAuthData, ...others }: Params) {
     super({
-      timestamp: params.timestamp,
-      identifier: params.identifier,
-      groupPk: params.groupPk,
+      ...others,
     });
 
-    this.groupName = params.groupName;
-    this.adminSignature = params.adminSignature;
-    this.memberAuthData = params.memberAuthData;
+    this.groupName = groupName; // not sure if getting an invite with an empty group name should make us drop an incoming group invite (and the keys associated to it too)
+    this.adminSignature = adminSignature;
+    this.memberAuthData = memberAuthData;
+    Preconditions.checkUin8tArrayOrThrow(
+      memberAuthData,
+      100,
+      'memberAuthData',
+      'GroupUpdateInviteMessage'
+    );
+    Preconditions.checkUin8tArrayOrThrow(
+      adminSignature,
+      32,
+      'adminSignature',
+      'GroupUpdateInviteMessage'
+    );
   }
 
-  protected updateProto(): SignalService.GroupUpdateMessage {
+  public dataProto(): SignalService.DataMessage {
     const ourProfile = UserUtils.getOurProfile();
     const inviteMessage = new SignalService.GroupUpdateInviteMessage({
       groupSessionId: this.groupPk,
       name: this.groupName,
       adminSignature: this.adminSignature,
       memberAuthData: this.memberAuthData,
+    });
+
+    return new SignalService.DataMessage({
       profile: ourProfile
         ? { displayName: ourProfile.displayName, profilePicture: ourProfile.avatarPointer }
         : undefined,
       profileKey: ourProfile?.profileKey,
+      groupUpdateMessage: { inviteMessage },
     });
-    return new SignalService.GroupUpdateMessage({ inviteMessage });
   }
 
   public isForGroupSwarm(): boolean {

@@ -17,12 +17,13 @@ export class GroupUpdateDeleteMessage extends GroupUpdateMessage {
     this.adminSignature = params.adminSignature;
   }
 
-  protected updateProto(): SignalService.GroupUpdateMessage {
+  public dataProto(): SignalService.DataMessage {
     const deleteMessage = new SignalService.GroupUpdateDeleteMessage({
       groupSessionId: this.groupPk,
       adminSignature: this.adminSignature,
     });
-    return new SignalService.GroupUpdateMessage({ deleteMessage });
+
+    return new SignalService.DataMessage({ groupUpdateMessage: { deleteMessage } });
   }
 
   public isForGroupSwarm(): boolean {

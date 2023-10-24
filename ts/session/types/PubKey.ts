@@ -1,4 +1,4 @@
-import { GroupPubkeyType } from 'libsession_util_nodejs';
+import { GroupPubkeyType, PubkeyType } from 'libsession_util_nodejs';
 import { fromHexToArray } from '../utils/String';
 
 export enum KeyPrefixType {
@@ -235,8 +235,14 @@ export class PubKey {
     return key.startsWith(KeyPrefixType.blinded15) || key.startsWith(KeyPrefixType.blinded25);
   }
 
+  // TODO we should probably move those to a libsession exported ts file
   public static isClosedGroupV2(key: string): key is GroupPubkeyType {
     const regex = new RegExp(`^${KeyPrefixType.groupV2}${PubKey.HEX}{64}$`);
+    return regex.test(key);
+  }
+
+  public static is05Pubkey(key: string): key is PubkeyType {
+    const regex = new RegExp(`^${KeyPrefixType.standard}${PubKey.HEX}{64}$`);
     return regex.test(key);
   }
 }

@@ -53,7 +53,7 @@ export class GroupUpdateInfoChangeMessage extends GroupUpdateMessage {
     }
   }
 
-  protected updateProto(): SignalService.GroupUpdateMessage {
+  public dataProto(): SignalService.DataMessage {
     const infoChangeMessage = new SignalService.GroupUpdateInfoChangeMessage({
       type: this.typeOfChange,
     });
@@ -66,10 +66,7 @@ export class GroupUpdateInfoChangeMessage extends GroupUpdateMessage {
     ) {
       infoChangeMessage.updatedExpiration = this.updatedExpirationSeconds;
     }
-
-    return new SignalService.GroupUpdateMessage({
-      infoChangeMessage,
-    });
+    return new SignalService.DataMessage({ groupUpdateMessage: { infoChangeMessage } });
   }
 
   public isForGroupSwarm(): boolean {
