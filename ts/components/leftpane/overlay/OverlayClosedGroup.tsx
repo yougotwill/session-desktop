@@ -34,6 +34,7 @@ const StyledMemberListNoContacts = styled.div`
 const StyledGroupMemberListContainer = styled.div`
   padding: 2px 0px;
   width: 100%;
+  min-height: 40px;
   max-height: 400px;
   overflow-y: auto;
   border-top: 1px solid var(--border-color);

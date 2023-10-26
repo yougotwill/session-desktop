@@ -1,5 +1,5 @@
-import { isEmpty, isNil, omit } from 'lodash';
 import { GroupPubkeyType } from 'libsession_util_nodejs';
+import { omit } from 'lodash';
 import { Snode } from '../../../data/data';
 import { updateIsOnline } from '../../../state/ducks/onion';
 import { doSnodeBatchRequest } from './batchRequest';
@@ -12,14 +12,15 @@ import { PubKey } from '../../types';
 import { UserUtils } from '../../utils';
 import {
   RetrieveGroupAdminSubRequestType,
+  RetrieveGroupSubAccountSubRequestType,
   RetrieveLegacyClosedGroupSubRequestType,
   RetrieveSubRequestType,
   UpdateExpiryOnNodeGroupSubRequest,
   UpdateExpiryOnNodeUserSubRequest,
 } from './SnodeRequestTypes';
-import { SnodeSignature } from './snodeSignatures';
+import { SnodeGroupSignature } from './signature/groupSignature';
+import { SnodeSignature } from './signature/snodeSignatures';
 import { RetrieveMessagesResultsBatched, RetrieveMessagesResultsContent } from './types';
-import { PreConditionFailed } from '../../utils/errors';
 
 type RetrieveParams = {
   pubkey: string;
@@ -102,28 +103,23 @@ async function retrieveRequestForGroup({
     throw new Error(`retrieveRequestForGroup: not a groupNamespace: ${namespace}`);
   }
   const group = await UserGroupsWrapperActions.getGroup(groupPk);
-  const groupSecretKey = group?.secretKey;
-  if (isNil(groupSecretKey) || isEmpty(groupSecretKey)) {
-    throw new PreConditionFailed(
-      `retrieveRequestForGroup: failed to find group admin secret key in wrapper`
-    );
-  }
-  const signatureBuilt = await SnodeSignature.getSnodeGroupSignatureParams({
-    ...retrieveParam,
+
+  const sigResult = await SnodeGroupSignature.getSnodeGroupSignature({
+    method: 'retrieve',
     namespace,
-    method: 'retrieve' as const,
-    groupPk,
-    groupIdentityPrivKey: groupSecretKey,
+    group,
   });
 
-  const retrieveGroup = {
-    ...retrieveParam,
-    ...signatureBuilt,
-    namespace,
-  };
-  const retrieveParamsGroup: RetrieveGroupAdminSubRequestType = {
-    method: 'retrieve' as const,
-    params: retrieveGroup,
+  const retrieveParamsGroup:
+    | RetrieveGroupSubAccountSubRequestType
+    | RetrieveGroupAdminSubRequestType = {
+    method: 'retrieve',
+    params: {
+      ...retrieveParam,
+      ...sigResult,
+
+      namespace,
+    },
   };
 
   return retrieveParamsGroup;
@@ -188,17 +184,12 @@ async function buildRetrieveRequest(
       retrieveRequestsParams.push(expireParams);
     } else if (PubKey.isClosedGroupV2(pubkey)) {
       const group = await UserGroupsWrapperActions.getGroup(pubkey);
-      if (!group || !group.secretKey || isEmpty(group.secretKey)) {
-        throw new PreConditionFailed(
-          'generateUpdateExpiryGroupSignature only handles when the group is in the userwrapper currently and we have the adminkey'
-        );
-      }
-      const signResult = await SnodeSignature.generateUpdateExpiryGroupSignature({
+
+      const signResult = await SnodeGroupSignature.generateUpdateExpiryGroupSignature({
         shortenOrExtend: '',
         timestamp: expiry,
         messagesHashes: configHashesToBump,
-        groupPk: pubkey,
-        groupPrivKey: group.secretKey,
+        group,
       });
 
       const expireParams: UpdateExpiryOnNodeGroupSubRequest = {
@@ -206,7 +197,7 @@ async function buildRetrieveRequest(
         params: {
           messages: configHashesToBump,
           expiry,
-          signature: signResult.signature,
+          ...signResult,
           pubkey,
         },
       };

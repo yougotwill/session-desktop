@@ -25,3 +25,8 @@ export type RetrieveRequestResult = {
 };
 
 export type RetrieveMessagesResultsBatched = Array<RetrieveRequestResult>;
+
+export type WithTimestamp = { timestamp: number };
+export type ShortenOrExtend = 'extend' | 'shorten' | '';
+export type WithShortenOrExtend = { shortenOrExtend: ShortenOrExtend };
+export type WithMessagesHashes = { messagesHashes: Array<string> };

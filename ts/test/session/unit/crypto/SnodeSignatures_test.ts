@@ -5,7 +5,8 @@ import { HexString } from '../../../../node/hexStrings';
 import { getSodiumNode } from '../../../../node/sodiumNode';
 import { GetNetworkTime } from '../../../../session/apis/snode_api/getNetworkTime';
 import { SnodeNamespaces } from '../../../../session/apis/snode_api/namespaces';
-import { SnodeSignature } from '../../../../session/apis/snode_api/snodeSignatures';
+import { SnodeGroupSignature } from '../../../../session/apis/snode_api/signature/groupSignature';
+import { SnodeSignature } from '../../../../session/apis/snode_api/signature/snodeSignatures';
 import { concatUInt8Array } from '../../../../session/crypto';
 import { UserUtils } from '../../../../session/utils';
 import { fromBase64ToArray, fromHexToArray } from '../../../../session/utils/String';
@@ -47,18 +48,21 @@ describe('SnodeSignature', () => {
     Sinon.restore();
   });
 
-  describe('getSnodeGroupSignatureParams', () => {
+  describe('getSnodeGroupAdminSignatureParams', () => {
     beforeEach(() => {
       Sinon.stub(GetNetworkTime, 'getNowWithNetworkOffset').returns(hardcodedTimestamp);
     });
 
     describe('retrieve', () => {
       it('retrieve namespace ClosedGroupInfo', async () => {
-        const ret = await SnodeSignature.getSnodeGroupSignatureParams({
+        const ret = await SnodeGroupSignature.getSnodeGroupSignature({
           method: 'retrieve',
           namespace: SnodeNamespaces.ClosedGroupInfo,
-          groupIdentityPrivKey: privKeyUint,
-          groupPk: validGroupPk,
+          group: {
+            authData: null,
+            pubkeyHex: validGroupPk,
+            secretKey: privKeyUint,
+          },
         });
         expect(ret.pubkey).to.be.eq(validGroupPk);
 
@@ -68,11 +72,14 @@ describe('SnodeSignature', () => {
       });
 
       it('retrieve namespace ClosedGroupKeys', async () => {
-        const ret = await SnodeSignature.getSnodeGroupSignatureParams({
+        const ret = await SnodeGroupSignature.getSnodeGroupSignature({
           method: 'retrieve',
           namespace: SnodeNamespaces.ClosedGroupKeys,
-          groupIdentityPrivKey: privKeyUint,
-          groupPk: validGroupPk,
+          group: {
+            authData: null,
+            pubkeyHex: validGroupPk,
+            secretKey: privKeyUint,
+          },
         });
         expect(ret.pubkey).to.be.eq(validGroupPk);
 
@@ -83,11 +90,14 @@ describe('SnodeSignature', () => {
       });
 
       it('retrieve namespace ClosedGroupMessages', async () => {
-        const ret = await SnodeSignature.getSnodeGroupSignatureParams({
+        const ret = await SnodeGroupSignature.getSnodeGroupSignature({
           method: 'retrieve',
           namespace: SnodeNamespaces.ClosedGroupMessages,
-          groupIdentityPrivKey: privKeyUint,
-          groupPk: validGroupPk,
+          group: {
+            authData: null,
+            pubkeyHex: validGroupPk,
+            secretKey: privKeyUint,
+          },
         });
         expect(ret.pubkey).to.be.eq(validGroupPk);
 
@@ -99,11 +109,14 @@ describe('SnodeSignature', () => {
 
     describe('store', () => {
       it('store namespace ClosedGroupInfo', async () => {
-        const ret = await SnodeSignature.getSnodeGroupSignatureParams({
+        const ret = await SnodeGroupSignature.getSnodeGroupSignature({
           method: 'store',
           namespace: SnodeNamespaces.ClosedGroupInfo,
-          groupIdentityPrivKey: privKeyUint,
-          groupPk: validGroupPk,
+          group: {
+            authData: null,
+            pubkeyHex: validGroupPk,
+            secretKey: privKeyUint,
+          },
         });
         expect(ret.pubkey).to.be.eq(validGroupPk);
         expect(ret.timestamp).to.be.eq(hardcodedTimestamp);
@@ -113,11 +126,14 @@ describe('SnodeSignature', () => {
       });
 
       it('store namespace ClosedGroupKeys', async () => {
-        const ret = await SnodeSignature.getSnodeGroupSignatureParams({
+        const ret = await SnodeGroupSignature.getSnodeGroupSignature({
           method: 'store',
           namespace: SnodeNamespaces.ClosedGroupKeys,
-          groupIdentityPrivKey: privKeyUint,
-          groupPk: validGroupPk,
+          group: {
+            authData: null,
+            pubkeyHex: validGroupPk,
+            secretKey: privKeyUint,
+          },
         });
         expect(ret.pubkey).to.be.eq(validGroupPk);
 
@@ -127,11 +143,14 @@ describe('SnodeSignature', () => {
       });
 
       it('store namespace ClosedGroupMessages', async () => {
-        const ret = await SnodeSignature.getSnodeGroupSignatureParams({
+        const ret = await SnodeGroupSignature.getSnodeGroupSignature({
           method: 'store',
           namespace: SnodeNamespaces.ClosedGroupMessages,
-          groupIdentityPrivKey: privKeyUint,
-          groupPk: validGroupPk,
+          group: {
+            authData: null,
+            pubkeyHex: validGroupPk,
+            secretKey: privKeyUint,
+          },
         });
         expect(ret.pubkey).to.be.eq(validGroupPk);
         expect(ret.timestamp).to.be.eq(hardcodedTimestamp);
@@ -141,12 +160,104 @@ describe('SnodeSignature', () => {
     });
   });
 
+  // describe('getSnodeGroupSubAccountSignatureParams', () => {
+  //   beforeEach(() => {
+  //     Sinon.stub(GetNetworkTime, 'getNowWithNetworkOffset').returns(hardcodedTimestamp);
+  //   });
+
+  //   describe('retrieve', () => {
+  //     it('retrieve namespace ClosedGroupInfo', async () => {
+  //       const ret = await SnodeSignature.getSnodeGroupSignatureParams({
+  //         method: 'retrieve',
+  //         namespace: SnodeNamespaces.ClosedGroupInfo,
+  //         groupPk: validGroupPk,
+  //         groupIdentityPrivKey: privKeyUint,
+  //       });
+  //       expect(ret.pubkey).to.be.eq(validGroupPk);
+
+  //       expect(ret.timestamp).to.be.eq(hardcodedTimestamp);
+  //       const verificationData = `retrieve${SnodeNamespaces.ClosedGroupInfo}${hardcodedTimestamp}`;
+  //       await verifySig(ret, verificationData);
+  //     });
+
+  //     it('retrieve namespace ClosedGroupKeys', async () => {
+  //       const ret = await SnodeSignature.getSnodeGroupSignatureParams({
+  //         method: 'retrieve',
+  //         namespace: SnodeNamespaces.ClosedGroupKeys,
+  //         groupIdentityPrivKey: privKeyUint,
+  //         groupPk: validGroupPk,
+  //       });
+  //       expect(ret.pubkey).to.be.eq(validGroupPk);
+
+  //       expect(ret.timestamp).to.be.eq(hardcodedTimestamp);
+  //       const verificationData = `retrieve${SnodeNamespaces.ClosedGroupKeys}${hardcodedTimestamp}`;
+
+  //       await verifySig(ret, verificationData);
+  //     });
+
+  //     it('retrieve namespace ClosedGroupMessages', async () => {
+  //       const ret = await SnodeSignature.getSnodeGroupSignatureParams({
+  //         method: 'retrieve',
+  //         namespace: SnodeNamespaces.ClosedGroupMessages,
+  //         groupIdentityPrivKey: privKeyUint,
+  //         groupPk: validGroupPk,
+  //       });
+  //       expect(ret.pubkey).to.be.eq(validGroupPk);
+
+  //       expect(ret.timestamp).to.be.eq(hardcodedTimestamp);
+  //       const verificationData = `retrieve${SnodeNamespaces.ClosedGroupMessages}${hardcodedTimestamp}`;
+  //       await verifySig(ret, verificationData);
+  //     });
+  //   });
+
+  //   describe('store', () => {
+  //     it('store namespace ClosedGroupInfo', async () => {
+  //       const ret = await SnodeSignature.getSnodeGroupSignatureParams({
+  //         method: 'store',
+  //         namespace: SnodeNamespaces.ClosedGroupInfo,
+  //         groupIdentityPrivKey: privKeyUint,
+  //         groupPk: validGroupPk,
+  //       });
+  //       expect(ret.pubkey).to.be.eq(validGroupPk);
+  //       expect(ret.timestamp).to.be.eq(hardcodedTimestamp);
+
+  //       const verificationData = `store${SnodeNamespaces.ClosedGroupInfo}${hardcodedTimestamp}`;
+  //       await verifySig(ret, verificationData);
+  //     });
+
+  //     it('store namespace ClosedGroupKeys', async () => {
+  //       const ret = await SnodeSignature.getSnodeGroupSubAccountSignatureParams({
+  //         method: 'store',
+  //         namespace: SnodeNamespaces.ClosedGroupKeys,
+  //         groupIdentityPrivKey: privKeyUint,
+  //         groupPk: validGroupPk,
+  //       });
+  //       expect(ret.pubkey).to.be.eq(validGroupPk);
+
+  //       expect(ret.timestamp).to.be.eq(hardcodedTimestamp);
+  //       const verificationData = `store${SnodeNamespaces.ClosedGroupKeys}${hardcodedTimestamp}`;
+  //       await verifySig(ret, verificationData);
+  //     });
+
+  //     it('store namespace ClosedGroupMessages', async () => {
+  //       const ret = await SnodeSignature.getSnodeGroupSubAccountSignatureParams({
+  //         method: 'store',
+  //         namespace: SnodeNamespaces.ClosedGroupMessages,
+  //         groupPk: validGroupPk,
+  //       });
+  //       expect(ret.groupPk).to.be.eq(validGroupPk);
+  //       expect(ret.timestamp).to.be.eq(hardcodedTimestamp);
+  //       const verificationData = `store${SnodeNamespaces.ClosedGroupMessages}${hardcodedTimestamp}`;
+  //       await verifySig(ret, verificationData);
+  //     });
+  //   });
+  // });
+
   describe('generateUpdateExpiryGroupSignature', () => {
     it('throws if groupPk not given', async () => {
       const func = async () => {
-        return SnodeSignature.generateUpdateExpiryGroupSignature({
-          groupPk: null as any,
-          groupPrivKey: privKeyUint,
+        return SnodeGroupSignature.generateUpdateExpiryGroupSignature({
+          group: { pubkeyHex: null as any, secretKey: privKeyUint, authData: null },
           messagesHashes: ['[;p['],
           shortenOrExtend: '',
           timestamp: hardcodedTimestamp,
@@ -159,9 +270,13 @@ describe('SnodeSignature', () => {
 
     it('throws if groupPrivKey is empty', async () => {
       const func = async () => {
-        return SnodeSignature.generateUpdateExpiryGroupSignature({
-          groupPk: validGroupPk,
-          groupPrivKey: new Uint8Array() as any,
+        return SnodeGroupSignature.generateUpdateExpiryGroupSignature({
+          group: {
+            pubkeyHex: validGroupPk as any,
+            secretKey: new Uint8Array() as any,
+            authData: null,
+          },
+
           messagesHashes: ['[;p['],
           shortenOrExtend: '',
           timestamp: hardcodedTimestamp,
@@ -176,9 +291,8 @@ describe('SnodeSignature', () => {
       const hashes = ['hash4321', 'hash4221'];
       const timestamp = hardcodedTimestamp;
       const shortenOrExtend = '';
-      const ret = await SnodeSignature.generateUpdateExpiryGroupSignature({
-        groupPk: validGroupPk,
-        groupPrivKey: privKeyUint,
+      const ret = await SnodeGroupSignature.generateUpdateExpiryGroupSignature({
+        group: { pubkeyHex: validGroupPk, secretKey: privKeyUint, authData: null },
         messagesHashes: hashes,
         shortenOrExtend: '',
         timestamp,
@@ -194,9 +308,8 @@ describe('SnodeSignature', () => {
       const hashes = ['hash4321', 'hash4221'];
       const timestamp = hardcodedTimestamp;
       const shortenOrExtend = '';
-      const ret = await SnodeSignature.generateUpdateExpiryGroupSignature({
-        groupPk: validGroupPk,
-        groupPrivKey: privKeyUint,
+      const ret = await SnodeGroupSignature.generateUpdateExpiryGroupSignature({
+        group: { pubkeyHex: validGroupPk, secretKey: privKeyUint, authData: null },
         messagesHashes: hashes,
         shortenOrExtend: '',
         timestamp,
@@ -213,9 +326,8 @@ describe('SnodeSignature', () => {
       const hashes = ['hash4321', 'hash4221'];
       const timestamp = hardcodedTimestamp;
       const shortenOrExtend = '';
-      const ret = await SnodeSignature.generateUpdateExpiryGroupSignature({
-        groupPk: validGroupPk,
-        groupPrivKey: privKeyUint,
+      const ret = await SnodeGroupSignature.generateUpdateExpiryGroupSignature({
+        group: { pubkeyHex: validGroupPk, secretKey: privKeyUint, authData: null },
         messagesHashes: hashes,
         shortenOrExtend: '',
         timestamp,
@@ -234,9 +346,8 @@ describe('SnodeSignature', () => {
       const hashes = ['hash4321', 'hash4221'];
       const timestamp = hardcodedTimestamp;
       const shortenOrExtend = '';
-      const ret = await SnodeSignature.generateUpdateExpiryGroupSignature({
-        groupPk: validGroupPk,
-        groupPrivKey: privKeyUint,
+      const ret = await SnodeGroupSignature.generateUpdateExpiryGroupSignature({
+        group: { pubkeyHex: validGroupPk, secretKey: privKeyUint, authData: null },
         messagesHashes: hashes,
         shortenOrExtend: '',
         timestamp,

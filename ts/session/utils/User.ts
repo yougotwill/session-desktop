@@ -83,7 +83,7 @@ export async function getUserED25519KeyPair(): Promise<HexKeyPair | undefined> {
   return undefined;
 }
 
-export const getUserED25519KeyPairBytes = async (): Promise<ByteKeyPair | undefined> => {
+export const getUserED25519KeyPairBytes = async (): Promise<ByteKeyPair> => {
   // 'identityKey' keeps the ed25519KeyPair under a ed25519KeyPair field.
   // it is only set if the user migrated to the ed25519 way of generating a key
   const item = await UserUtils.getIdentityKeyPair();
@@ -96,7 +96,7 @@ export const getUserED25519KeyPairBytes = async (): Promise<ByteKeyPair | undefi
       privKeyBytes,
     };
   }
-  return undefined;
+  throw new Error('getUserED25519KeyPairBytes: user has no keypair');
 };
 
 export function getOurProfile(): LokiProfile | undefined {

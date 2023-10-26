@@ -13,6 +13,7 @@ import {
   MetaGroupWrapperActionsCalls,
   ProfilePicture,
   PubkeyType,
+  Uint8ArrayLen100,
   UserConfigWrapperActionsCalls,
   UserGroupsSet,
   UserGroupsWrapperActionsCalls,
@@ -505,6 +506,17 @@ export const MetaGroupWrapperActions: MetaGroupWrapperActionsCalls = {
       'makeSwarmSubAccount',
       memberPubkeyHex,
     ]) as Promise<ReturnType<MetaGroupWrapperActionsCalls['makeSwarmSubAccount']>>,
+  swarmSubaccountSign: async (
+    groupPk: GroupPubkeyType,
+    message: Uint8Array,
+    authData: Uint8ArrayLen100
+  ) =>
+    callLibSessionWorker([
+      `MetaGroupConfig-${groupPk}`,
+      'swarmSubaccountSign',
+      message,
+      authData,
+    ]) as Promise<ReturnType<MetaGroupWrapperActionsCalls['swarmSubaccountSign']>>,
 };
 
 export const callLibSessionWorker = async (

@@ -40,7 +40,6 @@ function onClickOnMessageInnerContainer(event: React.MouseEvent<HTMLDivElement>)
   // User clicked on message body
   const target = event.target as HTMLDivElement;
   if (target.className === 'text-selectable' || window.contextMenuShown) {
-    // eslint-disable-next-line no-useless-return
     return;
   }
 }

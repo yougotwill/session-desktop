@@ -11,7 +11,7 @@ import { ConversationModel } from '../models/conversation';
 import { ConvoHub } from '../session/conversations';
 import { PubKey } from '../session/types';
 import { StringUtils, UserUtils } from '../session/utils';
-import { handleClosedGroupControlMessage } from './closedGroups';
+import { handleLegacyClosedGroupControlMessage } from './closedGroups';
 import { handleMessageJob, toRegularMessage } from './queuedJob';
 
 import { ConversationTypeEnum } from '../models/conversationAttributes';
@@ -25,6 +25,7 @@ import { isUsFromCache } from '../session/utils/User';
 import { Action, Reaction } from '../types/Reaction';
 import { toLogFormat } from '../types/attachments/Errors';
 import { Reactions } from '../util/reactions';
+import { GroupV2Receiver } from './groupv2/handleGroupV2Message';
 
 function cleanAttachment(attachment: any) {
   return {
@@ -43,7 +44,7 @@ function cleanAttachments(decrypted: SignalService.DataMessage) {
 
   // Here we go from binary to string/base64 in all AttachmentPointer digest/key fields
 
-  // we do not care about group on Session
+  // we do not care about group on Session Desktop
 
   decrypted.group = null;
 
@@ -150,7 +151,6 @@ export function cleanIncomingDataMessage(
  *        * envelope.source is our pubkey (our other device has the same pubkey as us)
  *        * dataMessage.syncTarget is either the group public key OR the private conversation this message is about.
  */
-
 export async function handleSwarmDataMessage(
   envelope: EnvelopePlus,
   sentAtTimestamp: number,
@@ -161,9 +161,20 @@ export async function handleSwarmDataMessage(
   window.log.info('handleSwarmDataMessage');
 
   const cleanDataMessage = cleanIncomingDataMessage(rawDataMessage, envelope);
-  // we handle group updates from our other devices in handleClosedGroupControlMessage()
+
+  if (cleanDataMessage.groupUpdateMessage) {
+    await GroupV2Receiver.handleGroupUpdateMessage({
+      envelopeTimestamp: sentAtTimestamp,
+      updateMessage: rawDataMessage.groupUpdateMessage as SignalService.GroupUpdateMessage,
+    });
+    // Groups update should always be able to be decrypted as we get the keys before trying to decrypt them.
+    // If decryption failed once, it will keep failing, so no need to keep it in the cache.
+    await removeFromCache({ id: envelope.id });
+    return;
+  }
+  // we handle legacy group updates from our other devices in handleLegacyClosedGroupControlMessage()
   if (cleanDataMessage.closedGroupControlMessage) {
-    await handleClosedGroupControlMessage(
+    await handleLegacyClosedGroupControlMessage(
       envelope,
       cleanDataMessage.closedGroupControlMessage as SignalService.DataMessage.ClosedGroupControlMessage
     );

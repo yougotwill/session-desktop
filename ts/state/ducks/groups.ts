@@ -13,8 +13,8 @@ import { ConversationTypeEnum } from '../../models/conversationAttributes';
 import { HexString } from '../../node/hexStrings';
 import { getSwarmPollingInstance } from '../../session/apis/snode_api';
 import { SnodeNamespaces } from '../../session/apis/snode_api/namespaces';
+import { SnodeGroupSignature } from '../../session/apis/snode_api/signature/groupSignature';
 import { ConvoHub } from '../../session/conversations';
-import { getGroupInvitesMessages } from '../../session/crypto/group/groupSignature';
 import { getMessageQueue } from '../../session/sending';
 import { PubKey } from '../../session/types';
 import { UserUtils } from '../../session/utils';
@@ -130,6 +130,9 @@ const initNewGroupInWrapper = createAsyncThunk(
         );
       }
 
+      // now that we've added members to the group, make sure to make a full key rotation
+      // to include them and marks the corresponding wrappers as dirty
+      await MetaGroupWrapperActions.keyRekey(groupPk);
       const convo = await ConvoHub.use().getOrCreateAndWait(groupPk, ConversationTypeEnum.GROUPV2);
 
       await convo.setIsApproved(true, false);
@@ -148,7 +151,7 @@ const initNewGroupInWrapper = createAsyncThunk(
       await openConversationWithMessages({ conversationKey: groupPk, messageId: null });
       // everything is setup for this group, we now need to send the invites to every members, privately and asynchronously, and gracefully handle errors with toasts.
 
-      const inviteDetails = await getGroupInvitesMessages({
+      const inviteDetails = await SnodeGroupSignature.getGroupInvitesMessages({
         groupName,
         membersFromWrapper,
         secretKey: groupSecretKey,
@@ -161,7 +164,6 @@ const initNewGroupInWrapper = createAsyncThunk(
           namespace: SnodeNamespaces.Default,
           pubkey: PubKey.cast(detail.member),
         });
-        console.log(`sending invite message to ${detail.member}`);
       });
 
       return { groupPk: newGroup.pubkeyHex, infos, members: membersFromWrapper };

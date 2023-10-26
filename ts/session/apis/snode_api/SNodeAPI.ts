@@ -8,8 +8,8 @@ import { ed25519Str } from '../../onions/onionPath';
 import { StringUtils, UserUtils } from '../../utils';
 import { fromBase64ToArray, fromHexToArray } from '../../utils/String';
 import { doSnodeBatchRequest } from './batchRequest';
+import { SnodeSignature } from './signature/snodeSignatures';
 import { getSwarmFor } from './snodePool';
-import { SnodeSignature } from './snodeSignatures';
 
 export const ERROR_CODE_NO_CONNECT = 'ENETUNREACH: No network connection.';
 

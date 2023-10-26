@@ -75,7 +75,7 @@ export async function removeAllClosedGroupEncryptionKeyPairs(groupPubKey: string
   await Data.removeAllClosedGroupEncryptionKeyPairs(groupPubKey);
 }
 
-export async function handleClosedGroupControlMessage(
+export async function handleLegacyClosedGroupControlMessage(
   envelope: EnvelopePlus,
   groupUpdate: SignalService.DataMessage.ClosedGroupControlMessage
 ) {

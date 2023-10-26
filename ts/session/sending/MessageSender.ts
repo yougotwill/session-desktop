@@ -3,7 +3,7 @@
 import { AbortController } from 'abort-controller';
 import ByteBuffer from 'bytebuffer';
 import { GroupPubkeyType, PubkeyType } from 'libsession_util_nodejs';
-import _, { isEmpty, isNil, sample, toNumber } from 'lodash';
+import _, { isEmpty, sample, toNumber } from 'lodash';
 import pRetry from 'p-retry';
 import { Data } from '../../data/data';
 import { SignalService } from '../../protobuf';
@@ -22,8 +22,13 @@ import {
 } from '../apis/snode_api/SnodeRequestTypes';
 import { GetNetworkTime } from '../apis/snode_api/getNetworkTime';
 import { SnodeNamespace, SnodeNamespaces } from '../apis/snode_api/namespaces';
+import {
+  SigResultAdmin,
+  SigResultSubAccount,
+  SnodeGroupSignature,
+} from '../apis/snode_api/signature/groupSignature';
+import { SnodeSignature, SnodeSignatureResult } from '../apis/snode_api/signature/snodeSignatures';
 import { getSwarmFor } from '../apis/snode_api/snodePool';
-import { SnodeSignature } from '../apis/snode_api/snodeSignatures';
 import { SnodeAPIStore } from '../apis/snode_api/storeMessage';
 import { ConvoHub } from '../conversations';
 import { MessageEncrypter } from '../crypto';
@@ -184,14 +189,20 @@ async function send(
   );
 }
 
-async function getSignatureParamsFromNamespace(item: StoreOnNodeParamsNoSig, destination: string) {
+async function getSignatureParamsFromNamespace(
+  item: StoreOnNodeParamsNoSig,
+  destination: string
+): Promise<SigResultSubAccount | SigResultAdmin | SnodeSignatureResult | object> {
+  const store = 'store' as const;
   if (SnodeNamespace.isUserConfigNamespace(item.namespace)) {
     const ourPrivKey = (await UserUtils.getUserED25519KeyPairBytes())?.privKeyBytes;
     if (!ourPrivKey) {
-      throw new Error('sendMessagesDataToSnode UserUtils.getUserED25519KeyPairBytes is empty');
+      throw new Error(
+        'getSignatureParamsFromNamespace UserUtils.getUserED25519KeyPairBytes is empty'
+      );
     }
     return SnodeSignature.getSnodeSignatureParamsUs({
-      method: 'store' as const,
+      method: store,
       namespace: item.namespace,
     });
   }
@@ -201,20 +212,18 @@ async function getSignatureParamsFromNamespace(item: StoreOnNodeParamsNoSig, des
     item.namespace === SnodeNamespaces.ClosedGroupMessages
   ) {
     if (!PubKey.isClosedGroupV2(destination)) {
-      throw new Error('sendMessagesDataToSnode: groupconfig namespace required a 03 pubkey');
+      throw new Error(
+        'getSignatureParamsFromNamespace: groupconfig namespace required a 03 pubkey'
+      );
     }
-    const group = await UserGroupsWrapperActions.getGroup(destination);
-    const groupSecretKey = group?.secretKey; // TODO we will need to the user auth at some point
-    if (isNil(groupSecretKey) || isEmpty(groupSecretKey)) {
-      throw new Error(`sendMessagesDataToSnode: failed to find group admin secret key in wrapper`);
-    }
-    return SnodeSignature.getSnodeGroupSignatureParams({
-      method: 'store' as const,
+    const found = await UserGroupsWrapperActions.getGroup(destination);
+    return SnodeGroupSignature.getSnodeGroupSignature({
+      method: store,
       namespace: item.namespace,
-      groupPk: destination,
-      groupIdentityPrivKey: groupSecretKey,
+      group: found,
     });
   }
+  // no signature required for this namespace/pubkey combo
   return {};
 }
 

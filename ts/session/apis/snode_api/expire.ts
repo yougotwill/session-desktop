@@ -8,8 +8,8 @@ import { EmptySwarmError } from '../../utils/errors';
 import { UpdateExpireNodeUserParams } from './SnodeRequestTypes';
 import { doSnodeBatchRequest } from './batchRequest';
 import { GetNetworkTime } from './getNetworkTime';
+import { SnodeSignature } from './signature/snodeSignatures';
 import { getSwarmFor } from './snodePool';
-import { SnodeSignature } from './snodeSignatures';
 
 async function verifySignature({
   pubkey,

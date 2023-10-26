@@ -50,6 +50,16 @@ export type RetrieveGroupAdminSubRequestType = WithRetrieveMethod & {
     signature: string;
     namespace: SnodeNamespacesGroup;
   } & RetrieveAlwaysNeeded &
+    WithMaxCountSize;
+};
+
+export type RetrieveGroupSubAccountSubRequestType = WithRetrieveMethod & {
+  params: {
+    namespace: SnodeNamespacesGroup;
+    signature: string;
+    subaccount: string;
+    subaccount_sig: string;
+  } & RetrieveAlwaysNeeded &
     WithMaxCountSize &
     WithPubkeyAsGroupPubkey;
 };
@@ -59,7 +69,8 @@ export type RetrieveSubRequestType =
   | RetrievePubkeySubRequestType
   | RetrieveGroupAdminSubRequestType
   | UpdateExpiryOnNodeUserSubRequest
-  | UpdateExpiryOnNodeGroupSubRequest;
+  | UpdateExpiryOnNodeGroupSubRequest
+  | RetrieveGroupSubAccountSubRequestType;
 
 /**
  * OXEND_REQUESTS
@@ -91,7 +102,7 @@ export type GetServiceNodesSubRequest = {
   };
 };
 
-export type StoreOnNodeParams = {
+type StoreOnNodeNormalParams = {
   pubkey: string;
   ttl: number;
   timestamp: number;
@@ -101,6 +112,19 @@ export type StoreOnNodeParams = {
   signature?: string;
   pubkey_ed25519?: string;
 };
+
+type StoreOnNodeSubAccountParams = Pick<
+  StoreOnNodeNormalParams,
+  'data' | 'namespace' | 'ttl' | 'timestamp'
+> & {
+  pubkey: GroupPubkeyType;
+  subaccount: string;
+  subaccount_sig: string;
+  namespace: SnodeNamespaces.ClosedGroupMessages; // this can only be this one, subaccounts holder can not post to something else atm
+  signature: string; // signature is mandatory for subaccount
+};
+
+export type StoreOnNodeParams = StoreOnNodeNormalParams | StoreOnNodeSubAccountParams;
 
 export type StoreOnNodeParamsNoSig = Pick<
   StoreOnNodeParams,
@@ -131,7 +155,10 @@ type StoreOnNodeUserConfig = StoreOnNodeShared & {
 
 export type StoreOnNodeData = StoreOnNodeGroupConfig | StoreOnNodeUserConfig;
 
-export type StoreOnNodeSubRequest = { method: 'store'; params: StoreOnNodeParams };
+export type StoreOnNodeSubRequest = {
+  method: 'store';
+  params: StoreOnNodeParams | StoreOnNodeSubAccountParams;
+};
 export type NetworkTimeSubRequest = { method: 'info'; params: object };
 
 type DeleteSigParameters = {
