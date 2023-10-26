@@ -1,11 +1,11 @@
 import {
-  GroupMemberGet,
   GroupPubkeyType,
+  PubkeyType,
   Uint8ArrayLen100,
   Uint8ArrayLen64,
   UserGroupsGet,
 } from 'libsession_util_nodejs';
-import { compact, isEmpty } from 'lodash';
+import { isEmpty } from 'lodash';
 import { MetaGroupWrapperActions } from '../../../../webworker/workers/browser/libsession_worker_interface';
 import { getSodiumRenderer } from '../../../crypto/MessageEncrypter';
 import { GroupUpdateInviteMessage } from '../../../messages/outgoing/controlMessage/group_v2/to_user/GroupUpdateInviteMessage';
@@ -18,13 +18,13 @@ import { WithMessagesHashes, WithShortenOrExtend, WithTimestamp } from '../types
 import { SignatureShared } from './signatureShared';
 import { SnodeSignatureResult } from './snodeSignatures';
 
-async function getGroupInvitesMessages({
+async function getGroupInviteMessage({
   groupName,
-  membersFromWrapper,
+  member,
   secretKey,
   groupPk,
 }: {
-  membersFromWrapper: Array<GroupMemberGet>;
+  member: PubkeyType;
   groupName: string;
   secretKey: Uint8ArrayLen64; // len 64
   groupPk: GroupPubkeyType;
@@ -32,31 +32,23 @@ async function getGroupInvitesMessages({
   const sodium = await getSodiumRenderer();
   const timestamp = GetNetworkTime.getNowWithNetworkOffset();
 
-  const inviteDetails = compact(
-    await Promise.all(
-      membersFromWrapper.map(async ({ pubkeyHex: member }) => {
-        if (UserUtils.isUsFromCache(member)) {
-          return null;
-        }
-        const tosign = `INVITE${member}${timestamp}`;
+  if (UserUtils.isUsFromCache(member)) {
+    throw new Error('getGroupInviteMessage: we cannot invite ourselves');
+  }
+  const tosign = `INVITE${member}${timestamp}`;
 
-        // Note: as the signature is built with the timestamp here, we cannot override the timestamp later on the sending pipeline
-        const adminSignature = sodium.crypto_sign_detached(tosign, secretKey);
-        const memberAuthData = await MetaGroupWrapperActions.makeSwarmSubAccount(groupPk, member);
+  // Note: as the signature is built with the timestamp here, we cannot override the timestamp later on the sending pipeline
+  const adminSignature = sodium.crypto_sign_detached(tosign, secretKey);
+  const memberAuthData = await MetaGroupWrapperActions.makeSwarmSubAccount(groupPk, member);
 
-        const invite = new GroupUpdateInviteMessage({
-          groupName,
-          groupPk,
-          timestamp,
-          adminSignature,
-          memberAuthData,
-        });
-
-        return { member, invite };
-      })
-    )
-  );
-  return inviteDetails;
+  const invite = new GroupUpdateInviteMessage({
+    groupName,
+    groupPk,
+    timestamp,
+    adminSignature,
+    memberAuthData,
+  });
+  return invite;
 }
 
 type ParamsShared = {
@@ -220,6 +212,6 @@ async function generateUpdateExpiryGroupSignature({
 
 export const SnodeGroupSignature = {
   generateUpdateExpiryGroupSignature,
-  getGroupInvitesMessages,
+  getGroupInviteMessage,
   getSnodeGroupSignature,
 };

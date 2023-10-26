@@ -1,32 +1,32 @@
-import _ from 'lodash';
-import ReactDOM from 'react-dom';
 import Backbone from 'backbone';
+import _, { toPairs } from 'lodash';
+import ReactDOM from 'react-dom';
 
-import React from 'react';
 import nativeEmojiData from '@emoji-mart/data';
+import React from 'react';
 
-import { MessageModel } from '../models/message';
 import { isMacOS } from '../OS';
+import { SessionInboxView } from '../components/SessionInboxView';
+import { SessionRegistrationView } from '../components/registration/SessionRegistrationView';
+import { Data } from '../data/data';
+import { OpenGroupData } from '../data/opengroups';
+import { SettingsKey } from '../data/settings-key';
+import { MessageModel } from '../models/message';
+import { deleteAllLogs } from '../node/logs';
 import { queueAllCached } from '../receiver/receiver';
+import { loadKnownBlindedKeys } from '../session/apis/open_group_api/sogsv3/knownBlindedkeys';
 import { ConvoHub } from '../session/conversations';
 import { AttachmentDownloads, ToastUtils } from '../session/utils';
 import { getOurPubKeyStrFromCache } from '../session/utils/User';
+import { runners } from '../session/utils/job_runners/JobRunner';
+import { LibSessionUtil } from '../session/utils/libsession/libsession_utils';
+import { switchPrimaryColorTo } from '../themes/switchPrimaryColor';
 import { BlockedNumberController } from '../util';
+import { initialiseEmojiData } from '../util/emoji';
 import { ExpirationTimerOptions } from '../util/expiringMessages';
 import { Notifications } from '../util/notifications';
 import { Registration } from '../util/registration';
-import { isSignInByLinking, Storage } from '../util/storage';
-import { Data } from '../data/data';
-import { SessionRegistrationView } from '../components/registration/SessionRegistrationView';
-import { SessionInboxView } from '../components/SessionInboxView';
-import { deleteAllLogs } from '../node/logs';
-import { OpenGroupData } from '../data/opengroups';
-import { loadKnownBlindedKeys } from '../session/apis/open_group_api/sogsv3/knownBlindedkeys';
-import { initialiseEmojiData } from '../util/emoji';
-import { switchPrimaryColorTo } from '../themes/switchPrimaryColor';
-import { LibSessionUtil } from '../session/utils/libsession/libsession_utils';
-import { runners } from '../session/utils/job_runners/JobRunner';
-import { SettingsKey } from '../data/settings-key';
+import { Storage, isSignInByLinking } from '../util/storage';
 
 // Globally disable drag and drop
 document.body.addEventListener(
@@ -112,12 +112,13 @@ function mapOldThemeToNew(theme: string) {
 
 async function startJobRunners() {
   // start the job runners
-  await runners.avatarDownloadRunner.loadJobsFromDb();
-  runners.avatarDownloadRunner.startProcessing();
-  await runners.userSyncRunner.loadJobsFromDb();
-  runners.userSyncRunner.startProcessing();
-  await runners.groupSyncRunner.loadJobsFromDb();
-  runners.groupSyncRunner.startProcessing();
+  const pairs = toPairs(runners);
+  for (let index = 0; index < pairs.length; index++) {
+    const runner = pairs[index][1];
+    // eslint-disable-next-line no-await-in-loop
+    await runner.loadJobsFromDb();
+    runner.startProcessing();
+  }
 }
 
 // We need this 'first' check because we don't want to start the app up any other time

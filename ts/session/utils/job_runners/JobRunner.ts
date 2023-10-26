@@ -5,6 +5,7 @@ import { timeout } from '../Promise';
 import { persistedJobFromData } from './JobDeserialization';
 import {
   AvatarDownloadPersistedData,
+  GroupInvitePersistedData,
   GroupSyncPersistedData,
   PersistedJob,
   RunJobResult,
@@ -358,9 +359,14 @@ const avatarDownloadRunner = new PersistedJobRunner<AvatarDownloadPersistedData>
   'AvatarDownloadJob',
   null
 );
+const groupInviteJobRunner = new PersistedJobRunner<GroupInvitePersistedData>(
+  'GroupInviteJob',
+  null
+);
 
 export const runners = {
   userSyncRunner,
   groupSyncRunner,
   avatarDownloadRunner,
+  groupInviteJobRunner,
 };

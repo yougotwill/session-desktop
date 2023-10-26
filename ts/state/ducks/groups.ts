@@ -12,15 +12,13 @@ import { ConfigDumpData } from '../../data/configDump/configDump';
 import { ConversationTypeEnum } from '../../models/conversationAttributes';
 import { HexString } from '../../node/hexStrings';
 import { getSwarmPollingInstance } from '../../session/apis/snode_api';
-import { SnodeNamespaces } from '../../session/apis/snode_api/namespaces';
-import { SnodeGroupSignature } from '../../session/apis/snode_api/signature/groupSignature';
 import { ConvoHub } from '../../session/conversations';
-import { getMessageQueue } from '../../session/sending';
 import { PubKey } from '../../session/types';
 import { UserUtils } from '../../session/utils';
 import { getUserED25519KeyPairBytes } from '../../session/utils/User';
 import { PreConditionFailed } from '../../session/utils/errors';
 import { RunJobResult } from '../../session/utils/job_runners/PersistedJob';
+import { GroupInvite } from '../../session/utils/job_runners/jobs/GroupInviteJob';
 import { GroupSync } from '../../session/utils/job_runners/jobs/GroupSyncJob';
 import { stringify, toFixedUint8ArrayOfLength } from '../../types/sqlSharedTypes';
 import {
@@ -134,7 +132,6 @@ const initNewGroupInWrapper = createAsyncThunk(
       // to include them and marks the corresponding wrappers as dirty
       await MetaGroupWrapperActions.keyRekey(groupPk);
       const convo = await ConvoHub.use().getOrCreateAndWait(groupPk, ConversationTypeEnum.GROUPV2);
-
       await convo.setIsApproved(true, false);
 
       const result = await GroupSync.pushChangesToGroupSwarmIfNeeded(groupPk);
@@ -148,23 +145,17 @@ const initNewGroupInWrapper = createAsyncThunk(
       await convo.commit();
       convo.updateLastMessage();
       dispatch(resetOverlayMode());
+
+      // Everything is setup for this group, we now need to send the invites to each members,
+      // privately and asynchronously, and gracefully handle errors with toasts.
+      // Let's do all of this part of a job to handle app crashes and make sure we
+      //  can update the groupwrapper with a failed state if a message fails to be sent.
+      for (let index = 0; index < membersFromWrapper.length; index++) {
+        const member = membersFromWrapper[index];
+        await GroupInvite.addGroupInviteJob({ member: member.pubkeyHex, groupPk });
+      }
+
       await openConversationWithMessages({ conversationKey: groupPk, messageId: null });
-      // everything is setup for this group, we now need to send the invites to every members, privately and asynchronously, and gracefully handle errors with toasts.
-
-      const inviteDetails = await SnodeGroupSignature.getGroupInvitesMessages({
-        groupName,
-        membersFromWrapper,
-        secretKey: groupSecretKey,
-        groupPk,
-      });
-
-      void inviteDetails.map(async detail => {
-        await getMessageQueue().sendToPubKeyNonDurably({
-          message: detail.invite,
-          namespace: SnodeNamespaces.Default,
-          pubkey: PubKey.cast(detail.member),
-        });
-      });
 
       return { groupPk: newGroup.pubkeyHex, infos, members: membersFromWrapper };
     } catch (e) {

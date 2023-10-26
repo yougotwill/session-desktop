@@ -1,9 +1,11 @@
+import { GroupPubkeyType, PubkeyType } from 'libsession_util_nodejs';
 import { cloneDeep, isEmpty } from 'lodash';
 
 export type PersistedJobType =
   | 'UserSyncJobType'
   | 'GroupSyncJobType'
   | 'AvatarDownloadJobType'
+  | 'GroupInviteJobType'
   | 'FakeSleepForJobType'
   | 'FakeSleepForJobMultiType';
 
@@ -32,6 +34,12 @@ export interface AvatarDownloadPersistedData extends PersistedJobData {
   conversationId: string;
 }
 
+export interface GroupInvitePersistedData extends PersistedJobData {
+  jobType: 'GroupInviteJobType';
+  groupPk: GroupPubkeyType;
+  member: PubkeyType;
+}
+
 export interface UserSyncPersistedData extends PersistedJobData {
   jobType: 'UserSyncJobType';
 }
@@ -44,7 +52,8 @@ export type TypeOfPersistedData =
   | AvatarDownloadPersistedData
   | FakeSleepJobData
   | FakeSleepForMultiJobData
-  | GroupSyncPersistedData;
+  | GroupSyncPersistedData
+  | GroupInvitePersistedData;
 
 export type AddJobCheckReturn = 'skipAddSameJobPresent' | 'sameJobDataAlreadyInQueue' | null;
 
