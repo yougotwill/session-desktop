@@ -256,7 +256,7 @@ export class MessageQueue {
       | ClosedGroupMemberLeftMessage
       | GroupUpdateInviteMessage;
     namespace: SnodeNamespaces;
-  }): Promise<boolean | number> {
+  }): Promise<number | null> {
     let rawMessage;
     try {
       rawMessage = await MessageUtils.toRawMessage(pubkey, message, namespace);
@@ -271,7 +271,7 @@ export class MessageQueue {
       if (rawMessage) {
         await MessageSentHandler.handleMessageSentFailure(rawMessage, error);
       }
-      return false;
+      return null;
     }
   }
 

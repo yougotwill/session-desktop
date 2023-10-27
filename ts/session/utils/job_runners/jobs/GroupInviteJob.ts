@@ -1,8 +1,11 @@
 import { GroupPubkeyType, PubkeyType } from 'libsession_util_nodejs';
-import { isNumber } from 'lodash';
+import { debounce, difference, isNumber } from 'lodash';
 import { v4 } from 'uuid';
-import { UserUtils } from '../..';
-import { UserGroupsWrapperActions } from '../../../../webworker/workers/browser/libsession_worker_interface';
+import { ToastUtils, UserUtils } from '../..';
+import {
+  MetaGroupWrapperActions,
+  UserGroupsWrapperActions,
+} from '../../../../webworker/workers/browser/libsession_worker_interface';
 import { SnodeNamespaces } from '../../../apis/snode_api/namespaces';
 import { SnodeGroupSignature } from '../../../apis/snode_api/signature/groupSignature';
 import { getMessageQueue } from '../../../sending';
@@ -31,6 +34,14 @@ export function shouldAddGroupInviteJob(args: JobExtraArgs) {
   return true;
 }
 
+const invitesFailed = new Map<
+  GroupPubkeyType,
+  {
+    debouncedCall: (groupPk: GroupPubkeyType) => void;
+    failedMembers: Array<PubkeyType>;
+  }
+>();
+
 async function addGroupInviteJob({ groupPk, member }: JobExtraArgs) {
   if (shouldAddGroupInviteJob({ groupPk, member })) {
     const groupInviteJob = new GroupInviteJob({
@@ -41,6 +52,42 @@ async function addGroupInviteJob({ groupPk, member }: JobExtraArgs) {
     window.log.debug(`addGroupInviteJob: adding group invite for ${groupPk}:${member} `);
     await runners.groupInviteJobRunner.addJob(groupInviteJob);
   }
+}
+
+function displayFailedInvitesForGroup(groupPk: GroupPubkeyType) {
+  const thisGroupFailures = invitesFailed.get(groupPk);
+  if (!thisGroupFailures || thisGroupFailures.failedMembers.length === 0) {
+    return;
+  }
+  const count = thisGroupFailures.failedMembers.length;
+  switch (count) {
+    case 1:
+      ToastUtils.pushToastWarning(
+        `invite-failed${groupPk}`,
+        window.i18n('inviteFailed'),
+        window.i18n('groupInviteFailedOne', [...thisGroupFailures.failedMembers, groupPk])
+      );
+      break;
+    case 2:
+      ToastUtils.pushToastWarning(
+        `invite-failed${groupPk}`,
+        window.i18n('inviteFailed'),
+        window.i18n('groupInviteFailedTwo', [...thisGroupFailures.failedMembers, groupPk])
+      );
+      break;
+    default:
+      ToastUtils.pushToastWarning(
+        `invite-failed${groupPk}`,
+        window.i18n('inviteFailed'),
+        window.i18n('groupInviteFailedOthers', [
+          thisGroupFailures.failedMembers[0],
+          `${thisGroupFailures.failedMembers.length - 1}`,
+          groupPk,
+        ])
+      );
+  }
+  // toast was displayed empty the list
+  thisGroupFailures.failedMembers = [];
 }
 
 class GroupInviteJob extends PersistedJob<GroupInvitePersistedData> {
@@ -75,12 +122,12 @@ class GroupInviteJob extends PersistedJob<GroupInvitePersistedData> {
   }
 
   public async run(): Promise<RunJobResult> {
-    const { groupPk, member } = this.persistedData;
+    const { groupPk, member, jobType, identifier } = this.persistedData;
 
     window.log.info(
-      `running job ${this.persistedData.jobType} with groupPk:"${groupPk}" member: ${member} id:"${this.persistedData.identifier}" `
+      `running job ${jobType} with groupPk:"${groupPk}" member: ${member} id:"${identifier}" `
     );
-    const group = await UserGroupsWrapperActions.getGroup(this.persistedData.groupPk);
+    const group = await UserGroupsWrapperActions.getGroup(groupPk);
     if (!group || !group.secretKey || !group.name) {
       window.log.warn(`GroupInviteJob: Did not find group in wrapper or no valid info in wrapper`);
       return RunJobResult.PermanentFailure;
@@ -89,25 +136,31 @@ class GroupInviteJob extends PersistedJob<GroupInvitePersistedData> {
     if (UserUtils.isUsFromCache(member)) {
       return RunJobResult.Success; // nothing to do for us, we get the update from our user's libsession wrappers
     }
+    let failed = true;
+    try {
+      const inviteDetails = await SnodeGroupSignature.getGroupInviteMessage({
+        groupName: group.name,
+        member,
+        secretKey: group.secretKey,
+        groupPk,
+      });
 
-    const inviteDetails = await SnodeGroupSignature.getGroupInviteMessage({
-      groupName: group.name,
-      member,
-      secretKey: group.secretKey,
-      groupPk,
-    });
-    if (!inviteDetails) {
-      window.log.warn(`GroupInviteJob: Did not find group in wrapper or no valid info in wrapper`);
-
-      return RunJobResult.PermanentFailure;
+      const storedAt = await getMessageQueue().sendToPubKeyNonDurably({
+        message: inviteDetails,
+        namespace: SnodeNamespaces.Default,
+        pubkey: PubKey.cast(member),
+      });
+      if (storedAt !== null) {
+        failed = false;
+      }
+    } finally {
+      updateFailedStateForMember(groupPk, member, failed);
+      try {
+        await MetaGroupWrapperActions.memberSetInvited(groupPk, member, failed);
+      } catch (e) {
+        window.log.warn('GroupInviteJob memberSetInvited failed with', e.message);
+      }
     }
-
-    await getMessageQueue().sendToPubKeyNonDurably({
-      message: inviteDetails,
-      namespace: SnodeNamespaces.Default,
-      pubkey: PubKey.cast(member),
-    });
-
     // return true so this job is marked as a success and we don't need to retry it
     return RunJobResult.Success;
   }
@@ -142,3 +195,29 @@ export const GroupInvite = {
   GroupInviteJob,
   addGroupInviteJob,
 };
+function updateFailedStateForMember(groupPk: GroupPubkeyType, member: PubkeyType, failed: boolean) {
+  let thisGroupFailure = invitesFailed.get(groupPk);
+
+  if (!failed) {
+    // invite sent success, remove a pending failure state from the list of toasts to display
+    if (thisGroupFailure) {
+      thisGroupFailure.failedMembers = difference(thisGroupFailure.failedMembers, [member]);
+    }
+
+    return;
+  }
+  // invite sent failed, append the member to that groupFailure member list, and trigger the debounce call
+  if (!thisGroupFailure) {
+    thisGroupFailure = {
+      failedMembers: [],
+      debouncedCall: debounce(displayFailedInvitesForGroup, 1000), // TODO change to 5000
+    };
+  }
+
+  if (!thisGroupFailure.failedMembers.includes(member)) {
+    thisGroupFailure.failedMembers.push(member);
+  }
+
+  invitesFailed.set(groupPk, thisGroupFailure);
+  thisGroupFailure.debouncedCall(groupPk);
+}

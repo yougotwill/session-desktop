@@ -258,6 +258,11 @@
   "groupTwoPromoted": "<b>$first$</b> and <b>$second$</b> were promoted to Admin.",
   "groupOthersPromoted": "<b>$name$</b> and <b>$count$ others</b> were promoted to Admin.",
 
+  "inviteFailed": "Invite Failed",
+  "groupInviteFailedOne": "Failed to invite <b>$name$</b> to <b>$groupname$</b>",
+  "groupInviteFailedTwo": "Failed to invite <b>$first$</b> and <b>$second$</b> to <b>$groupname$</b>",
+  "groupInviteFailedOthers": "Failed to invite <b>$first$</b> and <b>$count$ others</b> to <b>$groupname$</b>",
+
   "groupOneLeft": "<b>$name$</b> left the group.",
   "groupYouLeft": "<b>You</b> left the group.",
 

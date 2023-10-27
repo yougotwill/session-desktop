@@ -1,4 +1,4 @@
-import _ from 'lodash';
+import _, { isFinite, isNumber } from 'lodash';
 import { ClosedGroup, getMessageQueue } from '..';
 import { ConversationTypeEnum } from '../../models/conversationAttributes';
 import { addKeyPairToCacheAndDBIfNeeded } from '../../receiver/closedGroups';
@@ -119,7 +119,9 @@ async function sendToGroupMembers(
   window?.log?.info(`Sending invites for group ${groupPublicKey} to ${listOfMembers}`);
   // evaluating if all invites sent, if failed give the option to retry failed invites via modal dialog
   const inviteResults = await Promise.all(promises);
-  const allInvitesSent = _.every(inviteResults, inviteResult => inviteResult !== false);
+  const allInvitesSent = _.every(inviteResults, inviteResult => {
+    return isNumber(inviteResult) && isFinite(inviteResult);
+  });
 
   if (allInvitesSent) {
     // if (true) {
@@ -157,7 +159,7 @@ async function sendToGroupMembers(
         inviteResults.forEach((result, index) => {
           const member = listOfMembers[index];
           // group invite must always contain the admin member.
-          if (result !== true || admins.includes(member)) {
+          if (result === null || admins.includes(member)) {
             membersToResend.push(member);
           }
         });

@@ -1,10 +1,12 @@
-import { noop } from 'lodash';
+import { clone, noop } from 'lodash';
 import React from 'react';
 import styled from 'styled-components';
 
 import { Flex } from './Flex';
 
+import { useConversationsUsernameWithQuoteOrShortPk } from '../../hooks/useParamSelector';
 import { SessionIcon, SessionIconType } from '../icon';
+import { SessionHtmlRenderer } from './SessionHTMLRenderer';
 
 // NOTE We don't change the color strip on the left based on the type. 16/09/2022
 export enum SessionToastType {
@@ -45,6 +47,29 @@ const IconDiv = styled.div`
   padding-inline-end: var(--margins-xs);
   margin: 0 var(--margins-xs);
 `;
+
+function useReplacePkInTextWithNames(description: string) {
+  const pubkeysToLookup = [...description.matchAll(/0[3,5][0-9a-fA-F]{64}/g)] || [];
+  const memberNames = useConversationsUsernameWithQuoteOrShortPk(pubkeysToLookup.map(m => m[0]));
+
+  let replacedWithNames = clone(description);
+  for (let index = 0; index < memberNames.length; index++) {
+    const name = memberNames[index];
+    const pk = pubkeysToLookup[index][0];
+    replacedWithNames = replacedWithNames.replace(pk, name);
+  }
+
+  return replacedWithNames;
+}
+
+function DescriptionPubkeysReplaced({ description }: { description: string }) {
+  const replacedWithNames = useReplacePkInTextWithNames(description);
+  return (
+    <DescriptionDiv>
+      <SessionHtmlRenderer html={replacedWithNames} />
+    </DescriptionDiv>
+  );
+}
 
 export const SessionToast = (props: Props) => {
   const { title, description, type, icon } = props;
@@ -93,7 +118,7 @@ export const SessionToast = (props: Props) => {
         className="session-toast"
       >
         <TitleDiv>{title}</TitleDiv>
-        {toastDesc && <DescriptionDiv>{toastDesc}</DescriptionDiv>}
+        {toastDesc && <DescriptionPubkeysReplaced description={toastDesc} />}
       </Flex>
     </Flex>
   );

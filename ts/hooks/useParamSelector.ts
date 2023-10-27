@@ -60,18 +60,44 @@ export function useConversationRealName(convoId?: string) {
   return convoProps?.isPrivate ? convoProps?.displayNameInProfile : undefined;
 }
 
+function usernameForQuoteOrFullPk(pubkey: string, state: StateType) {
+  if (pubkey === UserUtils.getOurPubKeyStrFromCache() || pubkey.toLowerCase() === 'you') {
+    return window.i18n('you');
+  }
+  // use the name from the cached libsession wrappers if available
+  if (PubKey.isClosedGroupV2(pubkey)) {
+    const info = state.groups.infos[pubkey];
+    if (info && info.name) {
+      return info.name;
+    }
+  }
+  const convo = state.conversations.conversationLookup[pubkey];
+
+  const nameGot = convo?.nickname || convo?.displayNameInProfile;
+  return nameGot?.length ? nameGot : null;
+}
+
 /**
  * Returns either the nickname, the profileName, in '"' or the full pubkeys given
  */
 export function useConversationsUsernameWithQuoteOrFullPubkey(pubkeys: Array<string>) {
   return useSelector((state: StateType) => {
     return pubkeys.map(pubkey => {
-      if (pubkey === UserUtils.getOurPubKeyStrFromCache() || pubkey.toLowerCase() === 'you') {
-        return window.i18n('you');
-      }
-      const convo = state.conversations.conversationLookup[pubkey];
-      const nameGot = convo?.displayNameInProfile;
-      return nameGot?.length ? `"${nameGot}"` : pubkey;
+      const nameGot = usernameForQuoteOrFullPk(pubkey, state);
+      return nameGot?.length ? nameGot : pubkey;
+    });
+  });
+}
+
+/**
+ * Returns either the nickname, the profileName, a shortened pubkey, or "you" for our own pubkey
+ */
+export function useConversationsUsernameWithQuoteOrShortPk(pubkeys: Array<string>) {
+  return useSelector((state: StateType) => {
+    return pubkeys.map(pubkey => {
+      const nameGot = usernameForQuoteOrFullPk(pubkey, state);
+
+      return nameGot?.length ? nameGot : PubKey.shorten(pubkey);
     });
   });
 }
