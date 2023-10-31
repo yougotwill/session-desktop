@@ -856,13 +856,14 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       return false;
     }
 
-    const previousExpirationMode = this.getExpirationMode();
-    const previousExpirationTimer = this.getExpireTimer();
-
-    if (
-      isEqual(expirationMode, previousExpirationMode) &&
-      isEqual(expireTimer, previousExpirationTimer)
-    ) {
+    const oldExpirationMode = this.getExpirationMode();
+    const oldExpireTimer = this.getExpireTimer();
+    const oldExpirationType = DisappearingMessages.changeToDisappearingMessageType(
+      this,
+      oldExpireTimer,
+      oldExpirationMode
+    );
+    if (isEqual(expirationMode, oldExpirationMode) && isEqual(expireTimer, oldExpirationType)) {
       window.log.debug(
         `[updateExpireTimer]  Ignoring ExpireTimerUpdate ${
           fromSync ? 'config/sync ' : ''
@@ -892,11 +893,6 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       expirationMode
     );
 
-    // For some reasons, we want a timer update to "off" to disappear with the previous setting on that conversation...
-    const shouldUsePreviousExpiration =
-      expirationType === 'unknown' &&
-      previousExpirationMode !== 'off' &&
-      previousExpirationMode !== 'legacy';
     const commonAttributes = {
       flags: SignalService.DataMessage.Flags.EXPIRATION_TIMER_UPDATE,
       expirationTimerUpdate: {
@@ -906,8 +902,8 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
         source,
         fromSync,
       },
-      expirationType: shouldUsePreviousExpiration ? previousExpirationMode : expirationType,
-      expireTimer: shouldUsePreviousExpiration ? previousExpirationTimer : expireTimer,
+      expirationType: expireTimer === 0 ? oldExpirationType : expirationType,
+      expireTimer: expireTimer === 0 ? oldExpireTimer : expireTimer,
     };
 
     if (!message) {
@@ -928,8 +924,8 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       }
     } else {
       message.set({
-        expirationType: shouldUsePreviousExpiration ? previousExpirationMode : expirationType,
-        expireTimer: shouldUsePreviousExpiration ? previousExpirationTimer : expireTimer,
+        expirationType: expireTimer === 0 ? oldExpirationType : expirationType,
+        expireTimer: expireTimer === 0 ? oldExpireTimer : expireTimer,
       });
     }
 
