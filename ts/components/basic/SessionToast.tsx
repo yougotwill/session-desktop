@@ -17,22 +17,14 @@ export enum SessionToastType {
 }
 
 type Props = {
-  title: string;
+  description: string;
+
   id?: string;
   type?: SessionToastType;
   icon?: SessionIconType;
-  description?: string;
   closeToast?: any;
   onToastClick?: () => void;
 };
-
-const TitleDiv = styled.div`
-  font-size: var(--font-size-md);
-  line-height: var(--font-size-md);
-  font-family: var(--font-default);
-  color: var(--text-primary-color);
-  text-overflow: ellipsis;
-`;
 
 const DescriptionDiv = styled.div`
   font-size: var(--font-size-sm);
@@ -72,7 +64,7 @@ function DescriptionPubkeysReplaced({ description }: { description: string }) {
 }
 
 export const SessionToast = (props: Props) => {
-  const { title, description, type, icon } = props;
+  const { description, type, icon } = props;
 
   const toastDesc = description || '';
   const toastIconSize = toastDesc ? 'huge' : 'medium';
@@ -117,8 +109,7 @@ export const SessionToast = (props: Props) => {
         flexDirection="column"
         className="session-toast"
       >
-        <TitleDiv>{title}</TitleDiv>
-        {toastDesc && <DescriptionPubkeysReplaced description={toastDesc} />}
+        <DescriptionPubkeysReplaced description={toastDesc} />
       </Flex>
     </Flex>
   );

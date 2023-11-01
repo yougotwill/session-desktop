@@ -64,21 +64,18 @@ function displayFailedInvitesForGroup(groupPk: GroupPubkeyType) {
     case 1:
       ToastUtils.pushToastWarning(
         `invite-failed${groupPk}`,
-        window.i18n('inviteFailed'),
         window.i18n('groupInviteFailedOne', [...thisGroupFailures.failedMembers, groupPk])
       );
       break;
     case 2:
       ToastUtils.pushToastWarning(
         `invite-failed${groupPk}`,
-        window.i18n('inviteFailed'),
         window.i18n('groupInviteFailedTwo', [...thisGroupFailures.failedMembers, groupPk])
       );
       break;
     default:
       ToastUtils.pushToastWarning(
         `invite-failed${groupPk}`,
-        window.i18n('inviteFailed'),
         window.i18n('groupInviteFailedOthers', [
           thisGroupFailures.failedMembers[0],
           `${thisGroupFailures.failedMembers.length - 1}`,

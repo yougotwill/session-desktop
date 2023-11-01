@@ -128,8 +128,7 @@ export async function autoScaleAvatarBlob(file: File) {
   } catch (e) {
     ToastUtils.pushToastError(
       'pickFileForAvatar',
-      'An error happened while picking/resizing the image',
-      e.message || ''
+      `An error happened while picking/resizing the image: "${e.message || ''}"`
     );
     window.log.error(e);
     return null;
