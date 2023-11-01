@@ -154,6 +154,29 @@ async function getSnodeGroupSignature({
   throw new Error(`getSnodeGroupSignature: needs either groupSecretKey or authData`);
 }
 
+async function signDataWithAdminSecret(
+  verificationString: string,
+  group: Pick<GroupDetailsNeededForSignature, 'secretKey'>
+) {
+  const verificationData = StringUtils.encode(verificationString, 'utf8');
+  const message = new Uint8Array(verificationData);
+
+  if (!group) {
+    throw new Error('signDataWithAdminSecret group was not found');
+  }
+  const { secretKey } = group;
+
+  const groupSecretKey = secretKey && !isEmpty(secretKey) ? secretKey : null;
+  if (!groupSecretKey) {
+    throw new Error('groupSecretKey is empty');
+  }
+  const sodium = await getSodiumRenderer();
+
+  return {
+    signature: fromUInt8ArrayToBase64(sodium.crypto_sign_detached(message, groupSecretKey)),
+  };
+}
+
 // this is kind of duplicated with `generateUpdateExpirySignature`, but needs to use the authData when secretKey is not available
 async function generateUpdateExpiryGroupSignature({
   shortenOrExtend,
@@ -214,4 +237,5 @@ export const SnodeGroupSignature = {
   generateUpdateExpiryGroupSignature,
   getGroupInviteMessage,
   getSnodeGroupSignature,
+  signDataWithAdminSecret,
 };

@@ -192,10 +192,6 @@ export type UpdateExpireNodeUserParams = WithPubkeyAsString &
 
 export type UpdateExpireNodeGroupParams = WithPubkeyAsGroupPubkey & UpdateExpireAlwaysNeeded;
 
-type UpdateExpiryOnNodeSubRequest =
-  | UpdateExpiryOnNodeUserSubRequest
-  | UpdateExpiryOnNodeGroupSubRequest;
-
 export type UpdateExpiryOnNodeUserSubRequest = {
   method: 'expire';
   params: UpdateExpireNodeUserParams;
@@ -204,6 +200,20 @@ export type UpdateExpiryOnNodeUserSubRequest = {
 export type UpdateExpiryOnNodeGroupSubRequest = {
   method: 'expire';
   params: UpdateExpireNodeGroupParams;
+};
+
+type UpdateExpiryOnNodeSubRequest =
+  | UpdateExpiryOnNodeUserSubRequest
+  | UpdateExpiryOnNodeGroupSubRequest;
+
+export type RevokeSubaccountParams = {
+  pubkey: GroupPubkeyType;
+  revoke: string; // the subaccount token to revoke in hex
+  signature: string;
+};
+export type RevokeSubaccountSubRequest = {
+  method: 'revoke_subaccount' | 'unrevoke_subaccount';
+  params: RevokeSubaccountParams;
 };
 
 export type OxendSubRequest = OnsResolveSubRequest | GetServiceNodesSubRequest;
@@ -216,7 +226,8 @@ export type SnodeApiSubRequests =
   | NetworkTimeSubRequest
   | DeleteFromNodeSubRequest
   | DeleteAllFromNodeSubRequest
-  | UpdateExpiryOnNodeSubRequest;
+  | UpdateExpiryOnNodeSubRequest
+  | RevokeSubaccountSubRequest;
 
 // eslint-disable-next-line @typescript-eslint/array-type
 export type NonEmptyArray<T> = [T, ...T[]];
