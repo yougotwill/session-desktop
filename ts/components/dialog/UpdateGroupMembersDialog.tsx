@@ -1,5 +1,5 @@
 import _ from 'lodash';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useDispatch } from 'react-redux';
 import useKey from 'react-use/lib/useKey';
 import styled from 'styled-components';
@@ -25,6 +25,7 @@ import {
 import { useSet } from '../../hooks/useSet';
 import { ConvoHub } from '../../session/conversations';
 import { initiateClosedGroupUpdate } from '../../session/group/closed-group';
+import { useSelectedIsGroupV2 } from '../../state/selectors/selectedConversation';
 
 type Props = {
   conversationId: string;
@@ -46,16 +47,19 @@ const ClassicMemberList = (props: {
 }) => {
   const { onSelect, convoId, onUnselect, selectedMembers } = props;
   const weAreAdmin = useWeAreAdmin(convoId);
+  const isV2Group = useSelectedIsGroupV2();
 
   const groupAdmins = useGroupAdmins(convoId);
   const groupMembers = useSortedGroupMembers(convoId);
 
-  let currentMembers = groupMembers || [];
-  currentMembers = [...currentMembers].sort(m => (groupAdmins?.includes(m) ? -1 : 0));
+  const sortedMembers = useMemo(
+    () => [...groupMembers].sort(m => (groupAdmins?.includes(m) ? -1 : 0)),
+    [groupMembers, groupAdmins]
+  );
 
   return (
     <>
-      {currentMembers.map(member => {
+      {sortedMembers.map(member => {
         const isSelected = (weAreAdmin && selectedMembers.includes(member)) || false;
         const isAdmin = groupAdmins?.includes(member);
 
@@ -68,6 +72,8 @@ const ClassicMemberList = (props: {
             key={member}
             isAdmin={isAdmin}
             disableBg={true}
+            displayGroupStatus={isV2Group && weAreAdmin}
+            groupPk={convoId}
           />
         );
       })}

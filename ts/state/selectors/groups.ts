@@ -1,5 +1,4 @@
-import { GroupPubkeyType } from 'libsession_util_nodejs';
-import { isEmpty } from 'lodash';
+import { GroupMemberGet, GroupPubkeyType, PubkeyType } from 'libsession_util_nodejs';
 import { useSelector } from 'react-redux';
 import { PubKey } from '../../session/types';
 import { GroupState } from '../ducks/groups';
@@ -7,7 +6,7 @@ import { StateType } from '../reducer';
 
 const getLibGroupsState = (state: StateType): GroupState => state.groups;
 
-export function getLibMembersPubkeys(state: StateType, convo?: string): Array<string> {
+function getMembersOfGroup(state: StateType, convo?: string): Array<GroupMemberGet> {
   if (!convo) {
     return [];
   }
@@ -16,9 +15,15 @@ export function getLibMembersPubkeys(state: StateType, convo?: string): Array<st
   }
 
   const members = getLibGroupsState(state).members[convo];
-  if (isEmpty(members)) {
-    return [];
-  }
+  return members || [];
+}
+
+function findMemberInMembers(members: Array<GroupMemberGet>, memberPk: string) {
+  return members.find(m => m.pubkeyHex === memberPk);
+}
+
+export function getLibMembersPubkeys(state: StateType, convo?: string): Array<string> {
+  const members = getMembersOfGroup(state, convo);
 
   return members.map(m => m.pubkeyHex);
 }
@@ -28,19 +33,34 @@ function getIsCreatingGroupFromUI(state: StateType): boolean {
 }
 
 export function getLibAdminsPubkeys(state: StateType, convo?: string): Array<string> {
-  if (!convo) {
-    return [];
-  }
-  if (!PubKey.isClosedGroupV2(convo)) {
-    return [];
-  }
-
-  const members = getLibGroupsState(state).members[convo];
-  if (isEmpty(members)) {
-    return [];
-  }
+  const members = getMembersOfGroup(state, convo);
 
   return members.filter(m => m.promoted).map(m => m.pubkeyHex);
+}
+
+function getMemberInviteFailed(state: StateType, pubkey: PubkeyType, convo?: GroupPubkeyType) {
+  const members = getMembersOfGroup(state, convo);
+  return findMemberInMembers(members, pubkey)?.inviteFailed || false;
+}
+
+function getMemberInvitePending(state: StateType, pubkey: PubkeyType, convo?: GroupPubkeyType) {
+  const members = getMembersOfGroup(state, convo);
+  return findMemberInMembers(members, pubkey)?.invitePending || false;
+}
+
+function getMemberIsPromoted(state: StateType, pubkey: PubkeyType, convo?: GroupPubkeyType) {
+  const members = getMembersOfGroup(state, convo);
+  return findMemberInMembers(members, pubkey)?.promoted || false;
+}
+
+function getMemberPromotionFailed(state: StateType, pubkey: PubkeyType, convo?: GroupPubkeyType) {
+  const members = getMembersOfGroup(state, convo);
+  return findMemberInMembers(members, pubkey)?.promotionFailed || false;
+}
+
+function getMemberPromotionPending(state: StateType, pubkey: PubkeyType, convo?: GroupPubkeyType) {
+  const members = getMembersOfGroup(state, convo);
+  return findMemberInMembers(members, pubkey)?.promotionPending || false;
 }
 
 export function getLibMembersCount(state: StateType, convo?: GroupPubkeyType): Array<string> {
@@ -88,4 +108,22 @@ export function getLibGroupAdminsOutsideRedux(convoId: string): Array<string> {
 
 export function useIsCreatingGroupFromUIPending() {
   return useSelector(getIsCreatingGroupFromUI);
+}
+
+export function useMemberInviteFailed(member: PubkeyType, groupPk: GroupPubkeyType) {
+  return useSelector((state: StateType) => getMemberInviteFailed(state, member, groupPk));
+}
+
+export function useMemberInvitePending(member: PubkeyType, groupPk: GroupPubkeyType) {
+  return useSelector((state: StateType) => getMemberInvitePending(state, member, groupPk));
+}
+export function useMemberIsPromoted(member: PubkeyType, groupPk: GroupPubkeyType) {
+  return useSelector((state: StateType) => getMemberIsPromoted(state, member, groupPk));
+}
+
+export function useMemberPromotionFailed(member: PubkeyType, groupPk: GroupPubkeyType) {
+  return useSelector((state: StateType) => getMemberPromotionFailed(state, member, groupPk));
+}
+export function useMemberPromotionPending(member: PubkeyType, groupPk: GroupPubkeyType) {
+  return useSelector((state: StateType) => getMemberPromotionPending(state, member, groupPk));
 }

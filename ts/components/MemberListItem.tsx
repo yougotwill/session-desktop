@@ -1,8 +1,20 @@
 import React from 'react';
 import styled from 'styled-components';
 
-import { Avatar, AvatarSize, CrownIcon } from './avatar/Avatar';
+import { GroupPubkeyType, PubkeyType } from 'libsession_util_nodejs';
 import { useConversationUsernameOrShorten } from '../hooks/useParamSelector';
+import { PubKey } from '../session/types';
+import { UserUtils } from '../session/utils';
+import { GroupInvite } from '../session/utils/job_runners/jobs/GroupInviteJob';
+import {
+  useMemberInviteFailed,
+  useMemberInvitePending,
+  useMemberPromotionFailed,
+  useMemberPromotionPending,
+} from '../state/selectors/groups';
+import { Avatar, AvatarSize, CrownIcon } from './avatar/Avatar';
+import { Flex } from './basic/Flex';
+import { SessionButton, SessionButtonShape, SessionButtonType } from './basic/SessionButton';
 import { SessionRadio } from './basic/SessionRadio';
 
 const AvatarContainer = styled.div`
@@ -55,8 +67,6 @@ const StyledInfo = styled.div`
 
 const StyledName = styled.span`
   font-weight: bold;
-  margin-inline-start: var(--margins-md);
-  margin-inline-end: var(--margins-md);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -67,7 +77,7 @@ const StyledCheckContainer = styled.div`
   align-items: center;
 `;
 
-export const MemberListItem = (props: {
+type MemberListItemProps = {
   pubkey: string;
   isSelected: boolean;
   // this bool is used to make a zombie appear with less opacity than a normal member
@@ -78,19 +88,114 @@ export const MemberListItem = (props: {
   onSelect?: (pubkey: string) => void;
   onUnselect?: (pubkey: string) => void;
   dataTestId?: string;
-}) => {
-  const {
-    isSelected,
-    pubkey,
-    isZombie,
-    isAdmin,
-    onSelect,
-    onUnselect,
-    inMentions,
-    disableBg,
-    dataTestId,
-  } = props;
+  displayGroupStatus?: boolean;
+  groupPk?: string;
+};
 
+const ResendInviteContainer = ({
+  displayGroupStatus,
+  groupPk,
+  pubkey,
+}: Pick<MemberListItemProps, 'displayGroupStatus' | 'pubkey' | 'groupPk'>) => {
+  if (
+    displayGroupStatus &&
+    groupPk &&
+    PubKey.isClosedGroupV2(groupPk) &&
+    PubKey.is05Pubkey(pubkey) &&
+    !UserUtils.isUsFromCache(pubkey)
+  ) {
+    return (
+      <Flex container={true} margin="0 0 0 auto">
+        <ResendInviteButton groupPk={groupPk} pubkey={pubkey} />
+      </Flex>
+    );
+  }
+  return null;
+};
+
+const StyledGroupStatusText = styled.span<{ isFailure: boolean }>`
+  color: var(--danger-color);
+  font-size: var(--font-size-xs);
+  margin-top: var(--margins-xs);
+`;
+
+const GroupStatusText = ({ groupPk, pubkey }: { pubkey: PubkeyType; groupPk: GroupPubkeyType }) => {
+  const groupInviteFailed = useMemberInviteFailed(pubkey, groupPk);
+  const groupPromotionFailed = useMemberPromotionFailed(pubkey, groupPk);
+
+  const groupInvitePending = useMemberInvitePending(pubkey, groupPk);
+  const groupPromotionPending = useMemberPromotionPending(pubkey, groupPk);
+
+  const statusText = groupPromotionFailed
+    ? window.i18n('promotionFailed')
+    : groupInviteFailed
+    ? window.i18n('inviteFailed')
+    : groupInvitePending
+    ? window.i18n('invitePending')
+    : groupPromotionPending
+    ? window.i18n('promotionPending')
+    : null;
+
+  if (!statusText) {
+    return null;
+  }
+  return (
+    <StyledGroupStatusText isFailure={groupPromotionFailed || groupInviteFailed}>
+      {statusText}
+    </StyledGroupStatusText>
+  );
+};
+
+const GroupStatusContainer = ({
+  displayGroupStatus,
+  groupPk,
+  pubkey,
+}: Pick<MemberListItemProps, 'displayGroupStatus' | 'pubkey' | 'groupPk'>) => {
+  if (
+    displayGroupStatus &&
+    groupPk &&
+    PubKey.isClosedGroupV2(groupPk) &&
+    PubKey.is05Pubkey(pubkey) &&
+    !UserUtils.isUsFromCache(pubkey)
+  ) {
+    return <GroupStatusText groupPk={groupPk} pubkey={pubkey} />;
+  }
+  return null;
+};
+
+const ResendInviteButton = ({
+  groupPk,
+  pubkey,
+}: {
+  pubkey: PubkeyType;
+  groupPk: GroupPubkeyType;
+}) => {
+  return (
+    <SessionButton
+      dataTestId="resend-invite-button"
+      buttonShape={SessionButtonShape.Square}
+      buttonType={SessionButtonType.Solid}
+      text={window.i18n('resend')}
+      onClick={() => {
+        void GroupInvite.addGroupInviteJob({ groupPk, member: pubkey });
+      }}
+    />
+  );
+};
+
+export const MemberListItem = ({
+  isSelected,
+  pubkey,
+  dataTestId,
+  disableBg,
+  displayGroupStatus,
+  inMentions,
+  isAdmin,
+  isZombie,
+  onSelect,
+  onUnselect,
+  groupPk,
+}: MemberListItemProps) => {
   const memberName = useConversationUsernameOrShorten(pubkey);
 
   return (
@@ -114,8 +219,26 @@ export const MemberListItem = (props: {
     >
       <StyledInfo>
         <AvatarItem memberPubkey={pubkey} isAdmin={isAdmin || false} />
-        <StyledName>{memberName}</StyledName>
+        <Flex
+          container={true}
+          flexDirection="column"
+          margin="0 var(--margins-md)"
+          alignItems="flex-start"
+        >
+          <StyledName>{memberName}</StyledName>
+          <GroupStatusContainer
+            pubkey={pubkey}
+            displayGroupStatus={displayGroupStatus}
+            groupPk={groupPk}
+          />
+        </Flex>
       </StyledInfo>
+
+      <ResendInviteContainer
+        pubkey={pubkey}
+        displayGroupStatus={displayGroupStatus}
+        groupPk={groupPk}
+      />
 
       {!inMentions && (
         <StyledCheckContainer>
