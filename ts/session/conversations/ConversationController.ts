@@ -97,7 +97,7 @@ class ConvoController {
       throw new TypeError(`'type' must be 'private' or 'group' or 'groupv2' but got: '${type}'`);
     }
 
-    if (type === ConversationTypeEnum.GROUPV2 && !PubKey.isClosedGroupV2(id)) {
+    if (type === ConversationTypeEnum.GROUPV2 && !PubKey.is03Pubkey(id)) {
       throw new Error(
         'required v3 closed group but the pubkey does not match the 03 prefix for them'
       );
@@ -220,7 +220,7 @@ class ConvoController {
     // if we were kicked or sent our left message, we have nothing to do more with that group.
     // Just delete everything related to it, not trying to add update message or send a left message.
     await this.removeGroupOrCommunityFromDBAndRedux(groupId);
-    if (PubKey.isClosedGroupV2(groupId)) {
+    if (PubKey.is03Pubkey(groupId)) {
       await remove03GroupFromWrappers(groupId);
     } else {
       await removeLegacyGroupFromWrappers(groupId);

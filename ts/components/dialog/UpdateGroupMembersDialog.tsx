@@ -1,9 +1,10 @@
-import _ from 'lodash';
+import _, { difference } from 'lodash';
 import React, { useMemo } from 'react';
 import { useDispatch } from 'react-redux';
 import useKey from 'react-use/lib/useKey';
 import styled from 'styled-components';
 
+import { PubkeyType } from 'libsession_util_nodejs';
 import { ToastUtils, UserUtils } from '../../session/utils';
 
 import { updateGroupMembersModal } from '../../state/ducks/modalDialog';
@@ -24,8 +25,12 @@ import {
 
 import { useSet } from '../../hooks/useSet';
 import { ConvoHub } from '../../session/conversations';
-import { initiateClosedGroupUpdate } from '../../session/group/closed-group';
+import { ClosedGroup } from '../../session/group/closed-group';
+import { PubKey } from '../../session/types';
+import { groupInfoActions } from '../../state/ducks/groups';
+import { useMemberGroupChangePending } from '../../state/selectors/groups';
 import { useSelectedIsGroupV2 } from '../../state/selectors/selectedConversation';
+import { SessionSpinner } from '../basic/SessionSpinner';
 
 type Props = {
   conversationId: string;
@@ -172,7 +177,7 @@ async function onSubmit(convoId: string, membersAfterUpdate: Array<string>) {
     memberAfterUpdate => !_.includes(membersToRemove, memberAfterUpdate)
   );
 
-  void initiateClosedGroupUpdate(
+  void ClosedGroup.initiateClosedGroupUpdate(
     convoId,
     convoFound.getRealSessionUsername() || 'Unknown',
     filteredMembers
@@ -187,6 +192,7 @@ export const UpdateGroupMembersDialog = (props: Props) => {
   const existingMembers = useSortedGroupMembers(conversationId) || [];
   const displayName = useConversationUsername(conversationId);
   const groupAdmins = useGroupAdmins(conversationId);
+  const isProcessingUIChange = useMemberGroupChangePending();
 
   const {
     addTo,
@@ -205,9 +211,20 @@ export const UpdateGroupMembersDialog = (props: Props) => {
   };
 
   const onClickOK = async () => {
-    // const members = getWouldBeMembers(this.state.contactList).map(d => d.id);
-    // do not include zombies here, they are removed by force
+    if (PubKey.is03Pubkey(conversationId)) {
+      const groupv2Action = groupInfoActions.currentDeviceGroupMembersChange({
+        groupPk: conversationId,
+        addMembersWithHistory: [],
+        addMembersWithoutHistory: [],
+        removeMembers: difference(existingMembers, membersToKeepWithUpdate) as Array<PubkeyType>,
+      });
+      dispatch(groupv2Action as any);
+
+      return; // keeping the dialog open until the async thunk is done
+    }
+
     await onSubmit(conversationId, membersToKeepWithUpdate);
+
     closeDialog();
   };
 
@@ -261,16 +278,24 @@ export const UpdateGroupMembersDialog = (props: Props) => {
       {showNoMembersMessage && <p>{window.i18n('noMembersInThisGroup')}</p>}
 
       <SpacerLG />
+      <SessionSpinner loading={isProcessingUIChange} />
+      <SpacerLG />
 
       <div className="session-modal__button-group">
         {weAreAdmin && (
-          <SessionButton text={okText} onClick={onClickOK} buttonType={SessionButtonType.Simple} />
+          <SessionButton
+            text={okText}
+            onClick={onClickOK}
+            buttonType={SessionButtonType.Simple}
+            disabled={isProcessingUIChange}
+          />
         )}
         <SessionButton
           text={cancelText}
           buttonColor={weAreAdmin ? SessionButtonColor.Danger : undefined}
           buttonType={SessionButtonType.Simple}
           onClick={closeDialog}
+          disabled={isProcessingUIChange}
         />
       </div>
     </SessionWrapperModal>

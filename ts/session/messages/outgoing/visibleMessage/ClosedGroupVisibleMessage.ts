@@ -27,7 +27,7 @@ export class ClosedGroupVisibleMessage extends ClosedGroupMessage {
       throw new Error('ClosedGroupVisibleMessage: groupId must be set');
     }
 
-    if (PubKey.isClosedGroupV2(PubKey.cast(params.groupId).key)) {
+    if (PubKey.is03Pubkey(PubKey.cast(params.groupId).key)) {
       throw new Error('GroupContext should not be used anymore with closed group v3');
     }
   }
@@ -69,7 +69,7 @@ export class ClosedGroupV2VisibleMessage extends DataMessage {
     });
     this.chatMessage = params.chatMessage;
 
-    if (!PubKey.isClosedGroupV2(params.destination)) {
+    if (!PubKey.is03Pubkey(params.destination)) {
       throw new Error('ClosedGroupV2VisibleMessage only work with 03-groups destination');
     }
     this.destination = params.destination;

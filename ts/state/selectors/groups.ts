@@ -10,7 +10,7 @@ function getMembersOfGroup(state: StateType, convo?: string): Array<GroupMemberG
   if (!convo) {
     return [];
   }
-  if (!PubKey.isClosedGroupV2(convo)) {
+  if (!PubKey.is03Pubkey(convo)) {
     return [];
   }
 
@@ -22,7 +22,7 @@ function findMemberInMembers(members: Array<GroupMemberGet>, memberPk: string) {
   return members.find(m => m.pubkeyHex === memberPk);
 }
 
-export function getLibMembersPubkeys(state: StateType, convo?: string): Array<string> {
+export function getLibMembersPubkeys(state: StateType, convo?: string): Array<PubkeyType> {
   const members = getMembersOfGroup(state, convo);
 
   return members.map(m => m.pubkeyHex);
@@ -30,6 +30,10 @@ export function getLibMembersPubkeys(state: StateType, convo?: string): Array<st
 
 function getIsCreatingGroupFromUI(state: StateType): boolean {
   return getLibGroupsState(state).creationFromUIPending;
+}
+
+function getIsMemberGroupChangePendingFromUI(state: StateType): boolean {
+  return getLibGroupsState(state).memberChangesFromUIPending;
 }
 
 export function getLibAdminsPubkeys(state: StateType, convo?: string): Array<string> {
@@ -71,7 +75,7 @@ function getLibGroupName(state: StateType, convo?: string): string | undefined {
   if (!convo) {
     return undefined;
   }
-  if (!PubKey.isClosedGroupV2(convo)) {
+  if (!PubKey.is03Pubkey(convo)) {
     return undefined;
   }
 
@@ -83,7 +87,7 @@ export function useLibGroupName(convoId?: string): string | undefined {
   return useSelector((state: StateType) => getLibGroupName(state, convoId));
 }
 
-export function useLibGroupMembers(convoId?: string): Array<string> {
+export function useLibGroupMembers(convoId?: string): Array<PubkeyType> {
   return useSelector((state: StateType) => getLibMembersPubkeys(state, convoId));
 }
 
@@ -124,6 +128,11 @@ export function useMemberIsPromoted(member: PubkeyType, groupPk: GroupPubkeyType
 export function useMemberPromotionFailed(member: PubkeyType, groupPk: GroupPubkeyType) {
   return useSelector((state: StateType) => getMemberPromotionFailed(state, member, groupPk));
 }
+
 export function useMemberPromotionPending(member: PubkeyType, groupPk: GroupPubkeyType) {
   return useSelector((state: StateType) => getMemberPromotionPending(state, member, groupPk));
+}
+
+export function useMemberGroupChangePending() {
+  return useSelector(getIsMemberGroupChangePendingFromUI);
 }

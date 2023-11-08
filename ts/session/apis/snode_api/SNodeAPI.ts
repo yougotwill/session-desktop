@@ -46,7 +46,7 @@ const forceNetworkDeletion = async (): Promise<Array<string> | null> => {
             });
 
             const ret = await doSnodeBatchRequest(
-              [{ method, params: { ...signOpts, namespace } }],
+              [{ method, params: { ...signOpts, namespace, pubkey: usPk } }],
               snodeToMakeRequestTo,
               10000,
               usPk

@@ -3,7 +3,7 @@ import { SignalService } from '../protobuf';
 import { GetNetworkTime } from '../session/apis/snode_api/getNetworkTime';
 import { TTL_DEFAULT } from '../session/constants';
 import { CallManager, UserUtils } from '../session/utils';
-import { removeFromCache } from './cache';
+import { IncomingMessageCache } from './cache';
 import { EnvelopePlus } from './types';
 
 export async function handleCallMessage(
@@ -23,26 +23,26 @@ export async function handleCallMessage(
     callMessage.type !== SignalService.CallMessage.Type.END_CALL
   ) {
     window.log.info('Dropping incoming call from ourself');
-    await removeFromCache(envelope);
+    await IncomingMessageCache.removeFromCache(envelope);
     return;
   }
 
   if (CallManager.isCallRejected(callMessage.uuid)) {
-    await removeFromCache(envelope);
+    await IncomingMessageCache.removeFromCache(envelope);
 
     window.log.info(`Dropping already rejected call from this device ${callMessage.uuid}`);
     return;
   }
 
   if (type === SignalService.CallMessage.Type.PROVISIONAL_ANSWER) {
-    await removeFromCache(envelope);
+    await IncomingMessageCache.removeFromCache(envelope);
 
     window.log.info('Skipping callMessage PROVISIONAL_ANSWER');
     return;
   }
 
   if (type === SignalService.CallMessage.Type.PRE_OFFER) {
-    await removeFromCache(envelope);
+    await IncomingMessageCache.removeFromCache(envelope);
 
     window.log.info('Skipping callMessage PRE_OFFER');
     return;
@@ -53,11 +53,11 @@ export async function handleCallMessage(
       Math.max(sentTimestamp - GetNetworkTime.getNowWithNetworkOffset()) > TTL_DEFAULT.CALL_MESSAGE
     ) {
       window?.log?.info('Dropping incoming OFFER callMessage sent a while ago: ', sentTimestamp);
-      await removeFromCache(envelope);
+      await IncomingMessageCache.removeFromCache(envelope);
 
       return;
     }
-    await removeFromCache(envelope);
+    await IncomingMessageCache.removeFromCache(envelope);
 
     await CallManager.handleCallTypeOffer(sender, callMessage, sentTimestamp);
 
@@ -65,7 +65,7 @@ export async function handleCallMessage(
   }
 
   if (type === SignalService.CallMessage.Type.END_CALL) {
-    await removeFromCache(envelope);
+    await IncomingMessageCache.removeFromCache(envelope);
 
     await CallManager.handleCallTypeEndCall(sender, callMessage.uuid);
 
@@ -73,20 +73,20 @@ export async function handleCallMessage(
   }
 
   if (type === SignalService.CallMessage.Type.ANSWER) {
-    await removeFromCache(envelope);
+    await IncomingMessageCache.removeFromCache(envelope);
 
     await CallManager.handleCallTypeAnswer(sender, callMessage, sentTimestamp);
 
     return;
   }
   if (type === SignalService.CallMessage.Type.ICE_CANDIDATES) {
-    await removeFromCache(envelope);
+    await IncomingMessageCache.removeFromCache(envelope);
 
     await CallManager.handleCallTypeIceCandidates(sender, callMessage, sentTimestamp);
 
     return;
   }
-  await removeFromCache(envelope);
+  await IncomingMessageCache.removeFromCache(envelope);
 
   // if this another type of call message, just add it to the manager
   await CallManager.handleOtherCallTypes(sender, callMessage, sentTimestamp);

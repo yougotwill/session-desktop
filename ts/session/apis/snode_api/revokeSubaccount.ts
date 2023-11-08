@@ -1,62 +1,79 @@
 import { GroupPubkeyType } from 'libsession_util_nodejs';
-import _, { isEmpty } from 'lodash';
+import { from_hex } from 'libsodium-wrappers-sumo';
+import _ from 'lodash';
 import { doSnodeBatchRequest } from './batchRequest';
 
-import { UserGroupsWrapperActions } from '../../../webworker/workers/browser/libsession_worker_interface';
+import { concatUInt8Array } from '../../crypto';
 import { PubKey } from '../../types';
-import { stringToUint8Array } from '../../utils/String';
-import { RevokeSubaccountSubRequest } from './SnodeRequestTypes';
+import { StringUtils } from '../../utils';
+import { RevokeSubaccountSubRequest, UnrevokeSubaccountSubRequest } from './SnodeRequestTypes';
+import { GetNetworkTime } from './getNetworkTime';
 import { SnodeGroupSignature } from './signature/groupSignature';
 import { getSwarmFor } from './snodePool';
 
-type Change = {
+export type RevokeChanges = Array<{
   action: 'revoke_subaccount' | 'unrevoke_subaccount';
-  tokenToRevoke: string;
-};
+  tokenToRevokeHex: string;
+}>;
 
-type ArrayOfChange = Array<Change>;
 async function getRevokeSubaccountRequest({
   groupPk,
-  actions,
+  revokeChanges,
+  groupSecretKey,
 }: {
   groupPk: GroupPubkeyType;
-  actions: ArrayOfChange;
-}): Promise<Array<RevokeSubaccountSubRequest>> {
-  if (!PubKey.isClosedGroupV2(groupPk)) {
+  groupSecretKey: Uint8Array;
+  revokeChanges: RevokeChanges;
+}): Promise<Array<RevokeSubaccountSubRequest | UnrevokeSubaccountSubRequest>> {
+  if (!PubKey.is03Pubkey(groupPk)) {
     throw new Error('revokeSubaccountForGroup: not a 03 group');
   }
 
-  const group = await UserGroupsWrapperActions.getGroup(groupPk);
+  const timestamp = GetNetworkTime.getNowWithNetworkOffset();
 
-  if (!group || isEmpty(group?.secretKey)) {
-    throw new Error(`revokeSubaccountForGroup ${groupPk} needs admin secretkey`);
-  }
+  const revokeParams: Array<RevokeSubaccountSubRequest | UnrevokeSubaccountSubRequest> =
+    await Promise.all(
+      revokeChanges.map(async change => {
+        const tokenBytes = from_hex(change.tokenToRevokeHex);
 
-  const revokeParams: Array<RevokeSubaccountSubRequest> = await Promise.all(
-    actions.map(async action => {
-      const verificationString = `${action}${stringToUint8Array(action.tokenToRevoke)}`;
-      const sigResult = await SnodeGroupSignature.signDataWithAdminSecret(
-        verificationString,
-        group
-      );
+        const prefix = new Uint8Array(StringUtils.encode(`${change.action}${timestamp}`, 'utf8'));
+        const sigResult = await SnodeGroupSignature.signDataWithAdminSecret(
+          concatUInt8Array(prefix, tokenBytes),
+          { secretKey: groupSecretKey }
+        );
 
-      return {
-        method: action.action,
-        params: {
-          revoke: action.tokenToRevoke,
-          ...sigResult,
-          pubkey: groupPk,
-        },
-      };
-    })
-  );
+        const args =
+          change.action === 'revoke_subaccount'
+            ? {
+                method: change.action,
+                params: {
+                  revoke: change.tokenToRevokeHex,
+                  ...sigResult,
+                  pubkey: groupPk,
+                  timestamp,
+                },
+              }
+            : {
+                method: change.action,
+                params: {
+                  unrevoke: change.tokenToRevokeHex,
+                  ...sigResult,
+                  pubkey: groupPk,
+                  timestamp,
+                },
+              };
+
+        return args;
+      })
+    );
 
   return revokeParams;
 }
 
 async function revokeSubAccounts(
   groupPk: GroupPubkeyType,
-  actions: ArrayOfChange
+  revokeChanges: RevokeChanges,
+  groupSecretKey: Uint8Array
 ): Promise<boolean> {
   try {
     const swarm = await getSwarmFor(groupPk);
@@ -66,10 +83,11 @@ async function revokeSubAccounts(
     }
     const revokeParams = await getRevokeSubaccountRequest({
       groupPk,
-      actions,
+      revokeChanges,
+      groupSecretKey,
     });
 
-    const results = await doSnodeBatchRequest(revokeParams, snode, 4000, null);
+    const results = await doSnodeBatchRequest(revokeParams, snode, 7000, null);
 
     if (!results || !results.length) {
       throw new Error(`_revokeSubAccounts could not talk to ${snode.ip}:${snode.port}`);
@@ -81,4 +99,4 @@ async function revokeSubAccounts(
   }
 }
 
-export const SnodeAPIRetrieve = { revokeSubAccounts };
+export const SnodeAPIRevoke = { revokeSubAccounts };

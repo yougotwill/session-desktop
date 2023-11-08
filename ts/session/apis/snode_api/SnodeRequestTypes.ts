@@ -134,8 +134,12 @@ export type StoreOnNodeParamsNoSig = Pick<
 export type DeleteFromNodeWithTimestampParams = {
   timestamp: string | number;
   namespace: number | null | 'all';
-} & DeleteSigParameters;
-export type DeleteByHashesFromNodeParams = { messages: Array<string> } & DeleteSigParameters;
+} & (DeleteSigUserParameters | DeleteSigGroupParameters);
+
+export type DeleteByHashesFromNodeParams = { messages: Array<string> } & (
+  | DeleteSigUserParameters
+  | DeleteSigGroupParameters
+);
 
 type StoreOnNodeShared = {
   networkTimestamp: number;
@@ -161,9 +165,14 @@ export type StoreOnNodeSubRequest = {
 };
 export type NetworkTimeSubRequest = { method: 'info'; params: object };
 
-type DeleteSigParameters = {
-  pubkey: string;
+type DeleteSigUserParameters = {
+  pubkey: PubkeyType;
   pubkey_ed25519: string;
+  signature: string;
+};
+
+type DeleteSigGroupParameters = {
+  pubkey: GroupPubkeyType;
   signature: string;
 };
 
@@ -206,14 +215,28 @@ type UpdateExpiryOnNodeSubRequest =
   | UpdateExpiryOnNodeUserSubRequest
   | UpdateExpiryOnNodeGroupSubRequest;
 
-export type RevokeSubaccountParams = {
+type RevokeSubaccountShared = {
   pubkey: GroupPubkeyType;
-  revoke: string; // the subaccount token to revoke in hex
   signature: string;
+  timestamp: number;
 };
+
+export type RevokeSubaccountParams = RevokeSubaccountShared & {
+  revoke: string; // the subaccount token to revoke in hex
+};
+
+export type UnrevokeSubaccountParams = RevokeSubaccountShared & {
+  unrevoke: string; // the subaccount token to revoke in hex
+};
+
 export type RevokeSubaccountSubRequest = {
-  method: 'revoke_subaccount' | 'unrevoke_subaccount';
+  method: 'revoke_subaccount';
   params: RevokeSubaccountParams;
+};
+
+export type UnrevokeSubaccountSubRequest = {
+  method: 'unrevoke_subaccount';
+  params: UnrevokeSubaccountParams;
 };
 
 export type OxendSubRequest = OnsResolveSubRequest | GetServiceNodesSubRequest;
@@ -227,7 +250,8 @@ export type SnodeApiSubRequests =
   | DeleteFromNodeSubRequest
   | DeleteAllFromNodeSubRequest
   | UpdateExpiryOnNodeSubRequest
-  | RevokeSubaccountSubRequest;
+  | RevokeSubaccountSubRequest
+  | UnrevokeSubaccountSubRequest;
 
 // eslint-disable-next-line @typescript-eslint/array-type
 export type NonEmptyArray<T> = [T, ...T[]];

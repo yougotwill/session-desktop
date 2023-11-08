@@ -1,7 +1,8 @@
+// eslint-disable-next-line import/order
+import * as BetterSqlite3 from '@signalapp/better-sqlite3';
 import { app, clipboard, dialog, Notification } from 'electron';
 import fs from 'fs';
 import path from 'path';
-import * as BetterSqlite3 from '@signalapp/better-sqlite3';
 import rimraf from 'rimraf';
 
 import { base64_variants, from_base64, to_hex } from 'libsodium-wrappers-sumo';
@@ -910,7 +911,7 @@ function saveSeenMessageHash(data: any) {
   try {
     assertGlobalInstance()
       .prepare(
-        `INSERT INTO seenMessages (
+        `INSERT OR REPLACE INTO seenMessages (
       expiresAt,
       hash
       ) values (

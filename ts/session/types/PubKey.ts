@@ -236,7 +236,7 @@ export class PubKey {
   }
 
   // TODO we should probably move those to a libsession exported ts file
-  public static isClosedGroupV2(key: string): key is GroupPubkeyType {
+  public static is03Pubkey(key: string): key is GroupPubkeyType {
     const regex = new RegExp(`^${KeyPrefixType.groupV2}${PubKey.HEX}{64}$`);
     return regex.test(key);
   }

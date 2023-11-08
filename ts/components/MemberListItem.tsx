@@ -100,12 +100,12 @@ const ResendInviteContainer = ({
   if (
     displayGroupStatus &&
     groupPk &&
-    PubKey.isClosedGroupV2(groupPk) &&
+    PubKey.is03Pubkey(groupPk) &&
     PubKey.is05Pubkey(pubkey) &&
     !UserUtils.isUsFromCache(pubkey)
   ) {
     return (
-      <Flex container={true} margin="0 0 0 auto">
+      <Flex container={true} margin="0 0 0 auto" padding="0 var(--margins-lg)">
         <ResendInviteButton groupPk={groupPk} pubkey={pubkey} />
       </Flex>
     );
@@ -114,7 +114,7 @@ const ResendInviteContainer = ({
 };
 
 const StyledGroupStatusText = styled.span<{ isFailure: boolean }>`
-  color: var(--danger-color);
+  color: ${props => (props.isFailure ? 'var(--danger-color)' : 'var(--text-secondary-color)')};
   font-size: var(--font-size-xs);
   margin-top: var(--margins-xs);
 `;
@@ -154,7 +154,7 @@ const GroupStatusContainer = ({
   if (
     displayGroupStatus &&
     groupPk &&
-    PubKey.isClosedGroupV2(groupPk) &&
+    PubKey.is03Pubkey(groupPk) &&
     PubKey.is05Pubkey(pubkey) &&
     !UserUtils.isUsFromCache(pubkey)
   ) {

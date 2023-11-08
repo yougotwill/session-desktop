@@ -1,9 +1,11 @@
+import { PubkeyType } from 'libsession_util_nodejs';
 import { compact, isEmpty, isFinite, isNumber } from 'lodash';
 import { useSelector } from 'react-redux';
 import {
   hasValidIncomingRequestValues,
   hasValidOutgoingRequestValues,
 } from '../models/conversation';
+import { ConversationTypeEnum } from '../models/conversationAttributes';
 import { isUsAnySogsFromCache } from '../session/apis/open_group_api/sogsv3/knownBlindedkeys';
 import { CONVERSATION } from '../session/constants';
 import { PubKey } from '../session/types';
@@ -31,7 +33,7 @@ export function useConversationUsername(convoId?: string) {
   const convoProps = useConversationPropsById(convoId);
   const groupName = useLibGroupName(convoId);
 
-  if (convoId && PubKey.isClosedGroupV2(convoId) && groupName) {
+  if (convoId && PubKey.is03Pubkey(convoId) && groupName) {
     // when getting a new 03 group from the usergroup wrapper,
     // we set the displayNameInProfile with the name from the wrapper.
     // So let's keep falling back to convoProps?.displayNameInProfile if groupName is not set yet (it comes later through the groupInfos namespace)
@@ -65,7 +67,7 @@ function usernameForQuoteOrFullPk(pubkey: string, state: StateType) {
     return window.i18n('you');
   }
   // use the name from the cached libsession wrappers if available
-  if (PubKey.isClosedGroupV2(pubkey)) {
+  if (PubKey.is03Pubkey(pubkey)) {
     const info = state.groups.infos[pubkey];
     if (info && info.name) {
       return info.name;
@@ -148,6 +150,12 @@ export function useNotificationSetting(convoId?: string) {
   const convoProps = useConversationPropsById(convoId);
   return convoProps?.currentNotificationSetting || 'all';
 }
+
+export function useIsGroupV2(convoId?: string) {
+  const convoProps = useConversationPropsById(convoId);
+  return convoId && convoProps?.type === ConversationTypeEnum.GROUPV2 && PubKey.is03Pubkey(convoId);
+}
+
 export function useIsPublic(convoId?: string) {
   const convoProps = useConversationPropsById(convoId);
   return Boolean(convoProps && convoProps.isPublic);
@@ -188,7 +196,7 @@ export function useGroupAdmins(convoId?: string) {
 
   const libMembers = useLibGroupAdmins(convoId);
 
-  if (convoId && PubKey.isClosedGroupV2(convoId)) {
+  if (convoId && PubKey.is03Pubkey(convoId)) {
     return compact(libMembers?.slice()?.sort()) || [];
   }
 
@@ -369,7 +377,7 @@ function useMembers(convoId: string | undefined) {
  * Get the list of members of a closed group or []
  * @param convoId the closed group id to extract members from
  */
-export function useSortedGroupMembers(convoId: string | undefined): Array<string> {
+export function useSortedGroupMembers(convoId: string | undefined): Array<PubkeyType> {
   const members = useMembers(convoId);
   const isPublic = useIsPublic(convoId);
   const isPrivate = useIsPrivate(convoId);
@@ -377,9 +385,9 @@ export function useSortedGroupMembers(convoId: string | undefined): Array<string
   if (isPrivate || isPublic) {
     return [];
   }
-  if (convoId && PubKey.isClosedGroupV2(convoId)) {
+  if (convoId && PubKey.is03Pubkey(convoId)) {
     return compact(libMembers?.slice()?.sort()) || [];
   }
   // we need to clone the array before being able to call sort() it
-  return compact(members?.slice()?.sort()) || [];
+  return (compact(members?.slice()?.sort()) || []) as Array<PubkeyType>;
 }

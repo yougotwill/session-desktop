@@ -43,7 +43,7 @@ export class GroupUpdateInviteMessage extends GroupUpdateMessage {
   public dataProto(): SignalService.DataMessage {
     const ourProfile = UserUtils.getOurProfile();
     const inviteMessage = new SignalService.GroupUpdateInviteMessage({
-      groupSessionId: this.groupPk,
+      groupSessionId: this.destination,
       name: this.groupName,
       adminSignature: this.adminSignature,
       memberAuthData: this.memberAuthData,

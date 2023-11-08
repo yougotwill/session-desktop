@@ -226,7 +226,8 @@ describe('libsession_metagroup', () => {
         promotionPending: true,
       });
 
-      metaGroupWrapper.memberErase(member2);
+      const rekeyed = metaGroupWrapper.memberEraseAndRekey([member2]);
+      expect(rekeyed).to.be.eq(true);
       expect(metaGroupWrapper.memberGetAll().length).to.be.deep.eq(1);
       expect(metaGroupWrapper.memberGetAll()[0]).to.be.deep.eq({
         ...emptyMember(member),
@@ -287,8 +288,10 @@ describe('libsession_metagroup', () => {
       expect(metaGroupWrapper2.keysNeedsRekey()).to.be.eq(false);
 
       // remove m2 from wrapper2, and m1 from wrapper1
-      metaGroupWrapper2.memberErase(m2);
-      metaGroupWrapper.memberErase(m1);
+      const rekeyed1 = metaGroupWrapper2.memberEraseAndRekey([m2]);
+      const rekeyed2 = metaGroupWrapper.memberEraseAndRekey([m1]);
+      expect(rekeyed1).to.be.eq(true);
+      expect(rekeyed2).to.be.eq(true);
 
       // const push1 = metaGroupWrapper.push();
       // metaGroupWrapper2.metaMerge([push1]);

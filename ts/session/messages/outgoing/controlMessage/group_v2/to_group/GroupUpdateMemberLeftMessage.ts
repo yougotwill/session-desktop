@@ -1,4 +1,5 @@
 import { SignalService } from '../../../../../../protobuf';
+import { SnodeNamespaces } from '../../../../../apis/snode_api/namespaces';
 import { GroupUpdateMessage } from '../GroupUpdateMessage';
 
 /**
@@ -7,6 +8,8 @@ import { GroupUpdateMessage } from '../GroupUpdateMessage';
  *
  */
 export class GroupUpdateMemberLeftMessage extends GroupUpdateMessage {
+  public readonly namespace = SnodeNamespaces.ClosedGroupMessages;
+
   public dataProto(): SignalService.DataMessage {
     const memberLeftMessage = new SignalService.GroupUpdateMemberLeftMessage({});
 

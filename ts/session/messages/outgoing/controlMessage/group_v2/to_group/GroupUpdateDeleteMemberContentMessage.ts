@@ -1,6 +1,7 @@
 import { PubkeyType } from 'libsession_util_nodejs';
 import { isEmpty } from 'lodash';
 import { SignalService } from '../../../../../../protobuf';
+import { SnodeNamespaces } from '../../../../../apis/snode_api/namespaces';
 import { Preconditions } from '../../../preconditions';
 import { GroupUpdateMessage, GroupUpdateMessageParams } from '../GroupUpdateMessage';
 
@@ -15,6 +16,7 @@ type Params = GroupUpdateMessageParams & {
 export class GroupUpdateDeleteMemberContentMessage extends GroupUpdateMessage {
   public readonly memberSessionIds: Params['memberSessionIds'];
   public readonly adminSignature: Params['adminSignature'];
+  public readonly namespace = SnodeNamespaces.ClosedGroupMessages;
 
   constructor(params: Params) {
     super(params);

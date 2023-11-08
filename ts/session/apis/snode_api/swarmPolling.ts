@@ -2,7 +2,17 @@
 /* eslint-disable more/no-then */
 /* eslint-disable @typescript-eslint/no-misused-promises */
 import { GroupPubkeyType } from 'libsession_util_nodejs';
-import { compact, concat, difference, flatten, isArray, last, sample, uniqBy } from 'lodash';
+import {
+  compact,
+  concat,
+  difference,
+  flatten,
+  isArray,
+  last,
+  sample,
+  toNumber,
+  uniqBy,
+} from 'lodash';
 import { v4 } from 'uuid';
 import { Data, Snode } from '../../../data/data';
 import { SignalService } from '../../../protobuf';
@@ -13,7 +23,6 @@ import * as snodePool from './snodePool';
 
 import { ConversationModel } from '../../../models/conversation';
 import { ConversationTypeEnum } from '../../../models/conversationAttributes';
-import { signalservice } from '../../../protobuf/compiled';
 import { EnvelopePlus } from '../../../receiver/types';
 import { updateIsOnline } from '../../../state/ducks/onion';
 import { assertUnreachable } from '../../../types/sqlSharedTypes';
@@ -26,7 +35,6 @@ import { DURATION, SWARM_POLLING_TIMEOUT } from '../../constants';
 import { ConvoHub } from '../../conversations';
 import { ed25519Str } from '../../onions/onionPath';
 import { StringUtils, UserUtils } from '../../utils';
-import { perfEnd, perfStart } from '../../utils/Performance';
 import { PreConditionFailed } from '../../utils/errors';
 import { LibSessionUtil } from '../../utils/libsession/libsession_utils';
 import { SnodeNamespace, SnodeNamespaces, UserConfigNamespaces } from './namespaces';
@@ -197,10 +205,10 @@ export class SwarmPolling {
     }
 
     // only groups NOT starting with 03
-    const legacyGroups = pollingEntries.filter(m => !PubKey.isClosedGroupV2(m.pubkey.key));
+    const legacyGroups = pollingEntries.filter(m => !PubKey.is03Pubkey(m.pubkey.key));
 
     // only groups starting with 03
-    const groups = pollingEntries.filter(m => PubKey.isClosedGroupV2(m.pubkey.key));
+    const groups = pollingEntries.filter(m => PubKey.is03Pubkey(m.pubkey.key));
 
     // let's grab the groups and legacy groups which should be left as they are not in their corresponding wrapper
     const legacyGroupsToLeave = legacyGroups
@@ -271,7 +279,7 @@ export class SwarmPolling {
     // if all snodes returned an error (null), no need to update the lastPolledTimestamp
     if (type === ConversationTypeEnum.GROUP || type === ConversationTypeEnum.GROUPV2) {
       window?.log?.debug(
-        `Polled for group(${ed25519Str(pubkey)}):, got ${countMessages} messages back.`
+        `Polled for group${ed25519Str(pubkey)} got ${countMessages} messages back.`
       );
       let lastPolledTimestamp = Date.now();
       if (countMessages >= minMsgCountShouldRetry) {
@@ -304,7 +312,7 @@ export class SwarmPolling {
       await SwarmPollingUserConfig.handleUserSharedConfigMessages(confMessages);
       return;
     }
-    if (type === ConversationTypeEnum.GROUPV2 && PubKey.isClosedGroupV2(pubkey)) {
+    if (type === ConversationTypeEnum.GROUPV2 && PubKey.is03Pubkey(pubkey)) {
       await SwarmPollingGroupConfig.handleGroupSharedConfigMessages(confMessages, pubkey);
     }
   }
@@ -369,33 +377,18 @@ export class SwarmPolling {
       return;
     }
 
-    perfStart(`handleSeenMessages-${pubkey}`);
     const newMessages = await this.handleSeenMessages(uniqOtherMsgs);
-    perfEnd(`handleSeenMessages-${pubkey}`, 'handleSeenMessages');
     if (type === ConversationTypeEnum.GROUPV2) {
-      for (let index = 0; index < newMessages.length; index++) {
-        const msg = newMessages[index];
-        const retrieveResult = new Uint8Array(StringUtils.encode(msg.data, 'base64'));
-        try {
-          const envelopePlus = await decryptForGroupV2({
-            content: retrieveResult,
-            groupPk: pubkey,
-            sentTimestamp: msg.timestamp,
-          });
-          if (!envelopePlus) {
-            throw new Error('decryptForGroupV2 returned empty envelope');
-          }
-
-          // this is the processing of the message itself, which can be long.
-          Receiver.handleRequest(envelopePlus.content, envelopePlus.source, msg.hash);
-        } catch (e) {
-          window.log.warn('failed to handle groupv2 otherMessage because of: ', e.message);
-        }
-      }
+      // groupv2 messages are not stored in the cache, so for each that we process, we also add it as seen message.
+      // this is to take care of a crash half way through processing messages. We'd get the same 100 messages back, and we'd skip up to the first not seen message
+      await handleMessagesForGroupV2(newMessages, pubkey);
       return;
     }
 
-    // trigger the handling of all the other messages, not shared config related
+    // private and legacy groups are cached, so we can mark them as seen right away, they are still in the cache until processed correctly.
+    // at some point we should get rid of the cache completely, and do the same logic as for groupv2 above
+    await this.updateSeenMessages(newMessages);
+    // trigger the handling of all the other messages, not shared config related and not groupv2 encrypted
     newMessages.forEach(m => {
       const content = extractWebSocketContent(m.data);
 
@@ -421,7 +414,7 @@ export class SwarmPolling {
     // this can happen when a group is removed from the wrapper while we were polling
 
     const newGroupButNotInWrapper =
-      PubKey.isClosedGroupV2(pubkey) && !allGroupsInWrapper.some(m => m.pubkeyHex === pubkey);
+      PubKey.is03Pubkey(pubkey) && !allGroupsInWrapper.some(m => m.pubkeyHex === pubkey);
     const legacyGroupButNoInWrapper =
       type === ConversationTypeEnum.GROUP &&
       pubkey.startsWith('05') &&
@@ -453,12 +446,12 @@ export class SwarmPolling {
           window.log.warn(`failed to get currentHashes for user variant ${variant}`);
         }
       }
-      window.log.debug(`configHashesToBump private: ${configHashesToBump}`);
+      window.log.debug(`configHashesToBump private count: ${configHashesToBump.length}`);
       return configHashesToBump;
     }
-    if (type === ConversationTypeEnum.GROUPV2 && PubKey.isClosedGroupV2(pubkey)) {
+    if (type === ConversationTypeEnum.GROUPV2 && PubKey.is03Pubkey(pubkey)) {
       const toBump = await MetaGroupWrapperActions.currentHashes(pubkey);
-      window.log.debug(`configHashesToBump group: ${toBump}`);
+      window.log.debug(`configHashesToBump group count: ${toBump.length}`);
       return toBump;
     }
     return [];
@@ -583,14 +576,17 @@ export class SwarmPolling {
     const dupHashes = await Data.getSeenMessagesByHashList(incomingHashes);
     const newMessages = messages.filter((m: RetrieveMessageItem) => !dupHashes.includes(m.hash));
 
-    if (newMessages.length) {
-      const newHashes = newMessages.map((m: RetrieveMessageItem) => ({
+    return newMessages;
+  }
+
+  private async updateSeenMessages(processedMessages: Array<RetrieveMessageItem>) {
+    if (processedMessages.length) {
+      const newHashes = processedMessages.map((m: RetrieveMessageItem) => ({
         expiresAt: m.expiration,
         hash: m.hash,
       }));
       await Data.saveSeenMessageHashes(newHashes);
     }
-    return newMessages;
   }
 
   // eslint-disable-next-line consistent-return
@@ -745,7 +741,7 @@ async function decryptForGroupV2(retrieveResult: {
   window?.log?.info('received closed group message v2');
   try {
     const groupPk = retrieveResult.groupPk;
-    if (!PubKey.isClosedGroupV2(groupPk)) {
+    if (!PubKey.is03Pubkey(groupPk)) {
       throw new PreConditionFailed('decryptForGroupV2: not a 03 prefixed group');
     }
 
@@ -756,9 +752,19 @@ async function decryptForGroupV2(retrieveResult: {
       receivedAt: Date.now(),
       content: decrypted.plaintext,
       source: groupPk,
-      type: signalservice.Envelope.Type.CLOSED_GROUP_MESSAGE,
+      type: SignalService.Envelope.Type.CLOSED_GROUP_MESSAGE,
       timestamp: retrieveResult.sentTimestamp,
     };
+    try {
+      // just try to parse what we have, it should be a protobuf content decrypted already
+      const parsedEnvelope = SignalService.Envelope.decode(new Uint8Array(decrypted.plaintext));
+
+      SignalService.Content.decode(parsedEnvelope.content);
+      envelopePlus.content = parsedEnvelope.content;
+    } catch (e) {
+      throw new Error('content got from libsession does not look to be envelope+decryptedContent');
+    }
+
     // the receiving pipeline relies on the envelope.senderIdentity field to know who is the author of a message
 
     return envelopePlus;
@@ -766,4 +772,52 @@ async function decryptForGroupV2(retrieveResult: {
     window.log.warn('failed to decrypt message with error: ', e.message);
     return null;
   }
+}
+
+async function handleMessagesForGroupV2(
+  newMessages: Array<RetrieveMessageItem>,
+  groupPk: GroupPubkeyType
+) {
+  for (let index = 0; index < newMessages.length; index++) {
+    const msg = newMessages[index];
+    const retrieveResult = new Uint8Array(StringUtils.encode(msg.data, 'base64'));
+    try {
+      const envelopePlus = await decryptForGroupV2({
+        content: retrieveResult,
+        groupPk,
+        sentTimestamp: msg.timestamp,
+      });
+      if (!envelopePlus) {
+        throw new Error('decryptForGroupV2 returned empty envelope');
+      }
+
+      // this is the processing of the message itself, which can be long.
+      // We allow 1 minute per message at most, which should be plenty
+      await Receiver.handleSwarmContentDecryptedWithTimeout({
+        envelope: envelopePlus,
+        contentDecrypted: envelopePlus.content,
+        messageHash: msg.hash,
+        sentAtTimestamp: toNumber(envelopePlus.timestamp),
+      });
+    } catch (e) {
+      window.log.warn('failed to handle groupv2 otherMessage because of: ', e.message);
+    } finally {
+      // that message was processed, add it to the seen messages list
+      try {
+        await Data.saveSeenMessageHashes([
+          {
+            hash: msg.hash,
+            expiresAt: msg.expiration,
+          },
+        ]);
+      } catch (e) {
+        window.log.warn('failed saveSeenMessageHashes: ', e.message);
+      }
+    }
+  }
+
+  // make sure that all the message above are indeed seen (extra check as everything should already be marked as seen in the loop above)
+  await Data.saveSeenMessageHashes(
+    newMessages.map(m => ({ hash: m.hash, expiresAt: m.expiration }))
+  );
 }

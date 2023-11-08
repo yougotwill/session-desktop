@@ -230,9 +230,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
   }
 
   public isClosedGroupV2(): boolean {
-    return Boolean(
-      this.get('type') === ConversationTypeEnum.GROUPV2 && PubKey.isClosedGroupV2(this.id)
-    );
+    return Boolean(this.get('type') === ConversationTypeEnum.GROUPV2 && PubKey.is03Pubkey(this.id));
   }
 
   public isPrivate() {

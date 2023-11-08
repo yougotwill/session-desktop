@@ -5,8 +5,11 @@ import {
   Uint8ArrayLen64,
   UserGroupsGet,
 } from 'libsession_util_nodejs';
-import { isEmpty } from 'lodash';
-import { MetaGroupWrapperActions } from '../../../../webworker/workers/browser/libsession_worker_interface';
+import { isEmpty, isString } from 'lodash';
+import {
+  MetaGroupWrapperActions,
+  UserGroupsWrapperActions,
+} from '../../../../webworker/workers/browser/libsession_worker_interface';
 import { getSodiumRenderer } from '../../../crypto/MessageEncrypter';
 import { GroupUpdateInviteMessage } from '../../../messages/outgoing/controlMessage/group_v2/to_user/GroupUpdateInviteMessage';
 import { StringUtils, UserUtils } from '../../../utils';
@@ -155,10 +158,12 @@ async function getSnodeGroupSignature({
 }
 
 async function signDataWithAdminSecret(
-  verificationString: string,
+  verificationString: string | Uint8Array,
   group: Pick<GroupDetailsNeededForSignature, 'secretKey'>
 ) {
-  const verificationData = StringUtils.encode(verificationString, 'utf8');
+  const verificationData = isString(verificationString)
+    ? StringUtils.encode(verificationString, 'utf8')
+    : verificationString;
   const message = new Uint8Array(verificationData);
 
   if (!group) {
@@ -233,9 +238,41 @@ async function generateUpdateExpiryGroupSignature({
   throw new Error(`generateUpdateExpiryGroupSignature: needs either groupSecretKey or authData`);
 }
 
+async function getGroupSignatureByHashesParams({
+  messagesHashes,
+  method,
+  pubkey,
+}: WithMessagesHashes & {
+  pubkey: GroupPubkeyType;
+  method: 'delete';
+}) {
+  const verificationData = StringUtils.encode(`${method}${messagesHashes.join('')}`, 'utf8');
+  const message = new Uint8Array(verificationData);
+
+  const sodium = await getSodiumRenderer();
+  try {
+    const group = await UserGroupsWrapperActions.getGroup(pubkey);
+    if (!group || !group.secretKey || isEmpty(group.secretKey)) {
+      throw new Error('getSnodeGroupSignatureByHashesParams needs admin secretKey');
+    }
+    const signature = sodium.crypto_sign_detached(message, group.secretKey);
+    const signatureBase64 = fromUInt8ArrayToBase64(signature);
+
+    return {
+      signature: signatureBase64,
+      pubkey,
+      messages: messagesHashes,
+    };
+  } catch (e) {
+    window.log.warn('getSnodeGroupSignatureByHashesParams failed with: ', e.message);
+    throw e;
+  }
+}
+
 export const SnodeGroupSignature = {
   generateUpdateExpiryGroupSignature,
   getGroupInviteMessage,
   getSnodeGroupSignature,
+  getGroupSignatureByHashesParams,
   signDataWithAdminSecret,
 };

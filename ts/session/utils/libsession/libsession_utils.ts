@@ -178,7 +178,7 @@ async function pendingChangesForUs(): Promise<UserDestinationChanges> {
  * @returns an object with a list of messages to be pushed and the list of hashes to bump expiry, server side
  */
 async function pendingChangesForGroup(groupPk: GroupPubkeyType): Promise<GroupDestinationChanges> {
-  if (!PubKey.isClosedGroupV2(groupPk)) {
+  if (!PubKey.is03Pubkey(groupPk)) {
     throw new Error(`pendingChangesForGroup only works for user or 03 group pubkeys`);
   }
   // one of the wrapper behind the metagroup needs a push
@@ -254,7 +254,7 @@ function resultShouldBeIncluded<T extends PendingChangesForGroup | PendingChange
   batchResult: BatchResultEntry
 ) {
   const hash = batchResult.body?.hash;
-  if (batchResult.code === 200 && isString(hash) && msgPushed.ciphertext) {
+  if (batchResult.code === 200 && isString(hash) && msgPushed && msgPushed.ciphertext) {
     return {
       hash,
       pushed: msgPushed,
@@ -288,6 +288,7 @@ function batchResultsToGroupSuccessfulChange(
 
   for (let j = 0; j < result.length; j++) {
     const msgPushed = request.messages?.[j];
+
     const shouldBe = resultShouldBeIncluded(msgPushed, result[j]);
 
     if (shouldBe) {
@@ -346,7 +347,7 @@ function batchResultsToUserSuccessfulChange(
  */
 async function saveDumpsToDb(pubkey: PubkeyType | GroupPubkeyType) {
   // first check if this is relating a group
-  if (PubKey.isClosedGroupV2(pubkey)) {
+  if (PubKey.is03Pubkey(pubkey)) {
     const metaNeedsDump = await MetaGroupWrapperActions.needsDump(pubkey);
     // save the concatenated dumps as a single entry in the DB if any of the dumps had a need for dump
     if (metaNeedsDump) {
@@ -356,6 +357,7 @@ async function saveDumpsToDb(pubkey: PubkeyType | GroupPubkeyType) {
         publicKey: pubkey,
         variant: `MetaGroupConfig-${pubkey}`,
       });
+
       window.log.debug(`Saved dumps for metagroup ${ed25519Str(pubkey)}`);
     } else {
       window.log.debug(`No need to update local dumps for metagroup ${ed25519Str(pubkey)}`);

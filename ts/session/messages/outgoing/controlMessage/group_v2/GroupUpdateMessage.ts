@@ -8,14 +8,14 @@ export interface GroupUpdateMessageParams extends MessageParams {
 }
 
 export abstract class GroupUpdateMessage extends DataMessage {
-  public readonly groupPk: GroupUpdateMessageParams['groupPk'];
+  public readonly destination: GroupUpdateMessageParams['groupPk'];
 
   constructor(params: GroupUpdateMessageParams) {
     super(params);
 
-    this.groupPk = params.groupPk;
-    if (!this.groupPk || this.groupPk.length === 0) {
-      throw new Error('groupPk must be set');
+    this.destination = params.groupPk;
+    if (!this.destination || this.destination.length === 0) {
+      throw new Error('destination must be set to the groupPubkey');
     }
   }
 

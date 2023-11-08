@@ -1,12 +1,15 @@
 import { isArray } from 'lodash';
 import { Snode } from '../../../data/data';
+import { SnodeNamespace } from './namespaces';
 import { processOnionRequestErrorAtDestination, SnodeResponse } from './onions';
 import { snodeRpc } from './sessionRpc';
 import { NotEmptyArrayOfBatchResults, SnodeApiSubRequests } from './SnodeRequestTypes';
 
 function logSubRequests(requests: Array<SnodeApiSubRequests>) {
   return requests.map(m =>
-    m.method === 'retrieve' || m.method === 'store' ? `${m.method}-${m.params.namespace}` : m.method
+    m.method === 'retrieve' || m.method === 'store'
+      ? `${m.method}-${SnodeNamespace.toRoles(m.params.namespace)}`
+      : m.method
   );
 }
 

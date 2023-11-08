@@ -6,13 +6,25 @@ import {
   GroupPubkeyType,
   PubkeyType,
   UserGroupsGet,
+  WithGroupPubkey,
 } from 'libsession_util_nodejs';
-import { isEmpty, uniq } from 'lodash';
+import { base64_variants, from_base64 } from 'libsodium-wrappers-sumo';
+import { intersection, isEmpty, uniq } from 'lodash';
 import { ConfigDumpData } from '../../data/configDump/configDump';
 import { ConversationTypeEnum } from '../../models/conversationAttributes';
 import { HexString } from '../../node/hexStrings';
+import { SignalService } from '../../protobuf';
+import { getMessageQueue } from '../../session';
 import { getSwarmPollingInstance } from '../../session/apis/snode_api';
+import { GetNetworkTime } from '../../session/apis/snode_api/getNetworkTime';
+import { SnodeNamespaces } from '../../session/apis/snode_api/namespaces';
+import { RevokeChanges, SnodeAPIRevoke } from '../../session/apis/snode_api/revokeSubaccount';
+import { SnodeGroupSignature } from '../../session/apis/snode_api/signature/groupSignature';
 import { ConvoHub } from '../../session/conversations';
+import { ClosedGroup } from '../../session/group/closed-group';
+import { GroupUpdateInfoChangeMessage } from '../../session/messages/outgoing/controlMessage/group_v2/to_group/GroupUpdateInfoChangeMessage';
+import { GroupUpdateMemberChangeMessage } from '../../session/messages/outgoing/controlMessage/group_v2/to_group/GroupUpdateMemberChangeMessage';
+import { GroupUpdateDeleteMessage } from '../../session/messages/outgoing/controlMessage/group_v2/to_user/GroupUpdateDeleteMessage';
 import { PubKey } from '../../session/types';
 import { UserUtils } from '../../session/utils';
 import { getUserED25519KeyPairBytes } from '../../session/utils/User';
@@ -33,16 +45,25 @@ import { StateType } from '../reducer';
 import { openConversationWithMessages } from './conversations';
 import { resetOverlayMode } from './section';
 
+type WithAddWithoutHistoryMembers = { withoutHistory: Array<PubkeyType> };
+type WithAddWithHistoryMembers = { withHistory: Array<PubkeyType> };
+type WithRemoveMembers = { removed: Array<PubkeyType> };
+type WithFromCurrentDevice = { fromCurrentDevice: boolean }; // there are some changes we want to do only when the current user do the change, and not when a network change triggers it.
+
 export type GroupState = {
   infos: Record<GroupPubkeyType, GroupInfoGet>;
   members: Record<GroupPubkeyType, Array<GroupMemberGet>>;
   creationFromUIPending: boolean;
+  memberChangesFromUIPending: boolean;
+  nameChangesFromUIPending: boolean;
 };
 
 export const initialGroupState: GroupState = {
   infos: {},
   members: {},
   creationFromUIPending: false,
+  memberChangesFromUIPending: false,
+  nameChangesFromUIPending: false,
 };
 
 type GroupDetailsUpdate = {
@@ -127,18 +148,19 @@ const initNewGroupInWrapper = createAsyncThunk(
           `memberGetAll of ${groupPk} returned empty result even if it was just init.`
         );
       }
-
       // now that we've added members to the group, make sure to make a full key rotation
       // to include them and marks the corresponding wrappers as dirty
       await MetaGroupWrapperActions.keyRekey(groupPk);
+
       const convo = await ConvoHub.use().getOrCreateAndWait(groupPk, ConversationTypeEnum.GROUPV2);
       await convo.setIsApproved(true, false);
 
-      const result = await GroupSync.pushChangesToGroupSwarmIfNeeded(groupPk);
+      const result = await GroupSync.pushChangesToGroupSwarmIfNeeded(groupPk, []);
       if (result !== RunJobResult.Success) {
         window.log.warn('GroupSync.pushChangesToGroupSwarmIfNeeded during create failed');
         throw new Error('failed to pushChangesToGroupSwarmIfNeeded');
       }
+      getSwarmPollingInstance().addGroupId(new PubKey(groupPk));
 
       await convo.unhideIfNeeded();
       convo.set({ active_at: Date.now() });
@@ -186,7 +208,12 @@ const handleUserGroupUpdate = createAsyncThunk(
     const state = payloadCreator.getState() as StateType;
     const groupPk = userGroup.pubkeyHex;
     if (state.groups.infos[groupPk] && state.groups.members[groupPk]) {
-      throw new Error('handleUserGroupUpdate group already present in redux slice');
+      window.log.info('handleUserGroupUpdate group already present in redux slice');
+      return {
+        groupPk,
+        infos: await MetaGroupWrapperActions.infoGet(groupPk),
+        members: await MetaGroupWrapperActions.memberGetAll(groupPk),
+      };
     }
 
     const ourEd25519KeypairBytes = await UserUtils.getUserED25519KeyPairBytes();
@@ -333,6 +360,385 @@ const destroyGroupDetails = createAsyncThunk(
   }
 );
 
+function validateMemberChange({
+  groupPk,
+  withHistory: addMembersWithHistory,
+  withoutHistory: addMembersWithoutHistory,
+  removed: removeMembers,
+}: WithGroupPubkey & WithAddWithoutHistoryMembers & WithAddWithHistoryMembers & WithRemoveMembers) {
+  const us = UserUtils.getOurPubKeyStrFromCache();
+  if (
+    addMembersWithHistory.includes(us) ||
+    addMembersWithoutHistory.includes(us) ||
+    removeMembers.includes(us)
+  ) {
+    throw new PreConditionFailed(
+      'currentDeviceGroupMembersChange cannot be used for changes of our own state in the group'
+    );
+  }
+
+  const withHistory = uniq(addMembersWithHistory);
+  const withoutHistory = uniq(addMembersWithoutHistory);
+  const removed = uniq(removeMembers);
+  const convo = ConvoHub.use().get(groupPk);
+  if (!convo) {
+    throw new PreConditionFailed('currentDeviceGroupMembersChange convo not present in convohub');
+  }
+  if (intersection(withHistory, withoutHistory).length) {
+    throw new Error(
+      'withHistory and withoutHistory can only have values which are not in the other'
+    );
+  }
+
+  if (
+    intersection(withHistory, removed).length ||
+    intersection(withHistory, removed).length ||
+    intersection(withoutHistory, removed).length
+  ) {
+    throw new Error(
+      'withHistory/without and removed can only have values which are not in the other'
+    );
+  }
+  return { withoutHistory, withHistory, removed, us, convo };
+}
+
+function validateNameChange({
+  groupPk,
+  newName,
+  currentName,
+}: WithGroupPubkey & { newName: string; currentName: string }) {
+  const us = UserUtils.getOurPubKeyStrFromCache();
+  if (!newName || isEmpty(newName)) {
+    throw new PreConditionFailed('validateNameChange needs a non empty name');
+  }
+
+  const convo = ConvoHub.use().get(groupPk);
+  if (!convo) {
+    throw new PreConditionFailed('validateNameChange convo not present in convohub');
+  }
+  if (newName === currentName) {
+    throw new PreConditionFailed('validateNameChange no name change detected');
+  }
+
+  return { newName, us, convo };
+}
+
+async function handleWithHistoryMembers({
+  groupPk,
+  withHistory,
+}: WithGroupPubkey & {
+  withHistory: Array<PubkeyType>;
+}) {
+  for (let index = 0; index < withHistory.length; index++) {
+    const member = withHistory[index];
+    const created = await MetaGroupWrapperActions.memberGetOrConstruct(groupPk, member);
+    await MetaGroupWrapperActions.memberSetInvited(groupPk, created.pubkeyHex, false);
+  }
+  const supplementKeys = withHistory.length
+    ? await MetaGroupWrapperActions.generateSupplementKeys(groupPk, withHistory)
+    : [];
+  return supplementKeys;
+}
+
+async function handleWithoutHistoryMembers({
+  groupPk,
+  withoutHistory,
+}: WithGroupPubkey & WithAddWithoutHistoryMembers) {
+  for (let index = 0; index < withoutHistory.length; index++) {
+    const member = withoutHistory[index];
+    const created = await MetaGroupWrapperActions.memberGetOrConstruct(groupPk, member);
+    await MetaGroupWrapperActions.memberSetInvited(groupPk, created.pubkeyHex, false);
+  }
+}
+
+async function handleRemoveMembers({
+  groupPk,
+  removed,
+  secretKey,
+  fromCurrentDevice,
+}: WithGroupPubkey & WithRemoveMembers & WithFromCurrentDevice & { secretKey: Uint8Array }) {
+  if (!fromCurrentDevice) {
+    return;
+  }
+  await MetaGroupWrapperActions.memberEraseAndRekey(groupPk, removed);
+
+  const timestamp = GetNetworkTime.getNowWithNetworkOffset();
+  await Promise.all(
+    removed.map(async m => {
+      const adminSignature = await SnodeGroupSignature.signDataWithAdminSecret(
+        `DELETE${m}${timestamp}`,
+        { secretKey }
+      );
+      const deleteMessage = new GroupUpdateDeleteMessage({
+        groupPk,
+        timestamp,
+        adminSignature: from_base64(adminSignature.signature, base64_variants.ORIGINAL),
+      });
+
+      const sentStatus = await getMessageQueue().sendToPubKeyNonDurably({
+        pubkey: PubKey.cast(m),
+        message: deleteMessage,
+        namespace: SnodeNamespaces.Default,
+      });
+      if (!sentStatus) {
+        window.log.warn('Failed to send a GroupUpdateDeleteMessage to a member removed: ', m);
+        throw new Error('Failed to send a GroupUpdateDeleteMessage to a member removed');
+      }
+    })
+  );
+}
+
+async function getPendingRevokeChanges({
+  withoutHistory,
+  withHistory,
+  removed,
+  groupPk,
+}: WithGroupPubkey &
+  WithAddWithoutHistoryMembers &
+  WithAddWithHistoryMembers &
+  WithRemoveMembers): Promise<RevokeChanges> {
+  const revokeChanges: RevokeChanges = [];
+
+  for (let index = 0; index < withoutHistory.length; index++) {
+    const m = withoutHistory[index];
+    const token = await MetaGroupWrapperActions.swarmSubAccountToken(groupPk, m);
+    revokeChanges.push({ action: 'unrevoke_subaccount', tokenToRevokeHex: token });
+  }
+  for (let index = 0; index < withHistory.length; index++) {
+    const m = withHistory[index];
+    const token = await MetaGroupWrapperActions.swarmSubAccountToken(groupPk, m);
+    revokeChanges.push({ action: 'unrevoke_subaccount', tokenToRevokeHex: token });
+  }
+  for (let index = 0; index < removed.length; index++) {
+    const m = removed[index];
+    const token = await MetaGroupWrapperActions.swarmSubAccountToken(groupPk, m);
+    revokeChanges.push({ action: 'revoke_subaccount', tokenToRevokeHex: token });
+  }
+
+  return revokeChanges;
+}
+
+async function handleMemberChangeFromUIOrNot({
+  addMembersWithHistory,
+  addMembersWithoutHistory,
+  groupPk,
+  removeMembers,
+  fromCurrentDevice,
+}: WithFromCurrentDevice &
+  WithGroupPubkey & {
+    addMembersWithHistory: Array<PubkeyType>;
+    addMembersWithoutHistory: Array<PubkeyType>;
+    removeMembers: Array<PubkeyType>;
+  }) {
+  const group = await UserGroupsWrapperActions.getGroup(groupPk);
+  if (!group || !group.secretKey || isEmpty(group.secretKey)) {
+    throw new Error('tried to make change to group but we do not have the admin secret key');
+  }
+
+  const { removed, withHistory, withoutHistory, convo, us } = validateMemberChange({
+    withHistory: addMembersWithHistory,
+    withoutHistory: addMembersWithoutHistory,
+    groupPk,
+    removed: removeMembers,
+  });
+  // first, unrevoke people who are added, and sevoke people who are removed
+  const revokeChanges = await getPendingRevokeChanges({
+    groupPk,
+    withHistory,
+    withoutHistory,
+    removed,
+  });
+
+  await SnodeAPIRevoke.revokeSubAccounts(groupPk, revokeChanges, group.secretKey);
+
+  // then, handle the addition with history of messages by generating supplement keys.
+  // this adds them to the members wrapper etc
+  const supplementKeys = await handleWithHistoryMembers({ groupPk, withHistory });
+
+  // then handle the addition without history of messages (full rotation of keys).
+  // this adds them to the members wrapper etc
+  await handleWithoutHistoryMembers({ groupPk, withoutHistory });
+
+  // lastly, handle the removal of members.
+  // we've already revoked their token above
+  // this removes them from the wrapper
+  await handleRemoveMembers({ groupPk, removed, secretKey: group.secretKey, fromCurrentDevice });
+
+  // push new members & key supplement in a single batch call
+  const batchResult = await GroupSync.pushChangesToGroupSwarmIfNeeded(groupPk, supplementKeys);
+  if (batchResult !== RunJobResult.Success) {
+    throw new Error(
+      'currentDeviceGroupMembersChange: pushChangesToGroupSwarmIfNeeded did not return success'
+    );
+  }
+
+  // schedule send invite details, auth signature, etc. to the new users
+  for (let index = 0; index < withoutHistory.length; index++) {
+    const member = withoutHistory[index];
+    await GroupInvite.addGroupInviteJob({ groupPk, member });
+  }
+  for (let index = 0; index < withHistory.length; index++) {
+    const member = withHistory[index];
+    await GroupInvite.addGroupInviteJob({ groupPk, member });
+  }
+
+  const allAdded = [...withHistory, ...withoutHistory]; // those are already enforced to be unique (and without intersection) in `validateMemberChange()`
+  const timestamp = Date.now();
+  if (fromCurrentDevice && allAdded.length) {
+    const msg = await ClosedGroup.addUpdateMessage(
+      convo,
+      { joiningMembers: allAdded },
+      us,
+      timestamp
+    );
+    await getMessageQueue().sendToGroupV2({
+      message: new GroupUpdateMemberChangeMessage({
+        added: allAdded,
+        groupPk,
+        typeOfChange: SignalService.GroupUpdateMemberChangeMessage.Type.ADDED,
+        identifier: msg.id,
+        timestamp,
+      }),
+    });
+  }
+  if (fromCurrentDevice && removed.length) {
+    const msg = await ClosedGroup.addUpdateMessage(
+      convo,
+      { kickedMembers: removed },
+      us,
+      timestamp
+    );
+    await getMessageQueue().sendToGroupV2({
+      message: new GroupUpdateMemberChangeMessage({
+        removed,
+        groupPk,
+        typeOfChange: SignalService.GroupUpdateMemberChangeMessage.Type.REMOVED,
+        identifier: msg.id,
+        timestamp: Date.now(),
+      }),
+    });
+  }
+
+  convo.set({
+    active_at: timestamp,
+  });
+  await convo.commit();
+}
+
+async function handleNameChangeFromUIOrNot({
+  groupPk,
+  newName: uncheckedName,
+  fromCurrentDevice,
+}: WithFromCurrentDevice &
+  WithGroupPubkey & {
+    newName: string;
+  }) {
+  const group = await UserGroupsWrapperActions.getGroup(groupPk);
+  if (!group || !group.secretKey || isEmpty(group.secretKey)) {
+    throw new Error('tried to make change to group but we do not have the admin secret key');
+  }
+
+  // this throws if the name is the same, or empty
+  const { newName, convo, us } = validateNameChange({
+    newName: uncheckedName,
+    currentName: group.name || '',
+    groupPk,
+  });
+
+  group.name = newName;
+  await UserGroupsWrapperActions.setGroup(group);
+  console.warn('after set and refetcj', await UserGroupsWrapperActions.getGroup(group.pubkeyHex));
+  const batchResult = await GroupSync.pushChangesToGroupSwarmIfNeeded(groupPk, []);
+  if (batchResult !== RunJobResult.Success) {
+    throw new Error(
+      'handleNameChangeFromUIOrNot: pushChangesToGroupSwarmIfNeeded did not return success'
+    );
+  }
+
+  const timestamp = Date.now();
+
+  if (fromCurrentDevice) {
+    const msg = await ClosedGroup.addUpdateMessage(convo, { newName }, us, timestamp);
+    await getMessageQueue().sendToGroupV2({
+      message: new GroupUpdateInfoChangeMessage({
+        groupPk,
+        typeOfChange: SignalService.GroupUpdateInfoChangeMessage.Type.NAME,
+        updatedName: newName,
+        identifier: msg.id,
+        timestamp: Date.now(),
+      }),
+    });
+  }
+
+  convo.set({
+    active_at: timestamp,
+  });
+  await convo.commit();
+}
+
+/**
+ * This action is used to trigger a change when the local user does a change to a group v2 members list.
+ * GroupV2 added members can be added two ways: with and without the history of messages.
+ * GroupV2 removed members have their subaccount token revoked on the server side so they cannot poll anymore from the group's swarm.
+ */
+const currentDeviceGroupMembersChange = createAsyncThunk(
+  'group/currentDeviceGroupMembersChange',
+  async (
+    {
+      groupPk,
+      ...args
+    }: {
+      groupPk: GroupPubkeyType;
+      addMembersWithHistory: Array<PubkeyType>;
+      addMembersWithoutHistory: Array<PubkeyType>;
+      removeMembers: Array<PubkeyType>;
+    },
+    payloadCreator
+  ): Promise<GroupDetailsUpdate> => {
+    const state = payloadCreator.getState() as StateType;
+    if (!state.groups.infos[groupPk] || !state.groups.members[groupPk]) {
+      throw new PreConditionFailed(
+        'currentDeviceGroupMembersChange group not present in redux slice'
+      );
+    }
+
+    await handleMemberChangeFromUIOrNot({ groupPk, ...args, fromCurrentDevice: true });
+
+    return {
+      groupPk,
+      infos: await MetaGroupWrapperActions.infoGet(groupPk),
+      members: await MetaGroupWrapperActions.memberGetAll(groupPk),
+    };
+  }
+);
+
+const currentDeviceGroupNameChange = createAsyncThunk(
+  'group/currentDeviceGroupNameChange',
+  async (
+    {
+      groupPk,
+      ...args
+    }: {
+      groupPk: GroupPubkeyType;
+      newName: string;
+    },
+    payloadCreator
+  ): Promise<GroupDetailsUpdate> => {
+    const state = payloadCreator.getState() as StateType;
+    if (!state.groups.infos[groupPk] || !state.groups.members[groupPk]) {
+      throw new PreConditionFailed('currentDeviceGroupNameChange group not present in redux slice');
+    }
+
+    await handleNameChangeFromUIOrNot({ groupPk, ...args, fromCurrentDevice: true });
+
+    return {
+      groupPk,
+      infos: await MetaGroupWrapperActions.infoGet(groupPk),
+      members: await MetaGroupWrapperActions.memberGetAll(groupPk),
+    };
+  }
+);
+
 /**
  * This slice is the one holding the default joinable rooms fetched once in a while from the default opengroup v2 server.
  */
@@ -348,8 +754,8 @@ const groupSlice = createSlice({
       state.creationFromUIPending = false;
       return state;
     });
-    builder.addCase(initNewGroupInWrapper.rejected, state => {
-      window.log.error('a initNewGroupInWrapper was rejected');
+    builder.addCase(initNewGroupInWrapper.rejected, (state, action) => {
+      window.log.error('a initNewGroupInWrapper was rejected', action.error);
       state.creationFromUIPending = false;
       return state;
       // FIXME delete the wrapper completely & corresponding dumps, and usergroups entry?
@@ -368,8 +774,8 @@ const groupSlice = createSlice({
       });
       return state;
     });
-    builder.addCase(loadMetaDumpsFromDB.rejected, state => {
-      window.log.error('a loadMetaDumpsFromDB was rejected');
+    builder.addCase(loadMetaDumpsFromDB.rejected, (state, action) => {
+      window.log.error('a loadMetaDumpsFromDB was rejected', action.error);
       return state;
     });
     builder.addCase(refreshGroupDetailsFromWrapper.fulfilled, (state, action) => {
@@ -378,8 +784,8 @@ const groupSlice = createSlice({
         state.infos[groupPk] = infos;
         state.members[groupPk] = members;
 
-        window.log.debug(`groupInfo after merge: ${stringify(infos)}`);
-        window.log.debug(`groupMembers after merge: ${stringify(members)}`);
+        // window.log.debug(`groupInfo after merge: ${stringify(infos)}`);
+        // window.log.debug(`groupMembers after merge: ${stringify(members)}`);
       } else {
         window.log.debug(
           `refreshGroupDetailsFromWrapper no details found, removing from slice: ${groupPk}}`
@@ -390,8 +796,8 @@ const groupSlice = createSlice({
       }
       return state;
     });
-    builder.addCase(refreshGroupDetailsFromWrapper.rejected, () => {
-      window.log.error('a refreshGroupDetailsFromWrapper was rejected');
+    builder.addCase(refreshGroupDetailsFromWrapper.rejected, (_state, action) => {
+      window.log.error('a refreshGroupDetailsFromWrapper was rejected', action.error);
     });
     builder.addCase(destroyGroupDetails.fulfilled, (state, action) => {
       const { groupPk } = action.payload;
@@ -399,8 +805,8 @@ const groupSlice = createSlice({
       delete state.infos[groupPk];
       delete state.members[groupPk];
     });
-    builder.addCase(destroyGroupDetails.rejected, () => {
-      window.log.error('a destroyGroupDetails was rejected');
+    builder.addCase(destroyGroupDetails.rejected, (_state, action) => {
+      window.log.error('a destroyGroupDetails was rejected', action.error);
     });
     builder.addCase(handleUserGroupUpdate.fulfilled, (state, action) => {
       const { infos, members, groupPk } = action.payload;
@@ -419,8 +825,43 @@ const groupSlice = createSlice({
         delete state.members[groupPk];
       }
     });
-    builder.addCase(handleUserGroupUpdate.rejected, () => {
-      window.log.error('a handleUserGroupUpdate was rejected');
+    builder.addCase(handleUserGroupUpdate.rejected, (_state, action) => {
+      window.log.error('a handleUserGroupUpdate was rejected', action.error);
+    });
+    builder.addCase(currentDeviceGroupMembersChange.fulfilled, (state, action) => {
+      state.memberChangesFromUIPending = false;
+
+      const { infos, members, groupPk } = action.payload;
+      state.infos[groupPk] = infos;
+      state.members[groupPk] = members;
+
+      window.log.debug(`groupInfo after currentDeviceGroupMembersChange: ${stringify(infos)}`);
+      window.log.debug(`groupMembers after currentDeviceGroupMembersChange: ${stringify(members)}`);
+    });
+    builder.addCase(currentDeviceGroupMembersChange.rejected, (state, action) => {
+      window.log.error('a currentDeviceGroupMembersChange was rejected', action.error);
+      state.memberChangesFromUIPending = false;
+    });
+    builder.addCase(currentDeviceGroupMembersChange.pending, state => {
+      state.memberChangesFromUIPending = true;
+    });
+
+    builder.addCase(currentDeviceGroupNameChange.fulfilled, (state, action) => {
+      state.nameChangesFromUIPending = false;
+
+      const { infos, members, groupPk } = action.payload;
+      state.infos[groupPk] = infos;
+      state.members[groupPk] = members;
+
+      window.log.debug(`groupInfo after currentDeviceGroupNameChange: ${stringify(infos)}`);
+      window.log.debug(`groupMembers after currentDeviceGroupNameChange: ${stringify(members)}`);
+    });
+    builder.addCase(currentDeviceGroupNameChange.rejected, (state, action) => {
+      window.log.error('a currentDeviceGroupNameChange was rejected', action.error);
+      state.nameChangesFromUIPending = false;
+    });
+    builder.addCase(currentDeviceGroupNameChange.pending, state => {
+      state.nameChangesFromUIPending = true;
     });
   },
 });
@@ -431,6 +872,8 @@ export const groupInfoActions = {
   destroyGroupDetails,
   refreshGroupDetailsFromWrapper,
   handleUserGroupUpdate,
+  currentDeviceGroupMembersChange,
+  currentDeviceGroupNameChange,
   ...groupSlice.actions,
 };
 export const groupReducer = groupSlice.reducer;

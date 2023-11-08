@@ -1,6 +1,7 @@
 import React from 'react';
 import useKey from 'react-use/lib/useKey';
 
+import { PubkeyType } from 'libsession_util_nodejs';
 import _ from 'lodash';
 import { useDispatch, useSelector } from 'react-redux';
 import { ConversationTypeEnum } from '../../models/conversationAttributes';
@@ -18,12 +19,16 @@ import {
   useZombies,
 } from '../../hooks/useParamSelector';
 import { useSet } from '../../hooks/useSet';
-import { initiateClosedGroupUpdate } from '../../session/group/closed-group';
+import { ClosedGroup } from '../../session/group/closed-group';
+import { PubKey } from '../../session/types';
 import { SessionUtilUserGroups } from '../../session/utils/libsession/libsession_utils_user_groups';
+import { groupInfoActions } from '../../state/ducks/groups';
 import { getPrivateContactsPubkeys } from '../../state/selectors/conversations';
+import { useMemberGroupChangePending } from '../../state/selectors/groups';
 import { MemberListItem } from '../MemberListItem';
 import { SessionWrapperModal } from '../SessionWrapperModal';
 import { SessionButton, SessionButtonColor, SessionButtonType } from '../basic/SessionButton';
+import { SessionSpinner } from '../basic/SessionSpinner';
 
 type Props = {
   conversationId: string;
@@ -99,7 +104,7 @@ const submitForClosedGroup = async (convoId: string, pubkeys: Array<string>) => 
     const groupId = convo.get('id');
     const groupName = convo.getNicknameOrRealUsernameOrPlaceholder();
 
-    await initiateClosedGroupUpdate(groupId, groupName, uniqMembers);
+    await ClosedGroup.initiateClosedGroupUpdate(groupId, groupName, uniqMembers);
   }
 };
 
@@ -108,7 +113,9 @@ const InviteContactsDialogInner = (props: Props) => {
   const dispatch = useDispatch();
 
   const privateContactPubkeys = useSelector(getPrivateContactsPubkeys);
-  let validContactsForInvite = _.clone(privateContactPubkeys);
+  let validContactsForInvite = _.clone(privateContactPubkeys) as Array<PubkeyType>;
+
+  const isProcessingUIChange = useMemberGroupChangePending();
 
   const isPrivate = useIsPrivate(conversationId);
   const isPublic = useIsPublic(conversationId);
@@ -141,6 +148,16 @@ const InviteContactsDialogInner = (props: Props) => {
       if (isPublic) {
         void submitForOpenGroup(conversationId, selectedContacts);
       } else {
+        if (PubKey.is03Pubkey(conversationId)) {
+          const action = groupInfoActions.currentDeviceGroupMembersChange({
+            addMembersWithoutHistory: selectedContacts as Array<PubkeyType>,
+            addMembersWithHistory: [],
+            removeMembers: [],
+            groupPk: conversationId,
+          });
+          dispatch(action as any);
+          return;
+        }
         void submitForClosedGroup(conversationId, selectedContacts);
       }
     }
@@ -189,12 +206,14 @@ const InviteContactsDialogInner = (props: Props) => {
         )}
       </div>
       <SpacerLG />
+      <SessionSpinner loading={isProcessingUIChange} />
+      <SpacerLG />
 
       <div className="session-modal__button-group">
         <SessionButton
           text={okText}
           buttonType={SessionButtonType.Simple}
-          disabled={!hasContacts}
+          disabled={!hasContacts || isProcessingUIChange}
           onClick={onClickOK}
         />
         <SessionButton
@@ -202,6 +221,7 @@ const InviteContactsDialogInner = (props: Props) => {
           buttonColor={SessionButtonColor.Danger}
           buttonType={SessionButtonType.Simple}
           onClick={closeDialog}
+          disabled={isProcessingUIChange}
         />
       </div>
     </SessionWrapperModal>

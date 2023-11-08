@@ -31,6 +31,11 @@ import {
 } from '../apis/snode_api/namespaces';
 import { CallMessage } from '../messages/outgoing/controlMessage/CallMessage';
 import { UnsendMessage } from '../messages/outgoing/controlMessage/UnsendMessage';
+import { GroupUpdateDeleteMemberContentMessage } from '../messages/outgoing/controlMessage/group_v2/to_group/GroupUpdateDeleteMemberContentMessage';
+import { GroupUpdateInfoChangeMessage } from '../messages/outgoing/controlMessage/group_v2/to_group/GroupUpdateInfoChangeMessage';
+import { GroupUpdateMemberChangeMessage } from '../messages/outgoing/controlMessage/group_v2/to_group/GroupUpdateMemberChangeMessage';
+import { GroupUpdateMemberLeftMessage } from '../messages/outgoing/controlMessage/group_v2/to_group/GroupUpdateMemberLeftMessage';
+import { GroupUpdateDeleteMessage } from '../messages/outgoing/controlMessage/group_v2/to_user/GroupUpdateDeleteMessage';
 import { GroupUpdateInviteMessage } from '../messages/outgoing/controlMessage/group_v2/to_user/GroupUpdateInviteMessage';
 import { OpenGroupVisibleMessage } from '../messages/outgoing/visibleMessage/OpenGroupVisibleMessage';
 
@@ -202,7 +207,12 @@ export class MessageQueue {
     message,
     sentCb,
   }: {
-    message: ClosedGroupV2VisibleMessage;
+    message:
+      | ClosedGroupV2VisibleMessage
+      | GroupUpdateMemberChangeMessage
+      | GroupUpdateInfoChangeMessage
+      | GroupUpdateDeleteMemberContentMessage
+      | GroupUpdateMemberLeftMessage;
     sentCb?: (message: RawMessage) => Promise<void>;
   }): Promise<void> {
     if (!message.destination) {
@@ -254,7 +264,8 @@ export class MessageQueue {
       | ClosedGroupNewMessage
       | CallMessage
       | ClosedGroupMemberLeftMessage
-      | GroupUpdateInviteMessage;
+      | GroupUpdateInviteMessage
+      | GroupUpdateDeleteMessage;
     namespace: SnodeNamespaces;
   }): Promise<number | null> {
     let rawMessage;

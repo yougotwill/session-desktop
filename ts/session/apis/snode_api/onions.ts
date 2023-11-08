@@ -1,25 +1,26 @@
 import https from 'https';
-// eslint-disable-next-line import/no-named-default
-import { default as insecureNodeFetch, RequestInit, Response } from 'node-fetch';
-import ByteBuffer from 'bytebuffer';
-import pRetry from 'p-retry';
-import { cloneDeep, isEmpty, isString, omit } from 'lodash';
+// eslint-disable import/no-named-default
 import { AbortSignal } from 'abort-controller';
+import ByteBuffer from 'bytebuffer';
 import { to_string } from 'libsodium-wrappers-sumo';
+import { cloneDeep, isEmpty, isString, omit } from 'lodash';
+// eslint-disable-next-line import/no-named-default
+import { RequestInit, Response, default as insecureNodeFetch } from 'node-fetch';
+import pRetry from 'p-retry';
 // eslint-disable-next-line import/no-unresolved
 import { AbortSignal as AbortSignalNode } from 'node-fetch/externals';
 
 import { dropSnodeFromSnodePool, dropSnodeFromSwarmIfNeeded, updateSwarmFor } from './snodePool';
 
 import { OnionPaths } from '../../onions';
-import { toHex } from '../../utils/String';
 import { ed25519Str, incrementBadPathCountOrDrop } from '../../onions/onionPath';
+import { toHex } from '../../utils/String';
 
 import { Snode } from '../../../data/data';
-import { ERROR_CODE_NO_CONNECT } from './SNodeAPI';
-import { hrefPnServerProd } from '../push_notification_api/PnServer';
 import { callUtilsWorker } from '../../../webworker/workers/browser/util_worker_interface';
 import { encodeV4Request } from '../../onions/onionv4';
+import { hrefPnServerProd } from '../push_notification_api/PnServer';
+import { ERROR_CODE_NO_CONNECT } from './SNodeAPI';
 
 // hold the ed25519 key of a snode against the time it fails. Used to remove a snode only after a few failures (snodeFailureThreshold failures)
 let snodeFailureCount: Record<string, number> = {};
@@ -261,6 +262,14 @@ function process406Or425Error(statusCode: number) {
   }
 }
 
+function process401Error(statusCode: number) {
+  if (statusCode === 401) {
+    throw new pRetry.AbortError(
+      `Got 401 status code. Most likely a client bug. Retries would not help. `
+    );
+  }
+}
+
 function processOxenServerError(_statusCode: number, body?: string) {
   if (body === OXEN_SERVER_ERROR) {
     window?.log?.warn('[path] Got Oxen server Error. Not much to do if the server has troubles.');
@@ -310,6 +319,7 @@ export async function processOnionRequestErrorAtDestination({
     `processOnionRequestErrorAtDestination. statusCode nok: ${statusCode}: associatedWith:${associatedWith}  destinationSnodeEd25519:${destinationSnodeEd25519}`
   );
   process406Or425Error(statusCode);
+  process401Error(statusCode);
   processOxenServerError(statusCode, body);
   await process421Error(statusCode, body, associatedWith, destinationSnodeEd25519);
   if (destinationSnodeEd25519) {
@@ -387,6 +397,7 @@ async function processAnyOtherErrorAtDestination(
   // this test checks for error at the destination.
   if (
     status !== 400 &&
+    status !== 401 && // handled in process401Error
     status !== 406 && // handled in process406Error
     status !== 421 // handled in process421Error
   ) {

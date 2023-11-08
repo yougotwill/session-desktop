@@ -42,7 +42,7 @@ function isSigParamsForGroupAdmin(
   sigParams: SnodeSigParamsAdminGroup | SnodeSigParamsUs | SnodeSigParamsSubAccount
 ): sigParams is SnodeSigParamsAdminGroup {
   const asGr = sigParams as SnodeSigParamsAdminGroup;
-  return PubKey.isClosedGroupV2(asGr.groupPk) && !isEmpty(asGr.privKey);
+  return PubKey.is03Pubkey(asGr.groupPk) && !isEmpty(asGr.privKey);
 }
 
 async function getSnodeSignatureShared(params: SnodeSigParamsAdminGroup | SnodeSigParamsUs) {

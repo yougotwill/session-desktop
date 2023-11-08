@@ -27,7 +27,7 @@ export class GroupUpdateDeleteMessage extends GroupUpdateMessage {
 
   public dataProto(): SignalService.DataMessage {
     const deleteMessage = new SignalService.GroupUpdateDeleteMessage({
-      groupSessionId: this.groupPk,
+      groupSessionId: this.destination,
       adminSignature: this.adminSignature,
     });
 

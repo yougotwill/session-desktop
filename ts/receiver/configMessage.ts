@@ -6,7 +6,6 @@ import { ConfigDumpData } from '../data/configDump/configDump';
 import { SettingsKey } from '../data/settings-key';
 import { deleteAllMessagesByConvoIdNoConfirmation } from '../interactions/conversationInteractions';
 import { CONVERSATION_PRIORITIES, ConversationTypeEnum } from '../models/conversationAttributes';
-import { ClosedGroup } from '../session';
 import { getOpenGroupManager } from '../session/apis/open_group_api/opengroupV2/OpenGroupManagerV2';
 import { OpenGroupUtils } from '../session/apis/open_group_api/utils';
 import { getOpenGroupV2ConversationId } from '../session/apis/open_group_api/utils/OpenGroupUtils';
@@ -34,6 +33,7 @@ import {
   UserConfigNamespaces,
 } from '../session/apis/snode_api/namespaces';
 import { RetrieveMessageItemWithNamespace } from '../session/apis/snode_api/types';
+import { ClosedGroup, GroupInfo } from '../session/group/closed-group';
 import { groupInfoActions } from '../state/ducks/groups';
 import {
   ConfigWrapperObjectTypesMeta,
@@ -555,7 +555,7 @@ async function handleLegacyGroupUpdate(latestEnvelopeTimestamp: number) {
     const activeAt = legacyGroupConvo.getActiveAt();
     // then for all the existing legacy group in the wrapper, we need to override the field of what we have in the DB with what is in the wrapper
     // We only set group admins on group creation
-    const groupDetails: ClosedGroup.GroupInfo = {
+    const groupDetails: GroupInfo = {
       id: fromWrapper.pubkeyHex,
       name: fromWrapper.name,
       members,
@@ -682,7 +682,7 @@ async function handleGroupUpdate(latestEnvelopeTimestamp: number) {
   const allGroupsInWrapper = await UserGroupsWrapperActions.getAllGroups();
   const allGroupsInDb = ConvoHub.use()
     .getConversations()
-    .filter(m => PubKey.isClosedGroupV2(m.id));
+    .filter(m => PubKey.is03Pubkey(m.id));
 
   const allGoupsIdsInWrapper = allGroupsInWrapper.map(m => m.pubkeyHex);
   const allGoupsIdsInDb = allGroupsInDb.map(m => m.id as string);

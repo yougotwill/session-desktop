@@ -4,9 +4,12 @@ import { RetrieveMessageItemWithNamespace } from '../types';
 async function handleUserSharedConfigMessages(
   userConfigMessagesMerged: Array<RetrieveMessageItemWithNamespace>
 ) {
-  window.log.info(`received userConfigMessagesMerged count: ${userConfigMessagesMerged.length}`);
   try {
     if (userConfigMessagesMerged.length) {
+      window.log.info(
+        `received userConfigMessagesMerged count: ${userConfigMessagesMerged.length}`
+      );
+
       try {
         window.log.info(
           `handleConfigMessagesViaLibSession of "${userConfigMessagesMerged.length}" messages with libsession`

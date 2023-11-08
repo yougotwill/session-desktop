@@ -66,13 +66,16 @@ async function confirmPushedAndDump(
   return LibSessionUtil.saveDumpsToDb(groupPk);
 }
 
-async function pushChangesToGroupSwarmIfNeeded(groupPk: GroupPubkeyType): Promise<RunJobResult> {
+async function pushChangesToGroupSwarmIfNeeded(
+  groupPk: GroupPubkeyType,
+  supplementKeys: Array<Uint8Array>
+): Promise<RunJobResult> {
   // save the dumps to DB even before trying to push them, so at least we have an up to date dumps in the DB in case of crash, no network etc
   await LibSessionUtil.saveDumpsToDb(groupPk);
   const changesToPush = await LibSessionUtil.pendingChangesForGroup(groupPk);
   // If there are no pending changes then the job can just complete (next time something
   // is updated we want to try and run immediately so don't schedule another run in this case)
-  if (isEmpty(changesToPush?.messages)) {
+  if (isEmpty(changesToPush?.messages) && !supplementKeys.length) {
     return RunJobResult.Success;
   }
 
@@ -85,6 +88,17 @@ async function pushChangesToGroupSwarmIfNeeded(groupPk: GroupPubkeyType): Promis
       data: item.ciphertext,
     };
   });
+  if (supplementKeys.length) {
+    supplementKeys.forEach(key =>
+      msgs.push({
+        namespace: SnodeNamespaces.ClosedGroupKeys,
+        pubkey: groupPk,
+        ttl: TTL_DEFAULT.TTL_CONFIG,
+        networkTimestamp: GetNetworkTime.getNowWithNetworkOffset(),
+        data: key,
+      })
+    );
+  }
 
   const result = await MessageSender.sendEncryptedDataToSnode(
     msgs,
@@ -93,7 +107,9 @@ async function pushChangesToGroupSwarmIfNeeded(groupPk: GroupPubkeyType): Promis
   );
 
   const expectedReplyLength =
-    changesToPush.messages.length + (changesToPush.allOldHashes.size ? 1 : 0);
+    changesToPush.messages.length +
+    (changesToPush.allOldHashes.size ? 1 : 0) +
+    supplementKeys.length;
 
   // we do a sequence call here. If we do not have the right expected number of results, consider it a failure
   if (!isArray(result) || result.length !== expectedReplyLength) {
@@ -141,7 +157,7 @@ class GroupSyncJob extends PersistedJob<GroupSyncPersistedData> {
 
     try {
       const thisJobDestination = this.persistedData.identifier;
-      if (!PubKey.isClosedGroupV2(thisJobDestination)) {
+      if (!PubKey.is03Pubkey(thisJobDestination)) {
         return RunJobResult.PermanentFailure;
       }
 
@@ -157,7 +173,7 @@ class GroupSyncJob extends PersistedJob<GroupSyncPersistedData> {
       }
 
       // return await so we catch exceptions in here
-      return await GroupSync.pushChangesToGroupSwarmIfNeeded(thisJobDestination);
+      return await GroupSync.pushChangesToGroupSwarmIfNeeded(thisJobDestination, []);
 
       // eslint-disable-next-line no-useless-catch
     } catch (e) {

@@ -92,13 +92,13 @@ message GroupUpdateInviteMessage {
   // @required
   required bytes          adminSignature         = 6;
 }
-
 message GroupUpdateDeleteMessage {
   // @required
   required string         groupSessionId          = 1; // The `groupIdentityPublicKey` with a `03` prefix
   // @required
   required bytes          adminSignature          = 2;
 }
+
 
 message GroupUpdateInfoChangeMessage {
 	enum Type {

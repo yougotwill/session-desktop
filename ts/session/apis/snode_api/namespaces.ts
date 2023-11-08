@@ -1,4 +1,4 @@
-import { last, orderBy } from 'lodash';
+import { isNumber, last, orderBy } from 'lodash';
 import { PickEnum } from '../../../types/Enums';
 import { assertUnreachable } from '../../../types/sqlSharedTypes';
 
@@ -222,9 +222,45 @@ function maxSizeMap(namespaces: Array<SnodeNamespaces>) {
   return sizeMap;
 }
 
+function toRole(namespace: number) {
+  const asKnownNamespace: SnodeNamespaces = namespace;
+  switch (asKnownNamespace) {
+    case SnodeNamespaces.LegacyClosedGroup:
+      return 'legacyGroup';
+    case SnodeNamespaces.Default:
+      return 'default';
+    case SnodeNamespaces.UserProfile:
+      return 'userProfile';
+    case SnodeNamespaces.UserContacts:
+      return 'userContacts';
+    case SnodeNamespaces.ConvoInfoVolatile:
+      return 'convoVolatile';
+    case SnodeNamespaces.UserGroups:
+      return 'userGroups';
+    case SnodeNamespaces.ClosedGroupMessages:
+      return 'groupMsg';
+    case SnodeNamespaces.ClosedGroupKeys:
+      return 'groupKeys';
+    case SnodeNamespaces.ClosedGroupInfo:
+      return 'groupInfo';
+    case SnodeNamespaces.ClosedGroupMembers:
+      return 'groupMembers';
+    default:
+      return `${namespace}`;
+  }
+}
+
+function toRoles(namespace: number | Array<number>) {
+  if (isNumber(namespace)) {
+    return [namespace].map(toRole);
+  }
+  return namespace.map(toRole);
+}
+
 export const SnodeNamespace = {
   isUserConfigNamespace,
   isGroupConfigNamespace,
   isGroupNamespace,
   maxSizeMap,
+  toRoles,
 };

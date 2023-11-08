@@ -30,6 +30,7 @@ import {
 import { SnodeSignature, SnodeSignatureResult } from '../apis/snode_api/signature/snodeSignatures';
 import { getSwarmFor } from '../apis/snode_api/snodePool';
 import { SnodeAPIStore } from '../apis/snode_api/storeMessage';
+import { TTL_DEFAULT } from '../constants';
 import { ConvoHub } from '../conversations';
 import { MessageEncrypter } from '../crypto';
 import { addMessagePadding } from '../crypto/BufferPadding';
@@ -111,9 +112,13 @@ async function send(
   retryMinTimeout?: number, // in ms
   isASyncMessage?: boolean
 ): Promise<{ wrappedEnvelope: Uint8Array; effectiveTimestamp: number }> {
+  const destination = message.device;
+  if (!PubKey.is03Pubkey(destination) && !PubKey.is05Pubkey(destination)) {
+    throw new Error('MessageSender rawMessage was given invalid pubkey');
+  }
+
   return pRetry(
     async () => {
-      const recipient = PubKey.cast(message.device);
       const { ttl } = message;
 
       // we can only have a single message in this send function for now
@@ -141,26 +146,24 @@ async function send(
       const batchResult = await MessageSender.sendMessagesDataToSnode(
         [
           {
-            pubkey: recipient.key,
+            pubkey: destination,
             data64: encryptedAndWrapped.data64,
             ttl,
             timestamp: encryptedAndWrapped.networkTimestamp,
             namespace: encryptedAndWrapped.namespace,
           },
         ],
-        recipient.key,
+        destination,
         null,
         'batch'
       );
 
-      const isDestinationClosedGroup = ConvoHub.use().get(recipient.key)?.isClosedGroup();
+      const isDestinationClosedGroup = ConvoHub.use().get(destination)?.isClosedGroup();
       // If message also has a sync message, save that hash. Otherwise save the hash from the regular message send i.e. only closed groups in this case.
       if (
         encryptedAndWrapped.identifier &&
         (encryptedAndWrapped.isSyncMessage || isDestinationClosedGroup) &&
-        batchResult &&
-        !isEmpty(batchResult) &&
-        batchResult[0].code === 200 &&
+        batchResult?.[0].code === 200 &&
         !isEmpty(batchResult[0].body.hash)
       ) {
         const messageSendHash = batchResult[0].body.hash;
@@ -168,6 +171,13 @@ async function send(
         if (foundMessage) {
           await foundMessage.updateMessageHash(messageSendHash);
           await foundMessage.commit();
+          await Data.saveSeenMessageHashes([
+            {
+              hash: messageSendHash,
+              expiresAt: encryptedAndWrapped.networkTimestamp + TTL_DEFAULT.TTL_MAX, // non config msg expire at TTL_MAX at most
+            },
+          ]);
+
           window?.log?.info(
             `updated message ${foundMessage.get('id')} with hash: ${foundMessage.get(
               'messageHash'
@@ -211,7 +221,7 @@ async function getSignatureParamsFromNamespace(
     SnodeNamespace.isGroupConfigNamespace(item.namespace) ||
     item.namespace === SnodeNamespaces.ClosedGroupMessages
   ) {
-    if (!PubKey.isClosedGroupV2(destination)) {
+    if (!PubKey.is03Pubkey(destination)) {
       throw new Error(
         'getSignatureParamsFromNamespace: groupconfig namespace required a 03 pubkey'
       );
@@ -229,7 +239,7 @@ async function getSignatureParamsFromNamespace(
 
 async function sendMessagesDataToSnode(
   params: Array<StoreOnNodeParamsNoSig>,
-  destination: string,
+  destination: PubkeyType | GroupPubkeyType,
   messagesHashesToDelete: Set<string> | null,
   method: 'batch' | 'sequence'
 ): Promise<NotEmptyArrayOfBatchResults> {
@@ -256,11 +266,17 @@ async function sendMessagesDataToSnode(
 
   const signedDeleteOldHashesRequest =
     messagesHashesToDelete && messagesHashesToDelete.size
-      ? await SnodeSignature.getSnodeSignatureByHashesParams({
-          method: 'delete' as const,
-          messagesHashes: [...messagesHashesToDelete],
-          pubkey: destination,
-        })
+      ? PubKey.is03Pubkey(destination)
+        ? await SnodeGroupSignature.getGroupSignatureByHashesParams({
+            method: 'delete' as const,
+            messagesHashes: [...messagesHashesToDelete],
+            pubkey: destination,
+          })
+        : await SnodeSignature.getSnodeSignatureByHashesParams({
+            method: 'delete' as const,
+            messagesHashes: [...messagesHashesToDelete],
+            pubkey: destination,
+          })
       : null;
 
   const snode = sample(swarm);
@@ -281,7 +297,9 @@ async function sendMessagesDataToSnode(
       window?.log?.info(
         `sendMessagesDataToSnode - Successfully stored messages to ${ed25519Str(destination)} via ${
           snode.ip
-        }:${snode.port} on namespaces: ${rightDestination.map(m => m.namespace).join(',')}`
+        }:${snode.port} on namespaces: ${SnodeNamespace.toRoles(
+          rightDestination.map(m => m.namespace)
+        ).join(',')}`
       );
     }
 
@@ -377,7 +395,7 @@ async function encryptMessageAndWrap(
     ttl,
   } = params;
 
-  if (PubKey.isClosedGroupV2(destination)) {
+  if (PubKey.is03Pubkey(destination)) {
     return encryptForGroupV2(params);
   }
 

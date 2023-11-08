@@ -1,9 +1,9 @@
-import { difference, isNumber, omit, pick } from 'lodash';
 import * as BetterSqlite3 from '@signalapp/better-sqlite3';
+import { difference, isNumber, omit, pick } from 'lodash';
 import {
+  CONVERSATION_PRIORITIES,
   ConversationAttributes,
   ConversationAttributesWithNotSavedOnes,
-  CONVERSATION_PRIORITIES,
 } from '../models/conversationAttributes';
 
 export const CONVERSATIONS_TABLE = 'conversations';

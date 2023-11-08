@@ -242,6 +242,9 @@ data.initData();
 const { ConvoHub } = require('./ts/session/conversations/ConversationController');
 window.getConversationController = ConvoHub.use;
 
+const { IncomingMessageCache } = require('./ts/receiver/cache');
+window.IncomingMessageCache = IncomingMessageCache;
+
 // Linux seems to periodically let the event loop stop, so this is a global workaround
 setInterval(() => {
   window.nodeSetImmediate(() => {});

@@ -96,7 +96,7 @@ async function retrieveRequestForGroup({
   namespace: SnodeNamespacesGroup;
   retrieveParam: RetrieveParams;
 }) {
-  if (!PubKey.isClosedGroupV2(groupPk)) {
+  if (!PubKey.is03Pubkey(groupPk)) {
     throw new Error('retrieveRequestForGroup: not a 03 group');
   }
   if (!SnodeNamespace.isGroupNamespace(namespace)) {
@@ -148,7 +148,7 @@ async function buildRetrieveRequest(
         return retrieveRequestForLegacyGroup({ namespace, ourPubkey, pubkey, retrieveParam });
       }
 
-      if (PubKey.isClosedGroupV2(pubkey)) {
+      if (PubKey.is03Pubkey(pubkey)) {
         if (!SnodeNamespace.isGroupNamespace(namespace)) {
           // either config or messages namespaces for 03 groups
           throw new Error(`tried to poll from a non 03 group namespace ${namespace}`);
@@ -182,7 +182,7 @@ async function buildRetrieveRequest(
         },
       };
       retrieveRequestsParams.push(expireParams);
-    } else if (PubKey.isClosedGroupV2(pubkey)) {
+    } else if (PubKey.is03Pubkey(pubkey)) {
       const group = await UserGroupsWrapperActions.getGroup(pubkey);
 
       const signResult = await SnodeGroupSignature.generateUpdateExpiryGroupSignature({

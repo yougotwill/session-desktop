@@ -242,17 +242,17 @@
   "groupNameChangeFallback": "Group name updated.",
   "groupAvatarChange": "Group display picture updated.",
 
-  "groupOneJoined": "<b>name</b> joined the group.",
+  "groupOneJoined": "<b>$name$</b> joined the group.",
   "groupYouJoined": "<b>You</b> joined the group.",
   "groupTwoJoined": "<b>$first$</b> and <b>$second$</b> joined the group.",
   "groupOthersJoined": "<b>$name$</b> and <b>$count$ others</b> joined the group.",
 
-  "groupOneRemoved": "<b>name</b> was removed from the group.",
+  "groupOneRemoved": "<b>$name$</b> was removed from the group.",
   "groupYouRemoved": "<b>You</b> were removed from the group.",
   "groupTwoRemoved": "<b>$first$</b> and <b>$second$</b> were removed from the group.",
   "groupOthersRemoved": "<b>$name$</b> and <b>$count$ others</b> were removed from the group.",
 
-  "groupOnePromoted": "<b>name</b> was promoted to Admin.",
+  "groupOnePromoted": "<b>$name$</b> was promoted to Admin.",
   "groupYouPromoted": "<b>You</b> were promoted to Admin.",
   "groupTwoPromoted": "<b>$first$</b> and <b>$second$</b> were promoted to Admin.",
   "groupOthersPromoted": "<b>$name$</b> and <b>$count$ others</b> were promoted to Admin.",

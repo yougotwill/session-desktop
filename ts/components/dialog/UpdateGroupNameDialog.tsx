@@ -6,8 +6,10 @@ import React from 'react';
 import { clone } from 'lodash';
 import { ConversationModel } from '../../models/conversation';
 import { ConvoHub } from '../../session/conversations';
-import { initiateClosedGroupUpdate } from '../../session/group/closed-group';
+import { ClosedGroup } from '../../session/group/closed-group';
 import { initiateOpenGroupUpdate } from '../../session/group/open-group';
+import { PubKey } from '../../session/types';
+import { groupInfoActions } from '../../state/ducks/groups';
 import { updateGroupNameModal } from '../../state/ducks/modalDialog';
 import { getLibGroupNameOutsideRedux } from '../../state/selectors/groups';
 import { pickFileForAvatar } from '../../types/attachments/VisualAttachment';
@@ -75,14 +77,24 @@ export class UpdateGroupNameDialog extends React.Component<Props, State> {
         void initiateOpenGroupUpdate(this.convo.id, trimmedGroupName, {
           objectUrl: newAvatarObjecturl,
         });
+        this.closeDialog();
       } else {
+        const groupPk = this.convo.id;
+        if (PubKey.is03Pubkey(groupPk)) {
+          const groupv2Action = groupInfoActions.currentDeviceGroupNameChange({
+            groupPk,
+            newName: trimmedGroupName,
+          });
+          window.inboxStore.dispatch(groupv2Action as any);
+
+          return; // keeping the dialog open until the async thunk is done
+        }
         const members = this.convo.getGroupMembers() || [];
 
-        void initiateClosedGroupUpdate(this.convo.id, trimmedGroupName, members);
+        void ClosedGroup.initiateClosedGroupUpdate(this.convo.id, trimmedGroupName, members);
+        this.closeDialog();
       }
     }
-
-    this.closeDialog();
   }
 
   public render() {

@@ -25,6 +25,7 @@ import { ClosedGroupRemovedMembersMessage } from '../messages/outgoing/controlMe
 import { PubKey } from '../types';
 import { UserUtils } from '../utils';
 import { fromHexToArray, toHex } from '../utils/String';
+import { PreConditionFailed } from '../utils/errors';
 
 export type GroupInfo = {
   id: string;
@@ -44,6 +45,7 @@ export interface MemberChanges {
   joiningMembers?: Array<string>;
   leavingMembers?: Array<string>;
   kickedMembers?: Array<string>;
+  promotedMembers?: Array<string>;
 }
 
 /**
@@ -55,16 +57,16 @@ export interface MemberChanges {
  * @param members the new members (or just pass the old one if nothing changed)
  * @returns nothing
  */
-export async function initiateClosedGroupUpdate(
+async function initiateClosedGroupUpdate(
   groupId: string,
   groupName: string,
   members: Array<string>
 ) {
-  const isGroupV2 = PubKey.isClosedGroupV2(groupId);
-  const convo = await ConvoHub.use().getOrCreateAndWait(
-    groupId,
-    isGroupV2 ? ConversationTypeEnum.GROUPV2 : ConversationTypeEnum.GROUP
-  );
+  const isGroupV2 = PubKey.is03Pubkey(groupId);
+  if (isGroupV2) {
+    throw new PreConditionFailed('initiateClosedGroupUpdate does not handle closedgroupv2');
+  }
+  const convo = await ConvoHub.use().getOrCreateAndWait(groupId, ConversationTypeEnum.GROUP);
 
   // do not give an admins field here. We don't want to be able to update admins and
   // updateOrCreateClosedGroup() will update them if given the choice.
@@ -93,7 +95,7 @@ export async function initiateClosedGroupUpdate(
   if (diff.newName?.length) {
     const nameOnlyDiff: GroupDiff = _.pick(diff, 'newName');
 
-    const dbMessageName = await addUpdateMessage(
+    const dbMessageName = await ClosedGroup.addUpdateMessage(
       convo,
       nameOnlyDiff,
       UserUtils.getOurPubKeyStrFromCache(),
@@ -105,7 +107,7 @@ export async function initiateClosedGroupUpdate(
   if (diff.joiningMembers?.length) {
     const joiningOnlyDiff: GroupDiff = _.pick(diff, 'joiningMembers');
 
-    const dbMessageAdded = await addUpdateMessage(
+    const dbMessageAdded = await ClosedGroup.addUpdateMessage(
       convo,
       joiningOnlyDiff,
       UserUtils.getOurPubKeyStrFromCache(),
@@ -116,7 +118,7 @@ export async function initiateClosedGroupUpdate(
 
   if (diff.leavingMembers?.length) {
     const leavingOnlyDiff: GroupDiff = { kickedMembers: diff.leavingMembers };
-    const dbMessageLeaving = await addUpdateMessage(
+    const dbMessageLeaving = await ClosedGroup.addUpdateMessage(
       convo,
       leavingOnlyDiff,
       UserUtils.getOurPubKeyStrFromCache(),
@@ -133,7 +135,7 @@ export async function initiateClosedGroupUpdate(
   await convo.commit();
 }
 
-export async function addUpdateMessage(
+async function addUpdateMessage(
   convo: ConversationModel,
   diff: GroupDiff,
   sender: string,
@@ -203,10 +205,10 @@ function buildGroupDiff(convo: ConversationModel, update: GroupInfo): GroupDiff 
   return groupDiff;
 }
 
-export async function updateOrCreateClosedGroup(details: GroupInfo) {
+async function updateOrCreateClosedGroup(details: GroupInfo) {
   const { id, expireTimer } = details;
 
-  const isV3 = PubKey.isClosedGroupV2(id);
+  const isV3 = PubKey.is03Pubkey(id);
 
   const conversation = await ConvoHub.use().getOrCreateAndWait(
     id,
@@ -324,7 +326,7 @@ async function sendAddedMembers(
   await Promise.all(promises);
 }
 
-export async function sendRemovedMembers(
+async function sendRemovedMembers(
   convo: ConversationModel,
   removedMembers: Array<string>,
   stillMembers: Array<string>,
@@ -435,7 +437,7 @@ async function generateAndSendNewEncryptionKeyPair(
   });
 }
 
-export async function buildEncryptionKeyPairWrappers(
+async function buildEncryptionKeyPairWrappers(
   targetMembers: Array<string>,
   encryptionKeyPair: ECKeyPair
 ) {
@@ -464,3 +466,10 @@ export async function buildEncryptionKeyPairWrappers(
   );
   return wrappers;
 }
+
+export const ClosedGroup = {
+  addUpdateMessage,
+  initiateClosedGroupUpdate,
+  updateOrCreateClosedGroup,
+  buildEncryptionKeyPairWrappers,
+};

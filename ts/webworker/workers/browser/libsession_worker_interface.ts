@@ -423,9 +423,9 @@ export const MetaGroupWrapperActions: MetaGroupWrapperActionsCalls = {
     callLibSessionWorker([`MetaGroupConfig-${groupPk}`, 'memberGetAll']) as Promise<
       ReturnType<MetaGroupWrapperActionsCalls['memberGetAll']>
     >,
-  memberErase: async (groupPk: GroupPubkeyType, pubkeyHex: PubkeyType) =>
-    callLibSessionWorker([`MetaGroupConfig-${groupPk}`, 'memberErase', pubkeyHex]) as Promise<
-      ReturnType<MetaGroupWrapperActionsCalls['memberErase']>
+  memberEraseAndRekey: async (groupPk: GroupPubkeyType, members: Array<PubkeyType>) =>
+    callLibSessionWorker([`MetaGroupConfig-${groupPk}`, 'memberEraseAndRekey', members]) as Promise<
+      ReturnType<MetaGroupWrapperActionsCalls['memberEraseAndRekey']>
     >,
   memberSetAccepted: async (groupPk: GroupPubkeyType, pubkeyHex: PubkeyType) =>
     callLibSessionWorker([`MetaGroupConfig-${groupPk}`, 'memberSetAccepted', pubkeyHex]) as Promise<
@@ -506,6 +506,12 @@ export const MetaGroupWrapperActions: MetaGroupWrapperActionsCalls = {
       'makeSwarmSubAccount',
       memberPubkeyHex,
     ]) as Promise<ReturnType<MetaGroupWrapperActionsCalls['makeSwarmSubAccount']>>,
+  generateSupplementKeys: async (groupPk: GroupPubkeyType, membersPubkeyHex: Array<PubkeyType>) =>
+    callLibSessionWorker([
+      `MetaGroupConfig-${groupPk}`,
+      'generateSupplementKeys',
+      membersPubkeyHex,
+    ]) as Promise<ReturnType<MetaGroupWrapperActionsCalls['generateSupplementKeys']>>,
   swarmSubaccountSign: async (
     groupPk: GroupPubkeyType,
     message: Uint8Array,
@@ -517,6 +523,19 @@ export const MetaGroupWrapperActions: MetaGroupWrapperActionsCalls = {
       message,
       authData,
     ]) as Promise<ReturnType<MetaGroupWrapperActionsCalls['swarmSubaccountSign']>>,
+
+  swarmSubAccountToken: async (groupPk: GroupPubkeyType, memberPk: PubkeyType) =>
+    callLibSessionWorker([
+      `MetaGroupConfig-${groupPk}`,
+      'swarmSubAccountToken',
+      memberPk,
+    ]) as Promise<ReturnType<MetaGroupWrapperActionsCalls['swarmSubAccountToken']>>,
+  swarmVerifySubAccount: async (groupPk: GroupPubkeyType, signingValue: Uint8ArrayLen100) =>
+    callLibSessionWorker([
+      `MetaGroupConfig-${groupPk}`,
+      'swarmVerifySubAccount',
+      signingValue,
+    ]) as Promise<ReturnType<MetaGroupWrapperActionsCalls['swarmVerifySubAccount']>>,
 };
 
 export const callLibSessionWorker = async (

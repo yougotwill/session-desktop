@@ -2,7 +2,7 @@
 import { isEmpty, isFinite, noop, omit, toNumber } from 'lodash';
 
 import { SignalService } from '../protobuf';
-import { removeFromCache } from './cache';
+import { IncomingMessageCache } from './cache';
 import { getEnvelopeId } from './common';
 import { EnvelopePlus } from './types';
 
@@ -39,19 +39,21 @@ function cleanAttachment(attachment: any) {
   };
 }
 
-function cleanAttachments(decrypted: SignalService.DataMessage) {
-  const { quote } = decrypted;
+function cleanAttachments(decryptedDataMessage: SignalService.DataMessage) {
+  const { quote } = decryptedDataMessage;
 
   // Here we go from binary to string/base64 in all AttachmentPointer digest/key fields
 
   // we do not care about group on Session Desktop
 
-  decrypted.group = null;
+  decryptedDataMessage.group = null;
 
   // when receiving a message we get keys of attachment as buffer, but we override the data with the decrypted string instead.
   // TODO it would be nice to get rid of that as any here, but not in this PR
-  decrypted.attachments = (decrypted.attachments || []).map(cleanAttachment) as any;
-  decrypted.preview = (decrypted.preview || []).map((item: any) => {
+  decryptedDataMessage.attachments = (decryptedDataMessage.attachments || []).map(
+    cleanAttachment
+  ) as any;
+  decryptedDataMessage.preview = (decryptedDataMessage.preview || []).map((item: any) => {
     const { image } = item;
 
     if (!image) {
@@ -166,10 +168,12 @@ export async function handleSwarmDataMessage(
     await GroupV2Receiver.handleGroupUpdateMessage({
       envelopeTimestamp: sentAtTimestamp,
       updateMessage: rawDataMessage.groupUpdateMessage as SignalService.GroupUpdateMessage,
+      source: envelope.source,
+      senderIdentity: envelope.senderIdentity,
     });
     // Groups update should always be able to be decrypted as we get the keys before trying to decrypt them.
     // If decryption failed once, it will keep failing, so no need to keep it in the cache.
-    await removeFromCache({ id: envelope.id });
+    await IncomingMessageCache.removeFromCache({ id: envelope.id });
     return;
   }
   // we handle legacy group updates from our other devices in handleLegacyClosedGroupControlMessage()
@@ -198,7 +202,7 @@ export async function handleSwarmDataMessage(
 
   if (isSyncedMessage && !isMe) {
     window?.log?.warn('Got a sync message from someone else than me. Dropping it.');
-    await removeFromCache(envelope);
+    await IncomingMessageCache.removeFromCache(envelope);
     return;
   }
   const convoIdToAddTheMessageTo = PubKey.removeTextSecurePrefixIfNeeded(
@@ -206,7 +210,7 @@ export async function handleSwarmDataMessage(
   );
 
   const isGroupMessage = !!envelope.senderIdentity;
-  const isGroupV2Message = isGroupMessage && PubKey.isClosedGroupV2(envelope.source);
+  const isGroupV2Message = isGroupMessage && PubKey.is03Pubkey(envelope.source);
   let typeOfConvo = ConversationTypeEnum.PRIVATE;
   if (isGroupV2Message) {
     typeOfConvo = ConversationTypeEnum.GROUPV2;
@@ -241,13 +245,13 @@ export async function handleSwarmDataMessage(
 
   if (!messageHasVisibleContent(cleanDataMessage)) {
     window?.log?.warn(`Message ${getEnvelopeId(envelope)} ignored; it was empty`);
-    await removeFromCache(envelope);
+    await IncomingMessageCache.removeFromCache(envelope);
     return;
   }
 
   if (!convoIdToAddTheMessageTo) {
     window?.log?.error('We cannot handle a message without a conversationId');
-    await removeFromCache(envelope);
+    await IncomingMessageCache.removeFromCache(envelope);
     return;
   }
 
@@ -272,7 +276,7 @@ export async function handleSwarmDataMessage(
     cleanDataMessage,
     convoToAddMessageTo,
     // eslint-disable-next-line @typescript-eslint/no-misused-promises
-    () => removeFromCache(envelope)
+    () => IncomingMessageCache.removeFromCache(envelope)
   );
 }
 

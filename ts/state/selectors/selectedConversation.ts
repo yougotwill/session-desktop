@@ -134,7 +134,7 @@ const getSelectedConversationIsGroupV2 = (state: StateType): boolean => {
     return false;
   }
   return selected.type
-    ? selected.type === ConversationTypeEnum.GROUPV2 && PubKey.isClosedGroupV2(selected.id)
+    ? selected.type === ConversationTypeEnum.GROUPV2 && PubKey.is03Pubkey(selected.id)
     : false;
 };
 
@@ -158,7 +158,7 @@ const getSelectedMembersCount = (state: StateType): number => {
   if (!selected) {
     return 0;
   }
-  if (PubKey.isClosedGroupV2(selected.id)) {
+  if (PubKey.is03Pubkey(selected.id)) {
     return getLibMembersPubkeys(state, selected.id).length || 0;
   }
   if (selected.isPrivate || selected.isPublic) {
@@ -319,7 +319,7 @@ export function useSelectedNicknameOrProfileNameOrShortenedPubkey() {
   if (isMe) {
     return window.i18n('noteToSelf');
   }
-  if (selectedId && PubKey.isClosedGroupV2(selectedId)) {
+  if (selectedId && PubKey.is03Pubkey(selectedId)) {
     return libGroupName;
   }
   return nickname || profileName || shortenedPubkey;

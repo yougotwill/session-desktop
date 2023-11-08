@@ -271,7 +271,7 @@ describe('GroupSyncJob pushChangesToGroupSwarmIfNeeded', () => {
   });
 
   it('call savesDumpToDb even if no changes are required on the serverside', async () => {
-    const result = await GroupSync.pushChangesToGroupSwarmIfNeeded(groupPk);
+    const result = await GroupSync.pushChangesToGroupSwarmIfNeeded(groupPk, []);
     pendingChangesForGroupStub.resolves(undefined);
     expect(result).to.be.eq(RunJobResult.Success);
     expect(sendStub.callCount).to.be.eq(0);
@@ -290,7 +290,7 @@ describe('GroupSyncJob pushChangesToGroupSwarmIfNeeded', () => {
       messages: [info, member],
       allOldHashes: new Set('123'),
     });
-    const result = await GroupSync.pushChangesToGroupSwarmIfNeeded(groupPk);
+    const result = await GroupSync.pushChangesToGroupSwarmIfNeeded(groupPk, []);
 
     sendStub.resolves(undefined);
     expect(result).to.be.eq(RunJobResult.RetryJobIfPossible); // not returning anything in the sendstub so network issue happened
@@ -349,7 +349,7 @@ describe('GroupSyncJob pushChangesToGroupSwarmIfNeeded', () => {
       { code: 200, body: { hash: 'hashmember' } },
       { code: 200, body: {} }, // because we are giving a set of allOldHashes
     ]);
-    const result = await GroupSync.pushChangesToGroupSwarmIfNeeded(groupPk);
+    const result = await GroupSync.pushChangesToGroupSwarmIfNeeded(groupPk, []);
 
     expect(sendStub.callCount).to.be.eq(1);
     expect(pendingChangesForGroupStub.callCount).to.be.eq(1);

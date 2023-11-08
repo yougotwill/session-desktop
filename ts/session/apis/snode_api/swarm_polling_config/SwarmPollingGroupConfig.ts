@@ -11,12 +11,12 @@ async function handleGroupSharedConfigMessages(
   groupConfigMessagesMerged: Array<RetrieveMessageItemWithNamespace>,
   groupPk: GroupPubkeyType
 ) {
-  window.log.info(
-    `received groupConfigMessagesMerged count: ${
-      groupConfigMessagesMerged.length
-    } for groupPk:${ed25519Str(groupPk)}`
-  );
   try {
+    window.log.info(
+      `received groupConfigMessagesMerged count: ${
+        groupConfigMessagesMerged.length
+      } for groupPk:${ed25519Str(groupPk)}`
+    );
     const infos = groupConfigMessagesMerged
       .filter(m => m.namespace === SnodeNamespaces.ClosedGroupInfo)
       .map(info => {

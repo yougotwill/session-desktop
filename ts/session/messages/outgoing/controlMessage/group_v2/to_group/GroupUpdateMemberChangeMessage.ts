@@ -2,6 +2,7 @@ import { PubkeyType } from 'libsession_util_nodejs';
 import { isEmpty } from 'lodash';
 import { SignalService } from '../../../../../../protobuf';
 import { assertUnreachable } from '../../../../../../types/sqlSharedTypes';
+import { SnodeNamespaces } from '../../../../../apis/snode_api/namespaces';
 import { GroupUpdateMessage, GroupUpdateMessageParams } from '../GroupUpdateMessage';
 
 type MembersAddedMessageParams = GroupUpdateMessageParams & {
@@ -25,6 +26,7 @@ type MembersPromotedMessageParams = GroupUpdateMessageParams & {
 export class GroupUpdateMemberChangeMessage extends GroupUpdateMessage {
   public readonly typeOfChange: SignalService.GroupUpdateMemberChangeMessage.Type;
   public readonly memberSessionIds: Array<PubkeyType> = []; // added, removed, promoted based on the type.
+  public readonly namespace = SnodeNamespaces.ClosedGroupMessages;
 
   constructor(
     params: MembersAddedMessageParams | MembersRemovedMessageParams | MembersPromotedMessageParams

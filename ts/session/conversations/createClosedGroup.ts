@@ -1,5 +1,5 @@
 import _, { isFinite, isNumber } from 'lodash';
-import { ClosedGroup, getMessageQueue } from '..';
+import { getMessageQueue } from '..';
 import { ConversationTypeEnum } from '../../models/conversationAttributes';
 import { addKeyPairToCacheAndDBIfNeeded } from '../../receiver/closedGroups';
 import { ECKeyPair } from '../../receiver/keypairs';
@@ -8,6 +8,7 @@ import { updateConfirmModal } from '../../state/ducks/modalDialog';
 import { getSwarmPollingInstance } from '../apis/snode_api';
 import { SnodeNamespaces } from '../apis/snode_api/namespaces';
 import { generateClosedGroupPublicKey, generateCurve25519KeyPairWithoutPrefix } from '../crypto';
+import { ClosedGroup, GroupInfo } from '../group/closed-group';
 import {
   ClosedGroupNewMessage,
   ClosedGroupNewMessageParams,
@@ -53,7 +54,7 @@ export async function createClosedGroup(groupName: string, members: Array<string
   const admins = [us];
   const existingExpireTimer = 0;
 
-  const groupDetails: ClosedGroup.GroupInfo = {
+  const groupDetails: GroupInfo = {
     id: groupPublicKey,
     name: groupName,
     members: listOfMembers,

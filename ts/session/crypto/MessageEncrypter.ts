@@ -74,7 +74,7 @@ export async function encrypt(
 
     case CLOSED_GROUP_MESSAGE: {
       const groupPk = destination.key;
-      if (PubKey.isClosedGroupV2(groupPk)) {
+      if (PubKey.is03Pubkey(groupPk)) {
         return {
           envelopeType: CLOSED_GROUP_MESSAGE,
           cipherText: await encryptWithLibSession(groupPk, plainTextBuffer),

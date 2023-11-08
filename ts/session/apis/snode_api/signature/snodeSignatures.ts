@@ -1,4 +1,9 @@
-import { GroupPubkeyType, Uint8ArrayLen100, Uint8ArrayLen64 } from 'libsession_util_nodejs';
+import {
+  GroupPubkeyType,
+  PubkeyType,
+  Uint8ArrayLen100,
+  Uint8ArrayLen64,
+} from 'libsession_util_nodejs';
 import { isEmpty } from 'lodash';
 import { toFixedUint8ArrayOfLength } from '../../../../types/sqlSharedTypes';
 import { getSodiumRenderer } from '../../../crypto';
@@ -20,13 +25,9 @@ async function getSnodeSignatureByHashesParams({
   method,
   pubkey,
 }: WithMessagesHashes & {
-  pubkey: string;
+  pubkey: PubkeyType;
   method: 'delete';
-}): Promise<
-  Pick<SnodeSignatureResult, 'pubkey_ed25519' | 'signature' | 'pubkey'> & {
-    messages: Array<string>;
-  }
-> {
+}) {
   const ourEd25519Key = await UserUtils.getUserED25519KeyPair();
 
   if (!ourEd25519Key) {
@@ -79,7 +80,7 @@ function isSigParamsForGroupAdmin(
   sigParams: SnodeSigParamsAdminGroup | SnodeSigParamsUs | SnodeSigParamsSubAccount
 ): sigParams is SnodeSigParamsAdminGroup {
   const asGr = sigParams as SnodeSigParamsAdminGroup;
-  return PubKey.isClosedGroupV2(asGr.groupPk) && !isEmpty(asGr.privKey);
+  return PubKey.is03Pubkey(asGr.groupPk) && !isEmpty(asGr.privKey);
 }
 
 function getVerificationData(params: SnodeSigParamsShared) {

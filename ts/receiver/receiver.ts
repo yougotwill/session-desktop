@@ -4,15 +4,18 @@ import { v4 as uuidv4 } from 'uuid';
 
 import { EnvelopePlus } from './types';
 
-import { addToCache, getAllFromCache, getAllFromCacheForSource, removeFromCache } from './cache';
+import { IncomingMessageCache } from './cache';
 
 // innerHandleSwarmContentMessage is only needed because of code duplication in handleDecryptedEnvelope...
 import { handleSwarmContentMessage, innerHandleSwarmContentMessage } from './contentMessage';
 
 import { Data } from '../data/data';
 import { SignalService } from '../protobuf';
+import { DURATION } from '../session/constants';
+import { PubKey } from '../session/types';
 import { StringUtils, UserUtils } from '../session/utils';
 import { perfEnd, perfStart } from '../session/utils/Performance';
+import { sleepFor } from '../session/utils/Promise';
 import { createTaskWithTimeout } from '../session/utils/TaskWithTimeout';
 import { UnprocessedParameter } from '../types/sqlSharedTypes';
 import { getEnvelopeId } from './common';
@@ -21,13 +24,58 @@ export { downloadAttachment } from './attachments';
 
 const incomingMessagePromises: Array<Promise<any>> = [];
 
-async function handleSwarmEnvelope(envelope: EnvelopePlus, messageHash: string) {
-  if (envelope.content && envelope.content.length > 0) {
-    return handleSwarmContentMessage(envelope, messageHash);
-  }
+export async function handleSwarmContentDecryptedWithTimeout({
+  envelope,
+  messageHash,
+  sentAtTimestamp,
+  contentDecrypted,
+}: {
+  envelope: EnvelopePlus;
+  messageHash: string;
+  sentAtTimestamp: number;
+  contentDecrypted: ArrayBuffer;
+}) {
+  let taskDone = false;
+  return Promise.race([
+    (async () => {
+      await sleepFor(1 * DURATION.MINUTES); // 1 minute expiry per message seems more than enough
+      if (taskDone) {
+        return;
+      }
+      window.log.error(
+        'handleSwarmContentDecryptedWithTimeout timer expired for envelope ',
+        envelope.id
+      );
+      await IncomingMessageCache.removeFromCache(envelope);
+    })(),
+    (async () => {
+      try {
+        await innerHandleSwarmContentMessage({
+          envelope,
+          messageHash,
+          contentDecrypted,
+          sentAtTimestamp,
+        });
+        await IncomingMessageCache.removeFromCache(envelope);
+      } catch (e) {
+        window.log.error(
+          'handleSwarmContentDecryptedWithTimeout task failed with ',
+          e.message,
+          envelope.id
+        );
+      } finally {
+        taskDone = true;
+      }
+    })(),
+  ]);
+}
 
-  await removeFromCache(envelope);
-  throw new Error('Received message with no content');
+async function handleSwarmEnvelope(envelope: EnvelopePlus, messageHash: string) {
+  if (isEmpty(envelope.content)) {
+    await IncomingMessageCache.removeFromCache(envelope);
+    throw new Error('Received message with no content');
+  }
+  return handleSwarmContentMessage(envelope, messageHash);
 }
 
 class EnvelopeQueue {
@@ -97,7 +145,9 @@ async function handleRequestDetail(
 
     // eslint-disable-next-line no-param-reassign
     data = SignalService.Envelope.encode(envelope).finish();
-    envelope.senderIdentity = senderIdentity;
+    if (!PubKey.is03Pubkey(senderIdentity)) {
+      envelope.senderIdentity = senderIdentity;
+    }
   }
 
   envelope.id = uuidv4();
@@ -110,7 +160,11 @@ async function handleRequestDetail(
     // need to handle senderIdentity separately)...
     perfStart(`addToCache-${envelope.id}`);
 
-    await addToCache(envelope, contentIsEnvelope(data) ? data.content : data, messageHash);
+    await IncomingMessageCache.addToCache(
+      envelope,
+      contentIsEnvelope(data) ? data.content : data,
+      messageHash
+    );
     perfEnd(`addToCache-${envelope.id}`, 'addToCache');
 
     // To ensure that we queue in the same order we receive messages
@@ -130,7 +184,7 @@ async function handleRequestDetail(
  * @param inConversation if the request is related to a group, this will be set to the group pubkey. Otherwise, it is set to null
  */
 export function handleRequest(
-  plaintext: Uint8Array,
+  plaintext: EnvelopePlus | Uint8Array,
   inConversation: string | null,
   messageHash: string
 ): void {
@@ -149,7 +203,7 @@ export function handleRequest(
  * Used in main_renderer.js
  */
 export async function queueAllCached() {
-  const items = await getAllFromCache();
+  const items = await IncomingMessageCache.getAllFromCache();
 
   await items.reduce(async (promise, item) => {
     await promise;
@@ -158,7 +212,7 @@ export async function queueAllCached() {
 }
 
 export async function queueAllCachedFromSource(source: string) {
-  const items = await getAllFromCacheForSource(source);
+  const items = await IncomingMessageCache.getAllFromCacheForSource(source);
 
   // queue all cached for this source, but keep the order
   await items.reduce(async (promise, item) => {
@@ -179,12 +233,13 @@ async function queueCached(item: UnprocessedParameter) {
     // Why do we need to do this???
     envelope.senderIdentity = envelope.senderIdentity || item.senderIdentity;
 
-    const { decrypted } = item;
+    // decrypted must be a decryptedContent here (SignalService.Content.parse will be called with it in the pipeline)
+    const { decrypted: decryptedContentB64 } = item;
 
-    if (decrypted) {
-      const payloadPlaintext = StringUtils.encode(decrypted, 'base64');
+    if (decryptedContentB64) {
+      const contentDecrypted = StringUtils.encode(decryptedContentB64, 'base64');
 
-      queueDecryptedEnvelope(envelope, payloadPlaintext, envelope.messageHash);
+      queueDecryptedEnvelope({ envelope, contentDecrypted, messageHash: envelope.messageHash });
     } else {
       queueSwarmEnvelope(envelope, envelope.messageHash);
     }
@@ -209,11 +264,19 @@ async function queueCached(item: UnprocessedParameter) {
   }
 }
 
-function queueDecryptedEnvelope(envelope: any, plaintext: ArrayBuffer, messageHash: string) {
+function queueDecryptedEnvelope({
+  contentDecrypted,
+  envelope,
+  messageHash,
+}: {
+  envelope: any;
+  contentDecrypted: ArrayBuffer;
+  messageHash: string;
+}) {
   const id = getEnvelopeId(envelope);
   window?.log?.info('queueing decrypted envelope', id);
 
-  const task = handleDecryptedEnvelope.bind(null, envelope, plaintext, messageHash);
+  const task = handleDecryptedEnvelope.bind(null, { envelope, contentDecrypted, messageHash });
   const taskWithTimeout = createTaskWithTimeout(task, `queueEncryptedEnvelope ${id}`);
   try {
     envelopeQueue.add(taskWithTimeout);
@@ -225,16 +288,25 @@ function queueDecryptedEnvelope(envelope: any, plaintext: ArrayBuffer, messageHa
   }
 }
 
-async function handleDecryptedEnvelope(
-  envelope: EnvelopePlus,
-  plaintext: ArrayBuffer,
-  messageHash: string
-) {
+async function handleDecryptedEnvelope({
+  envelope,
+  messageHash,
+  contentDecrypted,
+}: {
+  envelope: EnvelopePlus;
+  contentDecrypted: ArrayBuffer;
+  messageHash: string;
+}) {
   if (envelope.content) {
     const sentAtTimestamp = _.toNumber(envelope.timestamp);
 
-    await innerHandleSwarmContentMessage(envelope, sentAtTimestamp, plaintext, messageHash);
+    await innerHandleSwarmContentMessage({
+      envelope,
+      sentAtTimestamp,
+      contentDecrypted,
+      messageHash,
+    });
   } else {
-    await removeFromCache(envelope);
+    await IncomingMessageCache.removeFromCache(envelope);
   }
 }

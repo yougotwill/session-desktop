@@ -1,5 +1,6 @@
 import { isEmpty, isFinite } from 'lodash';
 import { SignalService } from '../../../../../../protobuf';
+import { SnodeNamespaces } from '../../../../../apis/snode_api/namespaces';
 import { GroupUpdateMessage, GroupUpdateMessageParams } from '../GroupUpdateMessage';
 
 type NameChangeParams = GroupUpdateMessageParams & {
@@ -23,6 +24,7 @@ export class GroupUpdateInfoChangeMessage extends GroupUpdateMessage {
   public readonly typeOfChange: SignalService.GroupUpdateInfoChangeMessage.Type;
   public readonly updatedName: string = '';
   public readonly updatedExpirationSeconds: number = 0;
+  public readonly namespace = SnodeNamespaces.ClosedGroupMessages;
 
   constructor(params: NameChangeParams | AvatarChangeParams | DisappearingMessageChangeParams) {
     super(params);

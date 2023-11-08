@@ -1,4 +1,5 @@
 import { SignalService } from '../../../../../../protobuf';
+import { SnodeNamespaces } from '../../../../../apis/snode_api/namespaces';
 import { getOurProfile } from '../../../../../utils/User';
 import { GroupUpdateMessage, GroupUpdateMessageParams } from '../GroupUpdateMessage';
 
@@ -13,6 +14,8 @@ type Params = GroupUpdateMessageParams & {
  */
 export class GroupUpdateInviteResponseMessage extends GroupUpdateMessage {
   public readonly isApproved: Params['isApproved'];
+  public readonly namespace = SnodeNamespaces.ClosedGroupMessages;
+
   constructor(params: Params) {
     super(params);
     this.isApproved = params.isApproved;
