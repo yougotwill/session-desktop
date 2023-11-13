@@ -1,16 +1,22 @@
-import { PubkeyType, WithGroupPubkey } from 'libsession_util_nodejs';
-import { isEmpty } from 'lodash';
+import { GroupPubkeyType, PubkeyType, WithGroupPubkey } from 'libsession_util_nodejs';
+import { isEmpty, isFinite, isNumber } from 'lodash';
 import { ConversationTypeEnum } from '../../models/conversationAttributes';
 import { HexString } from '../../node/hexStrings';
 import { SignalService } from '../../protobuf';
 import { getSwarmPollingInstance } from '../../session/apis/snode_api';
 import { ConvoHub } from '../../session/conversations';
+import { getSodiumRenderer } from '../../session/crypto';
 import { ClosedGroup } from '../../session/group/closed-group';
 import { ed25519Str } from '../../session/onions/onionPath';
 import { PubKey } from '../../session/types';
 import { UserUtils } from '../../session/utils';
+import { stringToUint8Array } from '../../session/utils/String';
+import { PreConditionFailed } from '../../session/utils/errors';
+import { UserSync } from '../../session/utils/job_runners/jobs/UserSyncJob';
 import { LibSessionUtil } from '../../session/utils/libsession/libsession_utils';
+import { groupInfoActions } from '../../state/ducks/groups';
 import { toFixedUint8ArrayOfLength } from '../../types/sqlSharedTypes';
+import { BlockedNumberController } from '../../util';
 import {
   MetaGroupWrapperActions,
   UserGroupsWrapperActions,
@@ -27,11 +33,7 @@ type GroupInviteDetails = {
 } & WithEnvelopeTimestamp &
   WithAuthor;
 
-type GroupMemberChangeDetails = {
-  memberChangeDetails: SignalService.GroupUpdateMemberChangeMessage;
-} & WithEnvelopeTimestamp &
-  WithGroupPubkey &
-  WithAuthor;
+type GroupUpdateGeneric<T> = { change: T } & WithEnvelopeTimestamp & WithGroupPubkey & WithAuthor;
 
 type GroupUpdateDetails = {
   updateMessage: SignalService.GroupUpdateMessage;
@@ -43,22 +45,39 @@ async function handleGroupInviteMessage({
   envelopeTimestamp,
 }: GroupInviteDetails) {
   if (!PubKey.is03Pubkey(inviteMessage.groupSessionId)) {
-    // invite to a group which has not a 03 prefix, we can just drop it.
     return;
   }
+
+  if (BlockedNumberController.isBlocked(author)) {
+    window.log.info(
+      `received invite to group ${ed25519Str(
+        inviteMessage.groupSessionId
+      )} by blocked user:${ed25519Str(author)}... dropping it`
+    );
+    return;
+  }
+  const sigValid = await verifySig({
+    pubKey: HexString.fromHexString(inviteMessage.groupSessionId),
+    signature: inviteMessage.adminSignature,
+    data: stringToUint8Array(`INVITE${UserUtils.getOurPubKeyStrFromCache()}${envelopeTimestamp}`),
+  });
+
+  if (!sigValid) {
+    window.log.warn('received group invite with invalid signature. dropping');
+    return;
+  }
+
   window.log.debug(
     `received invite to group ${ed25519Str(inviteMessage.groupSessionId)} by user:${ed25519Str(
       author
     )}`
   );
-  // TODO verify sig invite adminSignature
   const convo = await ConvoHub.use().getOrCreateAndWait(
     inviteMessage.groupSessionId,
     ConversationTypeEnum.GROUPV2
   );
   convo.set({
     active_at: envelopeTimestamp,
-    didApproveMe: true,
   });
 
   if (inviteMessage.name && isEmpty(convo.getRealSessionUsername())) {
@@ -94,33 +113,107 @@ async function handleGroupInviteMessage({
     ).buffer,
   });
   await LibSessionUtil.saveDumpsToDb(UserUtils.getOurPubKeyStrFromCache());
+  await UserSync.queueNewJobIfNeeded();
 
   // TODO use the pending so we actually don't start polling here unless it is not in the pending state.
   // once everything is ready, start polling using that authData to get the keys, members, details of that group, and its messages.
   getSwarmPollingInstance().addGroupId(inviteMessage.groupSessionId);
 }
 
-async function handleGroupMemberChangeMessage({
-  memberChangeDetails,
+async function verifySig({
+  data,
+  pubKey,
+  signature,
+}: {
+  data: Uint8Array;
+  signature: Uint8Array;
+  pubKey: Uint8Array;
+}) {
+  const sodium = await getSodiumRenderer();
+  return sodium.crypto_sign_verify_detached(signature, data, pubKey);
+}
+
+async function handleGroupInfoChangeMessage({
+  change,
   groupPk,
   envelopeTimestamp,
   author,
-}: GroupMemberChangeDetails) {
-  if (!PubKey.is03Pubkey(groupPk)) {
-    // invite to a group which has not a 03 prefix, we can just drop it.
+}: GroupUpdateGeneric<SignalService.GroupUpdateInfoChangeMessage>) {
+  const sigValid = await verifySig({
+    pubKey: HexString.fromHexString(groupPk),
+    signature: change.adminSignature,
+    data: stringToUint8Array(`INFO_CHANGE${change.type}${envelopeTimestamp}`),
+  });
+  if (!sigValid) {
+    window.log.warn('received group info change with invalid signature. dropping');
     return;
   }
-  // TODO verify sig invite adminSignature
   const convo = ConvoHub.use().get(groupPk);
   if (!convo) {
     return;
   }
 
-  switch (memberChangeDetails.type) {
+  switch (change.type) {
+    case SignalService.GroupUpdateInfoChangeMessage.Type.NAME: {
+      await ClosedGroup.addUpdateMessage(
+        convo,
+        { newName: change.updatedName },
+        author,
+        envelopeTimestamp
+      );
+
+      break;
+    }
+    case SignalService.GroupUpdateInfoChangeMessage.Type.AVATAR: {
+      console.warn('Not implemented');
+      throw new Error('Not implemented');
+    }
+    case SignalService.GroupUpdateInfoChangeMessage.Type.DISAPPEARING_MESSAGES: {
+      if (
+        change.updatedExpiration &&
+        isNumber(change.updatedExpiration) &&
+        isFinite(change.updatedExpiration) &&
+        change.updatedExpiration >= 0
+      ) {
+        await convo.updateExpireTimer(change.updatedExpiration, author, envelopeTimestamp);
+      }
+      break;
+    }
+    default:
+      return;
+  }
+
+  convo.set({
+    active_at: envelopeTimestamp,
+  });
+}
+
+async function handleGroupMemberChangeMessage({
+  change,
+  groupPk,
+  envelopeTimestamp,
+  author,
+}: GroupUpdateGeneric<SignalService.GroupUpdateMemberChangeMessage>) {
+  const convo = ConvoHub.use().get(groupPk);
+  if (!convo) {
+    return;
+  }
+
+  const sigValid = await verifySig({
+    pubKey: HexString.fromHexString(groupPk),
+    signature: change.adminSignature,
+    data: stringToUint8Array(`MEMBER_CHANGE${change.type}${envelopeTimestamp}`),
+  });
+  if (!sigValid) {
+    window.log.warn('received group member change with invalid signature. dropping');
+    return;
+  }
+
+  switch (change.type) {
     case SignalService.GroupUpdateMemberChangeMessage.Type.ADDED: {
       await ClosedGroup.addUpdateMessage(
         convo,
-        { joiningMembers: memberChangeDetails.memberSessionIds },
+        { joiningMembers: change.memberSessionIds },
         author,
         envelopeTimestamp
       );
@@ -130,7 +223,7 @@ async function handleGroupMemberChangeMessage({
     case SignalService.GroupUpdateMemberChangeMessage.Type.REMOVED: {
       await ClosedGroup.addUpdateMessage(
         convo,
-        { kickedMembers: memberChangeDetails.memberSessionIds },
+        { kickedMembers: change.memberSessionIds },
         author,
         envelopeTimestamp
       );
@@ -139,7 +232,7 @@ async function handleGroupMemberChangeMessage({
     case SignalService.GroupUpdateMemberChangeMessage.Type.PROMOTED: {
       await ClosedGroup.addUpdateMessage(
         convo,
-        { promotedMembers: memberChangeDetails.memberSessionIds },
+        { promotedMembers: change.memberSessionIds },
         author,
         envelopeTimestamp
       );
@@ -151,27 +244,187 @@ async function handleGroupMemberChangeMessage({
 
   convo.set({
     active_at: envelopeTimestamp,
-    didApproveMe: true,
   });
+}
+
+async function handleGroupMemberLeftMessage({
+  groupPk,
+  envelopeTimestamp,
+  author,
+}: GroupUpdateGeneric<SignalService.GroupUpdateMemberLeftMessage>) {
+  // No need to verify sig, the author is already verified with the libsession.decrypt()
+  const convo = ConvoHub.use().get(groupPk);
+  if (!convo) {
+    return;
+  }
+
+  await ClosedGroup.addUpdateMessage(
+    convo,
+    { leavingMembers: [author] },
+    author,
+    envelopeTimestamp
+  );
+  convo.set({
+    active_at: envelopeTimestamp,
+  });
+  // TODO We should process this message type even if the sender is blocked
+}
+
+async function handleGroupDeleteMemberContentMessage({
+  groupPk,
+  envelopeTimestamp,
+  change,
+}: GroupUpdateGeneric<SignalService.GroupUpdateDeleteMemberContentMessage>) {
+  const convo = ConvoHub.use().get(groupPk);
+  if (!convo) {
+    return;
+  }
+
+  const sigValid = await verifySig({
+    pubKey: HexString.fromHexString(groupPk),
+    signature: change.adminSignature,
+    data: stringToUint8Array(
+      `DELETE_CONTENT${envelopeTimestamp}${change.memberSessionIds.join()}${change.messageHashes.join()}`
+    ),
+  });
+
+  if (!sigValid) {
+    window.log.warn('received group member delete content with invalid signature. dropping');
+    return;
+  }
+
+  // TODO we should process this message type even if the sender is blocked
+  console.warn('Not implemented');
+  convo.set({
+    active_at: envelopeTimestamp,
+  });
+  throw new Error('Not implemented');
+}
+
+async function handleGroupUpdateDeleteMessage({
+  groupPk,
+  envelopeTimestamp,
+  change,
+}: GroupUpdateGeneric<SignalService.GroupUpdateDeleteMessage>) {
+  // TODO verify sig?
+  const convo = ConvoHub.use().get(groupPk);
+  if (!convo) {
+    return;
+  }
+  const sigValid = await verifySig({
+    pubKey: HexString.fromHexString(groupPk),
+    signature: change.adminSignature,
+    data: stringToUint8Array(`DELETE${envelopeTimestamp}${change.memberSessionIds.join()}`),
+  });
+
+  if (!sigValid) {
+    window.log.warn('received group delete message with invalid signature. dropping');
+    return;
+  }
+  convo.set({
+    active_at: envelopeTimestamp,
+  });
+  console.warn('Not implemented');
+  throw new Error('Not implemented');
+  // TODO We should process this message type even if the sender is blocked
+}
+
+async function handleGroupUpdateInviteResponseMessage({
+  groupPk,
+  envelopeTimestamp,
+}: GroupUpdateGeneric<SignalService.GroupUpdateInviteResponseMessage>) {
+  // no sig verify for this type of messages
+  const convo = ConvoHub.use().get(groupPk);
+  if (!convo) {
+    return;
+  }
+  convo.set({
+    active_at: envelopeTimestamp,
+  });
+  console.warn('Not implemented');
+
+  // TODO We should process this message type even if the sender is blocked
+  throw new Error('Not implemented');
+}
+
+async function handleGroupUpdatePromoteMessage({
+  change,
+}: Omit<GroupUpdateGeneric<SignalService.GroupUpdatePromoteMessage>, 'groupPk'>) {
+  const seed = change.groupIdentitySeed;
+  const sodium = await getSodiumRenderer();
+  const groupKeypair = sodium.crypto_sign_seed_keypair(seed);
+
+  const groupPk = `03${HexString.toHexString(groupKeypair.publicKey)}` as GroupPubkeyType;
+
+  const convo = ConvoHub.use().get(groupPk);
+  if (!convo) {
+    return;
+  }
+  // no group update message here, another message is sent to the group's swarm for the update message.
+  // this message is just about the keys that we need to save, and accepting the promotion.
+
+  const found = await UserGroupsWrapperActions.getGroup(groupPk);
+
+  if (!found) {
+    // could have been removed by the user already so let's not force create it
+    window.log.info(
+      'received group promote message but that group is not in the usergroups wrapper'
+    );
+    return;
+  }
+  found.secretKey = groupKeypair.privateKey;
+  await UserGroupsWrapperActions.setGroup(found);
+  await UserSync.queueNewJobIfNeeded();
+
+  window.inboxStore.dispatch(
+    groupInfoActions.markUsAsAdmin({
+      groupPk,
+    })
+  );
+
+  // TODO we should process this even if the sender is blocked
+}
+
+async function handle1o1GroupUpdateMessage(
+  details: GroupUpdateDetails & WithUncheckedSource & WithUncheckedSenderIdentity
+) {
+  // the message types below are received from our own swarm, so source is the sender, and senderIdentity is empty
+
+  if (details.updateMessage.inviteMessage || details.updateMessage.promoteMessage) {
+    if (!PubKey.is05Pubkey(details.source)) {
+      window.log.warn('received group invite/promote with invalid author');
+      throw new PreConditionFailed('received group invite/promote with invalid author');
+    }
+    if (details.updateMessage.inviteMessage) {
+      await handleGroupInviteMessage({
+        inviteMessage: details.updateMessage
+          .inviteMessage as SignalService.GroupUpdateInviteMessage,
+        ...details,
+        author: details.source,
+      });
+    } else if (details.updateMessage.promoteMessage) {
+      await handleGroupUpdatePromoteMessage({
+        change: details.updateMessage.promoteMessage as SignalService.GroupUpdatePromoteMessage,
+        ...details,
+        author: details.source,
+      });
+    }
+
+    // returns true for all cases where this message was expected to be a 1o1 message, even if not processed
+    return true;
+  }
+
+  return false;
 }
 
 async function handleGroupUpdateMessage(
   details: GroupUpdateDetails & WithUncheckedSource & WithUncheckedSenderIdentity
 ) {
-  if (details.updateMessage.inviteMessage) {
-    // the invite message is received from our own swarm, so source is the sender, and senderIdentity is empty
-    const author = details.source;
-    if (!PubKey.is05Pubkey(author)) {
-      window.log.warn('received group inviteMessage with invalid author');
-      return;
-    }
-    await handleGroupInviteMessage({
-      inviteMessage: details.updateMessage.inviteMessage as SignalService.GroupUpdateInviteMessage,
-      ...details,
-      author,
-    });
+  const was1o1Message = await handle1o1GroupUpdateMessage(details);
+  if (was1o1Message) {
     return;
   }
+
   // other messages are received from the groups swarm, so source is the groupPk, and senderIdentity is the author
   const author = details.senderIdentity;
   const groupPk = details.source;
@@ -179,16 +432,57 @@ async function handleGroupUpdateMessage(
     window.log.warn('received group update message with invalid author or groupPk');
     return;
   }
+  const detailsWithContext = { ...details, author, groupPk };
+
   if (details.updateMessage.memberChangeMessage) {
     await handleGroupMemberChangeMessage({
-      memberChangeDetails: details.updateMessage
+      change: details.updateMessage
         .memberChangeMessage as SignalService.GroupUpdateMemberChangeMessage,
-      ...details,
-      author,
-      groupPk,
+      ...detailsWithContext,
     });
     return;
   }
+
+  if (details.updateMessage.infoChangeMessage) {
+    await handleGroupInfoChangeMessage({
+      change: details.updateMessage.infoChangeMessage as SignalService.GroupUpdateInfoChangeMessage,
+      ...detailsWithContext,
+    });
+    return;
+  }
+
+  if (details.updateMessage.memberLeftMessage) {
+    await handleGroupMemberLeftMessage({
+      change: details.updateMessage.memberLeftMessage as SignalService.GroupUpdateMemberLeftMessage,
+      ...detailsWithContext,
+    });
+    return;
+  }
+  if (details.updateMessage.deleteMemberContent) {
+    await handleGroupDeleteMemberContentMessage({
+      change: details.updateMessage
+        .deleteMemberContent as SignalService.GroupUpdateDeleteMemberContentMessage,
+      ...detailsWithContext,
+    });
+    return;
+  }
+  if (details.updateMessage.deleteMessage) {
+    await handleGroupUpdateDeleteMessage({
+      change: details.updateMessage.deleteMessage as SignalService.GroupUpdateDeleteMessage,
+      ...detailsWithContext,
+    });
+    return;
+  }
+  if (details.updateMessage.inviteResponse) {
+    await handleGroupUpdateInviteResponseMessage({
+      change: details.updateMessage
+        .inviteResponse as SignalService.GroupUpdateInviteResponseMessage,
+      ...detailsWithContext,
+    });
+    return;
+  }
+
+  window.log.warn('received group update of unknown type. Discarding...');
 }
 
 export const GroupV2Receiver = { handleGroupUpdateMessage };

@@ -90,13 +90,12 @@ message GroupUpdateInviteMessage {
   required string         name                   = 2;
   required bytes          memberAuthData         = 3;
   // @required
-  required bytes          adminSignature         = 6;
+  required bytes          adminSignature         = 4;
 }
+
 message GroupUpdateDeleteMessage {
-  // @required
-  required string         groupSessionId          = 1; // The `groupIdentityPublicKey` with a `03` prefix
-  // @required
-  required bytes          adminSignature          = 2;
+ repeated string         memberSessionIds   = 1;
+ required bytes          adminSignature     = 2;
 }
 
 
@@ -111,6 +110,7 @@ message GroupUpdateInfoChangeMessage {
   required Type     type              = 1;
   optional string   updatedName       = 2;
   optional uint32   updatedExpiration = 3;
+  required bytes    adminSignature    = 4;
 }
 
 message GroupUpdateMemberChangeMessage {
@@ -122,7 +122,8 @@ message GroupUpdateMemberChangeMessage {
 
   // @required
   required Type   type               = 1;
-  repeated string  memberSessionIds  = 2;
+  repeated string memberSessionIds   = 2;
+  required bytes  adminSignature     = 3;
 }
 
 
@@ -142,9 +143,9 @@ message GroupUpdateInviteResponseMessage {
 
 
 message GroupUpdateDeleteMemberContentMessage {
-  repeated string  memberSessionIds   = 1;
-  // @required
-  required bytes  adminSignature      = 2;
+  repeated string memberSessionIds    = 1;
+  repeated string messageHashes       = 2;
+  optional bytes  adminSignature      = 3;
 }
 
 message GroupUpdateMessage {

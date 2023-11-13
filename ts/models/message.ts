@@ -997,14 +997,12 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
     if (!this.id) {
       throw new Error('A message always needs an id');
     }
-
-    perfStart(`messageCommit-${this.id}`);
+    console.warn('this.attributes', JSON.stringify(this.attributes));
     // because the saving to db calls _cleanData which mutates the field for cleaning, we need to save a copy
     const id = await Data.saveMessage(cloneDeep(this.attributes));
     if (triggerUIUpdate) {
       this.dispatchMessageUpdate();
     }
-    perfEnd(`messageCommit-${this.id}`, 'messageCommit');
 
     return id;
   }

@@ -32,6 +32,11 @@ export enum SnodeNamespaces {
   UserGroups = 5,
 
   /**
+   * This is the namespace that revoked members can still poll messages from
+   */
+  ClosedGroupRevokedRetrievableMessages = -11,
+
+  /**
    * This is the namespace used to sync the closed group messages for each closed group
    */
   ClosedGroupMessages = 11,
@@ -97,6 +102,7 @@ function isUserConfigNamespace(namespace: SnodeNamespaces): namespace is UserCon
     case SnodeNamespaces.ClosedGroupMembers:
     case SnodeNamespaces.ClosedGroupMessages:
     case SnodeNamespaces.LegacyClosedGroup:
+    case SnodeNamespaces.ClosedGroupRevokedRetrievableMessages:
     case SnodeNamespaces.Default:
       // user messages is not hosting config based messages
       return false;
@@ -125,6 +131,7 @@ function isGroupConfigNamespace(
     case SnodeNamespaces.ConvoInfoVolatile:
     case SnodeNamespaces.LegacyClosedGroup:
     case SnodeNamespaces.ClosedGroupMessages:
+    case SnodeNamespaces.ClosedGroupRevokedRetrievableMessages:
       return false;
     case SnodeNamespaces.ClosedGroupInfo:
     case SnodeNamespaces.ClosedGroupKeys:
@@ -151,6 +158,9 @@ function isGroupNamespace(namespace: SnodeNamespaces): namespace is SnodeNamespa
     return true;
   }
   if (namespace === SnodeNamespaces.ClosedGroupMessages) {
+    return true;
+  }
+  if (namespace === SnodeNamespaces.ClosedGroupRevokedRetrievableMessages) {
     return true;
   }
   switch (namespace) {
@@ -185,6 +195,7 @@ function namespacePriority(namespace: SnodeNamespaces): 10 | 1 {
     case SnodeNamespaces.ClosedGroupInfo:
     case SnodeNamespaces.ClosedGroupMembers:
     case SnodeNamespaces.ClosedGroupKeys:
+    case SnodeNamespaces.ClosedGroupRevokedRetrievableMessages:
       return 1;
 
     default:

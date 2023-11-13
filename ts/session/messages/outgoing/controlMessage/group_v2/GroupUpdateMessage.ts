@@ -1,7 +1,13 @@
 import { GroupPubkeyType } from 'libsession_util_nodejs';
 import { SignalService } from '../../../../../protobuf';
+import { LibSodiumWrappers } from '../../../../crypto';
 import { DataMessage } from '../../DataMessage';
 import { MessageParams } from '../../Message';
+
+export type AdminSigDetails = {
+  secretKey: Uint8Array;
+  sodium: LibSodiumWrappers;
+};
 
 export interface GroupUpdateMessageParams extends MessageParams {
   groupPk: GroupPubkeyType;

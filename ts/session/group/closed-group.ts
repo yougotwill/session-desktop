@@ -1,11 +1,13 @@
 import _, { isFinite, isNumber } from 'lodash';
 import { v4 as uuidv4 } from 'uuid';
 
+import { PubkeyType } from 'libsession_util_nodejs';
 import { getMessageQueue } from '..';
 import { Data } from '../../data/data';
 import { ConversationModel } from '../../models/conversation';
 import { ConversationAttributes, ConversationTypeEnum } from '../../models/conversationAttributes';
 import { MessageModel } from '../../models/message';
+import { MessageGroupUpdate } from '../../models/messageType';
 import { SignalService } from '../../protobuf';
 import {
   addKeyPairToCacheAndDBIfNeeded,
@@ -37,15 +39,15 @@ export type GroupInfo = {
   admins?: Array<string>;
 };
 
-export interface GroupDiff extends MemberChanges {
-  newName?: string;
-}
-
 export interface MemberChanges {
   joiningMembers?: Array<string>;
   leavingMembers?: Array<string>;
   kickedMembers?: Array<string>;
   promotedMembers?: Array<string>;
+}
+
+export interface GroupDiff extends MemberChanges {
+  newName?: string;
 }
 
 /**
@@ -141,7 +143,7 @@ async function addUpdateMessage(
   sender: string,
   sentAt: number
 ): Promise<MessageModel> {
-  const groupUpdate: any = {};
+  const groupUpdate: MessageGroupUpdate = {};
 
   if (diff.newName) {
     groupUpdate.name = diff.newName;
@@ -149,14 +151,14 @@ async function addUpdateMessage(
 
   if (diff.joiningMembers) {
     groupUpdate.joined = diff.joiningMembers;
-  }
-
-  if (diff.leavingMembers) {
+  } else if (diff.leavingMembers) {
     groupUpdate.left = diff.leavingMembers;
-  }
-
-  if (diff.kickedMembers) {
+  } else if (diff.kickedMembers) {
     groupUpdate.kicked = diff.kickedMembers;
+  } else if (diff.promotedMembers) {
+    groupUpdate.promoted = diff.promotedMembers as Array<PubkeyType>;
+  } else {
+    throw new Error('addUpdateMessage with unknown type of change');
   }
 
   if (UserUtils.isUsFromCache(sender)) {

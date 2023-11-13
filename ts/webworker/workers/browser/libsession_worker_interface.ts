@@ -438,6 +438,10 @@ export const MetaGroupWrapperActions: MetaGroupWrapperActionsCalls = {
       pubkeyHex,
       failed,
     ]) as Promise<ReturnType<MetaGroupWrapperActionsCalls['memberSetPromoted']>>,
+  memberSetAdmin: async (groupPk: GroupPubkeyType, pubkeyHex: PubkeyType) =>
+    callLibSessionWorker([`MetaGroupConfig-${groupPk}`, 'memberSetAdmin', pubkeyHex]) as Promise<
+      ReturnType<MetaGroupWrapperActionsCalls['memberSetAdmin']>
+    >,
   memberSetInvited: async (groupPk: GroupPubkeyType, pubkeyHex: PubkeyType, failed: boolean) =>
     callLibSessionWorker([
       `MetaGroupConfig-${groupPk}`,

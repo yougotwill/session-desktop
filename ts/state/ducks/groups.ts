@@ -21,6 +21,7 @@ import { SnodeNamespaces } from '../../session/apis/snode_api/namespaces';
 import { RevokeChanges, SnodeAPIRevoke } from '../../session/apis/snode_api/revokeSubaccount';
 import { SnodeGroupSignature } from '../../session/apis/snode_api/signature/groupSignature';
 import { ConvoHub } from '../../session/conversations';
+import { getSodiumRenderer } from '../../session/crypto';
 import { ClosedGroup } from '../../session/group/closed-group';
 import { GroupUpdateInfoChangeMessage } from '../../session/messages/outgoing/controlMessage/group_v2/to_group/GroupUpdateInfoChangeMessage';
 import { GroupUpdateMemberChangeMessage } from '../../session/messages/outgoing/controlMessage/group_v2/to_group/GroupUpdateMemberChangeMessage';
@@ -32,6 +33,7 @@ import { PreConditionFailed } from '../../session/utils/errors';
 import { RunJobResult } from '../../session/utils/job_runners/PersistedJob';
 import { GroupInvite } from '../../session/utils/job_runners/jobs/GroupInviteJob';
 import { GroupSync } from '../../session/utils/job_runners/jobs/GroupSyncJob';
+import { UserSync } from '../../session/utils/job_runners/jobs/UserSyncJob';
 import { stringify, toFixedUint8ArrayOfLength } from '../../types/sqlSharedTypes';
 import {
   getGroupPubkeyFromWrapperType,
@@ -129,7 +131,7 @@ const initNewGroupInWrapper = createAsyncThunk(
         const member = uniqMembers[index];
         const created = await MetaGroupWrapperActions.memberGetOrConstruct(groupPk, member);
         if (created.pubkeyHex === us) {
-          await MetaGroupWrapperActions.memberSetPromoted(groupPk, created.pubkeyHex, false);
+          await MetaGroupWrapperActions.memberSetAdmin(groupPk, created.pubkeyHex);
         } else {
           await MetaGroupWrapperActions.memberSetInvited(groupPk, created.pubkeyHex, false);
         }
@@ -474,11 +476,14 @@ async function handleRemoveMembers({
         timestamp,
         adminSignature: from_base64(adminSignature.signature, base64_variants.ORIGINAL),
       });
+      console.warn(
+        'TODO: poll from namespace -11, handle messages and sig for it, batch request handle 401/403, but 200 ok for this -11 namespace'
+      );
 
       const sentStatus = await getMessageQueue().sendToPubKeyNonDurably({
         pubkey: PubKey.cast(m),
         message: deleteMessage,
-        namespace: SnodeNamespaces.Default,
+        namespace: SnodeNamespaces.ClosedGroupRevokedRetrievableMessages,
       });
       if (!sentStatus) {
         window.log.warn('Failed to send a GroupUpdateDeleteMessage to a member removed: ', m);
@@ -581,6 +586,7 @@ async function handleMemberChangeFromUIOrNot({
     const member = withHistory[index];
     await GroupInvite.addGroupInviteJob({ groupPk, member });
   }
+  const sodium = await getSodiumRenderer();
 
   const allAdded = [...withHistory, ...withoutHistory]; // those are already enforced to be unique (and without intersection) in `validateMemberChange()`
   const timestamp = Date.now();
@@ -598,6 +604,8 @@ async function handleMemberChangeFromUIOrNot({
         typeOfChange: SignalService.GroupUpdateMemberChangeMessage.Type.ADDED,
         identifier: msg.id,
         timestamp,
+        secretKey: group.secretKey,
+        sodium,
       }),
     });
   }
@@ -614,7 +622,9 @@ async function handleMemberChangeFromUIOrNot({
         groupPk,
         typeOfChange: SignalService.GroupUpdateMemberChangeMessage.Type.REMOVED,
         identifier: msg.id,
-        timestamp: Date.now(),
+        timestamp: GetNetworkTime.getNowWithNetworkOffset(),
+        secretKey: group.secretKey,
+        sodium,
       }),
     });
   }
@@ -637,6 +647,10 @@ async function handleNameChangeFromUIOrNot({
   if (!group || !group.secretKey || isEmpty(group.secretKey)) {
     throw new Error('tried to make change to group but we do not have the admin secret key');
   }
+  const infos = await MetaGroupWrapperActions.infoGet(groupPk);
+  if (!infos) {
+    throw new PreConditionFailed('nameChange infoGet is empty');
+  }
 
   // this throws if the name is the same, or empty
   const { newName, convo, us } = validateNameChange({
@@ -646,14 +660,18 @@ async function handleNameChangeFromUIOrNot({
   });
 
   group.name = newName;
+  infos.name = newName;
   await UserGroupsWrapperActions.setGroup(group);
-  console.warn('after set and refetcj', await UserGroupsWrapperActions.getGroup(group.pubkeyHex));
+  await MetaGroupWrapperActions.infoSet(groupPk, infos);
+
   const batchResult = await GroupSync.pushChangesToGroupSwarmIfNeeded(groupPk, []);
   if (batchResult !== RunJobResult.Success) {
     throw new Error(
       'handleNameChangeFromUIOrNot: pushChangesToGroupSwarmIfNeeded did not return success'
     );
   }
+
+  await UserSync.queueNewJobIfNeeded();
 
   const timestamp = Date.now();
 
@@ -666,6 +684,8 @@ async function handleNameChangeFromUIOrNot({
         updatedName: newName,
         identifier: msg.id,
         timestamp: Date.now(),
+        secretKey: group.secretKey,
+        sodium: await getSodiumRenderer(),
       }),
     });
   }
@@ -703,6 +723,41 @@ const currentDeviceGroupMembersChange = createAsyncThunk(
     }
 
     await handleMemberChangeFromUIOrNot({ groupPk, ...args, fromCurrentDevice: true });
+
+    return {
+      groupPk,
+      infos: await MetaGroupWrapperActions.infoGet(groupPk),
+      members: await MetaGroupWrapperActions.memberGetAll(groupPk),
+    };
+  }
+);
+
+const markUsAsAdmin = createAsyncThunk(
+  'group/markUsAsAdmin',
+  async (
+    {
+      groupPk,
+    }: {
+      groupPk: GroupPubkeyType;
+    },
+    payloadCreator
+  ): Promise<GroupDetailsUpdate> => {
+    const state = payloadCreator.getState() as StateType;
+    if (!state.groups.infos[groupPk] || !state.groups.members[groupPk]) {
+      throw new PreConditionFailed('markUsAsAdmin group not present in redux slice');
+    }
+    const us = UserUtils.getOurPubKeyStrFromCache();
+
+    if (state.groups.members[groupPk].find(m => m.pubkeyHex === us)?.admin) {
+      // we are already an admin, nothing to do
+      return {
+        groupPk,
+        infos: await MetaGroupWrapperActions.infoGet(groupPk),
+        members: await MetaGroupWrapperActions.memberGetAll(groupPk),
+      };
+    }
+    await MetaGroupWrapperActions.memberSetAdmin(groupPk, us);
+    await GroupSync.queueNewJobIfNeeded(groupPk);
 
     return {
       groupPk,
@@ -863,6 +918,17 @@ const groupSlice = createSlice({
     builder.addCase(currentDeviceGroupNameChange.pending, state => {
       state.nameChangesFromUIPending = true;
     });
+    builder.addCase(markUsAsAdmin.fulfilled, (state, action) => {
+      const { infos, members, groupPk } = action.payload;
+      state.infos[groupPk] = infos;
+      state.members[groupPk] = members;
+
+      window.log.debug(`groupInfo after markUsAsAdmin: ${stringify(infos)}`);
+      window.log.debug(`groupMembers after markUsAsAdmin: ${stringify(members)}`);
+    });
+    builder.addCase(markUsAsAdmin.rejected, (_state, action) => {
+      window.log.error('a markUsAsAdmin was rejected', action.error);
+    });
   },
 });
 
@@ -873,6 +939,7 @@ export const groupInfoActions = {
   refreshGroupDetailsFromWrapper,
   handleUserGroupUpdate,
   currentDeviceGroupMembersChange,
+  markUsAsAdmin,
   currentDeviceGroupNameChange,
   ...groupSlice.actions,
 };

@@ -61,7 +61,9 @@ function overwriteOutgoingTimestampWithNetworkTimestamp(message: { plainTextBuff
     if (
       dataMessage.syncTarget ||
       dataMessage.groupUpdateMessage?.inviteMessage ||
+      dataMessage.groupUpdateMessage?.infoChangeMessage ||
       dataMessage.groupUpdateMessage?.deleteMemberContent ||
+      dataMessage.groupUpdateMessage?.memberChangeMessage ||
       dataMessage.groupUpdateMessage?.deleteMessage
     ) {
       return {

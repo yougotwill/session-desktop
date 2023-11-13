@@ -3,7 +3,13 @@ import { isEmpty } from 'lodash';
 import { SignalService } from '../../../../../../protobuf';
 import { assertUnreachable } from '../../../../../../types/sqlSharedTypes';
 import { SnodeNamespaces } from '../../../../../apis/snode_api/namespaces';
-import { GroupUpdateMessage, GroupUpdateMessageParams } from '../GroupUpdateMessage';
+import { LibSodiumWrappers } from '../../../../../crypto';
+import { stringToUint8Array } from '../../../../../utils/String';
+import {
+  AdminSigDetails,
+  GroupUpdateMessage,
+  GroupUpdateMessageParams,
+} from '../GroupUpdateMessage';
 
 type MembersAddedMessageParams = GroupUpdateMessageParams & {
   typeOfChange: SignalService.GroupUpdateMemberChangeMessage.Type.ADDED;
@@ -27,15 +33,24 @@ export class GroupUpdateMemberChangeMessage extends GroupUpdateMessage {
   public readonly typeOfChange: SignalService.GroupUpdateMemberChangeMessage.Type;
   public readonly memberSessionIds: Array<PubkeyType> = []; // added, removed, promoted based on the type.
   public readonly namespace = SnodeNamespaces.ClosedGroupMessages;
+  private readonly secretKey: Uint8Array; // not sent, only used for signing content as part of the message
+  private readonly sodium: LibSodiumWrappers;
 
   constructor(
-    params: MembersAddedMessageParams | MembersRemovedMessageParams | MembersPromotedMessageParams
+    params: (
+      | MembersAddedMessageParams
+      | MembersRemovedMessageParams
+      | MembersPromotedMessageParams
+    ) &
+      AdminSigDetails
   ) {
     super(params);
     const { Type } = SignalService.GroupUpdateMemberChangeMessage;
     const { typeOfChange } = params;
 
     this.typeOfChange = typeOfChange;
+    this.secretKey = params.secretKey;
+    this.sodium = params.sodium;
 
     switch (typeOfChange) {
       case Type.ADDED: {
@@ -68,6 +83,10 @@ export class GroupUpdateMemberChangeMessage extends GroupUpdateMessage {
     const memberChangeMessage = new SignalService.GroupUpdateMemberChangeMessage({
       type: this.typeOfChange,
       memberSessionIds: this.memberSessionIds,
+      adminSignature: this.sodium.crypto_sign_detached(
+        stringToUint8Array(`MEMBER_CHANGE${this.typeOfChange}${this.timestamp}`),
+        this.secretKey
+      ),
     });
 
     return new SignalService.DataMessage({ groupUpdateMessage: { memberChangeMessage } });

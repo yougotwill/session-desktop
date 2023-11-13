@@ -38,8 +38,6 @@ import { ECKeyPair } from './keypairs';
 
 export async function handleSwarmContentMessage(envelope: EnvelopePlus, messageHash: string) {
   try {
-    console.warn('444 envelope.source', envelope.source);
-    console.warn('444 envelope.senderIdentity', envelope.senderIdentity);
     const decryptedForAll = await decrypt(envelope);
 
     if (!decryptedForAll || !decryptedForAll.decryptedContent || isEmpty(decryptedForAll)) {

@@ -7,7 +7,7 @@ interface Params extends GroupUpdateMessageParams {
 }
 
 /**
- * GroupUpdateDeleteMessage is sent as a 1o1 message to the recipient, not through the group's swarm.
+ * GroupUpdateDeleteMessage is sent to the group's swarm on the `revokedRetrievableGroupMessages`
  */
 export class GroupUpdateDeleteMessage extends GroupUpdateMessage {
   public readonly adminSignature: Params['adminSignature'];
@@ -27,9 +27,9 @@ export class GroupUpdateDeleteMessage extends GroupUpdateMessage {
 
   public dataProto(): SignalService.DataMessage {
     const deleteMessage = new SignalService.GroupUpdateDeleteMessage({
-      groupSessionId: this.destination,
       adminSignature: this.adminSignature,
     });
+    throw new Error('Not implemented');
 
     return new SignalService.DataMessage({ groupUpdateMessage: { deleteMessage } });
   }

@@ -28,6 +28,7 @@ function emptyMember(pubkeyHex: PubkeyType): GroupMemberGet {
     promoted: false,
     promotionFailed: false,
     promotionPending: false,
+    admin: false,
     pubkeyHex,
   };
 }
