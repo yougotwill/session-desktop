@@ -491,12 +491,6 @@ export async function innerHandleSwarmContentMessage({
       return;
     }
 
-    if (content.sharedConfigMessage) {
-      window.log.warn('content.sharedConfigMessage are handled outside of the receiving pipeline');
-      // this should never happen, but remove it from cache just in case something is messed up
-      await IncomingMessageCache.removeFromCache(envelope);
-      return;
-    }
     if (content.dataExtractionNotification) {
       perfStart(`handleDataExtractionNotification-${envelope.id}`);
 

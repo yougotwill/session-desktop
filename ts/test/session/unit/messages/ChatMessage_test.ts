@@ -1,4 +1,5 @@
 import { expect } from 'chai';
+// eslint-disable-next-line import/order
 import { TextEncoder } from 'util';
 
 import { toNumber } from 'lodash';
