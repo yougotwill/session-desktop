@@ -175,8 +175,6 @@ export class VisibleMessage extends DataMessage {
       });
     }
 
-    dataMessage.timestamp = this.timestamp;
-
     return dataMessage;
   }
 

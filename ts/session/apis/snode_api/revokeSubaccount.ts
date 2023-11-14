@@ -29,7 +29,7 @@ async function getRevokeSubaccountRequest({
     throw new Error('revokeSubaccountForGroup: not a 03 group');
   }
 
-  const timestamp = GetNetworkTime.getNowWithNetworkOffset();
+  const timestamp = GetNetworkTime.now();
 
   const revokeParams: Array<RevokeSubaccountSubRequest | UnrevokeSubaccountSubRequest> =
     await Promise.all(

@@ -27,7 +27,7 @@ export type SnodeSigParamsUs = SnodeSigParamsShared & {
 };
 
 function getVerificationDataForStoreRetrieve(params: SnodeSigParamsShared) {
-  const signatureTimestamp = GetNetworkTime.getNowWithNetworkOffset();
+  const signatureTimestamp = GetNetworkTime.now();
   const verificationData = StringUtils.encode(
     `${params.method}${params.namespace === 0 ? '' : params.namespace}${signatureTimestamp}`,
     'utf8'

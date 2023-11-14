@@ -14,7 +14,7 @@ const isHexString = (maybeHex: string) =>
  *
  * Throws an error if this string is not a hex string.
  * @param hexString the string to convert from
- * @returns the Uint8Arraty
+ * @returns the Uint8Arrat
  */
 const fromHexString = (hexString: string): Uint8Array => {
   if (!isHexString(hexString)) {
@@ -27,11 +27,24 @@ const fromHexString = (hexString: string): Uint8Array => {
   return Uint8Array.from(matches.map(byte => parseInt(byte, 16)));
 };
 
+/**
+ * Returns the Uint8Array corresponding to the given string, without a 03/05 prefix when there is a prefix
+ * Note: this is different than the libsodium.from_hex().
+ */
+const fromHexStringNoPrefix = (hexString: string): Uint8Array => {
+  const asHex = fromHexString(hexString);
+  if (asHex.length === 33) {
+    return asHex.slice(1);
+  }
+  return asHex;
+};
+
 const toHexString = (bytes: Uint8Array) =>
   bytes.reduce((str, byte) => str + byte.toString(16).padStart(2, '0'), '');
 
 export const HexString = {
   toHexString,
   fromHexString,
+  fromHexStringNoPrefix,
   isHexString,
 };

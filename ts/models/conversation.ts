@@ -553,7 +553,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       const chatMessageParams: VisibleMessageParams = {
         body: '',
         // we need to use a new timestamp here, otherwise android&iOS will consider this message as a duplicate and drop the synced reaction
-        timestamp: GetNetworkTime.getNowWithNetworkOffset(),
+        timestamp: GetNetworkTime.now(),
         reaction,
         lokiProfile: UserUtils.getOurProfile(),
       };
@@ -744,7 +744,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     const { attachments, body, groupInvitation, preview, quote } = msg;
     this.clearTypingTimers();
     const expireTimer = this.get('expireTimer');
-    const networkTimestamp = GetNetworkTime.getNowWithNetworkOffset();
+    const networkTimestamp = GetNetworkTime.now();
 
     window?.log?.info(
       'Sending message to conversation',
@@ -2219,9 +2219,9 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     }
 
     const typingParams = {
-      timestamp: GetNetworkTime.getNowWithNetworkOffset(),
+      timestamp: GetNetworkTime.now(),
       isTyping,
-      typingTimestamp: GetNetworkTime.getNowWithNetworkOffset(),
+      typingTimestamp: GetNetworkTime.now(),
     };
     const typingMessage = new TypingMessage(typingParams);
 

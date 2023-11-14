@@ -49,9 +49,7 @@ export async function handleCallMessage(
   }
 
   if (type === SignalService.CallMessage.Type.OFFER) {
-    if (
-      Math.max(sentTimestamp - GetNetworkTime.getNowWithNetworkOffset()) > TTL_DEFAULT.CALL_MESSAGE
-    ) {
+    if (Math.max(sentTimestamp - GetNetworkTime.now()) > TTL_DEFAULT.CALL_MESSAGE) {
       window?.log?.info('Dropping incoming OFFER callMessage sent a while ago: ', sentTimestamp);
       await IncomingMessageCache.removeFromCache(envelope);
 

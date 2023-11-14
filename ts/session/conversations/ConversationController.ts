@@ -473,7 +473,7 @@ async function leaveClosedGroup(groupId: string, fromSyncMessage: boolean) {
   await convo.updateGroupAdmins(admins, false);
   await convo.commit();
 
-  const networkTimestamp = GetNetworkTime.getNowWithNetworkOffset();
+  const networkTimestamp = GetNetworkTime.now();
 
   getSwarmPollingInstance().removePubkey(groupId, 'leaveClosedGroup');
 

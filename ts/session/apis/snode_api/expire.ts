@@ -196,7 +196,7 @@ export async function expireMessageOnSnode(props: ExpireMessageOnSnodeProps) {
 
   const swarm = await getSwarmFor(ourPubKey);
 
-  const expiry = GetNetworkTime.getNowWithNetworkOffset() + expireTimer;
+  const expiry = GetNetworkTime.now() + expireTimer;
   const signResult = await SnodeSignature.generateUpdateExpiryOurSignature({
     shortenOrExtend,
     timestamp: expiry,

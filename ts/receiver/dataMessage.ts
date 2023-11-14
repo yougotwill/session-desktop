@@ -1,5 +1,5 @@
 /* eslint-disable no-param-reassign */
-import { isEmpty, isFinite, noop, omit, toNumber } from 'lodash';
+import { isEmpty, noop, omit, toNumber } from 'lodash';
 
 import { SignalService } from '../protobuf';
 import { IncomingMessageCache } from './cache';
@@ -100,10 +100,7 @@ export function messageHasVisibleContent(message: SignalService.DataMessage) {
   );
 }
 
-export function cleanIncomingDataMessage(
-  rawDataMessage: SignalService.DataMessage,
-  envelope?: EnvelopePlus
-) {
+export function cleanIncomingDataMessage(rawDataMessage: SignalService.DataMessage) {
   const FLAGS = SignalService.DataMessage.Flags;
 
   // Now that its decrypted, validate the message and clean it up for consumer
@@ -134,11 +131,6 @@ export function cleanIncomingDataMessage(
   }
   cleanAttachments(rawDataMessage);
 
-  // if the decrypted dataMessage timestamp is not set, copy the one from the envelope
-  if (!isFinite(rawDataMessage?.timestamp) && envelope) {
-    rawDataMessage.timestamp = envelope.timestamp;
-  }
-
   return rawDataMessage;
 }
 
@@ -162,7 +154,7 @@ export async function handleSwarmDataMessage(
 ): Promise<void> {
   window.log.info('handleSwarmDataMessage');
 
-  const cleanDataMessage = cleanIncomingDataMessage(rawDataMessage, envelope);
+  const cleanDataMessage = cleanIncomingDataMessage(rawDataMessage);
 
   if (cleanDataMessage.groupUpdateMessage) {
     await GroupV2Receiver.handleGroupUpdateMessage({

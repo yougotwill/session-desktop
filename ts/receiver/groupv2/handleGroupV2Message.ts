@@ -4,10 +4,13 @@ import { ConversationTypeEnum } from '../../models/conversationAttributes';
 import { HexString } from '../../node/hexStrings';
 import { SignalService } from '../../protobuf';
 import { getSwarmPollingInstance } from '../../session/apis/snode_api';
+import { GetNetworkTime } from '../../session/apis/snode_api/getNetworkTime';
 import { ConvoHub } from '../../session/conversations';
 import { getSodiumRenderer } from '../../session/crypto';
 import { ClosedGroup } from '../../session/group/closed-group';
+import { GroupUpdateInviteResponseMessage } from '../../session/messages/outgoing/controlMessage/group_v2/to_group/GroupUpdateInviteResponseMessage';
 import { ed25519Str } from '../../session/onions/onionPath';
+import { getMessageQueue } from '../../session/sending';
 import { PubKey } from '../../session/types';
 import { UserUtils } from '../../session/utils';
 import { stringToUint8Array } from '../../session/utils/String';
@@ -57,7 +60,7 @@ async function handleGroupInviteMessage({
     return;
   }
   const sigValid = await verifySig({
-    pubKey: HexString.fromHexString(inviteMessage.groupSessionId),
+    pubKey: HexString.fromHexStringNoPrefix(inviteMessage.groupSessionId),
     signature: inviteMessage.adminSignature,
     data: stringToUint8Array(`INVITE${UserUtils.getOurPubKeyStrFromCache()}${envelopeTimestamp}`),
   });
@@ -108,12 +111,22 @@ async function handleGroupInviteMessage({
     groupEd25519Secretkey: null,
     userEd25519Secretkey: toFixedUint8ArrayOfLength(userEd25519Secretkey, 64).buffer,
     groupEd25519Pubkey: toFixedUint8ArrayOfLength(
-      HexString.fromHexString(inviteMessage.groupSessionId.slice(2)),
+      HexString.fromHexStringNoPrefix(inviteMessage.groupSessionId),
       32
     ).buffer,
   });
   await LibSessionUtil.saveDumpsToDb(UserUtils.getOurPubKeyStrFromCache());
   await UserSync.queueNewJobIfNeeded();
+
+  // TODO currently sending auto-accept of invite. needs to be removed once we get the Group message request logic
+  console.warn('currently sending auto accept invite response');
+  await getMessageQueue().sendToGroupV2({
+    message: new GroupUpdateInviteResponseMessage({
+      groupPk: inviteMessage.groupSessionId,
+      isApproved: true,
+      timestamp: GetNetworkTime.now(),
+    }),
+  });
 
   // TODO use the pending so we actually don't start polling here unless it is not in the pending state.
   // once everything is ready, start polling using that authData to get the keys, members, details of that group, and its messages.
@@ -140,7 +153,7 @@ async function handleGroupInfoChangeMessage({
   author,
 }: GroupUpdateGeneric<SignalService.GroupUpdateInfoChangeMessage>) {
   const sigValid = await verifySig({
-    pubKey: HexString.fromHexString(groupPk),
+    pubKey: HexString.fromHexStringNoPrefix(groupPk),
     signature: change.adminSignature,
     data: stringToUint8Array(`INFO_CHANGE${change.type}${envelopeTimestamp}`),
   });
@@ -200,7 +213,7 @@ async function handleGroupMemberChangeMessage({
   }
 
   const sigValid = await verifySig({
-    pubKey: HexString.fromHexString(groupPk),
+    pubKey: HexString.fromHexStringNoPrefix(groupPk),
     signature: change.adminSignature,
     data: stringToUint8Array(`MEMBER_CHANGE${change.type}${envelopeTimestamp}`),
   });
@@ -281,7 +294,7 @@ async function handleGroupDeleteMemberContentMessage({
   }
 
   const sigValid = await verifySig({
-    pubKey: HexString.fromHexString(groupPk),
+    pubKey: HexString.fromHexStringNoPrefix(groupPk),
     signature: change.adminSignature,
     data: stringToUint8Array(
       `DELETE_CONTENT${envelopeTimestamp}${change.memberSessionIds.join()}${change.messageHashes.join()}`
@@ -312,7 +325,7 @@ async function handleGroupUpdateDeleteMessage({
     return;
   }
   const sigValid = await verifySig({
-    pubKey: HexString.fromHexString(groupPk),
+    pubKey: HexString.fromHexStringNoPrefix(groupPk),
     signature: change.adminSignature,
     data: stringToUint8Array(`DELETE${envelopeTimestamp}${change.memberSessionIds.join()}`),
   });
@@ -331,20 +344,22 @@ async function handleGroupUpdateDeleteMessage({
 
 async function handleGroupUpdateInviteResponseMessage({
   groupPk,
-  envelopeTimestamp,
+  change,
+  author,
 }: GroupUpdateGeneric<SignalService.GroupUpdateInviteResponseMessage>) {
-  // no sig verify for this type of messages
+  // no sig verify for this type of message
   const convo = ConvoHub.use().get(groupPk);
   if (!convo) {
     return;
   }
-  convo.set({
-    active_at: envelopeTimestamp,
-  });
-  console.warn('Not implemented');
+  if (!change.isApproved) {
+    window.log.info('got inviteResponse but isApproved is false. Dropping');
+    return;
+  }
+
+  window.inboxStore.dispatch(groupInfoActions.inviteResponseReceived({ groupPk, member: author }));
 
   // TODO We should process this message type even if the sender is blocked
-  throw new Error('Not implemented');
 }
 
 async function handleGroupUpdatePromoteMessage({

@@ -791,7 +791,7 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
       if (conversation.isPublic()) {
         const openGroupParams: VisibleMessageParams = {
           identifier: this.id,
-          timestamp: GetNetworkTime.getNowWithNetworkOffset(),
+          timestamp: GetNetworkTime.now(),
           lokiProfile: UserUtils.getOurProfile(),
           body,
           attachments,

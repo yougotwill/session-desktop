@@ -90,7 +90,7 @@ async function pushChangesToUserSwarmIfNeeded() {
     return {
       namespace: item.namespace,
       pubkey: us,
-      networkTimestamp: GetNetworkTime.getNowWithNetworkOffset(),
+      networkTimestamp: GetNetworkTime.now(),
       ttl: TTL_DEFAULT.TTL_CONFIG,
       data: item.ciphertext,
     };

@@ -3,7 +3,7 @@
 import { AbortController } from 'abort-controller';
 import ByteBuffer from 'bytebuffer';
 import { GroupPubkeyType, PubkeyType } from 'libsession_util_nodejs';
-import _, { isEmpty, sample, toNumber } from 'lodash';
+import { isEmpty, sample, toNumber } from 'lodash';
 import pRetry from 'p-retry';
 import { Data } from '../../data/data';
 import { SignalService } from '../../protobuf';
@@ -48,7 +48,7 @@ import { EmptySwarmError } from '../utils/errors';
 // ================ SNODE STORE ================
 
 function overwriteOutgoingTimestampWithNetworkTimestamp(message: { plainTextBuffer: Uint8Array }) {
-  const networkTimestamp = GetNetworkTime.getNowWithNetworkOffset();
+  const networkTimestamp = GetNetworkTime.now();
 
   const { plainTextBuffer } = message;
   const contentDecoded = SignalService.Content.decode(plainTextBuffer);
@@ -68,7 +68,7 @@ function overwriteOutgoingTimestampWithNetworkTimestamp(message: { plainTextBuff
     ) {
       return {
         overRiddenTimestampBuffer: plainTextBuffer,
-        networkTimestamp: _.toNumber(dataMessage.timestamp),
+        networkTimestamp: toNumber(dataMessage.timestamp),
       };
     }
     dataMessage.timestamp = networkTimestamp;
@@ -533,7 +533,7 @@ async function sendToOpenGroupV2(
   // we agreed to pad message for opengroupv2
   const paddedBody = addMessagePadding(rawMessage.plainTextBuffer());
   const v2Message = new OpenGroupMessageV2({
-    sentTimestamp: GetNetworkTime.getNowWithNetworkOffset(),
+    sentTimestamp: GetNetworkTime.now(),
     base64EncodedData: fromUInt8ArrayToBase64(paddedBody),
     filesToLink,
   });
@@ -558,7 +558,7 @@ async function sendToOpenGroupV2BlindedRequest(
   recipientBlindedId: string
 ): Promise<{ serverId: number; serverTimestamp: number }> {
   const v2Message = new OpenGroupMessageV2({
-    sentTimestamp: GetNetworkTime.getNowWithNetworkOffset(),
+    sentTimestamp: GetNetworkTime.now(),
     base64EncodedData: fromUInt8ArrayToBase64(encryptedContent),
   });
 

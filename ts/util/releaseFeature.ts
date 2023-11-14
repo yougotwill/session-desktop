@@ -79,10 +79,7 @@ async function checkIsFeatureReleased(featureName: FeatureNameTracked): Promise<
   const featureAlreadyReleased = await getIsFeatureReleased(featureName);
 
   // Is it time to release the feature based on the network timestamp?
-  if (
-    !featureAlreadyReleased &&
-    GetNetworkTime.getNowWithNetworkOffset() >= getFeatureReleaseTimestamp(featureName)
-  ) {
+  if (!featureAlreadyReleased && GetNetworkTime.now() >= getFeatureReleaseTimestamp(featureName)) {
     window.log.info(`[releaseFeature]: It is time to release ${featureName}. Releasing it now`);
     await Storage.put(featureStorageItemId(featureName), true);
     setIsFeatureReleasedCached(featureName, true);

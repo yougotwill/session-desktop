@@ -414,7 +414,7 @@ async function generateAndSendNewEncryptionKeyPair(
 
   const keypairsMessage = new ClosedGroupEncryptionPairMessage({
     groupId: toHex(groupId),
-    timestamp: GetNetworkTime.getNowWithNetworkOffset(),
+    timestamp: GetNetworkTime.now(),
     encryptedKeyPairs: wrappers,
   });
 

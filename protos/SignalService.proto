@@ -162,6 +162,10 @@ message GroupUpdateMessage {
 
 message DataMessage {
 
+  // 7 = timestamp unused and should not be used
+  reserved 7;
+  reserved "timestamp";
+
   enum Flags {
     EXPIRATION_TIMER_UPDATE   = 2;
   }
@@ -253,7 +257,6 @@ message DataMessage {
   optional uint32                    flags                           = 4;
   optional uint32                    expireTimer                     = 5;
   optional bytes                     profileKey                      = 6;
-  optional uint64                    timestamp                       = 7;
   optional Quote                     quote                           = 8;
   repeated Preview                   preview                         = 10;
   optional Reaction                  reaction                        = 11;

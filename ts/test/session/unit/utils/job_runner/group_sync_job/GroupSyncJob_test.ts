@@ -285,7 +285,7 @@ describe('GroupSyncJob pushChangesToGroupSwarmIfNeeded', () => {
     const member = validMembers(sodium);
     const networkTimestamp = 4444;
     const ttl = TTL_DEFAULT.TTL_CONFIG;
-    Sinon.stub(GetNetworkTime, 'getNowWithNetworkOffset').returns(networkTimestamp);
+    Sinon.stub(GetNetworkTime, 'now').returns(networkTimestamp);
     pendingChangesForGroupStub.resolves({
       messages: [info, member],
       allOldHashes: new Set('123'),

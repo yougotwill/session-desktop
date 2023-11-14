@@ -6,8 +6,8 @@
 
 import { isNumber } from 'lodash';
 import { Snode } from '../../../data/data';
-import { doSnodeBatchRequest } from './batchRequest';
 import { NetworkTimeSubRequest } from './SnodeRequestTypes';
+import { doSnodeBatchRequest } from './batchRequest';
 
 function getNetworkTimeSubRequests(): Array<NetworkTimeSubRequest> {
   const request: NetworkTimeSubRequest = { method: 'info', params: {} };
@@ -43,11 +43,11 @@ let latestTimestampOffset = Number.MAX_SAFE_INTEGER;
 function handleTimestampOffsetFromNetwork(_request: string, snodeTimestamp: number) {
   if (snodeTimestamp && isNumber(snodeTimestamp) && snodeTimestamp > 1609419600 * 1000) {
     // first january 2021. Arbitrary, just want to make sure the return timestamp is somehow valid and not some crazy low value
-    const now = Date.now();
+    const clockTime = Date.now();
     if (latestTimestampOffset === Number.MAX_SAFE_INTEGER) {
-      window?.log?.info(`first timestamp offset received:  ${now - snodeTimestamp}ms`);
+      window?.log?.info(`first timestamp offset received:  ${clockTime - snodeTimestamp}ms`);
     }
-    latestTimestampOffset = now - snodeTimestamp;
+    latestTimestampOffset = clockTime - snodeTimestamp;
   }
 }
 
@@ -65,7 +65,7 @@ function getLatestTimestampOffset() {
   return latestTimestampOffset;
 }
 
-function getNowWithNetworkOffset() {
+function now() {
   // make sure to call exports here, as we stub the exported one for testing.
   return Date.now() - GetNetworkTime.getLatestTimestampOffset();
 }
@@ -74,5 +74,5 @@ export const GetNetworkTime = {
   getNetworkTime,
   handleTimestampOffsetFromNetwork,
   getLatestTimestampOffset,
-  getNowWithNetworkOffset,
+  now,
 };

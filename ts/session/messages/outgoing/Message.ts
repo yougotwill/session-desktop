@@ -14,8 +14,9 @@ export abstract class Message {
     if (identifier && identifier.length === 0) {
       throw new Error('Cannot set empty identifier');
     }
-    if (!timestamp) {
-      throw new Error('Cannot set undefined timestamp');
+
+    if (!timestamp || timestamp <= 0) {
+      throw new Error('Cannot set undefined timestamp or <=0');
     }
     this.identifier = identifier || uuid();
   }

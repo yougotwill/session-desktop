@@ -140,7 +140,7 @@ async function buildRetrieveRequest(
       const retrieveParam = {
         pubkey,
         last_hash: lastHashes.at(index) || '',
-        timestamp: GetNetworkTime.getNowWithNetworkOffset(),
+        timestamp: GetNetworkTime.now(),
         max_size: foundMaxSize,
       };
 
@@ -163,7 +163,7 @@ async function buildRetrieveRequest(
   );
 
   if (configHashesToBump?.length) {
-    const expiry = GetNetworkTime.getNowWithNetworkOffset() + DURATION.DAYS * 30;
+    const expiry = GetNetworkTime.now() + DURATION.DAYS * 30;
     if (isUs) {
       const signResult = await SnodeSignature.generateUpdateExpiryOurSignature({
         shortenOrExtend: '',

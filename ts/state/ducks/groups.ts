@@ -74,6 +74,15 @@ type GroupDetailsUpdate = {
   members: Array<GroupMemberGet>;
 };
 
+async function checkWeAreAdminOrThrow(groupPk: GroupPubkeyType, context: string) {
+  const us = UserUtils.getOurPubKeyStrFromCache();
+  const inGroup = await MetaGroupWrapperActions.memberGet(groupPk, us);
+  const haveAdminkey = await UserGroupsWrapperActions.getGroup(groupPk);
+  if (!haveAdminkey || inGroup?.promoted) {
+    throw new Error(`checkWeAreAdminOrThrow failed with ctx: ${context}`);
+  }
+}
+
 /**
  * Create a brand new group with a 03 prefix.
  * To be called only when our current logged in user, through the UI, creates a brand new closed group given a name and a list of members.
@@ -464,7 +473,7 @@ async function handleRemoveMembers({
   }
   await MetaGroupWrapperActions.memberEraseAndRekey(groupPk, removed);
 
-  const timestamp = GetNetworkTime.getNowWithNetworkOffset();
+  const timestamp = GetNetworkTime.now();
   await Promise.all(
     removed.map(async m => {
       const adminSignature = await SnodeGroupSignature.signDataWithAdminSecret(
@@ -539,6 +548,8 @@ async function handleMemberChangeFromUIOrNot({
   if (!group || !group.secretKey || isEmpty(group.secretKey)) {
     throw new Error('tried to make change to group but we do not have the admin secret key');
   }
+
+  await checkWeAreAdminOrThrow(groupPk, 'handleMemberChangeFromUIOrNot');
 
   const { removed, withHistory, withoutHistory, convo, us } = validateMemberChange({
     withHistory: addMembersWithHistory,
@@ -622,7 +633,7 @@ async function handleMemberChangeFromUIOrNot({
         groupPk,
         typeOfChange: SignalService.GroupUpdateMemberChangeMessage.Type.REMOVED,
         identifier: msg.id,
-        timestamp: GetNetworkTime.getNowWithNetworkOffset(),
+        timestamp: GetNetworkTime.now(),
         secretKey: group.secretKey,
         sodium,
       }),
@@ -651,6 +662,8 @@ async function handleNameChangeFromUIOrNot({
   if (!infos) {
     throw new PreConditionFailed('nameChange infoGet is empty');
   }
+
+  await checkWeAreAdminOrThrow(groupPk, 'handleNameChangeFromUIOrNot');
 
   // this throws if the name is the same, or empty
   const { newName, convo, us } = validateNameChange({
@@ -767,6 +780,35 @@ const markUsAsAdmin = createAsyncThunk(
   }
 );
 
+const inviteResponseReceived = createAsyncThunk(
+  'group/inviteResponseReceived',
+  async (
+    {
+      groupPk,
+      member,
+    }: {
+      groupPk: GroupPubkeyType;
+      member: PubkeyType;
+    },
+    payloadCreator
+  ): Promise<GroupDetailsUpdate> => {
+    const state = payloadCreator.getState() as StateType;
+    if (!state.groups.infos[groupPk] || !state.groups.members[groupPk]) {
+      throw new PreConditionFailed('inviteResponseReceived group but not present in redux slice');
+    }
+    await checkWeAreAdminOrThrow(groupPk, 'inviteResponseReceived');
+
+    await MetaGroupWrapperActions.memberSetAccepted(groupPk, member);
+    await GroupSync.queueNewJobIfNeeded(groupPk);
+
+    return {
+      groupPk,
+      infos: await MetaGroupWrapperActions.infoGet(groupPk),
+      members: await MetaGroupWrapperActions.memberGetAll(groupPk),
+    };
+  }
+);
+
 const currentDeviceGroupNameChange = createAsyncThunk(
   'group/currentDeviceGroupNameChange',
   async (
@@ -783,6 +825,7 @@ const currentDeviceGroupNameChange = createAsyncThunk(
     if (!state.groups.infos[groupPk] || !state.groups.members[groupPk]) {
       throw new PreConditionFailed('currentDeviceGroupNameChange group not present in redux slice');
     }
+    await checkWeAreAdminOrThrow(groupPk, 'currentDeviceGroupNameChange');
 
     await handleNameChangeFromUIOrNot({ groupPk, ...args, fromCurrentDevice: true });
 
@@ -929,6 +972,18 @@ const groupSlice = createSlice({
     builder.addCase(markUsAsAdmin.rejected, (_state, action) => {
       window.log.error('a markUsAsAdmin was rejected', action.error);
     });
+
+    builder.addCase(inviteResponseReceived.fulfilled, (state, action) => {
+      const { infos, members, groupPk } = action.payload;
+      state.infos[groupPk] = infos;
+      state.members[groupPk] = members;
+
+      window.log.debug(`groupInfo after inviteResponseReceived: ${stringify(infos)}`);
+      window.log.debug(`groupMembers after inviteResponseReceived: ${stringify(members)}`);
+    });
+    builder.addCase(inviteResponseReceived.rejected, (_state, action) => {
+      window.log.error('a inviteResponseReceived was rejected', action.error);
+    });
   },
 });
 
@@ -940,6 +995,7 @@ export const groupInfoActions = {
   handleUserGroupUpdate,
   currentDeviceGroupMembersChange,
   markUsAsAdmin,
+  inviteResponseReceived,
   currentDeviceGroupNameChange,
   ...groupSlice.actions,
 };

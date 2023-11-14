@@ -50,7 +50,7 @@ describe('SnodeSignature', () => {
 
   describe('getSnodeGroupAdminSignatureParams', () => {
     beforeEach(() => {
-      Sinon.stub(GetNetworkTime, 'getNowWithNetworkOffset').returns(hardcodedTimestamp);
+      Sinon.stub(GetNetworkTime, 'now').returns(hardcodedTimestamp);
     });
 
     describe('retrieve', () => {
@@ -162,7 +162,7 @@ describe('SnodeSignature', () => {
 
   // describe('getSnodeGroupSubAccountSignatureParams', () => {
   //   beforeEach(() => {
-  //     Sinon.stub(GetNetworkTime, 'getNowWithNetworkOffset').returns(hardcodedTimestamp);
+  //     Sinon.stub(GetNetworkTime, 'now').returns(hardcodedTimestamp);
   //   });
 
   //   describe('retrieve', () => {
