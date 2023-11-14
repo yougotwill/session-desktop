@@ -553,7 +553,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       const chatMessageParams: VisibleMessageParams = {
         body: '',
         // we need to use a new timestamp here, otherwise android&iOS will consider this message as a duplicate and drop the synced reaction
-        timestamp: GetNetworkTime.now(),
+        createAtNetworkTimestamp: GetNetworkTime.now(),
         reaction,
         lokiProfile: UserUtils.getOurProfile(),
       };
@@ -726,10 +726,8 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       return;
     }
 
-    const timestamp = Date.now();
-
     const messageRequestResponseParams: MessageRequestResponseParams = {
-      timestamp,
+      createAtNetworkTimestamp: GetNetworkTime.now(),
       lokiProfile: UserUtils.getOurProfile(),
     };
 
@@ -758,7 +756,6 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       quote: isEmpty(quote) ? undefined : quote,
       preview,
       attachments,
-      sent_at: networkTimestamp,
       expireTimer,
       serverTimestamp: this.isPublic() ? networkTimestamp : undefined,
       groupInvitation,
@@ -832,7 +829,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
 
     // When we add a disappearing messages notification to the conversation, we want it
     //   to be above the message that initiated that change, hence the subtraction.
-    const timestamp = (receivedAt || Date.now()) - 1;
+    const createAtNetworkTimestamp = (receivedAt || GetNetworkTime.now()) - 1;
 
     this.set({ expireTimer });
 
@@ -851,7 +848,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     if (isOutgoing) {
       message = await this.addSingleOutgoingMessage({
         ...commonAttributes,
-        sent_at: timestamp,
+        sent_at: createAtNetworkTimestamp,
       });
     } else {
       message = await this.addSingleIncomingMessage({
@@ -860,13 +857,13 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
         //   indicator above it. We set it to 'unread' to trigger that placement.
         unread: READ_MESSAGE_STATE.unread,
         source,
-        sent_at: timestamp,
-        received_at: timestamp,
+        sent_at: createAtNetworkTimestamp,
+        received_at: createAtNetworkTimestamp,
       });
     }
 
     if (this.isActive()) {
-      this.set('active_at', timestamp);
+      this.set('active_at', createAtNetworkTimestamp);
     }
 
     if (shouldCommit) {
@@ -880,7 +877,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
 
     const expireUpdate = {
       identifier: message.id,
-      timestamp,
+      createAtNetworkTimestamp,
       expireTimer: expireTimer || (null as number | null),
     };
 
@@ -1046,7 +1043,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       // we should probably stack read receipts and send them every 5 seconds for instance per conversation
 
       const receiptMessage = new ReadReceiptMessage({
-        timestamp: Date.now(),
+        createAtNetworkTimestamp: GetNetworkTime.now(),
         timestamps,
       });
 
@@ -1785,9 +1782,10 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       const destination = this.id as string;
 
       const sentAt = message.get('sent_at');
-      if (!sentAt) {
-        throw new Error('sendMessageJob() sent_at must be set.');
+      if (sentAt) {
+        throw new Error('sendMessageJob() sent_at is already set.');
       }
+      const networkTimestamp = GetNetworkTime.now();
 
       // we are trying to send a message to someone. Make sure this convo is not hidden
       await this.unhideIfNeeded(true);
@@ -1797,7 +1795,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       const chatMessageParams: VisibleMessageParams = {
         body,
         identifier: id,
-        timestamp: sentAt,
+        createAtNetworkTimestamp: networkTimestamp,
         attachments,
         expireTimer,
         preview: preview ? [preview] : [],
@@ -1866,7 +1864,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
           const groupInvitation = message.get('groupInvitation');
           const groupInvitMessage = new GroupInvitationMessage({
             identifier: id,
-            timestamp: sentAt,
+            createAtNetworkTimestamp: networkTimestamp,
             name: groupInvitation.name,
             url: groupInvitation.url,
             expireTimer: this.get('expireTimer'),
@@ -2219,15 +2217,19 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     }
 
     const typingParams = {
-      timestamp: GetNetworkTime.now(),
+      createAtNetworkTimestamp: GetNetworkTime.now(),
       isTyping,
       typingTimestamp: GetNetworkTime.now(),
     };
     const typingMessage = new TypingMessage(typingParams);
 
-    const device = new PubKey(recipientId);
+    const pubkey = new PubKey(recipientId);
     void getMessageQueue()
-      .sendToPubKey(device, typingMessage, SnodeNamespaces.Default)
+      .sendToPubKeyNonDurably({
+        pubkey,
+        message: typingMessage,
+        namespace: SnodeNamespaces.Default,
+      })
       .catch(window?.log?.error);
   }
 

@@ -16,7 +16,10 @@ export class GroupInvitationMessage extends DataMessage {
   private readonly expireTimer?: number;
 
   constructor(params: GroupInvitationMessageParams) {
-    super({ timestamp: params.timestamp, identifier: params.identifier });
+    super({
+      createAtNetworkTimestamp: params.createAtNetworkTimestamp,
+      identifier: params.identifier,
+    });
     this.url = params.url;
     this.name = params.name;
     this.expireTimer = params.expireTimer;

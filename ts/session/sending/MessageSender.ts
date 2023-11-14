@@ -3,7 +3,7 @@
 import { AbortController } from 'abort-controller';
 import ByteBuffer from 'bytebuffer';
 import { GroupPubkeyType, PubkeyType } from 'libsession_util_nodejs';
-import { isEmpty, sample, toNumber } from 'lodash';
+import { isEmpty, sample } from 'lodash';
 import pRetry from 'p-retry';
 import { Data } from '../../data/data';
 import { SignalService } from '../../protobuf';
@@ -40,52 +40,12 @@ import { ClosedGroupNewMessage } from '../messages/outgoing/controlMessage/group
 import { OpenGroupVisibleMessage } from '../messages/outgoing/visibleMessage/OpenGroupVisibleMessage';
 import { ed25519Str } from '../onions/onionPath';
 import { PubKey } from '../types';
-import { RawMessage } from '../types/RawMessage';
+import { OutgoingRawMessage } from '../types/RawMessage';
 import { UserUtils } from '../utils';
 import { fromUInt8ArrayToBase64 } from '../utils/String';
 import { EmptySwarmError } from '../utils/errors';
 
 // ================ SNODE STORE ================
-
-function overwriteOutgoingTimestampWithNetworkTimestamp(message: { plainTextBuffer: Uint8Array }) {
-  const networkTimestamp = GetNetworkTime.now();
-
-  const { plainTextBuffer } = message;
-  const contentDecoded = SignalService.Content.decode(plainTextBuffer);
-
-  const { dataMessage, dataExtractionNotification, typingMessage } = contentDecoded;
-  if (dataMessage && dataMessage.timestamp && toNumber(dataMessage.timestamp) > 0) {
-    // for a few message types, we cannot override the timestamp when sending it.
-    // - for a sync message
-    // - groupv2InviteMessage, groupUpdateDeleteMemberContentMessage, groupUpdateDeleteMessage as the embedded signature depends on the timestamp inside
-    if (
-      dataMessage.syncTarget ||
-      dataMessage.groupUpdateMessage?.inviteMessage ||
-      dataMessage.groupUpdateMessage?.infoChangeMessage ||
-      dataMessage.groupUpdateMessage?.deleteMemberContent ||
-      dataMessage.groupUpdateMessage?.memberChangeMessage ||
-      dataMessage.groupUpdateMessage?.deleteMessage
-    ) {
-      return {
-        overRiddenTimestampBuffer: plainTextBuffer,
-        networkTimestamp: toNumber(dataMessage.timestamp),
-      };
-    }
-    dataMessage.timestamp = networkTimestamp;
-  }
-  if (
-    dataExtractionNotification &&
-    dataExtractionNotification.timestamp &&
-    toNumber(dataExtractionNotification.timestamp) > 0
-  ) {
-    dataExtractionNotification.timestamp = networkTimestamp;
-  }
-  if (typingMessage && typingMessage.timestamp && toNumber(typingMessage.timestamp) > 0) {
-    typingMessage.timestamp = networkTimestamp;
-  }
-  const overRiddenTimestampBuffer = SignalService.Content.encode(contentDecoded).finish();
-  return { overRiddenTimestampBuffer, networkTimestamp };
-}
 
 function getMinRetryTimeout() {
   return 1000;
@@ -109,7 +69,7 @@ function isSyncMessage(message: ContentMessage) {
  * @param attempts The amount of times to attempt sending. Minimum value is 1.
  */
 async function send(
-  message: RawMessage,
+  message: OutgoingRawMessage,
   attempts: number = 3,
   retryMinTimeout?: number, // in ms
   isASyncMessage?: boolean
@@ -131,7 +91,8 @@ async function send(
           namespace: message.namespace,
           ttl,
           identifier: message.identifier,
-          isSyncMessage: Boolean(isASyncMessage),
+          isSyncMessage: !!isASyncMessage,
+          networkTimestamp: message.networkTimestampCreated,
         },
       ]);
 
@@ -332,6 +293,7 @@ type EncryptAndWrapMessage = {
   plainTextBuffer: Uint8Array;
   destination: string;
   namespace: number;
+  networkTimestamp: number;
 } & SharedEncryptAndWrap;
 
 type EncryptAndWrapMessageResults = {
@@ -353,15 +315,14 @@ async function encryptForGroupV2(
     namespace,
     plainTextBuffer,
     ttl,
+    networkTimestamp,
   } = params;
 
-  const { overRiddenTimestampBuffer, networkTimestamp } =
-    overwriteOutgoingTimestampWithNetworkTimestamp({ plainTextBuffer });
   const envelope = await buildEnvelope(
     SignalService.Envelope.Type.CLOSED_GROUP_MESSAGE,
     destination,
     networkTimestamp,
-    overRiddenTimestampBuffer
+    plainTextBuffer
   );
 
   const recipient = PubKey.cast(destination);
@@ -395,19 +356,18 @@ async function encryptMessageAndWrap(
     namespace,
     plainTextBuffer,
     ttl,
+    networkTimestamp,
   } = params;
 
   if (PubKey.is03Pubkey(destination)) {
     return encryptForGroupV2(params);
   }
 
-  const { overRiddenTimestampBuffer, networkTimestamp } =
-    overwriteOutgoingTimestampWithNetworkTimestamp({ plainTextBuffer });
   const recipient = PubKey.cast(destination);
 
   const { envelopeType, cipherText } = await MessageEncrypter.encrypt(
     recipient,
-    overRiddenTimestampBuffer,
+    plainTextBuffer,
     encryptionBasedOnConversation(recipient)
   );
 

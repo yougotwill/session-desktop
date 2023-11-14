@@ -10,7 +10,7 @@ export class ClosedGroupEncryptionPairMessage extends ClosedGroupMessage {
 
   constructor(params: ClosedGroupEncryptionPairMessageParams) {
     super({
-      timestamp: params.timestamp,
+      createAtNetworkTimestamp: params.createAtNetworkTimestamp,
       identifier: params.identifier,
       groupId: params.groupId,
     });

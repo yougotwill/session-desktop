@@ -412,7 +412,7 @@ async function createOfferAndSendIt(recipient: string) {
       );
 
       const offerMessage = new CallMessage({
-        timestamp: Date.now(),
+        createAtNetworkTimestamp: GetNetworkTime.now(),
         type: SignalService.CallMessage.Type.OFFER,
         sdps: [overridenSdps],
         uuid: currentCallUUID,
@@ -499,7 +499,7 @@ export async function USER_callRecipient(recipient: string) {
   peerConnection = createOrGetPeerConnection(recipient);
   // send a pre offer just to wake up the device on the remote side
   const preOfferMsg = new CallMessage({
-    timestamp: now,
+    createAtNetworkTimestamp: GetNetworkTime.now(),
     type: SignalService.CallMessage.Type.PRE_OFFER,
     uuid: currentCallUUID,
   });
@@ -572,7 +572,7 @@ const iceSenderDebouncer = _.debounce(async (recipient: string) => {
     return;
   }
   const callIceCandicates = new CallMessage({
-    timestamp: Date.now(),
+    createAtNetworkTimestamp: GetNetworkTime.now(),
     type: SignalService.CallMessage.Type.ICE_CANDIDATES,
     sdpMLineIndexes: validCandidates.map(c => c.sdpMLineIndex),
     sdpMids: validCandidates.map(c => c.sdpMid),
@@ -881,7 +881,7 @@ export async function rejectCallAlreadyAnotherCall(fromSender: string, forcedUUI
   rejectedCallUUIDS.add(forcedUUID);
   const rejectCallMessage = new CallMessage({
     type: SignalService.CallMessage.Type.END_CALL,
-    timestamp: Date.now(),
+    createAtNetworkTimestamp: GetNetworkTime.now(),
     uuid: forcedUUID,
   });
   await sendCallMessageAndSync(rejectCallMessage, fromSender);
@@ -904,7 +904,7 @@ export async function USER_rejectIncomingCallRequest(fromSender: string) {
     rejectedCallUUIDS.add(aboutCallUUID);
     const endCallMessage = new CallMessage({
       type: SignalService.CallMessage.Type.END_CALL,
-      timestamp: Date.now(),
+      createAtNetworkTimestamp: GetNetworkTime.now(),
       uuid: aboutCallUUID,
     });
     // sync the reject event so our other devices remove the popup too
@@ -946,7 +946,7 @@ export async function USER_hangup(fromSender: string) {
   rejectedCallUUIDS.add(currentCallUUID);
   const endCallMessage = new CallMessage({
     type: SignalService.CallMessage.Type.END_CALL,
-    timestamp: Date.now(),
+    createAtNetworkTimestamp: GetNetworkTime.now(),
     uuid: currentCallUUID,
   });
   void getMessageQueue().sendToPubKeyNonDurably({
@@ -1020,7 +1020,7 @@ async function buildAnswerAndSendIt(sender: string) {
     }
     const answerSdp = answer.sdp;
     const callAnswerMessage = new CallMessage({
-      timestamp: Date.now(),
+      createAtNetworkTimestamp: GetNetworkTime.now(),
       type: SignalService.CallMessage.Type.ANSWER,
       sdps: [answerSdp],
       uuid: currentCallUUID,

@@ -43,7 +43,7 @@ export const forceSyncConfigurationNowIfNeeded = async (waitForMessageSent = fal
 const buildSyncVisibleMessage = (
   identifier: string,
   dataMessage: SignalService.DataMessage,
-  timestamp: number,
+  createAtNetworkTimestamp: number,
   syncTarget: string
 ) => {
   const body = dataMessage.body || undefined;
@@ -74,7 +74,7 @@ const buildSyncVisibleMessage = (
 
   return new VisibleMessage({
     identifier,
-    timestamp,
+    createAtNetworkTimestamp,
     attachments,
     body,
     quote,
@@ -87,14 +87,14 @@ const buildSyncVisibleMessage = (
 const buildSyncExpireTimerMessage = (
   identifier: string,
   dataMessage: SignalService.DataMessage,
-  timestamp: number,
+  createAtNetworkTimestamp: number,
   syncTarget: string
 ) => {
   const expireTimer = dataMessage.expireTimer;
 
   return new ExpirationTimerUpdateMessage({
     identifier,
-    timestamp,
+    createAtNetworkTimestamp,
     expireTimer,
     syncTarget,
   });

@@ -10,7 +10,7 @@ export class ClosedGroupNameChangeMessage extends ClosedGroupMessage {
 
   constructor(params: ClosedGroupNameChangeMessageParams) {
     super({
-      timestamp: params.timestamp,
+      createAtNetworkTimestamp: params.createAtNetworkTimestamp,
       identifier: params.identifier,
       groupId: params.groupId,
     });

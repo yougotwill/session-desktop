@@ -3,7 +3,7 @@ import { AbortController } from 'abort-controller';
 import { MessageSender } from '.';
 import { ClosedGroupMessage } from '../messages/outgoing/controlMessage/group/ClosedGroupMessage';
 import { ClosedGroupNameChangeMessage } from '../messages/outgoing/controlMessage/group/ClosedGroupNameChangeMessage';
-import { PubKey, RawMessage } from '../types';
+import { OutgoingRawMessage, PubKey } from '../types';
 import { JobQueue, MessageUtils, UserUtils } from '../utils';
 import { PendingMessageCache } from './PendingMessageCache';
 
@@ -30,6 +30,8 @@ import {
   SnodeNamespacesUser,
 } from '../apis/snode_api/namespaces';
 import { CallMessage } from '../messages/outgoing/controlMessage/CallMessage';
+import { DataExtractionNotificationMessage } from '../messages/outgoing/controlMessage/DataExtractionNotificationMessage';
+import { TypingMessage } from '../messages/outgoing/controlMessage/TypingMessage';
 import { UnsendMessage } from '../messages/outgoing/controlMessage/UnsendMessage';
 import { GroupUpdateDeleteMemberContentMessage } from '../messages/outgoing/controlMessage/group_v2/to_group/GroupUpdateDeleteMemberContentMessage';
 import { GroupUpdateInfoChangeMessage } from '../messages/outgoing/controlMessage/group_v2/to_group/GroupUpdateInfoChangeMessage';
@@ -64,7 +66,7 @@ export class MessageQueue {
     destinationPubKey: PubKey,
     message: ContentMessage,
     namespace: SnodeNamespaces,
-    sentCb?: (message: RawMessage) => Promise<void>,
+    sentCb?: (message: OutgoingRawMessage) => Promise<void>,
     isGroup = false
   ): Promise<void> {
     if ((message as any).syncTarget) {
@@ -187,7 +189,7 @@ export class MessageQueue {
   }: {
     message: ClosedGroupMessageType;
     namespace: SnodeNamespacesLegacyGroup;
-    sentCb?: (message: RawMessage) => Promise<void>;
+    sentCb?: (message: OutgoingRawMessage) => Promise<void>;
     groupPubKey?: PubKey;
   }): Promise<void> {
     let destinationPubKey: PubKey | undefined = groupPubKey;
@@ -213,7 +215,7 @@ export class MessageQueue {
       | GroupUpdateInfoChangeMessage
       | GroupUpdateDeleteMemberContentMessage
       | GroupUpdateMemberLeftMessage;
-    sentCb?: (message: RawMessage) => Promise<void>;
+    sentCb?: (message: OutgoingRawMessage) => Promise<void>;
   }): Promise<void> {
     if (!message.destination) {
       throw new Error('Invalid group message passed in sendToGroupV2.');
@@ -235,7 +237,7 @@ export class MessageQueue {
   }: {
     namespace: SnodeNamespacesUser;
     message?: SyncMessageType;
-    sentCb?: (message: RawMessage) => Promise<void>;
+    sentCb?: (message: OutgoingRawMessage) => Promise<void>;
   }): Promise<void> {
     if (!message) {
       return;
@@ -262,6 +264,8 @@ export class MessageQueue {
     pubkey: PubKey;
     message:
       | ClosedGroupNewMessage
+      | TypingMessage // no point of caching the typing message, they are very short lived
+      | DataExtractionNotificationMessage
       | CallMessage
       | ClosedGroupMemberLeftMessage
       | GroupUpdateInviteMessage
@@ -351,7 +355,7 @@ export class MessageQueue {
     destinationPk: PubKey,
     message: ContentMessage,
     namespace: SnodeNamespaces,
-    sentCb?: (message: RawMessage) => Promise<void>,
+    sentCb?: (message: OutgoingRawMessage) => Promise<void>,
     isGroup = false
   ): Promise<void> {
     // Don't send to ourselves

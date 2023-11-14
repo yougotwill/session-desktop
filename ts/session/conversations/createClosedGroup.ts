@@ -6,6 +6,7 @@ import { ECKeyPair } from '../../receiver/keypairs';
 import { openConversationWithMessages } from '../../state/ducks/conversations';
 import { updateConfirmModal } from '../../state/ducks/modalDialog';
 import { getSwarmPollingInstance } from '../apis/snode_api';
+import { GetNetworkTime } from '../apis/snode_api/getNetworkTime';
 import { SnodeNamespaces } from '../apis/snode_api/namespaces';
 import { generateClosedGroupPublicKey, generateCurve25519KeyPairWithoutPrefix } from '../crypto';
 import { ClosedGroup, GroupInfo } from '../group/closed-group';
@@ -191,6 +192,8 @@ function createInvitePromises(
   encryptionKeyPair: ECKeyPair,
   existingExpireTimer: number
 ) {
+  const createAtNetworkTimestamp = GetNetworkTime.now();
+
   return listOfMembers.map(async m => {
     const messageParams: ClosedGroupNewMessageParams = {
       groupId: groupPublicKey,
@@ -198,7 +201,7 @@ function createInvitePromises(
       members: listOfMembers,
       admins,
       keypair: encryptionKeyPair,
-      timestamp: Date.now(),
+      createAtNetworkTimestamp,
       expireTimer: existingExpireTimer,
     };
     const message = new ClosedGroupNewMessage(messageParams);

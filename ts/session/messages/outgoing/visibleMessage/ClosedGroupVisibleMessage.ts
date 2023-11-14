@@ -18,7 +18,7 @@ export class ClosedGroupVisibleMessage extends ClosedGroupMessage {
 
   constructor(params: ClosedGroupVisibleMessageParams) {
     super({
-      timestamp: params.chatMessage.timestamp,
+      createAtNetworkTimestamp: params.chatMessage.createAtNetworkTimestamp,
       identifier: params.identifier ?? params.chatMessage.identifier,
       groupId: params.groupId,
     });
@@ -64,7 +64,7 @@ export class ClosedGroupV2VisibleMessage extends DataMessage {
       WithGroupMessageNamespace
   ) {
     super({
-      timestamp: params.chatMessage.timestamp,
+      createAtNetworkTimestamp: params.chatMessage.createAtNetworkTimestamp,
       identifier: params.identifier ?? params.chatMessage.identifier,
     });
     this.chatMessage = params.chatMessage;

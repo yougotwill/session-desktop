@@ -8,8 +8,8 @@ interface ReadReceiptMessageParams extends MessageParams {
 export class ReadReceiptMessage extends ContentMessage {
   public readonly timestamps: Array<number>;
 
-  constructor({ timestamp, identifier, timestamps }: ReadReceiptMessageParams) {
-    super({ timestamp, identifier });
+  constructor({ createAtNetworkTimestamp, identifier, timestamps }: ReadReceiptMessageParams) {
+    super({ createAtNetworkTimestamp, identifier });
     this.timestamps = timestamps;
   }
 

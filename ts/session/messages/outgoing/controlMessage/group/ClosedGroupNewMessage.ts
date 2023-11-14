@@ -1,7 +1,7 @@
 import { SignalService } from '../../../../../protobuf';
-import { ClosedGroupMessage, ClosedGroupMessageParams } from './ClosedGroupMessage';
-import { fromHexToArray } from '../../../../utils/String';
 import { ECKeyPair } from '../../../../../receiver/keypairs';
+import { fromHexToArray } from '../../../../utils/String';
+import { ClosedGroupMessage, ClosedGroupMessageParams } from './ClosedGroupMessage';
 
 export interface ClosedGroupNewMessageParams extends ClosedGroupMessageParams {
   name: string;
@@ -20,7 +20,7 @@ export class ClosedGroupNewMessage extends ClosedGroupMessage {
 
   constructor(params: ClosedGroupNewMessageParams) {
     super({
-      timestamp: params.timestamp,
+      createAtNetworkTimestamp: params.createAtNetworkTimestamp,
       identifier: params.identifier,
       groupId: params.groupId,
     });

@@ -259,7 +259,7 @@ async function sendNewName(convo: ConversationModel, name: string, messageId: st
 
   // Send the update to the group
   const nameChangeMessage = new ClosedGroupNameChangeMessage({
-    timestamp: Date.now(),
+    createAtNetworkTimestamp: GetNetworkTime.now(),
     groupId,
     identifier: messageId,
     name,
@@ -294,7 +294,7 @@ async function sendAddedMembers(
   const existingExpireTimer = convo.get('expireTimer') || 0;
   // Send the Added Members message to the group (only members already in the group will get it)
   const closedGroupControlMessage = new ClosedGroupAddedMembersMessage({
-    timestamp: Date.now(),
+    createAtNetworkTimestamp: GetNetworkTime.now(),
     groupId,
     addedMembers,
     identifier: messageId,
@@ -306,7 +306,7 @@ async function sendAddedMembers(
 
   // Send closed group update messages to any new members individually
   const newClosedGroupUpdate = new ClosedGroupNewMessage({
-    timestamp: Date.now(),
+    createAtNetworkTimestamp: GetNetworkTime.now(),
     name: groupName,
     groupId,
     admins,
@@ -352,7 +352,7 @@ async function sendRemovedMembers(
   }
   // Send the update to the group and generate + distribute a new encryption key pair if needed
   const mainClosedGroupControlMessage = new ClosedGroupRemovedMembersMessage({
-    timestamp: Date.now(),
+    createAtNetworkTimestamp: GetNetworkTime.now(),
     groupId,
     removedMembers,
     identifier: messageId,
@@ -414,7 +414,7 @@ async function generateAndSendNewEncryptionKeyPair(
 
   const keypairsMessage = new ClosedGroupEncryptionPairMessage({
     groupId: toHex(groupId),
-    timestamp: GetNetworkTime.now(),
+    createAtNetworkTimestamp: GetNetworkTime.now(),
     encryptedKeyPairs: wrappers,
   });
 

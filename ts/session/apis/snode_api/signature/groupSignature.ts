@@ -33,7 +33,7 @@ async function getGroupInviteMessage({
   groupPk: GroupPubkeyType;
 }) {
   const sodium = await getSodiumRenderer();
-  const timestamp = GetNetworkTime.now();
+  const createAtNetworkTimestamp = GetNetworkTime.now();
 
   if (UserUtils.isUsFromCache(member)) {
     throw new Error('getGroupInviteMessage: we cannot invite ourselves');
@@ -42,7 +42,7 @@ async function getGroupInviteMessage({
 
   // Note: as the signature is built with the timestamp here, we cannot override the timestamp later on the sending pipeline
   const adminSignature = sodium.crypto_sign_detached(
-    stringToUint8Array(`INVITE${member}${timestamp}`),
+    stringToUint8Array(`INVITE${member}${createAtNetworkTimestamp}`),
     secretKey
   );
   const memberAuthData = await MetaGroupWrapperActions.makeSwarmSubAccount(groupPk, member);
@@ -50,7 +50,7 @@ async function getGroupInviteMessage({
   const invite = new GroupUpdateInviteMessage({
     groupName,
     groupPk,
-    timestamp,
+    createAtNetworkTimestamp,
     adminSignature,
     memberAuthData,
   });

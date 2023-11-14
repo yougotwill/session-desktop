@@ -18,7 +18,7 @@ import { ContentMessage } from '../../../../session/messages/outgoing';
 import { ClosedGroupMessage } from '../../../../session/messages/outgoing/controlMessage/group/ClosedGroupMessage';
 import { MessageSender } from '../../../../session/sending';
 import { MessageQueue } from '../../../../session/sending/MessageQueue';
-import { PubKey, RawMessage } from '../../../../session/types';
+import { OutgoingRawMessage, PubKey } from '../../../../session/types';
 import { PromiseUtils, UserUtils } from '../../../../session/utils';
 import { TestUtils } from '../../../test-utils';
 import { PendingMessageCacheStub } from '../../../test-utils/stubs';
@@ -46,7 +46,7 @@ describe('MessageQueue', () => {
 
   // Message Sender Stubs
   let sendStub: sinon.SinonStub<
-    [RawMessage, (number | undefined)?, (number | undefined)?, (boolean | undefined)?]
+    [OutgoingRawMessage, (number | undefined)?, (number | undefined)?, (boolean | undefined)?]
   >;
 
   beforeEach(() => {

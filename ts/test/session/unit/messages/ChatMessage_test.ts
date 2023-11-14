@@ -1,5 +1,5 @@
-import { TextEncoder } from 'util';
 import { expect } from 'chai';
+import { TextEncoder } from 'util';
 
 import { toNumber } from 'lodash';
 import { SignalService } from '../../../../protobuf';
@@ -14,7 +14,7 @@ import {
 describe('VisibleMessage', () => {
   it('can create empty message with just a timestamp', () => {
     const message = new VisibleMessage({
-      timestamp: Date.now(),
+      createAtNetworkTimestamp: Date.now(),
     });
     const plainText = message.plainTextBuffer();
     const decoded = SignalService.Content.decode(plainText);
@@ -24,7 +24,7 @@ describe('VisibleMessage', () => {
 
   it('can create message with a body', () => {
     const message = new VisibleMessage({
-      timestamp: Date.now(),
+      createAtNetworkTimestamp: Date.now(),
       body: 'body',
     });
     const plainText = message.plainTextBuffer();
@@ -34,7 +34,7 @@ describe('VisibleMessage', () => {
 
   it('can create message with a expire timer', () => {
     const message = new VisibleMessage({
-      timestamp: Date.now(),
+      createAtNetworkTimestamp: Date.now(),
       expireTimer: 3600,
     });
     const plainText = message.plainTextBuffer();
@@ -51,7 +51,7 @@ describe('VisibleMessage', () => {
       profileKey,
     };
     const message = new VisibleMessage({
-      timestamp: Date.now(),
+      createAtNetworkTimestamp: Date.now(),
       lokiProfile,
     });
     const plainText = message.plainTextBuffer();
@@ -70,7 +70,7 @@ describe('VisibleMessage', () => {
   it('can create message with a quote without attachments', () => {
     const quote: Quote = { id: 1234, author: 'author', text: 'text' };
     const message = new VisibleMessage({
-      timestamp: Date.now(),
+      createAtNetworkTimestamp: Date.now(),
       quote,
     });
     const plainText = message.plainTextBuffer();
@@ -87,7 +87,7 @@ describe('VisibleMessage', () => {
     previews.push(preview);
 
     const message = new VisibleMessage({
-      timestamp: Date.now(),
+      createAtNetworkTimestamp: Date.now(),
       preview: previews,
     });
     const plainText = message.plainTextBuffer();
@@ -109,7 +109,7 @@ describe('VisibleMessage', () => {
     attachments.push(attachment);
 
     const message = new VisibleMessage({
-      timestamp: Date.now(),
+      createAtNetworkTimestamp: Date.now(),
       attachments,
     });
     const plainText = message.plainTextBuffer();
@@ -124,14 +124,14 @@ describe('VisibleMessage', () => {
 
   it('correct ttl', () => {
     const message = new VisibleMessage({
-      timestamp: Date.now(),
+      createAtNetworkTimestamp: Date.now(),
     });
     expect(message.ttl()).to.equal(Constants.TTL_DEFAULT.TTL_MAX);
   });
 
   it('has an identifier', () => {
     const message = new VisibleMessage({
-      timestamp: Date.now(),
+      createAtNetworkTimestamp: Date.now(),
     });
     expect(message.identifier).to.not.equal(null, 'identifier cannot be null');
     expect(message.identifier).to.not.equal(undefined, 'identifier cannot be undefined');

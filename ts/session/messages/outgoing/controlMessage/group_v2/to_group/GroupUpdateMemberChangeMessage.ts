@@ -84,7 +84,7 @@ export class GroupUpdateMemberChangeMessage extends GroupUpdateMessage {
       type: this.typeOfChange,
       memberSessionIds: this.memberSessionIds,
       adminSignature: this.sodium.crypto_sign_detached(
-        stringToUint8Array(`MEMBER_CHANGE${this.typeOfChange}${this.timestamp}`),
+        stringToUint8Array(`MEMBER_CHANGE${this.typeOfChange}${this.createAtNetworkTimestamp}`),
         this.secretKey
       ),
     });

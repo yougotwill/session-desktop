@@ -74,7 +74,7 @@ export class GroupUpdateInfoChangeMessage extends GroupUpdateMessage {
     const infoChangeMessage = new SignalService.GroupUpdateInfoChangeMessage({
       type: this.typeOfChange,
       adminSignature: this.sodium.crypto_sign_detached(
-        stringToUint8Array(`INFO_CHANGE${this.typeOfChange}${this.timestamp}`),
+        stringToUint8Array(`INFO_CHANGE${this.typeOfChange}${this.createAtNetworkTimestamp}`),
         this.secretKey
       ),
     });

@@ -791,7 +791,7 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
       if (conversation.isPublic()) {
         const openGroupParams: VisibleMessageParams = {
           identifier: this.id,
-          timestamp: GetNetworkTime.now(),
+          createAtNetworkTimestamp: GetNetworkTime.now(),
           lokiProfile: UserUtils.getOurProfile(),
           body,
           attachments,
@@ -817,7 +817,7 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
       const chatParams = {
         identifier: this.id,
         body,
-        timestamp: Date.now(), // force a new timestamp to handle user fixed his clock
+        createAtNetworkTimestamp: GetNetworkTime.now(),
         expireTimer: this.get('expireTimer'),
         attachments,
         preview: preview ? [preview] : [],
@@ -997,7 +997,6 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
     if (!this.id) {
       throw new Error('A message always needs an id');
     }
-    console.warn('this.attributes', JSON.stringify(this.attributes));
     // because the saving to db calls _cleanData which mutates the field for cleaning, we need to save a copy
     const id = await Data.saveMessage(cloneDeep(this.attributes));
     if (triggerUIUpdate) {

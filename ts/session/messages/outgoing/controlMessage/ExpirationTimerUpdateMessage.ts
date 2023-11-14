@@ -16,7 +16,10 @@ export class ExpirationTimerUpdateMessage extends DataMessage {
   public readonly expireTimer: number | null;
 
   constructor(params: ExpirationTimerUpdateMessageParams) {
-    super({ timestamp: params.timestamp, identifier: params.identifier });
+    super({
+      createAtNetworkTimestamp: params.createAtNetworkTimestamp,
+      identifier: params.identifier,
+    });
     this.expireTimer = params.expireTimer;
 
     const { groupId, syncTarget } = params;

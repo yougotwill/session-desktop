@@ -473,16 +473,16 @@ async function handleRemoveMembers({
   }
   await MetaGroupWrapperActions.memberEraseAndRekey(groupPk, removed);
 
-  const timestamp = GetNetworkTime.now();
+  const createAtNetworkTimestamp = GetNetworkTime.now();
   await Promise.all(
     removed.map(async m => {
       const adminSignature = await SnodeGroupSignature.signDataWithAdminSecret(
-        `DELETE${m}${timestamp}`,
+        `DELETE${m}${createAtNetworkTimestamp}`,
         { secretKey }
       );
       const deleteMessage = new GroupUpdateDeleteMessage({
         groupPk,
-        timestamp,
+        createAtNetworkTimestamp,
         adminSignature: from_base64(adminSignature.signature, base64_variants.ORIGINAL),
       });
       console.warn(
@@ -600,13 +600,13 @@ async function handleMemberChangeFromUIOrNot({
   const sodium = await getSodiumRenderer();
 
   const allAdded = [...withHistory, ...withoutHistory]; // those are already enforced to be unique (and without intersection) in `validateMemberChange()`
-  const timestamp = Date.now();
+  const createAtNetworkTimestamp = GetNetworkTime.now();
   if (fromCurrentDevice && allAdded.length) {
     const msg = await ClosedGroup.addUpdateMessage(
       convo,
       { joiningMembers: allAdded },
       us,
-      timestamp
+      createAtNetworkTimestamp
     );
     await getMessageQueue().sendToGroupV2({
       message: new GroupUpdateMemberChangeMessage({
@@ -614,7 +614,7 @@ async function handleMemberChangeFromUIOrNot({
         groupPk,
         typeOfChange: SignalService.GroupUpdateMemberChangeMessage.Type.ADDED,
         identifier: msg.id,
-        timestamp,
+        createAtNetworkTimestamp,
         secretKey: group.secretKey,
         sodium,
       }),
@@ -625,7 +625,7 @@ async function handleMemberChangeFromUIOrNot({
       convo,
       { kickedMembers: removed },
       us,
-      timestamp
+      createAtNetworkTimestamp
     );
     await getMessageQueue().sendToGroupV2({
       message: new GroupUpdateMemberChangeMessage({
@@ -633,7 +633,7 @@ async function handleMemberChangeFromUIOrNot({
         groupPk,
         typeOfChange: SignalService.GroupUpdateMemberChangeMessage.Type.REMOVED,
         identifier: msg.id,
-        timestamp: GetNetworkTime.now(),
+        createAtNetworkTimestamp,
         secretKey: group.secretKey,
         sodium,
       }),
@@ -641,7 +641,7 @@ async function handleMemberChangeFromUIOrNot({
   }
 
   convo.set({
-    active_at: timestamp,
+    active_at: createAtNetworkTimestamp,
   });
   await convo.commit();
 }
@@ -686,17 +686,22 @@ async function handleNameChangeFromUIOrNot({
 
   await UserSync.queueNewJobIfNeeded();
 
-  const timestamp = Date.now();
+  const createAtNetworkTimestamp = GetNetworkTime.now();
 
   if (fromCurrentDevice) {
-    const msg = await ClosedGroup.addUpdateMessage(convo, { newName }, us, timestamp);
+    const msg = await ClosedGroup.addUpdateMessage(
+      convo,
+      { newName },
+      us,
+      createAtNetworkTimestamp
+    );
     await getMessageQueue().sendToGroupV2({
       message: new GroupUpdateInfoChangeMessage({
         groupPk,
         typeOfChange: SignalService.GroupUpdateInfoChangeMessage.Type.NAME,
         updatedName: newName,
         identifier: msg.id,
-        timestamp: Date.now(),
+        createAtNetworkTimestamp,
         secretKey: group.secretKey,
         sodium: await getSodiumRenderer(),
       }),
@@ -704,7 +709,7 @@ async function handleNameChangeFromUIOrNot({
   }
 
   convo.set({
-    active_at: timestamp,
+    active_at: createAtNetworkTimestamp,
   });
   await convo.commit();
 }

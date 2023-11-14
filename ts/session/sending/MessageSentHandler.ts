@@ -3,7 +3,7 @@ import { Data } from '../../data/data';
 import { SignalService } from '../../protobuf';
 import { PnServer } from '../apis/push_notification_api';
 import { OpenGroupVisibleMessage } from '../messages/outgoing/visibleMessage/OpenGroupVisibleMessage';
-import { RawMessage } from '../types';
+import { OutgoingRawMessage } from '../types';
 import { UserUtils } from '../utils';
 
 async function handlePublicMessageSentSuccess(
@@ -41,7 +41,7 @@ async function handlePublicMessageSentSuccess(
 }
 
 async function handleMessageSentSuccess(
-  sentMessage: RawMessage,
+  sentMessage: OutgoingRawMessage,
   effectiveTimestamp: number,
   wrappedEnvelope?: Uint8Array
 ) {
@@ -135,7 +135,7 @@ async function handleMessageSentSuccess(
 }
 
 async function handleMessageSentFailure(
-  sentMessage: RawMessage | OpenGroupVisibleMessage,
+  sentMessage: OutgoingRawMessage | OpenGroupVisibleMessage,
   error: any
 ) {
   const fetchedMessage = await fetchHandleMessageSentData(sentMessage.identifier);

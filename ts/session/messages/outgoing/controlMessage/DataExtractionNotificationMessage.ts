@@ -1,15 +1,16 @@
 import { v4 as uuid } from 'uuid';
 
-import { SignalService } from '../../../../protobuf';
-import { MessageParams } from '../Message';
 import { ContentMessage } from '..';
-import { PubKey } from '../../../types';
 import { getMessageQueue } from '../../..';
-import { ConvoHub } from '../../../conversations';
-import { UserUtils } from '../../../utils';
 import { SettingsKey } from '../../../../data/settings-key';
+import { SignalService } from '../../../../protobuf';
 import { Storage } from '../../../../util/storage';
+import { GetNetworkTime } from '../../../apis/snode_api/getNetworkTime';
 import { SnodeNamespaces } from '../../../apis/snode_api/namespaces';
+import { ConvoHub } from '../../../conversations';
+import { PubKey } from '../../../types';
+import { UserUtils } from '../../../utils';
+import { MessageParams } from '../Message';
 
 interface DataExtractionNotificationMessageParams extends MessageParams {
   referencedAttachmentTimestamp: number;
@@ -19,7 +20,10 @@ export class DataExtractionNotificationMessage extends ContentMessage {
   public readonly referencedAttachmentTimestamp: number;
 
   constructor(params: DataExtractionNotificationMessageParams) {
-    super({ timestamp: params.timestamp, identifier: params.identifier });
+    super({
+      createAtNetworkTimestamp: params.createAtNetworkTimestamp,
+      identifier: params.identifier,
+    });
     this.referencedAttachmentTimestamp = params.referencedAttachmentTimestamp;
     // this does not make any sense
     if (!this.referencedAttachmentTimestamp) {
@@ -68,7 +72,7 @@ export const sendDataExtractionNotification = async (
   const dataExtractionNotificationMessage = new DataExtractionNotificationMessage({
     referencedAttachmentTimestamp,
     identifier: uuid(),
-    timestamp: Date.now(),
+    createAtNetworkTimestamp: GetNetworkTime.now(),
   });
   const pubkey = PubKey.cast(conversationId);
   window.log.info(
@@ -76,11 +80,11 @@ export const sendDataExtractionNotification = async (
   );
 
   try {
-    await getMessageQueue().sendToPubKey(
+    await getMessageQueue().sendToPubKeyNonDurably({
       pubkey,
-      dataExtractionNotificationMessage,
-      SnodeNamespaces.Default
-    );
+      message: dataExtractionNotificationMessage,
+      namespace: SnodeNamespaces.Default,
+    });
   } catch (e) {
     window.log.warn('failed to send data extraction notification', e);
   }

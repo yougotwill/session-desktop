@@ -11,7 +11,7 @@ export class ClosedGroupAddedMembersMessage extends ClosedGroupMessage {
 
   constructor(params: ClosedGroupAddedMembersMessageParams) {
     super({
-      timestamp: params.timestamp,
+      createAtNetworkTimestamp: params.createAtNetworkTimestamp,
       identifier: params.identifier,
       groupId: params.groupId,
     });

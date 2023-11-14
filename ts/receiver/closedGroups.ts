@@ -20,6 +20,7 @@ import { perfEnd, perfStart } from '../session/utils/Performance';
 import { ReleasedFeatures } from '../util/releaseFeature';
 import { Storage } from '../util/storage';
 // eslint-disable-next-line import/no-unresolved, import/extensions
+import { GetNetworkTime } from '../session/apis/snode_api/getNetworkTime';
 import { ClosedGroup, GroupDiff, GroupInfo } from '../session/group/closed-group';
 import { ConfigWrapperUser } from '../webworker/workers/browser/libsession_worker_functions';
 import { IncomingMessageCache } from './cache';
@@ -915,7 +916,7 @@ async function sendLatestKeyPairToUsers(
 
       const keypairsMessage = new ClosedGroupEncryptionPairReplyMessage({
         groupId: groupPubKey,
-        timestamp: Date.now(),
+        createAtNetworkTimestamp: GetNetworkTime.now(),
         encryptedKeyPairs: wrappers,
       });
 

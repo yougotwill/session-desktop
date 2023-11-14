@@ -12,7 +12,7 @@ export abstract class ClosedGroupMessage extends DataMessage {
 
   constructor(params: ClosedGroupMessageParams) {
     super({
-      timestamp: params.timestamp,
+      createAtNetworkTimestamp: params.createAtNetworkTimestamp,
       identifier: params.identifier,
     });
 

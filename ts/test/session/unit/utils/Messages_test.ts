@@ -110,7 +110,7 @@ describe('Message Utils', () => {
       const member = TestUtils.generateFakePubKey().key;
 
       const msg = new ClosedGroupNewMessage({
-        timestamp: Date.now(),
+        createAtNetworkTimestamp: Date.now(),
         name: 'df',
         members: [member],
         admins: [member],
@@ -126,7 +126,7 @@ describe('Message Utils', () => {
       const device = TestUtils.generateFakePubKey();
 
       const msg = new ClosedGroupNameChangeMessage({
-        timestamp: Date.now(),
+        createAtNetworkTimestamp: Date.now(),
         name: 'df',
         groupId: TestUtils.generateFakePubKey().key,
       });
@@ -138,7 +138,7 @@ describe('Message Utils', () => {
       const device = TestUtils.generateFakePubKey();
 
       const msg = new ClosedGroupAddedMembersMessage({
-        timestamp: Date.now(),
+        createAtNetworkTimestamp: Date.now(),
         addedMembers: [TestUtils.generateFakePubKey().key],
         groupId: TestUtils.generateFakePubKey().key,
       });
@@ -150,7 +150,7 @@ describe('Message Utils', () => {
       const device = TestUtils.generateFakePubKey();
 
       const msg = new ClosedGroupRemovedMembersMessage({
-        timestamp: Date.now(),
+        createAtNetworkTimestamp: Date.now(),
         removedMembers: [TestUtils.generateFakePubKey().key],
         groupId: TestUtils.generateFakePubKey().key,
       });
@@ -170,7 +170,7 @@ describe('Message Utils', () => {
         })
       );
       const msg = new ClosedGroupEncryptionPairMessage({
-        timestamp: Date.now(),
+        createAtNetworkTimestamp: Date.now(),
         groupId: TestUtils.generateFakePubKey().key,
         encryptedKeyPairs: fakeWrappers,
       });
@@ -190,7 +190,7 @@ describe('Message Utils', () => {
         })
       );
       const msg = new ClosedGroupEncryptionPairReplyMessage({
-        timestamp: Date.now(),
+        createAtNetworkTimestamp: Date.now(),
         groupId: TestUtils.generateFakePubKey().key,
         encryptedKeyPairs: fakeWrappers,
       });

@@ -89,7 +89,10 @@ export class VisibleMessage extends DataMessage {
   private readonly syncTarget?: string;
 
   constructor(params: VisibleMessageParams) {
-    super({ timestamp: params.timestamp, identifier: params.identifier });
+    super({
+      createAtNetworkTimestamp: params.createAtNetworkTimestamp,
+      identifier: params.identifier,
+    });
     this.attachments = params.attachments;
     this.body = params.body;
     this.quote = params.quote;
@@ -179,7 +182,10 @@ export class VisibleMessage extends DataMessage {
   }
 
   public isEqual(comparator: VisibleMessage): boolean {
-    return this.identifier === comparator.identifier && this.timestamp === comparator.timestamp;
+    return (
+      this.identifier === comparator.identifier &&
+      this.createAtNetworkTimestamp === comparator.createAtNetworkTimestamp
+    );
   }
 }
 

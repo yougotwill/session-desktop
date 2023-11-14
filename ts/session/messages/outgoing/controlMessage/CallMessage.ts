@@ -1,8 +1,8 @@
-import { SignalService } from '../../../../protobuf';
-import { MessageParams } from '../Message';
 import { ContentMessage } from '..';
+import { SignalService } from '../../../../protobuf';
 import { signalservice } from '../../../../protobuf/compiled';
 import { TTL_DEFAULT } from '../../../constants';
+import { MessageParams } from '../Message';
 
 interface CallMessageParams extends MessageParams {
   type: SignalService.CallMessage.Type;
@@ -20,7 +20,10 @@ export class CallMessage extends ContentMessage {
   public readonly uuid: string;
 
   constructor(params: CallMessageParams) {
-    super({ timestamp: params.timestamp, identifier: params.identifier });
+    super({
+      createAtNetworkTimestamp: params.createAtNetworkTimestamp,
+      identifier: params.identifier,
+    });
     this.type = params.type;
     this.sdpMLineIndexes = params.sdpMLineIndexes;
     this.sdpMids = params.sdpMids;
