@@ -80,7 +80,6 @@ message GroupUpdateDeleteMessage {
  required bytes          adminSignature     = 2;
 }
 
-
 message GroupUpdateInfoChangeMessage {
 	enum Type {
     NAME                  = 1;
@@ -232,7 +231,8 @@ message DataMessage {
   optional ClosedGroupControlMessage closedGroupControlMessage       = 104;
   optional string                    syncTarget                      = 105;
   optional bool                      blocksCommunityMessageRequests  = 106;
-  optional GroupUpdateMessage        groupUpdateMessage              = 120;}
+  optional GroupUpdateMessage        groupUpdateMessage              = 120;
+}
 
 message CallMessage {
 

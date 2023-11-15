@@ -3,8 +3,8 @@ import { SnodeNamespaces } from './namespaces';
 export type RetrieveMessageItem = {
   hash: string;
   expiration: number;
-  data: string; // base64 encrypted content of the emssage
-  timestamp: number;
+  data: string; // base64 encrypted content of the message
+  storedAt: number; // **not** the envelope timestamp, but when the message was effectively stored on the snode
 };
 
 export type RetrieveMessageItemWithNamespace = RetrieveMessageItem & {

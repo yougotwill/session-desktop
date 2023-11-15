@@ -134,13 +134,15 @@ async function buildRetrieveRequest(
 ): Promise<Array<RetrieveSubRequestType>> {
   const isUs = pubkey === ourPubkey;
   const maxSizeMap = SnodeNamespace.maxSizeMap(namespaces);
+  const now = GetNetworkTime.now();
+
   const retrieveRequestsParams: Array<RetrieveSubRequestType> = await Promise.all(
     namespaces.map(async (namespace, index) => {
       const foundMaxSize = maxSizeMap.find(m => m.namespace === namespace)?.maxSize;
       const retrieveParam = {
         pubkey,
         last_hash: lastHashes.at(index) || '',
-        timestamp: GetNetworkTime.now(),
+        timestamp: now,
         max_size: foundMaxSize,
       };
 
@@ -197,7 +199,7 @@ async function buildRetrieveRequest(
         params: {
           messages: configHashesToBump,
           expiry,
-          ...signResult,
+          ...omit(signResult, 'timestamp'),
           pubkey,
         },
       };
@@ -262,13 +264,12 @@ async function retrieveNextMessages(
       `_retrieveNextMessages - retrieve result is not 200 with ${targetNode.ip}:${targetNode.port} but ${firstResult.code}`
     );
   }
-
+  if (!window.inboxStore?.getState().onionPaths.isOnline) {
+    window.inboxStore?.dispatch(updateIsOnline(true));
+  }
   try {
     // we rely on the code of the first one to check for online status
     const bodyFirstResult = firstResult.body;
-    if (!window.inboxStore?.getState().onionPaths.isOnline) {
-      window.inboxStore?.dispatch(updateIsOnline(true));
-    }
 
     GetNetworkTime.handleTimestampOffsetFromNetwork('retrieve', bodyFirstResult.t);
 
@@ -280,9 +281,7 @@ async function retrieveNextMessages(
     }));
   } catch (e) {
     window?.log?.warn('exception while parsing json of nextMessage:', e);
-    if (!window.inboxStore?.getState().onionPaths.isOnline) {
-      window.inboxStore?.dispatch(updateIsOnline(true));
-    }
+
     throw new Error(
       `_retrieveNextMessages - exception while parsing json of nextMessage ${targetNode.ip}:${targetNode.port}: ${e?.message}`
     );

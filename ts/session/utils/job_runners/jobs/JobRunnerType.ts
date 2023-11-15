@@ -4,4 +4,5 @@ export type JobRunnerType =
   | 'FakeSleepForJob'
   | 'FakeSleepForMultiJob'
   | 'AvatarDownloadJob'
-  | 'GroupInviteJob';
+  | 'GroupInviteJob'
+  | 'GroupPromoteJob';

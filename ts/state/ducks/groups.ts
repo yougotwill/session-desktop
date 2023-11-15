@@ -5,6 +5,7 @@ import {
   GroupMemberGet,
   GroupPubkeyType,
   PubkeyType,
+  Uint8ArrayLen64,
   UserGroupsGet,
   WithGroupPubkey,
 } from 'libsession_util_nodejs';
@@ -17,7 +18,6 @@ import { SignalService } from '../../protobuf';
 import { getMessageQueue } from '../../session';
 import { getSwarmPollingInstance } from '../../session/apis/snode_api';
 import { GetNetworkTime } from '../../session/apis/snode_api/getNetworkTime';
-import { SnodeNamespaces } from '../../session/apis/snode_api/namespaces';
 import { RevokeChanges, SnodeAPIRevoke } from '../../session/apis/snode_api/revokeSubaccount';
 import { SnodeGroupSignature } from '../../session/apis/snode_api/signature/groupSignature';
 import { ConvoHub } from '../../session/conversations';
@@ -76,9 +76,10 @@ type GroupDetailsUpdate = {
 
 async function checkWeAreAdminOrThrow(groupPk: GroupPubkeyType, context: string) {
   const us = UserUtils.getOurPubKeyStrFromCache();
-  const inGroup = await MetaGroupWrapperActions.memberGet(groupPk, us);
-  const haveAdminkey = await UserGroupsWrapperActions.getGroup(groupPk);
-  if (!haveAdminkey || inGroup?.promoted) {
+
+  const usInGroup = await MetaGroupWrapperActions.memberGet(groupPk, us);
+  const inUserGroup = await UserGroupsWrapperActions.getGroup(groupPk);
+  if (isEmpty(inUserGroup?.secretKey) || !usInGroup?.promoted) {
     throw new Error(`checkWeAreAdminOrThrow failed with ctx: ${context}`);
   }
 }
@@ -185,7 +186,7 @@ const initNewGroupInWrapper = createAsyncThunk(
       //  can update the groupwrapper with a failed state if a message fails to be sent.
       for (let index = 0; index < membersFromWrapper.length; index++) {
         const member = membersFromWrapper[index];
-        await GroupInvite.addGroupInviteJob({ member: member.pubkeyHex, groupPk });
+        await GroupInvite.addJob({ member: member.pubkeyHex, groupPk });
       }
 
       await openConversationWithMessages({ conversationKey: groupPk, messageId: null });
@@ -460,6 +461,10 @@ async function handleWithoutHistoryMembers({
     const created = await MetaGroupWrapperActions.memberGetOrConstruct(groupPk, member);
     await MetaGroupWrapperActions.memberSetInvited(groupPk, created.pubkeyHex, false);
   }
+
+  if (!isEmpty(withoutHistory)) {
+    await MetaGroupWrapperActions.keyRekey(groupPk);
+  }
 }
 
 async function handleRemoveMembers({
@@ -471,6 +476,7 @@ async function handleRemoveMembers({
   if (!fromCurrentDevice) {
     return;
   }
+
   await MetaGroupWrapperActions.memberEraseAndRekey(groupPk, removed);
 
   const createAtNetworkTimestamp = GetNetworkTime.now();
@@ -489,15 +495,14 @@ async function handleRemoveMembers({
         'TODO: poll from namespace -11, handle messages and sig for it, batch request handle 401/403, but 200 ok for this -11 namespace'
       );
 
-      const sentStatus = await getMessageQueue().sendToPubKeyNonDurably({
-        pubkey: PubKey.cast(m),
-        message: deleteMessage,
-        namespace: SnodeNamespaces.ClosedGroupRevokedRetrievableMessages,
-      });
-      if (!sentStatus) {
-        window.log.warn('Failed to send a GroupUpdateDeleteMessage to a member removed: ', m);
-        throw new Error('Failed to send a GroupUpdateDeleteMessage to a member removed');
-      }
+      // const sentStatus = await getMessageQueue().sendToPubKeyNonDurably({
+      //   pubkey: PubKey.cast(m),
+      //   message: deleteMessage,
+      //   namespace: SnodeNamespaces.ClosedGroupRevokedRetrievableMessages,
+      // });
+      // if (!sentStatus) {
+      //   window.log.warn('Failed to send a GroupUpdateDeleteMessage to a member removed: ', m);
+      // }
     })
   );
 }
@@ -591,11 +596,11 @@ async function handleMemberChangeFromUIOrNot({
   // schedule send invite details, auth signature, etc. to the new users
   for (let index = 0; index < withoutHistory.length; index++) {
     const member = withoutHistory[index];
-    await GroupInvite.addGroupInviteJob({ groupPk, member });
+    await GroupInvite.addJob({ groupPk, member });
   }
   for (let index = 0; index < withHistory.length; index++) {
     const member = withHistory[index];
-    await GroupInvite.addGroupInviteJob({ groupPk, member });
+    await GroupInvite.addJob({ groupPk, member });
   }
   const sodium = await getSodiumRenderer();
 
@@ -755,8 +760,10 @@ const markUsAsAdmin = createAsyncThunk(
   async (
     {
       groupPk,
+      secret,
     }: {
       groupPk: GroupPubkeyType;
+      secret: Uint8ArrayLen64;
     },
     payloadCreator
   ): Promise<GroupDetailsUpdate> => {
@@ -764,6 +771,12 @@ const markUsAsAdmin = createAsyncThunk(
     if (!state.groups.infos[groupPk] || !state.groups.members[groupPk]) {
       throw new PreConditionFailed('markUsAsAdmin group not present in redux slice');
     }
+    if (secret.length !== 64) {
+      throw new PreConditionFailed('markUsAsAdmin secret needs to be 64');
+    }
+    console.warn('before setSigKeys ', groupPk, stringify(secret));
+    await MetaGroupWrapperActions.setSigKeys(groupPk, secret);
+    console.warn('after setSigKeys');
     const us = UserUtils.getOurPubKeyStrFromCache();
 
     if (state.groups.members[groupPk].find(m => m.pubkeyHex === us)?.admin) {
@@ -801,10 +814,15 @@ const inviteResponseReceived = createAsyncThunk(
     if (!state.groups.infos[groupPk] || !state.groups.members[groupPk]) {
       throw new PreConditionFailed('inviteResponseReceived group but not present in redux slice');
     }
-    await checkWeAreAdminOrThrow(groupPk, 'inviteResponseReceived');
+    try {
+      await checkWeAreAdminOrThrow(groupPk, 'inviteResponseReceived');
 
-    await MetaGroupWrapperActions.memberSetAccepted(groupPk, member);
-    await GroupSync.queueNewJobIfNeeded(groupPk);
+      await MetaGroupWrapperActions.memberSetAccepted(groupPk, member);
+      await GroupSync.queueNewJobIfNeeded(groupPk);
+    } catch (e) {
+      window.log.info('inviteResponseReceived failed with', e.message);
+      // only admins can do the steps above, but we don't want to throw if we are not an admin
+    }
 
     return {
       groupPk,

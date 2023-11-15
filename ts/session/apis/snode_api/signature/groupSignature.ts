@@ -12,6 +12,7 @@ import {
 } from '../../../../webworker/workers/browser/libsession_worker_interface';
 import { getSodiumRenderer } from '../../../crypto/MessageEncrypter';
 import { GroupUpdateInviteMessage } from '../../../messages/outgoing/controlMessage/group_v2/to_user/GroupUpdateInviteMessage';
+import { GroupUpdatePromoteMessage } from '../../../messages/outgoing/controlMessage/group_v2/to_user/GroupUpdatePromoteMessage';
 import { StringUtils, UserUtils } from '../../../utils';
 import { fromUInt8ArrayToBase64, stringToUint8Array } from '../../../utils/String';
 import { PreConditionFailed } from '../../../utils/errors';
@@ -38,7 +39,6 @@ async function getGroupInviteMessage({
   if (UserUtils.isUsFromCache(member)) {
     throw new Error('getGroupInviteMessage: we cannot invite ourselves');
   }
-  debugger;
 
   // Note: as the signature is built with the timestamp here, we cannot override the timestamp later on the sending pipeline
   const adminSignature = sodium.crypto_sign_detached(
@@ -55,6 +55,29 @@ async function getGroupInviteMessage({
     memberAuthData,
   });
   return invite;
+}
+
+async function getGroupPromoteMessage({
+  member,
+  secretKey,
+  groupPk,
+}: {
+  member: PubkeyType;
+  secretKey: Uint8ArrayLen64; // len 64
+  groupPk: GroupPubkeyType;
+}) {
+  const createAtNetworkTimestamp = GetNetworkTime.now();
+
+  if (UserUtils.isUsFromCache(member)) {
+    throw new Error('getGroupPromoteMessage: we cannot promote ourselves');
+  }
+
+  const msg = new GroupUpdatePromoteMessage({
+    groupPk,
+    createAtNetworkTimestamp,
+    groupIdentitySeed: secretKey.slice(0, 32), // the seed is the first 32 bytes of the secretkey
+  });
+  return msg;
 }
 
 type ParamsShared = {
@@ -275,6 +298,7 @@ async function getGroupSignatureByHashesParams({
 export const SnodeGroupSignature = {
   generateUpdateExpiryGroupSignature,
   getGroupInviteMessage,
+  getGroupPromoteMessage,
   getSnodeGroupSignature,
   getGroupSignatureByHashesParams,
   signDataWithAdminSecret,

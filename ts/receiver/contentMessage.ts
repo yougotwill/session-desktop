@@ -44,12 +44,13 @@ export async function handleSwarmContentMessage(envelope: EnvelopePlus, messageH
       return;
     }
 
-    const sentAtTimestamp = toNumber(envelope.timestamp);
+    const envelopeTimestamp = toNumber(envelope.timestamp);
+
     // swarm messages already comes with a timestamp in milliseconds, so this sentAtTimestamp is correct.
     // the sogs messages do not come as milliseconds but just seconds, so we override it
     await innerHandleSwarmContentMessage({
       envelope,
-      sentAtTimestamp,
+      envelopeTimestamp,
       contentDecrypted: decryptedForAll.decryptedContent,
       messageHash,
     });
@@ -400,10 +401,10 @@ export async function innerHandleSwarmContentMessage({
   contentDecrypted,
   envelope,
   messageHash,
-  sentAtTimestamp,
+  envelopeTimestamp,
 }: {
   envelope: EnvelopePlus;
-  sentAtTimestamp: number;
+  envelopeTimestamp: number;
   contentDecrypted: ArrayBuffer;
   messageHash: string;
 }): Promise<void> {
@@ -437,7 +438,7 @@ export async function innerHandleSwarmContentMessage({
     const isPrivateConversationMessage = !envelope.senderIdentity;
 
     if (isPrivateConversationMessage) {
-      if (await shouldDropIncomingPrivateMessage(sentAtTimestamp, envelope, content)) {
+      if (await shouldDropIncomingPrivateMessage(envelopeTimestamp, envelope, content)) {
         await IncomingMessageCache.removeFromCache(envelope);
         return;
       }
@@ -468,7 +469,7 @@ export async function innerHandleSwarmContentMessage({
       }
       await handleSwarmDataMessage(
         envelope,
-        sentAtTimestamp,
+        envelopeTimestamp,
         content.dataMessage as SignalService.DataMessage,
         messageHash,
         senderConversationModel

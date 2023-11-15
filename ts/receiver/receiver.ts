@@ -1,5 +1,5 @@
 /* eslint-disable more/no-then */
-import _, { isEmpty, last } from 'lodash';
+import { isEmpty, last, toNumber } from 'lodash';
 import { v4 as uuidv4 } from 'uuid';
 
 import { EnvelopePlus } from './types';
@@ -27,12 +27,12 @@ const incomingMessagePromises: Array<Promise<any>> = [];
 export async function handleSwarmContentDecryptedWithTimeout({
   envelope,
   messageHash,
-  sentAtTimestamp,
+  envelopeTimestamp,
   contentDecrypted,
 }: {
   envelope: EnvelopePlus;
   messageHash: string;
-  sentAtTimestamp: number;
+  envelopeTimestamp: number;
   contentDecrypted: ArrayBuffer;
 }) {
   let taskDone = false;
@@ -54,7 +54,7 @@ export async function handleSwarmContentDecryptedWithTimeout({
           envelope,
           messageHash,
           contentDecrypted,
-          sentAtTimestamp,
+          envelopeTimestamp,
         });
         await IncomingMessageCache.removeFromCache(envelope);
       } catch (e) {
@@ -297,16 +297,14 @@ async function handleDecryptedEnvelope({
   contentDecrypted: ArrayBuffer;
   messageHash: string;
 }) {
-  if (envelope.content) {
-    const sentAtTimestamp = _.toNumber(envelope.timestamp);
-
-    await innerHandleSwarmContentMessage({
-      envelope,
-      sentAtTimestamp,
-      contentDecrypted,
-      messageHash,
-    });
-  } else {
+  if (!envelope.content) {
     await IncomingMessageCache.removeFromCache(envelope);
   }
+
+  return innerHandleSwarmContentMessage({
+    envelope,
+    contentDecrypted,
+    messageHash,
+    envelopeTimestamp: toNumber(envelope.timestamp),
+  });
 }

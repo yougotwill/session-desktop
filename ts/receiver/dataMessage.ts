@@ -147,7 +147,7 @@ export function cleanIncomingDataMessage(rawDataMessage: SignalService.DataMessa
  */
 export async function handleSwarmDataMessage(
   envelope: EnvelopePlus,
-  sentAtTimestamp: number,
+  envelopeTimestamp: number,
   rawDataMessage: SignalService.DataMessage,
   messageHash: string,
   senderConversationModel: ConversationModel
@@ -158,7 +158,7 @@ export async function handleSwarmDataMessage(
 
   if (cleanDataMessage.groupUpdateMessage) {
     await GroupV2Receiver.handleGroupUpdateMessage({
-      envelopeTimestamp: sentAtTimestamp,
+      envelopeTimestamp,
       updateMessage: rawDataMessage.groupUpdateMessage as SignalService.GroupUpdateMessage,
       source: envelope.source,
       senderIdentity: envelope.senderIdentity,
@@ -252,19 +252,19 @@ export async function handleSwarmDataMessage(
       ? createSwarmMessageSentFromUs({
           conversationId: convoIdToAddTheMessageTo,
           messageHash,
-          sentAt: sentAtTimestamp,
+          sentAt: envelopeTimestamp,
         })
       : createSwarmMessageSentFromNotUs({
           conversationId: convoIdToAddTheMessageTo,
           messageHash,
           sender: senderConversationModel.id,
-          sentAt: sentAtTimestamp,
+          sentAt: envelopeTimestamp,
         });
 
   await handleSwarmMessage(
     msgModel,
     messageHash,
-    sentAtTimestamp,
+    envelopeTimestamp,
     cleanDataMessage,
     convoToAddMessageTo,
     // eslint-disable-next-line @typescript-eslint/no-misused-promises

@@ -1,7 +1,7 @@
 import React from 'react';
 
 import { PubkeyType } from 'libsession_util_nodejs';
-import { useConversationsUsernameWithQuoteOrFullPubkey } from '../../../../hooks/useParamSelector';
+import { useConversationsUsernameWithQuoteOrShortPk } from '../../../../hooks/useParamSelector';
 import { arrayContainsUsOnly } from '../../../../models/message';
 import { PreConditionFailed } from '../../../../session/utils/errors';
 import {
@@ -89,7 +89,7 @@ const ChangeItemJoined = (added: Array<PubkeyType>): string => {
   if (!added.length) {
     throw new Error('Group update add is missing contacts');
   }
-  const names = useConversationsUsernameWithQuoteOrFullPubkey(added);
+  const names = useConversationsUsernameWithQuoteOrShortPk(added);
   const isGroupV2 = useSelectedIsGroupV2();
   const us = useOurPkStr();
   if (isGroupV2) {
@@ -107,7 +107,7 @@ const ChangeItemKicked = (removed: Array<PubkeyType>): string => {
   if (!removed.length) {
     throw new Error('Group update removed is missing contacts');
   }
-  const names = useConversationsUsernameWithQuoteOrFullPubkey(removed);
+  const names = useConversationsUsernameWithQuoteOrShortPk(removed);
   const isGroupV2 = useSelectedIsGroupV2();
   const us = useOurPkStr();
   if (isGroupV2) {
@@ -130,7 +130,7 @@ const ChangeItemPromoted = (promoted: Array<PubkeyType>): string => {
   if (!promoted.length) {
     throw new Error('Group update promoted is missing contacts');
   }
-  const names = useConversationsUsernameWithQuoteOrFullPubkey(promoted);
+  const names = useConversationsUsernameWithQuoteOrShortPk(promoted);
   const isGroupV2 = useSelectedIsGroupV2();
   const us = useOurPkStr();
   if (isGroupV2) {
@@ -148,7 +148,7 @@ const ChangeItemLeft = (left: Array<PubkeyType>): string => {
     throw new Error('Group update remove is missing contacts');
   }
 
-  const names = useConversationsUsernameWithQuoteOrFullPubkey(left);
+  const names = useConversationsUsernameWithQuoteOrShortPk(left);
 
   if (arrayContainsUsOnly(left)) {
     return window.i18n('youLeftTheGroup');

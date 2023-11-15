@@ -131,7 +131,7 @@ async function mergeUserConfigsWithIncomingUpdates(
       const needsPush = await GenericWrapperActions.needsPush(variant);
       const mergedTimestamps = sameVariant
         .filter(m => hashesMerged.includes(m.hash))
-        .map(m => m.timestamp);
+        .map(m => m.storedAt);
       const latestEnvelopeTimestamp = Math.max(...mergedTimestamps);
 
       window.log.debug(

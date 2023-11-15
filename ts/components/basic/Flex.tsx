@@ -27,6 +27,7 @@ export interface FlexProps {
     | 'inherit';
   // Child Props
   flexGrow?: number;
+  gap?: string;
   flexShrink?: number;
   flexBasis?: number;
   // Common Layout Props
@@ -52,6 +53,7 @@ export const Flex = styled.div<FlexProps>`
   align-items: ${props => props.alignItems || 'stretch'};
   margin: ${props => props.margin || '0'};
   padding: ${props => props.padding || '0'};
+  gap: ${props => props.gap || undefined};
   width: ${props => props.width || 'auto'};
   height: ${props => props.height || 'auto'};
   max-width: ${props => props.maxWidth || 'none'};

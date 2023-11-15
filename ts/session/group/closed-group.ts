@@ -147,9 +147,7 @@ async function addUpdateMessage(
 
   if (diff.newName) {
     groupUpdate.name = diff.newName;
-  }
-
-  if (diff.joiningMembers) {
+  } else if (diff.joiningMembers) {
     groupUpdate.joined = diff.joiningMembers;
   } else if (diff.leavingMembers) {
     groupUpdate.left = diff.leavingMembers;

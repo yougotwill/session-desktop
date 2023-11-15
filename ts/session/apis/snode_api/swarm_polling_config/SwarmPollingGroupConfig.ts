@@ -8,32 +8,37 @@ import { SnodeNamespaces } from '../namespaces';
 import { RetrieveMessageItemWithNamespace } from '../types';
 
 async function handleGroupSharedConfigMessages(
-  groupConfigMessagesMerged: Array<RetrieveMessageItemWithNamespace>,
+  groupConfigMessages: Array<RetrieveMessageItemWithNamespace>,
   groupPk: GroupPubkeyType
 ) {
   try {
     window.log.info(
-      `received groupConfigMessagesMerged count: ${
-        groupConfigMessagesMerged.length
-      } for groupPk:${ed25519Str(groupPk)}`
+      `received groupConfigMessages count: ${groupConfigMessages.length} for groupPk:${ed25519Str(
+        groupPk
+      )}`
     );
-    const infos = groupConfigMessagesMerged
+
+    if (groupConfigMessages.find(m => !m.storedAt)) {
+      debugger;
+      throw new Error('all incoming group config message should have a timestamp');
+    }
+    const infos = groupConfigMessages
       .filter(m => m.namespace === SnodeNamespaces.ClosedGroupInfo)
       .map(info => {
         return { data: fromBase64ToArray(info.data), hash: info.hash };
       });
-    const members = groupConfigMessagesMerged
+    const members = groupConfigMessages
       .filter(m => m.namespace === SnodeNamespaces.ClosedGroupMembers)
       .map(info => {
         return { data: fromBase64ToArray(info.data), hash: info.hash };
       });
-    const keys = groupConfigMessagesMerged
+    const keys = groupConfigMessages
       .filter(m => m.namespace === SnodeNamespaces.ClosedGroupKeys)
       .map(info => {
         return {
           data: fromBase64ToArray(info.data),
           hash: info.hash,
-          timestampMs: info.timestamp,
+          timestampMs: info.storedAt,
         };
       });
     const toMerge = {
@@ -42,6 +47,11 @@ async function handleGroupSharedConfigMessages(
       groupMember: members,
     };
 
+    window.log.info(
+      `received keys: ${toMerge.groupKeys.length},infos: ${toMerge.groupInfo.length},members: ${
+        toMerge.groupMember.length
+      } for groupPk:${ed25519Str(groupPk)}`
+    );
     // do the merge with our current state
     await MetaGroupWrapperActions.metaMerge(groupPk, toMerge);
     // save updated dumps to the DB right away
@@ -55,7 +65,7 @@ async function handleGroupSharedConfigMessages(
     );
   } catch (e) {
     window.log.warn(
-      `handleGroupSharedConfigMessages of ${groupConfigMessagesMerged.length} failed with ${e.message}`
+      `handleGroupSharedConfigMessages of ${groupConfigMessages.length} failed with ${e.message}`
     );
     // not rethrowing
   }

@@ -26,7 +26,7 @@ type JobExtraArgs = {
   member: PubkeyType;
 };
 
-export function shouldAddGroupInviteJob(args: JobExtraArgs) {
+export function shouldAddJob(args: JobExtraArgs) {
   if (UserUtils.isUsFromCache(args.member)) {
     return false;
   }
@@ -42,8 +42,8 @@ const invitesFailed = new Map<
   }
 >();
 
-async function addGroupInviteJob({ groupPk, member }: JobExtraArgs) {
-  if (shouldAddGroupInviteJob({ groupPk, member })) {
+async function addJob({ groupPk, member }: JobExtraArgs) {
+  if (shouldAddJob({ groupPk, member })) {
     const groupInviteJob = new GroupInviteJob({
       groupPk,
       member,
@@ -190,7 +190,7 @@ class GroupInviteJob extends PersistedJob<GroupInvitePersistedData> {
 
 export const GroupInvite = {
   GroupInviteJob,
-  addGroupInviteJob,
+  addJob,
 };
 function updateFailedStateForMember(groupPk: GroupPubkeyType, member: PubkeyType, failed: boolean) {
   let thisGroupFailure = invitesFailed.get(groupPk);

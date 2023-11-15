@@ -59,7 +59,7 @@ async function handleGroupInviteMessage({
     );
     return;
   }
-  debugger;
+
   const sigValid = await verifySig({
     pubKey: HexString.fromHexStringNoPrefix(inviteMessage.groupSessionId),
     signature: inviteMessage.adminSignature,
@@ -120,7 +120,6 @@ async function handleGroupInviteMessage({
   await UserSync.queueNewJobIfNeeded();
 
   // TODO currently sending auto-accept of invite. needs to be removed once we get the Group message request logic
-  debugger;
   console.warn('currently sending auto accept invite response');
   await getMessageQueue().sendToGroupV2({
     message: new GroupUpdateInviteResponseMessage({
@@ -396,6 +395,7 @@ async function handleGroupUpdatePromoteMessage({
   window.inboxStore.dispatch(
     groupInfoActions.markUsAsAdmin({
       groupPk,
+      secret: groupKeypair.privateKey,
     })
   );
 

@@ -1,4 +1,5 @@
 import { GroupPubkeyType } from 'libsession_util_nodejs';
+import { isEmpty } from 'lodash';
 import { MessageEncrypter, concatUInt8Array, getSodiumRenderer } from '.';
 import { Data } from '../../data/data';
 import { SignalService } from '../../protobuf';
@@ -116,14 +117,14 @@ export async function encryptUsingSessionProtocol(
   );
 
   const signature = sodium.crypto_sign_detached(verificationData, userED25519SecretKeyBytes);
-  if (!signature || signature.length === 0) {
+  if (isEmpty(signature)) {
     throw new Error("Couldn't sign message");
   }
 
   const plaintextWithMetadata = concatUInt8Array(plaintext, userED25519PubKeyBytes, signature);
 
   const ciphertext = sodium.crypto_box_seal(plaintextWithMetadata, recipientX25519PublicKey);
-  if (!ciphertext) {
+  if (isEmpty(ciphertext)) {
     throw new Error("Couldn't encrypt message.");
   }
   return ciphertext;

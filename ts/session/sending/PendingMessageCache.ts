@@ -136,7 +136,7 @@ export class PendingMessageCache {
               !isNumber(message.networkTimestampCreated) ||
               message.networkTimestampCreated <= 0
             ) {
-              throw new Error('networkTimestampCreated is emptyo <=0');
+              throw new Error('networkTimestampCreated is empty <=0');
             }
 
             const plainTextBuffer = from_hex(message.plainTextBufferHex); // if a plaintextBufferHex is unset or not hex, this throws and we remove that message entirely

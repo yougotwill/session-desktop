@@ -14,6 +14,7 @@ import {
   ProfilePicture,
   PubkeyType,
   Uint8ArrayLen100,
+  Uint8ArrayLen64,
   UserConfigWrapperActionsCalls,
   UserGroupsSet,
   UserGroupsWrapperActionsCalls,
@@ -540,6 +541,11 @@ export const MetaGroupWrapperActions: MetaGroupWrapperActionsCalls = {
       'swarmVerifySubAccount',
       signingValue,
     ]) as Promise<ReturnType<MetaGroupWrapperActionsCalls['swarmVerifySubAccount']>>,
+  setSigKeys: async (groupPk: GroupPubkeyType, secret: Uint8ArrayLen64) => {
+    return callLibSessionWorker([`MetaGroupConfig-${groupPk}`, 'setSigKeys', secret]) as Promise<
+      ReturnType<MetaGroupWrapperActionsCalls['setSigKeys']>
+    >;
+  },
 };
 
 export const callLibSessionWorker = async (

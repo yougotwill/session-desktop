@@ -39,6 +39,7 @@ import { GroupUpdateMemberChangeMessage } from '../messages/outgoing/controlMess
 import { GroupUpdateMemberLeftMessage } from '../messages/outgoing/controlMessage/group_v2/to_group/GroupUpdateMemberLeftMessage';
 import { GroupUpdateDeleteMessage } from '../messages/outgoing/controlMessage/group_v2/to_user/GroupUpdateDeleteMessage';
 import { GroupUpdateInviteMessage } from '../messages/outgoing/controlMessage/group_v2/to_user/GroupUpdateInviteMessage';
+import { GroupUpdatePromoteMessage } from '../messages/outgoing/controlMessage/group_v2/to_user/GroupUpdatePromoteMessage';
 import { OpenGroupVisibleMessage } from '../messages/outgoing/visibleMessage/OpenGroupVisibleMessage';
 
 type ClosedGroupMessageType =
@@ -269,6 +270,7 @@ export class MessageQueue {
       | CallMessage
       | ClosedGroupMemberLeftMessage
       | GroupUpdateInviteMessage
+      | GroupUpdatePromoteMessage
       | GroupUpdateDeleteMessage;
     namespace: SnodeNamespaces;
   }): Promise<number | null> {
@@ -283,6 +285,7 @@ export class MessageQueue {
       );
       return effectiveTimestamp;
     } catch (error) {
+      window.log.error('failed to send message with: ', error.message);
       if (rawMessage) {
         await MessageSentHandler.handleMessageSentFailure(rawMessage, error);
       }

@@ -2,6 +2,8 @@
 /* eslint-disable more/no-then */
 /* eslint-disable @typescript-eslint/no-misused-promises */
 import { GroupPubkeyType } from 'libsession_util_nodejs';
+import { z } from 'zod';
+
 import {
   compact,
   concat,
@@ -9,6 +11,7 @@ import {
   flatten,
   isArray,
   last,
+  omit,
   sample,
   toNumber,
   uniqBy,
@@ -23,7 +26,6 @@ import * as snodePool from './snodePool';
 
 import { ConversationModel } from '../../../models/conversation';
 import { ConversationTypeEnum } from '../../../models/conversationAttributes';
-import { EnvelopePlus } from '../../../receiver/types';
 import { updateIsOnline } from '../../../state/ducks/onion';
 import { assertUnreachable } from '../../../types/sqlSharedTypes';
 import {
@@ -35,6 +37,7 @@ import { DURATION, SWARM_POLLING_TIMEOUT } from '../../constants';
 import { ConvoHub } from '../../conversations';
 import { ed25519Str } from '../../onions/onionPath';
 import { StringUtils, UserUtils } from '../../utils';
+import { sleepFor } from '../../utils/Promise';
 import { PreConditionFailed } from '../../utils/errors';
 import { LibSessionUtil } from '../../utils/libsession/libsession_utils';
 import { SnodeNamespace, SnodeNamespaces, UserConfigNamespaces } from './namespaces';
@@ -313,6 +316,7 @@ export class SwarmPolling {
       return;
     }
     if (type === ConversationTypeEnum.GROUPV2 && PubKey.is03Pubkey(pubkey)) {
+      await sleepFor(100);
       await SwarmPollingGroupConfig.handleGroupSharedConfigMessages(confMessages, pubkey);
     }
   }
@@ -671,11 +675,30 @@ export class SwarmPolling {
   }
 }
 
-function retrieveItemWithNamespace(results: Array<RetrieveRequestResult>) {
+// zod schema for retrieve items as returned by the snodes
+const retrieveItemSchema = z.object({
+  hash: z.string(),
+  data: z.string(),
+  expiration: z.number(),
+  timestamp: z.number(),
+});
+
+function retrieveItemWithNamespace(
+  results: Array<RetrieveRequestResult>
+): Array<RetrieveMessageItemWithNamespace> {
   return flatten(
     compact(
       results.map(
-        result => result.messages.messages?.map(r => ({ ...r, namespace: result.namespace }))
+        result =>
+          result.messages.messages?.map(r => {
+            // throws if the result is not expected
+            const parsedItem = retrieveItemSchema.parse(r);
+            return {
+              ...omit(parsedItem, 'timestamp'),
+              namespace: result.namespace,
+              storedAt: parsedItem.timestamp,
+            };
+          })
       )
     )
   );
@@ -698,7 +721,6 @@ function filterMessagesPerTypeOfConvo<T extends ConversationTypeEnum>(
       );
 
       const confMessages = retrieveItemWithNamespace(userConfs);
-
       const otherMessages = retrieveItemWithNamespace(userOthers);
 
       return { confMessages, otherMessages: uniqBy(otherMessages, x => x.hash) };
@@ -719,7 +741,6 @@ function filterMessagesPerTypeOfConvo<T extends ConversationTypeEnum>(
       );
 
       const groupConfMessages = retrieveItemWithNamespace(groupConfs);
-
       const groupOtherMessages = retrieveItemWithNamespace(groupOthers);
 
       return {
@@ -733,11 +754,7 @@ function filterMessagesPerTypeOfConvo<T extends ConversationTypeEnum>(
   }
 }
 
-async function decryptForGroupV2(retrieveResult: {
-  groupPk: string;
-  content: Uint8Array;
-  sentTimestamp: number;
-}): Promise<EnvelopePlus | null> {
+async function decryptForGroupV2(retrieveResult: { groupPk: string; content: Uint8Array }) {
   window?.log?.info('received closed group message v2');
   try {
     const groupPk = retrieveResult.groupPk;
@@ -746,28 +763,22 @@ async function decryptForGroupV2(retrieveResult: {
     }
 
     const decrypted = await MetaGroupWrapperActions.decryptMessage(groupPk, retrieveResult.content);
-    const envelopePlus: EnvelopePlus = {
+    // just try to parse what we have, it should be a protobuf content decrypted already
+    const parsedEnvelope = SignalService.Envelope.decode(new Uint8Array(decrypted.plaintext));
+
+    // not doing anything, just enforcing that the content is indeed a protobuf object of type Content, or throws
+    SignalService.Content.decode(parsedEnvelope.content);
+
+    // the receiving pipeline relies on the envelope.senderIdentity field to know who is the author of a message
+    return {
       id: v4(),
       senderIdentity: decrypted.pubkeyHex,
       receivedAt: Date.now(),
-      content: decrypted.plaintext,
+      content: parsedEnvelope.content,
       source: groupPk,
       type: SignalService.Envelope.Type.CLOSED_GROUP_MESSAGE,
-      timestamp: retrieveResult.sentTimestamp,
+      timestamp: parsedEnvelope.timestamp,
     };
-    try {
-      // just try to parse what we have, it should be a protobuf content decrypted already
-      const parsedEnvelope = SignalService.Envelope.decode(new Uint8Array(decrypted.plaintext));
-
-      SignalService.Content.decode(parsedEnvelope.content);
-      envelopePlus.content = parsedEnvelope.content;
-    } catch (e) {
-      throw new Error('content got from libsession does not look to be envelope+decryptedContent');
-    }
-
-    // the receiving pipeline relies on the envelope.senderIdentity field to know who is the author of a message
-
-    return envelopePlus;
   } catch (e) {
     window.log.warn('failed to decrypt message with error: ', e.message);
     return null;
@@ -785,7 +796,6 @@ async function handleMessagesForGroupV2(
       const envelopePlus = await decryptForGroupV2({
         content: retrieveResult,
         groupPk,
-        sentTimestamp: msg.timestamp,
       });
       if (!envelopePlus) {
         throw new Error('decryptForGroupV2 returned empty envelope');
@@ -797,7 +807,7 @@ async function handleMessagesForGroupV2(
         envelope: envelopePlus,
         contentDecrypted: envelopePlus.content,
         messageHash: msg.hash,
-        sentAtTimestamp: toNumber(envelopePlus.timestamp),
+        envelopeTimestamp: toNumber(envelopePlus.timestamp),
       });
     } catch (e) {
       window.log.warn('failed to handle groupv2 otherMessage because of: ', e.message);

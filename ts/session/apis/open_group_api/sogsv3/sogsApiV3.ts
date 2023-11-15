@@ -475,7 +475,7 @@ async function handleInboxOutboxMessages(
 
         await innerHandleSwarmContentMessage({
           envelope: builtEnvelope,
-          sentAtTimestamp: postedAtInMs,
+          envelopeTimestamp: postedAtInMs,
           contentDecrypted: builtEnvelope.content,
           messageHash: '',
         });

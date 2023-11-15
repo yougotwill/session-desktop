@@ -6,6 +6,7 @@ import { useConversationUsernameOrShorten } from '../hooks/useParamSelector';
 import { PubKey } from '../session/types';
 import { UserUtils } from '../session/utils';
 import { GroupInvite } from '../session/utils/job_runners/jobs/GroupInviteJob';
+import { GroupPromote } from '../session/utils/job_runners/jobs/GroupPromoteJob';
 import {
   useMemberInviteFailed,
   useMemberInvitePending,
@@ -14,7 +15,12 @@ import {
 } from '../state/selectors/groups';
 import { Avatar, AvatarSize, CrownIcon } from './avatar/Avatar';
 import { Flex } from './basic/Flex';
-import { SessionButton, SessionButtonShape, SessionButtonType } from './basic/SessionButton';
+import {
+  SessionButton,
+  SessionButtonColor,
+  SessionButtonShape,
+  SessionButtonType,
+} from './basic/SessionButton';
 import { SessionRadio } from './basic/SessionRadio';
 
 const AvatarContainer = styled.div`
@@ -92,7 +98,7 @@ type MemberListItemProps = {
   groupPk?: string;
 };
 
-const ResendInviteContainer = ({
+const ResendContainer = ({
   displayGroupStatus,
   groupPk,
   pubkey,
@@ -105,8 +111,14 @@ const ResendInviteContainer = ({
     !UserUtils.isUsFromCache(pubkey)
   ) {
     return (
-      <Flex container={true} margin="0 0 0 auto" padding="0 var(--margins-lg)">
+      <Flex
+        container={true}
+        margin="0 0 0 auto"
+        padding="0 var(--margins-lg)"
+        gap="var(--margins-sm)"
+      >
         <ResendInviteButton groupPk={groupPk} pubkey={pubkey} />
+        <ResendPromoteButton groupPk={groupPk} pubkey={pubkey} />
       </Flex>
     );
   }
@@ -177,7 +189,28 @@ const ResendInviteButton = ({
       buttonType={SessionButtonType.Solid}
       text={window.i18n('resend')}
       onClick={() => {
-        void GroupInvite.addGroupInviteJob({ groupPk, member: pubkey });
+        void GroupInvite.addJob({ groupPk, member: pubkey });
+      }}
+    />
+  );
+};
+
+const ResendPromoteButton = ({
+  groupPk,
+  pubkey,
+}: {
+  pubkey: PubkeyType;
+  groupPk: GroupPubkeyType;
+}) => {
+  return (
+    <SessionButton
+      dataTestId="resend-promote-button"
+      buttonShape={SessionButtonShape.Square}
+      buttonType={SessionButtonType.Solid}
+      buttonColor={SessionButtonColor.Danger}
+      text="ReSEND PRomote"
+      onClick={() => {
+        void GroupPromote.addJob({ groupPk, member: pubkey });
       }}
     />
   );
@@ -234,11 +267,7 @@ export const MemberListItem = ({
         </Flex>
       </StyledInfo>
 
-      <ResendInviteContainer
-        pubkey={pubkey}
-        displayGroupStatus={displayGroupStatus}
-        groupPk={groupPk}
-      />
+      <ResendContainer pubkey={pubkey} displayGroupStatus={displayGroupStatus} groupPk={groupPk} />
 
       {!inMentions && (
         <StyledCheckContainer>

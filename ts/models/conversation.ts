@@ -759,6 +759,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       expireTimer,
       serverTimestamp: this.isPublic() ? networkTimestamp : undefined,
       groupInvitation,
+      sent_at: networkTimestamp, // overriden later, but we need one to have the sorting done in the UI even when the sending is pending
     });
 
     // We're offline!
@@ -1781,9 +1782,9 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       const { id } = message;
       const destination = this.id as string;
 
-      const sentAt = message.get('sent_at');
-      if (sentAt) {
-        throw new Error('sendMessageJob() sent_at is already set.');
+      const sentAt = message.get('sent_at'); // this is used to store the timestamp when we tried sending that message, it should be set by the caller
+      if (!sentAt) {
+        throw new Error('sendMessageJob() sent_at is not set.');
       }
       const networkTimestamp = GetNetworkTime.now();
 
