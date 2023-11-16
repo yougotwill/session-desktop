@@ -422,6 +422,11 @@ class CompositionBoxInner extends React.Component<Props, State> {
     const { typingEnabled } = this.props;
     /* eslint-disable @typescript-eslint/no-misused-promises */
 
+    // we completely hide the composition box when typing is not enabled now.
+    if (!typingEnabled) {
+      return null;
+    }
+
     return (
       <Flex
         dir={this.props.htmlDirection}
@@ -430,7 +435,7 @@ class CompositionBoxInner extends React.Component<Props, State> {
         alignItems={'center'}
         width={'100%'}
       >
-        {typingEnabled && <AddStagedAttachmentButton onClick={this.onChooseAttachment} />}
+        <AddStagedAttachmentButton onClick={this.onChooseAttachment} />
         <input
           className="hidden"
           placeholder="Attachment"
@@ -439,7 +444,7 @@ class CompositionBoxInner extends React.Component<Props, State> {
           type="file"
           onChange={this.onChoseAttachment}
         />
-        {typingEnabled && <StartRecordingButton onClick={this.onLoadVoiceNoteView} />}
+        <StartRecordingButton onClick={this.onLoadVoiceNoteView} />
         <StyledSendMessageInput
           role="main"
           dir={this.props.htmlDirection}
@@ -451,11 +456,11 @@ class CompositionBoxInner extends React.Component<Props, State> {
         >
           {this.renderTextArea()}
         </StyledSendMessageInput>
-        {typingEnabled && (
-          <ToggleEmojiButton ref={this.emojiPanelButton} onClick={this.toggleEmojiPanel} />
-        )}
-        {typingEnabled && <SendMessageButton onClick={this.onSendMessage} />}
-        {typingEnabled && showEmojiPanel && (
+
+        <ToggleEmojiButton ref={this.emojiPanelButton} onClick={this.toggleEmojiPanel} />
+
+        <SendMessageButton onClick={this.onSendMessage} />
+        {showEmojiPanel && (
           <StyledEmojiPanelContainer role="button" dir={this.props.htmlDirection}>
             <SessionEmojiPanel
               ref={this.emojiPanel}
@@ -478,6 +483,7 @@ class CompositionBoxInner extends React.Component<Props, State> {
     if (!this.props.selectedConversation) {
       return null;
     }
+    // Note: we completely hide the composition box if typing is not enabled now, so this component is not rendered
 
     const makeMessagePlaceHolderText = () => {
       if (isKickedFromGroup) {
@@ -494,7 +500,6 @@ class CompositionBoxInner extends React.Component<Props, State> {
 
     const { isKickedFromGroup, left, isBlocked } = this.props.selectedConversation;
     const messagePlaceHolder = makeMessagePlaceHolderText();
-    const { typingEnabled } = this.props;
     const neverMatchingRegex = /($a)/;
 
     const style = sendMessageStyle(htmlDirection);
@@ -511,7 +516,6 @@ class CompositionBoxInner extends React.Component<Props, State> {
         spellCheck={true}
         dir={htmlDirection}
         inputRef={this.textarea}
-        disabled={!typingEnabled}
         rows={1}
         data-testid="message-input-text-area"
         style={style}

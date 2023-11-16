@@ -74,7 +74,7 @@ export const NoMessageInConversation = () => {
     if (privateBlindedAndBlockingMsgReqs) {
       localizedKey = 'noMessagesInBlindedDisabledMsgRequests';
     } else {
-      localizedKey = 'noMessagesInReadOnly';
+      localizedKey = 'thereAreNoMessagesIn';
     }
   } else if (isMe) {
     localizedKey = 'noMessagesInNoteToSelf';
