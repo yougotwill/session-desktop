@@ -774,9 +774,7 @@ const markUsAsAdmin = createAsyncThunk(
     if (secret.length !== 64) {
       throw new PreConditionFailed('markUsAsAdmin secret needs to be 64');
     }
-    console.warn('before setSigKeys ', groupPk, stringify(secret));
-    await MetaGroupWrapperActions.setSigKeys(groupPk, secret);
-    console.warn('after setSigKeys');
+    await MetaGroupWrapperActions.loadAdminKeys(groupPk, secret);
     const us = UserUtils.getOurPubKeyStrFromCache();
 
     if (state.groups.members[groupPk].find(m => m.pubkeyHex === us)?.admin) {
@@ -788,6 +786,7 @@ const markUsAsAdmin = createAsyncThunk(
       };
     }
     await MetaGroupWrapperActions.memberSetAdmin(groupPk, us);
+
     await GroupSync.queueNewJobIfNeeded(groupPk);
 
     return {

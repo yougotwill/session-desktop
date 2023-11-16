@@ -541,9 +541,9 @@ export const MetaGroupWrapperActions: MetaGroupWrapperActionsCalls = {
       'swarmVerifySubAccount',
       signingValue,
     ]) as Promise<ReturnType<MetaGroupWrapperActionsCalls['swarmVerifySubAccount']>>,
-  setSigKeys: async (groupPk: GroupPubkeyType, secret: Uint8ArrayLen64) => {
-    return callLibSessionWorker([`MetaGroupConfig-${groupPk}`, 'setSigKeys', secret]) as Promise<
-      ReturnType<MetaGroupWrapperActionsCalls['setSigKeys']>
+    loadAdminKeys: async (groupPk: GroupPubkeyType, secret: Uint8ArrayLen64) => {
+    return callLibSessionWorker([`MetaGroupConfig-${groupPk}`, 'loadAdminKeys', secret]) as Promise<
+      ReturnType<MetaGroupWrapperActionsCalls['loadAdminKeys']>
     >;
   },
 };
