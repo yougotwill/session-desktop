@@ -78,10 +78,11 @@ export const OverlayMessageRequest = () => {
             const convoId = messageRequests[index];
             // eslint-disable-next-line no-await-in-loop
             await declineConversationWithoutConfirm({
-              blockContact: false,
+              alsoBlock: false,
               conversationId: convoId,
               currentlySelectedConvo,
               syncToDevices: false,
+              conversationIdOrigin: null, // block is false, no need for conversationIdOrigin
             });
           }
 

@@ -3,6 +3,7 @@ import { isEmpty, isFinite, isNumber } from 'lodash';
 import { ConversationTypeEnum } from '../../models/conversationAttributes';
 import { HexString } from '../../node/hexStrings';
 import { SignalService } from '../../protobuf';
+import { getMessageQueue } from '../../session';
 import { getSwarmPollingInstance } from '../../session/apis/snode_api';
 import { GetNetworkTime } from '../../session/apis/snode_api/getNetworkTime';
 import { ConvoHub } from '../../session/conversations';
@@ -10,14 +11,13 @@ import { getSodiumRenderer } from '../../session/crypto';
 import { ClosedGroup } from '../../session/group/closed-group';
 import { GroupUpdateInviteResponseMessage } from '../../session/messages/outgoing/controlMessage/group_v2/to_group/GroupUpdateInviteResponseMessage';
 import { ed25519Str } from '../../session/onions/onionPath';
-import { getMessageQueue } from '../../session/sending';
 import { PubKey } from '../../session/types';
 import { UserUtils } from '../../session/utils';
 import { stringToUint8Array } from '../../session/utils/String';
 import { PreConditionFailed } from '../../session/utils/errors';
 import { UserSync } from '../../session/utils/job_runners/jobs/UserSyncJob';
 import { LibSessionUtil } from '../../session/utils/libsession/libsession_utils';
-import { groupInfoActions } from '../../state/ducks/groups';
+import { groupInfoActions } from '../../state/ducks/metaGroups';
 import { toFixedUint8ArrayOfLength } from '../../types/sqlSharedTypes';
 import { BlockedNumberController } from '../../util';
 import {
@@ -41,6 +41,20 @@ type GroupUpdateGeneric<T> = { change: T } & WithEnvelopeTimestamp & WithGroupPu
 type GroupUpdateDetails = {
   updateMessage: SignalService.GroupUpdateMessage;
 } & WithEnvelopeTimestamp;
+
+async function sendInviteResponseToGroup({ groupPk }: { groupPk: GroupPubkeyType }) {
+  await getMessageQueue().sendToGroupV2({
+    message: new GroupUpdateInviteResponseMessage({
+      groupPk,
+      isApproved: true,
+      createAtNetworkTimestamp: GetNetworkTime.now(),
+    }),
+  });
+
+  // TODO use the pending so we actually don't start polling here unless it is not in the pending state.
+  // once everything is ready, start polling using that authData to get the keys, members, details of that group, and its messages.
+  getSwarmPollingInstance().addGroupId(groupPk);
+}
 
 async function handleGroupInviteMessage({
   inviteMessage,
@@ -82,6 +96,8 @@ async function handleGroupInviteMessage({
   );
   convo.set({
     active_at: envelopeTimestamp,
+    didApproveMe: true,
+    conversationIdOrigin: author,
   });
 
   if (inviteMessage.name && isEmpty(convo.getRealSessionUsername())) {
@@ -90,6 +106,7 @@ async function handleGroupInviteMessage({
     });
   }
   await convo.commit();
+  const userEd25519Secretkey = (await UserUtils.getUserED25519KeyPairBytes()).privKeyBytes;
 
   let found = await UserGroupsWrapperActions.getGroup(inviteMessage.groupSessionId);
   if (!found) {
@@ -100,12 +117,16 @@ async function handleGroupInviteMessage({
       priority: 0,
       pubkeyHex: inviteMessage.groupSessionId,
       secretKey: null,
+      kicked: false,
+      invitePending: true,
     };
+  } else {
+    found.kicked = false;
+    found.name = inviteMessage.name;
   }
   // not sure if we should drop it, or set it again? They should be the same anyway
   found.authData = inviteMessage.memberAuthData;
 
-  const userEd25519Secretkey = (await UserUtils.getUserED25519KeyPairBytes()).privKeyBytes;
   await UserGroupsWrapperActions.setGroup(found);
   await MetaGroupWrapperActions.init(inviteMessage.groupSessionId, {
     metaDumped: null,
@@ -118,20 +139,10 @@ async function handleGroupInviteMessage({
   });
   await LibSessionUtil.saveDumpsToDb(UserUtils.getOurPubKeyStrFromCache());
   await UserSync.queueNewJobIfNeeded();
-
-  // TODO currently sending auto-accept of invite. needs to be removed once we get the Group message request logic
-  console.warn('currently sending auto accept invite response');
-  await getMessageQueue().sendToGroupV2({
-    message: new GroupUpdateInviteResponseMessage({
-      groupPk: inviteMessage.groupSessionId,
-      isApproved: true,
-      createAtNetworkTimestamp: GetNetworkTime.now(),
-    }),
-  });
-
-  // TODO use the pending so we actually don't start polling here unless it is not in the pending state.
-  // once everything is ready, start polling using that authData to get the keys, members, details of that group, and its messages.
-  getSwarmPollingInstance().addGroupId(inviteMessage.groupSessionId);
+  if (!found.invitePending) {
+    // if this group should already be polling
+    getSwarmPollingInstance().addGroupId(inviteMessage.groupSessionId);
+  }
 }
 
 async function verifySig({

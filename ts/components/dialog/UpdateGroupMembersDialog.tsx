@@ -27,7 +27,7 @@ import { useSet } from '../../hooks/useSet';
 import { ConvoHub } from '../../session/conversations';
 import { ClosedGroup } from '../../session/group/closed-group';
 import { PubKey } from '../../session/types';
-import { groupInfoActions } from '../../state/ducks/groups';
+import { groupInfoActions } from '../../state/ducks/metaGroups';
 import { useMemberGroupChangePending } from '../../state/selectors/groups';
 import { useSelectedIsGroupV2 } from '../../state/selectors/selectedConversation';
 import { SessionSpinner } from '../basic/SessionSpinner';

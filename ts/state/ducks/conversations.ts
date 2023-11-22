@@ -8,6 +8,8 @@ import { LightBoxOptions } from '../../components/conversation/SessionConversati
 import { Data } from '../../data/data';
 import {
   CONVERSATION_PRIORITIES,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  ConversationAttributes,
   ConversationNotificationSettingType,
   ConversationTypeEnum,
 } from '../../models/conversationAttributes';
@@ -253,6 +255,10 @@ export interface ReduxConversationType {
    * If this is undefined, it means all notification are enabled
    */
   currentNotificationSetting?: ConversationNotificationSettingType;
+  /**
+   * @see {@link ConversationAttributes#conversationIdOrigin}.
+   */
+  conversationIdOrigin?: string;
 
   priority?: number; // undefined means 0
   isInitialFetchingInProgress?: boolean;

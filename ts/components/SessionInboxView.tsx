@@ -1,12 +1,12 @@
+import { fromPairs, map } from 'lodash';
 import moment from 'moment';
 import React from 'react';
 import { Provider } from 'react-redux';
-import styled from 'styled-components';
-import { fromPairs, map } from 'lodash';
+import useMount from 'react-use/lib/useMount';
+import useUpdate from 'react-use/lib/useUpdate';
 import { persistStore } from 'redux-persist';
 import { PersistGate } from 'redux-persist/integration/react';
-import useUpdate from 'react-use/lib/useUpdate';
-import useMount from 'react-use/lib/useMount';
+import styled from 'styled-components';
 
 import { LeftPane } from './leftpane/LeftPane';
 // moment does not support es-419 correctly (and cause white screen on app start)
@@ -33,13 +33,14 @@ import { ExpirationTimerOptions } from '../util/expiringMessages';
 import { SessionMainPanel } from './SessionMainPanel';
 
 import { SettingsKey } from '../data/settings-key';
+import { groupInfoActions, initialGroupState } from '../state/ducks/metaGroups';
 import { getSettingsInitialState, updateAllOnStorageReady } from '../state/ducks/settings';
 import { initialSogsRoomInfoState } from '../state/ducks/sogsRoomInfo';
 import { useHasDeviceOutdatedSyncing } from '../state/selectors/settings';
 import { Storage } from '../util/storage';
+import { UserGroupsWrapperActions } from '../webworker/workers/browser/libsession_worker_interface';
 import { NoticeBanner } from './NoticeBanner';
 import { Flex } from './basic/Flex';
-import { groupInfoActions, initialGroupState } from '../state/ducks/groups';
 
 function makeLookup<T>(items: Array<T>, key: string): { [key: string]: T } {
   // Yep, we can't index into item without knowing what it is. True. But we want to.
@@ -59,11 +60,17 @@ const StyledGutter = styled.div`
   transition: none;
 `;
 
-function createSessionInboxStore() {
+async function createSessionInboxStore() {
   // Here we set up a full redux store with initial state for our LeftPane Root
   const conversations = ConvoHub.use()
     .getConversations()
     .map(conversation => conversation.getConversationModelProps());
+
+  const userGroups: Record<string, any> = {};
+
+  (await UserGroupsWrapperActions.getAllGroups()).forEach(m => {
+    userGroups[m.pubkeyHex] = m;
+  });
 
   const timerOptions: TimerOptionsArray = ExpirationTimerOptions.getTimerSecondsWithName();
   const initialState: StateType = {
@@ -90,14 +97,15 @@ function createSessionInboxStore() {
     sogsRoomInfo: initialSogsRoomInfoState,
     settings: getSettingsInitialState(),
     groups: initialGroupState,
+    userGroups: { userGroups },
   };
 
   return createStore(initialState);
 }
 
-function setupLeftPane(forceUpdateInboxComponent: () => void) {
+async function setupLeftPane(forceUpdateInboxComponent: () => void) {
   window.openConversationWithMessages = openConversationWithMessages;
-  window.inboxStore = createSessionInboxStore();
+  window.inboxStore = await createSessionInboxStore();
   window.inboxStore.dispatch(updateAllOnStorageReady());
   window.inboxStore.dispatch(groupInfoActions.loadMetaDumpsFromDB()); // this loads the dumps from DB and fills the 03-groups slice with the corresponding details
   forceUpdateInboxComponent();
@@ -125,7 +133,7 @@ export const SessionInboxView = () => {
   const update = useUpdate();
   // run only on mount
   useMount(() => {
-    setupLeftPane(update);
+    void setupLeftPane(update);
   });
 
   if (!window.inboxStore) {

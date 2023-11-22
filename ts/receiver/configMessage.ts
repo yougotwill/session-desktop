@@ -34,7 +34,7 @@ import {
 } from '../session/apis/snode_api/namespaces';
 import { RetrieveMessageItemWithNamespace } from '../session/apis/snode_api/types';
 import { ClosedGroup, GroupInfo } from '../session/group/closed-group';
-import { groupInfoActions } from '../state/ducks/groups';
+import { groupInfoActions } from '../state/ducks/metaGroups';
 import {
   ConfigWrapperObjectTypesMeta,
   ConfigWrapperUser,

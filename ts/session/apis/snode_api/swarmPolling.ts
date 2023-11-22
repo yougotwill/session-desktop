@@ -189,6 +189,9 @@ export class SwarmPolling {
   }
 
   public async getPollingDetails(pollingEntries: Array<GroupPollingEntry>) {
+    // Note: all of those checks are explicitely made only based on the libsession wrappers data, and NOT the DB.
+    // Eventually, we want to get rid of the duplication between the DB and libsession wrappers.
+    // If you need to add a check based on the DB, this is code smell.
     let toPollDetails: Array<PollForUs | PollForLegacy | PollForGroup> = [];
     const ourPubkey = UserUtils.getOurPubKeyStrFromCache();
 
@@ -230,7 +233,12 @@ export class SwarmPolling {
 
     const allGroupsTracked = groups
       .filter(m => this.shouldPollByTimeout(m)) // should we poll from it depending on this group activity?
-      .filter(m => allGroupsInWrapper.some(w => w.pubkeyHex === m.pubkey.key)) // we don't poll from groups which are not in the usergroup wrapper
+      .filter(m => {
+        // We don't poll from groups which are not in the usergroup wrapper, and for those which are not marked as accepted
+        // We don't want to leave them, we just don't want to poll from them.
+        const found = allGroupsInWrapper.find(w => w.pubkeyHex === m.pubkey.key);
+        return found && !found.invitePending;
+      })
       .map(m => m.pubkey.key as GroupPubkeyType) // extract the pubkey
       .map(m => [m, ConversationTypeEnum.GROUPV2] as PollForGroup);
 
@@ -560,7 +568,12 @@ export class SwarmPolling {
 
     const closedGroupsOnly = convos.filter(
       (c: ConversationModel) =>
-        c.isClosedGroup() && !c.isBlocked() && !c.isKickedFromGroup() && !c.isLeft()
+        (c.isClosedGroupV2() &&
+          !c.isBlocked() &&
+          !c.isKickedFromGroup() &&
+          !c.isLeft() &&
+          c.isApproved()) ||
+        (c.isClosedGroup() && !c.isBlocked() && !c.isKickedFromGroup() && !c.isLeft())
     );
 
     closedGroupsOnly.forEach(c => {

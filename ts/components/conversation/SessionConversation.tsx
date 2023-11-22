@@ -55,6 +55,7 @@ import { MessageDetail } from './message/message-item/MessageDetail';
 
 import { HTMLDirection } from '../../util/i18n';
 import { SessionSpinner } from '../basic/SessionSpinner';
+import { ConversationMessageRequestButtons } from './MessageRequestButtons';
 
 const DEFAULT_JPEG_QUALITY = 0.85;
 
@@ -270,7 +271,7 @@ export class SessionConversation extends React.Component<Props, State> {
 
               <div className="conversation-messages">
                 <NoMessageInConversation />
-
+                <ConversationMessageRequestButtons />
                 <SplitViewContainer
                   top={<InConversationCallContainer />}
                   bottom={

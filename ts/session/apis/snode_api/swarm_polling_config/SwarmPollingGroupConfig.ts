@@ -1,5 +1,5 @@
 import { GroupPubkeyType } from 'libsession_util_nodejs';
-import { groupInfoActions } from '../../../../state/ducks/groups';
+import { groupInfoActions } from '../../../../state/ducks/metaGroups';
 import { MetaGroupWrapperActions } from '../../../../webworker/workers/browser/libsession_worker_interface';
 import { ed25519Str } from '../../../onions/onionPath';
 import { fromBase64ToArray } from '../../../utils/String';
@@ -19,7 +19,6 @@ async function handleGroupSharedConfigMessages(
     );
 
     if (groupConfigMessages.find(m => !m.storedAt)) {
-      debugger;
       throw new Error('all incoming group config message should have a timestamp');
     }
     const infos = groupConfigMessages

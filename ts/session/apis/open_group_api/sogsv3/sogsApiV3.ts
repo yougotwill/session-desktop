@@ -436,7 +436,7 @@ async function handleInboxOutboxMessages(
             messageHash: '',
             sentAt: postedAtInMs,
           });
-          await outboxConversationModel.setOriginConversationID(serverConversationId);
+          await outboxConversationModel.setOriginConversationID(serverConversationId, true);
 
           await handleOutboxMessageModel(
             msgModel,

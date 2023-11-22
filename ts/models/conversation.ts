@@ -237,6 +237,10 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     return isDirectConversation(this.get('type'));
   }
 
+  public isPrivateAndBlinded() {
+    return this.isPrivate() && PubKey.isBlinded(this.id);
+  }
+
   // returns true if this is a closed/medium or open group
   public isGroup() {
     return isOpenOrClosedGroup(this.get('type'));
@@ -383,8 +387,11 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       toRet.groupAdmins = this.getGroupAdmins();
     }
 
-    // those are values coming only from the DB when this is a closed group
+    if (this.isClosedGroupV2() || this.isPrivateAndBlinded()) {
+      toRet.conversationIdOrigin = this.getConversationIdOrigin();
+    }
     if (this.isClosedGroup()) {
+      // those are values coming only from the DB when this is a closed group
       if (this.isKickedFromGroup()) {
         toRet.isKickedFromGroup = this.isKickedFromGroup();
       }
@@ -660,6 +667,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
    */
   public isIncomingRequest(): boolean {
     return hasValidIncomingRequestValues({
+      id: this.id,
       isMe: this.isMe(),
       isApproved: this.isApproved(),
       isBlocked: this.isBlocked(),
@@ -1359,14 +1367,29 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     }
   }
 
-  public async setOriginConversationID(conversationIdOrigin: string) {
-    if (conversationIdOrigin === this.get('conversationIdOrigin')) {
+  public async setOriginConversationID(conversationIdOrigin: string, shouldCommit: boolean) {
+    if (conversationIdOrigin === this.getConversationIdOrigin()) {
       return;
+    }
+    // conversationIdOrigin can only be a 05 pubkey (invite to a 03 group from a 05 person, or a sogs url), or undefined
+    if (
+      conversationIdOrigin &&
+      !PubKey.is05Pubkey(conversationIdOrigin) &&
+      !OpenGroupUtils.isOpenGroupV2(conversationIdOrigin)
+    ) {
+      window.log.warn(
+        'tried to setOriginConversationID with invalid parameter:',
+        conversationIdOrigin
+      );
+      throw new Error('tried to setOriginConversationID with invalid parameter ');
     }
     this.set({
       conversationIdOrigin,
     });
-    await this.commit();
+
+    if (shouldCommit) {
+      await this.commit();
+    }
   }
 
   /**
@@ -1735,6 +1758,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
   public isLeft(): boolean {
     if (this.isClosedGroup()) {
       if (this.isClosedGroupV2()) {
+        // getLibGroupNameOutsideRedux(this.id) ||
         // console.info('isLeft using lib todo'); // debugger
       }
       return !!this.get('left');
@@ -1931,7 +1955,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
 
   private async sendBlindedMessageRequest(messageParams: VisibleMessageParams) {
     const ourSignKeyBytes = await UserUtils.getUserED25519KeyPairBytes();
-    const groupUrl = this.getSogsOriginMessage();
+    const groupUrl = this.getConversationIdOrigin();
 
     if (!PubKey.isBlinded(this.id)) {
       window?.log?.warn('sendBlindedMessageRequest - convo is not a blinded one');
@@ -2091,10 +2115,18 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
   }
 
   /**
-   *
-   * @returns The open group conversationId this conversation originated from
+   * @link ConversationAttributes#conversationIdOrigin
    */
-  private getSogsOriginMessage() {
+  private getConversationIdOrigin() {
+    if (!this.isClosedGroupV2() && !this.isPrivateAndBlinded()) {
+      window.log.warn(
+        'getConversationIdOrigin can only be set with 03-group or blinded conversation (15 prefix), got:',
+        this.id
+      );
+      throw new Error(
+        'getConversationIdOrigin can only be set with 03-group or blinded conversation (15 prefix)'
+      );
+    }
     return this.get('conversationIdOrigin');
   }
 
@@ -2443,6 +2475,7 @@ export function hasValidOutgoingRequestValues({
  * @param values Required properties to evaluate if this is a message request
  */
 export function hasValidIncomingRequestValues({
+  id,
   isMe,
   isApproved,
   isBlocked,
@@ -2450,6 +2483,7 @@ export function hasValidIncomingRequestValues({
   activeAt,
   didApproveMe,
 }: {
+  id: string;
   isMe: boolean;
   isApproved: boolean;
   isBlocked: boolean;
@@ -2459,5 +2493,12 @@ export function hasValidIncomingRequestValues({
 }): boolean {
   // if a convo is not active, it means we didn't get any messages nor sent any.
   const isActive = activeAt && isFinite(activeAt) && activeAt > 0;
-  return Boolean(isPrivate && !isMe && !isApproved && !isBlocked && isActive && didApproveMe);
+  return Boolean(
+    (isPrivate || PubKey.is03Pubkey(id)) &&
+      !isMe &&
+      !isApproved &&
+      !isBlocked &&
+      isActive &&
+      didApproveMe
+  );
 }

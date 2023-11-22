@@ -14,6 +14,7 @@ import { OpenGroupUtils } from '../session/apis/open_group_api/utils';
 import { ConvoHub } from '../session/conversations';
 import { getSodiumRenderer } from '../session/crypto';
 import { getDecryptedMediaUrl } from '../session/crypto/DecryptedAttachmentsManager';
+import { PubKey } from '../session/types';
 import { perfEnd, perfStart } from '../session/utils/Performance';
 import { fromHexToArray, toHex } from '../session/utils/String';
 import { UserSync } from '../session/utils/job_runners/jobs/UserSyncJob';
@@ -36,6 +37,7 @@ import {
   updateRemoveModeratorsModal,
 } from '../state/ducks/modalDialog';
 import { MIME } from '../types';
+import { LocalizerKeys } from '../types/LocalizerKeys';
 import { IMAGE_JPEG } from '../types/MIME';
 import { processNewAttachment } from '../types/MessageAttachment';
 import { urlToBlob } from '../types/attachments/VisualAttachment';
@@ -69,11 +71,6 @@ export async function blockConvoById(conversationId: string) {
   if (!conversation.id || conversation.isPublic()) {
     return;
   }
-
-  // I don't think we want to reset the approved fields when blocking a contact
-  // if (conversation.isPrivate()) {
-  //   await conversation.setIsApproved(false);
-  // }
 
   await BlockedNumberController.block(conversation.id);
   await conversation.commit();
@@ -124,19 +121,24 @@ export const approveConvoAndSendResponse = async (
 };
 
 export async function declineConversationWithoutConfirm({
-  blockContact,
+  alsoBlock,
   conversationId,
   currentlySelectedConvo,
   syncToDevices,
+  conversationIdOrigin,
 }: {
   conversationId: string;
   currentlySelectedConvo: string | undefined;
   syncToDevices: boolean;
-  blockContact: boolean; // if set to false, the contact will just be set to not approved
+  alsoBlock: boolean;
+  conversationIdOrigin: string | null;
 }) {
   const conversationToDecline = ConvoHub.use().get(conversationId);
 
-  if (!conversationToDecline || !conversationToDecline.isPrivate()) {
+  if (
+    !conversationToDecline ||
+    (!conversationToDecline.isPrivate() && !conversationToDecline.isClosedGroupV2())
+  ) {
     window?.log?.info('No conversation to decline.');
     return;
   }
@@ -144,10 +146,20 @@ export async function declineConversationWithoutConfirm({
   // Note: do not set the active_at undefined as this would make that conversation not synced with the libsession wrapper
   await conversationToDecline.setIsApproved(false, false);
   await conversationToDecline.setDidApproveMe(false, false);
+  await conversationToDecline.setOriginConversationID('', false);
   // this will update the value in the wrapper if needed but not remove the entry if we want it gone. The remove is done below with removeContactFromWrapper
   await conversationToDecline.commit();
-  if (blockContact) {
-    await blockConvoById(conversationId);
+  if (alsoBlock) {
+    if (PubKey.is03Pubkey(conversationId)) {
+      // Note: if we do want to block this convo, we actually want to block the person who invited us, not the 03 pubkey itself
+      if (conversationIdOrigin && !PubKey.is03Pubkey(conversationIdOrigin)) {
+        // restoring from seed we can be missing the conversationIdOrigin, so we wouldn't be able to block the person who invited us
+
+        await blockConvoById(conversationIdOrigin);
+      }
+    } else {
+      await blockConvoById(conversationId);
+    }
   }
   // when removing a message request, without blocking it, we actually have no need to store the conversation in the wrapper. So just remove the entry
 
@@ -156,6 +168,10 @@ export async function declineConversationWithoutConfirm({
     !SessionUtilContact.isContactToStoreInWrapper(conversationToDecline)
   ) {
     await SessionUtilContact.removeContactFromWrapper(conversationToDecline.id);
+  }
+
+  if (PubKey.is03Pubkey(conversationId)) {
+    await UserGroupsWrapperActions.eraseGroup(conversationId);
   }
 
   if (syncToDevices) {
@@ -169,25 +185,58 @@ export async function declineConversationWithoutConfirm({
 export const declineConversationWithConfirm = ({
   conversationId,
   syncToDevices,
-  blockContact,
+  alsoBlock,
   currentlySelectedConvo,
+  conversationIdOrigin,
 }: {
   conversationId: string;
   currentlySelectedConvo: string | undefined;
   syncToDevices: boolean;
-  blockContact: boolean; // if set to false, the contact will just be set to not approved
+  alsoBlock: boolean;
+  conversationIdOrigin: string | null;
 }) => {
+  const isGroupV2 = PubKey.is03Pubkey(conversationId);
+
+  const okKey: LocalizerKeys = alsoBlock ? 'block' : isGroupV2 ? 'delete' : 'decline';
+  const nameToBlock =
+    alsoBlock && !!conversationIdOrigin
+      ? ConvoHub.use().get(conversationIdOrigin)?.getContactProfileNameOrShortenedPubKey()
+      : null;
+  const messageKey: LocalizerKeys = isGroupV2
+    ? alsoBlock && nameToBlock
+      ? 'deleteGroupRequestAndBlock'
+      : 'deleteGroupRequest'
+    : 'declineRequestMessage';
+
+  let message = '';
+  // restoring from seeed we might not have the sender of that invite, so we need to take care of not having one (and not block)
+  if (isGroupV2 && messageKey === 'deleteGroupRequestAndBlock') {
+    if (!nameToBlock) {
+      throw new Error(
+        'deleteGroupRequestAndBlock needs a nameToBlock (or block should not be visible)'
+      );
+    }
+
+    message = window.i18n(
+      messageKey,
+      messageKey === 'deleteGroupRequestAndBlock' ? [nameToBlock] : []
+    );
+  } else {
+    message = window.i18n(messageKey);
+  }
+
   window?.inboxStore?.dispatch(
     updateConfirmModal({
-      okText: blockContact ? window.i18n('block') : window.i18n('decline'),
+      okText: window.i18n(okKey),
       cancelText: window.i18n('cancel'),
-      message: window.i18n('declineRequestMessage'),
+      message,
       onClickOk: async () => {
         await declineConversationWithoutConfirm({
           conversationId,
           currentlySelectedConvo,
-          blockContact,
+          alsoBlock,
           syncToDevices,
+          conversationIdOrigin,
         });
       },
       onClickCancel: () => {

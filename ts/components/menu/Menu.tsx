@@ -9,6 +9,7 @@ import {
   useIsActive,
   useIsBlinded,
   useIsBlocked,
+  useIsGroupV2,
   useIsIncomingRequest,
   useIsKickedFromGroup,
   useIsLeft,
@@ -48,6 +49,7 @@ import {
   updateConfirmModal,
   updateUserDetailsModal,
 } from '../../state/ducks/modalDialog';
+import { useConversationIdOrigin } from '../../state/selectors/conversations';
 import { getIsMessageSection } from '../../state/selectors/section';
 import { useSelectedConversationKey } from '../../state/selectors/selectedConversation';
 import { LocalizerKeys } from '../../types/LocalizerKeys';
@@ -502,20 +504,21 @@ export const DeclineMsgRequestMenuItem = () => {
   const isRequest = useIsIncomingRequest(convoId);
   const isPrivate = useIsPrivate(convoId);
   const selected = useSelectedConversationKey();
-
-  if (isPrivate && isRequest) {
+  const isGroupV2 = useIsGroupV2(convoId);
+  if ((isPrivate || isGroupV2) && isRequest) {
     return (
       <Item
         onClick={() => {
           declineConversationWithConfirm({
             conversationId: convoId,
             syncToDevices: true,
-            blockContact: false,
+            alsoBlock: false,
             currentlySelectedConvo: selected || undefined,
+            conversationIdOrigin: null,
           });
         }}
       >
-        {window.i18n('decline')}
+        {isGroupV2 ? window.i18n('delete') : window.i18n('decline')}
       </Item>
     );
   }
@@ -527,16 +530,20 @@ export const DeclineAndBlockMsgRequestMenuItem = () => {
   const isRequest = useIsIncomingRequest(convoId);
   const selected = useSelectedConversationKey();
   const isPrivate = useIsPrivate(convoId);
+  const isGroupV2 = useIsGroupV2(convoId);
+  const convoOrigin = useConversationIdOrigin(convoId);
 
-  if (isRequest && isPrivate) {
+  if (isRequest && (isPrivate || (isGroupV2 && convoOrigin))) {
+    // to block the author of a groupv2 invitge we need the convoOrigin set
     return (
       <Item
         onClick={() => {
           declineConversationWithConfirm({
             conversationId: convoId,
             syncToDevices: true,
-            blockContact: true,
+            alsoBlock: true,
             currentlySelectedConvo: selected || undefined,
+            conversationIdOrigin: convoOrigin ?? null,
           });
         }}
       >

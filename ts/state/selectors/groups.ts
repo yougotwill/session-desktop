@@ -1,7 +1,7 @@
 import { GroupMemberGet, GroupPubkeyType, PubkeyType } from 'libsession_util_nodejs';
 import { useSelector } from 'react-redux';
 import { PubKey } from '../../session/types';
-import { GroupState } from '../ducks/groups';
+import { GroupState } from '../ducks/metaGroups';
 import { StateType } from '../reducer';
 
 const getLibGroupsState = (state: StateType): GroupState => state.groups;

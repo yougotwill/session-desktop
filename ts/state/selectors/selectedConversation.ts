@@ -36,10 +36,6 @@ const getIsSelectedBlocked = (state: StateType): boolean => {
   return Boolean(getSelectedConversation(state)?.isBlocked) || false;
 };
 
-const getSelectedIsApproved = (state: StateType): boolean => {
-  return Boolean(getSelectedConversation(state)?.isApproved) || false;
-};
-
 const getSelectedApprovedMe = (state: StateType): boolean => {
   return Boolean(getSelectedConversation(state)?.didApproveMe) || false;
 };
@@ -210,7 +206,9 @@ export function useSelectedIsBlocked() {
 }
 
 export function useSelectedIsApproved() {
-  return useSelector(getSelectedIsApproved);
+  return useSelector((state: StateType): boolean => {
+    return !!(getSelectedConversation(state)?.isApproved || false);
+  });
 }
 
 export function useSelectedApprovedMe() {
@@ -278,6 +276,10 @@ export function useSelectedIsKickedFromGroup() {
 
 export function useSelectedIsLeft() {
   return useSelector((state: StateType) => Boolean(getSelectedConversation(state)?.left) || false);
+}
+
+export function useSelectedConversationIdOrigin() {
+  return useSelector((state: StateType) => getSelectedConversation(state)?.conversationIdOrigin);
 }
 
 export function useSelectedNickname() {

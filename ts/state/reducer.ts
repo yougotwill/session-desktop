@@ -1,26 +1,27 @@
 import { combineReducers } from '@reduxjs/toolkit';
 
-import { reducer as search, SearchStateType } from './ducks/search';
-import { ConversationsStateType, reducer as conversations } from './ducks/conversations';
-import { reducer as user, UserStateType } from './ducks/user';
-import { reducer as theme } from './ducks/theme';
-import { reducer as primaryColor } from './ducks/primaryColor';
-import { reducer as section, SectionStateType } from './ducks/section';
-import { defaultRoomReducer as defaultRooms, DefaultRoomsState } from './ducks/defaultRooms';
-import { ReduxSogsRoomInfos, SogsRoomInfoState } from './ducks/sogsRoomInfo';
 import { callReducer as call, CallStateType } from './ducks/call';
+import { reducer as conversations, ConversationsStateType } from './ducks/conversations';
+import { defaultRoomReducer as defaultRooms, DefaultRoomsState } from './ducks/defaultRooms';
+import { reducer as primaryColor } from './ducks/primaryColor';
+import { reducer as search, SearchStateType } from './ducks/search';
+import { reducer as section, SectionStateType } from './ducks/section';
+import { ReduxSogsRoomInfos, SogsRoomInfoState } from './ducks/sogsRoomInfo';
+import { reducer as theme } from './ducks/theme';
+import { reducer as user, UserStateType } from './ducks/user';
 
-import { defaultOnionReducer as onionPaths, OnionState } from './ducks/onion';
+import { PrimaryColorStateType, ThemeStateType } from '../themes/constants/colors';
+import { groupReducer, GroupState } from './ducks/metaGroups';
 import { modalReducer as modals, ModalState } from './ducks/modalDialog';
-import { userConfigReducer as userConfig, UserConfigState } from './ducks/userConfig';
-import { timerOptionReducer as timerOptions, TimerOptionsState } from './ducks/timerOptions';
+import { defaultOnionReducer as onionPaths, OnionState } from './ducks/onion';
+import { settingsReducer, SettingsState } from './ducks/settings';
 import {
   reducer as stagedAttachments,
   StagedAttachmentsStateType,
 } from './ducks/stagedAttachments';
-import { PrimaryColorStateType, ThemeStateType } from '../themes/constants/colors';
-import { settingsReducer, SettingsState } from './ducks/settings';
-import { groupReducer, GroupState } from './ducks/groups';
+import { timerOptionReducer as timerOptions, TimerOptionsState } from './ducks/timerOptions';
+import { userConfigReducer as userConfig, UserConfigState } from './ducks/userConfig';
+import { userGroupReducer, UserGroupState } from './ducks/userGroups';
 
 export type StateType = {
   search: SearchStateType;
@@ -39,6 +40,7 @@ export type StateType = {
   sogsRoomInfo: SogsRoomInfoState;
   settings: SettingsState;
   groups: GroupState;
+  userGroups: UserGroupState;
 };
 
 export const reducers = {
@@ -58,6 +60,7 @@ export const reducers = {
   sogsRoomInfo: ReduxSogsRoomInfos.sogsRoomInfoReducer,
   settings: settingsReducer,
   groups: groupReducer,
+  userGroups: userGroupReducer,
 };
 
 // Making this work would require that our reducer signature supported AnyAction, not

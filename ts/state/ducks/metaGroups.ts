@@ -34,6 +34,7 @@ import { RunJobResult } from '../../session/utils/job_runners/PersistedJob';
 import { GroupInvite } from '../../session/utils/job_runners/jobs/GroupInviteJob';
 import { GroupSync } from '../../session/utils/job_runners/jobs/GroupSyncJob';
 import { UserSync } from '../../session/utils/job_runners/jobs/UserSyncJob';
+import { LibSessionUtil } from '../../session/utils/libsession/libsession_utils';
 import { stringify, toFixedUint8ArrayOfLength } from '../../types/sqlSharedTypes';
 import {
   getGroupPubkeyFromWrapperType,
@@ -585,6 +586,8 @@ async function handleMemberChangeFromUIOrNot({
   // this removes them from the wrapper
   await handleRemoveMembers({ groupPk, removed, secretKey: group.secretKey, fromCurrentDevice });
 
+  await LibSessionUtil.saveDumpsToDb(groupPk);
+
   // push new members & key supplement in a single batch call
   const batchResult = await GroupSync.pushChangesToGroupSwarmIfNeeded(groupPk, supplementKeys);
   if (batchResult !== RunJobResult.Success) {
@@ -644,6 +647,7 @@ async function handleMemberChangeFromUIOrNot({
       }),
     });
   }
+  await LibSessionUtil.saveDumpsToDb(groupPk);
 
   convo.set({
     active_at: createAtNetworkTimestamp,
@@ -862,8 +866,8 @@ const currentDeviceGroupNameChange = createAsyncThunk(
 /**
  * This slice is the one holding the default joinable rooms fetched once in a while from the default opengroup v2 server.
  */
-const groupSlice = createSlice({
-  name: 'group',
+const metaGroupSlice = createSlice({
+  name: 'metaGroup',
   initialState: initialGroupState,
   reducers: {},
   extraReducers: builder => {
@@ -1019,6 +1023,6 @@ export const groupInfoActions = {
   markUsAsAdmin,
   inviteResponseReceived,
   currentDeviceGroupNameChange,
-  ...groupSlice.actions,
+  ...metaGroupSlice.actions,
 };
-export const groupReducer = groupSlice.reducer;
+export const groupReducer = metaGroupSlice.reducer;

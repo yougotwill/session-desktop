@@ -22,7 +22,7 @@ import { useSet } from '../../hooks/useSet';
 import { ClosedGroup } from '../../session/group/closed-group';
 import { PubKey } from '../../session/types';
 import { SessionUtilUserGroups } from '../../session/utils/libsession/libsession_utils_user_groups';
-import { groupInfoActions } from '../../state/ducks/groups';
+import { groupInfoActions } from '../../state/ducks/metaGroups';
 import { getPrivateContactsPubkeys } from '../../state/selectors/conversations';
 import { useMemberGroupChangePending } from '../../state/selectors/groups';
 import { MemberListItem } from '../MemberListItem';

@@ -9,7 +9,7 @@ import { ConvoHub } from '../../session/conversations';
 import { ClosedGroup } from '../../session/group/closed-group';
 import { initiateOpenGroupUpdate } from '../../session/group/open-group';
 import { PubKey } from '../../session/types';
-import { groupInfoActions } from '../../state/ducks/groups';
+import { groupInfoActions } from '../../state/ducks/metaGroups';
 import { updateGroupNameModal } from '../../state/ducks/modalDialog';
 import { getLibGroupNameOutsideRedux } from '../../state/selectors/groups';
 import { pickFileForAvatar } from '../../types/attachments/VisualAttachment';

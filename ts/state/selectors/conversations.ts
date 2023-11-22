@@ -2,6 +2,7 @@
 import { createSelector } from '@reduxjs/toolkit';
 import { filter, isEmpty, isFinite, isNumber, pick, sortBy, toNumber } from 'lodash';
 
+import { useSelector } from 'react-redux';
 import {
   ConversationLookupType,
   ConversationsStateType,
@@ -90,6 +91,13 @@ export const hasSelectedConversationIncomingMessages = createSelector(
   getSortedMessagesOfSelectedConversation,
   (messages: Array<MessageModelPropsWithoutConvoProps>): boolean => {
     return messages.some(m => m.propsForMessage.direction === 'incoming');
+  }
+);
+
+export const hasSelectedConversationOutgoingMessages = createSelector(
+  getSortedMessagesOfSelectedConversation,
+  (messages: Array<MessageModelPropsWithoutConvoProps>): boolean => {
+    return messages.some(m => m.propsForMessage.direction === 'outgoing');
   }
 );
 
@@ -379,8 +387,9 @@ const _getConversationRequests = (
   sortedConversations: Array<ReduxConversationType>
 ): Array<ReduxConversationType> => {
   return filter(sortedConversations, conversation => {
-    const { isApproved, isBlocked, isPrivate, isMe, activeAt, didApproveMe } = conversation;
+    const { isApproved, isBlocked, isPrivate, isMe, activeAt, didApproveMe, id } = conversation;
     const isIncomingRequest = hasValidIncomingRequestValues({
+      id,
       isApproved: isApproved || false,
       isBlocked: isBlocked || false,
       isPrivate: isPrivate || false,
@@ -613,8 +622,8 @@ export function getLoadedMessagesLength(state: StateType) {
   return getMessagesFromState(state).length;
 }
 
-export function getSelectedHasMessages(state: StateType): boolean {
-  return !isEmpty(getMessagesFromState(state));
+export function useSelectedHasMessages(): boolean {
+  return useSelector((state: StateType) => !isEmpty(getMessagesFromState(state)));
 }
 
 export const isFirstUnreadMessageIdAbove = createSelector(
@@ -961,4 +970,10 @@ export const getIsSelectedConvoInitialLoadingInProgress = (state: StateType): bo
 
 export function getCurrentlySelectedConversationOutsideRedux() {
   return window?.inboxStore?.getState().conversations.selectedConversation as string | undefined;
+}
+
+export function useConversationIdOrigin(convoId: string | undefined) {
+  return useSelector((state: StateType) =>
+    convoId ? state.conversations.conversationLookup?.[convoId]?.conversationIdOrigin : undefined
+  );
 }

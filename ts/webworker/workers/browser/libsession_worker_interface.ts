@@ -16,13 +16,16 @@ import {
   Uint8ArrayLen100,
   Uint8ArrayLen64,
   UserConfigWrapperActionsCalls,
+  UserGroupsGet,
   UserGroupsSet,
   UserGroupsWrapperActionsCalls,
 } from 'libsession_util_nodejs';
 // eslint-disable-next-line import/order
 import { join } from 'path';
 
+import { cloneDeep } from 'lodash';
 import { getAppRootPath } from '../../../node/getRootPath';
+import { userGroupsActions } from '../../../state/ducks/userGroups';
 import { WorkerInterface } from '../../worker_interface';
 import { ConfigWrapperUser, LibSessionWorkerFunctions } from './libsession_worker_functions';
 
@@ -115,11 +118,11 @@ function createBaseActionsFor(wrapperType: ConfigWrapperUser) {
       GenericWrapperActions.confirmPushed(wrapperType, seqno, hash),
     dump: async () => GenericWrapperActions.dump(wrapperType),
     makeDump: async () => GenericWrapperActions.makeDump(wrapperType),
-    merge: async (toMerge: Array<MergeSingle>) => GenericWrapperActions.merge(wrapperType, toMerge),
     needsDump: async () => GenericWrapperActions.needsDump(wrapperType),
     needsPush: async () => GenericWrapperActions.needsPush(wrapperType),
     push: async () => GenericWrapperActions.push(wrapperType),
     currentHashes: async () => GenericWrapperActions.currentHashes(wrapperType),
+    merge: async (toMerge: Array<MergeSingle>) => GenericWrapperActions.merge(wrapperType, toMerge),
   };
 }
 
@@ -184,9 +187,24 @@ export const ContactsWrapperActions: ContactsWrapperActionsCalls = {
     >,
 };
 
+// this is a cache of the new groups only. Anytime we create, update, delete, or merge a group, we update this
+const groups: Map<GroupPubkeyType, UserGroupsGet> = new Map();
+
+function dispatchCachedGroupsToRedux() {
+  window?.inboxStore?.dispatch?.(
+    userGroupsActions.refreshUserGroupsSlice({ groups: [...groups.values()] })
+  );
+}
+
 export const UserGroupsWrapperActions: UserGroupsWrapperActionsCalls = {
   /* Reuse the GenericWrapperActions with the UserGroupsConfig argument */
   ...createBaseActionsFor('UserGroupsConfig'),
+  // override the merge() as we need to refresh the cached groups
+  merge: async (toMerge: Array<MergeSingle>) => {
+    const mergeRet = await GenericWrapperActions.merge('UserGroupsConfig', toMerge);
+    await UserGroupsWrapperActions.getAllGroups(); // this refreshes the cached data after merge
+    return mergeRet;
+  },
 
   /** UserGroups wrapper specific actions */
 
@@ -245,30 +263,61 @@ export const UserGroupsWrapperActions: UserGroupsWrapperActionsCalls = {
       ReturnType<UserGroupsWrapperActionsCalls['eraseLegacyGroup']>
     >,
 
-  createGroup: async () =>
-    callLibSessionWorker(['UserGroupsConfig', 'createGroup']) as Promise<
+  createGroup: async () => {
+    const group = (await callLibSessionWorker(['UserGroupsConfig', 'createGroup'])) as Awaited<
       ReturnType<UserGroupsWrapperActionsCalls['createGroup']>
-    >,
+    >;
+    groups.set(group.pubkeyHex, group);
+    dispatchCachedGroupsToRedux();
+    return cloneDeep(group);
+  },
 
-  getGroup: async (pubkeyHex: GroupPubkeyType) =>
-    callLibSessionWorker(['UserGroupsConfig', 'getGroup', pubkeyHex]) as Promise<
-      ReturnType<UserGroupsWrapperActionsCalls['getGroup']>
-    >,
+  getGroup: async (pubkeyHex: GroupPubkeyType) => {
+    const group = (await callLibSessionWorker([
+      'UserGroupsConfig',
+      'getGroup',
+      pubkeyHex,
+    ])) as Awaited<ReturnType<UserGroupsWrapperActionsCalls['getGroup']>>;
+    if (group) {
+      groups.set(group.pubkeyHex, group);
+    } else {
+      groups.delete(pubkeyHex);
+    }
+    dispatchCachedGroupsToRedux();
+    return cloneDeep(group);
+  },
 
-  getAllGroups: async () =>
-    callLibSessionWorker(['UserGroupsConfig', 'getAllGroups']) as Promise<
-      ReturnType<UserGroupsWrapperActionsCalls['getAllGroups']>
-    >,
+  getAllGroups: async () => {
+    const groupsFetched = (await callLibSessionWorker([
+      'UserGroupsConfig',
+      'getAllGroups',
+    ])) as Awaited<ReturnType<UserGroupsWrapperActionsCalls['getAllGroups']>>;
+    groups.clear();
+    groupsFetched.forEach(f => groups.set(f.pubkeyHex, f));
+    dispatchCachedGroupsToRedux();
+    return cloneDeep(groupsFetched);
+  },
 
-  setGroup: async (info: UserGroupsSet) =>
-    callLibSessionWorker(['UserGroupsConfig', 'setGroup', info]) as Promise<
+  setGroup: async (info: UserGroupsSet) => {
+    const group = (await callLibSessionWorker(['UserGroupsConfig', 'setGroup', info])) as Awaited<
       ReturnType<UserGroupsWrapperActionsCalls['setGroup']>
-    >,
+    >;
+    groups.set(group.pubkeyHex, group);
+    dispatchCachedGroupsToRedux();
+    return cloneDeep(group);
+  },
 
-  eraseGroup: async (pubkeyHex: GroupPubkeyType) =>
-    callLibSessionWorker(['UserGroupsConfig', 'eraseGroup', pubkeyHex]) as Promise<
-      ReturnType<UserGroupsWrapperActionsCalls['eraseGroup']>
-    >,
+  eraseGroup: async (pubkeyHex: GroupPubkeyType) => {
+    const ret = (await callLibSessionWorker([
+      'UserGroupsConfig',
+      'eraseGroup',
+      pubkeyHex,
+    ])) as Awaited<ReturnType<UserGroupsWrapperActionsCalls['eraseGroup']>>;
+
+    groups.delete(pubkeyHex);
+    dispatchCachedGroupsToRedux();
+    return ret;
+  },
 };
 
 export const ConvoInfoVolatileWrapperActions: ConvoInfoVolatileWrapperActionsCalls = {
@@ -541,7 +590,7 @@ export const MetaGroupWrapperActions: MetaGroupWrapperActionsCalls = {
       'swarmVerifySubAccount',
       signingValue,
     ]) as Promise<ReturnType<MetaGroupWrapperActionsCalls['swarmVerifySubAccount']>>,
-    loadAdminKeys: async (groupPk: GroupPubkeyType, secret: Uint8ArrayLen64) => {
+  loadAdminKeys: async (groupPk: GroupPubkeyType, secret: Uint8ArrayLen64) => {
     return callLibSessionWorker([`MetaGroupConfig-${groupPk}`, 'loadAdminKeys', secret]) as Promise<
       ReturnType<MetaGroupWrapperActionsCalls['loadAdminKeys']>
     >;

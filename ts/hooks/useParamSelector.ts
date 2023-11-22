@@ -231,6 +231,7 @@ export function useIsIncomingRequest(convoId?: string) {
   return Boolean(
     convoProps &&
       hasValidIncomingRequestValues({
+        id: convoProps.id,
         isMe: convoProps.isMe || false,
         isApproved: convoProps.isApproved || false,
         isPrivate: convoProps.isPrivate || false,

@@ -18,7 +18,7 @@ import { getMessageQueue } from '..';
 import { deleteAllMessagesByConvoIdNoConfirmation } from '../../interactions/conversationInteractions';
 import { CONVERSATION_PRIORITIES, ConversationTypeEnum } from '../../models/conversationAttributes';
 import { removeAllClosedGroupEncryptionKeyPairs } from '../../receiver/closedGroups';
-import { groupInfoActions } from '../../state/ducks/groups';
+import { groupInfoActions } from '../../state/ducks/metaGroups';
 import { getCurrentlySelectedConversationOutsideRedux } from '../../state/selectors/conversations';
 import { assertUnreachable } from '../../types/sqlSharedTypes';
 import { UserGroupsWrapperActions } from '../../webworker/workers/browser/libsession_worker_interface';
@@ -212,7 +212,6 @@ class ConvoController {
     }
     window.log.info(`deleteClosedGroup: ${groupId}, sendLeaveMessage?:${options.sendLeaveMessage}`);
     getSwarmPollingInstance().removePubkey(groupId, 'deleteClosedGroup'); // we don't need to keep polling anymore.
-
     if (options.sendLeaveMessage) {
       await leaveClosedGroup(groupId, options.fromSyncMessage);
     }

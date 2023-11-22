@@ -100,7 +100,7 @@ export const MessageAvatar = (props: Props) => {
         privateConvoToOpen = foundRealSessionId || privateConvoToOpen;
       }
 
-      await ConvoHub.use().get(privateConvoToOpen).setOriginConversationID(selectedConvoKey);
+      await ConvoHub.use().get(privateConvoToOpen).setOriginConversationID(selectedConvoKey, true);
 
       // public and blinded key for that message, we should open the convo as is and see if the user wants
       // to send a sogs blinded message request.

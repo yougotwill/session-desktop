@@ -73,7 +73,7 @@ export interface ConversationAttributes {
 
   isTrustedForAttachmentDownload: boolean; // not synced accross devices, this field is used if we should auto download attachments from this conversation or not
 
-  conversationIdOrigin?: string; // Blinded message requests ONLY: The community from which this conversation originated from
+  conversationIdOrigin?: string; // The conversation from which this conversation originated from: blinded message request or 03-group admin who invited us
 
   // TODOLATER those two items are only used for legacy closed groups and will be removed when we get rid of the legacy closed groups support
   lastJoinedTimestamp: number; // ClosedGroup: last time we were added to this group // TODOLATER to remove after legacy closed group are dropped

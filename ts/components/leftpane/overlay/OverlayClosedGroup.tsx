@@ -15,7 +15,7 @@ import { useSet } from '../../../hooks/useSet';
 import { VALIDATION } from '../../../session/constants';
 import { createClosedGroup } from '../../../session/conversations/createClosedGroup';
 import { ToastUtils } from '../../../session/utils';
-import { groupInfoActions } from '../../../state/ducks/groups';
+import { groupInfoActions } from '../../../state/ducks/metaGroups';
 import { resetOverlayMode } from '../../../state/ducks/section';
 import { getPrivateContactsPubkeys } from '../../../state/selectors/conversations';
 import { useIsCreatingGroupFromUIPending } from '../../../state/selectors/groups';

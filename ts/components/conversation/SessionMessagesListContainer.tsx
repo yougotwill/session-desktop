@@ -24,7 +24,6 @@ import {
 import { getSelectedConversationKey } from '../../state/selectors/selectedConversation';
 import { SessionMessagesList } from './SessionMessagesList';
 import { TypingBubble } from './TypingBubble';
-import { ConversationMessageRequestButtons } from './MessageRequestButtons';
 
 export type SessionMessageListProps = {
   messageContainerRef: React.RefObject<HTMLDivElement>;
@@ -126,7 +125,6 @@ class SessionMessagesListContainerInner extends React.Component<Props> {
           isTyping={!!conversation.isTyping}
           key="typing-bubble"
         />
-        <ConversationMessageRequestButtons />
 
         <ScrollToLoadedMessageContext.Provider value={this.scrollToLoadedMessage}>
           <SessionMessagesList

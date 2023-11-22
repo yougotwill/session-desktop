@@ -1,18 +1,29 @@
 import React from 'react';
-import { useSelector } from 'react-redux';
 import styled from 'styled-components';
 import { useIsIncomingRequest } from '../../hooks/useParamSelector';
 import {
   approveConvoAndSendResponse,
   declineConversationWithConfirm,
 } from '../../interactions/conversationInteractions';
+import { getSwarmPollingInstance } from '../../session/apis/snode_api/swarmPolling';
 import { ConvoHub } from '../../session/conversations';
-import { hasSelectedConversationIncomingMessages } from '../../state/selectors/conversations';
-import { useSelectedConversationKey } from '../../state/selectors/selectedConversation';
+import { PubKey } from '../../session/types';
+import {
+  useSelectedConversationIdOrigin,
+  useSelectedConversationKey,
+  useSelectedIsGroupV2,
+  useSelectedIsPrivateFriend,
+} from '../../state/selectors/selectedConversation';
+import { useLibGroupInvitePending } from '../../state/selectors/userGroups';
+import { UserGroupsWrapperActions } from '../../webworker/workers/browser/libsession_worker_interface';
 import { SessionButton, SessionButtonColor } from '../basic/SessionButton';
-import { ConversationRequestExplanation } from './SubtleNotification';
+import {
+  ConversationRequestExplanation,
+  GroupRequestExplanation,
+  InvitedToGroupControlMessage,
+} from './SubtleNotification';
 
-const ConversationRequestBanner = styled.div`
+const MessageRequestContainer = styled.div`
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -40,24 +51,31 @@ const StyledBlockUserText = styled.span`
   font-weight: 700;
 `;
 
-const handleDeclineConversationRequest = (convoId: string, currentSelected: string | undefined) => {
+const handleDeclineConversationRequest = (
+  convoId: string,
+  currentSelected: string | undefined,
+  conversationIdOrigin: string | null
+) => {
   declineConversationWithConfirm({
     conversationId: convoId,
     syncToDevices: true,
-    blockContact: false,
+    alsoBlock: false,
     currentlySelectedConvo: currentSelected,
+    conversationIdOrigin,
   });
 };
 
 const handleDeclineAndBlockConversationRequest = (
   convoId: string,
-  currentSelected: string | undefined
+  currentSelected: string | undefined,
+  conversationIdOrigin: string | null
 ) => {
   declineConversationWithConfirm({
     conversationId: convoId,
     syncToDevices: true,
-    blockContact: true,
+    alsoBlock: true,
     currentlySelectedConvo: currentSelected,
+    conversationIdOrigin,
   });
 };
 
@@ -69,17 +87,34 @@ const handleAcceptConversationRequest = async (convoId: string) => {
   await convo.setDidApproveMe(true, false);
   await convo.setIsApproved(true, false);
   await convo.commit();
-  await convo.addOutgoingApprovalMessage(Date.now());
-  await approveConvoAndSendResponse(convoId, true);
+  if (convo.isPrivate()) {
+    await convo.addOutgoingApprovalMessage(Date.now());
+    await approveConvoAndSendResponse(convoId, true);
+  } else if (PubKey.is03Pubkey(convoId)) {
+    const found = await UserGroupsWrapperActions.getGroup(convoId);
+    if (!found) {
+      window.log.warn('cannot approve a non existing group in usergroup');
+      return;
+    }
+    // this updates the wrapper and refresh the redux slice
+    await UserGroupsWrapperActions.setGroup({ ...found, invitePending: false });
+    getSwarmPollingInstance().addGroupId(convoId);
+  }
 };
 
 export const ConversationMessageRequestButtons = () => {
   const selectedConvoId = useSelectedConversationKey();
-
-  const hasIncomingMessages = useSelector(hasSelectedConversationIncomingMessages);
   const isIncomingRequest = useIsIncomingRequest(selectedConvoId);
+  const isGroupV2 = useSelectedIsGroupV2();
+  const isPrivateAndFriend = useSelectedIsPrivateFriend();
+  const isGroupPendingInvite = useLibGroupInvitePending(selectedConvoId);
+  const convoOrigin = useSelectedConversationIdOrigin() ?? null;
 
-  if (!selectedConvoId || !hasIncomingMessages) {
+  if (
+    !selectedConvoId ||
+    isPrivateAndFriend || // if we are already friends, there is no need for the msg request buttons
+    (isGroupV2 && !isGroupPendingInvite)
+  ) {
     return null;
   }
 
@@ -88,18 +123,8 @@ export const ConversationMessageRequestButtons = () => {
   }
 
   return (
-    <ConversationRequestBanner>
-      <StyledBlockUserText
-        onClick={() => {
-          handleDeclineAndBlockConversationRequest(selectedConvoId, selectedConvoId);
-        }}
-        data-testid="decline-and-block-message-request"
-      >
-        {window.i18n('block')}
-      </StyledBlockUserText>
-
-      <ConversationRequestExplanation />
-
+    <MessageRequestContainer>
+      <InvitedToGroupControlMessage />
       <ConversationBannerRow>
         <SessionButton
           onClick={async () => {
@@ -110,13 +135,25 @@ export const ConversationMessageRequestButtons = () => {
         />
         <SessionButton
           buttonColor={SessionButtonColor.Danger}
-          text={window.i18n('decline')}
+          text={isGroupV2 ? window.i18n('delete') : window.i18n('decline')}
           onClick={() => {
-            handleDeclineConversationRequest(selectedConvoId, selectedConvoId);
+            handleDeclineConversationRequest(selectedConvoId, selectedConvoId, convoOrigin);
           }}
           dataTestId="decline-message-request"
         />
       </ConversationBannerRow>
-    </ConversationRequestBanner>
+      {isGroupV2 ? <GroupRequestExplanation /> : <ConversationRequestExplanation />}
+
+      {(isGroupV2 && !!convoOrigin) || !isGroupV2 ? (
+        <StyledBlockUserText
+          onClick={() => {
+            handleDeclineAndBlockConversationRequest(selectedConvoId, selectedConvoId, convoOrigin);
+          }}
+          data-testid="decline-and-block-message-request"
+        >
+          {window.i18n('block')}
+        </StyledBlockUserText>
+      ) : null}
+    </MessageRequestContainer>
   );
 };
