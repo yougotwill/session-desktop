@@ -196,7 +196,9 @@ function dispatchCachedGroupsToRedux() {
   );
 }
 
-export const UserGroupsWrapperActions: UserGroupsWrapperActionsCalls = {
+export const UserGroupsWrapperActions: UserGroupsWrapperActionsCalls & {
+  getCachedGroup: (pubkeyHex: GroupPubkeyType) => UserGroupsGet | undefined;
+} = {
   /* Reuse the GenericWrapperActions with the UserGroupsConfig argument */
   ...createBaseActionsFor('UserGroupsConfig'),
   // override the merge() as we need to refresh the cached groups
@@ -285,6 +287,10 @@ export const UserGroupsWrapperActions: UserGroupsWrapperActionsCalls = {
     }
     dispatchCachedGroupsToRedux();
     return cloneDeep(group);
+  },
+
+  getCachedGroup: (pubkeyHex: GroupPubkeyType) => {
+    return groups.get(pubkeyHex);
   },
 
   getAllGroups: async () => {

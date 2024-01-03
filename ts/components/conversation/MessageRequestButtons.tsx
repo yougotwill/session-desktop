@@ -17,11 +17,7 @@ import {
 import { useLibGroupInvitePending } from '../../state/selectors/userGroups';
 import { UserGroupsWrapperActions } from '../../webworker/workers/browser/libsession_worker_interface';
 import { SessionButton, SessionButtonColor } from '../basic/SessionButton';
-import {
-  ConversationRequestExplanation,
-  GroupRequestExplanation,
-  InvitedToGroupControlMessage,
-} from './SubtleNotification';
+import { InvitedToGroupControlMessage, MessageRequestExplanation } from './SubtleNotification';
 
 const MessageRequestContainer = styled.div`
   display: flex;
@@ -135,14 +131,14 @@ export const ConversationMessageRequestButtons = () => {
         />
         <SessionButton
           buttonColor={SessionButtonColor.Danger}
-          text={isGroupV2 ? window.i18n('delete') : window.i18n('decline')}
+          text={window.i18n('delete')}
           onClick={() => {
             handleDeclineConversationRequest(selectedConvoId, selectedConvoId, convoOrigin);
           }}
           dataTestId="decline-message-request"
         />
       </ConversationBannerRow>
-      {isGroupV2 ? <GroupRequestExplanation /> : <ConversationRequestExplanation />}
+      <MessageRequestExplanation />
 
       {(isGroupV2 && !!convoOrigin) || !isGroupV2 ? (
         <StyledBlockUserText

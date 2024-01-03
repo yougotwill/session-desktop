@@ -528,6 +528,7 @@ export type LocalizerKeys =
   | 'youGotKickedFromGroup'
   | 'youHaveANewFriendRequest'
   | 'youLeftTheGroup'
+  | 'youWereInvitedToGroup'
   | 'yourSessionID'
   | 'yourUniqueSessionID'
   | 'zoomFactorSettingTitle';

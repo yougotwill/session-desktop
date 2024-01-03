@@ -518,7 +518,7 @@ export const DeclineMsgRequestMenuItem = () => {
           });
         }}
       >
-        {isGroupV2 ? window.i18n('delete') : window.i18n('decline')}
+        {window.i18n('delete')}
       </Item>
     );
   }

@@ -197,7 +197,7 @@ export const declineConversationWithConfirm = ({
 }) => {
   const isGroupV2 = PubKey.is03Pubkey(conversationId);
 
-  const okKey: LocalizerKeys = alsoBlock ? 'block' : isGroupV2 ? 'delete' : 'decline';
+  const okKey: LocalizerKeys = alsoBlock ? 'block' : 'delete';
   const nameToBlock =
     alsoBlock && !!conversationIdOrigin
       ? ConvoHub.use().get(conversationIdOrigin)?.getContactProfileNameOrShortenedPubKey()

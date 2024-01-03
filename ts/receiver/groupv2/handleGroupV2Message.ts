@@ -74,6 +74,8 @@ async function handleGroupInviteMessage({
     return;
   }
 
+  const authorIsApproved = ConvoHub.use().get(author)?.isApproved() || false;
+
   const sigValid = await verifySig({
     pubKey: HexString.fromHexStringNoPrefix(inviteMessage.groupSessionId),
     signature: inviteMessage.adminSignature,
@@ -124,6 +126,10 @@ async function handleGroupInviteMessage({
     found.kicked = false;
     found.name = inviteMessage.name;
   }
+  if (authorIsApproved) {
+    // pre approve invite to groups when we've already approved the person who invited us
+    found.invitePending = false;
+  }
   // not sure if we should drop it, or set it again? They should be the same anyway
   found.authData = inviteMessage.memberAuthData;
 
@@ -142,6 +148,10 @@ async function handleGroupInviteMessage({
   if (!found.invitePending) {
     // if this group should already be polling
     getSwarmPollingInstance().addGroupId(inviteMessage.groupSessionId);
+    console.warn(
+      'we need to do a first poll to fetch the keys etc before we can send our invite response...'
+    );
+    await sendInviteResponseToGroup({ groupPk: inviteMessage.groupSessionId });
   }
 }
 

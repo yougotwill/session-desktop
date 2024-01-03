@@ -38,6 +38,7 @@ import { MessageReactsSelectorProps } from '../../components/conversation/messag
 import { processQuoteAttachment } from '../../models/message';
 import { isUsAnySogsFromCache } from '../../session/apis/open_group_api/sogsv3/knownBlindedkeys';
 import { PubKey } from '../../session/types';
+import { UserGroupsWrapperActions } from '../../webworker/workers/browser/libsession_worker_interface';
 import { getSelectedConversationKey } from './selectedConversation';
 import { getModeratorsOutsideRedux } from './sogsRoomInfo';
 
@@ -269,6 +270,13 @@ const _getLeftPaneConversationIds = (
   return sortedConversations
     .filter(conversation => {
       if (conversation.isBlocked) {
+        return false;
+      }
+
+      if (
+        PubKey.is03Pubkey(conversation.id) &&
+        UserGroupsWrapperActions.getCachedGroup(conversation.id)?.invitePending
+      ) {
         return false;
       }
 

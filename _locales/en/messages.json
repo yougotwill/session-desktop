@@ -509,6 +509,7 @@
   "respondingToRequestWarning": "Sending a message to this user will automatically accept their message request and reveal your Session ID.",
   "respondingToGroupRequestWarning": "Sending a message to this group will automatically accept the group invite.",
   "userInvitedYouToGroup": "<b>$name$</b> invited you to join <b>$groupName$</b>.",
+  "youWereInvitedToGroup": "<b>You</b> were invited to join <b>$groupName$</b>.",
   "hideRequestBanner": "Hide Message Request Banner",
   "openMessageRequestInbox": "Message Requests",
   "noMessageRequestsPending": "No pending message requests",

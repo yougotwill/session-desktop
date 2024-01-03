@@ -7,7 +7,7 @@ import {
 } from '../../hooks/useParamSelector';
 import { PubKey } from '../../session/types';
 import {
-  hasSelectedConversationIncomingMessages,
+  hasSelectedConversationOutgoingMessages,
   useSelectedHasMessages,
 } from '../../state/selectors/conversations';
 import {
@@ -18,6 +18,7 @@ import {
   useSelectedIsApproved,
   useSelectedIsGroupV2,
   useSelectedIsNoteToSelf,
+  useSelectedIsPrivate,
   useSelectedNicknameOrProfileNameOrShortenedPubkey,
 } from '../../state/selectors/selectedConversation';
 import {
@@ -51,17 +52,20 @@ function TextNotification({ html, dataTestId }: { html: string; dataTestId: stri
   );
 }
 
-/**
- * This component is used to display a warning when the user is responding to a message request.
- */
-export const ConversationRequestExplanation = () => {
+export const MessageRequestExplanation = () => {
+  const isGroupV2 = useSelectedIsGroupV2();
+
+  return isGroupV2 ? <GroupRequestExplanation /> : <ConversationRequestExplanation />;
+};
+
+const ConversationRequestExplanation = () => {
   const selectedConversation = useSelectedConversationKey();
   const isIncomingMessageRequest = useIsIncomingRequest(selectedConversation);
 
   const showMsgRequestUI = selectedConversation && isIncomingMessageRequest;
-  const hasIncomingMessages = useSelector(hasSelectedConversationIncomingMessages);
+  const hasOutgoingMessages = useSelector(hasSelectedConversationOutgoingMessages);
 
-  if (!showMsgRequestUI || !hasIncomingMessages) {
+  if (!showMsgRequestUI || hasOutgoingMessages) {
     return null;
   }
 
@@ -73,10 +77,7 @@ export const ConversationRequestExplanation = () => {
   );
 };
 
-/**
- * This component is used to display a warning when the user is responding to a group message request.
- */
-export const GroupRequestExplanation = () => {
+const GroupRequestExplanation = () => {
   const selectedConversation = useSelectedConversationKey();
   const isIncomingMessageRequest = useIsIncomingRequest(selectedConversation);
   const isGroupV2 = useSelectedIsGroupV2();
@@ -112,24 +113,19 @@ export const InvitedToGroupControlMessage = () => {
     isApproved ||
     hasMessages || // we don't want to display that "xx invited you" message if there are already other messages (incoming or outgoing)
     !isGroupV2 ||
-    !conversationOrigin ||
-    !PubKey.is05Pubkey(conversationOrigin) ||
+    (conversationOrigin && !PubKey.is05Pubkey(conversationOrigin)) ||
     !isGroupPendingInvite
   ) {
     return null;
   }
+  // when restoring from seed we might not have the pubkey of who invited us, in that case, we just use a fallback
+  const html = conversationOrigin
+    ? window.i18n('userInvitedYouToGroup', [adminNameInvitedUs, groupName])
+    : window.i18n('youWereInvitedToGroup', [groupName]);
 
-  return (
-    <TextNotification
-      dataTestId="group-invite-control-message"
-      html={window.i18n('userInvitedYouToGroup', [adminNameInvitedUs, groupName])}
-    />
-  );
+  return <TextNotification dataTestId="group-invite-control-message" html={html} />;
 };
 
-/**
- * This component is used to display a warning when the user is looking at an empty conversation.
- */
 export const NoMessageInConversation = () => {
   const selectedConversation = useSelectedConversationKey();
 
@@ -142,9 +138,16 @@ export const NoMessageInConversation = () => {
   const privateBlindedAndBlockingMsgReqs = useSelectedHasDisabledBlindedMsgRequests();
   // TODOLATER use this selector accross the whole application (left pane excluded)
   const nameToRender = useSelectedNicknameOrProfileNameOrShortenedPubkey() || '';
+  const isPrivate = useSelectedIsPrivate();
+  const isIncomingRequest = useIsIncomingRequest(selectedConversation);
 
   // groupV2 use its own invite logic as part of <GroupRequestExplanation />
-  if (!selectedConversation || hasMessage || (isGroupV2 && isInvitePending)) {
+  if (
+    !selectedConversation ||
+    hasMessage ||
+    (isGroupV2 && isInvitePending) ||
+    (isPrivate && isIncomingRequest)
+  ) {
     return null;
   }
   let localizedKey: LocalizerKeys = 'noMessagesInEverythingElse';
