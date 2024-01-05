@@ -1,8 +1,8 @@
 import { createSelector } from '@reduxjs/toolkit';
 
-import { StateType } from '../reducer';
-import { OverlayMode, SectionStateType, SectionType } from '../ducks/section';
 import { SessionSettingCategory } from '../../components/settings/SessionSettings';
+import { OverlayMode, SectionStateType, SectionType } from '../ducks/section';
+import { StateType } from '../reducer';
 
 export const getSection = (state: StateType): SectionStateType => state.section;
 
@@ -25,6 +25,7 @@ export const getIsAppFocused = createSelector(
   (state: SectionStateType): boolean => state.isAppFocused
 );
 
+// TODO This should probably be renamed to getLeftOverlayMode and the props should be updated.
 export const getOverlayMode = createSelector(
   getSection,
   (state: SectionStateType): OverlayMode | undefined => state.overlayMode

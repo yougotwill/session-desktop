@@ -74,6 +74,8 @@ const allowedKeysFormatRowOfConversation = [
   'markedAsUnread',
   'blocksSogsMsgReqsTimestamp',
   'priority',
+  'expirationMode',
+  'hasOutdatedClient',
 ];
 
 export function formatRowOfConversation(
@@ -196,6 +198,8 @@ const allowedKeysOfConversationAttributes = [
   'markedAsUnread',
   'blocksSogsMsgReqsTimestamp',
   'priority',
+  'expirationMode',
+  'hasOutdatedClient',
 ];
 
 /**

@@ -2,15 +2,15 @@ import { isEmpty } from 'lodash';
 import { UserUtils } from '..';
 import { SettingsKey } from '../../../data/settings-key';
 import { CONVERSATION_PRIORITIES } from '../../../models/conversationAttributes';
-import { toFixedUint8ArrayOfLength } from '../../../types/sqlSharedTypes';
+import { stringify, toFixedUint8ArrayOfLength } from '../../../types/sqlSharedTypes';
 import { Storage } from '../../../util/storage';
 import { UserConfigWrapperActions } from '../../../webworker/workers/browser/libsession_worker_interface';
 import { ConvoHub } from '../../conversations';
 import { fromHexToArray } from '../String';
 
 async function insertUserProfileIntoWrapper(convoId: string) {
-  if (!isUserProfileToStoreInWrapper(convoId)) {
-    return;
+  if (!SessionUtilUserProfile.isUserProfileToStoreInWrapper(convoId)) {
+    return null;
   }
   const us = UserUtils.getOurPubKeyStrFromCache();
   const ourConvo = ConvoHub.use().get(us);
@@ -26,29 +26,34 @@ async function insertUserProfileIntoWrapper(convoId: string) {
 
   const areBlindedMsgRequestEnabled = !!Storage.get(SettingsKey.hasBlindedMsgRequestsEnabled);
 
+  const expirySeconds = ourConvo.getExpireTimer() || 0;
   window.log.debug(
     `inserting into userprofile wrapper: username:"${dbName}", priority:${priority} image:${JSON.stringify(
-      { url: dbProfileUrl, key: dbProfileKey }
-    )}, settings: ${JSON.stringify({ areBlindedMsgRequestEnabled })}`
+      { url: dbProfileUrl, key: stringify(dbProfileKey) }
+    )}, settings: ${JSON.stringify({ areBlindedMsgRequestEnabled, expirySeconds })}`
   );
-  // const expirySeconds = ourConvo.get('expireTimer') || 0;
   if (dbProfileUrl && !isEmpty(dbProfileKey)) {
     if (dbProfileKey.length === 32) {
       const fixedLen = toFixedUint8ArrayOfLength(dbProfileKey, 32);
-      await UserConfigWrapperActions.setUserInfo(
-        dbName,
-        priority,
-        {
-          url: dbProfileUrl,
-          key: fixedLen.buffer, // TODO make this use the fixed length array
-        }
-        // expirySeconds
-      );
+      await UserConfigWrapperActions.setUserInfo(dbName, priority, {
+        url: dbProfileUrl,
+        key: fixedLen.buffer, // TODO make this use the fixed length array
+      });
     }
   } else {
-    await UserConfigWrapperActions.setUserInfo(dbName, priority, null); // expirySeconds
+    await UserConfigWrapperActions.setUserInfo(dbName, priority, null);
   }
   await UserConfigWrapperActions.setEnableBlindedMsgRequest(areBlindedMsgRequestEnabled);
+  await UserConfigWrapperActions.setNoteToSelfExpiry(expirySeconds);
+
+  // returned for testing purposes only
+  return {
+    id: convoId,
+    name: dbName,
+    priority,
+    avatarPointer: dbProfileUrl,
+    expirySeconds,
+  };
 }
 
 function isUserProfileToStoreInWrapper(convoId: string) {

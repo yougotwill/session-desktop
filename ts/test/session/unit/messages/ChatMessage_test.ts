@@ -12,10 +12,16 @@ import {
   VisibleMessage,
 } from '../../../../session/messages/outgoing/visibleMessage/VisibleMessage';
 
+const sharedNoExpire = {
+  expirationType: null,
+  expireTimer: null,
+};
+
 describe('VisibleMessage', () => {
   it('can create empty message with just a timestamp', () => {
     const message = new VisibleMessage({
       createAtNetworkTimestamp: Date.now(),
+      ...sharedNoExpire,
     });
     const plainText = message.plainTextBuffer();
     const decoded = SignalService.Content.decode(plainText);
@@ -27,20 +33,49 @@ describe('VisibleMessage', () => {
     const message = new VisibleMessage({
       createAtNetworkTimestamp: Date.now(),
       body: 'body',
+      ...sharedNoExpire,
     });
     const plainText = message.plainTextBuffer();
     const decoded = SignalService.Content.decode(plainText);
     expect(decoded.dataMessage).to.have.deep.property('body', 'body');
   });
 
-  it('can create message with a expire timer', () => {
+  it('can create a disappear after read message', () => {
     const message = new VisibleMessage({
       createAtNetworkTimestamp: Date.now(),
-      expireTimer: 3600,
+      ...sharedNoExpire,
+      expirationType: 'deleteAfterRead',
+      expireTimer: 300,
     });
     const plainText = message.plainTextBuffer();
     const decoded = SignalService.Content.decode(plainText);
-    expect(decoded.dataMessage).to.have.deep.property('expireTimer', 3600);
+    expect(decoded, 'should have an expirationType of deleteAfterRead').to.have.deep.property(
+      'expirationType',
+      SignalService.Content.ExpirationType.DELETE_AFTER_READ
+    );
+    expect(decoded, 'should have an expirationTimer of 5 minutes').to.have.deep.property(
+      'expirationTimer',
+      300
+    );
+  });
+
+  it('can create a disappear after send message', () => {
+    const message = new VisibleMessage({
+      createAtNetworkTimestamp: Date.now(),
+      ...sharedNoExpire,
+      expirationType: 'deleteAfterSend',
+      expireTimer: 60,
+    });
+    const plainText = message.plainTextBuffer();
+    const decoded = SignalService.Content.decode(plainText);
+    expect(decoded, 'should have an expirationType of deleteAfterSend').to.have.deep.property(
+      'expirationType',
+      SignalService.Content.ExpirationType.DELETE_AFTER_SEND
+    );
+    expect(decoded, 'should have an expirationTimer of 1 minute').to.have.deep.property(
+      'expirationTimer',
+      60
+    );
   });
 
   it('can create message with a full loki profile', () => {
@@ -54,6 +89,7 @@ describe('VisibleMessage', () => {
     const message = new VisibleMessage({
       createAtNetworkTimestamp: Date.now(),
       lokiProfile,
+      ...sharedNoExpire,
     });
     const plainText = message.plainTextBuffer();
     const decoded = SignalService.Content.decode(plainText);
@@ -73,6 +109,7 @@ describe('VisibleMessage', () => {
     const message = new VisibleMessage({
       createAtNetworkTimestamp: Date.now(),
       quote,
+      ...sharedNoExpire,
     });
     const plainText = message.plainTextBuffer();
     const decoded = SignalService.Content.decode(plainText);
@@ -90,6 +127,7 @@ describe('VisibleMessage', () => {
     const message = new VisibleMessage({
       createAtNetworkTimestamp: Date.now(),
       preview: previews,
+      ...sharedNoExpire,
     });
     const plainText = message.plainTextBuffer();
     const decoded = SignalService.Content.decode(plainText);
@@ -112,6 +150,7 @@ describe('VisibleMessage', () => {
     const message = new VisibleMessage({
       createAtNetworkTimestamp: Date.now(),
       attachments,
+      ...sharedNoExpire,
     });
     const plainText = message.plainTextBuffer();
     const decoded = SignalService.Content.decode(plainText);
@@ -126,13 +165,15 @@ describe('VisibleMessage', () => {
   it('correct ttl', () => {
     const message = new VisibleMessage({
       createAtNetworkTimestamp: Date.now(),
+      ...sharedNoExpire,
     });
-    expect(message.ttl()).to.equal(Constants.TTL_DEFAULT.TTL_MAX);
+    expect(message.ttl()).to.equal(Constants.TTL_DEFAULT.CONTENT_MESSAGE);
   });
 
   it('has an identifier', () => {
     const message = new VisibleMessage({
       createAtNetworkTimestamp: Date.now(),
+      ...sharedNoExpire,
     });
     expect(message.identifier).to.not.equal(null, 'identifier cannot be null');
     expect(message.identifier).to.not.equal(undefined, 'identifier cannot be undefined');

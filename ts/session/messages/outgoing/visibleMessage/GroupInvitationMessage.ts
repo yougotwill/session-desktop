@@ -1,28 +1,24 @@
-import { DataMessage } from '..';
 import { SignalService } from '../../../../protobuf';
-import { MessageParams } from '../Message';
+import { ExpirableMessage, ExpirableMessageParams } from '../ExpirableMessage';
 
-interface GroupInvitationMessageParams extends MessageParams {
+interface GroupInvitationMessageParams extends ExpirableMessageParams {
   url: string;
   name: string;
-  // if there is an expire timer set for the conversation, we need to set it.
-  // otherwise, it will disable the expire timer on the receiving side.
-  expireTimer?: number;
 }
 
-export class GroupInvitationMessage extends DataMessage {
+export class GroupInvitationMessage extends ExpirableMessage {
   private readonly url: string;
   private readonly name: string;
-  private readonly expireTimer?: number;
 
   constructor(params: GroupInvitationMessageParams) {
     super({
       createAtNetworkTimestamp: params.createAtNetworkTimestamp,
       identifier: params.identifier,
+      expirationType: params.expirationType,
+      expireTimer: params.expireTimer,
     });
     this.url = params.url;
     this.name = params.name;
-    this.expireTimer = params.expireTimer;
   }
 
   public dataProto(): SignalService.DataMessage {
@@ -32,8 +28,8 @@ export class GroupInvitationMessage extends DataMessage {
     });
 
     return new SignalService.DataMessage({
+      ...super.dataProto(),
       openGroupInvitation,
-      expireTimer: this.expireTimer,
     });
   }
 }

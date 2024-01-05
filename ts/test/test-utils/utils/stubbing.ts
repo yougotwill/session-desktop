@@ -1,7 +1,7 @@
 /* eslint-disable func-names */
 import { expect } from 'chai';
-import Sinon from 'sinon';
 import { UserGroupsWrapperActionsCalls } from 'libsession_util_nodejs';
+import Sinon from 'sinon';
 import { ConfigDumpData } from '../../../data/configDump/configDump';
 import { Data } from '../../../data/data';
 import { OpenGroupData } from '../../../data/opengroups';

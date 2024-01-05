@@ -11,8 +11,8 @@ import {
 import { from_hex } from 'libsodium-wrappers-sumo';
 import { isArray, isEmpty, isEqual } from 'lodash';
 import { OpenGroupV2Room } from '../data/opengroups';
-import { ConversationAttributes } from '../models/conversationAttributes';
 import { OpenGroupRequestCommonType } from '../session/apis/open_group_api/opengroupV2/ApiUtil';
+import { DisappearingMessageConversationModeType } from '../session/disappearing_messages/types';
 import { fromHexToArray, toHex } from '../session/utils/String';
 import { ConfigWrapperObjectTypesMeta } from '../webworker/workers/browser/libsession_worker_functions';
 
@@ -113,6 +113,8 @@ export type SaveConversationReturn = {
 } | null;
 
 /**
+ * NOTE This code should always match the last known version of the same function used in a libsession migration (V34)
+ *
  * This function returns a contactInfo for the wrapper to understand from the DB values.
  * Created in this file so we can reuse it during the migration (node side), and from the renderer side
  */
@@ -127,8 +129,9 @@ export function getContactInfoFromDBValues({
   dbProfileUrl,
   dbProfileKey,
   dbCreatedAtSeconds,
-}: // expirationTimerSeconds,
-{
+  expirationMode,
+  expireTimer,
+}: {
   id: string;
   dbApproved: boolean;
   dbApprovedMe: boolean;
@@ -136,10 +139,11 @@ export function getContactInfoFromDBValues({
   dbNickname: string | undefined;
   dbName: string | undefined;
   priority: number;
-  dbCreatedAtSeconds: number;
   dbProfileUrl: string | undefined;
   dbProfileKey: string | undefined;
-  // expirationTimerSeconds: number | undefined;
+  dbCreatedAtSeconds: number;
+  expirationMode: DisappearingMessageConversationModeType | undefined;
+  expireTimer: number | undefined;
 }): ContactInfoSet {
   const wrapperContact: ContactInfoSet = {
     id,
@@ -150,14 +154,8 @@ export function getContactInfoFromDBValues({
     nickname: dbNickname,
     name: dbName,
     createdAtSeconds: dbCreatedAtSeconds,
-    // expirationTimerSeconds:
-    //   !!expirationTimerSeconds && isFinite(expirationTimerSeconds) && expirationTimerSeconds > 0
-    //     ? expirationTimerSeconds
-    //     : 0, // TODOLATER add the expiration mode handling
-    // expirationMode:
-    //   !!expirationTimerSeconds && isFinite(expirationTimerSeconds) && expirationTimerSeconds > 0
-    //     ? 'disappearAfterSend'
-    //     : 'off',
+    expirationMode,
+    expirationTimerSeconds: !!expireTimer && expireTimer > 0 ? expireTimer : 0,
   };
 
   if (
@@ -173,7 +171,14 @@ export function getContactInfoFromDBValues({
   return wrapperContact;
 }
 
+export type CommunityInfoFromDBValues = {
+  priority: number;
+  fullUrl: string;
+};
+
 /**
+ * NOTE This code should always match the last known version of the same function used in a libsession migration (V31)
+ *
  * This function returns a CommunityInfo for the wrapper to understand from the DB values.
  * It is created in this file so we can reuse it during the migration (node side), and from the renderer side
  */
@@ -183,7 +188,7 @@ export function getCommunityInfoFromDBValues({
 }: {
   priority: number;
   fullUrl: string;
-}) {
+}): CommunityInfoFromDBValues {
   const community = {
     fullUrl,
     priority: priority || 0,
@@ -192,7 +197,7 @@ export function getCommunityInfoFromDBValues({
   return community;
 }
 
-function maybeArrayJSONtoArray(arr: string | Array<string>): Array<string> {
+export function maybeArrayJSONtoArray(arr: string | Array<string>): Array<string> {
   try {
     if (isArray(arr)) {
       return arr;
@@ -208,24 +213,31 @@ function maybeArrayJSONtoArray(arr: string | Array<string>): Array<string> {
   }
 }
 
+/**
+ * NOTE This code should always match the last known version of the same function used in a libsession migration (V34)
+ */
 export function getLegacyGroupInfoFromDBValues({
   id,
   priority,
   members: maybeMembers,
   displayNameInProfile,
-  // expireTimer,
+  expirationMode,
+  expireTimer,
   encPubkeyHex,
   encSeckeyHex,
   groupAdmins: maybeAdmins,
   lastJoinedTimestamp,
-}: Pick<
-  ConversationAttributes,
-  'id' | 'priority' | 'displayNameInProfile' | 'lastJoinedTimestamp' // | 'expireTimer'
-> & {
+}: {
+  id: string;
+  priority: number;
+  displayNameInProfile: string | undefined;
+  expirationMode: DisappearingMessageConversationModeType | undefined;
+  expireTimer: number | undefined;
   encPubkeyHex: string;
   encSeckeyHex: string;
   members: string | Array<string>;
   groupAdmins: string | Array<string>;
+  lastJoinedTimestamp: number;
 }) {
   const admins: Array<string> = maybeArrayJSONtoArray(maybeAdmins);
   const members: Array<string> = maybeArrayJSONtoArray(maybeMembers);
@@ -236,12 +248,16 @@ export function getLegacyGroupInfoFromDBValues({
       pubkeyHex: m,
     };
   });
+
   const legacyGroup: LegacyGroupInfo = {
     pubkeyHex: id,
-    // disappearingTimerSeconds: !expireTimer ? 0 : expireTimer,
     name: displayNameInProfile || '',
     priority: priority || 0,
     members: wrappedMembers,
+    disappearingTimerSeconds:
+      expirationMode && expirationMode !== 'off' && !!expireTimer && expireTimer > 0
+        ? expireTimer
+        : 0,
     encPubkey: !isEmpty(encPubkeyHex) ? from_hex(encPubkeyHex) : new Uint8Array(),
     encSeckey: !isEmpty(encSeckeyHex) ? from_hex(encSeckeyHex) : new Uint8Array(),
     joinedAtSeconds: Math.floor(lastJoinedTimestamp / 1000),

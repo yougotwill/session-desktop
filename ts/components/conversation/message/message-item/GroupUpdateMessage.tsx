@@ -11,7 +11,7 @@ import {
 import { useSelectedIsGroupV2 } from '../../../../state/selectors/selectedConversation';
 import { useOurPkStr } from '../../../../state/selectors/user';
 import { assertUnreachable } from '../../../../types/sqlSharedTypes';
-import { ReadableMessage } from './ReadableMessage';
+import { ExpirableReadableMessage } from './ExpirableReadableMessage';
 import { NotificationBubble } from './notification-bubble/NotificationBubble';
 
 type IdWithName = { sessionId: PubkeyType; name: string };
@@ -190,16 +190,16 @@ const ChangeItem = (change: PropsForGroupUpdateType): string => {
 };
 
 export const GroupUpdateMessage = (props: PropsForGroupUpdate) => {
-  const { change, messageId, receivedAt, isUnread } = props;
+  const { change, messageId } = props;
 
   return (
-    <ReadableMessage
+    <ExpirableReadableMessage
       messageId={messageId}
-      receivedAt={receivedAt}
-      isUnread={isUnread}
       key={`readable-message-${messageId}`}
+      dataTestId="group-update-message"
+      isControlMessage={true}
     >
       <NotificationBubble notificationText={ChangeItem(change)} iconType="users" />
-    </ReadableMessage>
+    </ExpirableReadableMessage>
   );
 };

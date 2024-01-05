@@ -14,6 +14,11 @@ export const getOurNumber = createSelector(
   (state: UserStateType): PubkeyType => state.ourNumber as PubkeyType
 );
 
+export const getOurDisplayNameInProfile = createSelector(
+  getUser,
+  (state: UserStateType): string => state.ourDisplayNameInProfile
+);
+
 export const getIntl = createSelector(getUser, (): LocalizerType => window.i18n);
 
 export function useOurPkStr() {

@@ -30,15 +30,8 @@ export async function createClosedGroup(groupName: string, members: Array<string
 
   const setOfMembers = new Set(members);
   const us = UserUtils.getOurPubKeyStrFromCache();
-
-  const identityKeyPair = await generateClosedGroupPublicKey();
-  if (!identityKeyPair) {
-    throw new Error('Could not create identity keypair for new closed group v3');
-  }
-
   const groupPublicKey = await generateClosedGroupPublicKey();
 
-  // the first encryption keypair is generated the same for all versions of closed group
   const encryptionKeyPair = await generateCurve25519KeyPairWithoutPrefix();
   if (!encryptionKeyPair) {
     throw new Error('Could not create encryption keypair for new closed group');
@@ -53,6 +46,8 @@ export async function createClosedGroup(groupName: string, members: Array<string
   setOfMembers.add(us);
   const listOfMembers = [...setOfMembers];
   const admins = [us];
+
+  const existingExpirationType = 'unknown';
   const existingExpireTimer = 0;
 
   const groupDetails: GroupInfo = {
@@ -61,10 +56,12 @@ export async function createClosedGroup(groupName: string, members: Array<string
     members: listOfMembers,
     admins,
     activeAt: Date.now(),
+    // TODO This is only applicable for old closed groups - will be removed in future
+    expirationType: existingExpirationType,
     expireTimer: existingExpireTimer,
   };
 
-  // we don't want the initial "AAA and You joined the group"
+  // we don't want the initial "AAA and You joined the group" anymore
 
   // be sure to call this before sending the message.
   // the sending pipeline needs to know from GroupUtils when a message is for a medium group
@@ -72,14 +69,14 @@ export async function createClosedGroup(groupName: string, members: Array<string
   await convo.commit();
   convo.updateLastMessage();
 
-  // Send a closed group update message to all members individually
+  // Send a closed group update message to all members individually.
+  // Note: we do not make those messages expire
   const allInvitesSent = await sendToGroupMembers(
     listOfMembers,
     groupPublicKey,
     groupName,
     admins,
-    encryptionKeyPair,
-    existingExpireTimer
+    encryptionKeyPair
   );
 
   if (allInvitesSent) {
@@ -99,7 +96,6 @@ export async function createClosedGroup(groupName: string, members: Array<string
 /**
  * Sends a group invite message to each member of the group.
  * @returns Array of promises for group invite messages sent to group members.
- * This function takes care of the groupv2 specificities
  */
 async function sendToGroupMembers(
   listOfMembers: Array<string>,
@@ -107,7 +103,6 @@ async function sendToGroupMembers(
   groupName: string,
   admins: Array<string>,
   encryptionKeyPair: ECKeyPair,
-  existingExpireTimer: number,
   isRetry: boolean = false
 ): Promise<any> {
   const promises = createInvitePromises(
@@ -115,8 +110,7 @@ async function sendToGroupMembers(
     groupPublicKey,
     groupName,
     admins,
-    encryptionKeyPair,
-    existingExpireTimer
+    encryptionKeyPair
   );
   window?.log?.info(`Sending invites for group ${groupPublicKey} to ${listOfMembers}`);
   // evaluating if all invites sent, if failed give the option to retry failed invites via modal dialog
@@ -126,7 +120,6 @@ async function sendToGroupMembers(
   });
 
   if (allInvitesSent) {
-    // if (true) {
     if (isRetry) {
       const invitesTitle =
         inviteResults.length > 1
@@ -173,7 +166,6 @@ async function sendToGroupMembers(
             groupName,
             admins,
             encryptionKeyPair,
-            existingExpireTimer,
             isRetrySend
           );
         }
@@ -189,8 +181,7 @@ function createInvitePromises(
   groupPublicKey: string,
   groupName: string,
   admins: Array<string>,
-  encryptionKeyPair: ECKeyPair,
-  existingExpireTimer: number
+  encryptionKeyPair: ECKeyPair
 ) {
   const createAtNetworkTimestamp = GetNetworkTime.now();
 
@@ -202,7 +193,8 @@ function createInvitePromises(
       admins,
       keypair: encryptionKeyPair,
       createAtNetworkTimestamp,
-      expireTimer: existingExpireTimer,
+      expirationType: null, // we keep that one **not** expiring
+      expireTimer: 0,
     };
     const message = new ClosedGroupNewMessage(messageParams);
     return getMessageQueue().sendToPubKeyNonDurably({

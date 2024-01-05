@@ -280,7 +280,7 @@ describe('UserSyncJob pushChangesToUserSwarmIfNeeded', () => {
     const profile = userChange(sodium, SnodeNamespaces.UserProfile, 321);
     const contact = userChange(sodium, SnodeNamespaces.UserContacts, 123);
     const networkTimestamp = 4444;
-    const ttl = TTL_DEFAULT.TTL_CONFIG;
+    const ttl = TTL_DEFAULT.CONFIG_MESSAGE;
     Sinon.stub(GetNetworkTime, 'now').returns(networkTimestamp);
 
     pendingChangesForUsStub.resolves({

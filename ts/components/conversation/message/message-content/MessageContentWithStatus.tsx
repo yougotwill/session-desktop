@@ -6,19 +6,22 @@ import { replyToMessage } from '../../../../interactions/conversationInteraction
 import { MessageRenderingProps } from '../../../../models/messageType';
 import { toggleSelectedMessageId } from '../../../../state/ducks/conversations';
 import { updateReactListModal } from '../../../../state/ducks/modalDialog';
+import { StateType } from '../../../../state/reducer';
+import { useHideAvatarInMsgList } from '../../../../state/selectors';
 import {
   getMessageContentWithStatusesSelectorProps,
   isMessageSelectionMode,
 } from '../../../../state/selectors/conversations';
 import { Reactions } from '../../../../util/reactions';
-import { MessageAvatar } from './MessageAvatar';
+import { Flex } from '../../../basic/Flex';
+import { ExpirableReadableMessage } from '../message-item/ExpirableReadableMessage';
 import { MessageAuthorText } from './MessageAuthorText';
 import { MessageContent } from './MessageContent';
 import { MessageContextMenu } from './MessageContextMenu';
 import { MessageReactions, StyledMessageReactions } from './MessageReactions';
 import { MessageStatus } from './MessageStatus';
 
-export type MessageContentWithStatusSelectorProps = Pick<
+export type MessageContentWithStatusSelectorProps = { isGroup: boolean } & Pick<
   MessageRenderingProps,
   'conversationType' | 'direction' | 'isDeleted'
 >;
@@ -27,15 +30,15 @@ type Props = {
   messageId: string;
   ctxMenuID: string;
   isDetailView?: boolean;
-  dataTestId?: string;
+  dataTestId: string;
   enableReactions: boolean;
 };
 
-const StyledMessageContentContainer = styled.div<{ direction: 'left' | 'right' }>`
+const StyledMessageContentContainer = styled.div<{ isIncoming: boolean }>`
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
-  align-items: ${props => (props.direction === 'left' ? 'flex-start' : 'flex-end')};
+  align-items: ${props => (props.isIncoming ? 'flex-start' : 'flex-end')};
   width: 100%;
 
   ${StyledMessageReactions} {
@@ -43,18 +46,19 @@ const StyledMessageContentContainer = styled.div<{ direction: 'left' | 'right' }
   }
 `;
 
-const StyledMessageWithAuthor = styled.div<{ isIncoming: boolean }>`
-  max-width: ${props => (props.isIncoming ? '100%' : 'calc(100% - 17px)')};
+const StyledMessageWithAuthor = styled.div`
+  max-width: '100%';
   display: flex;
   flex-direction: column;
   min-width: 0;
 `;
 
 export const MessageContentWithStatuses = (props: Props) => {
-  const contentProps = useSelector(state =>
-    getMessageContentWithStatusesSelectorProps(state as any, props.messageId)
+  const contentProps = useSelector((state: StateType) =>
+    getMessageContentWithStatusesSelectorProps(state, props.messageId)
   );
   const dispatch = useDispatch();
+  const hideAvatar = useHideAvatarInMsgList(props.messageId);
 
   const multiSelectMode = useSelector(isMessageSelectionMode);
 
@@ -94,11 +98,9 @@ export const MessageContentWithStatuses = (props: Props) => {
   if (!contentProps) {
     return null;
   }
-  const { conversationType, direction, isDeleted } = contentProps;
-  const isIncoming = direction === 'incoming';
 
-  const isPrivate = conversationType === 'private';
-  const hideAvatar = isPrivate || direction === 'outgoing';
+  const { direction, isDeleted } = contentProps;
+  const isIncoming = direction === 'incoming';
 
   const handleMessageReaction = async (emoji: string) => {
     await Reactions.sendMessageReaction(messageId, emoji);
@@ -110,33 +112,26 @@ export const MessageContentWithStatuses = (props: Props) => {
 
   return (
     <StyledMessageContentContainer
-      direction={isIncoming ? 'left' : 'right'}
+      isIncoming={isIncoming}
       onMouseLeave={() => {
         setPopupReaction('');
       }}
     >
-      <div
+      <ExpirableReadableMessage
+        messageId={messageId}
         className={classNames('module-message', `module-message--${direction}`)}
-        role="button"
+        role={'button'}
         onClick={onClickOnMessageOuterContainer}
         onDoubleClickCapture={onDoubleClickReplyToMessage}
-        data-testid={dataTestId}
+        dataTestId={dataTestId}
       >
-        <MessageAvatar messageId={messageId} hideAvatar={hideAvatar} isPrivate={isPrivate} />
-        <MessageStatus
-          dataTestId="msg-status-incoming"
-          messageId={messageId}
-          isCorrectSide={isIncoming}
-        />
-        <StyledMessageWithAuthor isIncoming={isIncoming}>
-          <MessageAuthorText messageId={messageId} />
-          <MessageContent messageId={messageId} isDetailView={isDetailView} />
-        </StyledMessageWithAuthor>
-        <MessageStatus
-          dataTestId="msg-status-outgoing"
-          messageId={messageId}
-          isCorrectSide={!isIncoming}
-        />
+        <Flex container={true} flexDirection="column" flexShrink={0}>
+          <StyledMessageWithAuthor>
+            <MessageAuthorText messageId={messageId} />
+            <MessageContent messageId={messageId} isDetailView={isDetailView} />
+          </StyledMessageWithAuthor>
+          <MessageStatus dataTestId="msg-status" messageId={messageId} />
+        </Flex>
         {!isDeleted && (
           <MessageContextMenu
             messageId={messageId}
@@ -144,7 +139,7 @@ export const MessageContentWithStatuses = (props: Props) => {
             enableReactions={enableReactions}
           />
         )}
-      </div>
+      </ExpirableReadableMessage>
       {enableReactions && (
         <MessageReactions
           messageId={messageId}

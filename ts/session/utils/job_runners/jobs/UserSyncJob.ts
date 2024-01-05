@@ -91,7 +91,7 @@ async function pushChangesToUserSwarmIfNeeded() {
       namespace: item.namespace,
       pubkey: us,
       networkTimestamp: GetNetworkTime.now(),
-      ttl: TTL_DEFAULT.TTL_CONFIG,
+      ttl: TTL_DEFAULT.CONFIG_MESSAGE,
       data: item.ciphertext,
     };
   });

@@ -41,6 +41,10 @@ import {
   getGroupPubkeyFromWrapperType,
   isUserConfigWrapperType,
 } from '../webworker/workers/browser/libsession_worker_functions';
+// eslint-disable-next-line import/no-unresolved, import/extensions
+import { Data } from '../data/data';
+import { FetchMsgExpirySwarm } from '../session/utils/job_runners/jobs/FetchMsgExpirySwarmJob';
+import { ReleasedFeatures } from '../util/releaseFeature';
 import {
   ContactsWrapperActions,
   ConvoInfoVolatileWrapperActions,
@@ -207,7 +211,11 @@ async function updateLibsessionLatestProcessedUserTimestamp(
   }
 }
 
-async function handleUserProfileUpdate(result: IncomingUserResult) {
+/**
+ * NOTE When adding new properties to the wrapper, don't update the conversation model here because the merge has not been done yet.
+ * Instead you will need to updateOurProfileLegacyOrViaLibSession() to support them
+ */
+async function handleUserProfileUpdate(result: IncomingUserResult): Promise<void> {
   const updateUserInfo = await UserConfigWrapperActions.getUserInfo();
   if (!updateUserInfo) {
     return;
@@ -224,14 +232,50 @@ async function handleUserProfileUpdate(result: IncomingUserResult) {
     !isEmpty(updateUserInfo.url) &&
     updateUserInfo.key.length === 32;
 
-  // NOTE: if you do any changes to the settings of a user which are synced, it should be done above the `updateOurProfileViaLibSession` call
-  await updateOurProfileViaLibSession(
-    result.latestEnvelopeTimestamp,
-    updateUserInfo.name,
-    picUpdate ? updateUserInfo.url : null,
-    picUpdate ? updateUserInfo.key : null, // TODO make the whole logic of handling profileKeys used the UInt8ArrayFixedLength
-    updateUserInfo.priority
-  );
+  // NOTE: if you do any changes to the user's settings which are synced, it should be done above the `updateOurProfileViaLibSession` call
+  await updateOurProfileViaLibSession({
+    sentAt: result.latestEnvelopeTimestamp,
+    displayName: updateUserInfo.name,
+    profileUrl: picUpdate ? updateUserInfo.url : null,
+    profileKey: picUpdate ? updateUserInfo.key : null,
+    priority: updateUserInfo.priority,
+  });
+
+  // NOTE: If we want to update the conversation in memory with changes from the updated user profile we need to wait untl the profile has been updated to prevent multiple merge conflicts
+  const ourConvo = ConvoHub.use().get(UserUtils.getOurPubKeyStrFromCache());
+
+  if (ourConvo) {
+    let changes = false;
+
+    const expireTimer = ourConvo.getExpireTimer();
+
+    const wrapperNoteToSelfExpirySeconds = await UserConfigWrapperActions.getNoteToSelfExpiry();
+
+    if (wrapperNoteToSelfExpirySeconds !== expireTimer) {
+      // TODO legacy messages support will be removed in a future release
+      const success = await ourConvo.updateExpireTimer({
+        providedDisappearingMode:
+          wrapperNoteToSelfExpirySeconds && wrapperNoteToSelfExpirySeconds > 0
+            ? ReleasedFeatures.isDisappearMessageV2FeatureReleasedCached()
+              ? 'deleteAfterSend'
+              : 'legacy'
+            : 'off',
+        providedExpireTimer: wrapperNoteToSelfExpirySeconds,
+        providedSource: ourConvo.id,
+        receivedAt: result.latestEnvelopeTimestamp,
+        fromSync: true,
+        shouldCommitConvo: false,
+        fromCurrentDevice: false,
+        fromConfigMessage: true,
+      });
+      changes = success;
+    }
+
+    // make sure to write the changes to the database now as the `AvatarDownloadJob` triggered by updateOurProfileLegacyOrViaLibSession might take some time before getting run
+    if (changes) {
+      await ourConvo.commit();
+    }
+  }
 
   const settingsKey = SettingsKey.latestUserProfileEnvelopeTimestamp;
   const currentLatestEnvelopeProcessed = Storage.get(settingsKey) || 0;
@@ -355,10 +399,22 @@ async function handleContactsUpdate() {
         changes = true;
       }
 
-      // if (wrapperConvo.expirationTimerSeconds !== contactConvo.get('expireTimer')) {
-      //   await contactConvo.updateExpireTimer(wrapperConvo.expirationTimerSeconds);
-      //   changes = true;
-      // }
+      if (
+        wrapperConvo.expirationTimerSeconds !== contactConvo.getExpireTimer() ||
+        wrapperConvo.expirationMode !== contactConvo.getExpirationMode()
+      ) {
+        const success = await contactConvo.updateExpireTimer({
+          providedDisappearingMode: wrapperConvo.expirationMode,
+          providedExpireTimer: wrapperConvo.expirationTimerSeconds,
+          providedSource: wrapperConvo.id,
+          receivedAt: result.latestEnvelopeTimestamp,
+          fromSync: true,
+          fromCurrentDevice: false,
+          shouldCommitConvo: false,
+          fromConfigMessage: true,
+        });
+        changes = changes || success;
+      }
 
       // we want to set the active_at to the created_at timestamp if active_at is unset, so that it shows up in our list.
       if (!contactConvo.getActiveAt() && wrapperConvo.createdAtSeconds) {
@@ -570,6 +626,26 @@ async function handleLegacyGroupUpdate(latestEnvelopeTimestamp: number) {
 
     let changes = await legacyGroupConvo.setPriorityFromWrapper(fromWrapper.priority, false);
 
+    if (fromWrapper.disappearingTimerSeconds !== legacyGroupConvo.getExpireTimer()) {
+      // TODO legacy messages support will be removed in a future release
+      const success = await legacyGroupConvo.updateExpireTimer({
+        providedDisappearingMode:
+          fromWrapper.disappearingTimerSeconds && fromWrapper.disappearingTimerSeconds > 0
+            ? ReleasedFeatures.isDisappearMessageV2FeatureReleasedCached()
+              ? 'deleteAfterSend'
+              : 'legacy'
+            : 'off',
+        providedExpireTimer: fromWrapper.disappearingTimerSeconds,
+        providedSource: legacyGroupConvo.id,
+        receivedAt: latestEnvelopeTimestamp,
+        fromSync: true,
+        shouldCommitConvo: false,
+        fromCurrentDevice: false,
+        fromConfigMessage: true,
+      });
+      changes = success;
+    }
+
     const existingTimestampMs = legacyGroupConvo.getLastJoinedTimestamp();
     const existingJoinedAtSeconds = Math.floor(existingTimestampMs / 1000);
     if (existingJoinedAtSeconds !== fromWrapper.joinedAtSeconds) {
@@ -579,17 +655,6 @@ async function handleLegacyGroupUpdate(latestEnvelopeTimestamp: number) {
       changes = true;
     }
 
-    // if (legacyGroupConvo.get('expireTimer') !== fromWrapper.disappearingTimerSeconds) {
-    //   await legacyGroupConvo.updateExpireTimer(
-    //     fromWrapper.disappearingTimerSeconds,
-    //     undefined,
-    //     latestEnvelopeTimestamp,
-    //     {
-    //       fromSync: true,
-    //     }
-    //   );
-    //   changes = true;
-    // }
     // start polling for this group if we haven't left it yet. The wrapper does not store this info for legacy group so we check from the DB entry instead
     if (!legacyGroupConvo.isKickedFromGroup() && !legacyGroupConvo.isLeft()) {
       getSwarmPollingInstance().addGroupId(PubKey.cast(fromWrapper.pubkeyHex));
@@ -744,10 +809,25 @@ async function applyConvoVolatileUpdateFromWrapper(
   }
 
   try {
-    // window.log.debug(
-    //   `applyConvoVolatileUpdateFromWrapper: ${convoId}: forcedUnread:${forcedUnread}, lastReadMessage:${lastReadMessageTimestamp}`
-    // );
-    // this should mark all the messages sent before fromWrapper.lastRead as read and update the unreadCount
+    // TODO legacy messages support will be removed in a future release
+    if (foundConvo.isPrivate() && !foundConvo.isMe() && foundConvo.getExpireTimer() > 0) {
+      const messagesExpiring = await Data.getUnreadDisappearingByConversation(
+        convoId,
+        lastReadMessageTimestamp
+      );
+
+      const messagesExpiringAfterRead = messagesExpiring.filter(
+        m => m.getExpirationType() === 'deleteAfterRead' && m.getExpireTimerSeconds() > 0
+      );
+
+      const messageIdsToFetchExpiriesFor = compact(messagesExpiringAfterRead.map(m => m.id));
+
+      if (messageIdsToFetchExpiriesFor.length) {
+        await FetchMsgExpirySwarm.queueNewJobIfNeeded(messageIdsToFetchExpiriesFor);
+      }
+    }
+
+    // this mark all the messages sent before fromWrapper.lastRead as read and update the unreadCount
     await foundConvo.markReadFromConfigMessage(lastReadMessageTimestamp);
     // this commits to the DB, if needed
     await foundConvo.markAsUnread(forcedUnread, true);
@@ -942,13 +1022,21 @@ async function handleUserConfigMessagesViaLibSession(
 }
 
 async function updateOurProfileViaLibSession(
-  sentAt: number,
-  displayName: string,
-  profileUrl: string | null,
-  profileKey: Uint8Array | null,
-  priority: number | null // passing null means to not update the priority at all (used for legacy config message for now)
+  {
+    displayName,
+    priority,
+    profileKey,
+    profileUrl,
+    sentAt,
+  }: {
+    sentAt: number;
+    displayName: string;
+    profileUrl: string | null;
+    profileKey: Uint8Array | null;
+    priority: number | null;
+  } // passing null means to not update the priority at all (used for legacy config message for now)
 ) {
-  await ProfileManager.updateOurProfileSync(displayName, profileUrl, profileKey, priority);
+  await ProfileManager.updateOurProfileSync({ displayName, profileUrl, profileKey, priority });
 
   await setLastProfileUpdateTimestamp(toNumber(sentAt));
   // do not trigger a signin by linking if the display name is empty

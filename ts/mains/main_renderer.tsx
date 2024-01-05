@@ -16,6 +16,7 @@ import { deleteAllLogs } from '../node/logs';
 import { queueAllCached } from '../receiver/receiver';
 import { loadKnownBlindedKeys } from '../session/apis/open_group_api/sogsv3/knownBlindedkeys';
 import { ConvoHub } from '../session/conversations';
+import { DisappearingMessages } from '../session/disappearing_messages';
 import { AttachmentDownloads, ToastUtils } from '../session/utils';
 import { getOurPubKeyStrFromCache } from '../session/utils/User';
 import { runners } from '../session/utils/job_runners/JobRunner';
@@ -23,7 +24,6 @@ import { LibSessionUtil } from '../session/utils/libsession/libsession_utils';
 import { switchPrimaryColorTo } from '../themes/switchPrimaryColor';
 import { BlockedNumberController } from '../util';
 import { initialiseEmojiData } from '../util/emoji';
-import { ExpirationTimerOptions } from '../util/expiringMessages';
 import { Notifications } from '../util/notifications';
 import { Registration } from '../util/registration';
 import { Storage, isSignInByLinking } from '../util/storage';
@@ -296,7 +296,7 @@ async function start() {
     ReactDOM.render(<SessionRegistrationView />, document.getElementById('root'));
     switchBodyToRtlIfNeeded();
   }
-  ExpirationTimerOptions.initExpiringMessageListener();
+  DisappearingMessages.initExpiringMessageListener();
 
   if (Registration.isDone() && !isSignInByLinking()) {
     await connect();

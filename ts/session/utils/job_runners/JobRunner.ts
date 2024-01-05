@@ -5,12 +5,14 @@ import { timeout } from '../Promise';
 import { persistedJobFromData } from './JobDeserialization';
 import {
   AvatarDownloadPersistedData,
+  FetchMsgExpirySwarmPersistedData,
   GroupInvitePersistedData,
   GroupPromotePersistedData,
   GroupSyncPersistedData,
   PersistedJob,
   RunJobResult,
   TypeOfPersistedData,
+  UpdateMsgExpirySwarmPersistedData,
   UserSyncPersistedData,
 } from './PersistedJob';
 import { JobRunnerType } from './jobs/JobRunnerType';
@@ -103,7 +105,7 @@ export class PersistedJobRunner<T extends TypeOfPersistedData> {
 
     // make sure there is no job with that same identifier already .
 
-    window.log.info(`job runner adding type :"${job.persistedData.jobType}" `);
+    window.log.debug(`job runner adding type:"${job.persistedData.jobType}"`);
     return this.addJobUnchecked(job);
   }
 
@@ -169,7 +171,7 @@ export class PersistedJobRunner<T extends TypeOfPersistedData> {
 
   private async writeJobsToDB() {
     const serialized = this.getSerializedJobs();
-    window.log.debug(`writing to db for "${this.jobRunnerType}": `, serialized);
+
     await Storage.put(this.getJobRunnerItemId(), JSON.stringify(serialized));
   }
 
@@ -371,9 +373,21 @@ const groupPromoteJobRunner = new PersistedJobRunner<GroupPromotePersistedData>(
   null
 );
 
+const updateMsgExpiryRunner = new PersistedJobRunner<UpdateMsgExpirySwarmPersistedData>(
+  'UpdateMsgExpirySwarmJob',
+  null
+);
+
+const fetchSwarmMsgExpiryRunner = new PersistedJobRunner<FetchMsgExpirySwarmPersistedData>(
+  'FetchMsgExpirySwarmJob',
+  null
+);
+
 export const runners = {
   userSyncRunner,
   groupSyncRunner,
+  updateMsgExpiryRunner,
+  fetchSwarmMsgExpiryRunner,
   avatarDownloadRunner,
   groupInviteJobRunner,
   groupPromoteJobRunner,

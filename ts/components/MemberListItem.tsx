@@ -2,7 +2,7 @@ import React from 'react';
 import styled from 'styled-components';
 
 import { GroupPubkeyType, PubkeyType } from 'libsession_util_nodejs';
-import { useConversationUsernameOrShorten } from '../hooks/useParamSelector';
+import { useNicknameOrProfileNameOrShortenedPubkey } from '../hooks/useParamSelector';
 import { PubKey } from '../session/types';
 import { UserUtils } from '../session/utils';
 import { GroupInvite } from '../session/utils/job_runners/jobs/GroupInviteJob';
@@ -229,7 +229,7 @@ export const MemberListItem = ({
   onUnselect,
   groupPk,
 }: MemberListItemProps) => {
-  const memberName = useConversationUsernameOrShorten(pubkey);
+  const memberName = useNicknameOrProfileNameOrShortenedPubkey(pubkey);
 
   return (
     <StyledSessionMemberItem

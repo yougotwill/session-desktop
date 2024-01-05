@@ -408,7 +408,12 @@ export class SwarmPolling {
         return;
       }
 
-      Receiver.handleRequest(content, type === ConversationTypeEnum.GROUP ? pubkey : null, m.hash);
+      Receiver.handleRequest(
+        content,
+        type === ConversationTypeEnum.GROUP ? pubkey : null,
+        m.hash,
+        m.expiration
+      );
     });
   }
 
@@ -501,7 +506,7 @@ export class SwarmPolling {
       if (!results.length) {
         return [];
       }
-      // when we asked to extend the expiry of the config messages, exclude it from the list of results as we do not want to mess up the last hash tracking logic
+      // NOTE when we asked to extend the expiry of the config messages, exclude it from the list of results as we do not want to mess up the last hash tracking logic
       if (configHashesToBump.length) {
         try {
           const lastResult = results[results.length - 1];
@@ -599,6 +604,7 @@ export class SwarmPolling {
   private async updateSeenMessages(processedMessages: Array<RetrieveMessageItem>) {
     if (processedMessages.length) {
       const newHashes = processedMessages.map((m: RetrieveMessageItem) => ({
+        // NOTE setting expiresAt will trigger the global function destroyExpiredMessages() on it's next interval
         expiresAt: m.expiration,
         hash: m.hash,
       }));
@@ -820,7 +826,8 @@ async function handleMessagesForGroupV2(
         envelope: envelopePlus,
         contentDecrypted: envelopePlus.content,
         messageHash: msg.hash,
-        envelopeTimestamp: toNumber(envelopePlus.timestamp),
+        sentAtTimestamp: toNumber(envelopePlus.timestamp),
+        messageExpirationFromRetrieve: msg.expiration,
       });
     } catch (e) {
       window.log.warn('failed to handle groupv2 otherMessage because of: ', e.message);

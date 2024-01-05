@@ -84,7 +84,7 @@ async function pushChangesToGroupSwarmIfNeeded(
       namespace: item.namespace,
       pubkey: groupPk,
       networkTimestamp: GetNetworkTime.now(),
-      ttl: TTL_DEFAULT.TTL_CONFIG,
+      ttl: TTL_DEFAULT.CONFIG_MESSAGE,
       data: item.ciphertext,
     };
   });
@@ -93,7 +93,7 @@ async function pushChangesToGroupSwarmIfNeeded(
       msgs.push({
         namespace: SnodeNamespaces.ClosedGroupKeys,
         pubkey: groupPk,
-        ttl: TTL_DEFAULT.TTL_CONFIG,
+        ttl: TTL_DEFAULT.CONFIG_MESSAGE,
         networkTimestamp: GetNetworkTime.now(),
         data: key,
       })

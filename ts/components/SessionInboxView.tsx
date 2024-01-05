@@ -26,10 +26,8 @@ import { initialSearchState } from '../state/ducks/search';
 import { initialSectionState } from '../state/ducks/section';
 import { getEmptyStagedAttachmentsState } from '../state/ducks/stagedAttachments';
 import { initialThemeState } from '../state/ducks/theme';
-import { TimerOptionsArray } from '../state/ducks/timerOptions';
 import { initialUserConfigState } from '../state/ducks/userConfig';
 import { StateType } from '../state/reducer';
-import { ExpirationTimerOptions } from '../util/expiringMessages';
 import { SessionMainPanel } from './SessionMainPanel';
 
 import { SettingsKey } from '../data/settings-key';
@@ -72,13 +70,13 @@ async function createSessionInboxStore() {
     userGroups[m.pubkeyHex] = m;
   });
 
-  const timerOptions: TimerOptionsArray = ExpirationTimerOptions.getTimerSecondsWithName();
   const initialState: StateType = {
     conversations: {
       ...getEmptyConversationState(),
       conversationLookup: makeLookup(conversations, 'id'),
     },
     user: {
+      ourDisplayNameInProfile: UserUtils.getOurProfile()?.displayName || '',
       ourNumber: UserUtils.getOurPubKeyStrFromCache(),
     },
     section: initialSectionState,
@@ -89,9 +87,6 @@ async function createSessionInboxStore() {
     onionPaths: initialOnionPathState,
     modals: initialModalState,
     userConfig: initialUserConfigState,
-    timerOptions: {
-      timerOptions,
-    },
     stagedAttachments: getEmptyStagedAttachmentsState(),
     call: initialCallState,
     sogsRoomInfo: initialSogsRoomInfoState,

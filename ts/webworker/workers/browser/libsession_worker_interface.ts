@@ -68,6 +68,7 @@ type GenericWrapperActionsCalls = {
   needsPush: GenericWrapperActionsCall<ConfigWrapperUser, 'needsPush'>;
   push: GenericWrapperActionsCall<ConfigWrapperUser, 'push'>;
   currentHashes: GenericWrapperActionsCall<ConfigWrapperUser, 'currentHashes'>;
+  storageNamespace: GenericWrapperActionsCall<ConfigWrapperUser, 'storageNamespace'>;
 };
 
 // TODO rename this to a UserWrapperActions or UserGenericWrapperActions as those actions are only used for User Wrappers now
@@ -107,6 +108,10 @@ export const GenericWrapperActions: GenericWrapperActionsCalls = {
     callLibSessionWorker([wrapperId, 'currentHashes']) as ReturnType<
       GenericWrapperActionsCalls['currentHashes']
     >,
+  storageNamespace: async (wrapperId: ConfigWrapperUser) =>
+    callLibSessionWorker([wrapperId, 'storageNamespace']) as ReturnType<
+      GenericWrapperActionsCalls['storageNamespace']
+    >,
 };
 
 function createBaseActionsFor(wrapperType: ConfigWrapperUser) {
@@ -123,6 +128,7 @@ function createBaseActionsFor(wrapperType: ConfigWrapperUser) {
     push: async () => GenericWrapperActions.push(wrapperType),
     currentHashes: async () => GenericWrapperActions.currentHashes(wrapperType),
     merge: async (toMerge: Array<MergeSingle>) => GenericWrapperActions.merge(wrapperType, toMerge),
+    storageNamespace: async () => GenericWrapperActions.storageNamespace(wrapperType),
   };
 }
 
@@ -139,17 +145,10 @@ export const UserConfigWrapperActions: UserConfigWrapperActionsCalls = {
     name: string,
     priority: number,
     profilePic: { url: string; key: Uint8Array } | null
-    // expireSeconds: number,
   ) =>
-    callLibSessionWorker([
-      'UserConfig',
-      'setUserInfo',
-      name,
-      priority,
-      profilePic,
-      // expireSeconds,
-    ]) as Promise<ReturnType<UserConfigWrapperActionsCalls['setUserInfo']>>,
-
+    callLibSessionWorker(['UserConfig', 'setUserInfo', name, priority, profilePic]) as Promise<
+      ReturnType<UserConfigWrapperActionsCalls['setUserInfo']>
+    >,
   getEnableBlindedMsgRequest: async () =>
     callLibSessionWorker(['UserConfig', 'getEnableBlindedMsgRequest']) as Promise<
       ReturnType<UserConfigWrapperActionsCalls['getEnableBlindedMsgRequest']>
@@ -160,6 +159,14 @@ export const UserConfigWrapperActions: UserConfigWrapperActionsCalls = {
       'setEnableBlindedMsgRequest',
       blindedMsgRequests,
     ]) as Promise<ReturnType<UserConfigWrapperActionsCalls['setEnableBlindedMsgRequest']>>,
+  getNoteToSelfExpiry: async () =>
+    callLibSessionWorker(['UserConfig', 'getNoteToSelfExpiry']) as Promise<
+      ReturnType<UserConfigWrapperActionsCalls['getNoteToSelfExpiry']>
+    >,
+  setNoteToSelfExpiry: async (expirySeconds: number) =>
+    callLibSessionWorker(['UserConfig', 'setNoteToSelfExpiry', expirySeconds]) as Promise<
+      ReturnType<UserConfigWrapperActionsCalls['setNoteToSelfExpiry']>
+    >,
 };
 
 export const ContactsWrapperActions: ContactsWrapperActionsCalls = {

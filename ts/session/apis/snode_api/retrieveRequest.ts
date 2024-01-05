@@ -7,7 +7,7 @@ import { GetNetworkTime } from './getNetworkTime';
 import { SnodeNamespace, SnodeNamespaces, SnodeNamespacesGroup } from './namespaces';
 
 import { UserGroupsWrapperActions } from '../../../webworker/workers/browser/libsession_worker_interface';
-import { DURATION } from '../../constants';
+import { TTL_DEFAULT } from '../../constants';
 import { PubKey } from '../../types';
 import { UserUtils } from '../../utils';
 import {
@@ -165,7 +165,7 @@ async function buildRetrieveRequest(
   );
 
   if (configHashesToBump?.length) {
-    const expiry = GetNetworkTime.now() + DURATION.DAYS * 30;
+    const expiry = GetNetworkTime.now() + TTL_DEFAULT.CONFIG_MESSAGE;
     if (isUs) {
       const signResult = await SnodeSignature.generateUpdateExpiryOurSignature({
         shortenOrExtend: '',
@@ -238,7 +238,6 @@ async function retrieveNextMessages(
     4000,
     associatedWith
   );
-
   if (!results || !results.length) {
     window?.log?.warn(
       `_retrieveNextMessages - sessionRpc could not talk to ${targetNode.ip}:${targetNode.port}`

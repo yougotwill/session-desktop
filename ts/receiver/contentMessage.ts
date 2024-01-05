@@ -13,15 +13,13 @@ import {
   deleteMessagesFromSwarmAndCompletelyLocally,
   deleteMessagesFromSwarmAndMarkAsDeletedLocally,
 } from '../interactions/conversations/unsendingInteractions';
-import {
-  CONVERSATION_PRIORITIES,
-  ConversationTypeEnum,
-  READ_MESSAGE_STATE,
-} from '../models/conversationAttributes';
+import { CONVERSATION_PRIORITIES, ConversationTypeEnum } from '../models/conversationAttributes';
 import { findCachedBlindedMatchOrLookupOnAllServers } from '../session/apis/open_group_api/sogsv3/knownBlindedkeys';
 import { ConvoHub } from '../session/conversations';
 import { concatUInt8Array, getSodiumRenderer } from '../session/crypto';
 import { removeMessagePadding } from '../session/crypto/BufferPadding';
+import { DisappearingMessages } from '../session/disappearing_messages';
+import { ReadyToDisappearMsgUpdate } from '../session/disappearing_messages/types';
 import { ProfileManager } from '../session/profile_manager/ProfileManager';
 import { GroupUtils, UserUtils } from '../session/utils';
 import { perfEnd, perfStart } from '../session/utils/Performance';
@@ -36,7 +34,11 @@ import { handleCallMessage } from './callMessage';
 import { getAllCachedECKeyPair, sentAtMoreRecentThanWrapper } from './closedGroups';
 import { ECKeyPair } from './keypairs';
 
-export async function handleSwarmContentMessage(envelope: EnvelopePlus, messageHash: string) {
+export async function handleSwarmContentMessage(
+  envelope: EnvelopePlus,
+  messageHash: string,
+  messageExpirationFromRetrieve: number | null
+) {
   try {
     const decryptedForAll = await decrypt(envelope);
 
@@ -44,15 +46,16 @@ export async function handleSwarmContentMessage(envelope: EnvelopePlus, messageH
       return;
     }
 
-    const envelopeTimestamp = toNumber(envelope.timestamp);
+    const sentAtTimestamp = toNumber(envelope.timestamp);
 
     // swarm messages already comes with a timestamp in milliseconds, so this sentAtTimestamp is correct.
     // the sogs messages do not come as milliseconds but just seconds, so we override it
     await innerHandleSwarmContentMessage({
       envelope,
-      envelopeTimestamp,
+      sentAtTimestamp,
       contentDecrypted: decryptedForAll.decryptedContent,
       messageHash,
+      messageExpirationFromRetrieve,
     });
   } catch (e) {
     window?.log?.warn(e.message);
@@ -401,12 +404,14 @@ export async function innerHandleSwarmContentMessage({
   contentDecrypted,
   envelope,
   messageHash,
-  envelopeTimestamp,
+  sentAtTimestamp,
+  messageExpirationFromRetrieve,
 }: {
   envelope: EnvelopePlus;
-  envelopeTimestamp: number;
+  sentAtTimestamp: number;
   contentDecrypted: ArrayBuffer;
   messageHash: string;
+  messageExpirationFromRetrieve: number | null;
 }): Promise<void> {
   try {
     window.log.info('innerHandleSwarmContentMessage');
@@ -438,7 +443,7 @@ export async function innerHandleSwarmContentMessage({
     const isPrivateConversationMessage = !envelope.senderIdentity;
 
     if (isPrivateConversationMessage) {
-      if (await shouldDropIncomingPrivateMessage(envelopeTimestamp, envelope, content)) {
+      if (await shouldDropIncomingPrivateMessage(sentAtTimestamp, envelope, content)) {
         await IncomingMessageCache.removeFromCache(envelope);
         return;
       }
@@ -453,27 +458,61 @@ export async function innerHandleSwarmContentMessage({
       ConversationTypeEnum.PRIVATE
     );
 
+    // We need to make sure that we trigger the outdated client banner ui on the correct model for the conversation and not the author (for closed groups)
+    let conversationModelForUIUpdate = senderConversationModel;
+
+    // For a private synced message, we need to make sure we have the conversation with the syncTarget
+    if (isPrivateConversationMessage && content.dataMessage?.syncTarget) {
+      conversationModelForUIUpdate = await ConvoHub.use().getOrCreateAndWait(
+        content.dataMessage.syncTarget,
+        ConversationTypeEnum.PRIVATE
+      );
+    }
+
     /**
      * For a closed group message, this holds the closed group's conversation.
      * For a private conversation message, this is just the conversation with that user
      */
     if (!isPrivateConversationMessage) {
+      console.warn('conversationModelForUIUpdate might need to be checked for groupv2 case');
       // this is a closed group message, we have a second conversation to make sure exists
-      await ConvoHub.use().getOrCreateAndWait(envelope.source, ConversationTypeEnum.GROUP);
+      conversationModelForUIUpdate = await ConvoHub.use().getOrCreateAndWait(
+        envelope.source,
+        ConversationTypeEnum.GROUP
+      );
     }
 
+    const expireUpdate = await DisappearingMessages.checkForExpireUpdateInContentMessage(
+      content,
+      conversationModelForUIUpdate,
+      messageExpirationFromRetrieve
+    );
     if (content.dataMessage) {
       // because typescript is funky with incoming protobufs
       if (isEmpty(content.dataMessage.profileKey)) {
         content.dataMessage.profileKey = null;
       }
-      await handleSwarmDataMessage(
+      // TODO legacy messages support will be removed in a future release
+      if (expireUpdate?.isDisappearingMessagesV2Released) {
+        await DisappearingMessages.checkHasOutdatedDisappearingMessageClient(
+          conversationModelForUIUpdate,
+          senderConversationModel,
+          expireUpdate
+        );
+        if (expireUpdate.isLegacyConversationSettingMessage) {
+          await IncomingMessageCache.removeFromCache(envelope);
+          return;
+        }
+      }
+      await handleSwarmDataMessage({
         envelope,
-        envelopeTimestamp,
-        content.dataMessage as SignalService.DataMessage,
+        sentAtTimestamp,
+        rawDataMessage: content.dataMessage as SignalService.DataMessage,
         messageHash,
-        senderConversationModel
-      );
+        senderConversationModel,
+        expireUpdate,
+      });
+
       return;
     }
 
@@ -495,10 +534,13 @@ export async function innerHandleSwarmContentMessage({
     if (content.dataExtractionNotification) {
       perfStart(`handleDataExtractionNotification-${envelope.id}`);
 
-      await handleDataExtractionNotification(
+      await handleDataExtractionNotification({
         envelope,
-        content.dataExtractionNotification as SignalService.DataExtractionNotification
-      );
+        dataExtractionNotification:
+          content.dataExtractionNotification as SignalService.DataExtractionNotification,
+        expireUpdate,
+        messageHash,
+      });
       perfEnd(
         `handleDataExtractionNotification-${envelope.id}`,
         'handleDataExtractionNotification'
@@ -510,7 +552,10 @@ export async function innerHandleSwarmContentMessage({
       return;
     }
     if (content.callMessage) {
-      await handleCallMessage(envelope, content.callMessage as SignalService.CallMessage);
+      await handleCallMessage(envelope, content.callMessage as SignalService.CallMessage, {
+        expireDetails: expireUpdate,
+        messageHash,
+      });
       return;
     }
     if (content.messageRequestResponse) {
@@ -580,12 +625,12 @@ async function handleTypingMessage(
   }
 
   if (envelope.timestamp && timestamp) {
-    const envelopeTimestamp = toNumber(envelope.timestamp);
+    const sentAtTimestamp = toNumber(envelope.timestamp);
     const typingTimestamp = toNumber(timestamp);
 
-    if (typingTimestamp !== envelopeTimestamp) {
+    if (typingTimestamp !== sentAtTimestamp) {
       window?.log?.warn(
-        `Typing message envelope timestamp (${envelopeTimestamp}) did not match typing timestamp (${typingTimestamp})`
+        `Typing message envelope timestamp (${sentAtTimestamp}) did not match typing timestamp (${typingTimestamp})`
       );
       return;
     }
@@ -785,49 +830,62 @@ async function handleMessageRequestResponse(
 }
 
 /**
- * A DataExtractionNotification message can only come from a 1 o 1 conversation.
+ * A DataExtractionNotification message can only come from a 1o1 conversation.
  *
- * We drop them if the convo is not a 1 o 1 conversation.
+ * We drop them if the convo is not a 1o1 conversation.
  */
-export async function handleDataExtractionNotification(
-  envelope: EnvelopePlus,
-  dataNotificationMessage: SignalService.DataExtractionNotification
-): Promise<void> {
+
+export async function handleDataExtractionNotification({
+  envelope,
+  expireUpdate,
+  messageHash,
+  dataExtractionNotification,
+}: {
+  envelope: EnvelopePlus;
+  dataExtractionNotification: SignalService.DataExtractionNotification;
+  expireUpdate: ReadyToDisappearMsgUpdate | undefined;
+  messageHash: string;
+}): Promise<void> {
   // we currently don't care about the timestamp included in the field itself, just the timestamp of the envelope
-  const { type, timestamp: referencedAttachment } = dataNotificationMessage;
+  const { type, timestamp: referencedAttachment } = dataExtractionNotification;
 
   const { source, timestamp } = envelope;
   await IncomingMessageCache.removeFromCache(envelope);
 
   const convo = ConvoHub.use().get(source);
-  if (!convo || !convo.isPrivate() || !Storage.get(SettingsKey.settingsReadReceipt)) {
-    window?.log?.info(
-      'Got DataNotification for unknown or non private convo or read receipt not enabled'
-    );
+  if (!convo || !convo.isPrivate()) {
+    window?.log?.info('Got DataNotification for unknown or non-private convo');
+
     return;
   }
 
-  if (!type || !source) {
+  if (!type || !source || !timestamp) {
     window?.log?.info('DataNotification pre check failed');
 
     return;
   }
 
-  if (timestamp) {
-    const envelopeTimestamp = toNumber(timestamp);
-    const referencedAttachmentTimestamp = toNumber(referencedAttachment);
+  const sentAtTimestamp = toNumber(timestamp);
+  const referencedAttachmentTimestamp = toNumber(referencedAttachment);
 
-    await convo.addSingleIncomingMessage({
+  let created = await convo.addSingleIncomingMessage({
+    source,
+    messageHash,
+    sent_at: sentAtTimestamp,
+    dataExtractionNotification: {
+      type,
+      referencedAttachmentTimestamp, // currently unused
       source,
-      sent_at: envelopeTimestamp,
-      dataExtractionNotification: {
-        type,
-        referencedAttachmentTimestamp, // currently unused
-        source,
-      },
-      unread: READ_MESSAGE_STATE.unread, // 1 means unread
-      expireTimer: 0,
-    });
-    convo.updateLastMessage();
-  }
+    },
+  });
+
+  created = DisappearingMessages.getMessageReadyToDisappear(
+    convo,
+    created,
+    0,
+    expireUpdate || undefined
+  );
+  await created.commit();
+  await convo.commit();
+  convo.updateLastMessage();
 }

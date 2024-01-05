@@ -23,7 +23,7 @@ import os from 'os';
 import fs from 'fs';
 import crypto from 'crypto';
 
-import _ from 'lodash';
+import _, { isEmpty } from 'lodash';
 import pify from 'pify';
 import Logger from 'bunyan';
 
@@ -86,12 +86,11 @@ import { installPermissionsHandler } from '../node/permissions'; // checked - on
 
 let appStartInitialSpellcheckSetting = true;
 
-const enableTestIntegrationWiderWindow = false;
-const isTestIntegration =
-  enableTestIntegrationWiderWindow &&
-  Boolean(
-    process.env.NODE_APP_INSTANCE && process.env.NODE_APP_INSTANCE.includes('test-integration')
-  );
+const isTestIntegration = Boolean(
+  process.env.NODE_APP_INSTANCE && process.env.NODE_APP_INSTANCE.includes('test-integration')
+);
+const openDevToolsTestIntegration = isTestIntegration && !isEmpty(process.env.TEST_OPEN_DEV_TOOLS);
+
 async function getSpellCheckSetting() {
   const json = sqlNode.getItemById('spell-check');
   // Default to `true` if setting doesn't exist yet
@@ -214,8 +213,8 @@ function captureClicks(window: BrowserWindow) {
 
 function getDefaultWindowSize() {
   return {
-    defaultWidth: isTestIntegration ? 1500 : 880,
-    defaultHeight: 820,
+    defaultWidth: 880,
+    defaultHeight: openDevToolsTestIntegration ? 1000 : 820, // the dev tools open at the bottom hide some stuff which should be visible
     minWidth: 880,
     minHeight: 600,
   };
@@ -416,11 +415,11 @@ async function createWindow() {
   const urlToLoad = prepareURL([getAppRootPath(), 'background.html']);
 
   await mainWindow.loadURL(urlToLoad);
-  if (isTestIntegration) {
+  if (openDevToolsTestIntegration) {
     setTimeout(() => {
       if (mainWindow && mainWindow.webContents) {
         mainWindow.webContents.openDevTools({
-          mode: 'right',
+          mode: 'bottom',
           activate: false,
         });
       }

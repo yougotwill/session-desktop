@@ -130,7 +130,7 @@ export const getSortedMessagesTypesOfSelectedConversation = createSelector(
       // this is to smooth a bit the loading of older message (to avoid a jump once new messages are rendered)
       const previousMessageTimestamp =
         index + 1 >= sortedMessages.length
-          ? Number.MAX_SAFE_INTEGER
+          ? 0
           : sortedMessages[index + 1].propsForMessage.serverTimestamp ||
             sortedMessages[index + 1].propsForMessage.timestamp;
 
@@ -935,8 +935,12 @@ export const getMessageContentWithStatusesSelectorProps = createSelector(
       return undefined;
     }
 
+    const isGroup =
+      props.propsForMessage.conversationType !== 'private' && !props.propsForMessage.isPublic;
+
     const msgProps: MessageContentWithStatusSelectorProps = {
       ...pick(props.propsForMessage, ['conversationType', 'direction', 'isDeleted']),
+      isGroup,
     };
 
     return msgProps;
@@ -954,7 +958,7 @@ export const getGenericReadableMessageSelectorProps = createSelector(
       'convoId',
       'direction',
       'conversationType',
-      'expirationLength',
+      'expirationDurationMs',
       'expirationTimestamp',
       'isExpired',
       'isUnread',

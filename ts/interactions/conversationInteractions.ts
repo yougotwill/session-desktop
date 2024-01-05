@@ -14,6 +14,7 @@ import { OpenGroupUtils } from '../session/apis/open_group_api/utils';
 import { ConvoHub } from '../session/conversations';
 import { getSodiumRenderer } from '../session/crypto';
 import { getDecryptedMediaUrl } from '../session/crypto/DecryptedAttachmentsManager';
+import { DisappearingMessageConversationModeType } from '../session/disappearing_messages/types';
 import { PubKey } from '../session/types';
 import { perfEnd, perfStart } from '../session/utils/Performance';
 import { fromHexToArray, toHex } from '../session/utils/String';
@@ -96,12 +97,9 @@ export async function unblockConvoById(conversationId: string) {
 }
 
 /**
- * marks the conversation's approval fields, sends messageRequestResponse, syncs to linked devices
+ * marks the conversation's approval fields, sends messageRequestResponse
  */
-export const approveConvoAndSendResponse = async (
-  conversationId: string,
-  syncToDevices: boolean = true
-) => {
+export const approveConvoAndSendResponse = async (conversationId: string) => {
   const convoToApprove = ConvoHub.use().get(conversationId);
 
   if (!convoToApprove) {
@@ -113,11 +111,6 @@ export const approveConvoAndSendResponse = async (
 
   await convoToApprove.commit();
   await convoToApprove.sendMessageRequestResponse();
-
-  // Conversation was not approved before so a sync is needed
-  if (syncToDevices) {
-    await forceSyncConfigurationNowIfNeeded();
-  }
 };
 
 export async function declineConversationWithoutConfirm({
@@ -412,7 +405,8 @@ export function deleteAllMessagesByConvoIdWithConfirmation(conversationId: strin
 
 export async function setDisappearingMessagesByConvoId(
   conversationId: string,
-  seconds: number | undefined
+  expirationMode: DisappearingMessageConversationModeType,
+  seconds?: number
 ) {
   const conversation = ConvoHub.use().get(conversationId);
 
@@ -423,10 +417,22 @@ export async function setDisappearingMessagesByConvoId(
     return;
   }
 
-  if (!seconds || seconds <= 0) {
-    await conversation.updateExpireTimer(null);
+  if (!expirationMode || expirationMode === 'off' || !seconds || seconds <= 0) {
+    await conversation.updateExpireTimer({
+      providedDisappearingMode: 'off',
+      providedExpireTimer: 0,
+      fromSync: false,
+      fromCurrentDevice: true,
+      fromConfigMessage: false,
+    });
   } else {
-    await conversation.updateExpireTimer(seconds);
+    await conversation.updateExpireTimer({
+      providedDisappearingMode: expirationMode,
+      providedExpireTimer: seconds,
+      fromSync: false,
+      fromCurrentDevice: true,
+      fromConfigMessage: false,
+    });
   }
 }
 

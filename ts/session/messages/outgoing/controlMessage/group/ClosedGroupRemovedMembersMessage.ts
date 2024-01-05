@@ -14,6 +14,8 @@ export class ClosedGroupRemovedMembersMessage extends ClosedGroupMessage {
       createAtNetworkTimestamp: params.createAtNetworkTimestamp,
       identifier: params.identifier,
       groupId: params.groupId,
+      expirationType: params.expirationType,
+      expireTimer: params.expireTimer,
     });
     this.removedMembers = params.removedMembers;
     if (!this.removedMembers?.length) {

@@ -26,7 +26,7 @@ describe('ReceiptMessage', () => {
   });
 
   it('correct ttl', () => {
-    expect(readMessage.ttl()).to.equal(Constants.TTL_DEFAULT.TTL_MAX);
+    expect(readMessage.ttl()).to.equal(Constants.TTL_DEFAULT.CONTENT_MESSAGE);
   });
 
   it('has an identifier', () => {

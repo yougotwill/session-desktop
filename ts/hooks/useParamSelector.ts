@@ -1,5 +1,7 @@
+import { createSelector } from '@reduxjs/toolkit';
 import { PubkeyType } from 'libsession_util_nodejs';
-import { compact, isEmpty, isFinite, isNumber } from 'lodash';
+import { compact, isEmpty, isFinite, isNumber, pick } from 'lodash';
+import { useMemo } from 'react';
 import { useSelector } from 'react-redux';
 import {
   hasValidIncomingRequestValues,
@@ -8,10 +10,15 @@ import {
 import { ConversationTypeEnum } from '../models/conversationAttributes';
 import { isUsAnySogsFromCache } from '../session/apis/open_group_api/sogsv3/knownBlindedkeys';
 import { CONVERSATION } from '../session/constants';
+import { TimerOptions, TimerOptionsArray } from '../session/disappearing_messages/timerOptions';
 import { PubKey } from '../session/types';
 import { UserUtils } from '../session/utils';
+import { PropsForExpiringMessage } from '../state/ducks/conversations';
 import { StateType } from '../state/reducer';
-import { getMessageReactsProps } from '../state/selectors/conversations';
+import {
+  getMessagePropsByMessageId,
+  getMessageReactsProps,
+} from '../state/selectors/conversations';
 import { useLibGroupAdmins, useLibGroupMembers, useLibGroupName } from '../state/selectors/groups';
 import { isPrivateAndFriend } from '../state/selectors/selectedConversation';
 import { useOurPkStr } from '../state/selectors/user';
@@ -45,11 +52,14 @@ export function useConversationUsername(convoId?: string) {
 /**
  * Returns either the nickname, displayNameInProfile, or the shorten pubkey
  */
-export function useConversationUsernameOrShorten(convoId?: string) {
+export function useNicknameOrProfileNameOrShortenedPubkey(convoId?: string) {
   const convoProps = useConversationPropsById(convoId);
 
   return (
-    convoProps?.nickname || convoProps?.displayNameInProfile || (convoId && PubKey.shorten(convoId))
+    convoProps?.nickname ||
+    convoProps?.displayNameInProfile ||
+    (convoId && PubKey.shorten(convoId)) ||
+    window.i18n('unknown')
   );
 }
 
@@ -351,6 +361,85 @@ export function useMentionedUs(conversationId?: string): boolean {
 
 export function useIsTyping(conversationId?: string): boolean {
   return useConversationPropsById(conversationId)?.isTyping || false;
+}
+
+const getMessageExpirationProps = createSelector(
+  getMessagePropsByMessageId,
+  (props): PropsForExpiringMessage | undefined => {
+    if (!props || isEmpty(props)) {
+      return undefined;
+    }
+
+    const msgProps: PropsForExpiringMessage = {
+      ...pick(props.propsForMessage, [
+        'convoId',
+        'direction',
+        'receivedAt',
+        'isUnread',
+        'expirationTimestamp',
+        'expirationDurationMs',
+        'isExpired',
+      ]),
+      messageId: props.propsForMessage.id,
+    };
+
+    return msgProps;
+  }
+);
+
+export function useMessageExpirationPropsById(messageId?: string) {
+  return useSelector((state: StateType) => {
+    if (!messageId) {
+      return null;
+    }
+    const messageExpirationProps = getMessageExpirationProps(state, messageId);
+    if (!messageExpirationProps) {
+      return null;
+    }
+    return messageExpirationProps;
+  });
+}
+
+export function useTimerOptionsByMode(disappearingMessageMode?: string, hasOnlyOneMode?: boolean) {
+  return useMemo(() => {
+    const options: TimerOptionsArray = [];
+    if (hasOnlyOneMode) {
+      options.push({
+        name: TimerOptions.getName(TimerOptions.VALUES[0]),
+        value: TimerOptions.VALUES[0],
+      });
+    }
+    switch (disappearingMessageMode) {
+      // TODO legacy messages support will be removed in a future release
+      case 'legacy':
+        options.push(
+          ...TimerOptions.DELETE_LEGACY.map(option => ({
+            name: TimerOptions.getName(option),
+            value: option,
+          }))
+        );
+        break;
+      case 'deleteAfterRead':
+        options.push(
+          ...TimerOptions.DELETE_AFTER_READ.map(option => ({
+            name: TimerOptions.getName(option),
+            value: option,
+          }))
+        );
+        break;
+      case 'deleteAfterSend':
+        options.push(
+          ...TimerOptions.DELETE_AFTER_SEND.map(option => ({
+            name: TimerOptions.getName(option),
+            value: option,
+          }))
+        );
+        break;
+      default:
+        return [];
+    }
+    return options;
+  }, [disappearingMessageMode, hasOnlyOneMode]);
 }
 
 export function useQuoteAuthorName(authorId?: string): {

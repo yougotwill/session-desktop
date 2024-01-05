@@ -5,7 +5,7 @@ export type OutgoingRawMessage = {
   identifier: string;
   plainTextBuffer: Uint8Array;
   device: string;
-  ttl: number;
+  ttl: number; // ttl is in millis
   networkTimestampCreated: number;
   encryption: SignalService.Envelope.Type;
   namespace: SnodeNamespaces;

@@ -20,6 +20,8 @@ import {
   createSwarmMessageSentFromNotUs,
   createSwarmMessageSentFromUs,
 } from '../models/messageFactory';
+import { DisappearingMessages } from '../session/disappearing_messages';
+import { DisappearingMessageUpdate } from '../session/disappearing_messages/types';
 import { ProfileManager } from '../session/profile_manager/ProfileManager';
 import { isUsFromCache } from '../session/utils/User';
 import { Action, Reaction } from '../types/Reaction';
@@ -111,6 +113,7 @@ export function cleanIncomingDataMessage(rawDataMessage: SignalService.DataMessa
   if (rawDataMessage.flags == null) {
     rawDataMessage.flags = 0;
   }
+  // TODO legacy messages support will be removed in a future release
   if (rawDataMessage.expireTimer == null) {
     rawDataMessage.expireTimer = 0;
   }
@@ -145,20 +148,28 @@ export function cleanIncomingDataMessage(rawDataMessage: SignalService.DataMessa
  *        * envelope.source is our pubkey (our other device has the same pubkey as us)
  *        * dataMessage.syncTarget is either the group public key OR the private conversation this message is about.
  */
-export async function handleSwarmDataMessage(
-  envelope: EnvelopePlus,
-  envelopeTimestamp: number,
-  rawDataMessage: SignalService.DataMessage,
-  messageHash: string,
-  senderConversationModel: ConversationModel
-): Promise<void> {
+export async function handleSwarmDataMessage({
+  envelope,
+  messageHash,
+  rawDataMessage,
+  senderConversationModel,
+  sentAtTimestamp,
+  expireUpdate,
+}: {
+  envelope: EnvelopePlus;
+  sentAtTimestamp: number;
+  rawDataMessage: SignalService.DataMessage;
+  messageHash: string;
+  senderConversationModel: ConversationModel;
+  expireUpdate?: DisappearingMessageUpdate;
+}): Promise<void> {
   window.log.info('handleSwarmDataMessage');
 
   const cleanDataMessage = cleanIncomingDataMessage(rawDataMessage);
 
   if (cleanDataMessage.groupUpdateMessage) {
     await GroupV2Receiver.handleGroupUpdateMessage({
-      envelopeTimestamp,
+      envelopeTimestamp: sentAtTimestamp,
       updateMessage: rawDataMessage.groupUpdateMessage as SignalService.GroupUpdateMessage,
       source: envelope.source,
       senderIdentity: envelope.senderIdentity,
@@ -172,7 +183,8 @@ export async function handleSwarmDataMessage(
   if (cleanDataMessage.closedGroupControlMessage) {
     await handleLegacyClosedGroupControlMessage(
       envelope,
-      cleanDataMessage.closedGroupControlMessage as SignalService.DataMessage.ClosedGroupControlMessage
+      cleanDataMessage.closedGroupControlMessage as SignalService.DataMessage.ClosedGroupControlMessage,
+      expireUpdate || null
     );
     return;
   }
@@ -247,24 +259,33 @@ export async function handleSwarmDataMessage(
     return;
   }
 
-  const msgModel =
+  let msgModel =
     isSyncedMessage || (envelope.senderIdentity && isUsFromCache(envelope.senderIdentity))
       ? createSwarmMessageSentFromUs({
           conversationId: convoIdToAddTheMessageTo,
           messageHash,
-          sentAt: envelopeTimestamp,
+          sentAt: sentAtTimestamp,
         })
       : createSwarmMessageSentFromNotUs({
           conversationId: convoIdToAddTheMessageTo,
           messageHash,
           sender: senderConversationModel.id,
-          sentAt: envelopeTimestamp,
+          sentAt: sentAtTimestamp,
         });
+
+  if (!isEmpty(expireUpdate)) {
+    msgModel = DisappearingMessages.getMessageReadyToDisappear(
+      convoToAddMessageTo,
+      msgModel,
+      cleanDataMessage.flags,
+      expireUpdate
+    );
+  }
 
   await handleSwarmMessage(
     msgModel,
     messageHash,
-    envelopeTimestamp,
+    sentAtTimestamp,
     cleanDataMessage,
     convoToAddMessageTo,
     // eslint-disable-next-line @typescript-eslint/no-misused-promises
@@ -336,6 +357,7 @@ async function handleSwarmMessage(
         sender: msgModel.get('source'),
         you: isUsFromCache(msgModel.get('source')),
       });
+
       if (
         convoToAddMessageTo.isPrivate() &&
         msgModel.get('unread') &&
@@ -348,6 +370,7 @@ async function handleSwarmMessage(
       confirm();
       return;
     }
+
     const isDuplicate = await isSwarmMessageDuplicate({
       source: msgModel.get('source'),
       sentAt,

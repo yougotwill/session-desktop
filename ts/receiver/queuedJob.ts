@@ -1,5 +1,4 @@
-import _, { isNumber } from 'lodash';
-
+import _, { isEmpty, isNumber } from 'lodash';
 import { queueAttachmentDownloads } from './attachments';
 
 import { Data } from '../data/data';
@@ -8,17 +7,18 @@ import { MessageModel } from '../models/message';
 import { ConvoHub } from '../session/conversations';
 import { Quote } from './types';
 
-import { ConversationTypeEnum, READ_MESSAGE_STATE } from '../models/conversationAttributes';
+import { ConversationTypeEnum } from '../models/conversationAttributes';
 import { MessageDirection } from '../models/messageType';
 import { SignalService } from '../protobuf';
+import { DisappearingMessages } from '../session/disappearing_messages';
 import { ProfileManager } from '../session/profile_manager/ProfileManager';
 import { PubKey } from '../session/types';
+import { UserUtils } from '../session/utils';
 import { PropsForMessageWithoutConvoProps, lookupQuote } from '../state/ducks/conversations';
 import { showMessageRequestBannerOutsideRedux } from '../state/ducks/userConfig';
 import { getHideMessageRequestBannerOutsideRedux } from '../state/selectors/userConfig';
 import { GoogleChrome } from '../util';
 import { LinkPreviews } from '../util/linkPreviews';
-import { ReleasedFeatures } from '../util/releaseFeature';
 
 function contentTypeSupported(type: string): boolean {
   const Chrome = GoogleChrome;
@@ -174,20 +174,6 @@ async function processProfileKeyNoCommit(
   }
 }
 
-function updateReadStatus(message: MessageModel) {
-  if (message.isExpirationTimerUpdate()) {
-    message.set({ unread: READ_MESSAGE_STATE.read });
-  }
-}
-
-function handleSyncedReceiptsNoCommit(message: MessageModel, conversation: ConversationModel) {
-  // If the newly received message is from us, we assume that we've seen the messages up until that point
-  const sentTimestamp = message.get('sent_at');
-  if (sentTimestamp) {
-    conversation.markConversationRead(sentTimestamp);
-  }
-}
-
 export type RegularMessageType = Pick<
   SignalService.DataMessage,
   | 'attachments'
@@ -199,6 +185,7 @@ export type RegularMessageType = Pick<
   | 'reaction'
   | 'profile'
   | 'profileKey'
+  // TODO legacy messages support will be removed in a future release
   | 'expireTimer'
   | 'blocksCommunityMessageRequests'
 > & { isRegularMessage: true };
@@ -242,8 +229,6 @@ async function handleRegularMessage(
   }
 
   handleLinkPreviews(rawDataMessage.body, rawDataMessage.preview, message);
-  const existingExpireTimer = conversation.get('expireTimer');
-
   message.set({
     flags: rawDataMessage.flags,
     // quote: rawDataMessage.quote, // do not do this copy here, it must be done only in copyFromQuotedMessage()
@@ -253,10 +238,6 @@ async function handleRegularMessage(
     messageHash,
     errors: [],
   });
-
-  if (existingExpireTimer) {
-    message.set({ expireTimer: existingExpireTimer });
-  }
 
   const serverTimestamp = message.get('serverTimestamp');
   if (
@@ -270,12 +251,8 @@ async function handleRegularMessage(
     await sendingDeviceConversation.updateBlocksSogsMsgReqsTimestamp(updateBlockTimestamp, false);
   }
 
-  // Expire timer updates are now explicit.
-  // We don't handle an expire timer from a incoming message except if it is an ExpireTimerUpdate message.
-
   if (type === 'incoming') {
     if (conversation.isPrivate()) {
-      updateReadStatus(message);
       const incomingMessageCount = await Data.getMessageCountByType(
         conversation.id,
         MessageDirection.incoming
@@ -299,17 +276,6 @@ async function handleRegularMessage(
       }
       // should only occur after isOutgoing request as it relies on didApproveMe being false.
       await conversation.setDidApproveMe(true);
-    }
-  } else if (type === 'outgoing') {
-    const userConfigLibsession = await ReleasedFeatures.checkIsUserConfigFeatureReleased();
-
-    if (!userConfigLibsession) {
-      // we want to do this for all types of conversations, not just private chats
-      handleSyncedReceiptsNoCommit(message, conversation);
-
-      if (conversation.isPrivate()) {
-        await conversation.setIsApproved(true);
-      }
     }
   }
 
@@ -342,31 +308,45 @@ async function handleRegularMessage(
   });
 }
 
-async function handleExpirationTimerUpdateNoCommit(
+async function markConvoAsReadIfOutgoingMessage(
   conversation: ConversationModel,
-  message: MessageModel,
-  source: string,
-  expireTimer: number
+  message: MessageModel
 ) {
-  message.set({
-    expirationTimerUpdate: {
-      source,
-      expireTimer,
-    },
-    unread: READ_MESSAGE_STATE.read, // mark the message as read.
-  });
-  conversation.set({ expireTimer });
-
-  await conversation.updateExpireTimer(expireTimer, source, message.get('received_at'), {}, false);
-}
-
-function markConvoAsReadIfOutgoingMessage(conversation: ConversationModel, message: MessageModel) {
   const isOutgoingMessage =
     message.get('type') === 'outgoing' || message.get('direction') === 'outgoing';
   if (isOutgoingMessage) {
     const sentAt = message.get('sent_at') || message.get('serverTimestamp');
     if (sentAt) {
-      conversation.markConversationRead(sentAt);
+      const expirationType = message.getExpirationType();
+      const expireTimer = message.getExpireTimerSeconds();
+      // NOTE starting disappearing messages timer for all outbound messages
+      if (
+        expirationType &&
+        expireTimer > 0 &&
+        Boolean(message.getExpirationStartTimestamp()) === false
+      ) {
+        const expirationMode = DisappearingMessages.changeToDisappearingConversationMode(
+          conversation,
+          expirationType,
+          expireTimer
+        );
+
+        if (expirationMode !== 'off') {
+          message.set({
+            expirationStartTimestamp: DisappearingMessages.setExpirationStartTimestamp(
+              expirationMode,
+              message.get('sent_at'),
+              'markConvoAsReadIfOutgoingMessage',
+              message.get('id')
+            ),
+          });
+          await message.commit();
+        }
+      }
+      conversation.markConversationRead({
+        newestUnreadDate: sentAt,
+        fromConfigMessage: false,
+      });
     }
   }
 }
@@ -382,7 +362,7 @@ export async function handleMessageJob(
   window?.log?.info(
     `Starting handleMessageJob for message ${messageModel.idForLogging()}, ${
       messageModel.get('serverTimestamp') || messageModel.get('timestamp')
-    } in conversation ${conversation.idForLogging()}`
+    } in conversation ${conversation.idForLogging()}, messageHash:${messageHash}`
   );
 
   const sendingDeviceConversation = await ConvoHub.use().getOrCreateAndWait(
@@ -391,17 +371,71 @@ export async function handleMessageJob(
   );
   try {
     messageModel.set({ flags: regularDataMessage.flags });
+
+    // NOTE we handle incoming disappear after send messages and sync messages here
+    if (
+      conversation &&
+      messageModel.getExpireTimerSeconds() > 0 &&
+      !messageModel.getExpirationStartTimestamp()
+    ) {
+      const expirationMode = DisappearingMessages.changeToDisappearingConversationMode(
+        conversation,
+        messageModel.getExpirationType(),
+        messageModel.getExpireTimerSeconds()
+      );
+
+      // TODO legacy messages support will be removed in a future release
+      const canBeDeleteAfterSend = conversation && (conversation.isMe() || conversation.isGroup());
+      if (
+        (canBeDeleteAfterSend && expirationMode === 'legacy') ||
+        expirationMode === 'deleteAfterSend'
+      ) {
+        messageModel.set({
+          expirationStartTimestamp: DisappearingMessages.setExpirationStartTimestamp(
+            expirationMode,
+            messageModel.get('sent_at'),
+            'handleMessageJob',
+            messageModel.get('id')
+          ),
+        });
+      }
+    }
+
     if (messageModel.isExpirationTimerUpdate()) {
-      const { expireTimer } = regularDataMessage;
-      const oldValue = conversation.get('expireTimer');
-      if (expireTimer === oldValue) {
-        confirm?.();
-        window?.log?.info(
-          'Dropping ExpireTimerUpdate message as we already have the same one set.'
+      // NOTE if we turn off disappearing messages from a legacy client expirationTimerUpdate can be undefined but the flags value is correctly set
+      const expirationTimerUpdate = messageModel.getExpirationTimerUpdate();
+      if (
+        messageModel.get('flags') !== SignalService.DataMessage.Flags.EXPIRATION_TIMER_UPDATE &&
+        (!expirationTimerUpdate || isEmpty(expirationTimerUpdate))
+      ) {
+        window.log.debug(
+          `[handleMessageJob] The ExpirationTimerUpdate is not defined correctly message: ${messageModel.get(
+            'id'
+          )}\nexpirationTimerUpdate: ${JSON.stringify(expirationTimerUpdate)}`
         );
+        confirm?.();
         return;
       }
-      await handleExpirationTimerUpdateNoCommit(conversation, messageModel, source, expireTimer);
+
+      const expireTimerUpdate = expirationTimerUpdate?.expireTimer || 0;
+      const expirationModeUpdate = DisappearingMessages.changeToDisappearingConversationMode(
+        conversation,
+        expirationTimerUpdate?.expirationType,
+        expireTimerUpdate
+      );
+
+      await conversation.updateExpireTimer({
+        providedDisappearingMode: expirationModeUpdate,
+        providedExpireTimer: expireTimerUpdate,
+        providedSource: source,
+        fromSync: source === UserUtils.getOurPubKeyStrFromCache(),
+        receivedAt: messageModel.get('received_at'),
+        existingMessage: messageModel,
+        shouldCommitConvo: false,
+        fromCurrentDevice: false,
+        fromConfigMessage: false,
+        // NOTE we don't commit yet because we want to get the message id, see below
+      });
     } else {
       // this does not commit to db nor UI unless we need to approve a convo
       await handleRegularMessage(
@@ -446,7 +480,7 @@ export async function handleMessageJob(
       );
     }
 
-    markConvoAsReadIfOutgoingMessage(conversation, messageModel);
+    await markConvoAsReadIfOutgoingMessage(conversation, messageModel);
     if (messageModel.get('unread')) {
       conversation.throttledNotify(messageModel);
     }

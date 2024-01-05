@@ -1,9 +1,10 @@
 /* eslint-disable no-case-declarations */
-import { CommunityInfo, UserGroupsType } from 'libsession_util_nodejs';
+import { CommunityInfo, LegacyGroupInfo, UserGroupsType } from 'libsession_util_nodejs';
 import { Data } from '../../../data/data';
 import { OpenGroupData } from '../../../data/opengroups';
 import { ConversationModel } from '../../../models/conversation';
 import {
+  CommunityInfoFromDBValues,
   assertUnreachable,
   getCommunityInfoFromDBValues,
   getLegacyGroupInfoFromDBValues,
@@ -66,17 +67,19 @@ function isLegacyGroupToRemoveFromDBIfNotInWrapper(convo: ConversationModel): bo
  * If that community does not exist in the wrapper, it is created before being updated.
  * Same applies for a legacy group.
  */
-async function insertGroupsFromDBIntoWrapperAndRefresh(convoId: string): Promise<void> {
+async function insertGroupsFromDBIntoWrapperAndRefresh(
+  convoId: string
+): Promise<CommunityInfoFromDBValues | LegacyGroupInfo | null> {
   const foundConvo = ConvoHub.use().get(convoId);
   if (!foundConvo) {
-    return;
+    return null;
   }
 
-  if (!isUserGroupToStoreInWrapper(foundConvo)) {
-    return;
+  if (!SessionUtilUserGroups.isUserGroupToStoreInWrapper(foundConvo)) {
+    return null;
   }
 
-  const convoType: UserGroupsType = isCommunityToStoreInWrapper(foundConvo)
+  const convoType: UserGroupsType = SessionUtilUserGroups.isCommunityToStoreInWrapper(foundConvo)
     ? 'Community'
     : PubKey.is03Pubkey(convoId)
     ? 'Group'
@@ -88,7 +91,7 @@ async function insertGroupsFromDBIntoWrapperAndRefresh(convoId: string): Promise
 
       const roomDetails = OpenGroupData.getV2OpenGroupRoomByRoomId(asOpengroup);
       if (!roomDetails) {
-        return;
+        return null;
       }
 
       // we need to build the full URL with the pubkey so we can add it to the wrapper. Let's reuse the exposed method from the wrapper for that
@@ -110,6 +113,12 @@ async function insertGroupsFromDBIntoWrapperAndRefresh(convoId: string): Promise
           wrapperComm.fullUrl,
           wrapperComm.priority
         );
+
+        // returned for testing purposes only
+        return {
+          fullUrl: wrapperComm.fullUrl,
+          priority: wrapperComm.priority,
+        };
       } catch (e) {
         window.log.warn(`UserGroupsWrapperActions.set of ${convoId} failed with ${e.message}`);
         // we still let this go through
@@ -123,7 +132,8 @@ async function insertGroupsFromDBIntoWrapperAndRefresh(convoId: string): Promise
         priority: foundConvo.getPriority(),
         members: foundConvo.getGroupMembers() || [],
         groupAdmins: foundConvo.getGroupAdmins(),
-        // expireTimer: foundConvo.get('expireTimer'),
+        expirationMode: foundConvo.getExpirationMode() || 'off',
+        expireTimer: foundConvo.getExpireTimer() || 0,
         displayNameInProfile: foundConvo.getRealSessionUsername(),
         encPubkeyHex: encryptionKeyPair?.publicHex || '',
         encSeckeyHex: encryptionKeyPair?.privateHex || '',
@@ -137,6 +147,8 @@ async function insertGroupsFromDBIntoWrapperAndRefresh(convoId: string): Promise
         );
         // this does the create or the update of the matching existing legacy group
         await UserGroupsWrapperActions.setLegacyGroup(wrapperLegacyGroup);
+        // returned for testing purposes only
+        return wrapperLegacyGroup;
       } catch (e) {
         window.log.warn(`UserGroupsWrapperActions.set of ${convoId} failed with ${e.message}`);
         // we still let this go through
@@ -152,6 +164,7 @@ async function insertGroupsFromDBIntoWrapperAndRefresh(convoId: string): Promise
         `insertGroupsFromDBIntoWrapperAndRefresh case not handeld "${convoType}"`
       );
   }
+  return null;
 }
 
 async function getCommunityByConvoIdNotCached(convoId: string) {

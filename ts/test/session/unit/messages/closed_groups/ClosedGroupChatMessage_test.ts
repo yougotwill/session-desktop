@@ -14,9 +14,12 @@ describe('ClosedGroupVisibleMessage', () => {
     groupId = TestUtils.generateFakePubKeyStr();
   });
   it('can create empty message with timestamp, groupId and chatMessage', () => {
+    const createAtNetworkTimestamp = Date.now();
     const chatMessage = new VisibleMessage({
-      createAtNetworkTimestamp: Date.now(),
+      createAtNetworkTimestamp,
       body: 'body',
+      expirationType: null,
+      expireTimer: null,
     });
     const message = new ClosedGroupVisibleMessage({
       groupId,
@@ -43,17 +46,21 @@ describe('ClosedGroupVisibleMessage', () => {
   it('correct ttl', () => {
     const chatMessage = new VisibleMessage({
       createAtNetworkTimestamp: Date.now(),
+      expirationType: null,
+      expireTimer: null,
     });
     const message = new ClosedGroupVisibleMessage({
       groupId,
       chatMessage,
     });
-    expect(message.ttl()).to.equal(Constants.TTL_DEFAULT.TTL_MAX);
+    expect(message.ttl()).to.equal(Constants.TTL_DEFAULT.CONTENT_MESSAGE);
   });
 
   it('has an identifier', () => {
     const chatMessage = new VisibleMessage({
       createAtNetworkTimestamp: Date.now(),
+      expirationType: null,
+      expireTimer: null,
     });
     const message = new ClosedGroupVisibleMessage({
       groupId,
@@ -64,24 +71,29 @@ describe('ClosedGroupVisibleMessage', () => {
   });
 
   it('should use the identifier passed into it over the one set in chatMessage', () => {
+    const createAtNetworkTimestamp = Date.now();
     const chatMessage = new VisibleMessage({
-      createAtNetworkTimestamp: Date.now(),
+      createAtNetworkTimestamp,
       body: 'body',
       identifier: 'chatMessage',
+      expirationType: null,
+      expireTimer: null,
     });
     const message = new ClosedGroupVisibleMessage({
       groupId,
       chatMessage,
-      identifier: 'closedGroupMessage',
     });
     expect(message.identifier).to.be.equal('closedGroupMessage');
   });
 
   it('should use the identifier of the chatMessage if one is not specified on the closed group message', () => {
+    const createAtNetworkTimestamp = Date.now();
     const chatMessage = new VisibleMessage({
-      createAtNetworkTimestamp: Date.now(),
+      createAtNetworkTimestamp,
       body: 'body',
       identifier: 'chatMessage',
+      expirationType: null,
+      expireTimer: null,
     });
     const message = new ClosedGroupVisibleMessage({
       groupId,

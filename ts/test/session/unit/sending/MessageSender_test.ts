@@ -69,27 +69,47 @@ describe('MessageSender', () => {
 
       it('should not retry if an error occurred during encryption', async () => {
         encryptStub.throws(new Error('Failed to encrypt.'));
-        const promise = MessageSender.send(rawMessage, 3, 10);
+        const promise = MessageSender.send({
+          message: rawMessage,
+          attempts: 3,
+          retryMinTimeout: 10,
+          isSyncMessage: false,
+        });
         await expect(promise).is.rejectedWith('Failed to encrypt.');
         expect(sessionMessageAPISendStub.callCount).to.equal(0);
       });
 
       it('should only call lokiMessageAPI once if no errors occured', async () => {
-        await MessageSender.send(rawMessage, 3, 10);
+        await MessageSender.send({
+          message: rawMessage,
+          attempts: 3,
+          retryMinTimeout: 10,
+          isSyncMessage: false,
+        });
         expect(sessionMessageAPISendStub.callCount).to.equal(1);
       });
 
       it('should only retry the specified amount of times before throwing', async () => {
         sessionMessageAPISendStub.throws(new Error('API error'));
         const attempts = 2;
-        const promise = MessageSender.send(rawMessage, attempts, 10);
+        const promise = MessageSender.send({
+          message: rawMessage,
+          attempts,
+          retryMinTimeout: 10,
+          isSyncMessage: false,
+        });
         await expect(promise).is.rejectedWith('API error');
         expect(sessionMessageAPISendStub.callCount).to.equal(attempts);
       });
 
       it('should not throw error if successful send occurs within the retry limit', async () => {
         sessionMessageAPISendStub.onFirstCall().throws(new Error('API error'));
-        await MessageSender.send(rawMessage, 3, 10);
+        await MessageSender.send({
+          message: rawMessage,
+          attempts: 3,
+          retryMinTimeout: 10,
+          isSyncMessage: false,
+        });
         expect(sessionMessageAPISendStub.callCount).to.equal(2);
       });
     });
@@ -115,7 +135,12 @@ describe('MessageSender', () => {
           SnodeNamespaces.Default
         );
 
-        await MessageSender.send(rawMessage, 3, 10);
+        await MessageSender.send({
+          message: rawMessage,
+          attempts: 3,
+          retryMinTimeout: 10,
+          isSyncMessage: false,
+        });
 
         const args = sessionMessageAPISendStub.getCall(0).args;
         expect(args[1]).to.equal(device.key);
@@ -141,7 +166,12 @@ describe('MessageSender', () => {
         );
         const offset = 200000;
         Sinon.stub(GetNetworkTime, 'getLatestTimestampOffset').returns(offset);
-        await MessageSender.send(rawMessage, 3, 10);
+        await MessageSender.send({
+          message: rawMessage,
+          attempts: 3,
+          retryMinTimeout: 10,
+          isSyncMessage: false,
+        });
 
         const firstArg = sessionMessageAPISendStub.getCall(0).args[0];
         const { data64 } = firstArg[0];
@@ -195,7 +225,12 @@ describe('MessageSender', () => {
             visibleMessage,
             SnodeNamespaces.Default
           );
-          await MessageSender.send(rawMessage, 3, 10);
+          await MessageSender.send({
+            message: rawMessage,
+            attempts: 3,
+            retryMinTimeout: 10,
+            isSyncMessage: false,
+          });
 
           const firstArg = sessionMessageAPISendStub.getCall(0).args[0];
           const { data64 } = firstArg[0];

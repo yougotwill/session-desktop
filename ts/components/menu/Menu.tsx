@@ -489,7 +489,7 @@ export const AcceptMsgRequestMenuItem = () => {
         onClick={async () => {
           await convo.setDidApproveMe(true);
           await convo.addOutgoingApprovalMessage(Date.now());
-          await approveConvoAndSendResponse(convoId, true);
+          await approveConvoAndSendResponse(convoId);
         }}
       >
         {window.i18n('accept')}

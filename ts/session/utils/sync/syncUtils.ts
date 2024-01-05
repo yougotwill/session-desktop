@@ -1,8 +1,10 @@
-import _ from 'lodash';
+import { isEmpty, isNumber, toNumber } from 'lodash';
 import { SignalService } from '../../../protobuf';
 import { UserSyncJobDone } from '../../../shims/events';
 import { ReleasedFeatures } from '../../../util/releaseFeature';
 
+import { DisappearingMessageUpdate } from '../../disappearing_messages/types';
+import { DataMessage } from '../../messages/outgoing';
 import { ExpirationTimerUpdateMessage } from '../../messages/outgoing/controlMessage/ExpirationTimerUpdateMessage';
 import { MessageRequestResponse } from '../../messages/outgoing/controlMessage/MessageRequestResponse';
 import { UnsendMessage } from '../../messages/outgoing/controlMessage/UnsendMessage';
@@ -44,7 +46,8 @@ const buildSyncVisibleMessage = (
   identifier: string,
   dataMessage: SignalService.DataMessage,
   createAtNetworkTimestamp: number,
-  syncTarget: string
+  syncTarget: string,
+  expireUpdate?: DisappearingMessageUpdate
 ) => {
   const body = dataMessage.body || undefined;
 
@@ -70,7 +73,7 @@ const buildSyncVisibleMessage = (
   }) as Array<AttachmentPointerWithUrl>;
   const quote = (dataMessage.quote as Quote) || undefined;
   const preview = (dataMessage.preview as Array<PreviewWithAttachmentUrl>) || [];
-  const expireTimer = dataMessage.expireTimer;
+  const dataMessageExpireTimer = dataMessage.expireTimer;
 
   return new VisibleMessage({
     identifier,
@@ -80,21 +83,23 @@ const buildSyncVisibleMessage = (
     quote,
     preview,
     syncTarget,
-    expireTimer,
+    expireTimer: expireUpdate?.expirationTimer || dataMessageExpireTimer,
+    expirationType: expireUpdate?.expirationType || null,
   });
 };
 
 const buildSyncExpireTimerMessage = (
   identifier: string,
-  dataMessage: SignalService.DataMessage,
   createAtNetworkTimestamp: number,
+  expireUpdate: DisappearingMessageUpdate,
   syncTarget: string
 ) => {
-  const expireTimer = dataMessage.expireTimer;
+  const { expirationType, expirationTimer: expireTimer } = expireUpdate;
 
   return new ExpirationTimerUpdateMessage({
     identifier,
     createAtNetworkTimestamp,
+    expirationType,
     expireTimer,
     syncTarget,
   });
@@ -108,24 +113,46 @@ export type SyncMessageType =
 
 export const buildSyncMessage = (
   identifier: string,
-  dataMessage: SignalService.DataMessage,
+  data: DataMessage | SignalService.DataMessage,
   syncTarget: string,
-  sentTimestamp: number
-): VisibleMessage | ExpirationTimerUpdateMessage => {
+  sentTimestamp: number,
+  expireUpdate?: DisappearingMessageUpdate
+): VisibleMessage | ExpirationTimerUpdateMessage | null => {
   if (
-    (dataMessage as any).constructor.name !== 'DataMessage' &&
-    !(dataMessage instanceof SignalService.DataMessage)
+    (data as any).constructor.name !== 'DataMessage' &&
+    !(data instanceof SignalService.DataMessage)
   ) {
     window?.log?.warn('buildSyncMessage with something else than a DataMessage');
   }
 
-  if (!sentTimestamp || !_.isNumber(sentTimestamp)) {
+  const dataMessage = data instanceof DataMessage ? data.dataProto() : data;
+
+  if (!sentTimestamp || !isNumber(sentTimestamp)) {
     throw new Error('Tried to build a sync message without a sentTimestamp');
   }
   // don't include our profileKey on syncing message. This is to be done through libsession now
-  const timestamp = _.toNumber(sentTimestamp);
-  if (dataMessage.flags === SignalService.DataMessage.Flags.EXPIRATION_TIMER_UPDATE) {
-    return buildSyncExpireTimerMessage(identifier, dataMessage, timestamp, syncTarget);
+  const timestamp = toNumber(sentTimestamp);
+
+  if (
+    dataMessage.flags === SignalService.DataMessage.Flags.EXPIRATION_TIMER_UPDATE &&
+    !isEmpty(expireUpdate)
+  ) {
+    const expireTimerSyncMessage = buildSyncExpireTimerMessage(
+      identifier,
+      timestamp,
+      expireUpdate,
+      syncTarget
+    );
+
+    return expireTimerSyncMessage;
   }
-  return buildSyncVisibleMessage(identifier, dataMessage, timestamp, syncTarget);
+
+  const visibleSyncMessage = buildSyncVisibleMessage(
+    identifier,
+    dataMessage,
+    timestamp,
+    syncTarget,
+    expireUpdate
+  );
+  return visibleSyncMessage;
 };

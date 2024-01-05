@@ -17,6 +17,7 @@ import {
   getOldTopMessageId,
   getSortedMessagesTypesOfSelectedConversation,
 } from '../../state/selectors/conversations';
+import { useSelectedConversationKey } from '../../state/selectors/selectedConversation';
 import { MessageDateBreak } from './message/message-item/DateBreak';
 import { GroupInvitation } from './message/message-item/GroupInvitation';
 import { GroupUpdateMessage } from './message/message-item/GroupUpdateMessage';
@@ -24,7 +25,6 @@ import { Message } from './message/message-item/Message';
 import { MessageRequestResponse } from './message/message-item/MessageRequestResponse';
 import { CallNotification } from './message/message-item/notification-bubble/CallNotification';
 
-import { useSelectedConversationKey } from '../../state/selectors/selectedConversation';
 import { DataExtractionNotification } from './message/message-item/DataExtractionNotification';
 import { SessionLastSeenIndicator } from './SessionLastSeenIndicator';
 import { TimerNotification } from './TimerNotification';

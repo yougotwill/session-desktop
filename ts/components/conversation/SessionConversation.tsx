@@ -48,14 +48,15 @@ import { SplitViewContainer } from '../SplitViewContainer';
 import { SessionButtonColor } from '../basic/SessionButton';
 import { InConversationCallContainer } from '../calling/InConversationCallContainer';
 import { LightboxGallery, MediaItemType } from '../lightbox/LightboxGallery';
-import { ConversationHeaderWithDetails } from './ConversationHeader';
-import { SessionRightPanelWithDetails } from './SessionRightPanel';
 import { NoMessageInConversation } from './SubtleNotification';
+import { ConversationHeaderWithDetails } from './header/ConversationHeader';
 import { MessageDetail } from './message/message-item/MessageDetail';
 
 import { HTMLDirection } from '../../util/i18n';
+import { NoticeBanner } from '../NoticeBanner';
 import { SessionSpinner } from '../basic/SessionSpinner';
 import { ConversationMessageRequestButtons } from './MessageRequestButtons';
+import { RightPanel } from './right-panel/RightPanel';
 
 const DEFAULT_JPEG_QUALITY = 0.85;
 
@@ -68,6 +69,7 @@ export interface LightBoxOptions {
 }
 
 interface Props {
+  ourDisplayNameInProfile: string;
   ourNumber: string;
   selectedConversationKey: string;
   selectedConversation?: ReduxConversationType;
@@ -232,6 +234,7 @@ export class SessionConversation extends React.Component<Props, State> {
     const { isDraggingFile } = this.state;
 
     const {
+      ourDisplayNameInProfile,
       selectedConversation,
       messagesProps,
       showMessageDetails,
@@ -248,10 +251,26 @@ export class SessionConversation extends React.Component<Props, State> {
     // TODOLATER break showMessageDetails & selectionMode into it's own container component so we can use hooks to fetch relevant state from the store
     const selectionMode = selectedMessages.length > 0;
 
+    const bannerText =
+      selectedConversation.hasOutdatedClient &&
+      selectedConversation.hasOutdatedClient !== ourDisplayNameInProfile
+        ? window.i18n('disappearingMessagesModeOutdated', [selectedConversation.hasOutdatedClient])
+        : window.i18n('someOfYourDeviceUseOutdatedVersion');
+
     return (
       <SessionTheme>
         <div className="conversation-header">
           <ConversationHeaderWithDetails />
+          {selectedConversation?.hasOutdatedClient?.length ? (
+            <NoticeBanner
+              text={bannerText}
+              dismissCallback={() => {
+                const conversation = ConvoHub.use().get(selectedConversation.id);
+                conversation.set({ hasOutdatedClient: undefined });
+                void conversation.commit();
+              }}
+            />
+          ) : null}
         </div>
         {isSelectedConvoInitialLoadingInProgress ? (
           <ConvoLoadingSpinner />
@@ -299,7 +318,7 @@ export class SessionConversation extends React.Component<Props, State> {
                 isRightPanelShowing && 'show'
               )}
             >
-              <SessionRightPanelWithDetails />
+              <RightPanel />
             </div>
           </>
         )}

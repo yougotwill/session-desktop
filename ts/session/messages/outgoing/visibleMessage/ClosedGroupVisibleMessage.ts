@@ -3,12 +3,18 @@ import { SignalService } from '../../../../protobuf';
 import { SnodeNamespaces } from '../../../apis/snode_api/namespaces';
 import { PubKey } from '../../../types';
 import { StringUtils } from '../../../utils';
-import { DataMessage } from '../DataMessage';
-import { ClosedGroupMessage } from '../controlMessage/group/ClosedGroupMessage';
+import { ExpirableMessage } from '../ExpirableMessage';
+import {
+  ClosedGroupMessage,
+  ClosedGroupMessageParams,
+} from '../controlMessage/group/ClosedGroupMessage';
 import { VisibleMessage } from './VisibleMessage';
 
-interface ClosedGroupVisibleMessageParams {
-  identifier?: string;
+interface ClosedGroupVisibleMessageParams
+  extends Omit<
+    ClosedGroupMessageParams,
+    'expireTimer' | 'expirationType' | 'identifier' | 'createAtNetworkTimestamp'
+  > {
   groupId: string;
   chatMessage: VisibleMessage;
 }
@@ -19,10 +25,20 @@ export class ClosedGroupVisibleMessage extends ClosedGroupMessage {
   constructor(params: ClosedGroupVisibleMessageParams) {
     super({
       createAtNetworkTimestamp: params.chatMessage.createAtNetworkTimestamp,
-      identifier: params.identifier ?? params.chatMessage.identifier,
+      identifier: params.chatMessage.identifier ?? params.chatMessage.identifier,
       groupId: params.groupId,
+      expirationType: params.chatMessage.expirationType,
+      expireTimer: params.chatMessage.expireTimer,
     });
+
     this.chatMessage = params.chatMessage;
+    if (
+      this.chatMessage.expirationType !== 'deleteAfterSend' &&
+      this.chatMessage.expirationType !== 'unknown'
+    ) {
+      throw new Error('group visible msg only support DaS and off Disappearing options');
+    }
+
     if (!params.groupId) {
       throw new Error('ClosedGroupVisibleMessage: groupId must be set');
     }
@@ -31,6 +47,7 @@ export class ClosedGroupVisibleMessage extends ClosedGroupMessage {
       throw new Error('GroupContext should not be used anymore with closed group v3');
     }
   }
+
   public dataProto(): SignalService.DataMessage {
     // expireTimer is set in the dataProto in this call directly
     const dataProto = this.chatMessage.dataProto();
@@ -52,22 +69,25 @@ export class ClosedGroupVisibleMessage extends ClosedGroupMessage {
 type WithDestinationGroupPk = { destination: GroupPubkeyType };
 type WithGroupMessageNamespace = { namespace: SnodeNamespaces.ClosedGroupMessages };
 
-// TODO audric This will need to extend ExpirableMessage after Disappearing Messages V2 is merged
-export class ClosedGroupV2VisibleMessage extends DataMessage {
+// TODO audric debugger This will need to extend ExpirableMessage after Disappearing Messages V2 is merged and checkd still working
+export class ClosedGroupV2VisibleMessage extends ExpirableMessage {
   private readonly chatMessage: VisibleMessage;
   public readonly destination: GroupPubkeyType;
   public readonly namespace: SnodeNamespaces.ClosedGroupMessages;
 
   constructor(
-    params: Pick<ClosedGroupVisibleMessageParams, 'chatMessage' | 'identifier'> &
+    params: Pick<ClosedGroupVisibleMessageParams, 'chatMessage'> &
       WithDestinationGroupPk &
       WithGroupMessageNamespace
   ) {
-    super({
-      createAtNetworkTimestamp: params.chatMessage.createAtNetworkTimestamp,
-      identifier: params.identifier ?? params.chatMessage.identifier,
-    });
+    super(params.chatMessage);
     this.chatMessage = params.chatMessage;
+    if (
+      this.chatMessage.expirationType !== 'deleteAfterSend' &&
+      this.chatMessage.expirationType !== 'unknown'
+    ) {
+      throw new Error('groupv2 message only support DaS and off Disappearing options');
+    }
 
     if (!PubKey.is03Pubkey(params.destination)) {
       throw new Error('ClosedGroupV2VisibleMessage only work with 03-groups destination');

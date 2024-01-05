@@ -37,7 +37,7 @@ const DescriptionDiv = styled.div`
 const IconDiv = styled.div`
   flex-shrink: 0;
   padding-inline-end: var(--margins-xs);
-  margin: 0 var(--margins-xs);
+  margin: 0 var(--margins-sm) 0 var(--margins-xs);
 `;
 
 function useReplacePkInTextWithNames(description: string) {

@@ -36,9 +36,9 @@ import { innerHandleSwarmContentMessage } from '../../../../receiver/contentMess
 import { handleOutboxMessageModel } from '../../../../receiver/dataMessage';
 import { EnvelopePlus } from '../../../../receiver/types';
 import { assertUnreachable } from '../../../../types/sqlSharedTypes';
-import { destroyMessagesAndUpdateRedux } from '../../../../util/expiringMessages';
 import { getSodiumRenderer } from '../../../crypto';
 import { removeMessagePadding } from '../../../crypto/BufferPadding';
+import { DisappearingMessages } from '../../../disappearing_messages';
 import { UserUtils } from '../../../utils';
 import { sogsRollingDeletions } from './sogsRollingDeletions';
 import { processMessagesUsingCache } from './sogsV3MutationCache';
@@ -182,7 +182,7 @@ const handleSogsV3DeletedMessages = async (
     });
 
     if (messageIds && messageIds.length) {
-      await destroyMessagesAndUpdateRedux(
+      await DisappearingMessages.destroyMessagesAndUpdateRedux(
         messageIds.map(messageId => ({
           conversationKey: convoId,
           messageId,
@@ -475,9 +475,10 @@ async function handleInboxOutboxMessages(
 
         await innerHandleSwarmContentMessage({
           envelope: builtEnvelope,
-          envelopeTimestamp: postedAtInMs,
+          sentAtTimestamp: postedAtInMs,
           contentDecrypted: builtEnvelope.content,
           messageHash: '',
+          messageExpirationFromRetrieve: null, // sogs message cannot expire
         });
       }
     } catch (e) {

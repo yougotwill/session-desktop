@@ -3,7 +3,7 @@
 import { AbortController } from 'abort-controller';
 import ByteBuffer from 'bytebuffer';
 import { GroupPubkeyType, PubkeyType } from 'libsession_util_nodejs';
-import { isEmpty, sample } from 'lodash';
+import { isEmpty, isNumber, isString, sample } from 'lodash';
 import pRetry from 'p-retry';
 import { Data } from '../../data/data';
 import { SignalService } from '../../protobuf';
@@ -51,7 +51,7 @@ function getMinRetryTimeout() {
   return 1000;
 }
 
-function isSyncMessage(message: ContentMessage) {
+function isContentSyncMessage(message: ContentMessage) {
   if (
     message instanceof ClosedGroupNewMessage ||
     message instanceof UnsendMessage ||
@@ -68,20 +68,25 @@ function isSyncMessage(message: ContentMessage) {
  * @param message The message to send.
  * @param attempts The amount of times to attempt sending. Minimum value is 1.
  */
-async function send(
-  message: OutgoingRawMessage,
-  attempts: number = 3,
-  retryMinTimeout?: number, // in ms
-  isASyncMessage?: boolean
-): Promise<{ wrappedEnvelope: Uint8Array; effectiveTimestamp: number }> {
+
+async function send({
+  message,
+  retryMinTimeout = 100,
+  attempts = 3,
+  isSyncMessage,
+}: {
+  message: OutgoingRawMessage;
+  attempts?: number;
+  retryMinTimeout?: number; // in ms
+  isSyncMessage: boolean;
+}): Promise<{ wrappedEnvelope: Uint8Array; effectiveTimestamp: number }> {
   const destination = message.device;
   if (!PubKey.is03Pubkey(destination) && !PubKey.is05Pubkey(destination)) {
     throw new Error('MessageSender rawMessage was given invalid pubkey');
   }
-
   return pRetry(
     async () => {
-      const { ttl } = message;
+      const recipient = PubKey.cast(message.device);
 
       // we can only have a single message in this send function for now
       const [encryptedAndWrapped] = await encryptMessagesAndWrap([
@@ -89,10 +94,10 @@ async function send(
           destination: message.device,
           plainTextBuffer: message.plainTextBuffer,
           namespace: message.namespace,
-          ttl,
+          ttl: message.ttl,
           identifier: message.identifier,
-          isSyncMessage: !!isASyncMessage,
           networkTimestamp: message.networkTimestampCreated,
+          isSyncMessage: Boolean(isSyncMessage),
         },
       ]);
 
@@ -105,13 +110,30 @@ async function send(
         found.set({ sent_at: encryptedAndWrapped.networkTimestamp });
         await found.commit();
       }
+      let foundMessage = encryptedAndWrapped.identifier
+        ? await Data.getMessageById(encryptedAndWrapped.identifier)
+        : null;
+
+      const isSyncedDeleteAfterReadMessage =
+        found &&
+        UserUtils.isUsFromCache(recipient.key) &&
+        found.getExpirationType() === 'deleteAfterRead' &&
+        found.getExpireTimerSeconds() > 0 &&
+        encryptedAndWrapped.isSyncMessage;
+
+      let overridenTtl = encryptedAndWrapped.ttl;
+      if (isSyncedDeleteAfterReadMessage && found.getExpireTimerSeconds() > 0) {
+        const asMs = found.getExpireTimerSeconds() * 1000;
+        window.log.debug(`overriding ttl for synced DaR message to ${asMs}`);
+        overridenTtl = asMs;
+      }
 
       const batchResult = await MessageSender.sendMessagesDataToSnode(
         [
           {
             pubkey: destination,
             data64: encryptedAndWrapped.data64,
-            ttl,
+            ttl: overridenTtl,
             timestamp: encryptedAndWrapped.networkTimestamp,
             namespace: encryptedAndWrapped.namespace,
           },
@@ -121,31 +143,43 @@ async function send(
         'batch'
       );
 
-      const isDestinationClosedGroup = ConvoHub.use().get(destination)?.isClosedGroup();
-      // If message also has a sync message, save that hash. Otherwise save the hash from the regular message send i.e. only closed groups in this case.
-      if (
-        encryptedAndWrapped.identifier &&
-        (encryptedAndWrapped.isSyncMessage || isDestinationClosedGroup) &&
-        batchResult?.[0].code === 200 &&
-        !isEmpty(batchResult[0].body.hash)
-      ) {
-        const messageSendHash = batchResult[0].body.hash;
-        const foundMessage = await Data.getMessageById(encryptedAndWrapped.identifier);
-        if (foundMessage) {
-          await foundMessage.updateMessageHash(messageSendHash);
-          await foundMessage.commit();
-          await Data.saveSeenMessageHashes([
-            {
-              hash: messageSendHash,
-              expiresAt: encryptedAndWrapped.networkTimestamp + TTL_DEFAULT.TTL_MAX, // non config msg expire at TTL_MAX at most
-            },
-          ]);
+      const isDestinationClosedGroup = ConvoHub.use().get(recipient.key)?.isClosedGroup();
+      const storedAt = batchResult?.[0]?.body?.t;
+      const storedHash = batchResult?.[0]?.body?.hash;
 
-          window?.log?.info(
-            `updated message ${foundMessage.get('id')} with hash: ${foundMessage.get(
-              'messageHash'
-            )}`
-          );
+      if (
+        batchResult &&
+        !isEmpty(batchResult) &&
+        batchResult[0].code === 200 &&
+        !isEmpty(storedHash) &&
+        isString(storedHash) &&
+        isNumber(storedAt)
+      ) {
+        // TODO: the expiration is due to be returned by the storage server on "store" soon, we will then be able to use it instead of doing the storedAt + ttl logic below
+        // if we have a hash and a storedAt, mark it as seen so we don't reprocess it on the next retrieve
+        await Data.saveSeenMessageHashes([
+          {
+            expiresAt: encryptedAndWrapped.networkTimestamp + TTL_DEFAULT.CONTENT_MESSAGE, // non config msg expire at TTL_MAX at most
+            hash: storedHash,
+          },
+        ]);
+        // If message also has a sync message, save that hash. Otherwise save the hash from the regular message send i.e. only closed groups in this case.
+
+        if (
+          encryptedAndWrapped.identifier &&
+          (encryptedAndWrapped.isSyncMessage || isDestinationClosedGroup)
+        ) {
+          // get a fresh copy of the message from the DB
+          foundMessage = await Data.getMessageById(encryptedAndWrapped.identifier);
+          if (foundMessage) {
+            await foundMessage.updateMessageHash(storedHash);
+            await foundMessage.commit();
+            window?.log?.info(
+              `updated message ${foundMessage.get('id')} with hash: ${foundMessage.get(
+                'messageHash'
+              )}`
+            );
+          }
         }
       }
 
@@ -540,5 +574,5 @@ export const MessageSender = {
   getMinRetryTimeout,
   sendToOpenGroupV2,
   send,
-  isSyncMessage,
+  isContentSyncMessage,
 };

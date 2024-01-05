@@ -9,11 +9,7 @@ export class ClosedGroupEncryptionPairMessage extends ClosedGroupMessage {
   private readonly encryptedKeyPairs: Array<SignalService.DataMessage.ClosedGroupControlMessage.KeyPairWrapper>;
 
   constructor(params: ClosedGroupEncryptionPairMessageParams) {
-    super({
-      createAtNetworkTimestamp: params.createAtNetworkTimestamp,
-      identifier: params.identifier,
-      groupId: params.groupId,
-    });
+    super(params);
     this.encryptedKeyPairs = params.encryptedKeyPairs;
     if (this.encryptedKeyPairs.length === 0) {
       throw new Error('EncryptedKeyPairs cannot be empty');

@@ -19,7 +19,6 @@ import {
   reducer as stagedAttachments,
   StagedAttachmentsStateType,
 } from './ducks/stagedAttachments';
-import { timerOptionReducer as timerOptions, TimerOptionsState } from './ducks/timerOptions';
 import { userConfigReducer as userConfig, UserConfigState } from './ducks/userConfig';
 import { userGroupReducer, UserGroupState } from './ducks/userGroups';
 
@@ -34,7 +33,6 @@ export type StateType = {
   onionPaths: OnionState;
   modals: ModalState;
   userConfig: UserConfigState;
-  timerOptions: TimerOptionsState;
   stagedAttachments: StagedAttachmentsStateType;
   call: CallStateType;
   sogsRoomInfo: SogsRoomInfoState;
@@ -54,7 +52,6 @@ export const reducers = {
   onionPaths,
   modals,
   userConfig,
-  timerOptions,
   stagedAttachments,
   call,
   sogsRoomInfo: ReduxSogsRoomInfos.sogsRoomInfoReducer,

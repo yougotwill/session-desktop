@@ -1,4 +1,5 @@
 import { defaults } from 'lodash';
+import { DisappearingMessageConversationModeType } from '../session/disappearing_messages/types';
 import { LastMessageStatusType } from '../state/ducks/conversations';
 
 /**
@@ -90,6 +91,7 @@ export interface ConversationAttributes {
   profileKey?: string; // Consider this being a hex string if it is set
   triggerNotificationsFor: ConversationNotificationSettingType;
   avatarPointer?: string; // this is the url of the avatar on the file server v2. we use this to detect if we need to redownload the avatar from someone (not used for opengroups)
+  /** in seconds, 0 means no expiration */
   expireTimer: number;
 
   members: Array<string>; // groups only members are all members for this group. zombies excluded (not used for communities)
@@ -103,6 +105,13 @@ export interface ConversationAttributes {
   markedAsUnread: boolean; // Force the conversation as unread even if all the messages are read. Used to highlight a conversation the user wants to check again later, synced.
 
   blocksSogsMsgReqsTimestamp: number; // if the convo is blinded and the user has denied contact through sogs, this field be set to the user's latest message timestamp
+
+  /** disappearing messages setting for this conversation */
+  expirationMode: DisappearingMessageConversationModeType;
+  // TODO legacy messages support will be removed in a future release
+  // TODO we need to make a migration to remove this value from the db since the implementation is hacky
+  /** to warn the user that the person he is talking to is using an old client which might cause issues */
+  hasOutdatedClient?: string;
 }
 
 /**
@@ -120,7 +129,9 @@ export const fillConvoAttributesWithDefaults = (
     groupAdmins: [],
 
     lastJoinedTimestamp: 0,
+    expirationMode: 'off',
     expireTimer: 0,
+
     active_at: 0,
 
     lastMessageStatus: undefined,

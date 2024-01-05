@@ -1,25 +1,25 @@
-import { compact, flatten } from 'lodash';
+import { compact, flatten, isEqual } from 'lodash';
 import React, { useEffect, useState } from 'react';
 
-import { useDispatch, useSelector } from 'react-redux';
+import { useDispatch } from 'react-redux';
 import useInterval from 'react-use/lib/useInterval';
 import styled from 'styled-components';
-import { Data } from '../../data/data';
-import { SessionIconButton } from '../icon';
+import { Data } from '../../../../data/data';
+import { SessionIconButton } from '../../../icon';
 
+import { useIsRightPanelShowing } from '../../../../hooks/useUI';
 import {
   deleteAllMessagesByConvoIdWithConfirmation,
-  setDisappearingMessagesByConvoId,
   showAddModeratorsByConvoId,
   showInviteContactByConvoId,
   showLeaveGroupByConvoId,
   showRemoveModeratorsByConvoId,
   showUpdateGroupMembersByConvoId,
   showUpdateGroupNameByConvoId,
-} from '../../interactions/conversationInteractions';
-import { Constants } from '../../session';
-import { closeRightPanel } from '../../state/ducks/conversations';
-import { isRightPanelShowing } from '../../state/selectors/conversations';
+} from '../../../../interactions/conversationInteractions';
+import { Constants } from '../../../../session';
+import { closeRightPanel } from '../../../../state/ducks/conversations';
+import { setRightOverlayMode } from '../../../../state/ducks/section';
 import {
   useSelectedConversationKey,
   useSelectedDisplayNameInProfile,
@@ -31,16 +31,15 @@ import {
   useSelectedIsPublic,
   useSelectedSubscriberCount,
   useSelectedWeAreAdmin,
-} from '../../state/selectors/selectedConversation';
-import { getTimerOptions } from '../../state/selectors/timerOptions';
-import { AttachmentTypeWithPath } from '../../types/Attachment';
-import { getAbsoluteAttachmentPath } from '../../types/MessageAttachment';
-import { Avatar, AvatarSize } from '../avatar/Avatar';
-import { SessionButton, SessionButtonColor, SessionButtonType } from '../basic/SessionButton';
-import { SessionDropdown } from '../basic/SessionDropdown';
-import { SpacerLG } from '../basic/Text';
-import { MediaItemType } from '../lightbox/LightboxGallery';
-import { MediaGallery } from './media-gallery/MediaGallery';
+} from '../../../../state/selectors/selectedConversation';
+import { AttachmentTypeWithPath } from '../../../../types/Attachment';
+import { getAbsoluteAttachmentPath } from '../../../../types/MessageAttachment';
+import { Avatar, AvatarSize } from '../../../avatar/Avatar';
+import { SessionButton, SessionButtonColor, SessionButtonType } from '../../../basic/SessionButton';
+import { SpacerLG } from '../../../basic/Text';
+import { PanelButtonGroup, PanelIconButton } from '../../../buttons';
+import { MediaItemType } from '../../../lightbox/LightboxGallery';
+import { MediaGallery } from '../../media-gallery/MediaGallery';
 
 async function getMediaGalleryProps(conversationId: string): Promise<{
   documents: Array<MediaItemType>;
@@ -128,7 +127,7 @@ const HeaderItem = () => {
   const showInviteContacts = isGroup && !isKickedFromGroup && !isBlocked && !left;
 
   return (
-    <div className="group-settings-header">
+    <div className="right-panel-header">
       <SessionIconButton
         iconType="chevron"
         iconSize="medium"
@@ -200,12 +199,13 @@ const StyledName = styled.h4`
   font-size: var(--font-size-md);
 `;
 
-export const SessionRightPanelWithDetails = () => {
+export const OverlayRightPanelSettings = () => {
   const [documents, setDocuments] = useState<Array<MediaItemType>>([]);
   const [media, setMedia] = useState<Array<MediaItemType>>([]);
 
   const selectedConvoKey = useSelectedConversationKey();
-  const isShowing = useSelector(isRightPanelShowing);
+  const dispatch = useDispatch();
+  const isShowing = useIsRightPanelShowing();
   const subscriberCount = useSelectedSubscriberCount();
 
   const isActive = useSelectedIsActive();
@@ -218,22 +218,36 @@ export const SessionRightPanelWithDetails = () => {
   const weAreAdmin = useSelectedWeAreAdmin();
 
   useEffect(() => {
-    let isRunning = true;
+    let isCancelled = false;
 
-    if (isShowing && selectedConvoKey) {
-      // eslint-disable-next-line more/no-then
-      void getMediaGalleryProps(selectedConvoKey).then(results => {
-        if (isRunning) {
-          setDocuments(results.documents);
-          setMedia(results.media);
+    const loadDocumentsOrMedia = async () => {
+      try {
+        if (isShowing && selectedConvoKey) {
+          const results = await getMediaGalleryProps(selectedConvoKey);
+
+          if (!isCancelled) {
+            if (!isEqual(documents, results.documents)) {
+              setDocuments(results.documents);
+            }
+
+            if (!isEqual(media, results.media)) {
+              setMedia(results.media);
+            }
+          }
         }
-      });
-    }
+      } catch (error) {
+        if (!isCancelled) {
+          window.log.debug(`OverlayRightPanelSettings loadDocumentsOrMedia: ${error}`);
+        }
+      }
+    };
+
+    void loadDocumentsOrMedia();
 
     return () => {
-      isRunning = false;
+      isCancelled = true;
     };
-  }, [isShowing, selectedConvoKey]);
+  }, [documents, isShowing, media, selectedConvoKey]);
 
   useInterval(async () => {
     if (isShowing && selectedConvoKey) {
@@ -244,6 +258,10 @@ export const SessionRightPanelWithDetails = () => {
       }
     }
   }, 10000);
+
+  if (!selectedConvoKey) {
+    return null;
+  }
 
   const showMemberCount = !!(subscriberCount && subscriberCount > 0);
   const commonNoShow = isKickedFromGroup || left || isBlocked || !isActive;
@@ -256,22 +274,7 @@ export const SessionRightPanelWithDetails = () => {
     ? window.i18n('youLeftTheGroup')
     : window.i18n('leaveGroup');
 
-  const timerOptions = useSelector(getTimerOptions).timerOptions;
-
-  if (!selectedConvoKey) {
-    return null;
-  }
-  const disappearingMessagesOptions = timerOptions.map(option => {
-    return {
-      content: option.name,
-      onClick: () => {
-        void setDisappearingMessagesByConvoId(selectedConvoKey, option.value);
-      },
-    };
-  });
-
-  const showUpdateGroupNameButton =
-    isGroup && (!isPublic || (isPublic && weAreAdmin)) && !commonNoShow;
+  const showUpdateGroupNameButton = isGroup && weAreAdmin && !commonNoShow; // legacy groups non-admin cannot change groupname anymore
   const showAddRemoveModeratorsButton = weAreAdmin && !commonNoShow && isPublic;
   const showUpdateGroupMembersButton = !isPublic && isGroup && !commonNoShow;
 
@@ -282,8 +285,9 @@ export const SessionRightPanelWithDetails = () => {
     : () => {
         showLeaveGroupByConvoId(selectedConvoKey);
       };
+
   return (
-    <div className="group-settings">
+    <>
       <HeaderItem />
       <StyledName data-testid="right-panel-group-name">{displayNameInProfile}</StyledName>
       {showMemberCount && (
@@ -295,13 +299,13 @@ export const SessionRightPanelWithDetails = () => {
           <SpacerLG />
         </>
       )}
+
       {showUpdateGroupNameButton && (
         <StyledGroupSettingsItem
-          className="group-settings-item"
+          className="right-panel-item"
           role="button"
-          // eslint-disable-next-line @typescript-eslint/no-misused-promises
-          onClick={async () => {
-            await showUpdateGroupNameByConvoId(selectedConvoKey);
+          onClick={() => {
+            void showUpdateGroupNameByConvoId(selectedConvoKey);
           }}
         >
           {isPublic ? window.i18n('editGroup') : window.i18n('editGroupName')}
@@ -310,7 +314,7 @@ export const SessionRightPanelWithDetails = () => {
       {showAddRemoveModeratorsButton && (
         <>
           <StyledGroupSettingsItem
-            className="group-settings-item"
+            className="right-panel-item"
             role="button"
             onClick={() => {
               showAddModeratorsByConvoId(selectedConvoKey);
@@ -319,7 +323,7 @@ export const SessionRightPanelWithDetails = () => {
             {window.i18n('addModerators')}
           </StyledGroupSettingsItem>
           <StyledGroupSettingsItem
-            className="group-settings-item"
+            className="right-panel-item"
             role="button"
             onClick={() => {
               showRemoveModeratorsByConvoId(selectedConvoKey);
@@ -332,23 +336,30 @@ export const SessionRightPanelWithDetails = () => {
 
       {showUpdateGroupMembersButton && (
         <StyledGroupSettingsItem
-          className="group-settings-item"
+          className="right-panel-item"
           role="button"
-          // eslint-disable-next-line @typescript-eslint/no-misused-promises
-          onClick={async () => {
-            await showUpdateGroupMembersByConvoId(selectedConvoKey);
+          onClick={() => {
+            void showUpdateGroupMembersByConvoId(selectedConvoKey);
           }}
         >
           {window.i18n('groupMembers')}
         </StyledGroupSettingsItem>
       )}
+      <SpacerLG />
+      <SpacerLG />
 
       {hasDisappearingMessages && (
-        <SessionDropdown
-          label={window.i18n('disappearingMessages')}
-          options={disappearingMessagesOptions}
-          dataTestId="disappearing-messages-dropdown"
-        />
+        /* TODO Move ButtonGroup around all settings items */
+        <PanelButtonGroup>
+          <PanelIconButton
+            iconType={'timer50'}
+            text={window.i18n('disappearingMessages')}
+            dataTestId="disappearing-messages"
+            onClick={() => {
+              dispatch(setRightOverlayMode('disappearing-messages'));
+            }}
+          />
+        </PanelButtonGroup>
       )}
 
       <MediaGallery documents={documents} media={media} />
@@ -363,6 +374,6 @@ export const SessionRightPanelWithDetails = () => {
           />
         </StyledLeaveButton>
       )}
-    </div>
+    </>
   );
 };

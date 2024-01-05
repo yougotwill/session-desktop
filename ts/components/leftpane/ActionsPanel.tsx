@@ -47,6 +47,8 @@ import { isDarkTheme } from '../../state/selectors/theme';
 import { ThemeStateType } from '../../themes/constants/colors';
 import { switchThemeTo } from '../../themes/switchTheme';
 
+import { ReleasedFeatures } from '../../util/releaseFeature';
+
 const Section = (props: { type: SectionType }) => {
   const ourNumber = useSelector(getOurNumber);
   const globalUnreadMessageCount = useSelector(getGlobalUnreadMessageCount);
@@ -189,6 +191,9 @@ const doAppStartUp = async () => {
   void setupTheme();
   // this generates the key to encrypt attachments locally
   await Data.generateAttachmentKeyIfEmpty();
+
+  // Feature Checks
+  await ReleasedFeatures.checkIsDisappearMessageV2FeatureReleased();
 
   // trigger a sync message if needed for our other devices
   void triggerSyncIfNeeded();

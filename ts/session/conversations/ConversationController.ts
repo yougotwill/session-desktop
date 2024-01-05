@@ -490,6 +490,8 @@ async function leaveClosedGroup(groupId: string, fromSyncMessage: boolean) {
   const ourLeavingMessage = new ClosedGroupMemberLeftMessage({
     createAtNetworkTimestamp: GetNetworkTime.now(),
     groupId,
+    expirationType: null, // we keep that one **not** expiring
+    expireTimer: null,
   });
 
   window?.log?.info(`We are leaving the group ${groupId}. Sending our leaving message.`);
