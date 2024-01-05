@@ -2,8 +2,8 @@ import React from 'react';
 import { useSelector } from 'react-redux';
 import styled from 'styled-components';
 import {
-  useConversationUsernameOrShorten,
   useIsIncomingRequest,
+  useNicknameOrProfileNameOrShortenedPubkey,
 } from '../../hooks/useParamSelector';
 import { PubKey } from '../../session/types';
 import {
@@ -106,7 +106,7 @@ export const InvitedToGroupControlMessage = () => {
   const groupName = useLibGroupInviteGroupName(selectedConversation) || window.i18n('unknown');
   const conversationOrigin = useSelectedConversationIdOrigin();
   const adminNameInvitedUs =
-    useConversationUsernameOrShorten(conversationOrigin) || window.i18n('unknown');
+    useNicknameOrProfileNameOrShortenedPubkey(conversationOrigin) || window.i18n('unknown');
   const isGroupPendingInvite = useLibGroupInvitePending(selectedConversation);
   if (
     !selectedConversation ||

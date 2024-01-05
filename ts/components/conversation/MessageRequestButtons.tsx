@@ -85,7 +85,7 @@ const handleAcceptConversationRequest = async (convoId: string) => {
   await convo.commit();
   if (convo.isPrivate()) {
     await convo.addOutgoingApprovalMessage(Date.now());
-    await approveConvoAndSendResponse(convoId, true);
+    await approveConvoAndSendResponse(convoId);
   } else if (PubKey.is03Pubkey(convoId)) {
     const found = await UserGroupsWrapperActions.getGroup(convoId);
     if (!found) {

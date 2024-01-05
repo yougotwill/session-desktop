@@ -48,6 +48,8 @@ async function sendInviteResponseToGroup({ groupPk }: { groupPk: GroupPubkeyType
       groupPk,
       isApproved: true,
       createAtNetworkTimestamp: GetNetworkTime.now(),
+      expirationType: 'unknown', // TODO audric do we want those not expiring?
+      expireTimer: 0,
     }),
   });
 
@@ -190,12 +192,14 @@ async function handleGroupInfoChangeMessage({
 
   switch (change.type) {
     case SignalService.GroupUpdateInfoChangeMessage.Type.NAME: {
-      await ClosedGroup.addUpdateMessage(
+      await ClosedGroup.addUpdateMessage({
         convo,
-        { newName: change.updatedName },
-        author,
-        envelopeTimestamp
-      );
+        diff: { newName: change.updatedName },
+
+        sender: author,
+        sentAt: envelopeTimestamp,
+        expireUpdate: null,
+      });
 
       break;
     }
@@ -210,7 +214,14 @@ async function handleGroupInfoChangeMessage({
         isFinite(change.updatedExpiration) &&
         change.updatedExpiration >= 0
       ) {
-        await convo.updateExpireTimer(change.updatedExpiration, author, envelopeTimestamp);
+        await convo.updateExpireTimer({
+          providedExpireTimer: change.updatedExpiration,
+          providedSource: author,
+          receivedAt: envelopeTimestamp,
+          fromCurrentDevice: false,
+          fromSync: false,
+          fromConfigMessage: false,
+        });
       }
       break;
     }
@@ -244,33 +255,29 @@ async function handleGroupMemberChangeMessage({
     return;
   }
 
+  const sharedDetails = { convo, sender: author, sentAt: envelopeTimestamp, expireUpdate: null };
+
   switch (change.type) {
     case SignalService.GroupUpdateMemberChangeMessage.Type.ADDED: {
-      await ClosedGroup.addUpdateMessage(
-        convo,
-        { joiningMembers: change.memberSessionIds },
-        author,
-        envelopeTimestamp
-      );
+      await ClosedGroup.addUpdateMessage({
+        diff: { joiningMembers: change.memberSessionIds },
+        ...sharedDetails,
+      });
 
       break;
     }
     case SignalService.GroupUpdateMemberChangeMessage.Type.REMOVED: {
-      await ClosedGroup.addUpdateMessage(
-        convo,
-        { kickedMembers: change.memberSessionIds },
-        author,
-        envelopeTimestamp
-      );
+      await ClosedGroup.addUpdateMessage({
+        diff: { kickedMembers: change.memberSessionIds },
+        ...sharedDetails,
+      });
       break;
     }
     case SignalService.GroupUpdateMemberChangeMessage.Type.PROMOTED: {
-      await ClosedGroup.addUpdateMessage(
-        convo,
-        { promotedMembers: change.memberSessionIds },
-        author,
-        envelopeTimestamp
-      );
+      await ClosedGroup.addUpdateMessage({
+        diff: { promotedMembers: change.memberSessionIds },
+        ...sharedDetails,
+      });
       break;
     }
     default:
@@ -293,12 +300,13 @@ async function handleGroupMemberLeftMessage({
     return;
   }
 
-  await ClosedGroup.addUpdateMessage(
+  await ClosedGroup.addUpdateMessage({
     convo,
-    { leavingMembers: [author] },
-    author,
-    envelopeTimestamp
-  );
+    diff: { leavingMembers: [author] },
+    sender: author,
+    sentAt: envelopeTimestamp,
+    expireUpdate: null,
+  });
   convo.set({
     active_at: envelopeTimestamp,
   });

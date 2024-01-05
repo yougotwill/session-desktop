@@ -1,8 +1,9 @@
 import { isEmpty, isEqual } from 'lodash';
-import React, { ReactElement, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
 import { useMessageReactsPropsById } from '../../../../hooks/useParamSelector';
 import { MessageRenderingProps } from '../../../../models/messageType';
+import { REACT_LIMIT } from '../../../../session/constants';
 import { useSelectedIsGroup } from '../../../../state/selectors/selectedConversation';
 import { SortedReactionList } from '../../../../types/Reaction';
 import { nativeEmojiData } from '../../../../util/emoji';
@@ -10,7 +11,6 @@ import { Flex } from '../../../basic/Flex';
 import { SessionIcon } from '../../../icon';
 import { Reaction, ReactionProps } from '../reactions/Reaction';
 import { StyledPopupContainer } from '../reactions/ReactionPopup';
-import { REACT_LIMIT } from '../../../../session/constants';
 
 export const popupXDefault = -81;
 export const popupYDefault = -90;
@@ -65,7 +65,7 @@ const StyledReadLess = styled.span`
 
 type ReactionsProps = Omit<ReactionProps, 'emoji'>;
 
-const Reactions = (props: ReactionsProps): ReactElement => {
+const Reactions = (props: ReactionsProps) => {
   const { messageId, reactions, inModal } = props;
   return (
     <StyledMessageReactions
@@ -85,7 +85,7 @@ interface ExpandReactionsProps extends ReactionsProps {
   handleExpand: () => void;
 }
 
-const CompressedReactions = (props: ExpandReactionsProps): ReactElement => {
+const CompressedReactions = (props: ExpandReactionsProps) => {
   const { messageId, reactions, inModal, handleExpand } = props;
   return (
     <StyledMessageReactions
@@ -119,7 +119,7 @@ const CompressedReactions = (props: ExpandReactionsProps): ReactElement => {
   );
 };
 
-const ExpandedReactions = (props: ExpandReactionsProps): ReactElement => {
+const ExpandedReactions = (props: ExpandReactionsProps) => {
   const { handleExpand } = props;
   return (
     <Flex container={true} flexDirection={'column'} alignItems={'center'} margin="4px 0 0">

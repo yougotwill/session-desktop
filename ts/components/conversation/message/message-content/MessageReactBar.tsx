@@ -1,5 +1,5 @@
 import { isEqual } from 'lodash';
-import React, { ReactElement, useState } from 'react';
+import React, { useState } from 'react';
 import useMount from 'react-use/lib/useMount';
 import styled from 'styled-components';
 
@@ -53,7 +53,7 @@ const ReactButton = styled.span`
   }
 `;
 
-export const MessageReactBar = (props: Props): ReactElement => {
+export const MessageReactBar = (props: Props) => {
   const { action, additionalAction } = props;
   const [recentReactions, setRecentReactions] = useState<RecentReactions>();
 

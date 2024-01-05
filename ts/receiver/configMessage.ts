@@ -349,7 +349,7 @@ async function deleteContactsFromDB(contactsToRemove: Array<string>) {
   }
 }
 
-async function handleContactsUpdate() {
+async function handleContactsUpdate(result: IncomingUserResult) {
   const us = UserUtils.getOurPubKeyStrFromCache();
 
   const allContactsInWrapper = await ContactsWrapperActions.getAll();
@@ -407,7 +407,7 @@ async function handleContactsUpdate() {
           providedDisappearingMode: wrapperConvo.expirationMode,
           providedExpireTimer: wrapperConvo.expirationTimerSeconds,
           providedSource: wrapperConvo.id,
-          receivedAt: result.latestEnvelopeTimestamp,
+          receivedAt: result.latestEnvelopeTimestamp, // this is most likely incorrect, but that's all we have
           fromSync: true,
           fromCurrentDevice: false,
           shouldCommitConvo: false,
@@ -947,7 +947,7 @@ async function processUserMergingResults(results: Map<ConfigWrapperUser, Incomin
           await handleUserProfileUpdate(incomingResult);
           break;
         case SnodeNamespaces.UserContacts:
-          await handleContactsUpdate();
+          await handleContactsUpdate(incomingResult);
           break;
         case SnodeNamespaces.UserGroups:
           await handleUserGroupsUpdate(incomingResult);

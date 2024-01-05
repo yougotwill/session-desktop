@@ -906,7 +906,6 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
         identifier: this.id,
         body,
         createAtNetworkTimestamp,
-        expireTimer: this.get('expireTimer'),
         attachments,
         preview: preview ? [preview] : [],
         quote,
@@ -1253,18 +1252,18 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
     const left: Array<string> | undefined = Array.isArray(groupUpdate.left)
       ? groupUpdate.left
       : groupUpdate.left
-      ? [groupUpdate.left]
-      : undefined;
+        ? [groupUpdate.left]
+        : undefined;
     const kicked: Array<string> | undefined = Array.isArray(groupUpdate.kicked)
       ? groupUpdate.kicked
       : groupUpdate.kicked
-      ? [groupUpdate.kicked]
-      : undefined;
+        ? [groupUpdate.kicked]
+        : undefined;
     const joined: Array<string> | undefined = Array.isArray(groupUpdate.joined)
       ? groupUpdate.joined
       : groupUpdate.joined
-      ? [groupUpdate.joined]
-      : undefined;
+        ? [groupUpdate.joined]
+        : undefined;
 
     const forcedArrayUpdate: MessageGroupUpdate = {};
 

@@ -19,7 +19,7 @@ import { EmptySwarmError } from '../../utils/errors';
 import { SeedNodeAPI } from '../seed_node_api';
 import {
   MAX_SUBREQUESTS_COUNT,
-  UpdateExpiryOnNodeSubRequest,
+  UpdateExpiryOnNodeUserSubRequest,
   WithShortenOrExtend,
   fakeHash,
 } from './SnodeRequestTypes';
@@ -155,7 +155,7 @@ type UpdatedExpiryWithHash = { messageHash: string; updatedExpiryMs: number };
 async function updateExpiryOnNodes(
   targetNode: Snode,
   ourPubKey: string,
-  expireRequests: Array<UpdateExpiryOnNodeSubRequest>
+  expireRequests: Array<UpdateExpiryOnNodeUserSubRequest>
 ): Promise<Array<UpdatedExpiryWithHash>> {
   try {
     const result = await doSnodeBatchRequest(expireRequests, targetNode, 4000, ourPubKey, 'batch');
@@ -290,7 +290,7 @@ export async function buildExpireRequestBatchExpiry(
 
 export async function buildExpireRequestSingleExpiry(
   expireDetails: ExpireMessageWithExpiryOnSnodeProps
-): Promise<UpdateExpiryOnNodeSubRequest | null> {
+): Promise<UpdateExpiryOnNodeUserSubRequest | null> {
   const ourPubKey = UserUtils.getOurPubKeyStrFromCache();
   if (!ourPubKey) {
     window.log.error('[buildExpireRequestSingleExpiry] No user pubkey');

@@ -13,7 +13,7 @@ import {
   useSelectedIsKickedFromGroup,
   useSelectedIsNoteToSelf,
   useSelectedIsPublic,
-  useSelectedMembers,
+  useSelectedMembersCount,
   useSelectedNicknameOrProfileNameOrShortenedPubkey,
   useSelectedNotificationSetting,
   useSelectedSubscriberCount,
@@ -44,14 +44,13 @@ export const ConversationHeaderTitle = () => {
   const isKickedFromGroup = useSelectedIsKickedFromGroup();
   const isMe = useSelectedIsNoteToSelf();
   const isGroup = useSelectedIsGroup();
-  const members = useSelectedMembers();
+  const selectedMembersCount = useSelectedMembersCount();
 
   const expirationMode = useSelectedConversationDisappearingMode();
   const expireTimer = useSelectedExpireTimer();
 
-  const [visibleSubtitle, setVisibleSubtitle] = useState<SubtitleStringsType>(
-    'disappearingMessages'
-  );
+  const [visibleSubtitle, setVisibleSubtitle] =
+    useState<SubtitleStringsType>('disappearingMessages');
 
   const [subtitleStrings, setSubtitleStrings] = useState<SubtitleStrings>({});
   const [subtitleArray, setSubtitleArray] = useState<Array<SubtitleStringsType>>([]);
@@ -69,7 +68,7 @@ export const ConversationHeaderTitle = () => {
       if (isPublic) {
         memberCount = subscriberCount || 0;
       } else {
-        memberCount = members.length;
+        memberCount = selectedMembersCount;
       }
     }
 
@@ -79,7 +78,7 @@ export const ConversationHeaderTitle = () => {
     }
 
     return null;
-  }, [i18n, isGroup, isKickedFromGroup, isPublic, members.length, subscriberCount]);
+  }, [i18n, isGroup, isKickedFromGroup, isPublic, selectedMembersCount, subscriberCount]);
 
   // TODO legacy messages support will be removed in a future release
   // NOTE If disappearing messages is defined we must show it first
@@ -88,12 +87,12 @@ export const ConversationHeaderTitle = () => {
       expirationMode === 'deleteAfterRead'
         ? window.i18n('disappearingMessagesModeAfterRead')
         : expirationMode === 'deleteAfterSend'
-        ? window.i18n('disappearingMessagesModeAfterSend')
-        : expirationMode === 'legacy'
-        ? isMe || (isGroup && !isPublic)
           ? window.i18n('disappearingMessagesModeAfterSend')
-          : window.i18n('disappearingMessagesModeAfterRead')
-        : null;
+          : expirationMode === 'legacy'
+            ? isMe || (isGroup && !isPublic)
+              ? window.i18n('disappearingMessagesModeAfterSend')
+              : window.i18n('disappearingMessagesModeAfterRead')
+            : null;
 
     const abbreviatedExpireTime = isNumber(expireTimer)
       ? TimerOptions.getAbbreviated(expireTimer)

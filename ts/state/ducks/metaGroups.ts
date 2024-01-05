@@ -9,9 +9,9 @@ import {
   UserGroupsGet,
   WithGroupPubkey,
 } from 'libsession_util_nodejs';
-import { base64_variants, from_base64 } from 'libsodium-wrappers-sumo';
 import { intersection, isEmpty, uniq } from 'lodash';
 import { ConfigDumpData } from '../../data/configDump/configDump';
+import { ConversationModel } from '../../models/conversation';
 import { ConversationTypeEnum } from '../../models/conversationAttributes';
 import { HexString } from '../../node/hexStrings';
 import { SignalService } from '../../protobuf';
@@ -22,10 +22,10 @@ import { RevokeChanges, SnodeAPIRevoke } from '../../session/apis/snode_api/revo
 import { SnodeGroupSignature } from '../../session/apis/snode_api/signature/groupSignature';
 import { ConvoHub } from '../../session/conversations';
 import { getSodiumRenderer } from '../../session/crypto';
+import { DisappearingMessages } from '../../session/disappearing_messages';
 import { ClosedGroup } from '../../session/group/closed-group';
 import { GroupUpdateInfoChangeMessage } from '../../session/messages/outgoing/controlMessage/group_v2/to_group/GroupUpdateInfoChangeMessage';
 import { GroupUpdateMemberChangeMessage } from '../../session/messages/outgoing/controlMessage/group_v2/to_group/GroupUpdateMemberChangeMessage';
-import { GroupUpdateDeleteMessage } from '../../session/messages/outgoing/controlMessage/group_v2/to_user/GroupUpdateDeleteMessage';
 import { PubKey } from '../../session/types';
 import { UserUtils } from '../../session/utils';
 import { getUserED25519KeyPairBytes } from '../../session/utils/User';
@@ -487,11 +487,11 @@ async function handleRemoveMembers({
         `DELETE${m}${createAtNetworkTimestamp}`,
         { secretKey }
       );
-      const deleteMessage = new GroupUpdateDeleteMessage({
-        groupPk,
-        createAtNetworkTimestamp,
-        adminSignature: from_base64(adminSignature.signature, base64_variants.ORIGINAL),
-      });
+      // const deleteMessage = new GroupUpdateDeleteMessage({
+      //   groupPk,
+      //   createAtNetworkTimestamp,
+      //   adminSignature: from_base64(adminSignature.signature, base64_variants.ORIGINAL),
+      // });
       console.warn(
         'TODO: poll from namespace -11, handle messages and sig for it, batch request handle 401/403, but 200 ok for this -11 namespace'
       );
@@ -536,6 +536,19 @@ async function getPendingRevokeChanges({
   }
 
   return revokeChanges;
+}
+
+function getConvoExpireDetailsForMsg(convo: ConversationModel) {
+  const expireTimer = convo.getExpireTimer();
+  const expireDetails = {
+    expirationType: DisappearingMessages.changeToDisappearingMessageType(
+      convo,
+      expireTimer,
+      convo.getExpirationMode()
+    ),
+    expireTimer,
+  };
+  return expireDetails;
 }
 
 async function handleMemberChangeFromUIOrNot({
@@ -606,16 +619,21 @@ async function handleMemberChangeFromUIOrNot({
     await GroupInvite.addJob({ groupPk, member });
   }
   const sodium = await getSodiumRenderer();
+  const createAtNetworkTimestamp = GetNetworkTime.now();
+
+  const shared = {
+    convo,
+    sender: us,
+    sentAt: createAtNetworkTimestamp,
+    expireUpdate: null,
+  };
 
   const allAdded = [...withHistory, ...withoutHistory]; // those are already enforced to be unique (and without intersection) in `validateMemberChange()`
-  const createAtNetworkTimestamp = GetNetworkTime.now();
   if (fromCurrentDevice && allAdded.length) {
-    const msg = await ClosedGroup.addUpdateMessage(
-      convo,
-      { joiningMembers: allAdded },
-      us,
-      createAtNetworkTimestamp
-    );
+    const msg = await ClosedGroup.addUpdateMessage({
+      diff: { joiningMembers: allAdded },
+      ...shared,
+    });
     await getMessageQueue().sendToGroupV2({
       message: new GroupUpdateMemberChangeMessage({
         added: allAdded,
@@ -625,16 +643,15 @@ async function handleMemberChangeFromUIOrNot({
         createAtNetworkTimestamp,
         secretKey: group.secretKey,
         sodium,
+        ...getConvoExpireDetailsForMsg(convo),
       }),
     });
   }
   if (fromCurrentDevice && removed.length) {
-    const msg = await ClosedGroup.addUpdateMessage(
-      convo,
-      { kickedMembers: removed },
-      us,
-      createAtNetworkTimestamp
-    );
+    const msg = await ClosedGroup.addUpdateMessage({
+      diff: { kickedMembers: removed },
+      ...shared,
+    });
     await getMessageQueue().sendToGroupV2({
       message: new GroupUpdateMemberChangeMessage({
         removed,
@@ -644,6 +661,7 @@ async function handleMemberChangeFromUIOrNot({
         createAtNetworkTimestamp,
         secretKey: group.secretKey,
         sodium,
+        ...getConvoExpireDetailsForMsg(convo),
       }),
     });
   }
@@ -698,12 +716,13 @@ async function handleNameChangeFromUIOrNot({
   const createAtNetworkTimestamp = GetNetworkTime.now();
 
   if (fromCurrentDevice) {
-    const msg = await ClosedGroup.addUpdateMessage(
+    const msg = await ClosedGroup.addUpdateMessage({
       convo,
-      { newName },
-      us,
-      createAtNetworkTimestamp
-    );
+      diff: { newName },
+      sender: us,
+      sentAt: createAtNetworkTimestamp,
+      expireUpdate: null,
+    });
     await getMessageQueue().sendToGroupV2({
       message: new GroupUpdateInfoChangeMessage({
         groupPk,
@@ -713,6 +732,7 @@ async function handleNameChangeFromUIOrNot({
         createAtNetworkTimestamp,
         secretKey: group.secretKey,
         sodium: await getSodiumRenderer(),
+        ...getConvoExpireDetailsForMsg(convo),
       }),
     });
   }

@@ -1,5 +1,6 @@
 import chai, { expect } from 'chai';
 import chaiAsPromised from 'chai-as-promised';
+import { PubkeyType } from 'libsession_util_nodejs';
 import Sinon from 'sinon';
 import {
   GetExpiriesFromNodeSubRequest,
@@ -23,7 +24,8 @@ describe('GetExpiriesRequest', () => {
   stubWindowLog();
 
   const getLatestTimestampOffset = 200000;
-  const ourNumber = '37e1631b002de498caf7c5c1712718bde7f257c6dadeed0c21abf5e939e6c309';
+  const ourNumber =
+    '37e1631b002de498caf7c5c1712718bde7f257c6dadeed0c21abf5e939e6c309' as PubkeyType;
   const ourUserEd25516Keypair = {
     pubKey: '37e1631b002de498caf7c5c1712718bde7f257c6dadeed0c21abf5e939e6c309',
     privKey:

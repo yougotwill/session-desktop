@@ -1,19 +1,18 @@
 import { GroupPubkeyType } from 'libsession_util_nodejs';
 import { SignalService } from '../../../../../protobuf';
 import { LibSodiumWrappers } from '../../../../crypto';
-import { DataMessage } from '../../DataMessage';
-import { MessageParams } from '../../Message';
+import { ExpirableMessage, ExpirableMessageParams } from '../../ExpirableMessage';
 
 export type AdminSigDetails = {
   secretKey: Uint8Array;
   sodium: LibSodiumWrappers;
 };
 
-export interface GroupUpdateMessageParams extends MessageParams {
+export interface GroupUpdateMessageParams extends ExpirableMessageParams {
   groupPk: GroupPubkeyType;
 }
 
-export abstract class GroupUpdateMessage extends DataMessage {
+export abstract class GroupUpdateMessage extends ExpirableMessage {
   public readonly destination: GroupUpdateMessageParams['groupPk'];
 
   constructor(params: GroupUpdateMessageParams) {

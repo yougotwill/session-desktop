@@ -5,6 +5,7 @@ import styled from 'styled-components';
 import { Data } from '../../../../data/data';
 import { useMessageExpirationPropsById } from '../../../../hooks/useParamSelector';
 import { MessageModelType } from '../../../../models/messageType';
+import { ConvoHub } from '../../../../session/conversations';
 import { PropsForExpiringMessage, messagesExpired } from '../../../../state/ducks/conversations';
 import { getIncrement } from '../../../../util/timer';
 import { ExpireTimer } from '../../ExpireTimer';
