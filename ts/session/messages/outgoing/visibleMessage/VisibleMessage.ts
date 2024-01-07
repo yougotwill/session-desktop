@@ -3,7 +3,8 @@ import { isEmpty } from 'lodash';
 import { SignalService } from '../../../../protobuf';
 import { LokiProfile } from '../../../../types/Message';
 import { Reaction } from '../../../../types/Reaction';
-import { ExpirableMessage, ExpirableMessageParams } from '../ExpirableMessage';
+import { DataMessage } from '../DataMessage';
+import { ExpirableMessageParams } from '../ExpirableMessage';
 
 interface AttachmentPointerCommon {
   contentType?: string;
@@ -71,7 +72,7 @@ export interface VisibleMessageParams extends ExpirableMessageParams {
   syncTarget?: string; // undefined means it is not a synced message
 }
 
-export class VisibleMessage extends ExpirableMessage {
+export class VisibleMessage extends DataMessage {
   public readonly reaction?: Reaction;
 
   private readonly attachments?: Array<AttachmentPointerWithUrl>;
@@ -113,7 +114,7 @@ export class VisibleMessage extends ExpirableMessage {
   }
 
   public dataProto(): SignalService.DataMessage {
-    const dataMessage = super.dataProto();
+    const dataMessage = new SignalService.DataMessage({});
 
     if (this.body) {
       dataMessage.body = this.body;

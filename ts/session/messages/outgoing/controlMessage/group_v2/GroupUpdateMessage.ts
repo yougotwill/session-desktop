@@ -1,7 +1,7 @@
 import { GroupPubkeyType } from 'libsession_util_nodejs';
-import { SignalService } from '../../../../../protobuf';
 import { LibSodiumWrappers } from '../../../../crypto';
-import { ExpirableMessage, ExpirableMessageParams } from '../../ExpirableMessage';
+import { DataMessage } from '../../DataMessage';
+import { ExpirableMessageParams } from '../../ExpirableMessage';
 
 export type AdminSigDetails = {
   secretKey: Uint8Array;
@@ -12,7 +12,7 @@ export interface GroupUpdateMessageParams extends ExpirableMessageParams {
   groupPk: GroupPubkeyType;
 }
 
-export abstract class GroupUpdateMessage extends ExpirableMessage {
+export abstract class GroupUpdateMessage extends DataMessage {
   public readonly destination: GroupUpdateMessageParams['groupPk'];
 
   constructor(params: GroupUpdateMessageParams) {
@@ -24,7 +24,8 @@ export abstract class GroupUpdateMessage extends ExpirableMessage {
     }
   }
 
-  public abstract dataProto(): SignalService.DataMessage;
+  // do not override the dataProto here, we want it to be defined in the child classes
+  // public abstract dataProto(): SignalService.DataMessage;
 
   public abstract isFor1o1Swarm(): boolean;
   public abstract isForGroupSwarm(): boolean;

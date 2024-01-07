@@ -1,12 +1,13 @@
 import { SignalService } from '../../../../protobuf';
-import { ExpirableMessage, ExpirableMessageParams } from '../ExpirableMessage';
+import { DataMessage } from '../DataMessage';
+import { ExpirableMessageParams } from '../ExpirableMessage';
 
 interface GroupInvitationMessageParams extends ExpirableMessageParams {
   url: string;
   name: string;
 }
 
-export class GroupInvitationMessage extends ExpirableMessage {
+export class GroupInvitationMessage extends DataMessage {
   private readonly url: string;
   private readonly name: string;
 
@@ -28,7 +29,6 @@ export class GroupInvitationMessage extends ExpirableMessage {
     });
 
     return new SignalService.DataMessage({
-      ...super.dataProto(),
       openGroupInvitation,
     });
   }

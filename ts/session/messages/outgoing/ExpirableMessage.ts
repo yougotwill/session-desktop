@@ -30,25 +30,16 @@ export class ExpirableMessage extends ContentMessage {
         this.expirationType === 'deleteAfterSend'
           ? SignalService.Content.ExpirationType.DELETE_AFTER_SEND
           : this.expirationType === 'deleteAfterRead'
-          ? SignalService.Content.ExpirationType.DELETE_AFTER_READ
-          : this.expirationType === 'unknown'
-          ? SignalService.Content.ExpirationType.UNKNOWN
-          : undefined,
+            ? SignalService.Content.ExpirationType.DELETE_AFTER_READ
+            : this.expirationType === 'unknown'
+              ? SignalService.Content.ExpirationType.UNKNOWN
+              : undefined,
       expirationTimer: this.expireTimer && this.expireTimer > -1 ? this.expireTimer : undefined,
     });
   }
 
-  public dataProto(): SignalService.DataMessage {
-    return new SignalService.DataMessage({
-      // TODO legacy messages support will be removed in a future release
-      expireTimer:
-        (this.expirationType === 'unknown' || !this.expirationType) &&
-        this.expireTimer &&
-        this.expireTimer > -1
-          ? this.expireTimer
-          : undefined,
-    });
-  }
+  // Note: dataProto() or anything else must be implemented in the child classes
+  // public dataProto()
 
   public getDisappearingMessageType(): DisappearingMessageType | undefined {
     return this.expirationType || undefined;

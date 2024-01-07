@@ -28,11 +28,11 @@ export class DataExtractionNotificationMessage extends ExpirableMessage {
 
   public contentProto(): SignalService.Content {
     const content = super.contentProto();
-    content.dataExtractionNotification = this.dataExtractionProto();
+    content.dataExtractionNotification = this.extractionProto();
     return content;
   }
 
-  protected dataExtractionProto(): SignalService.DataExtractionNotification {
+  protected extractionProto(): SignalService.DataExtractionNotification {
     const ACTION_ENUM = SignalService.DataExtractionNotification.Type;
 
     const action = ACTION_ENUM.MEDIA_SAVED; // we cannot know when user screenshots, so it can only be a media saved on desktop

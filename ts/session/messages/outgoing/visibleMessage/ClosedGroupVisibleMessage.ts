@@ -3,7 +3,7 @@ import { SignalService } from '../../../../protobuf';
 import { SnodeNamespaces } from '../../../apis/snode_api/namespaces';
 import { PubKey } from '../../../types';
 import { StringUtils } from '../../../utils';
-import { ExpirableMessage } from '../ExpirableMessage';
+import { DataMessage } from '../DataMessage';
 import {
   ClosedGroupMessage,
   ClosedGroupMessageParams,
@@ -70,7 +70,7 @@ type WithDestinationGroupPk = { destination: GroupPubkeyType };
 type WithGroupMessageNamespace = { namespace: SnodeNamespaces.ClosedGroupMessages };
 
 // TODO audric debugger This will need to extend ExpirableMessage after Disappearing Messages V2 is merged and checkd still working
-export class ClosedGroupV2VisibleMessage extends ExpirableMessage {
+export class ClosedGroupV2VisibleMessage extends DataMessage {
   private readonly chatMessage: VisibleMessage;
   public readonly destination: GroupPubkeyType;
   public readonly namespace: SnodeNamespaces.ClosedGroupMessages;

@@ -37,7 +37,7 @@ export class ExpirationTimerUpdateMessage extends DataMessage {
   }
 
   public dataProto(): SignalService.DataMessage {
-    const data = super.dataProto();
+    const data = new SignalService.DataMessage({});
 
     data.flags = SignalService.DataMessage.Flags.EXPIRATION_TIMER_UPDATE;
 
