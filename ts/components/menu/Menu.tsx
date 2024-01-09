@@ -589,8 +589,8 @@ export const NotificationForConvoMenuItem = (): JSX.Element | null => {
       n === 'all' || !n
         ? 'notificationForConvo_all'
         : n === 'disabled'
-        ? 'notificationForConvo_disabled'
-        : 'notificationForConvo_mentions_only';
+          ? 'notificationForConvo_disabled'
+          : 'notificationForConvo_mentions_only';
     return { value: n, name: window.i18n(keyToUse) };
   });
 

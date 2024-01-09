@@ -452,8 +452,8 @@ export function useQuoteAuthorName(authorId?: string): {
   const authorName = isMe
     ? window.i18n('you')
     : convoProps?.nickname || convoProps?.isPrivate
-    ? convoProps?.displayNameInProfile
-    : undefined;
+      ? convoProps?.displayNameInProfile
+      : undefined;
 
   return { authorName, isMe };
 }

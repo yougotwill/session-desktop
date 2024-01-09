@@ -15,6 +15,7 @@ import { ProfileManager } from '../session/profile_manager/ProfileManager';
 import { PubKey } from '../session/types';
 import { StringUtils, UserUtils } from '../session/utils';
 import { toHex } from '../session/utils/String';
+import { FetchMsgExpirySwarm } from '../session/utils/job_runners/jobs/FetchMsgExpirySwarmJob';
 import { UserSync } from '../session/utils/job_runners/jobs/UserSyncJob';
 import { LibSessionUtil } from '../session/utils/libsession/libsession_utils';
 import { SessionUtilContact } from '../session/utils/libsession/libsession_utils_contacts';
@@ -43,8 +44,9 @@ import {
 } from '../webworker/workers/browser/libsession_worker_functions';
 // eslint-disable-next-line import/no-unresolved, import/extensions
 import { Data } from '../data/data';
-import { FetchMsgExpirySwarm } from '../session/utils/job_runners/jobs/FetchMsgExpirySwarmJob';
 import { ReleasedFeatures } from '../util/releaseFeature';
+
+// eslint-disable-next-line import/no-unresolved
 import {
   ContactsWrapperActions,
   ConvoInfoVolatileWrapperActions,

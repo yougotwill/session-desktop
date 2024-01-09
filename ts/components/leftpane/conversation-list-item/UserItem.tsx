@@ -28,8 +28,8 @@ export const UserItem = () => {
   const displayName = isMe
     ? window.i18n('noteToSelf')
     : isSearchResultsMode && hasNickname && realName
-    ? `${realName} (${username})`
-    : username;
+      ? `${realName} (${username})`
+      : username;
 
   let shouldShowPubkey = false;
   if (isEmpty(username) && isEmpty(displayName)) {

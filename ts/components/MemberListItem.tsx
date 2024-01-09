@@ -141,12 +141,12 @@ const GroupStatusText = ({ groupPk, pubkey }: { pubkey: PubkeyType; groupPk: Gro
   const statusText = groupPromotionFailed
     ? window.i18n('promotionFailed')
     : groupInviteFailed
-    ? window.i18n('inviteFailed')
-    : groupInvitePending
-    ? window.i18n('invitePending')
-    : groupPromotionPending
-    ? window.i18n('promotionPending')
-    : null;
+      ? window.i18n('inviteFailed')
+      : groupInvitePending
+        ? window.i18n('invitePending')
+        : groupPromotionPending
+          ? window.i18n('promotionPending')
+          : null;
 
   if (!statusText) {
     return null;

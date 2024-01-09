@@ -230,8 +230,8 @@ onmessage = async (e: { data: [number, ConfigWrapperObjectTypesMeta, string, ...
     const wrapper = isUserConfigWrapperType(config)
       ? getCorrespondingUserWrapper(config)
       : isMetaWrapperType(config)
-      ? getCorrespondingGroupWrapper(config)
-      : undefined;
+        ? getCorrespondingGroupWrapper(config)
+        : undefined;
     if (!wrapper) {
       throw new Error(`did not find an already built wrapper for config: "${config}"`);
     }

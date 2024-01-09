@@ -80,7 +80,11 @@ export const getSwarmPollingInstance = () => {
   return instance;
 };
 
-type GroupPollingEntry = { pubkey: PubKey; lastPolledTimestamp: number };
+type GroupPollingEntry = {
+  pubkey: PubKey;
+  lastPolledTimestamp: number;
+  callbackFirstPoll?: () => Promise<void>;
+};
 
 function entryToKey(entry: GroupPollingEntry) {
   return entry.pubkey.key;
@@ -134,11 +138,11 @@ export class SwarmPolling {
     }
   }
 
-  public addGroupId(pubkey: PubKey | string) {
+  public addGroupId(pubkey: PubKey | string, callbackFirstPoll?: () => Promise<void>) {
     const pk = PubKey.cast(pubkey);
     if (this.groupPolling.findIndex(m => m.pubkey.key === pk.key) === -1) {
       window?.log?.info('Swarm addGroupId: adding pubkey to polling', pk.key);
-      this.groupPolling.push({ pubkey: pk, lastPolledTimestamp: 0 });
+      this.groupPolling.push({ pubkey: pk, lastPolledTimestamp: 0, callbackFirstPoll });
     }
   }
 
@@ -386,6 +390,11 @@ export class SwarmPolling {
 
     const shouldDiscardMessages = await this.shouldLeaveNotPolledGroup({ type, pubkey });
     if (shouldDiscardMessages) {
+      window.log.info(
+        `polled a pk which should not be polled anymore: ${ed25519Str(
+          pubkey
+        )}. Discarding polling result`
+      );
       return;
     }
 
@@ -394,6 +403,13 @@ export class SwarmPolling {
       // groupv2 messages are not stored in the cache, so for each that we process, we also add it as seen message.
       // this is to take care of a crash half way through processing messages. We'd get the same 100 messages back, and we'd skip up to the first not seen message
       await handleMessagesForGroupV2(newMessages, pubkey);
+      // if a callback was registered for the first poll of that group pk, call it
+      const groupEntry = this.groupPolling.find(m => m.pubkey.key === pubkey);
+      if (groupEntry && groupEntry.callbackFirstPoll) {
+        void groupEntry.callbackFirstPoll();
+        groupEntry.callbackFirstPoll = undefined;
+      }
+
       return;
     }
 

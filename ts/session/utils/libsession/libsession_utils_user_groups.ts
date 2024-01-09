@@ -82,8 +82,8 @@ async function insertGroupsFromDBIntoWrapperAndRefresh(
   const convoType: UserGroupsType = SessionUtilUserGroups.isCommunityToStoreInWrapper(foundConvo)
     ? 'Community'
     : PubKey.is03Pubkey(convoId)
-    ? 'Group'
-    : 'LegacyGroup';
+      ? 'Group'
+      : 'LegacyGroup';
 
   switch (convoType) {
     case 'Community':

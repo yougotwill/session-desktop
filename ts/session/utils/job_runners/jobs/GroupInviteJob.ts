@@ -153,7 +153,6 @@ class GroupInviteJob extends PersistedJob<GroupInvitePersistedData> {
     } finally {
       updateFailedStateForMember(groupPk, member, failed);
       try {
-        debugger;
         await MetaGroupWrapperActions.memberSetInvited(groupPk, member, failed);
       } catch (e) {
         window.log.warn('GroupInviteJob memberSetInvited failed with', e.message);

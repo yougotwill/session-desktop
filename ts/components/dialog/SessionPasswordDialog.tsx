@@ -82,10 +82,10 @@ export class SessionPasswordDialog extends React.Component<Props, State> {
       passwordAction === 'change'
         ? 'changePassword'
         : passwordAction === 'remove'
-        ? 'removePassword'
-        : passwordAction === 'enter'
-        ? 'passwordViewTitle'
-        : 'setPassword';
+          ? 'removePassword'
+          : passwordAction === 'enter'
+            ? 'passwordViewTitle'
+            : 'setPassword';
 
     return (
       <SessionWrapperModal title={window.i18n(localizedKeyAction)} onClose={this.closeDialog}>

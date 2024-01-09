@@ -17,6 +17,7 @@ import {
   xor,
 } from 'lodash';
 
+import { v4 } from 'uuid';
 import { SignalService } from '../protobuf';
 import { getMessageQueue } from '../session';
 import { ConvoHub } from '../session/conversations';
@@ -126,7 +127,6 @@ import {
   getSubscriberCountOutsideRedux,
 } from '../state/selectors/sogsRoomInfo'; // decide it it makes sense to move this to a redux slice?
 
-import { v4 } from 'uuid';
 import { DisappearingMessages } from '../session/disappearing_messages';
 import { DisappearingMessageConversationModeType } from '../session/disappearing_messages/types';
 import { FetchMsgExpirySwarm } from '../session/utils/job_runners/jobs/FetchMsgExpirySwarmJob';
@@ -2569,10 +2569,10 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       mode === 'deleteAfterRead'
         ? ours === 'deleteAfterRead'
         : mode === 'deleteAfterSend'
-        ? ours === 'deleteAfterSend'
-        : mode === 'off'
-        ? ours === 'off'
-        : false;
+          ? ours === 'deleteAfterSend'
+          : mode === 'off'
+            ? ours === 'off'
+            : false;
 
     return success;
   }

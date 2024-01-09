@@ -13,6 +13,7 @@ import { GroupUpdateInviteResponseMessage } from '../../session/messages/outgoin
 import { ed25519Str } from '../../session/onions/onionPath';
 import { PubKey } from '../../session/types';
 import { UserUtils } from '../../session/utils';
+import { sleepFor } from '../../session/utils/Promise';
 import { stringToUint8Array } from '../../session/utils/String';
 import { PreConditionFailed } from '../../session/utils/errors';
 import { UserSync } from '../../session/utils/job_runners/jobs/UserSyncJob';
@@ -63,15 +64,16 @@ async function handleGroupInviteMessage({
   author,
   envelopeTimestamp,
 }: GroupInviteDetails) {
-  if (!PubKey.is03Pubkey(inviteMessage.groupSessionId)) {
+  const groupPk = inviteMessage.groupSessionId;
+  if (!PubKey.is03Pubkey(groupPk)) {
     return;
   }
 
   if (BlockedNumberController.isBlocked(author)) {
     window.log.info(
-      `received invite to group ${ed25519Str(
-        inviteMessage.groupSessionId
-      )} by blocked user:${ed25519Str(author)}... dropping it`
+      `received invite to group ${ed25519Str(groupPk)} by blocked user:${ed25519Str(
+        author
+      )}... dropping it`
     );
     return;
   }
@@ -79,7 +81,7 @@ async function handleGroupInviteMessage({
   const authorIsApproved = ConvoHub.use().get(author)?.isApproved() || false;
 
   const sigValid = await verifySig({
-    pubKey: HexString.fromHexStringNoPrefix(inviteMessage.groupSessionId),
+    pubKey: HexString.fromHexStringNoPrefix(groupPk),
     signature: inviteMessage.adminSignature,
     data: stringToUint8Array(`INVITE${UserUtils.getOurPubKeyStrFromCache()}${envelopeTimestamp}`),
   });
@@ -89,15 +91,8 @@ async function handleGroupInviteMessage({
     return;
   }
 
-  window.log.debug(
-    `received invite to group ${ed25519Str(inviteMessage.groupSessionId)} by user:${ed25519Str(
-      author
-    )}`
-  );
-  const convo = await ConvoHub.use().getOrCreateAndWait(
-    inviteMessage.groupSessionId,
-    ConversationTypeEnum.GROUPV2
-  );
+  window.log.debug(`received invite to group ${ed25519Str(groupPk)} by user:${ed25519Str(author)}`);
+  const convo = await ConvoHub.use().getOrCreateAndWait(groupPk, ConversationTypeEnum.GROUPV2);
   convo.set({
     active_at: envelopeTimestamp,
     didApproveMe: true,
@@ -112,14 +107,14 @@ async function handleGroupInviteMessage({
   await convo.commit();
   const userEd25519Secretkey = (await UserUtils.getUserED25519KeyPairBytes()).privKeyBytes;
 
-  let found = await UserGroupsWrapperActions.getGroup(inviteMessage.groupSessionId);
+  let found = await UserGroupsWrapperActions.getGroup(groupPk);
   if (!found) {
     found = {
       authData: null,
       joinedAtSeconds: Date.now(),
       name: inviteMessage.name,
       priority: 0,
-      pubkeyHex: inviteMessage.groupSessionId,
+      pubkeyHex: groupPk,
       secretKey: null,
       kicked: false,
       invitePending: true,
@@ -136,24 +131,24 @@ async function handleGroupInviteMessage({
   found.authData = inviteMessage.memberAuthData;
 
   await UserGroupsWrapperActions.setGroup(found);
-  await MetaGroupWrapperActions.init(inviteMessage.groupSessionId, {
+  await MetaGroupWrapperActions.init(groupPk, {
     metaDumped: null,
     groupEd25519Secretkey: null,
     userEd25519Secretkey: toFixedUint8ArrayOfLength(userEd25519Secretkey, 64).buffer,
-    groupEd25519Pubkey: toFixedUint8ArrayOfLength(
-      HexString.fromHexStringNoPrefix(inviteMessage.groupSessionId),
-      32
-    ).buffer,
+    groupEd25519Pubkey: toFixedUint8ArrayOfLength(HexString.fromHexStringNoPrefix(groupPk), 32)
+      .buffer,
   });
+
   await LibSessionUtil.saveDumpsToDb(UserUtils.getOurPubKeyStrFromCache());
   await UserSync.queueNewJobIfNeeded();
   if (!found.invitePending) {
     // if this group should already be polling
-    getSwarmPollingInstance().addGroupId(inviteMessage.groupSessionId);
-    console.warn(
-      'we need to do a first poll to fetch the keys etc before we can send our invite response...'
-    );
-    await sendInviteResponseToGroup({ groupPk: inviteMessage.groupSessionId });
+    getSwarmPollingInstance().addGroupId(groupPk, async () => {
+      // we need to do a first poll to fetch the keys etc before we can send our invite response
+      // this is pretty hacky, but also an admin seeing a message from that user in the group will mark it as not pending anymore
+      await sleepFor(2000);
+      await sendInviteResponseToGroup({ groupPk });
+    });
   }
 }
 

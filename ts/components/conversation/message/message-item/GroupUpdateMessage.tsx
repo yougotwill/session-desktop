@@ -69,10 +69,10 @@ function changeOfMembersV2({
     sortedWithUsFirst.length === 1 && sortedWithUsFirst[0].sessionId === us
       ? 'You'
       : sortedWithUsFirst.length === 1
-      ? 'One'
-      : sortedWithUsFirst.length === 2
-      ? 'Two'
-      : 'Others';
+        ? 'One'
+        : sortedWithUsFirst.length === 2
+          ? 'Two'
+          : 'Others';
 
   const action =
     type === 'added' ? 'Joined' : type === 'promoted' ? 'Promoted' : ('Removed' as const);

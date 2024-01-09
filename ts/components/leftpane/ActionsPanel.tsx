@@ -44,8 +44,9 @@ import {
 import { UserSync } from '../../session/utils/job_runners/jobs/UserSyncJob';
 import { forceSyncConfigurationNowIfNeeded } from '../../session/utils/sync/syncUtils';
 import { isDarkTheme } from '../../state/selectors/theme';
-import { ThemeStateType } from '../../themes/constants/colors';
+import { ensureThemeConsistency } from '../../themes/SessionTheme';
 import { switchThemeTo } from '../../themes/switchTheme';
+import { getOppositeTheme } from '../../util/theme';
 
 import { ReleasedFeatures } from '../../util/releaseFeature';
 
@@ -63,11 +64,8 @@ const Section = (props: { type: SectionType }) => {
     if (type === SectionType.Profile) {
       dispatch(editProfileModal({}));
     } else if (type === SectionType.ColorMode) {
-      const currentTheme = String(window.Events.getThemeSetting());
-      const newTheme = (
-        isDarkMode ? currentTheme.replace('dark', 'light') : currentTheme.replace('light', 'dark')
-      ) as ThemeStateType;
-
+      const currentTheme = window.Events.getThemeSetting();
+      const newTheme = getOppositeTheme(currentTheme);
       // We want to persist the primary color when using the color mode button
       void switchThemeTo({
         theme: newTheme,
@@ -151,14 +149,26 @@ const cleanUpMediasInterval = DURATION.MINUTES * 60;
 const fetchReleaseFromFileServerInterval = 1000 * 60; // try to fetch the latest release from the fileserver every minute
 
 const setupTheme = async () => {
+  const shouldFollowSystemTheme = window.getSettingValue(SettingsKey.hasFollowSystemThemeEnabled);
   const theme = window.Events.getThemeSetting();
-  // We don't want to reset the primary color on startup
-  await switchThemeTo({
+  const themeConfig = {
     theme,
     mainWindow: true,
     usePrimaryColor: true,
     dispatch: window?.inboxStore?.dispatch || undefined,
-  });
+  };
+
+  if (shouldFollowSystemTheme) {
+    // Check if system theme matches currently set theme, if not switch it and return true, if matching return false
+    const wasThemeSwitched = await ensureThemeConsistency();
+    if (!wasThemeSwitched) {
+      // if theme wasn't switched them set theme to default
+      await switchThemeTo(themeConfig);
+    }
+    return;
+  }
+
+  await switchThemeTo(themeConfig);
 };
 
 // Do this only if we created a new Session ID, or if we already received the initial configuration message

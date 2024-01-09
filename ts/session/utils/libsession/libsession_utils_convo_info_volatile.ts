@@ -56,8 +56,8 @@ function getConvoType(convo: ConversationModel): ConvoVolatileType {
     SessionUtilUserProfile.isUserProfileToStoreInWrapper(convo.id)
       ? '1o1'
       : SessionUtilUserGroups.isCommunityToStoreInWrapper(convo)
-      ? 'Community'
-      : 'LegacyGroup';
+        ? 'Community'
+        : 'LegacyGroup';
 
   return convoType;
 }
