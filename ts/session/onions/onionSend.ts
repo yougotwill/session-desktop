@@ -13,12 +13,12 @@ import {
 } from '../apis/open_group_api/sogsv3/sogsV3SendMessage';
 import { pnServerPubkeyHex, pnServerUrl } from '../apis/push_notification_api/PnServer';
 import {
-  buildErrorMessageWithFailedCode,
   FinalDestNonSnodeOptions,
   FinalRelayOptions,
   Onions,
-  SnodeResponse,
   STATUS_NO_STATUS,
+  SnodeResponse,
+  buildErrorMessageWithFailedCode,
 } from '../apis/snode_api/onions';
 import { PROTOCOLS } from '../constants';
 import { OnionV4 } from './onionv4';
@@ -239,13 +239,13 @@ const sendViaOnionV4ToNonSnodeWithRetries = async (
         minTimeout: OnionSending.getMinTimeoutForSogs(),
         onFailedAttempt: e => {
           window?.log?.warn(
-            `sendViaOnionV4ToNonSnodeRetryable attempt #${e.attemptNumber} failed. ${e.retriesLeft} retries left...: ${e.message}`
+            `sendViaOnionV4ToNonSnodeWithRetries attempt #${e.attemptNumber} failed. ${e.retriesLeft} retries left...: ${e.message}`
           );
         },
       }
     );
   } catch (e) {
-    window?.log?.warn('sendViaOnionV4ToNonSnodeRetryable failed ', e.message, throwErrors);
+    window?.log?.warn('sendViaOnionV4ToNonSnodeWithRetries failed ', e.message, throwErrors);
     if (throwErrors) {
       throw e;
     }

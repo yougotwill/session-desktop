@@ -1,5 +1,6 @@
 import https from 'https';
 // eslint-disable import/no-named-default
+// eslint-disable-next-line import/no-named-default
 import { AbortSignal } from 'abort-controller';
 import ByteBuffer from 'bytebuffer';
 import { to_string } from 'libsodium-wrappers-sumo';
@@ -19,6 +20,7 @@ import { toHex } from '../../utils/String';
 import { Snode } from '../../../data/data';
 import { callUtilsWorker } from '../../../webworker/workers/browser/util_worker_interface';
 import { encodeV4Request } from '../../onions/onionv4';
+import { fileServerHost } from '../file_server_api/FileServerApi';
 import { hrefPnServerProd } from '../push_notification_api/PnServer';
 import { ERROR_CODE_NO_CONNECT } from './SNodeAPI';
 
@@ -854,6 +856,7 @@ async function sendOnionRequestHandlingSnodeEject({
     response = result.response;
     if (
       !isEmpty(finalRelayOptions) &&
+      finalRelayOptions.host !== fileServerHost &&
       response.status === 502 &&
       response.statusText === 'Bad Gateway'
     ) {
@@ -863,6 +866,7 @@ async function sendOnionRequestHandlingSnodeEject({
     decodingSymmetricKey = result.decodingSymmetricKey;
   } catch (e) {
     window?.log?.warn('sendOnionRequestNoRetries error message: ', e.message);
+
     if (e.code === 'ENETUNREACH' || e.message === 'ENETUNREACH' || throwErrors) {
       throw e;
     }
