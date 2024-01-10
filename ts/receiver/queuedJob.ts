@@ -1,4 +1,4 @@
-import _, { isEmpty, isNumber } from 'lodash';
+import _, { isEmpty, isNumber, toNumber } from 'lodash';
 import { queueAttachmentDownloads } from './attachments';
 
 import { Data } from '../data/data';
@@ -16,9 +16,11 @@ import { PubKey } from '../session/types';
 import { UserUtils } from '../session/utils';
 import { PropsForMessageWithoutConvoProps, lookupQuote } from '../state/ducks/conversations';
 import { showMessageRequestBannerOutsideRedux } from '../state/ducks/userConfig';
+import { getMemberInvitePendingOutsideRedux } from '../state/selectors/groups';
 import { getHideMessageRequestBannerOutsideRedux } from '../state/selectors/userConfig';
 import { GoogleChrome } from '../util';
 import { LinkPreviews } from '../util/linkPreviews';
+import { GroupV2Receiver } from './groupv2/handleGroupV2Message';
 
 function contentTypeSupported(type: string): boolean {
   const Chrome = GoogleChrome;
@@ -212,6 +214,66 @@ export function toRegularMessage(rawDataMessage: SignalService.DataMessage): Reg
   };
 }
 
+async function toggleMsgRequestBannerIfNeeded(
+  conversation: ConversationModel,
+  message: MessageModel,
+  source: string
+) {
+  if (!conversation.isPrivate() || !message.isIncoming()) {
+    return;
+  }
+
+  const incomingMessageCount = await Data.getMessageCountByType(
+    conversation.id,
+    MessageDirection.incoming
+  );
+  const isFirstRequestMessage = incomingMessageCount < 2;
+  if (
+    conversation.isIncomingRequest() &&
+    isFirstRequestMessage &&
+    getHideMessageRequestBannerOutsideRedux()
+  ) {
+    showMessageRequestBannerOutsideRedux();
+  }
+
+  // For edge case when messaging a client that's unable to explicitly send request approvals
+  if (conversation.isOutgoingRequest()) {
+    // Conversation was not approved before so a sync is needed
+    await conversation.addIncomingApprovalMessage(toNumber(message.get('sent_at')) - 1, source);
+  }
+  // should only occur after isOutgoing request as it relies on didApproveMe being false.
+  await conversation.setDidApproveMe(true);
+}
+
+async function handleMessageFromPendingMember(
+  conversation: ConversationModel,
+  message: MessageModel,
+  source: string
+) {
+  const convoId = conversation.id;
+  if (
+    !conversation.isClosedGroupV2() ||
+    !message.isIncoming() ||
+    !conversation.weAreAdminUnblinded() || // this checks on libsession of that group if we are an admin
+    !conversation.getGroupMembers().includes(source) || // this check that the sender of that message is indeed a member of the group
+    !PubKey.is03Pubkey(convoId) ||
+    !PubKey.is05Pubkey(source)
+  ) {
+    return;
+  }
+
+  const isMemberInvitePending = getMemberInvitePendingOutsideRedux(source, convoId);
+  if (!isMemberInvitePending) {
+    return; // nothing else to do
+  }
+  // we are an admin and we received a message from a member whose invite is `pending`. Update that member state now and push a change.
+  await GroupV2Receiver.handleGroupUpdateInviteResponseMessage({
+    groupPk: convoId,
+    author: source,
+    change: { isApproved: true },
+  });
+}
+
 async function handleRegularMessage(
   conversation: ConversationModel,
   sendingDeviceConversation: ConversationModel,
@@ -220,7 +282,6 @@ async function handleRegularMessage(
   source: string,
   messageHash: string
 ): Promise<void> {
-  const type = message.get('type');
   // this does not trigger a UI update nor write to the db
   await copyFromQuotedMessage(message, rawDataMessage.quote);
 
@@ -251,33 +312,8 @@ async function handleRegularMessage(
     await sendingDeviceConversation.updateBlocksSogsMsgReqsTimestamp(updateBlockTimestamp, false);
   }
 
-  if (type === 'incoming') {
-    if (conversation.isPrivate()) {
-      const incomingMessageCount = await Data.getMessageCountByType(
-        conversation.id,
-        MessageDirection.incoming
-      );
-      const isFirstRequestMessage = incomingMessageCount < 2;
-      if (
-        conversation.isIncomingRequest() &&
-        isFirstRequestMessage &&
-        getHideMessageRequestBannerOutsideRedux()
-      ) {
-        showMessageRequestBannerOutsideRedux();
-      }
-
-      // For edge case when messaging a client that's unable to explicitly send request approvals
-      if (conversation.isOutgoingRequest()) {
-        // Conversation was not approved before so a sync is needed
-        await conversation.addIncomingApprovalMessage(
-          _.toNumber(message.get('sent_at')) - 1,
-          source
-        );
-      }
-      // should only occur after isOutgoing request as it relies on didApproveMe being false.
-      await conversation.setDidApproveMe(true);
-    }
-  }
+  await toggleMsgRequestBannerIfNeeded(conversation, message, source);
+  await handleMessageFromPendingMember(conversation, message, source);
 
   const conversationActiveAt = conversation.getActiveAt();
   if (

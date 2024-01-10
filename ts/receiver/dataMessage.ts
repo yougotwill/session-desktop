@@ -181,6 +181,7 @@ export async function handleSwarmDataMessage({
   }
   // we handle legacy group updates from our other devices in handleLegacyClosedGroupControlMessage()
   if (cleanDataMessage.closedGroupControlMessage) {
+    // TODO DEPRECATED
     await handleLegacyClosedGroupControlMessage(
       envelope,
       cleanDataMessage.closedGroupControlMessage as SignalService.DataMessage.ClosedGroupControlMessage,

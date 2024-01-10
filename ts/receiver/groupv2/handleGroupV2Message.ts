@@ -38,7 +38,9 @@ type GroupInviteDetails = {
 } & WithEnvelopeTimestamp &
   WithAuthor;
 
-type GroupUpdateGeneric<T> = { change: T } & WithEnvelopeTimestamp & WithGroupPubkey & WithAuthor;
+type GroupUpdateGeneric<T> = { change: Omit<T, 'toJSON'> } & WithEnvelopeTimestamp &
+  WithGroupPubkey &
+  WithAuthor;
 
 type GroupUpdateDetails = {
   updateMessage: SignalService.GroupUpdateMessage;
@@ -381,7 +383,7 @@ async function handleGroupUpdateInviteResponseMessage({
   groupPk,
   change,
   author,
-}: GroupUpdateGeneric<SignalService.GroupUpdateInviteResponseMessage>) {
+}: Omit<GroupUpdateGeneric<SignalService.GroupUpdateInviteResponseMessage>, 'envelopeTimestamp'>) {
   // no sig verify for this type of message
   const convo = ConvoHub.use().get(groupPk);
   if (!convo) {
@@ -536,4 +538,8 @@ async function handleGroupUpdateMessage(
   window.log.warn('received group update of unknown type. Discarding...');
 }
 
-export const GroupV2Receiver = { handleGroupUpdateMessage, sendInviteResponseToGroup };
+export const GroupV2Receiver = {
+  handleGroupUpdateMessage,
+  sendInviteResponseToGroup,
+  handleGroupUpdateInviteResponseMessage,
+};

@@ -110,6 +110,14 @@ export function getLibGroupAdminsOutsideRedux(convoId: string): Array<string> {
   return state ? getLibAdminsPubkeys(state, convoId) : [];
 }
 
+export function getMemberInvitePendingOutsideRedux(
+  member: PubkeyType,
+  convoId: GroupPubkeyType
+): boolean {
+  const state = window.inboxStore?.getState();
+  return state ? getMemberInvitePending(state, member, convoId) : false;
+}
+
 export function useIsCreatingGroupFromUIPending() {
   return useSelector(getIsCreatingGroupFromUI);
 }
