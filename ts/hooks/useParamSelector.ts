@@ -22,6 +22,7 @@ import {
 import { useLibGroupAdmins, useLibGroupMembers, useLibGroupName } from '../state/selectors/groups';
 import { isPrivateAndFriend } from '../state/selectors/selectedConversation';
 import { useOurPkStr } from '../state/selectors/user';
+import { useLibGroupInvitePending } from '../state/selectors/userGroups';
 
 export function useAvatarPath(convoId: string | undefined) {
   const convoProps = useConversationPropsById(convoId);
@@ -235,6 +236,7 @@ export function useIsApproved(convoId?: string) {
 
 export function useIsIncomingRequest(convoId?: string) {
   const convoProps = useConversationPropsById(convoId);
+  const invitePending = useLibGroupInvitePending(convoId) || false;
   if (!convoProps) {
     return false;
   }
@@ -248,6 +250,7 @@ export function useIsIncomingRequest(convoId?: string) {
         isBlocked: convoProps.isBlocked || false,
         didApproveMe: convoProps.didApproveMe || false,
         activeAt: convoProps.activeAt || 0,
+        invitePending,
       })
   );
 }

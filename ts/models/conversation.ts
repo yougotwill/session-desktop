@@ -132,6 +132,7 @@ import { DisappearingMessageConversationModeType } from '../session/disappearing
 import { FetchMsgExpirySwarm } from '../session/utils/job_runners/jobs/FetchMsgExpirySwarmJob';
 import { UpdateMsgExpirySwarm } from '../session/utils/job_runners/jobs/UpdateMsgExpirySwarmJob';
 import { ReleasedFeatures } from '../util/releaseFeature';
+import { UserGroupsWrapperActions } from '../webworker/workers/browser/libsession_worker_interface';
 import { markAttributesAsReadIfNeeded } from './messageFactory';
 
 type InMemoryConvoInfos = {
@@ -692,14 +693,19 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
    * Does this conversation contain the properties to be considered a message request
    */
   public isIncomingRequest(): boolean {
+    const id = this.id;
+    const invitePending = PubKey.is03Pubkey(id)
+      ? UserGroupsWrapperActions.getCachedGroup(id)?.invitePending || false
+      : false;
     return hasValidIncomingRequestValues({
-      id: this.id,
+      id,
       isMe: this.isMe(),
       isApproved: this.isApproved(),
       isBlocked: this.isBlocked(),
       isPrivate: this.isPrivate(),
       activeAt: this.getActiveAt(),
       didApproveMe: this.didApproveMe(),
+      invitePending,
     });
   }
 
@@ -2708,6 +2714,7 @@ export function hasValidIncomingRequestValues({
   isPrivate,
   activeAt,
   didApproveMe,
+  invitePending,
 }: {
   id: string;
   isMe: boolean;
@@ -2715,12 +2722,13 @@ export function hasValidIncomingRequestValues({
   isBlocked: boolean;
   isPrivate: boolean;
   didApproveMe: boolean;
+  invitePending: boolean;
   activeAt: number | undefined;
 }): boolean {
   // if a convo is not active, it means we didn't get any messages nor sent any.
   const isActive = activeAt && isFinite(activeAt) && activeAt > 0;
   return Boolean(
-    (isPrivate || PubKey.is03Pubkey(id)) &&
+    (isPrivate || (PubKey.is03Pubkey(id) && invitePending)) &&
       !isMe &&
       !isApproved &&
       !isBlocked &&

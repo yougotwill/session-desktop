@@ -267,6 +267,61 @@ export function getLegacyGroupInfoFromDBValues({
 }
 
 /**
+ * This function should only be used to update the libsession fields of a 03-group.
+ * Most of the fields tracked in the usergroup wrapper in libsession are actually not updated
+ * once the entry is created, but some of them needs to be updated.
+ */
+export function getGroupInfoFromDBValues({
+  id,
+  priority,
+  members: maybeMembers,
+  displayNameInProfile,
+  expirationMode,
+  expireTimer,
+  encPubkeyHex,
+  encSeckeyHex,
+  groupAdmins: maybeAdmins,
+  lastJoinedTimestamp,
+}: {
+  id: string;
+  priority: number;
+  displayNameInProfile: string | undefined;
+  expirationMode: DisappearingMessageConversationModeType | undefined;
+  expireTimer: number | undefined;
+  encPubkeyHex: string;
+  encSeckeyHex: string;
+  members: string | Array<string>;
+  groupAdmins: string | Array<string>;
+  lastJoinedTimestamp: number;
+}) {
+  const admins: Array<string> = maybeArrayJSONtoArray(maybeAdmins);
+  const members: Array<string> = maybeArrayJSONtoArray(maybeMembers);
+
+  const wrappedMembers: Array<LegacyGroupMemberInfo> = (members || []).map(m => {
+    return {
+      isAdmin: admins.includes(m),
+      pubkeyHex: m,
+    };
+  });
+
+  const legacyGroup: LegacyGroupInfo = {
+    pubkeyHex: id,
+    name: displayNameInProfile || '',
+    priority: priority || 0,
+    members: wrappedMembers,
+    disappearingTimerSeconds:
+      expirationMode && expirationMode !== 'off' && !!expireTimer && expireTimer > 0
+        ? expireTimer
+        : 0,
+    encPubkey: !isEmpty(encPubkeyHex) ? from_hex(encPubkeyHex) : new Uint8Array(),
+    encSeckey: !isEmpty(encSeckeyHex) ? from_hex(encSeckeyHex) : new Uint8Array(),
+    joinedAtSeconds: Math.floor(lastJoinedTimestamp / 1000),
+  };
+
+  return legacyGroup;
+}
+
+/**
  * This function can be used to make sure all the possible values as input of a switch as taken care off, without having a default case.
  *
  */

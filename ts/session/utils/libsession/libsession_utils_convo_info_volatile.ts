@@ -11,6 +11,7 @@ import {
 } from '../../../webworker/workers/browser/libsession_worker_interface';
 import { OpenGroupUtils } from '../../apis/open_group_api/utils';
 import { ConvoHub } from '../../conversations';
+import { PubKey } from '../../types';
 import { SessionUtilContact } from './libsession_utils_contacts';
 import { SessionUtilUserGroups } from './libsession_utils_user_groups';
 import { SessionUtilUserProfile } from './libsession_utils_user_profile';
@@ -57,7 +58,9 @@ function getConvoType(convo: ConversationModel): ConvoVolatileType {
       ? '1o1'
       : SessionUtilUserGroups.isCommunityToStoreInWrapper(convo)
         ? 'Community'
-        : 'LegacyGroup';
+        : SessionUtilUserGroups.isLegacyGroupToStoreInWrapper(convo)
+          ? 'LegacyGroup'
+          : 'Group';
 
   return convoType;
 }
@@ -119,7 +122,21 @@ async function insertConvoFromDBIntoWrapperAndRefresh(convoId: string): Promise<
       }
       break;
     case 'Group':
-      // we need to keep track of the convo volatile info for the new group now. // TODO AUDRIC debugger
+      try {
+        if (!PubKey.is03Pubkey(convoId)) {
+          throw new Error('group but not with 03 prefix');
+        }
+        await ConvoInfoVolatileWrapperActions.setGroup(
+          convoId,
+          lastReadMessageTimestamp,
+          isForcedUnread
+        );
+        await refreshConvoVolatileCached(convoId, true, false);
+      } catch (e) {
+        window.log.warn(
+          `ConvoInfoVolatileWrapperActions.setGroup of ${convoId} failed with ${e.message}`
+        );
+      }
       break;
     case 'Community':
       try {
@@ -175,6 +192,8 @@ async function refreshConvoVolatileCached(
       convoType = 'Community';
     } else if (convoId.startsWith('05') && isLegacyGroup) {
       convoType = 'LegacyGroup';
+    } else if (PubKey.is03Pubkey(convoId)) {
+      convoType = 'Group';
     } else if (convoId.startsWith('05')) {
       convoType = '1o1';
     }
@@ -192,6 +211,16 @@ async function refreshConvoVolatileCached(
           await ConvoInfoVolatileWrapperActions.getLegacyGroup(convoId);
         if (fromWrapperLegacyGroup) {
           mappedLegacyGroupWrapperValues.set(convoId, fromWrapperLegacyGroup);
+        }
+        refreshed = true;
+        break;
+      case 'Group':
+        if (!PubKey.is03Pubkey(convoId)) {
+          throw new Error('expected a 03 group');
+        }
+        const fromWrapperGroup = await ConvoInfoVolatileWrapperActions.getGroup(convoId);
+        if (fromWrapperGroup) {
+          mappedGroupWrapperValues.set(convoId, fromWrapperGroup);
         }
         refreshed = true;
         break;

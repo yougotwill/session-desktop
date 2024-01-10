@@ -18,6 +18,7 @@ import { stringToUint8Array } from '../../session/utils/String';
 import { PreConditionFailed } from '../../session/utils/errors';
 import { UserSync } from '../../session/utils/job_runners/jobs/UserSyncJob';
 import { LibSessionUtil } from '../../session/utils/libsession/libsession_utils';
+import { SessionUtilConvoInfoVolatile } from '../../session/utils/libsession/libsession_utils_convo_info_volatile';
 import { groupInfoActions } from '../../state/ducks/metaGroups';
 import { toFixedUint8ArrayOfLength } from '../../types/sqlSharedTypes';
 import { BlockedNumberController } from '../../util';
@@ -43,7 +44,14 @@ type GroupUpdateDetails = {
   updateMessage: SignalService.GroupUpdateMessage;
 } & WithEnvelopeTimestamp;
 
+/**
+ * Send the invite response to the group's swarm. An admin will handle it and update our invite pending state to not pending.
+ * NOTE:
+ *  This message can only be sent once we got the keys for the group, through a poll of the swarm.
+ */
 async function sendInviteResponseToGroup({ groupPk }: { groupPk: GroupPubkeyType }) {
+  window.log.info(`sendInviteResponseToGroup for group ${ed25519Str(groupPk)}`);
+
   await getMessageQueue().sendToGroupV2({
     message: new GroupUpdateInviteResponseMessage({
       groupPk,
@@ -53,10 +61,6 @@ async function sendInviteResponseToGroup({ groupPk }: { groupPk: GroupPubkeyType
       expireTimer: 0,
     }),
   });
-
-  // TODO use the pending so we actually don't start polling here unless it is not in the pending state.
-  // once everything is ready, start polling using that authData to get the keys, members, details of that group, and its messages.
-  getSwarmPollingInstance().addGroupId(groupPk);
 }
 
 async function handleGroupInviteMessage({
@@ -92,6 +96,7 @@ async function handleGroupInviteMessage({
   }
 
   window.log.debug(`received invite to group ${ed25519Str(groupPk)} by user:${ed25519Str(author)}`);
+
   const convo = await ConvoHub.use().getOrCreateAndWait(groupPk, ConversationTypeEnum.GROUPV2);
   convo.set({
     active_at: envelopeTimestamp,
@@ -104,7 +109,6 @@ async function handleGroupInviteMessage({
       displayNameInProfile: inviteMessage.name,
     });
   }
-  await convo.commit();
   const userEd25519Secretkey = (await UserUtils.getUserED25519KeyPairBytes()).privKeyBytes;
 
   let found = await UserGroupsWrapperActions.getGroup(groupPk);
@@ -131,6 +135,12 @@ async function handleGroupInviteMessage({
   found.authData = inviteMessage.memberAuthData;
 
   await UserGroupsWrapperActions.setGroup(found);
+  // force markedAsUnread to be true so it shows the unread banner (we only show the banner if there are unread messages on at least one msg/group request)
+  await convo.markAsUnread(true, false);
+  await convo.commit();
+
+  await SessionUtilConvoInfoVolatile.insertConvoFromDBIntoWrapperAndRefresh(convo.id);
+
   await MetaGroupWrapperActions.init(groupPk, {
     metaDumped: null,
     groupEd25519Secretkey: null,
@@ -142,7 +152,7 @@ async function handleGroupInviteMessage({
   await LibSessionUtil.saveDumpsToDb(UserUtils.getOurPubKeyStrFromCache());
   await UserSync.queueNewJobIfNeeded();
   if (!found.invitePending) {
-    // if this group should already be polling
+    // if this group should already be polling based on if that author is pre-approved or we've already approved that group from another device.
     getSwarmPollingInstance().addGroupId(groupPk, async () => {
       // we need to do a first poll to fetch the keys etc before we can send our invite response
       // this is pretty hacky, but also an admin seeing a message from that user in the group will mark it as not pending anymore
@@ -526,4 +536,4 @@ async function handleGroupUpdateMessage(
   window.log.warn('received group update of unknown type. Discarding...');
 }
 
-export const GroupV2Receiver = { handleGroupUpdateMessage };
+export const GroupV2Receiver = { handleGroupUpdateMessage, sendInviteResponseToGroup };

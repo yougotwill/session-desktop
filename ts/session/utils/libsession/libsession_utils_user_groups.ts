@@ -17,7 +17,11 @@ import { PubKey } from '../../types';
  * Returns true if that conversation is an active group
  */
 function isUserGroupToStoreInWrapper(convo: ConversationModel): boolean {
-  return isCommunityToStoreInWrapper(convo) || isLegacyGroupToStoreInWrapper(convo);
+  return (
+    isCommunityToStoreInWrapper(convo) ||
+    isLegacyGroupToStoreInWrapper(convo) ||
+    isGroupToStoreInWrapper(convo)
+  );
 }
 
 function isCommunityToStoreInWrapper(convo: ConversationModel): boolean {
@@ -36,7 +40,7 @@ function isLegacyGroupToStoreInWrapper(convo: ConversationModel): boolean {
 }
 
 function isGroupToStoreInWrapper(convo: ConversationModel): boolean {
-  return convo.isGroup() && PubKey.is03Pubkey(convo.id) && convo.isActive(); // TODO should we filter by left/kicked or they are on the wrapper itself?
+  return convo.isGroup() && PubKey.is03Pubkey(convo.id) && convo.isActive(); // debugger TODO should we filter by left/kicked or they are on the wrapper itself?
 }
 
 /**
@@ -155,7 +159,36 @@ async function insertGroupsFromDBIntoWrapperAndRefresh(
       }
       break;
     case 'Group':
-      // debugger;
+      // The 03-group is a bit different that the others as most fields are not to be updated.
+      // Indeed, they are more up to date on the group's swarm than ours and we don't want to keep both in sync.
+      if (!PubKey.is03Pubkey(convoId)) {
+        throw new Error('not a 03 group');
+      }
+      const groupInfo = {
+        pubkeyHex: convoId,
+        authData: null, // only updated when we process a new invite
+        invitePending: null, // only updated when we accept an invite
+        disappearingTimerSeconds: null, // not updated except when we process an invite/create a group
+        joinedAtSeconds: null, // no need to update this one except when we process an invite, maybe
+        name: null, // not updated except when we process an invite/create a group
+        secretKey: null, // not updated except when we process an promote/create a group
+        kicked: foundConvo.isKickedFromGroup() ?? null,
+        priority: foundConvo.getPriority() ?? null,
+      };
+      try {
+        window.log.debug(
+          `inserting into usergroup wrapper "${foundConvo.id}"... }`,
+          JSON.stringify(groupInfo)
+        );
+        // this does the create or the update of the matching existing group
+        await UserGroupsWrapperActions.setGroup(groupInfo);
+
+        // returned for testing purposes only
+        return null;
+      } catch (e) {
+        window.log.warn(`UserGroupsWrapperActions.set of ${convoId} failed with ${e.message}`);
+        // we still let this go through
+      }
       break;
 
     default:

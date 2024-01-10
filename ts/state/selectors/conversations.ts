@@ -396,6 +396,9 @@ const _getConversationRequests = (
 ): Array<ReduxConversationType> => {
   return filter(sortedConversations, conversation => {
     const { isApproved, isBlocked, isPrivate, isMe, activeAt, didApproveMe, id } = conversation;
+    const invitePending = PubKey.is03Pubkey(id)
+      ? UserGroupsWrapperActions.getCachedGroup(id)?.invitePending || false
+      : false;
     const isIncomingRequest = hasValidIncomingRequestValues({
       id,
       isApproved: isApproved || false,
@@ -404,29 +407,26 @@ const _getConversationRequests = (
       isMe: isMe || false,
       activeAt: activeAt || 0,
       didApproveMe: didApproveMe || false,
+      invitePending,
     });
     return isIncomingRequest;
   });
 };
 
-export const getConversationRequests = createSelector(
-  getSortedConversations,
-  _getConversationRequests
-);
+const getConversationRequests = createSelector(getSortedConversations, _getConversationRequests);
 
 export const getConversationRequestsIds = createSelector(getConversationRequests, requests =>
   requests.map(m => m.id)
 );
 
-export const hasConversationRequests = (state: StateType) => {
-  return !!getConversationRequests(state).length;
-};
-
 const _getUnreadConversationRequests = (
   sortedConversationRequests: Array<ReduxConversationType>
 ): Array<ReduxConversationType> => {
   return filter(sortedConversationRequests, conversation => {
-    return Boolean(conversation && conversation.unreadCount && conversation.unreadCount > 0);
+    return Boolean(
+      conversation &&
+        ((conversation.unreadCount && conversation.unreadCount > 0) || conversation.isMarkedUnread)
+    );
   });
 };
 
