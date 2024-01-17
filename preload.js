@@ -242,6 +242,9 @@ data.initData();
 const { ConvoHub } = require('./ts/session/conversations/ConversationController');
 window.getConversationController = ConvoHub.use;
 
+const { stringify } = require('./ts/types/sqlSharedTypes');
+window.stringify = stringify;
+
 const { IncomingMessageCache } = require('./ts/receiver/cache');
 window.IncomingMessageCache = IncomingMessageCache;
 

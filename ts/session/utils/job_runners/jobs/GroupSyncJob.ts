@@ -2,6 +2,7 @@
 import { GroupPubkeyType, WithGroupPubkey } from 'libsession_util_nodejs';
 import { isArray, isEmpty, isNumber } from 'lodash';
 import { UserUtils } from '../..';
+import { SignalService } from '../../../../protobuf';
 import { assertUnreachable } from '../../../../types/sqlSharedTypes';
 import { isSignInByLinking } from '../../../../util/storage';
 import { MetaGroupWrapperActions } from '../../../../webworker/workers/browser/libsession_worker_interface';
@@ -82,18 +83,20 @@ async function pushChangesToGroupSwarmIfNeeded({
   }): Promise<RunJobResult> {
   // save the dumps to DB even before trying to push them, so at least we have an up to date dumps in the DB in case of crash, no network etc
   await LibSessionUtil.saveDumpsToDb(groupPk);
-  const changesToPush = await LibSessionUtil.pendingChangesForGroup(groupPk);
+  const { allOldHashes, messages } = await LibSessionUtil.pendingChangesForGroup(groupPk);
   // If there are no pending changes then the job can just complete (next time something
   // is updated we want to try and run immediately so don't schedule another run in this case)
-  if (isEmpty(changesToPush?.messages) && !supplementKeys.length) {
+  if (isEmpty(messages) && !supplementKeys.length) {
     return RunJobResult.Success;
   }
 
-  const encryptedMessage: Array<StoreOnNodeData> = changesToPush.messages.map(item => {
+  const networkTimestamp = GetNetworkTime.now();
+
+  const encryptedMessage: Array<StoreOnNodeData> = messages.map(item => {
     return {
       namespace: item.namespace,
       pubkey: groupPk,
-      networkTimestamp: GetNetworkTime.now(),
+      networkTimestamp,
       ttl: TTL_DEFAULT.CONFIG_MESSAGE,
       data: item.ciphertext,
     };
@@ -107,22 +110,27 @@ async function pushChangesToGroupSwarmIfNeeded({
         namespace: SnodeNamespaces.ClosedGroupKeys,
         pubkey: groupPk,
         ttl: TTL_DEFAULT.CONFIG_MESSAGE,
-        networkTimestamp: GetNetworkTime.now(),
+        networkTimestamp,
         data: key,
       })
     );
   }
 
-  if (updateMessages.length) {
-    updateMessages.forEach(updateMessage =>
-      extraMessagesToEncrypt.push({
-        namespace: SnodeNamespaces.ClosedGroupMessages,
-        pubkey: groupPk,
-        ttl: TTL_DEFAULT.CONTENT_MESSAGE,
-        networkTimestamp: GetNetworkTime.now(),
-        data: updateMessage.plainTextBuffer(),
-      })
+  for (let index = 0; index < updateMessages.length; index++) {
+    const updateMessage = updateMessages[index];
+    const wrapped = await MessageSender.wrapContentIntoEnvelope(
+      SignalService.Envelope.Type.SESSION_MESSAGE,
+      undefined,
+      networkTimestamp,
+      updateMessage.plainTextBuffer()
     );
+    extraMessagesToEncrypt.push({
+      namespace: SnodeNamespaces.ClosedGroupMessages,
+      pubkey: groupPk,
+      ttl: TTL_DEFAULT.CONTENT_MESSAGE,
+      networkTimestamp,
+      data: SignalService.Envelope.encode(wrapped).finish(),
+    });
   }
 
   const encryptedData = await MetaGroupWrapperActions.encryptMessages(
@@ -140,17 +148,17 @@ async function pushChangesToGroupSwarmIfNeeded({
   const result = await MessageSender.sendEncryptedDataToSnode(
     [...encryptedMessage, ...extraMessagesEncrypted],
     groupPk,
-    changesToPush.allOldHashes,
+    allOldHashes,
     revokeParams,
     unrevokeParams
   );
 
   const expectedReplyLength =
-    changesToPush.messages.length +
-    (changesToPush.allOldHashes.size ? 1 : 0) +
-    (revokeParams?.revoke.length ? 1 : 0) +
-    (unrevokeParams?.unrevoke.length ? 1 : 0) +
-    (extraMessagesEncrypted?.length ? 1 : 0);
+    messages.length + // each of those messages are sent as a subrequest
+    extraMessagesEncrypted.length + // each of those messages are sent as a subrequest
+    (allOldHashes.size ? 1 : 0) + // we are sending all hashes changes as a single request
+    (revokeParams?.revoke.length ? 1 : 0) + // we are sending all revoke updates as a single request
+    (unrevokeParams?.unrevoke.length ? 1 : 0); // we are sending all revoke updates as a single request
 
   // we do a sequence call here. If we do not have the right expected number of results, consider it a failure
   if (!isArray(result) || result.length !== expectedReplyLength) {
@@ -162,7 +170,10 @@ async function pushChangesToGroupSwarmIfNeeded({
     return RunJobResult.RetryJobIfPossible;
   }
 
-  const changes = LibSessionUtil.batchResultsToGroupSuccessfulChange(result, changesToPush);
+  const changes = LibSessionUtil.batchResultsToGroupSuccessfulChange(result, {
+    allOldHashes,
+    messages,
+  });
   if (isEmpty(changes)) {
     return RunJobResult.RetryJobIfPossible;
   }

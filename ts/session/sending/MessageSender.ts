@@ -448,7 +448,7 @@ async function encryptForGroupV2(
     networkTimestamp,
   } = params;
 
-  const envelope = await buildEnvelope(
+  const envelope = await wrapContentIntoEnvelope(
     SignalService.Envelope.Type.CLOSED_GROUP_MESSAGE,
     destination,
     networkTimestamp,
@@ -501,7 +501,12 @@ async function encryptMessageAndWrap(
     encryptionBasedOnConversation(recipient)
   );
 
-  const envelope = await buildEnvelope(envelopeType, recipient.key, networkTimestamp, cipherText);
+  const envelope = await wrapContentIntoEnvelope(
+    envelopeType,
+    recipient.key,
+    networkTimestamp,
+    cipherText
+  );
   const data = wrapEnvelopeInWebSocketMessage(envelope);
   const data64 = ByteBuffer.wrap(data).toString('base64');
 
@@ -572,7 +577,7 @@ async function sendEncryptedDataToSnode(
   }
 }
 
-async function buildEnvelope(
+async function wrapContentIntoEnvelope(
   type: SignalService.Envelope.Type,
   sskSource: string | undefined,
   timestamp: number,
@@ -673,4 +678,5 @@ export const MessageSender = {
   sendToOpenGroupV2,
   send,
   isContentSyncMessage,
+  wrapContentIntoEnvelope,
 };
