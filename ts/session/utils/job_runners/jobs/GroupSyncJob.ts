@@ -1,5 +1,5 @@
 /* eslint-disable no-await-in-loop */
-import { GroupPubkeyType } from 'libsession_util_nodejs';
+import { GroupPubkeyType, WithGroupPubkey } from 'libsession_util_nodejs';
 import { isArray, isEmpty, isNumber } from 'lodash';
 import { UserUtils } from '../..';
 import { assertUnreachable } from '../../../../types/sqlSharedTypes';
@@ -8,8 +8,11 @@ import { MetaGroupWrapperActions } from '../../../../webworker/workers/browser/l
 import { StoreOnNodeData } from '../../../apis/snode_api/SnodeRequestTypes';
 import { GetNetworkTime } from '../../../apis/snode_api/getNetworkTime';
 import { SnodeNamespaces } from '../../../apis/snode_api/namespaces';
+import { WithRevokeParams } from '../../../apis/snode_api/types';
 import { TTL_DEFAULT } from '../../../constants';
 import { ConvoHub } from '../../../conversations';
+import { GroupUpdateInfoChangeMessage } from '../../../messages/outgoing/controlMessage/group_v2/to_group/GroupUpdateInfoChangeMessage';
+import { GroupUpdateMemberChangeMessage } from '../../../messages/outgoing/controlMessage/group_v2/to_group/GroupUpdateMemberChangeMessage';
 import { MessageSender } from '../../../sending/MessageSender';
 import { PubKey } from '../../../types';
 import { allowOnlyOneAtATime } from '../../Promise';
@@ -66,10 +69,17 @@ async function confirmPushedAndDump(
   return LibSessionUtil.saveDumpsToDb(groupPk);
 }
 
-async function pushChangesToGroupSwarmIfNeeded(
-  groupPk: GroupPubkeyType,
-  supplementKeys: Array<Uint8Array>
-): Promise<RunJobResult> {
+async function pushChangesToGroupSwarmIfNeeded({
+  revokeParams,
+  unrevokeParams,
+  updateMessages,
+  groupPk,
+  supplementKeys,
+}: WithGroupPubkey &
+  WithRevokeParams & {
+    supplementKeys: Array<Uint8Array>;
+    updateMessages: Array<GroupUpdateMemberChangeMessage | GroupUpdateInfoChangeMessage>;
+  }): Promise<RunJobResult> {
   // save the dumps to DB even before trying to push them, so at least we have an up to date dumps in the DB in case of crash, no network etc
   await LibSessionUtil.saveDumpsToDb(groupPk);
   const changesToPush = await LibSessionUtil.pendingChangesForGroup(groupPk);
@@ -79,7 +89,7 @@ async function pushChangesToGroupSwarmIfNeeded(
     return RunJobResult.Success;
   }
 
-  const msgs: Array<StoreOnNodeData> = changesToPush.messages.map(item => {
+  const encryptedMessage: Array<StoreOnNodeData> = changesToPush.messages.map(item => {
     return {
       namespace: item.namespace,
       pubkey: groupPk,
@@ -88,9 +98,12 @@ async function pushChangesToGroupSwarmIfNeeded(
       data: item.ciphertext,
     };
   });
+
+  const extraMessagesToEncrypt: Array<StoreOnNodeData> = [];
+
   if (supplementKeys.length) {
     supplementKeys.forEach(key =>
-      msgs.push({
+      extraMessagesToEncrypt.push({
         namespace: SnodeNamespaces.ClosedGroupKeys,
         pubkey: groupPk,
         ttl: TTL_DEFAULT.CONFIG_MESSAGE,
@@ -100,16 +113,44 @@ async function pushChangesToGroupSwarmIfNeeded(
     );
   }
 
-  const result = await MessageSender.sendEncryptedDataToSnode(
-    msgs,
+  if (updateMessages.length) {
+    updateMessages.forEach(updateMessage =>
+      extraMessagesToEncrypt.push({
+        namespace: SnodeNamespaces.ClosedGroupMessages,
+        pubkey: groupPk,
+        ttl: TTL_DEFAULT.CONTENT_MESSAGE,
+        networkTimestamp: GetNetworkTime.now(),
+        data: updateMessage.plainTextBuffer(),
+      })
+    );
+  }
+
+  const encryptedData = await MetaGroupWrapperActions.encryptMessages(
     groupPk,
-    changesToPush.allOldHashes
+    extraMessagesToEncrypt.map(m => m.data)
+  );
+
+  const extraMessagesEncrypted = extraMessagesToEncrypt.map((requestDetails, index) => ({
+    ...requestDetails,
+    data: encryptedData[index],
+  }));
+
+  // const
+
+  const result = await MessageSender.sendEncryptedDataToSnode(
+    [...encryptedMessage, ...extraMessagesEncrypted],
+    groupPk,
+    changesToPush.allOldHashes,
+    revokeParams,
+    unrevokeParams
   );
 
   const expectedReplyLength =
     changesToPush.messages.length +
     (changesToPush.allOldHashes.size ? 1 : 0) +
-    supplementKeys.length;
+    (revokeParams?.revoke.length ? 1 : 0) +
+    (unrevokeParams?.unrevoke.length ? 1 : 0) +
+    (extraMessagesEncrypted?.length ? 1 : 0);
 
   // we do a sequence call here. If we do not have the right expected number of results, consider it a failure
   if (!isArray(result) || result.length !== expectedReplyLength) {
@@ -173,7 +214,13 @@ class GroupSyncJob extends PersistedJob<GroupSyncPersistedData> {
       }
 
       // return await so we catch exceptions in here
-      return await GroupSync.pushChangesToGroupSwarmIfNeeded(thisJobDestination, []);
+      return await GroupSync.pushChangesToGroupSwarmIfNeeded({
+        groupPk: thisJobDestination,
+        revokeParams: null,
+        unrevokeParams: null,
+        supplementKeys: [],
+        updateMessages: [],
+      });
 
       // eslint-disable-next-line no-useless-catch
     } catch (e) {

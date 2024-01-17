@@ -1,10 +1,12 @@
 import { GroupPubkeyType, PubkeyType } from 'libsession_util_nodejs';
+import { isEmpty } from 'lodash';
 import {
   SnodeNamespaces,
   SnodeNamespacesGroup,
   SnodeNamespacesGroupConfig,
   UserConfigNamespaces,
 } from './namespaces';
+import { SignedGroupHashesParams, SignedHashesParams } from './types';
 
 export type SwarmForSubRequest = { method: 'get_swarm'; params: { pubkey: string } };
 
@@ -152,12 +154,20 @@ type StoreOnNodeGroupConfig = StoreOnNodeShared & {
   namespace: SnodeNamespacesGroupConfig;
 };
 
+type StoreOnNodeGroupMessage = StoreOnNodeShared & {
+  pubkey: GroupPubkeyType;
+  namespace: SnodeNamespaces.ClosedGroupMessages;
+};
+
 type StoreOnNodeUserConfig = StoreOnNodeShared & {
   pubkey: PubkeyType;
   namespace: UserConfigNamespaces;
 };
 
-export type StoreOnNodeData = StoreOnNodeGroupConfig | StoreOnNodeUserConfig;
+export type StoreOnNodeData =
+  | StoreOnNodeGroupConfig
+  | StoreOnNodeUserConfig
+  | StoreOnNodeGroupMessage;
 
 export type StoreOnNodeSubRequest = {
   method: 'store';
@@ -215,28 +225,34 @@ type UpdateExpiryOnNodeSubRequest =
   | UpdateExpiryOnNodeUserSubRequest
   | UpdateExpiryOnNodeGroupSubRequest;
 
-type RevokeSubaccountShared = {
+type SignedRevokeSubaccountShared = {
   pubkey: GroupPubkeyType;
   signature: string;
   timestamp: number;
 };
 
-export type RevokeSubaccountParams = RevokeSubaccountShared & {
-  revoke: string; // the subaccount token to revoke in hex
+export type SignedRevokeSubaccountParams = SignedRevokeSubaccountShared & {
+  revoke: Array<string>; // the subaccounts token to revoke in hex
 };
 
-export type UnrevokeSubaccountParams = RevokeSubaccountShared & {
-  unrevoke: string; // the subaccount token to revoke in hex
+export type SignedUnrevokeSubaccountParams = SignedRevokeSubaccountShared & {
+  unrevoke: Array<string>; // the subaccounts token to unrevoke in hex
 };
+
+export type RevokeSubaccountParams = Omit<SignedRevokeSubaccountParams, 'timestamp' | 'signature'>;
+export type UnrevokeSubaccountParams = Omit<
+  SignedUnrevokeSubaccountParams,
+  'timestamp' | 'signature'
+>;
 
 export type RevokeSubaccountSubRequest = {
   method: 'revoke_subaccount';
-  params: RevokeSubaccountParams;
+  params: SignedRevokeSubaccountParams;
 };
 
 export type UnrevokeSubaccountSubRequest = {
   method: 'unrevoke_subaccount';
-  params: UnrevokeSubaccountParams;
+  params: SignedUnrevokeSubaccountParams;
 };
 
 export type GetExpiriesNodeParams = {
@@ -283,3 +299,28 @@ export type NotEmptyArrayOfBatchResults = NonEmptyArray<BatchResultEntry>;
 export type WithShortenOrExtend = { shortenOrExtend: 'shorten' | 'extend' | '' };
 
 export const MAX_SUBREQUESTS_COUNT = 20;
+
+export type BatchStoreWithExtraParams =
+  | StoreOnNodeParams
+  | SignedGroupHashesParams
+  | SignedHashesParams
+  | RevokeSubaccountSubRequest
+  | UnrevokeSubaccountSubRequest;
+
+export function isUnrevokeRequest(
+  request: BatchStoreWithExtraParams
+): request is UnrevokeSubaccountSubRequest {
+  return !isEmpty((request as UnrevokeSubaccountSubRequest)?.params?.unrevoke);
+}
+
+export function isRevokeRequest(
+  request: BatchStoreWithExtraParams
+): request is RevokeSubaccountSubRequest {
+  return !isEmpty((request as RevokeSubaccountSubRequest)?.params?.revoke);
+}
+
+export function isDeleteByHashesParams(
+  request: BatchStoreWithExtraParams
+): request is SignedGroupHashesParams | SignedHashesParams {
+  return !isEmpty((request as SignedGroupHashesParams | SignedHashesParams)?.messages);
+}

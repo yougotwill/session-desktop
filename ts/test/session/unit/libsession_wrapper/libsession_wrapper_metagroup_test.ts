@@ -65,7 +65,7 @@ describe('libsession_metagroup', () => {
     it('can encrypt/decrypt message for group with us as author', async () => {
       const plaintext = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
       const toEncrypt = new Uint8Array(plaintext);
-      const encrypted = metaGroupWrapper.encryptMessage(toEncrypt);
+      const [encrypted] = metaGroupWrapper.encryptMessages([toEncrypt]);
       const decrypted = metaGroupWrapper.decryptMessage(encrypted);
 
       expect(decrypted.plaintext).to.be.deep.eq(toEncrypt);
@@ -75,7 +75,7 @@ describe('libsession_metagroup', () => {
     it('throws when encrypt/decrypt message when content is messed up', async () => {
       const plaintext = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
       const toEncrypt = new Uint8Array(plaintext);
-      const encrypted = metaGroupWrapper.encryptMessage(toEncrypt);
+      const [encrypted] = metaGroupWrapper.encryptMessages([toEncrypt]);
 
       encrypted[1] -= 1;
       const func = () => metaGroupWrapper.decryptMessage(encrypted);

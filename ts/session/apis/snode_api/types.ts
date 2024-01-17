@@ -1,3 +1,11 @@
+import { GroupPubkeyType, PubkeyType } from 'libsession_util_nodejs';
+import { PubKey } from '../../types';
+import {
+  RevokeSubaccountParams,
+  RevokeSubaccountSubRequest,
+  UnrevokeSubaccountParams,
+  UnrevokeSubaccountSubRequest,
+} from './SnodeRequestTypes';
 import { SnodeNamespaces } from './namespaces';
 
 export type RetrieveMessageItem = {
@@ -23,13 +31,56 @@ export type RetrieveRequestResult = {
   messages: RetrieveMessagesResultsContent;
   namespace: SnodeNamespaces;
 };
+export type WithMessagesHashes = { messagesHashes: Array<string> };
+
+export type DeleteMessageByHashesGroupSubRequest = WithMessagesHashes & {
+  pubkey: GroupPubkeyType;
+  method: 'delete';
+};
+
+export type DeleteMessageByHashesUserSubRequest = WithMessagesHashes & {
+  pubkey: PubkeyType;
+  method: 'delete';
+};
 
 export type RetrieveMessagesResultsBatched = Array<RetrieveRequestResult>;
 
 export type WithTimestamp = { timestamp: number };
 export type ShortenOrExtend = 'extend' | 'shorten' | '';
 export type WithShortenOrExtend = { shortenOrExtend: ShortenOrExtend };
-export type WithMessagesHashes = { messagesHashes: Array<string> };
+export type WithSignedRevokeRequests = {
+  signedRevokeRequests: Array<RevokeSubaccountSubRequest | UnrevokeSubaccountSubRequest> | null;
+};
+
+export type WithRevokeParams = {
+  revokeParams: RevokeSubaccountParams | null;
+  unrevokeParams: UnrevokeSubaccountParams | null;
+};
+export type WithMessagesToDeleteSubRequest = {
+  messagesToDelete:
+    | DeleteMessageByHashesUserSubRequest
+    | DeleteMessageByHashesGroupSubRequest
+    | null;
+};
+
+export type SignedHashesParams = {
+  signature: string;
+  pubkey: PubkeyType;
+  pubkey_ed25519: PubkeyType;
+  messages: Array<string>;
+};
+
+export type SignedGroupHashesParams = {
+  signature: string;
+  pubkey: GroupPubkeyType;
+  messages: Array<string>;
+};
+
+export function isDeleteByHashesGroup(
+  request: DeleteMessageByHashesUserSubRequest | DeleteMessageByHashesGroupSubRequest
+): request is DeleteMessageByHashesGroupSubRequest {
+  return PubKey.is03Pubkey(request.pubkey);
+}
 
 /** inherits from  https://api.oxen.io/storage-rpc/#/recursive?id=recursive but we only care about these values */
 export type ExpireMessageResultItem = {

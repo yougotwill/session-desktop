@@ -96,7 +96,13 @@ async function pushChangesToUserSwarmIfNeeded() {
     };
   });
 
-  const result = await MessageSender.sendEncryptedDataToSnode(msgs, us, changesToPush.allOldHashes);
+  const result = await MessageSender.sendEncryptedDataToSnode(
+    msgs,
+    us,
+    changesToPush.allOldHashes,
+    null,
+    null
+  );
 
   const expectedReplyLength =
     changesToPush.messages.length + (changesToPush.allOldHashes.size ? 1 : 0);

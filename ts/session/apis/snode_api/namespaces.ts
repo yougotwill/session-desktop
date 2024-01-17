@@ -74,7 +74,8 @@ export type SnodeNamespacesGroupConfig = PickEnum<
  */
 export type SnodeNamespacesGroup =
   | SnodeNamespacesGroupConfig
-  | PickEnum<SnodeNamespaces, SnodeNamespaces.ClosedGroupMessages>;
+  | PickEnum<SnodeNamespaces, SnodeNamespaces.ClosedGroupMessages>
+  | PickEnum<SnodeNamespaces, SnodeNamespaces.ClosedGroupRevokedRetrievableMessages>;
 
 export type SnodeNamespacesUser = PickEnum<SnodeNamespaces, SnodeNamespaces.Default>;
 

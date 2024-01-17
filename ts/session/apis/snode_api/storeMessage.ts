@@ -1,62 +1,60 @@
-import { isEmpty } from 'lodash';
 import { Snode } from '../../../data/data';
+import {
+  BatchStoreWithExtraParams,
+  NotEmptyArrayOfBatchResults,
+  SnodeApiSubRequests,
+  isDeleteByHashesParams,
+  isRevokeRequest,
+  isUnrevokeRequest,
+} from './SnodeRequestTypes';
 import { doSnodeBatchRequest } from './batchRequest';
 import { GetNetworkTime } from './getNetworkTime';
-import {
-  DeleteByHashesFromNodeParams,
-  DeleteFromNodeSubRequest,
-  NotEmptyArrayOfBatchResults,
-  StoreOnNodeParams,
-  StoreOnNodeSubRequest,
-} from './SnodeRequestTypes';
 
-function justStores(params: Array<StoreOnNodeParams>) {
+function buildStoreRequests(params: Array<BatchStoreWithExtraParams>): Array<SnodeApiSubRequests> {
   return params.map(p => {
+    if (isDeleteByHashesParams(p)) {
+      return {
+        method: 'delete' as const,
+        params: p,
+      };
+    }
+
+    if (isRevokeRequest(p)) {
+      return p;
+    }
+
+    if (isUnrevokeRequest(p)) {
+      return p;
+    }
+
     return {
       method: 'store',
       params: p,
-    } as StoreOnNodeSubRequest;
+    };
   });
-}
-
-function buildStoreRequests(
-  params: Array<StoreOnNodeParams>,
-  toDeleteOnSequence: DeleteByHashesFromNodeParams | null
-): Array<StoreOnNodeSubRequest | DeleteFromNodeSubRequest> {
-  if (!toDeleteOnSequence || isEmpty(toDeleteOnSequence)) {
-    return justStores(params);
-  }
-  return [...justStores(params), ...buildDeleteByHashesSubRequest(toDeleteOnSequence)];
-}
-
-function buildDeleteByHashesSubRequest(
-  params: DeleteByHashesFromNodeParams
-): Array<DeleteFromNodeSubRequest> {
-  return [
-    {
-      method: 'delete',
-      params,
-    },
-  ];
 }
 
 /**
  * Send a 'store' request to the specified targetNode, using params as argument
  * @returns the Array of stored hashes if it is a success, or null
  */
-async function storeOnNode(
+async function batchStoreOnNode(
   targetNode: Snode,
-  params: Array<StoreOnNodeParams>,
-  toDeleteOnSequence: DeleteByHashesFromNodeParams | null,
+  params: Array<BatchStoreWithExtraParams>,
   method: 'batch' | 'sequence'
 ): Promise<NotEmptyArrayOfBatchResults> {
   try {
-    const subRequests = buildStoreRequests(params, toDeleteOnSequence);
+    const subRequests = buildStoreRequests(params);
+    const asssociatedWith = (params[0] as any)?.pubkey as string | undefined;
+    if (!asssociatedWith) {
+      // not ideal,
+      throw new Error('batchStoreOnNode first subrequest pubkey needs to be set');
+    }
     const result = await doSnodeBatchRequest(
       subRequests,
       targetNode,
       4000,
-      params[0].pubkey,
+      asssociatedWith,
       method
     );
 
@@ -84,4 +82,4 @@ async function storeOnNode(
   }
 }
 
-export const SnodeAPIStore = { storeOnNode };
+export const SnodeAPIStore = { batchStoreOnNode };

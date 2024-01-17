@@ -12,7 +12,12 @@ import { StringUtils, UserUtils } from '../../../utils';
 import { fromHexToArray, fromUInt8ArrayToBase64 } from '../../../utils/String';
 import { PreConditionFailed } from '../../../utils/errors';
 import { GetNetworkTime } from '../getNetworkTime';
-import { WithMessagesHashes, WithShortenOrExtend, WithTimestamp } from '../types';
+import {
+  SignedHashesParams,
+  WithMessagesHashes,
+  WithShortenOrExtend,
+  WithTimestamp,
+} from '../types';
 
 export type SnodeSignatureResult = WithTimestamp & {
   signature: string;
@@ -27,7 +32,7 @@ async function getSnodeSignatureByHashesParams({
 }: WithMessagesHashes & {
   pubkey: PubkeyType;
   method: 'delete';
-}) {
+}): Promise<SignedHashesParams> {
   const ourEd25519Key = await UserUtils.getUserED25519KeyPair();
 
   if (!ourEd25519Key) {
@@ -46,7 +51,7 @@ async function getSnodeSignatureByHashesParams({
 
     return {
       signature: signatureBase64,
-      pubkey_ed25519: ourEd25519Key.pubKey,
+      pubkey_ed25519: ourEd25519Key.pubKey as PubkeyType,
       pubkey,
       messages: messagesHashes,
     };

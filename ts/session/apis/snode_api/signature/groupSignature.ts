@@ -18,7 +18,12 @@ import { fromUInt8ArrayToBase64, stringToUint8Array } from '../../../utils/Strin
 import { PreConditionFailed } from '../../../utils/errors';
 import { GetNetworkTime } from '../getNetworkTime';
 import { SnodeNamespacesGroup } from '../namespaces';
-import { WithMessagesHashes, WithShortenOrExtend, WithTimestamp } from '../types';
+import {
+  SignedGroupHashesParams,
+  WithMessagesHashes,
+  WithShortenOrExtend,
+  WithTimestamp,
+} from '../types';
 import { SignatureShared } from './signatureShared';
 import { SnodeSignatureResult } from './snodeSignatures';
 
@@ -275,7 +280,7 @@ async function getGroupSignatureByHashesParams({
 }: WithMessagesHashes & {
   pubkey: GroupPubkeyType;
   method: 'delete';
-}) {
+}): Promise<SignedGroupHashesParams> {
   const verificationData = StringUtils.encode(`${method}${messagesHashes.join('')}`, 'utf8');
   const message = new Uint8Array(verificationData);
 

@@ -1,21 +1,25 @@
+import { PubkeyType } from 'libsession_util_nodejs';
 import { SignalService } from '../../../../../../protobuf';
 import { Preconditions } from '../../../preconditions';
 import { GroupUpdateMessage, GroupUpdateMessageParams } from '../GroupUpdateMessage';
 
 interface Params extends GroupUpdateMessageParams {
-  adminSignature: Uint8Array; // this is a signature of `"DELETE" || sessionId || timestamp `
+  adminSignature: Uint8Array; // this is a signature of `"DELETE" || sessionId || timestamp`
+  memberSessionIds: Array<PubkeyType>;
 }
 
 /**
- * GroupUpdateDeleteMessage is sent to the group's swarm on the `revokedRetrievableGroupMessages`
+ * GroupUpdateDeleteMessage is sent to the group's swarm on the `revokedRetrievableGroupMessages` namespace
  */
 export class GroupUpdateDeleteMessage extends GroupUpdateMessage {
   public readonly adminSignature: Params['adminSignature'];
+  public readonly memberSessionIds: Params['memberSessionIds'];
 
   constructor(params: Params) {
     super(params);
 
     this.adminSignature = params.adminSignature;
+    this.memberSessionIds = params.memberSessionIds;
 
     Preconditions.checkUin8tArrayOrThrow({
       data: this.adminSignature,
@@ -28,8 +32,8 @@ export class GroupUpdateDeleteMessage extends GroupUpdateMessage {
   public dataProto(): SignalService.DataMessage {
     const deleteMessage = new SignalService.GroupUpdateDeleteMessage({
       adminSignature: this.adminSignature,
+      memberSessionIds: this.memberSessionIds,
     });
-    throw new Error('Not implemented');
 
     return new SignalService.DataMessage({ groupUpdateMessage: { deleteMessage } });
   }

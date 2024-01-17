@@ -3,7 +3,8 @@
 import { AbortController } from 'abort-controller';
 import ByteBuffer from 'bytebuffer';
 import { GroupPubkeyType, PubkeyType } from 'libsession_util_nodejs';
-import { isEmpty, isNumber, isString, sample } from 'lodash';
+import { from_hex } from 'libsodium-wrappers-sumo';
+import { compact, isEmpty, isNumber, isString, sample } from 'lodash';
 import pRetry from 'p-retry';
 import { Data } from '../../data/data';
 import { SignalService } from '../../protobuf';
@@ -16,9 +17,13 @@ import {
 } from '../apis/open_group_api/sogsv3/sogsV3SendMessage';
 import {
   NotEmptyArrayOfBatchResults,
+  RevokeSubaccountParams,
+  RevokeSubaccountSubRequest,
   StoreOnNodeData,
   StoreOnNodeParams,
   StoreOnNodeParamsNoSig,
+  UnrevokeSubaccountParams,
+  UnrevokeSubaccountSubRequest,
 } from '../apis/snode_api/SnodeRequestTypes';
 import { GetNetworkTime } from '../apis/snode_api/getNetworkTime';
 import { SnodeNamespace, SnodeNamespaces } from '../apis/snode_api/namespaces';
@@ -30,9 +35,10 @@ import {
 import { SnodeSignature, SnodeSignatureResult } from '../apis/snode_api/signature/snodeSignatures';
 import { getSwarmFor } from '../apis/snode_api/snodePool';
 import { SnodeAPIStore } from '../apis/snode_api/storeMessage';
+import { WithMessagesHashes, WithRevokeParams } from '../apis/snode_api/types';
 import { TTL_DEFAULT } from '../constants';
 import { ConvoHub } from '../conversations';
-import { MessageEncrypter } from '../crypto';
+import { MessageEncrypter, concatUInt8Array } from '../crypto';
 import { addMessagePadding } from '../crypto/BufferPadding';
 import { ContentMessage } from '../messages/outgoing';
 import { UnsendMessage } from '../messages/outgoing/controlMessage/UnsendMessage';
@@ -41,7 +47,7 @@ import { OpenGroupVisibleMessage } from '../messages/outgoing/visibleMessage/Ope
 import { ed25519Str } from '../onions/onionPath';
 import { PubKey } from '../types';
 import { OutgoingRawMessage } from '../types/RawMessage';
-import { UserUtils } from '../utils';
+import { StringUtils, UserUtils } from '../utils';
 import { fromUInt8ArrayToBase64 } from '../utils/String';
 import { EmptySwarmError } from '../utils/errors';
 
@@ -139,7 +145,7 @@ async function send({
           },
         ],
         destination,
-        null,
+        { messagesHashes: [], revokeParams: null, unrevokeParams: null },
         'batch'
       );
 
@@ -216,7 +222,8 @@ async function getSignatureParamsFromNamespace(
 
   if (
     SnodeNamespace.isGroupConfigNamespace(item.namespace) ||
-    item.namespace === SnodeNamespaces.ClosedGroupMessages
+    item.namespace === SnodeNamespaces.ClosedGroupMessages ||
+    item.namespace === SnodeNamespaces.ClosedGroupRevokedRetrievableMessages
   ) {
     if (!PubKey.is03Pubkey(destination)) {
       throw new Error(
@@ -234,10 +241,102 @@ async function getSignatureParamsFromNamespace(
   return {};
 }
 
+async function signDeleteHashesRequest(
+  destination: PubkeyType | GroupPubkeyType,
+  messagesHashes: Array<string>
+) {
+  if (isEmpty(messagesHashes)) {
+    return null;
+  }
+  const signedRequest = messagesHashes
+    ? PubKey.is03Pubkey(destination)
+      ? await SnodeGroupSignature.getGroupSignatureByHashesParams({
+          messagesHashes,
+          pubkey: destination,
+          method: 'delete',
+        })
+      : await SnodeSignature.getSnodeSignatureByHashesParams({
+          messagesHashes,
+          pubkey: destination,
+          method: 'delete',
+        })
+    : null;
+
+  return signedRequest || null;
+}
+
+async function signedRevokeRequest({
+  destination,
+  revokeParams,
+  unrevokeParams,
+}: WithRevokeParams & { destination: PubkeyType | GroupPubkeyType }) {
+  let revokeSignedRequest: RevokeSubaccountSubRequest | null = null;
+  let unrevokeSignedRequest: UnrevokeSubaccountSubRequest | null = null;
+
+  if (!PubKey.is03Pubkey(destination) || (isEmpty(revokeParams) && isEmpty(unrevokeParams))) {
+    return { revokeSignedRequest, unrevokeSignedRequest };
+  }
+
+  const group = await UserGroupsWrapperActions.getGroup(destination);
+  const secretKey = group?.secretKey;
+  if (!secretKey || isEmpty(secretKey)) {
+    throw new Error('tried to signedRevokeRequest but we do not have the admin secret key');
+  }
+
+  const timestamp = GetNetworkTime.now();
+
+  if (revokeParams) {
+    const method = 'revoke_subaccount' as const;
+    const tokensBytes = from_hex(revokeParams.revoke.join(''));
+
+    const prefix = new Uint8Array(StringUtils.encode(`${method}${timestamp}`, 'utf8'));
+    const sigResult = await SnodeGroupSignature.signDataWithAdminSecret(
+      concatUInt8Array(prefix, tokensBytes),
+      { secretKey }
+    );
+
+    revokeSignedRequest = {
+      method,
+      params: {
+        revoke: revokeParams.revoke,
+        ...sigResult,
+        pubkey: destination,
+        timestamp,
+      },
+    };
+  }
+  if (unrevokeParams) {
+    const method = 'unrevoke_subaccount' as const;
+    const tokensBytes = from_hex(unrevokeParams.unrevoke.join(''));
+
+    const prefix = new Uint8Array(StringUtils.encode(`${method}${timestamp}`, 'utf8'));
+    const sigResult = await SnodeGroupSignature.signDataWithAdminSecret(
+      concatUInt8Array(prefix, tokensBytes),
+      { secretKey }
+    );
+
+    unrevokeSignedRequest = {
+      method,
+      params: {
+        unrevoke: unrevokeParams.unrevoke,
+        ...sigResult,
+        pubkey: destination,
+        timestamp,
+      },
+    };
+  }
+
+  return { revokeSignedRequest, unrevokeSignedRequest };
+}
+
 async function sendMessagesDataToSnode(
   params: Array<StoreOnNodeParamsNoSig>,
   destination: PubkeyType | GroupPubkeyType,
-  messagesHashesToDelete: Set<string> | null,
+  {
+    messagesHashes: messagesToDelete,
+    revokeParams,
+    unrevokeParams,
+  }: WithMessagesHashes & WithRevokeParams,
   method: 'batch' | 'sequence'
 ): Promise<NotEmptyArrayOfBatchResults> {
   const rightDestination = params.filter(m => m.pubkey === destination);
@@ -261,32 +360,29 @@ async function sendMessagesDataToSnode(
     })
   );
 
-  const signedDeleteOldHashesRequest =
-    messagesHashesToDelete && messagesHashesToDelete.size
-      ? PubKey.is03Pubkey(destination)
-        ? await SnodeGroupSignature.getGroupSignatureByHashesParams({
-            method: 'delete' as const,
-            messagesHashes: [...messagesHashesToDelete],
-            pubkey: destination,
-          })
-        : await SnodeSignature.getSnodeSignatureByHashesParams({
-            method: 'delete' as const,
-            messagesHashes: [...messagesHashesToDelete],
-            pubkey: destination,
-          })
-      : null;
-
   const snode = sample(swarm);
   if (!snode) {
     throw new EmptySwarmError(destination, 'Ran out of swarm nodes to query');
   }
 
+  const signedDeleteHashesRequest = await signDeleteHashesRequest(destination, messagesToDelete);
+  const signedRevokeRequests = await signedRevokeRequest({
+    destination,
+    revokeParams,
+    unrevokeParams,
+  });
+
   try {
     // No pRetry here as if this is a bad path it will be handled and retried in lokiOnionFetch.
-    const storeResults = await SnodeAPIStore.storeOnNode(
+    const storeResults = await SnodeAPIStore.batchStoreOnNode(
       snode,
-      withSigWhenRequired,
-      signedDeleteOldHashesRequest,
+      compact([
+        ...withSigWhenRequired,
+        signedDeleteHashesRequest,
+        signedRevokeRequests?.revokeSignedRequest,
+        signedRevokeRequests?.unrevokeSignedRequest,
+      ]),
+
       method
     );
 
@@ -437,7 +533,9 @@ async function encryptMessagesAndWrap(
 async function sendEncryptedDataToSnode(
   encryptedData: Array<StoreOnNodeData>,
   destination: GroupPubkeyType | PubkeyType,
-  messagesHashesToDelete: Set<string> | null
+  messagesHashesToDelete: Set<string> | null,
+  revokeParams: RevokeSubaccountParams | null,
+  unrevokeParams: UnrevokeSubaccountParams | null
 ): Promise<NotEmptyArrayOfBatchResults | null> {
   try {
     const batchResults = await pRetry(
@@ -451,7 +549,7 @@ async function sendEncryptedDataToSnode(
             namespace: content.namespace,
           })),
           destination,
-          messagesHashesToDelete,
+          { messagesHashes: [...(messagesHashesToDelete || [])], revokeParams, unrevokeParams },
           'sequence'
         );
       },

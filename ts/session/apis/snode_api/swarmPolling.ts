@@ -539,7 +539,7 @@ export class SwarmPolling {
         }
         results = results.slice(0, results.length - 1);
       }
-
+      console.warn('results what when we get kicked out?: ', results);
       const lastMessages = results.map(r => {
         return last(r.messages.messages);
       });
@@ -645,6 +645,7 @@ export class SwarmPolling {
     }
     if (type === ConversationTypeEnum.GROUPV2) {
       return [
+        SnodeNamespaces.ClosedGroupRevokedRetrievableMessages, // if we are kicked from the group, this will still return a 200, other namespaces will be 401/403
         SnodeNamespaces.ClosedGroupMessages,
         SnodeNamespaces.ClosedGroupInfo,
         SnodeNamespaces.ClosedGroupMembers,
@@ -815,6 +816,7 @@ async function decryptForGroupV2(retrieveResult: { groupPk: string; content: Uin
       timestamp: parsedEnvelope.timestamp,
     };
   } catch (e) {
+    debugger;
     window.log.warn('failed to decrypt message with error: ', e.message);
     return null;
   }

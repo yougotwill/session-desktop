@@ -2,7 +2,7 @@ import Backbone from 'backbone';
 
 import autoBind from 'auto-bind';
 import filesize from 'filesize';
-import { PubkeyType } from 'libsession_util_nodejs';
+import { GroupPubkeyType, PubkeyType } from 'libsession_util_nodejs';
 import {
   cloneDeep,
   debounce,
@@ -20,7 +20,10 @@ import { SignalService } from '../protobuf';
 import { getMessageQueue } from '../session';
 import { ConvoHub } from '../session/conversations';
 import { ContentMessage } from '../session/messages/outgoing';
-import { ClosedGroupVisibleMessage } from '../session/messages/outgoing/visibleMessage/ClosedGroupVisibleMessage';
+import {
+  ClosedGroupV2VisibleMessage,
+  ClosedGroupVisibleMessage,
+} from '../session/messages/outgoing/visibleMessage/ClosedGroupVisibleMessage';
 import { PubKey } from '../session/types';
 import {
   UserUtils,
@@ -818,8 +821,9 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
     }
 
     window.log.info(
-      `Upload of message data for message ${this.idForLogging()} is finished in ${Date.now() -
-        start}ms.`
+      `Upload of message data for message ${this.idForLogging()} is finished in ${
+        Date.now() - start
+      }ms.`
     );
     return {
       body,
@@ -945,6 +949,18 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
         throw new Error(
           'We should only end up with a closed group here. Anything else is an error'
         );
+      }
+
+      if (conversation.isClosedGroupV2()) {
+        const groupV2VisibleMessage = new ClosedGroupV2VisibleMessage({
+          destination: PubKey.cast(this.get('conversationId')).key as GroupPubkeyType,
+          chatMessage,
+          namespace: SnodeNamespaces.ClosedGroupMessages,
+        });
+        // we need the return await so that errors are caught in the catch {}
+        return await getMessageQueue().sendToGroupV2({
+          message: groupV2VisibleMessage,
+        });
       }
 
       const closedGroupVisibleMessage = new ClosedGroupVisibleMessage({

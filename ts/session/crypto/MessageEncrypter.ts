@@ -20,7 +20,7 @@ type EncryptResult = {
 
 async function encryptWithLibSession(destination: GroupPubkeyType, plainText: Uint8Array) {
   try {
-    return MetaGroupWrapperActions.encryptMessage(destination, plainText);
+    return (await MetaGroupWrapperActions.encryptMessages(destination, [plainText]))[0];
   } catch (e) {
     window.log.warn('encrypt message for group failed with', e.message);
     throw new SigningFailed(e.message);
