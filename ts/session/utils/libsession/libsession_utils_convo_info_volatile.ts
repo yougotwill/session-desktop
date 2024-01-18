@@ -309,7 +309,7 @@ async function removeContactFromWrapper(convoId: string) {
  * whole other bunch of issues because it is a native node module.
  */
 function getConvoInfoVolatileTypes(): Array<ConvoVolatileType> {
-  return ['1o1', 'LegacyGroup', 'Community'];
+  return ['1o1', 'LegacyGroup', 'Group', 'Community'];
 }
 
 export const SessionUtilConvoInfoVolatile = {

@@ -919,7 +919,27 @@ async function handleConvoInfoVolatileUpdate() {
         break;
 
       case 'Group':
-        // debugger; // we need to update the current read messages of that group 03 with what we have in the wrapper // debugger
+        try {
+          const groupsV2 = await ConvoInfoVolatileWrapperActions.getAllGroups();
+          for (let index = 0; index < groupsV2.length; index++) {
+            const fromWrapper = groupsV2[index];
+
+            try {
+              await applyConvoVolatileUpdateFromWrapper(
+                fromWrapper.pubkeyHex,
+                fromWrapper.unread,
+                fromWrapper.lastRead
+              );
+            } catch (e) {
+              window.log.warn(
+                'handleConvoInfoVolatileUpdate of "Group" failed with error: ',
+                e.message
+              );
+            }
+          }
+        } catch (e) {
+          window.log.warn('getAllGroups of "Group" failed with error: ', e.message);
+        }
         break;
 
       default:
