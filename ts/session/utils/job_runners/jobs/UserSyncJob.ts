@@ -96,13 +96,13 @@ async function pushChangesToUserSwarmIfNeeded() {
     };
   });
 
-  const result = await MessageSender.sendEncryptedDataToSnode(
-    msgs,
-    us,
-    changesToPush.allOldHashes,
-    null,
-    null
-  );
+  const result = await MessageSender.sendEncryptedDataToSnode({
+    encryptedData: msgs,
+    destination: us,
+    messagesHashesToDelete: changesToPush.allOldHashes,
+    revokeParams: null,
+    unrevokeParams: null,
+  });
 
   const expectedReplyLength =
     changesToPush.messages.length + (changesToPush.allOldHashes.size ? 1 : 0);

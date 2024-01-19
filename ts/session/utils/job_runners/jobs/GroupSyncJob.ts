@@ -143,15 +143,13 @@ async function pushChangesToGroupSwarmIfNeeded({
     data: encryptedData[index],
   }));
 
-  // const
-
-  const result = await MessageSender.sendEncryptedDataToSnode(
-    [...encryptedMessage, ...extraMessagesEncrypted],
-    groupPk,
-    allOldHashes,
+  const result = await MessageSender.sendEncryptedDataToSnode({
+    encryptedData: [...encryptedMessage, ...extraMessagesEncrypted],
+    destination: groupPk,
+    messagesHashesToDelete: allOldHashes,
     revokeParams,
-    unrevokeParams
-  );
+    unrevokeParams,
+  });
 
   const expectedReplyLength =
     messages.length + // each of those messages are sent as a subrequest

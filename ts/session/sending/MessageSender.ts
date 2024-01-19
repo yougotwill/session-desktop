@@ -535,13 +535,19 @@ async function encryptMessagesAndWrap(
  * @param destination the pubkey we should deposit those message to
  * @returns the hashes of successful deposit
  */
-async function sendEncryptedDataToSnode(
-  encryptedData: Array<StoreOnNodeData>,
-  destination: GroupPubkeyType | PubkeyType,
-  messagesHashesToDelete: Set<string> | null,
-  revokeParams: RevokeSubaccountParams | null,
-  unrevokeParams: UnrevokeSubaccountParams | null
-): Promise<NotEmptyArrayOfBatchResults | null> {
+async function sendEncryptedDataToSnode({
+  destination,
+  encryptedData,
+  messagesHashesToDelete,
+  revokeParams,
+  unrevokeParams,
+}: {
+  encryptedData: Array<StoreOnNodeData>;
+  destination: GroupPubkeyType | PubkeyType;
+  messagesHashesToDelete: Set<string> | null;
+  revokeParams: RevokeSubaccountParams | null;
+  unrevokeParams: UnrevokeSubaccountParams | null;
+}): Promise<NotEmptyArrayOfBatchResults | null> {
   try {
     const batchResults = await pRetry(
       async () => {
