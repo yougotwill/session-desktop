@@ -1,5 +1,6 @@
 import { PubkeyType } from 'libsession_util_nodejs';
 import { SignalService } from '../../../../../../protobuf';
+import { SnodeNamespaces } from '../../../../../apis/snode_api/namespaces';
 import { Preconditions } from '../../../preconditions';
 import { GroupUpdateMessage, GroupUpdateMessageParams } from '../GroupUpdateMessage';
 
@@ -12,6 +13,7 @@ interface Params extends GroupUpdateMessageParams {
  * GroupUpdateDeleteMessage is sent to the group's swarm on the `revokedRetrievableGroupMessages` namespace
  */
 export class GroupUpdateDeleteMessage extends GroupUpdateMessage {
+  public readonly namespace = SnodeNamespaces.ClosedGroupRevokedRetrievableMessages;
   public readonly adminSignature: Params['adminSignature'];
   public readonly memberSessionIds: Params['memberSessionIds'];
 

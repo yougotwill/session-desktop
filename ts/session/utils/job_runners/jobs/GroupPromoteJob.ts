@@ -100,7 +100,7 @@ class GroupPromoteJob extends PersistedJob<GroupPromotePersistedData> {
         groupPk,
       });
 
-      const storedAt = await getMessageQueue().sendToPubKeyNonDurably({
+      const storedAt = await getMessageQueue().sendTo1o1NonDurably({
         message,
         namespace: SnodeNamespaces.Default,
         pubkey: PubKey.cast(member),

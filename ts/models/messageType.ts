@@ -159,6 +159,7 @@ export type MessageGroupUpdate = {
   kicked?: Array<string>;
   promoted?: Array<PubkeyType>;
   name?: string;
+  avatarChange?: boolean;
 };
 
 export interface MessageAttributesOptionals {

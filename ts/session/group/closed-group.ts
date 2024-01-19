@@ -42,16 +42,14 @@ export type GroupInfo = {
   admins?: Array<string>;
 };
 
-export interface MemberChanges {
+export type GroupDiff = {
   joiningMembers?: Array<string>;
   leavingMembers?: Array<string>;
   kickedMembers?: Array<string>;
   promotedMembers?: Array<string>;
-}
-
-export interface GroupDiff extends MemberChanges {
   newName?: string;
-}
+  avatarChange?: boolean;
+};
 
 /**
  * This function is only called when the local user makes a change to a group.
@@ -181,6 +179,8 @@ export async function addUpdateMessage({
     groupUpdate.kicked = diff.kickedMembers;
   } else if (diff.promotedMembers) {
     groupUpdate.promoted = diff.promotedMembers as Array<PubkeyType>;
+  } else if (diff.avatarChange) {
+    groupUpdate.avatarChange = true;
   } else {
     throw new Error('addUpdateMessage with unknown type of change');
   }

@@ -197,7 +197,7 @@ function createInvitePromises(
       expireTimer: 0,
     };
     const message = new ClosedGroupNewMessage(messageParams);
-    return getMessageQueue().sendToPubKeyNonDurably({
+    return getMessageQueue().sendTo1o1NonDurably({
       pubkey: PubKey.cast(m),
       message,
       namespace: SnodeNamespaces.Default,

@@ -202,7 +202,6 @@ async function handleGroupInfoChangeMessage({
       await ClosedGroup.addUpdateMessage({
         convo,
         diff: { newName: change.updatedName },
-
         sender: author,
         sentAt: envelopeTimestamp,
         expireUpdate: null,
@@ -211,8 +210,14 @@ async function handleGroupInfoChangeMessage({
       break;
     }
     case SignalService.GroupUpdateInfoChangeMessage.Type.AVATAR: {
-      console.warn('Not implemented');
-      throw new Error('Not implemented');
+      await ClosedGroup.addUpdateMessage({
+        convo,
+        diff: { avatarChange: true },
+        sender: author,
+        sentAt: envelopeTimestamp,
+        expireUpdate: null,
+      });
+      break;
     }
     case SignalService.GroupUpdateInfoChangeMessage.Type.DISAPPEARING_MESSAGES: {
       if (
@@ -221,6 +226,13 @@ async function handleGroupInfoChangeMessage({
         isFinite(change.updatedExpiration) &&
         change.updatedExpiration >= 0
       ) {
+        await ClosedGroup.addUpdateMessage({
+          convo,
+          diff: { newName: change.updatedName },
+          sender: author,
+          sentAt: envelopeTimestamp,
+          expireUpdate: null,
+        });
         await convo.updateExpireTimer({
           providedExpireTimer: change.updatedExpiration,
           providedSource: author,
@@ -307,6 +319,14 @@ async function handleGroupMemberLeftMessage({
     return;
   }
 
+  // this does nothing if we are not an admin
+  window.inboxStore.dispatch(
+    groupInfoActions.handleMemberLeftMessage({
+      groupPk,
+      memberLeft: author,
+    })
+  );
+
   await ClosedGroup.addUpdateMessage({
     convo,
     diff: { leavingMembers: [author] },
@@ -314,10 +334,11 @@ async function handleGroupMemberLeftMessage({
     sentAt: envelopeTimestamp,
     expireUpdate: null,
   });
+
   convo.set({
     active_at: envelopeTimestamp,
   });
-  // TODO We should process this message type even if the sender is blocked
+  // debugger TODO We should process this message type even if the sender is blocked
 }
 
 async function handleGroupDeleteMemberContentMessage({

@@ -117,6 +117,10 @@ export type PropsForGroupUpdatePromoted = {
   promoted: Array<PubkeyType>;
 };
 
+export type PropsForGroupUpdateAvatarChange = {
+  type: 'avatarChange';
+};
+
 export type PropsForGroupUpdateLeft = {
   type: 'left';
   left: Array<PubkeyType>;
@@ -131,6 +135,7 @@ export type PropsForGroupUpdateType =
   | PropsForGroupUpdateAdd
   | PropsForGroupUpdateKicked
   | PropsForGroupUpdatePromoted
+  | PropsForGroupUpdateAvatarChange
   | PropsForGroupUpdateName
   | PropsForGroupUpdateLeft;
 

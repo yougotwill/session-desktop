@@ -12,7 +12,6 @@ import { ExpirationTimerUpdateMessage } from '../messages/outgoing/controlMessag
 import { ClosedGroupAddedMembersMessage } from '../messages/outgoing/controlMessage/group/ClosedGroupAddedMembersMessage';
 import { ClosedGroupEncryptionPairMessage } from '../messages/outgoing/controlMessage/group/ClosedGroupEncryptionPairMessage';
 import { ClosedGroupMemberLeftMessage } from '../messages/outgoing/controlMessage/group/ClosedGroupMemberLeftMessage';
-import { ClosedGroupNewMessage } from '../messages/outgoing/controlMessage/group/ClosedGroupNewMessage';
 import { ClosedGroupRemovedMembersMessage } from '../messages/outgoing/controlMessage/group/ClosedGroupRemovedMembersMessage';
 import {
   ClosedGroupV2VisibleMessage,
@@ -21,6 +20,7 @@ import {
 import { SyncMessageType } from '../utils/sync/syncUtils';
 import { MessageSentHandler } from './MessageSentHandler';
 
+import { PubkeyType } from 'libsession_util_nodejs';
 import { OpenGroupRequestCommonType } from '../apis/open_group_api/opengroupV2/ApiUtil';
 import { OpenGroupMessageV2 } from '../apis/open_group_api/opengroupV2/OpenGroupMessageV2';
 import { sendSogsReactionOnionV4 } from '../apis/open_group_api/sogsv3/sogsV3SendReaction';
@@ -33,6 +33,7 @@ import { CallMessage } from '../messages/outgoing/controlMessage/CallMessage';
 import { DataExtractionNotificationMessage } from '../messages/outgoing/controlMessage/DataExtractionNotificationMessage';
 import { TypingMessage } from '../messages/outgoing/controlMessage/TypingMessage';
 import { UnsendMessage } from '../messages/outgoing/controlMessage/UnsendMessage';
+import { ClosedGroupNewMessage } from '../messages/outgoing/controlMessage/group/ClosedGroupNewMessage';
 import { GroupUpdateDeleteMemberContentMessage } from '../messages/outgoing/controlMessage/group_v2/to_group/GroupUpdateDeleteMemberContentMessage';
 import { GroupUpdateInfoChangeMessage } from '../messages/outgoing/controlMessage/group_v2/to_group/GroupUpdateInfoChangeMessage';
 import { GroupUpdateMemberChangeMessage } from '../messages/outgoing/controlMessage/group_v2/to_group/GroupUpdateMemberChangeMessage';
@@ -231,6 +232,48 @@ export class MessageQueue {
     );
   }
 
+  public async sendToGroupV2NonDurably({
+    message,
+  }: {
+    message:
+      | ClosedGroupV2VisibleMessage
+      | GroupUpdateMemberChangeMessage
+      | GroupUpdateInfoChangeMessage
+      | GroupUpdateDeleteMemberContentMessage
+      | GroupUpdateMemberLeftMessage
+      | GroupUpdateDeleteMessage;
+  }) {
+    if (!message.destination || !PubKey.is03Pubkey(message.destination)) {
+      throw new Error('Invalid group message passed in sendToGroupV2NonDurably.');
+    }
+
+    return this.sendToPubKeyNonDurably({
+      message,
+      namespace: message.namespace,
+      pubkey: PubKey.cast(message.destination),
+    });
+  }
+
+  public async sendToLegacyGroupNonDurably({
+    message,
+    namespace,
+    destination,
+  }: {
+    message: ClosedGroupMemberLeftMessage;
+    namespace: SnodeNamespaces.LegacyClosedGroup;
+    destination: PubkeyType;
+  }) {
+    if (!destination || !PubKey.is05Pubkey(destination)) {
+      throw new Error('Invalid legacygroup message passed in sendToLegacyGroupNonDurably.');
+    }
+
+    return this.sendToPubKeyNonDurably({
+      message,
+      namespace,
+      pubkey: PubKey.cast(destination),
+    });
+  }
+
   public async sendSyncMessage({
     namespace,
     message,
@@ -252,25 +295,40 @@ export class MessageQueue {
   }
 
   /**
-   * Sends a message that awaits until the message is completed sending
+   * Send a message to a 1o1 swarm
    * @param user user pub key to send to
    * @param message Message to be sent
    */
-  public async sendToPubKeyNonDurably({
+  public async sendTo1o1NonDurably({
     namespace,
     message,
     pubkey,
   }: {
     pubkey: PubKey;
     message:
-      | ClosedGroupNewMessage
       | TypingMessage // no point of caching the typing message, they are very short lived
       | DataExtractionNotificationMessage
       | CallMessage
-      | ClosedGroupMemberLeftMessage
+      | ClosedGroupNewMessage
       | GroupUpdateInviteMessage
-      | GroupUpdatePromoteMessage
-      | GroupUpdateDeleteMessage;
+      | GroupUpdatePromoteMessage;
+    namespace: SnodeNamespaces.Default;
+  }): Promise<number | null> {
+    return this.sendToPubKeyNonDurably({ message, namespace, pubkey });
+  }
+
+  /**
+   * Sends a message that awaits until the message is completed sending
+   * @param user user pub key to send to
+   * @param message Message to be sent
+   */
+  private async sendToPubKeyNonDurably({
+    namespace,
+    message,
+    pubkey,
+  }: {
+    pubkey: PubKey;
+    message: ContentMessage;
     namespace: SnodeNamespaces;
   }): Promise<number | null> {
     let rawMessage;

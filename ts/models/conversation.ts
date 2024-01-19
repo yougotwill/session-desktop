@@ -2459,7 +2459,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
 
     const pubkey = new PubKey(recipientId);
     void getMessageQueue()
-      .sendToPubKeyNonDurably({
+      .sendTo1o1NonDurably({
         pubkey,
         message: typingMessage,
         namespace: SnodeNamespaces.Default,

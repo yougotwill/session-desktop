@@ -142,7 +142,7 @@ class GroupInviteJob extends PersistedJob<GroupInvitePersistedData> {
         groupPk,
       });
 
-      const storedAt = await getMessageQueue().sendToPubKeyNonDurably({
+      const storedAt = await getMessageQueue().sendTo1o1NonDurably({
         message: inviteDetails,
         namespace: SnodeNamespaces.Default,
         pubkey: PubKey.cast(member),

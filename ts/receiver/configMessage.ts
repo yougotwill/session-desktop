@@ -1,5 +1,5 @@
 /* eslint-disable no-await-in-loop */
-import { ContactInfo, UserGroupsGet } from 'libsession_util_nodejs';
+import { ContactInfo, GroupPubkeyType, UserGroupsGet } from 'libsession_util_nodejs';
 import { base64_variants, from_base64 } from 'libsodium-wrappers-sumo';
 import { compact, difference, isEmpty, isNil, isNumber, toNumber } from 'lodash';
 import { ConfigDumpData } from '../data/configDump/configDump';
@@ -725,7 +725,7 @@ async function handleSingleGroupUpdate({
   }
 }
 
-async function handleSingleGroupUpdateToLeave(toLeave: string) {
+async function handleSingleGroupUpdateToLeave(toLeave: GroupPubkeyType) {
   // that group is not in the wrapper but in our local DB. it must be removed and cleaned
   try {
     window.log.debug(
@@ -747,12 +747,12 @@ async function handleSingleGroupUpdateToLeave(toLeave: string) {
 async function handleGroupUpdate(latestEnvelopeTimestamp: number) {
   // first let's check which groups needs to be joined or left by doing a diff of what is in the wrapper and what is in the DB
   const allGroupsInWrapper = await UserGroupsWrapperActions.getAllGroups();
-  const allGroupsInDb = ConvoHub.use()
+  const allGoupsIdsInDb = ConvoHub.use()
     .getConversations()
-    .filter(m => PubKey.is03Pubkey(m.id));
+    .map(m => m.id)
+    .filter(PubKey.is03Pubkey);
 
   const allGoupsIdsInWrapper = allGroupsInWrapper.map(m => m.pubkeyHex);
-  const allGoupsIdsInDb = allGroupsInDb.map(m => m.id as string);
   window.log.debug('allGoupsIdsInWrapper', stringify(allGoupsIdsInWrapper));
   window.log.debug('allGoupsIdsInDb', stringify(allGoupsIdsInDb));
 

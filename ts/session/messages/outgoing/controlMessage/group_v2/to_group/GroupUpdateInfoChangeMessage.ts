@@ -3,7 +3,6 @@ import { SignalService } from '../../../../../../protobuf';
 import { SnodeNamespaces } from '../../../../../apis/snode_api/namespaces';
 import { LibSodiumWrappers } from '../../../../../crypto';
 import { stringToUint8Array } from '../../../../../utils/String';
-import { PreConditionFailed } from '../../../../../utils/errors';
 import {
   AdminSigDetails,
   GroupUpdateMessage,
@@ -56,7 +55,6 @@ export class GroupUpdateInfoChangeMessage extends GroupUpdateMessage {
       }
       case types.AVATAR:
         // nothing to do for avatar
-        throw new PreConditionFailed('not implemented');
         break;
       case types.DISAPPEARING_MESSAGES: {
         if (!isFinite(params.updatedExpirationSeconds) || params.updatedExpirationSeconds < 0) {
@@ -89,6 +87,7 @@ export class GroupUpdateInfoChangeMessage extends GroupUpdateMessage {
         break;
 
       case SignalService.GroupUpdateInfoChangeMessage.Type.AVATAR:
+
       default:
         break;
     }

@@ -76,7 +76,7 @@ export const sendDataExtractionNotification = async (
   );
 
   try {
-    await getMessageQueue().sendToPubKeyNonDurably({
+    await getMessageQueue().sendTo1o1NonDurably({
       pubkey,
       message: dataExtractionNotificationMessage,
       namespace: SnodeNamespaces.Default,

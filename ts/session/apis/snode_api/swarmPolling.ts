@@ -440,6 +440,10 @@ export class SwarmPolling {
     type: ConversationTypeEnum;
     pubkey: string;
   }) {
+    const correctlyTypedPk = PubKey.is03Pubkey(pubkey) || PubKey.is05Pubkey(pubkey) ? pubkey : null;
+    if (!correctlyTypedPk) {
+      return false;
+    }
     const allLegacyGroupsInWrapper = await UserGroupsWrapperActions.getAllLegacyGroups();
     const allGroupsInWrapper = await UserGroupsWrapperActions.getAllGroups();
 
@@ -447,15 +451,16 @@ export class SwarmPolling {
     // this can happen when a group is removed from the wrapper while we were polling
 
     const newGroupButNotInWrapper =
-      PubKey.is03Pubkey(pubkey) && !allGroupsInWrapper.some(m => m.pubkeyHex === pubkey);
+      PubKey.is03Pubkey(correctlyTypedPk) &&
+      !allGroupsInWrapper.some(m => m.pubkeyHex === correctlyTypedPk);
     const legacyGroupButNoInWrapper =
       type === ConversationTypeEnum.GROUP &&
-      pubkey.startsWith('05') &&
+      PubKey.is05Pubkey(correctlyTypedPk) &&
       !allLegacyGroupsInWrapper.some(m => m.pubkeyHex === pubkey);
 
     if (newGroupButNotInWrapper || legacyGroupButNoInWrapper) {
       // not tracked anymore in the wrapper. Discard messages and stop polling
-      await this.notPollingForGroupAsNotInWrapper(pubkey, 'not in wrapper after poll');
+      await this.notPollingForGroupAsNotInWrapper(correctlyTypedPk, 'not in wrapper after poll');
       return true;
     }
     return false;
@@ -574,6 +579,9 @@ export class SwarmPolling {
   }
 
   private async notPollingForGroupAsNotInWrapper(pubkey: string, reason: string) {
+    if (!PubKey.is03Pubkey(pubkey) && !PubKey.is05Pubkey(pubkey)) {
+      return;
+    }
     window.log.debug(
       `notPollingForGroupAsNotInWrapper ${ed25519Str(pubkey)} with reason:"${reason}"`
     );
@@ -581,7 +589,6 @@ export class SwarmPolling {
       fromSyncMessage: true,
       sendLeaveMessage: false,
     });
-    return Promise.resolve();
   }
 
   private loadGroupIds() {

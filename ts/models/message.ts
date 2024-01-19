@@ -77,6 +77,7 @@ import {
   PropsForGroupInvitation,
   PropsForGroupUpdate,
   PropsForGroupUpdateAdd,
+  PropsForGroupUpdateAvatarChange,
   PropsForGroupUpdateKicked,
   PropsForGroupUpdateLeft,
   PropsForGroupUpdateName,
@@ -485,6 +486,12 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
       const change: PropsForGroupUpdateName = {
         type: 'name',
         newName: groupUpdate.name,
+      };
+      return { change, ...sharedProps };
+    }
+    if (groupUpdate.avatarChange) {
+      const change: PropsForGroupUpdateAvatarChange = {
+        type: 'avatarChange',
       };
       return { change, ...sharedProps };
     }

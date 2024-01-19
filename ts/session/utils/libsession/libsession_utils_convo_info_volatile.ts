@@ -278,11 +278,11 @@ async function removeLegacyGroupFromWrapper(convoId: string) {
 }
 
 async function removeGroupFromWrapper(groupPk: GroupPubkeyType) {
-  // try {
-  //   await ConvoInfoVolatileWrapperActions.eraseGroup(groupPk);
-  // } catch (e) {
-  // window.log.warn('removeGroupFromWrapper failed with ', e.message);
-  // }
+  try {
+    await ConvoInfoVolatileWrapperActions.eraseGroup(groupPk);
+  } catch (e) {
+    window.log.warn('removeGroupFromWrapper failed with ', e.message);
+  }
   window.log.warn('removeGroupFromWrapper TODO');
   mappedGroupWrapperValues.delete(groupPk);
 }
@@ -324,10 +324,10 @@ export const SessionUtilConvoInfoVolatile = {
   removeContactFromWrapper,
 
   // legacy group
-  removeLegacyGroupFromWrapper, // a group can be removed but also just marked hidden, so only call this function when the group is completely removed // TODOLATER
+  removeLegacyGroupFromWrapper, // a group can be removed but also just marked hidden, so only call this function when the group is completely removed
 
   // group
-  removeGroupFromWrapper, // a group can be removed but also just marked hidden, so only call this function when the group is completely removed // TODOLATER
+  removeGroupFromWrapper, // a group can be removed but also just marked hidden, so only call this function when the group is completely removed
 
   // communities
   removeCommunityFromWrapper,

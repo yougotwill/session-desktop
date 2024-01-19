@@ -439,7 +439,7 @@ async function createOfferAndSendIt(recipient: string, msgIdentifier: string | n
       });
 
       window.log.info(`sending '${offer.type}'' with callUUID: ${currentCallUUID}`);
-      const negotiationOfferSendResult = await getMessageQueue().sendToPubKeyNonDurably({
+      const negotiationOfferSendResult = await getMessageQueue().sendTo1o1NonDurably({
         pubkey: PubKey.cast(recipient),
         message: offerMessage,
         namespace: SnodeNamespaces.Default,
@@ -535,7 +535,7 @@ export async function USER_callRecipient(recipient: string) {
   // initiating a call is analogous to sending a message request
   await approveConvoAndSendResponse(recipient);
 
-  // Note: we do the sending of the preoffer manually as the sendToPubkeyNonDurably rely on having a message saved to the db for MessageSentSuccess
+  // Note: we do the sending of the preoffer manually as the sendTo1o1NonDurably rely on having a message saved to the db for MessageSentSuccess
   // which is not the case for a pre offer message (the message only exists in memory)
   const rawMessage = await MessageUtils.toRawMessage(
     PubKey.cast(recipient),
@@ -623,7 +623,7 @@ const iceSenderDebouncer = _.debounce(async (recipient: string) => {
     `sending ICE CANDIDATES MESSAGE to ${ed25519Str(recipient)} about call ${currentCallUUID}`
   );
 
-  await getMessageQueue().sendToPubKeyNonDurably({
+  await getMessageQueue().sendTo1o1NonDurably({
     pubkey: PubKey.cast(recipient),
     message: callIceCandicates,
     namespace: SnodeNamespaces.Default,
@@ -1004,12 +1004,12 @@ export async function USER_rejectIncomingCallRequest(fromSender: string) {
 
 async function sendCallMessageAndSync(callmessage: CallMessage, user: string) {
   await Promise.all([
-    getMessageQueue().sendToPubKeyNonDurably({
+    getMessageQueue().sendTo1o1NonDurably({
       pubkey: PubKey.cast(user),
       message: callmessage,
       namespace: SnodeNamespaces.Default,
     }),
-    getMessageQueue().sendToPubKeyNonDurably({
+    getMessageQueue().sendTo1o1NonDurably({
       pubkey: UserUtils.getOurPubKeyFromCache(),
       message: callmessage,
       namespace: SnodeNamespaces.Default,
@@ -1039,7 +1039,7 @@ export async function USER_hangup(fromSender: string) {
     expirationType,
     expireTimer,
   });
-  void getMessageQueue().sendToPubKeyNonDurably({
+  void getMessageQueue().sendTo1o1NonDurably({
     pubkey: PubKey.cast(fromSender),
     message: endCallMessage,
     namespace: SnodeNamespaces.Default,

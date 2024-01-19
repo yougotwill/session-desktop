@@ -19,7 +19,6 @@ import { SignalService } from '../../protobuf';
 import { getMessageQueue } from '../../session';
 import { getSwarmPollingInstance } from '../../session/apis/snode_api';
 import { GetNetworkTime } from '../../session/apis/snode_api/getNetworkTime';
-import { SnodeNamespaces } from '../../session/apis/snode_api/namespaces';
 import { RevokeChanges, SnodeAPIRevoke } from '../../session/apis/snode_api/revokeSubaccount';
 import { SnodeGroupSignature } from '../../session/apis/snode_api/signature/groupSignature';
 import { ConvoHub } from '../../session/conversations';
@@ -79,12 +78,18 @@ type GroupDetailsUpdate = {
   members: Array<GroupMemberGet>;
 };
 
-async function checkWeAreAdminOrThrow(groupPk: GroupPubkeyType, context: string) {
+async function checkWeAreAdmin(groupPk: GroupPubkeyType) {
   const us = UserUtils.getOurPubKeyStrFromCache();
 
   const usInGroup = await MetaGroupWrapperActions.memberGet(groupPk, us);
   const inUserGroup = await UserGroupsWrapperActions.getGroup(groupPk);
-  if (isEmpty(inUserGroup?.secretKey) || !usInGroup?.promoted) {
+  // if the secretKey is not empty AND we are a member of the group, we are a current admin
+  return Boolean(!isEmpty(inUserGroup?.secretKey) && usInGroup?.promoted);
+}
+
+async function checkWeAreAdminOrThrow(groupPk: GroupPubkeyType, context: string) {
+  const areWeAdmin = await checkWeAreAdmin(groupPk);
+  if (!areWeAdmin) {
     throw new Error(`checkWeAreAdminOrThrow failed with ctx: ${context}`);
   }
 }
@@ -532,10 +537,8 @@ async function handleRemoveMembersAndRekey({
       memberSessionIds: sortedRemoved,
     });
 
-    const result = await getMessageQueue().sendToPubKeyNonDurably({
+    const result = await getMessageQueue().sendToGroupV2NonDurably({
       message: removedMemberMessage,
-      pubkey: PubKey.cast(groupPk),
-      namespace: SnodeNamespaces.ClosedGroupRevokedRetrievableMessages,
     });
     if (!result) {
       throw new Error(
@@ -576,7 +579,6 @@ async function getPendingRevokeParams({
     const token = await MetaGroupWrapperActions.swarmSubAccountToken(groupPk, m);
     revokeChanges.push({ action: 'revoke_subaccount', tokenToRevokeHex: token });
   }
-
 
   return SnodeAPIRevoke.getRevokeSubaccountParams(groupPk, { revokeChanges, unrevokeChanges });
 }
@@ -621,8 +623,12 @@ async function getUpdateMessagesToPush({
 
   const updateMessages: Array<GroupUpdateMemberChangeMessage> = [];
 
+  if (!fromCurrentDevice) {
+    return updateMessages;
+  }
+
   const allAdded = [...withHistory, ...withoutHistory]; // those are already enforced to be unique (and without intersection) in `validateMemberChange()`
-  if (fromCurrentDevice && allAdded.length) {
+  if (allAdded.length) {
     updateMessages.push(
       new GroupUpdateMemberChangeMessage({
         added: allAdded,
@@ -635,7 +641,7 @@ async function getUpdateMessagesToPush({
       })
     );
   }
-  if (fromCurrentDevice && removed.length) {
+  if (removed.length) {
     updateMessages.push(
       new GroupUpdateMemberChangeMessage({
         removed,
@@ -760,6 +766,11 @@ async function handleMemberAddedFromUIOrNot({
   await convo.commit();
 }
 
+/**
+ * This function is called in two cases:
+ * - to udpate the state when kicking a member from the group from the UI
+ * - to update the state when handling a MEMBER_LEFT message
+ */
 async function handleMemberRemovedFromUIOrNot({
   groupPk,
   removeMembers,
@@ -781,7 +792,7 @@ async function handleMemberRemovedFromUIOrNot({
     groupPk,
     removed: removeMembers,
   });
-  // first, get revoke requests that need to be pushed for removed members
+  // first, get revoke requests that need to be pushed for leaving member
   const revokeUnrevokeParams = await getPendingRevokeParams({
     groupPk,
     withHistory: [],
@@ -789,7 +800,7 @@ async function handleMemberRemovedFromUIOrNot({
     removed,
   });
 
-  // Send the groupUpdateDeleteMessage that can still be decrypted by those removed members to namespace ClosedGroupRevokedRetrievableMessages.
+  // Send the groupUpdateDeleteMessage that can still be decrypted by those removed members to namespace ClosedGroupRevokedRetrievableMessages. (not when handling a MEMBER_LEFT message)
   // Then, rekey the wrapper, but don't push the changes yet, we want to batch all of the requests to be made together in the `pushChangesToGroupSwarmIfNeeded` below.
   await handleRemoveMembersAndRekey({
     groupPk,
@@ -980,6 +991,45 @@ const currentDeviceGroupMembersChange = createAsyncThunk(
       fromCurrentDevice: true,
       addMembersWithHistory: args.addMembersWithHistory,
       addMembersWithoutHistory: args.addMembersWithoutHistory,
+    });
+
+    return {
+      groupPk,
+      infos: await MetaGroupWrapperActions.infoGet(groupPk),
+      members: await MetaGroupWrapperActions.memberGetAll(groupPk),
+    };
+  }
+);
+
+/**
+ * This action is used to trigger a change when the local user does a change to a group v2 members list.
+ * GroupV2 added members can be added two ways: with and without the history of messages.
+ * GroupV2 removed members have their subaccount token revoked on the server side so they cannot poll anymore from the group's swarm.
+ */
+const handleMemberLeftMessage = createAsyncThunk(
+  'group/handleMemberLeftMessage',
+  async (
+    {
+      groupPk,
+      memberLeft,
+    }: {
+      groupPk: GroupPubkeyType;
+      memberLeft: PubkeyType;
+    },
+    payloadCreator
+  ): Promise<GroupDetailsUpdate> => {
+    const state = payloadCreator.getState() as StateType;
+    if (!state.groups.infos[groupPk] || !state.groups.members[groupPk]) {
+      throw new PreConditionFailed(
+        'currentDeviceGroupMembersChange group not present in redux slice'
+      );
+    }
+
+    await handleMemberRemovedFromUIOrNot({
+      groupPk,
+      removeMembers: [memberLeft],
+      fromCurrentDevice: true,
+      fromMemberLeftMessage: true,
     });
 
     return {
@@ -1201,6 +1251,7 @@ const metaGroupSlice = createSlice({
       state.memberChangesFromUIPending = true;
     });
 
+    /** currentDeviceGroupNameChange */
     builder.addCase(currentDeviceGroupNameChange.fulfilled, (state, action) => {
       state.nameChangesFromUIPending = false;
 
@@ -1218,6 +1269,21 @@ const metaGroupSlice = createSlice({
     builder.addCase(currentDeviceGroupNameChange.pending, state => {
       state.nameChangesFromUIPending = true;
     });
+
+    /** handleMemberLeftMessage */
+    builder.addCase(handleMemberLeftMessage.fulfilled, (state, action) => {
+      const { infos, members, groupPk } = action.payload;
+      state.infos[groupPk] = infos;
+      state.members[groupPk] = members;
+
+      window.log.debug(`groupInfo after handleMemberLeftMessage: ${stringify(infos)}`);
+      window.log.debug(`groupMembers after handleMemberLeftMessage: ${stringify(members)}`);
+    });
+    builder.addCase(handleMemberLeftMessage.rejected, (_state, action) => {
+      window.log.error('a handleMemberLeftMessage was rejected', action.error);
+    });
+
+    /** markUsAsAdmin */
     builder.addCase(markUsAsAdmin.fulfilled, (state, action) => {
       const { infos, members, groupPk } = action.payload;
       state.infos[groupPk] = infos;
@@ -1253,6 +1319,7 @@ export const groupInfoActions = {
   currentDeviceGroupMembersChange,
   markUsAsAdmin,
   inviteResponseReceived,
+  handleMemberLeftMessage,
   currentDeviceGroupNameChange,
   ...metaGroupSlice.actions,
 };

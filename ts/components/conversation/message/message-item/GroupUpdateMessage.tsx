@@ -143,6 +143,14 @@ const ChangeItemPromoted = (promoted: Array<PubkeyType>): string => {
   throw new PreConditionFailed('ChangeItemPromoted only applies to groupv2');
 };
 
+const ChangeItemAvatar = (): string => {
+  const isGroupV2 = useSelectedIsGroupV2();
+  if (isGroupV2) {
+    return window.i18n('groupAvatarChange');
+  }
+  throw new PreConditionFailed('ChangeItemAvatar only applies to groupv2');
+};
+
 const ChangeItemLeft = (left: Array<PubkeyType>): string => {
   if (!left.length) {
     throw new Error('Group update remove is missing contacts');
@@ -175,14 +183,14 @@ const ChangeItem = (change: PropsForGroupUpdateType): string => {
       return ChangeItemName(change.newName);
     case 'add':
       return ChangeItemJoined(change.added);
-
     case 'left':
       return ChangeItemLeft(change.left);
-
     case 'kicked':
       return ChangeItemKicked(change.kicked);
     case 'promoted':
       return ChangeItemPromoted(change.promoted);
+    case 'avatarChange':
+      return ChangeItemAvatar();
     default:
       assertUnreachable(type, `ChangeItem: Missing case error "${type}"`);
       return '';
