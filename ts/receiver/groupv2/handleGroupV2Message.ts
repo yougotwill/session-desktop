@@ -201,7 +201,7 @@ async function handleGroupInfoChangeMessage({
     case SignalService.GroupUpdateInfoChangeMessage.Type.NAME: {
       await ClosedGroup.addUpdateMessage({
         convo,
-        diff: { newName: change.updatedName },
+        diff: { type: 'name', newName: change.updatedName },
         sender: author,
         sentAt: envelopeTimestamp,
         expireUpdate: null,
@@ -212,7 +212,7 @@ async function handleGroupInfoChangeMessage({
     case SignalService.GroupUpdateInfoChangeMessage.Type.AVATAR: {
       await ClosedGroup.addUpdateMessage({
         convo,
-        diff: { avatarChange: true },
+        diff: { type: 'avatarChange' },
         sender: author,
         sentAt: envelopeTimestamp,
         expireUpdate: null,
@@ -228,7 +228,7 @@ async function handleGroupInfoChangeMessage({
       ) {
         await ClosedGroup.addUpdateMessage({
           convo,
-          diff: { newName: change.updatedName },
+          diff: { type: 'name', newName: change.updatedName },
           sender: author,
           sentAt: envelopeTimestamp,
           expireUpdate: null,
@@ -273,13 +273,19 @@ async function handleGroupMemberChangeMessage({
     window.log.warn('received group member change with invalid signature. dropping');
     return;
   }
+  const filteredMemberChange = change.memberSessionIds.filter(PubKey.is05Pubkey);
 
+  if (!filteredMemberChange) {
+    window.log.info('returning groupupdate of member change without associated members...');
+
+    return;
+  }
   const sharedDetails = { convo, sender: author, sentAt: envelopeTimestamp, expireUpdate: null };
 
   switch (change.type) {
     case SignalService.GroupUpdateMemberChangeMessage.Type.ADDED: {
       await ClosedGroup.addUpdateMessage({
-        diff: { joiningMembers: change.memberSessionIds },
+        diff: { type: 'add', added: filteredMemberChange },
         ...sharedDetails,
       });
 
@@ -287,14 +293,14 @@ async function handleGroupMemberChangeMessage({
     }
     case SignalService.GroupUpdateMemberChangeMessage.Type.REMOVED: {
       await ClosedGroup.addUpdateMessage({
-        diff: { kickedMembers: change.memberSessionIds },
+        diff: { type: 'kicked', kicked: filteredMemberChange },
         ...sharedDetails,
       });
       break;
     }
     case SignalService.GroupUpdateMemberChangeMessage.Type.PROMOTED: {
       await ClosedGroup.addUpdateMessage({
-        diff: { promotedMembers: change.memberSessionIds },
+        diff: { type: 'promoted', promoted: filteredMemberChange },
         ...sharedDetails,
       });
       break;
@@ -315,7 +321,7 @@ async function handleGroupMemberLeftMessage({
 }: GroupUpdateGeneric<SignalService.GroupUpdateMemberLeftMessage>) {
   // No need to verify sig, the author is already verified with the libsession.decrypt()
   const convo = ConvoHub.use().get(groupPk);
-  if (!convo) {
+  if (!convo || !PubKey.is05Pubkey(author)) {
     return;
   }
 
@@ -329,7 +335,7 @@ async function handleGroupMemberLeftMessage({
 
   await ClosedGroup.addUpdateMessage({
     convo,
-    diff: { leavingMembers: [author] },
+    diff: { type: 'left', left: [author] },
     sender: author,
     sentAt: envelopeTimestamp,
     expireUpdate: null,

@@ -186,14 +186,13 @@ export function useIsActive(convoId?: string) {
   return !!useActiveAt(convoId);
 }
 
-export function useIsLeft(convoId?: string) {
-  const convoProps = useConversationPropsById(convoId);
-  return Boolean(convoProps && convoProps.left);
-}
-
 export function useIsKickedFromGroup(convoId?: string) {
   const convoProps = useConversationPropsById(convoId);
-  return Boolean(convoProps && convoProps.isKickedFromGroup);
+  const libIsKicked = useLibGroupKicked(convoId);
+  if (convoId && PubKey.is03Pubkey(convoId)) {
+    return libIsKicked;
+  }
+  return Boolean(convoProps && (convoProps.isKickedFromGroup || libIsKicked)); // not ideal, but until we trust what we get from libsession for all cases, we have to either trust what we have in the DB
 }
 
 export function useWeAreAdmin(convoId?: string) {

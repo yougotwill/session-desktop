@@ -87,7 +87,8 @@ export class GroupUpdateInfoChangeMessage extends GroupUpdateMessage {
         break;
 
       case SignalService.GroupUpdateInfoChangeMessage.Type.AVATAR:
-
+        // nothing to do for the avatar case
+        break;
       default:
         break;
     }

@@ -81,7 +81,7 @@ export function getSelectedCanWrite(state: StateType) {
     return false;
   }
   const canWriteSogs = getCanWrite(state, selectedConvoPubkey);
-  const { isBlocked, isKickedFromGroup, left, isPublic } = selectedConvo;
+  const { isBlocked, isKickedFromGroup, isPublic } = selectedConvo;
 
   const readOnlySogs = isPublic && !canWriteSogs;
 

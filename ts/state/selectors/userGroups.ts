@@ -18,3 +18,17 @@ export function useLibGroupInvitePending(convoId?: string) {
 export function useLibGroupInviteGroupName(convoId?: string) {
   return useSelector((state: StateType) => getGroupById(state, convoId)?.name);
 }
+
+function getLibGroupKicked(state: StateType, convoId?: string) {
+  return getGroupById(state, convoId)?.kicked;
+}
+
+export function useLibGroupKicked(convoId?: string) {
+  return useSelector((state: StateType) => getLibGroupKicked(state, convoId));
+}
+
+export function getLibGroupKickedOutsideRedux(convoId?: string) {
+  const state = window.inboxStore?.getState();
+
+  return state ? getLibGroupKicked(state, convoId) : undefined;
+}

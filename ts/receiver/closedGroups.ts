@@ -626,6 +626,7 @@ async function handleClosedGroupNameChanged(
   if (newName !== convo.getRealSessionUsername()) {
     const groupDiff: GroupDiff = {
       newName,
+      type: 'name',
     };
     await ClosedGroup.addUpdateMessage({
       convo,
@@ -654,7 +655,9 @@ async function handleClosedGroupMembersAdded(
   const { members: addedMembersBinary } = groupUpdate;
   const addedMembers = (addedMembersBinary || []).map(toHex);
   const oldMembers = convo.getGroupMembers() || [];
-  const membersNotAlreadyPresent = addedMembers.filter(m => !oldMembers.includes(m));
+  const membersNotAlreadyPresent = addedMembers
+    .filter(m => !oldMembers.includes(m))
+    .filter(PubKey.is05Pubkey);
   window?.log?.info(`Got a group update for group ${envelope.source}, type: MEMBERS_ADDED`);
 
   // make sure those members are not on our zombie list
@@ -684,7 +687,8 @@ async function handleClosedGroupMembersAdded(
   );
 
   const groupDiff: GroupDiff = {
-    joiningMembers: membersNotAlreadyPresent,
+    type: 'add',
+    added: membersNotAlreadyPresent,
   };
   await ClosedGroup.addUpdateMessage({
     convo,
@@ -729,7 +733,9 @@ async function handleClosedGroupMembersRemoved(
   const removedMembers = groupUpdate.members.map(toHex);
   // effectivelyRemovedMembers are the members which where effectively on this group before the update
   // and is used for the group update message only
-  const effectivelyRemovedMembers = removedMembers.filter(m => currentMembers.includes(m));
+  const effectivelyRemovedMembers = removedMembers
+    .filter(m => currentMembers.includes(m))
+    .filter(PubKey.is05Pubkey);
   const groupPubKey = envelope.source;
   window?.log?.info(`Got a group update for group ${envelope.source}, type: MEMBERS_REMOVED`);
 
@@ -771,7 +777,8 @@ async function handleClosedGroupMembersRemoved(
     // Only add update message if we have something to show
     if (membersAfterUpdate.length !== currentMembers.length) {
       const groupDiff: GroupDiff = {
-        kickedMembers: effectivelyRemovedMembers,
+        type: 'kicked',
+        kicked: effectivelyRemovedMembers,
       };
       await ClosedGroup.addUpdateMessage({
         convo,
@@ -866,6 +873,11 @@ async function handleClosedGroupMemberLeft(
   expireUpdate: DisappearingMessageUpdate | null
 ) {
   const sender = envelope.senderIdentity;
+
+  if (!PubKey.is05Pubkey(sender)) {
+    throw new Error('groupmember left sender should be a 05 pk');
+  }
+
   const groupPublicKey = envelope.source;
   const didAdminLeave = convo.getGroupAdmins().includes(sender) || false;
   // If the admin leaves the group is disbanded
@@ -896,7 +908,8 @@ async function handleClosedGroupMemberLeft(
   // Another member left, not us, not the admin, just another member.
   // But this member was in the list of members (as performIfValid checks for that)
   const groupDiff: GroupDiff = {
-    leavingMembers: [sender],
+    type: 'left',
+    left: [sender],
   };
 
   await ClosedGroup.addUpdateMessage({

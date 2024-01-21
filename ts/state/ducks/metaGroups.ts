@@ -521,12 +521,14 @@ async function handleRemoveMembersAndRekey({
   const createAtNetworkTimestamp = GetNetworkTime.now();
   const sortedRemoved = removed.sort();
 
-  if (!fromMemberLeftMessage) {
+  // TODO implement the GroupUpdateDeleteMessage multi_encrypt_simple on chunk3 debugger
+  if (!fromMemberLeftMessage && false) {
     // We need to sign that message with the current admin key
     const adminSignature = await SnodeGroupSignature.signDataWithAdminSecret(
       `DELETE${createAtNetworkTimestamp}${sortedRemoved.join('')}`,
       { secretKey }
     );
+
     // We need to encrypt this message with the the current encryptionKey, before we call rekey()
     const removedMemberMessage = new GroupUpdateDeleteMessage({
       groupPk,
@@ -549,10 +551,6 @@ async function handleRemoveMembersAndRekey({
   // Note: we need to rekey only once the GroupUpdateDeleteMessage is sent because
   // otherwise removed members won't be able to decrypt it (as rekey is called after erase)
   await MetaGroupWrapperActions.memberEraseAndRekey(groupPk, sortedRemoved);
-
-  console.warn(
-    'TODO: poll from namespace -11, handle messages and sig for it, batch request handle 401/403, but 200 ok for this -11 namespace'
-  );
 }
 
 async function getPendingRevokeParams({
@@ -751,7 +749,7 @@ async function handleMemberAddedFromUIOrNot({
   );
   if (additions) {
     await ClosedGroup.addUpdateMessage({
-      diff: { joiningMembers: additions.memberSessionIds },
+      diff: { type: 'add', added: additions.memberSessionIds },
       ...shared,
       expireUpdate: {
         expirationTimer: expiringDetails.expireTimer,
@@ -866,7 +864,7 @@ async function handleMemberRemovedFromUIOrNot({
 
   if (removals) {
     await ClosedGroup.addUpdateMessage({
-      diff: { kickedMembers: removed },
+      diff: { type: 'kicked', kicked: removed },
       ...shared,
     });
   }
@@ -909,7 +907,7 @@ async function handleNameChangeFromUI({
   // we want to add an update message even if the change was done remotely
   const msg = await ClosedGroup.addUpdateMessage({
     convo,
-    diff: { newName },
+    diff: { type: 'name', newName },
     sender: us,
     sentAt: createAtNetworkTimestamp,
     expireUpdate: null,

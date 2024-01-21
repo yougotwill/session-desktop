@@ -13,6 +13,7 @@ import {
   distributingClosedGroupEncryptionKeyPairs,
 } from '../../receiver/closedGroups';
 import { ECKeyPair } from '../../receiver/keypairs';
+import { PropsForGroupUpdateType } from '../../state/ducks/conversations';
 import { GetNetworkTime } from '../apis/snode_api/getNetworkTime';
 import { SnodeNamespaces } from '../apis/snode_api/namespaces';
 import { ConvoHub } from '../conversations';
@@ -41,14 +42,7 @@ export type GroupInfo = {
   admins?: Array<string>;
 };
 
-export type GroupDiff = {
-  joiningMembers?: Array<string>;
-  leavingMembers?: Array<string>;
-  kickedMembers?: Array<string>;
-  promotedMembers?: Array<string>;
-  newName?: string;
-  avatarChange?: boolean;
-};
+export type GroupDiff = PropsForGroupUpdateType;
 
 /**
  * This function is only called when the local user makes a change to a group.
@@ -96,8 +90,14 @@ async function initiateClosedGroupUpdate(
   };
 
   const diff = buildGroupDiff(convo, groupDetails);
-
   await updateOrCreateClosedGroup(groupDetails);
+
+  if (!diff) {
+    window.log.warn('buildGroupDiff returned null');
+    await convo.commit();
+
+    return;
+  }
 
   const updateObj: GroupInfo = {
     id: groupId,
@@ -115,8 +115,8 @@ async function initiateClosedGroupUpdate(
     convo,
   };
 
-  if (diff.newName?.length) {
-    const nameOnlyDiff: GroupDiff = _.pick(diff, 'newName');
+  if (diff.type === 'name' && diff.newName?.length) {
+    const nameOnlyDiff: GroupDiff = _.pick(diff, ['type', 'newName']);
 
     const dbMessageName = await addUpdateMessage({
       diff: nameOnlyDiff,
@@ -125,30 +125,25 @@ async function initiateClosedGroupUpdate(
     await sendNewName(convo, diff.newName, dbMessageName.id as string);
   }
 
-  if (diff.joiningMembers?.length) {
-    const joiningOnlyDiff: GroupDiff = _.pick(diff, 'joiningMembers');
+  if (diff.type === 'add' && diff.added?.length) {
+    const joiningOnlyDiff: GroupDiff = _.pick(diff, ['type', 'added']);
 
     const dbMessageAdded = await addUpdateMessage({
       diff: joiningOnlyDiff,
       ...sharedDetails,
     });
-    await sendAddedMembers(convo, diff.joiningMembers, dbMessageAdded.id as string, updateObj);
+    await sendAddedMembers(convo, diff.added, dbMessageAdded.id as string, updateObj);
   }
 
-  if (diff.leavingMembers?.length) {
-    const leavingOnlyDiff: GroupDiff = { kickedMembers: diff.leavingMembers };
+  if (diff.type === 'kicked' && diff.kicked?.length) {
+    const leavingOnlyDiff: GroupDiff = _.pick(diff, ['type', 'kicked']);
 
     const dbMessageLeaving = await addUpdateMessage({
       diff: leavingOnlyDiff,
       ...sharedDetails,
     });
     const stillMembers = members;
-    await sendRemovedMembers(
-      convo,
-      diff.leavingMembers,
-      stillMembers,
-      dbMessageLeaving.id as string
-    );
+    await sendRemovedMembers(convo, diff.kicked, stillMembers, dbMessageLeaving.id as string);
   }
   await convo.commit();
 }
@@ -168,17 +163,17 @@ export async function addUpdateMessage({
 }): Promise<MessageModel> {
   const groupUpdate: MessageGroupUpdate = {};
 
-  if (diff.newName) {
+  if (diff.type === 'name' && diff.newName) {
     groupUpdate.name = diff.newName;
-  } else if (diff.joiningMembers) {
-    groupUpdate.joined = diff.joiningMembers;
-  } else if (diff.leavingMembers) {
-    groupUpdate.left = diff.leavingMembers;
-  } else if (diff.kickedMembers) {
-    groupUpdate.kicked = diff.kickedMembers;
-  } else if (diff.promotedMembers) {
-    groupUpdate.promoted = diff.promotedMembers as Array<PubkeyType>;
-  } else if (diff.avatarChange) {
+  } else if (diff.type === 'add' && diff.added) {
+    groupUpdate.joined = diff.added;
+  } else if (diff.type === 'left' && diff.left) {
+    groupUpdate.left = diff.left;
+  } else if (diff.type === 'kicked' && diff.kicked) {
+    groupUpdate.kicked = diff.kicked;
+  } else if (diff.type === 'promoted' && diff.promoted) {
+    groupUpdate.promoted = diff.promoted;
+  } else if (diff.type === 'avatarChange') {
     groupUpdate.avatarChange = true;
   } else {
     throw new Error('addUpdateMessage with unknown type of change');
@@ -218,11 +213,9 @@ export async function addUpdateMessage({
       });
 }
 
-function buildGroupDiff(convo: ConversationModel, update: GroupInfo): GroupDiff {
-  const groupDiff: GroupDiff = {};
-
+function buildGroupDiff(convo: ConversationModel, update: GroupInfo): GroupDiff | null {
   if (convo.getRealSessionUsername() !== update.name) {
-    groupDiff.newName = update.name;
+    return { type: 'name', newName: update.name };
   }
 
   const oldMembers = convo.getGroupMembers();
@@ -231,17 +224,21 @@ function buildGroupDiff(convo: ConversationModel, update: GroupInfo): GroupDiff 
 
   const newMembersWithZombiesLeft = _.uniq(update.members.concat(update.zombies || []));
 
-  const addedMembers = _.difference(newMembersWithZombiesLeft, oldMembersWithZombies);
-  if (addedMembers.length > 0) {
-    groupDiff.joiningMembers = addedMembers;
+  const added = _.difference(newMembersWithZombiesLeft, oldMembersWithZombies).filter(
+    PubKey.is05Pubkey
+  );
+  if (added.length > 0) {
+    return { type: 'add', added };
   }
   // Check if anyone got kicked:
-  const removedMembers = _.difference(oldMembersWithZombies, newMembersWithZombiesLeft);
+  const removedMembers = _.difference(oldMembersWithZombies, newMembersWithZombiesLeft).filter(
+    PubKey.is05Pubkey
+  );
   if (removedMembers.length > 0) {
-    groupDiff.leavingMembers = removedMembers;
+    return { type: 'kicked', kicked: removedMembers };
   }
 
-  return groupDiff;
+  return null;
 }
 
 export async function updateOrCreateClosedGroup(details: GroupInfo) {
