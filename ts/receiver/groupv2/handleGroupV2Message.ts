@@ -365,7 +365,6 @@ async function handleGroupDeleteMemberContentMessage({
   }
 
   // TODO we should process this message type even if the sender is blocked
-  console.warn('Not implemented');
   convo.set({
     active_at: envelopeTimestamp,
   });
@@ -395,7 +394,6 @@ async function handleGroupUpdateDeleteMessage({
   convo.set({
     active_at: envelopeTimestamp,
   });
-  console.warn('Not implemented');
   throw new Error('Not implemented');
   // TODO We should process this message type even if the sender is blocked
 }

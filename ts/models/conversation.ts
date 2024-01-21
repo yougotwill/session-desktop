@@ -411,9 +411,6 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       if (this.isKickedFromGroup()) {
         toRet.isKickedFromGroup = this.isKickedFromGroup();
       }
-      if (this.isLeft()) {
-        toRet.left = this.isLeft();
-      }
       // to be dropped once we get rid of the legacy closed groups
       const zombies = this.getGroupZombies() || [];
       if (zombies?.length) {
@@ -1916,20 +1913,9 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
   public isKickedFromGroup(): boolean {
     if (this.isClosedGroup()) {
       if (this.isClosedGroupV2()) {
-        // console.info('isKickedFromGroup using lib todo'); // debugger
+        return getLibGroupKickedOutsideRedux(this.id) || false;
       }
       return !!this.get('isKickedFromGroup');
-    }
-    return false;
-  }
-
-  public isLeft(): boolean {
-    if (this.isClosedGroup()) {
-      if (this.isClosedGroupV2()) {
-        // getLibGroupNameOutsideRedux(this.id) ||
-        // console.info('isLeft using lib todo'); // debugger
-      }
-      return !!this.get('left');
     }
     return false;
   }

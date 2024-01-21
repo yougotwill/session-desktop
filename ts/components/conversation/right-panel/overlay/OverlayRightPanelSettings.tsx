@@ -27,7 +27,6 @@ import {
   useSelectedIsBlocked,
   useSelectedIsGroup,
   useSelectedIsKickedFromGroup,
-  useSelectedIsLeft,
   useSelectedIsPublic,
   useSelectedSubscriberCount,
   useSelectedWeAreAdmin,
@@ -117,14 +116,13 @@ const HeaderItem = () => {
   const dispatch = useDispatch();
   const isBlocked = useSelectedIsBlocked();
   const isKickedFromGroup = useSelectedIsKickedFromGroup();
-  const left = useSelectedIsLeft();
   const isGroup = useSelectedIsGroup();
 
   if (!selectedConvoKey) {
     return null;
   }
 
-  const showInviteContacts = isGroup && !isKickedFromGroup && !isBlocked && !left;
+  const showInviteContacts = isGroup && !isKickedFromGroup && !isBlocked;
 
   return (
     <div className="right-panel-header">
@@ -212,7 +210,6 @@ export const OverlayRightPanelSettings = () => {
   const displayNameInProfile = useSelectedDisplayNameInProfile();
   const isBlocked = useSelectedIsBlocked();
   const isKickedFromGroup = useSelectedIsKickedFromGroup();
-  const left = useSelectedIsLeft();
   const isGroup = useSelectedIsGroup();
   const isPublic = useSelectedIsPublic();
   const weAreAdmin = useSelectedWeAreAdmin();
@@ -264,15 +261,13 @@ export const OverlayRightPanelSettings = () => {
   }
 
   const showMemberCount = !!(subscriberCount && subscriberCount > 0);
-  const commonNoShow = isKickedFromGroup || left || isBlocked || !isActive;
+  const commonNoShow = isKickedFromGroup || isBlocked || !isActive;
   const hasDisappearingMessages = !isPublic && !commonNoShow;
   const leaveGroupString = isPublic
     ? window.i18n('leaveGroup')
     : isKickedFromGroup
       ? window.i18n('youGotKickedFromGroup')
-      : left
-        ? window.i18n('youLeftTheGroup')
-        : window.i18n('leaveGroup');
+      : window.i18n('leaveGroup');
 
   const showUpdateGroupNameButton = isGroup && weAreAdmin && !commonNoShow; // legacy groups non-admin cannot change groupname anymore
   const showAddRemoveModeratorsButton = weAreAdmin && !commonNoShow && isPublic;
@@ -369,7 +364,7 @@ export const OverlayRightPanelSettings = () => {
             text={leaveGroupString}
             buttonColor={SessionButtonColor.Danger}
             buttonType={SessionButtonType.Simple}
-            disabled={isKickedFromGroup || left}
+            disabled={isKickedFromGroup}
             onClick={deleteConvoAction}
           />
         </StyledLeaveButton>

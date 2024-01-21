@@ -599,9 +599,8 @@ export class SwarmPolling {
         (c.isClosedGroupV2() &&
           !c.isBlocked() &&
           !c.isKickedFromGroup() &&
-          !c.isLeft() &&
           c.isApproved()) ||
-        (c.isClosedGroup() && !c.isBlocked() && !c.isKickedFromGroup() && !c.isLeft())
+        (c.isClosedGroup() && !c.isBlocked() && !c.isKickedFromGroup() )
     );
 
     closedGroupsOnly.forEach(c => {

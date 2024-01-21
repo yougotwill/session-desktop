@@ -489,16 +489,13 @@ class CompositionBoxInner extends React.Component<Props, State> {
       if (isKickedFromGroup) {
         return i18n('youGotKickedFromGroup');
       }
-      if (left) {
-        return i18n('youLeftTheGroup');
-      }
       if (isBlocked) {
         return i18n('unblockToSend');
       }
       return i18n('sendMessage');
     };
 
-    const { isKickedFromGroup, left, isBlocked } = this.props.selectedConversation;
+    const { isKickedFromGroup, isBlocked } = this.props.selectedConversation;
     const messagePlaceHolder = makeMessagePlaceHolderText();
     const neverMatchingRegex = /($a)/;
 
@@ -932,10 +929,6 @@ class CompositionBoxInner extends React.Component<Props, State> {
       return;
     }
 
-    if (!selectedConversation.isPrivate && selectedConversation.left) {
-      ToastUtils.pushYouLeftTheGroup();
-      return;
-    }
     if (!selectedConversation.isPrivate && selectedConversation.isKickedFromGroup) {
       ToastUtils.pushYouLeftTheGroup();
       return;

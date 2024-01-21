@@ -1,7 +1,6 @@
 import _ from 'lodash';
 import { v4 as uuidv4 } from 'uuid';
 
-import { PubkeyType } from 'libsession_util_nodejs';
 import { getMessageQueue } from '..';
 import { Data } from '../../data/data';
 import { ConversationModel } from '../../models/conversation';

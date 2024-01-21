@@ -34,8 +34,7 @@ function isLegacyGroupToStoreInWrapper(convo: ConversationModel): boolean {
     !convo.isPublic() &&
     convo.id.startsWith('05') && // new closed groups won't start with 05
     convo.isActive() &&
-    !convo.isKickedFromGroup() &&
-    !convo.isLeft()
+    !convo.isKickedFromGroup()
   );
 }
 

@@ -22,7 +22,7 @@ import {
 import { useLibGroupAdmins, useLibGroupMembers, useLibGroupName } from '../state/selectors/groups';
 import { isPrivateAndFriend } from '../state/selectors/selectedConversation';
 import { useOurPkStr } from '../state/selectors/user';
-import { useLibGroupInvitePending } from '../state/selectors/userGroups';
+import { useLibGroupInvitePending, useLibGroupKicked } from '../state/selectors/userGroups';
 
 export function useAvatarPath(convoId: string | undefined) {
   const convoProps = useConversationPropsById(convoId);

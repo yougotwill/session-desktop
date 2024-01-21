@@ -657,8 +657,8 @@ async function handleLegacyGroupUpdate(latestEnvelopeTimestamp: number) {
       changes = true;
     }
 
-    // start polling for this group if we haven't left it yet. The wrapper does not store this info for legacy group so we check from the DB entry instead
-    if (!legacyGroupConvo.isKickedFromGroup() && !legacyGroupConvo.isLeft()) {
+    // start polling for this group if we are still part of it.
+    if (!legacyGroupConvo.isKickedFromGroup()) {
       getSwarmPollingInstance().addGroupId(PubKey.cast(fromWrapper.pubkeyHex));
 
       // save the encryption keypair if needed

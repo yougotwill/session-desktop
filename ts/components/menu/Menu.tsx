@@ -12,7 +12,6 @@ import {
   useIsGroupV2,
   useIsIncomingRequest,
   useIsKickedFromGroup,
-  useIsLeft,
   useIsMe,
   useIsPrivate,
   useIsPrivateAndFriend,
@@ -138,14 +137,13 @@ export const DeleteGroupOrCommunityMenuItem = () => {
   const dispatch = useDispatch();
   const convoId = useConvoIdFromContext();
   const isPublic = useIsPublic(convoId);
-  const isLeft = useIsLeft(convoId);
   const isKickedFromGroup = useIsKickedFromGroup(convoId);
   const isPrivate = useIsPrivate(convoId);
   const isGroup = !isPrivate && !isPublic;
 
   // You need to have left a closed group first to be able to delete it completely as there is a leaving message to send first.
   // A community can just be removed right away.
-  if (isPublic || (isGroup && (isLeft || isKickedFromGroup))) {
+  if (isPublic || (isGroup && isKickedFromGroup)) {
     const menuItemText = isPublic ? window.i18n('leaveGroup') : window.i18n('editMenuDeleteGroup');
 
     const onClickClose = () => {
@@ -183,11 +181,10 @@ export const DeleteGroupOrCommunityMenuItem = () => {
 export const LeaveGroupMenuItem = () => {
   const convoId = useConvoIdFromContext();
   const isPublic = useIsPublic(convoId);
-  const isLeft = useIsLeft(convoId);
   const isKickedFromGroup = useIsKickedFromGroup(convoId);
   const isPrivate = useIsPrivate(convoId);
 
-  if (!isKickedFromGroup && !isLeft && !isPrivate && !isPublic) {
+  if (!isKickedFromGroup && !isPrivate && !isPublic) {
     return (
       <Item
         onClick={() => {
@@ -233,11 +230,10 @@ export const ShowUserDetailsMenuItem = () => {
 
 export const UpdateGroupNameMenuItem = () => {
   const convoId = useConvoIdFromContext();
-  const left = useIsLeft(convoId);
   const isKickedFromGroup = useIsKickedFromGroup(convoId);
   const weAreAdmin = useWeAreAdmin(convoId);
 
-  if (!isKickedFromGroup && !left && weAreAdmin) {
+  if (!isKickedFromGroup && weAreAdmin) {
     return (
       <Item
         onClick={() => {
@@ -562,19 +558,11 @@ export const NotificationForConvoMenuItem = (): JSX.Element | null => {
   const currentNotificationSetting = useNotificationSetting(convoId);
   const isBlocked = useIsBlocked(convoId);
   const isActive = useIsActive(convoId);
-  const isLeft = useIsLeft(convoId);
   const isKickedFromGroup = useIsKickedFromGroup(convoId);
   const isFriend = useIsPrivateAndFriend(convoId);
   const isPrivate = useIsPrivate(convoId);
 
-  if (
-    !convoId ||
-    isLeft ||
-    isKickedFromGroup ||
-    isBlocked ||
-    !isActive ||
-    (isPrivate && !isFriend)
-  ) {
+  if (!convoId || isKickedFromGroup || isBlocked || !isActive || (isPrivate && !isFriend)) {
     return null;
   }
 

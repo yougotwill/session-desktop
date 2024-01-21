@@ -304,8 +304,8 @@ export async function handleNewClosedGroup(
   const expireTimer = groupUpdate.expirationTimer;
 
   if (groupConvo) {
-    // if we did not left this group, just add the keypair we got if not already there
-    if (!groupConvo.isKickedFromGroup() && !groupConvo.isLeft()) {
+    // if we did not got kicked this group, just add the keypair we got if not already there
+    if (!groupConvo.isKickedFromGroup()) {
       const ecKeyPairAlreadyExistingConvo = new ECKeyPair(
         encryptionKeyPair!.publicKey,
         encryptionKeyPair!.privateKey

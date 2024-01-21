@@ -522,9 +522,6 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
       return undefined;
     }
 
-    if (this.getConversation()?.isLeft()) {
-      return 'sent';
-    }
 
     const readBy = this.get('read_by') || [];
     if (Storage.get(SettingsKey.settingsReadReceipt) && readBy.length > 0) {

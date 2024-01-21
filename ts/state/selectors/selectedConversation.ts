@@ -90,7 +90,6 @@ export function getSelectedCanWrite(state: StateType) {
   return !(
     isBlocked ||
     isKickedFromGroup ||
-    left ||
     readOnlySogs ||
     isBlindedAndDisabledMsgRequests
   );
@@ -350,10 +349,6 @@ export function useSelectedConversationDisappearingMode():
   | DisappearingMessageConversationModeType
   | undefined {
   return useSelector((state: StateType) => getSelectedConversation(state)?.expirationMode);
-}
-
-export function useSelectedIsLeft() {
-  return useSelector((state: StateType) => Boolean(getSelectedConversation(state)?.left) || false);
 }
 
 export function useSelectedConversationIdOrigin() {
