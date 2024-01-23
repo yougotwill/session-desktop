@@ -285,7 +285,7 @@ async function handleGroupMemberChangeMessage({
   switch (change.type) {
     case SignalService.GroupUpdateMemberChangeMessage.Type.ADDED: {
       await ClosedGroup.addUpdateMessage({
-        diff: { type: 'add', added: filteredMemberChange },
+        diff: { type: 'add', added: filteredMemberChange, withHistory: change.historyShared },
         ...sharedDetails,
       });
 

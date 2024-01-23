@@ -689,6 +689,7 @@ async function handleClosedGroupMembersAdded(
   const groupDiff: GroupDiff = {
     type: 'add',
     added: membersNotAlreadyPresent,
+    withHistory: false,
   };
   await ClosedGroup.addUpdateMessage({
     convo,

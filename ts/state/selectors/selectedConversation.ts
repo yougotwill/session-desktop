@@ -87,12 +87,7 @@ export function getSelectedCanWrite(state: StateType) {
 
   const isBlindedAndDisabledMsgRequests = getSelectedBlindedDisabledMsgRequests(state); // true if isPrivate, blinded and explicitely disabled msgreq
 
-  return !(
-    isBlocked ||
-    isKickedFromGroup ||
-    readOnlySogs ||
-    isBlindedAndDisabledMsgRequests
-  );
+  return !(isBlocked || isKickedFromGroup || readOnlySogs || isBlindedAndDisabledMsgRequests);
 }
 
 function getSelectedBlindedDisabledMsgRequests(state: StateType) {

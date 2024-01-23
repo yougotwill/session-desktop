@@ -12,17 +12,22 @@ import {
 } from '../GroupUpdateMessage';
 
 type MembersAddedMessageParams = GroupUpdateMessageParams & {
-  typeOfChange: SignalService.GroupUpdateMemberChangeMessage.Type.ADDED;
+  typeOfChange: 'added';
+  added: Array<PubkeyType>;
+};
+
+type MembersAddedWithHistoryMessageParams = GroupUpdateMessageParams & {
+  typeOfChange: 'addedWithHistory';
   added: Array<PubkeyType>;
 };
 
 type MembersRemovedMessageParams = GroupUpdateMessageParams & {
-  typeOfChange: SignalService.GroupUpdateMemberChangeMessage.Type.REMOVED;
+  typeOfChange: 'removed';
   removed: Array<PubkeyType>;
 };
 
 type MembersPromotedMessageParams = GroupUpdateMessageParams & {
-  typeOfChange: SignalService.GroupUpdateMemberChangeMessage.Type.PROMOTED;
+  typeOfChange: 'promoted';
   promoted: Array<PubkeyType>;
 };
 
@@ -30,7 +35,8 @@ type MembersPromotedMessageParams = GroupUpdateMessageParams & {
  * GroupUpdateInfoChangeMessage is sent to the group's swarm.
  */
 export class GroupUpdateMemberChangeMessage extends GroupUpdateMessage {
-  public readonly typeOfChange: SignalService.GroupUpdateMemberChangeMessage.Type;
+  public readonly typeOfChange: 'added' | 'addedWithHistory' | 'removed' | 'promoted';
+
   public readonly memberSessionIds: Array<PubkeyType> = []; // added, removed, promoted based on the type.
   public readonly namespace = SnodeNamespaces.ClosedGroupMessages;
   private readonly secretKey: Uint8Array; // not sent, only used for signing content as part of the message
@@ -41,11 +47,11 @@ export class GroupUpdateMemberChangeMessage extends GroupUpdateMessage {
       | MembersAddedMessageParams
       | MembersRemovedMessageParams
       | MembersPromotedMessageParams
+      | MembersAddedWithHistoryMessageParams
     ) &
       AdminSigDetails
   ) {
     super(params);
-    const { Type } = SignalService.GroupUpdateMemberChangeMessage;
     const { typeOfChange } = params;
 
     this.typeOfChange = typeOfChange;
@@ -53,21 +59,28 @@ export class GroupUpdateMemberChangeMessage extends GroupUpdateMessage {
     this.sodium = params.sodium;
 
     switch (typeOfChange) {
-      case Type.ADDED: {
+      case 'added': {
         if (isEmpty(params.added)) {
           throw new Error('added members list cannot be empty');
         }
         this.memberSessionIds = params.added;
         break;
       }
-      case Type.REMOVED: {
+      case 'addedWithHistory': {
+        if (isEmpty(params.added)) {
+          throw new Error('addedWithHistory members list cannot be empty');
+        }
+        this.memberSessionIds = params.added;
+        break;
+      }
+      case 'removed': {
         if (isEmpty(params.removed)) {
           throw new Error('removed members list cannot be empty');
         }
         this.memberSessionIds = params.removed;
         break;
       }
-      case Type.PROMOTED: {
+      case 'promoted': {
         if (isEmpty(params.promoted)) {
           throw new Error('promoted members list cannot be empty');
         }
@@ -80,8 +93,15 @@ export class GroupUpdateMemberChangeMessage extends GroupUpdateMessage {
   }
 
   public dataProto(): SignalService.DataMessage {
+    const { Type } = SignalService.GroupUpdateMemberChangeMessage;
+
     const memberChangeMessage = new SignalService.GroupUpdateMemberChangeMessage({
-      type: this.typeOfChange,
+      type:
+        this.typeOfChange === 'added' || this.typeOfChange === 'addedWithHistory'
+          ? Type.ADDED
+          : this.typeOfChange === 'removed'
+            ? Type.REMOVED
+            : Type.PROMOTED,
       memberSessionIds: this.memberSessionIds,
       adminSignature: this.sodium.crypto_sign_detached(
         stringToUint8Array(`MEMBER_CHANGE${this.typeOfChange}${this.createAtNetworkTimestamp}`),

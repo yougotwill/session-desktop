@@ -57,7 +57,7 @@ function changeOfMembersV2({
   type,
   us,
 }: {
-  type: 'added' | 'promoted' | 'removed';
+  type: 'added' | 'addedWithHistory' | 'promoted' | 'removed';
   changedWithNames: Array<IdWithName>;
   us: PubkeyType;
 }): string {
@@ -75,7 +75,13 @@ function changeOfMembersV2({
           : 'Others';
 
   const action =
-    type === 'added' ? 'Joined' : type === 'promoted' ? 'Promoted' : ('Removed' as const);
+    type === 'addedWithHistory'
+      ? 'JoinedWithHistory'
+      : type === 'added'
+        ? 'Joined'
+        : type === 'promoted'
+          ? 'Promoted'
+          : ('Removed' as const);
   const key = `group${subject}${action}` as const;
 
   return window.i18n(
@@ -85,7 +91,7 @@ function changeOfMembersV2({
 }
 
 // TODO those lookups might need to be memoized
-const ChangeItemJoined = (added: Array<PubkeyType>): string => {
+const ChangeItemJoined = (added: Array<PubkeyType>, withHistory: boolean): string => {
   if (!added.length) {
     throw new Error('Group update add is missing contacts');
   }
@@ -95,7 +101,7 @@ const ChangeItemJoined = (added: Array<PubkeyType>): string => {
   if (isGroupV2) {
     return changeOfMembersV2({
       changedWithNames: mapIdsWithNames(added, names),
-      type: 'added',
+      type: withHistory ? 'addedWithHistory' : 'added',
       us,
     });
   }
@@ -182,7 +188,7 @@ const ChangeItem = (change: PropsForGroupUpdateType): string => {
     case 'name':
       return ChangeItemName(change.newName);
     case 'add':
-      return ChangeItemJoined(change.added);
+      return ChangeItemJoined(change.added, change.withHistory);
     case 'left':
       return ChangeItemLeft(change.left);
     case 'kicked':

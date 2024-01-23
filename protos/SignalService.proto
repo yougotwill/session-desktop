@@ -112,7 +112,9 @@ message GroupUpdateMemberChangeMessage {
 
   required Type   type               = 1;
   repeated string memberSessionIds   = 2;
-  required bytes  adminSignature     = 3;
+  optional bool   historyShared      = 3;
+  required bytes  adminSignature     = 4;
+
 }
 
 

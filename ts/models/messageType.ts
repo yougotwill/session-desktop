@@ -156,6 +156,7 @@ export type PropsForMessageRequestResponse = MessageRequestResponseMsg & {
 export type MessageGroupUpdate = {
   left?: Array<string>;
   joined?: Array<string>;
+  joinedWithHistory?: Array<string>;
   kicked?: Array<string>;
   promoted?: Array<PubkeyType>;
   name?: string;

@@ -608,8 +608,10 @@ async function getUpdateMessagesToPush({
   removed,
   adminSecretKey,
   createAtNetworkTimestamp,
+  fromMemberLeftMessage,
 }: WithAddWithHistoryMembers &
   WithAddWithoutHistoryMembers &
+  WithFromMemberLeftMessage &
   WithRemoveMembers &
   WithFromCurrentDevice &
   WithGroupPubkey & {
@@ -621,17 +623,29 @@ async function getUpdateMessagesToPush({
 
   const updateMessages: Array<GroupUpdateMemberChangeMessage> = [];
 
-  if (!fromCurrentDevice) {
+  if (!fromCurrentDevice || fromMemberLeftMessage) {
     return updateMessages;
   }
 
-  const allAdded = [...withHistory, ...withoutHistory]; // those are already enforced to be unique (and without intersection) in `validateMemberChange()`
-  if (allAdded.length) {
+  if (withoutHistory.length) {
     updateMessages.push(
       new GroupUpdateMemberChangeMessage({
-        added: allAdded,
+        added: withoutHistory,
         groupPk,
-        typeOfChange: SignalService.GroupUpdateMemberChangeMessage.Type.ADDED,
+        typeOfChange: 'added',
+        createAtNetworkTimestamp,
+        secretKey: adminSecretKey,
+        sodium,
+        ...getConvoExpireDetailsForMsg(convo),
+      })
+    );
+  }
+  if (withHistory.length) {
+    updateMessages.push(
+      new GroupUpdateMemberChangeMessage({
+        added: withHistory,
+        groupPk,
+        typeOfChange: 'addedWithHistory',
         createAtNetworkTimestamp,
         secretKey: adminSecretKey,
         sodium,
@@ -644,7 +658,7 @@ async function getUpdateMessagesToPush({
       new GroupUpdateMemberChangeMessage({
         removed,
         groupPk,
-        typeOfChange: SignalService.GroupUpdateMemberChangeMessage.Type.REMOVED,
+        typeOfChange: 'removed',
         createAtNetworkTimestamp,
         secretKey: adminSecretKey,
         sodium,
@@ -652,6 +666,7 @@ async function getUpdateMessagesToPush({
       })
     );
   }
+  // TODO might need to add the promote case here
 
   return updateMessages;
 }
@@ -704,6 +719,7 @@ async function handleMemberAddedFromUIOrNot({
     withHistory,
     withoutHistory,
     createAtNetworkTimestamp,
+    fromMemberLeftMessage: false,
   });
 
   await LibSessionUtil.saveDumpsToDb(groupPk);
@@ -744,23 +760,21 @@ async function handleMemberAddedFromUIOrNot({
           : null,
     },
   };
-  const additions = updateMessages.find(
-    m => m.typeOfChange === SignalService.GroupUpdateMemberChangeMessage.Type.ADDED
-  );
-  if (additions) {
+  const additionsWithoutHistory = updateMessages.find(m => m.typeOfChange === 'added');
+  const additionsWithHistory = updateMessages.find(m => m.typeOfChange === 'addedWithHistory');
+  if (additionsWithoutHistory) {
     await ClosedGroup.addUpdateMessage({
-      diff: { type: 'add', added: additions.memberSessionIds },
+      diff: { type: 'add', added: additionsWithoutHistory.memberSessionIds, withHistory: false },
       ...shared,
-      expireUpdate: {
-        expirationTimer: expiringDetails.expireTimer,
-        expirationType: expiringDetails.expirationType,
-        messageExpirationFromRetrieve:
-          expiringDetails.expireTimer > 0
-            ? createAtNetworkTimestamp + expiringDetails.expireTimer
-            : null,
-      },
     });
   }
+  if (additionsWithHistory) {
+    await ClosedGroup.addUpdateMessage({
+      diff: { type: 'add', added: additionsWithHistory.memberSessionIds, withHistory: true },
+      ...shared,
+    });
+  }
+
   await convo.commit();
 }
 
@@ -819,6 +833,7 @@ async function handleMemberRemovedFromUIOrNot({
     withHistory: [],
     withoutHistory: [],
     createAtNetworkTimestamp,
+    fromMemberLeftMessage,
   });
 
   await LibSessionUtil.saveDumpsToDb(groupPk);
@@ -858,9 +873,7 @@ async function handleMemberRemovedFromUIOrNot({
     },
   };
 
-  const removals = updateMessages.find(
-    m => m.typeOfChange === SignalService.GroupUpdateMemberChangeMessage.Type.REMOVED
-  );
+  const removals = updateMessages.find(m => m.typeOfChange === 'removed');
 
   if (removals) {
     await ClosedGroup.addUpdateMessage({

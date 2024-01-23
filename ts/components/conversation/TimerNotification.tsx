@@ -150,7 +150,9 @@ function useTextToRender(props: PropsForExpirationTimer) {
     case 'fromOther':
       return disabled
         ? window.i18n(
-            ownSideOnly ? 'theyDisabledTheirDisappearingMessages' : 'disabledDisappearingMessages',
+            ownSideOnly
+              ? 'theyDisabledTheirDisappearingMessages'
+              : 'groupDisabledDisappearingMessages',
             [contact, timespanText]
           )
         : mode

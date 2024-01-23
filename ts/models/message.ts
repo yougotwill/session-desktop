@@ -455,6 +455,15 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
       const change: PropsForGroupUpdateAdd = {
         type: 'add',
         added: groupUpdate.joined as Array<PubkeyType>,
+        withHistory: false,
+      };
+      return { change, ...sharedProps };
+    }
+    if (groupUpdate.joinedWithHistory?.length) {
+      const change: PropsForGroupUpdateAdd = {
+        type: 'add',
+        added: groupUpdate.joined as Array<PubkeyType>,
+        withHistory: true,
       };
       return { change, ...sharedProps };
     }
@@ -521,7 +530,6 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
     if (this.isDataExtractionNotification() || this.isCallNotification()) {
       return undefined;
     }
-
 
     const readBy = this.get('read_by') || [];
     if (Storage.get(SettingsKey.settingsReadReceipt) && readBy.length > 0) {

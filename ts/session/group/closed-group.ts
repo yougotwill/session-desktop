@@ -89,11 +89,11 @@ async function initiateClosedGroupUpdate(
     expireTimer,
   };
 
-  const diff = buildGroupDiff(convo, groupDetails);
+  const diff = buildGroupV1Diff(convo, groupDetails);
   await updateOrCreateClosedGroup(groupDetails);
 
   if (!diff) {
-    window.log.warn('buildGroupDiff returned null');
+    window.log.warn('buildGroupV1Diff returned null');
     await convo.commit();
 
     return;
@@ -126,7 +126,7 @@ async function initiateClosedGroupUpdate(
   }
 
   if (diff.type === 'add' && diff.added?.length) {
-    const joiningOnlyDiff: GroupDiff = _.pick(diff, ['type', 'added']);
+    const joiningOnlyDiff: GroupDiff = _.pick(diff, ['type', 'added', 'withHistory']);
 
     const dbMessageAdded = await addUpdateMessage({
       diff: joiningOnlyDiff,
@@ -213,7 +213,7 @@ export async function addUpdateMessage({
       });
 }
 
-function buildGroupDiff(convo: ConversationModel, update: GroupInfo): GroupDiff | null {
+function buildGroupV1Diff(convo: ConversationModel, update: GroupInfo): GroupDiff | null {
   if (convo.getRealSessionUsername() !== update.name) {
     return { type: 'name', newName: update.name };
   }
@@ -228,7 +228,7 @@ function buildGroupDiff(convo: ConversationModel, update: GroupInfo): GroupDiff 
     PubKey.is05Pubkey
   );
   if (added.length > 0) {
-    return { type: 'add', added };
+    return { type: 'add', added, withHistory: false };
   }
   // Check if anyone got kicked:
   const removedMembers = _.difference(oldMembersWithZombies, newMembersWithZombiesLeft).filter(

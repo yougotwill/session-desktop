@@ -104,6 +104,7 @@ export type PropsForExpirationTimer = {
 
 export type PropsForGroupUpdateAdd = {
   type: 'add';
+  withHistory: boolean;
   added: Array<PubkeyType>;
 };
 
