@@ -327,6 +327,7 @@
   "leaveGroupConfirmationAdmin": "As you are the admin of this group, if you leave it it will be removed for every current members. Are you sure you want to leave this group?",
   "cannotRemoveCreatorFromGroup": "Cannot remove this user",
   "cannotRemoveCreatorFromGroupDesc": "You cannot remove this user as they are the creator of the group.",
+  "cannotRemoveAdminFromGroup": "Admins cannot be removed",
   "noContactsForGroup": "You don't have any contacts yet",
   "failedToAddAsModerator": "Failed to add user as admin",
   "failedToRemoveFromModerator": "Failed to remove user from the admin list",

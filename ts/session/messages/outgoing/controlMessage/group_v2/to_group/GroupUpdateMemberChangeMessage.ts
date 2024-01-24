@@ -95,16 +95,18 @@ export class GroupUpdateMemberChangeMessage extends GroupUpdateMessage {
   public dataProto(): SignalService.DataMessage {
     const { Type } = SignalService.GroupUpdateMemberChangeMessage;
 
+    const type: SignalService.GroupUpdateMemberChangeMessage.Type =
+      this.typeOfChange === 'added' || this.typeOfChange === 'addedWithHistory'
+        ? Type.ADDED
+        : this.typeOfChange === 'removed'
+          ? Type.REMOVED
+          : Type.PROMOTED;
+
     const memberChangeMessage = new SignalService.GroupUpdateMemberChangeMessage({
-      type:
-        this.typeOfChange === 'added' || this.typeOfChange === 'addedWithHistory'
-          ? Type.ADDED
-          : this.typeOfChange === 'removed'
-            ? Type.REMOVED
-            : Type.PROMOTED,
+      type,
       memberSessionIds: this.memberSessionIds,
       adminSignature: this.sodium.crypto_sign_detached(
-        stringToUint8Array(`MEMBER_CHANGE${this.typeOfChange}${this.createAtNetworkTimestamp}`),
+        stringToUint8Array(`MEMBER_CHANGE${type}${this.createAtNetworkTimestamp}`),
         this.secretKey
       ),
     });

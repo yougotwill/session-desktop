@@ -52,6 +52,7 @@ export type LocalizerKeys =
   | 'cameraPermissionNeeded'
   | 'cancel'
   | 'cannotMixImageAndNonImageAttachments'
+  | 'cannotRemoveAdminFromGroup'
   | 'cannotRemoveCreatorFromGroup'
   | 'cannotRemoveCreatorFromGroupDesc'
   | 'cannotUpdate'

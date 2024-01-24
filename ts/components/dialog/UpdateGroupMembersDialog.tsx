@@ -249,6 +249,11 @@ export const UpdateGroupMembersDialog = (props: Props) => {
       return;
     }
     if (groupAdmins?.includes(member)) {
+      if (PubKey.is03Pubkey(conversationId)) {
+        ToastUtils.pushCannotRemoveAdminFromGroup();
+        window?.log?.warn(`User ${member} cannot be removed as they are adn admin.`);
+        return;
+      }
       ToastUtils.pushCannotRemoveCreatorFromGroup();
       window?.log?.warn(
         `User ${member} cannot be removed as they are the creator of the closed group.`

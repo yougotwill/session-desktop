@@ -11,6 +11,7 @@ import {
 } from 'libsession_util_nodejs';
 import { base64_variants, from_base64 } from 'libsodium-wrappers-sumo';
 import { intersection, isEmpty, uniq } from 'lodash';
+import { v4 } from 'uuid';
 import { ConfigDumpData } from '../../data/configDump/configDump';
 import { ConversationModel } from '../../models/conversation';
 import { ConversationTypeEnum } from '../../models/conversationAttributes';
@@ -630,6 +631,7 @@ async function getUpdateMessagesToPush({
   if (withoutHistory.length) {
     updateMessages.push(
       new GroupUpdateMemberChangeMessage({
+        identifier: v4(),
         added: withoutHistory,
         groupPk,
         typeOfChange: 'added',
@@ -643,6 +645,7 @@ async function getUpdateMessagesToPush({
   if (withHistory.length) {
     updateMessages.push(
       new GroupUpdateMemberChangeMessage({
+        identifier: v4(),
         added: withHistory,
         groupPk,
         typeOfChange: 'addedWithHistory',
@@ -656,6 +659,7 @@ async function getUpdateMessagesToPush({
   if (removed.length) {
     updateMessages.push(
       new GroupUpdateMemberChangeMessage({
+        identifier: v4(),
         removed,
         groupPk,
         typeOfChange: 'removed',

@@ -493,6 +493,8 @@ async function encryptMessageAndWrap(
     return encryptForGroupV2(params);
   }
 
+  // can only be legacy group or 1o1 chats here
+
   const recipient = PubKey.cast(destination);
 
   const { envelopeType, cipherText } = await MessageEncrypter.encrypt(

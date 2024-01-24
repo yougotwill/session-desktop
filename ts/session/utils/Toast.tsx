@@ -194,6 +194,10 @@ export function pushCannotRemoveCreatorFromGroup() {
   pushToastWarning('cannotRemoveCreatorFromGroup', window.i18n('cannotRemoveCreatorFromGroupDesc'));
 }
 
+export function pushCannotRemoveAdminFromGroup() {
+  pushToastWarning('cannotRemoveAdminFromGroup', window.i18n('cannotRemoveAdminFromGroup'));
+}
+
 export function pushOnlyAdminCanRemove() {
   pushToastInfo('onlyAdminCanRemoveMembers', window.i18n('onlyAdminCanRemoveMembersDesc'));
 }
