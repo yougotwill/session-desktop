@@ -1,14 +1,11 @@
 import { isArray } from 'lodash';
 import pRetry from 'p-retry';
 import { Snode } from '../../../data/data';
+import { PubKey } from '../../types';
+import { SwarmForSubRequest } from './SnodeRequestTypes';
 import { doSnodeBatchRequest } from './batchRequest';
 import { GetNetworkTime } from './getNetworkTime';
 import { getRandomSnode } from './snodePool';
-import { SwarmForSubRequest } from './SnodeRequestTypes';
-
-function buildSwarmForSubRequests(pubkey: string): Array<SwarmForSubRequest> {
-  return [{ method: 'get_swarm', params: { pubkey } }];
-}
 
 /**
  * get snodes for pubkey from random snode. Uses an existing snode
@@ -17,9 +14,12 @@ async function requestSnodesForPubkeyWithTargetNodeRetryable(
   pubkey: string,
   targetNode: Snode
 ): Promise<Array<Snode>> {
-  const subRequests = buildSwarmForSubRequests(pubkey);
+  if (!PubKey.is03Pubkey(pubkey) && !PubKey.is05Pubkey(pubkey)) {
+    throw new Error('invalid pubkey given for swarmFor');
+  }
+  const subrequest = new SwarmForSubRequest(pubkey);
 
-  const result = await doSnodeBatchRequest(subRequests, targetNode, 4000, pubkey);
+  const result = await doSnodeBatchRequest([subrequest.build()], targetNode, 4000, pubkey);
 
   if (!result || !result.length) {
     window?.log?.warn(

@@ -3,7 +3,6 @@
 import { AbortController } from 'abort-controller';
 import ByteBuffer from 'bytebuffer';
 import { GroupPubkeyType, PubkeyType } from 'libsession_util_nodejs';
-import { from_hex } from 'libsodium-wrappers-sumo';
 import { compact, isEmpty, isNumber, isString, sample } from 'lodash';
 import pRetry from 'p-retry';
 import { Data } from '../../data/data';
@@ -17,13 +16,9 @@ import {
 } from '../apis/open_group_api/sogsv3/sogsV3SendMessage';
 import {
   NotEmptyArrayOfBatchResults,
-  RevokeSubaccountParams,
-  RevokeSubaccountSubRequest,
   StoreOnNodeData,
   StoreOnNodeParams,
   StoreOnNodeParamsNoSig,
-  UnrevokeSubaccountParams,
-  UnrevokeSubaccountSubRequest,
 } from '../apis/snode_api/SnodeRequestTypes';
 import { GetNetworkTime } from '../apis/snode_api/getNetworkTime';
 import { SnodeNamespace, SnodeNamespaces } from '../apis/snode_api/namespaces';
@@ -35,10 +30,10 @@ import {
 import { SnodeSignature, SnodeSignatureResult } from '../apis/snode_api/signature/snodeSignatures';
 import { getSwarmFor } from '../apis/snode_api/snodePool';
 import { SnodeAPIStore } from '../apis/snode_api/storeMessage';
-import { WithMessagesHashes, WithRevokeParams } from '../apis/snode_api/types';
+import { WithMessagesHashes, WithRevokeSubRequest } from '../apis/snode_api/types';
 import { TTL_DEFAULT } from '../constants';
 import { ConvoHub } from '../conversations';
-import { MessageEncrypter, concatUInt8Array } from '../crypto';
+import { MessageEncrypter } from '../crypto';
 import { addMessagePadding } from '../crypto/BufferPadding';
 import { ContentMessage } from '../messages/outgoing';
 import { UnsendMessage } from '../messages/outgoing/controlMessage/UnsendMessage';
@@ -47,7 +42,7 @@ import { OpenGroupVisibleMessage } from '../messages/outgoing/visibleMessage/Ope
 import { ed25519Str } from '../onions/onionPath';
 import { PubKey } from '../types';
 import { OutgoingRawMessage } from '../types/RawMessage';
-import { StringUtils, UserUtils } from '../utils';
+import { UserUtils } from '../utils';
 import { fromUInt8ArrayToBase64 } from '../utils/String';
 import { EmptySwarmError } from '../utils/errors';
 
@@ -145,7 +140,7 @@ async function send({
           },
         ],
         destination,
-        { messagesHashes: [], revokeParams: null, unrevokeParams: null },
+        { messagesHashes: [], revokeSubRequest: null, unrevokeSubRequest: null },
         'batch'
       );
 
@@ -265,78 +260,14 @@ async function signDeleteHashesRequest(
   return signedRequest || null;
 }
 
-async function signedRevokeRequest({
-  destination,
-  revokeParams,
-  unrevokeParams,
-}: WithRevokeParams & { destination: PubkeyType | GroupPubkeyType }) {
-  let revokeSignedRequest: RevokeSubaccountSubRequest | null = null;
-  let unrevokeSignedRequest: UnrevokeSubaccountSubRequest | null = null;
-
-  if (!PubKey.is03Pubkey(destination) || (isEmpty(revokeParams) && isEmpty(unrevokeParams))) {
-    return { revokeSignedRequest, unrevokeSignedRequest };
-  }
-
-  const group = await UserGroupsWrapperActions.getGroup(destination);
-  const secretKey = group?.secretKey;
-  if (!secretKey || isEmpty(secretKey)) {
-    throw new Error('tried to signedRevokeRequest but we do not have the admin secret key');
-  }
-
-  const timestamp = GetNetworkTime.now();
-
-  if (revokeParams) {
-    const method = 'revoke_subaccount' as const;
-    const tokensBytes = from_hex(revokeParams.revoke.join(''));
-
-    const prefix = new Uint8Array(StringUtils.encode(`${method}${timestamp}`, 'utf8'));
-    const sigResult = await SnodeGroupSignature.signDataWithAdminSecret(
-      concatUInt8Array(prefix, tokensBytes),
-      { secretKey }
-    );
-
-    revokeSignedRequest = {
-      method,
-      params: {
-        revoke: revokeParams.revoke,
-        ...sigResult,
-        pubkey: destination,
-        timestamp,
-      },
-    };
-  }
-  if (unrevokeParams) {
-    const method = 'unrevoke_subaccount' as const;
-    const tokensBytes = from_hex(unrevokeParams.unrevoke.join(''));
-
-    const prefix = new Uint8Array(StringUtils.encode(`${method}${timestamp}`, 'utf8'));
-    const sigResult = await SnodeGroupSignature.signDataWithAdminSecret(
-      concatUInt8Array(prefix, tokensBytes),
-      { secretKey }
-    );
-
-    unrevokeSignedRequest = {
-      method,
-      params: {
-        unrevoke: unrevokeParams.unrevoke,
-        ...sigResult,
-        pubkey: destination,
-        timestamp,
-      },
-    };
-  }
-
-  return { revokeSignedRequest, unrevokeSignedRequest };
-}
-
 async function sendMessagesDataToSnode(
   params: Array<StoreOnNodeParamsNoSig>,
   destination: PubkeyType | GroupPubkeyType,
   {
     messagesHashes: messagesToDelete,
-    revokeParams,
-    unrevokeParams,
-  }: WithMessagesHashes & WithRevokeParams,
+    revokeSubRequest,
+    unrevokeSubRequest,
+  }: WithMessagesHashes & WithRevokeSubRequest,
   method: 'batch' | 'sequence'
 ): Promise<NotEmptyArrayOfBatchResults> {
   const rightDestination = params.filter(m => m.pubkey === destination);
@@ -366,11 +297,6 @@ async function sendMessagesDataToSnode(
   }
 
   const signedDeleteHashesRequest = await signDeleteHashesRequest(destination, messagesToDelete);
-  const signedRevokeRequests = await signedRevokeRequest({
-    destination,
-    revokeParams,
-    unrevokeParams,
-  });
 
   try {
     // No pRetry here as if this is a bad path it will be handled and retried in lokiOnionFetch.
@@ -379,8 +305,8 @@ async function sendMessagesDataToSnode(
       compact([
         ...withSigWhenRequired,
         signedDeleteHashesRequest,
-        signedRevokeRequests?.revokeSignedRequest,
-        signedRevokeRequests?.unrevokeSignedRequest,
+        revokeSubRequest,
+        unrevokeSubRequest,
       ]),
 
       method
@@ -541,14 +467,12 @@ async function sendEncryptedDataToSnode({
   destination,
   encryptedData,
   messagesHashesToDelete,
-  revokeParams,
-  unrevokeParams,
-}: {
+  revokeSubRequest,
+  unrevokeSubRequest,
+}: WithRevokeSubRequest & {
   encryptedData: Array<StoreOnNodeData>;
   destination: GroupPubkeyType | PubkeyType;
   messagesHashesToDelete: Set<string> | null;
-  revokeParams: RevokeSubaccountParams | null;
-  unrevokeParams: UnrevokeSubaccountParams | null;
 }): Promise<NotEmptyArrayOfBatchResults | null> {
   try {
     const batchResults = await pRetry(
@@ -562,7 +486,11 @@ async function sendEncryptedDataToSnode({
             namespace: content.namespace,
           })),
           destination,
-          { messagesHashes: [...(messagesHashesToDelete || [])], revokeParams, unrevokeParams },
+          {
+            messagesHashes: [...(messagesHashesToDelete || [])],
+            revokeSubRequest,
+            unrevokeSubRequest,
+          },
           'sequence'
         );
       },

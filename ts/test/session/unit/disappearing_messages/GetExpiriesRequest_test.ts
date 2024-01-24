@@ -7,13 +7,12 @@ import {
   fakeHash,
 } from '../../../../session/apis/snode_api/SnodeRequestTypes';
 import {
-  GetExpiriesFromSnodeProps,
   GetExpiriesRequestResponseResults,
-  buildGetExpiriesRequest,
   processGetExpiriesRequestResponse,
 } from '../../../../session/apis/snode_api/getExpiriesRequest';
 import { GetNetworkTime } from '../../../../session/apis/snode_api/getNetworkTime';
 import { SnodeSignature } from '../../../../session/apis/snode_api/signature/snodeSignatures';
+import { WithMessagesHashes } from '../../../../session/apis/snode_api/types';
 import { UserUtils } from '../../../../session/utils';
 import { isValidUnixTimestamp } from '../../../../session/utils/Timestamps';
 import { TypedStub, generateFakeSnode, stubWindowLog } from '../../../test-utils/utils';
@@ -47,12 +46,13 @@ describe('GetExpiriesRequest', () => {
   });
 
   describe('buildGetExpiriesRequest', () => {
-    const props: GetExpiriesFromSnodeProps = {
-      messageHashes: ['messageHash'],
+    const props: WithMessagesHashes = {
+      messagesHashes: ['messageHash'],
     };
 
     it('builds a valid request given the messageHashes and valid timestamp for now', async () => {
-      const request: GetExpiriesFromNodeSubRequest | null = await buildGetExpiriesRequest(props);
+      const unsigned = new GetExpiriesFromNodeSubRequest(props);
+      const request = await unsigned.buildAndSignParameters();
 
       expect(request, 'should not return null').to.not.be.null;
       expect(request, 'should not return undefined').to.not.be.undefined;
@@ -63,7 +63,7 @@ describe('GetExpiriesRequest', () => {
       expect(request, "method should be 'get_expiries'").to.have.property('method', 'get_expiries');
       expect(request.params.pubkey, 'should have a matching pubkey').to.equal(ourNumber);
       expect(request.params.messages, 'messageHashes should match our input').to.deep.equal(
-        props.messageHashes
+        props.messagesHashes
       );
       expect(
         request.params.timestamp && isValidUnixTimestamp(request?.params.timestamp),
@@ -74,16 +74,17 @@ describe('GetExpiriesRequest', () => {
     it('fails to build a request if our pubkey is missing', async () => {
       // Modify the stub behavior for this test only we need to return an unsupported type to simulate a missing pubkey
       (getOurPubKeyStrFromCacheStub as any).returns(undefined);
-
-      const request: GetExpiriesFromNodeSubRequest | null = await buildGetExpiriesRequest(props);
+      const unsigned = new GetExpiriesFromNodeSubRequest(props);
+      const request = await unsigned.buildAndSignParameters();
 
       expect(request, 'should return null').to.be.null;
     });
     it('fails to build a request if our signature is missing', async () => {
       // Modify the stub behavior for this test only we need to return an unsupported type to simulate a missing pubkey
       Sinon.stub(SnodeSignature, 'generateGetExpiriesOurSignature').resolves(null);
-      // TODO audric this should throw
-      const request: GetExpiriesFromNodeSubRequest | null = await buildGetExpiriesRequest(props);
+      // TODO audric this should throw debugger
+      const unsigned = new GetExpiriesFromNodeSubRequest(props);
+      const request = await unsigned.buildAndSignParameters();
 
       expect(request, 'should return null').to.be.null;
     });

@@ -1,6 +1,5 @@
 import { isArray } from 'lodash';
 import { Snode } from '../../../data/data';
-import { SnodeNamespace } from './namespaces';
 import { processOnionRequestErrorAtDestination, SnodeResponse } from './onions';
 import { snodeRpc } from './sessionRpc';
 import {
@@ -9,12 +8,13 @@ import {
   SnodeApiSubRequests,
 } from './SnodeRequestTypes';
 
-function logSubRequests(requests: Array<SnodeApiSubRequests>) {
-  return requests.map(m =>
-    m.method === 'retrieve' || m.method === 'store'
-      ? `${m.method}-${SnodeNamespace.toRoles(m.params.namespace)}`
-      : m.method
-  );
+function logSubRequests(_requests: Array<SnodeApiSubRequests>) {
+  return 'logSubRequests to do';
+  // return requests.map(m =>
+  //   m.method === 'retrieve' || m.method === 'store'
+  //     ? `${m.method}-${SnodeNamespace.toRoles(m.params.namespace)}`
+  //     : m.method
+  // );
 }
 
 /**
@@ -83,6 +83,7 @@ function decodeBatchRequest(snodeResponse: SnodeResponse): NotEmptyArrayOfBatchR
   try {
     // console.error('decodeBatch: ', snodeResponse);
     if (snodeResponse.status !== 200) {
+      debugger;
       throw new Error(`decodeBatchRequest invalid status code: ${snodeResponse.status}`);
     }
     const parsed = JSON.parse(snodeResponse.body);

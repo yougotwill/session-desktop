@@ -7,6 +7,7 @@ import { GetNetworkTime } from '../../../../session/apis/snode_api/getNetworkTim
 import { SnodeNamespaces } from '../../../../session/apis/snode_api/namespaces';
 import { SnodeGroupSignature } from '../../../../session/apis/snode_api/signature/groupSignature';
 import { SnodeSignature } from '../../../../session/apis/snode_api/signature/snodeSignatures';
+import { WithSignature } from '../../../../session/apis/snode_api/types';
 import { concatUInt8Array } from '../../../../session/crypto';
 import { UserUtils } from '../../../../session/utils';
 import { fromBase64ToArray, fromHexToArray } from '../../../../session/utils/String';
@@ -27,7 +28,7 @@ const userEd25519Keypair = {
 
 const hardcodedTimestamp = 1234;
 
-async function verifySig(ret: { pubkey: string; signature: string }, verificationData: string) {
+async function verifySig(ret: WithSignature & { pubkey: string }, verificationData: string) {
   const without03 =
     ret.pubkey.startsWith('03') || ret.pubkey.startsWith('05') ? ret.pubkey.slice(2) : ret.pubkey; //
   const pk = HexString.fromHexString(without03);

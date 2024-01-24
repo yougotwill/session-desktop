@@ -100,8 +100,8 @@ async function pushChangesToUserSwarmIfNeeded() {
     encryptedData: msgs,
     destination: us,
     messagesHashesToDelete: changesToPush.allOldHashes,
-    revokeParams: null,
-    unrevokeParams: null,
+    revokeSubRequest: null,
+    unrevokeSubRequest: null,
   });
 
   const expectedReplyLength =

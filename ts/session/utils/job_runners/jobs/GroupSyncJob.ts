@@ -9,7 +9,7 @@ import { MetaGroupWrapperActions } from '../../../../webworker/workers/browser/l
 import { StoreOnNodeData } from '../../../apis/snode_api/SnodeRequestTypes';
 import { GetNetworkTime } from '../../../apis/snode_api/getNetworkTime';
 import { SnodeNamespaces } from '../../../apis/snode_api/namespaces';
-import { WithRevokeParams } from '../../../apis/snode_api/types';
+import { WithRevokeSubRequest } from '../../../apis/snode_api/types';
 import { TTL_DEFAULT } from '../../../constants';
 import { ConvoHub } from '../../../conversations';
 import { GroupUpdateInfoChangeMessage } from '../../../messages/outgoing/controlMessage/group_v2/to_group/GroupUpdateInfoChangeMessage';
@@ -71,13 +71,13 @@ async function confirmPushedAndDump(
 }
 
 async function pushChangesToGroupSwarmIfNeeded({
-  revokeParams,
-  unrevokeParams,
+  revokeSubRequest,
+  unrevokeSubRequest,
   updateMessages,
   groupPk,
   supplementKeys,
 }: WithGroupPubkey &
-  WithRevokeParams & {
+  WithRevokeSubRequest & {
     supplementKeys: Array<Uint8Array>;
     updateMessages: Array<GroupUpdateMemberChangeMessage | GroupUpdateInfoChangeMessage>;
   }): Promise<RunJobResult> {
@@ -147,16 +147,16 @@ async function pushChangesToGroupSwarmIfNeeded({
     encryptedData: [...encryptedMessage, ...extraMessagesEncrypted],
     destination: groupPk,
     messagesHashesToDelete: allOldHashes,
-    revokeParams,
-    unrevokeParams,
+    revokeSubRequest,
+    unrevokeSubRequest,
   });
 
   const expectedReplyLength =
     messages.length + // each of those messages are sent as a subrequest
     extraMessagesEncrypted.length + // each of those messages are sent as a subrequest
     (allOldHashes.size ? 1 : 0) + // we are sending all hashes changes as a single request
-    (revokeParams?.revoke.length ? 1 : 0) + // we are sending all revoke updates as a single request
-    (unrevokeParams?.unrevoke.length ? 1 : 0); // we are sending all revoke updates as a single request
+    (revokeSubRequest?.revokeTokenHex.length ? 1 : 0) + // we are sending all revoke updates as a single request
+    (unrevokeSubRequest?.revokeTokenHex.length ? 1 : 0); // we are sending all revoke updates as a single request
 
   // we do a sequence call here. If we do not have the right expected number of results, consider it a failure
   if (!isArray(result) || result.length !== expectedReplyLength) {
@@ -225,8 +225,8 @@ class GroupSyncJob extends PersistedJob<GroupSyncPersistedData> {
       // return await so we catch exceptions in here
       return await GroupSync.pushChangesToGroupSwarmIfNeeded({
         groupPk: thisJobDestination,
-        revokeParams: null,
-        unrevokeParams: null,
+        revokeSubRequest: null,
+        unrevokeSubRequest: null,
         supplementKeys: [],
         updateMessages: [],
       });

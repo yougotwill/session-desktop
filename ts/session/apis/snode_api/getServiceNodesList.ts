@@ -1,29 +1,10 @@
-import _, { intersectionWith, sampleSize } from 'lodash';
+import { compact, intersectionWith, sampleSize } from 'lodash';
 import { SnodePool } from '.';
 import { Snode } from '../../../data/data';
+import { GetServiceNodesSubRequest } from './SnodeRequestTypes';
 import { doSnodeBatchRequest } from './batchRequest';
 import { GetNetworkTime } from './getNetworkTime';
 import { minSnodePoolCount, requiredSnodesForAgreement } from './snodePool';
-import { GetServiceNodesSubRequest } from './SnodeRequestTypes';
-
-function buildSnodeListRequests(): Array<GetServiceNodesSubRequest> {
-  const request: GetServiceNodesSubRequest = {
-    method: 'oxend_request',
-    params: {
-      endpoint: 'get_service_nodes',
-      params: {
-        active_only: true,
-        fields: {
-          public_ip: true,
-          storage_port: true,
-          pubkey_x25519: true,
-          pubkey_ed25519: true,
-        },
-      },
-    },
-  };
-  return [request];
-}
 
 /**
  * Returns a list of unique snodes got from the specified targetNode.
@@ -31,8 +12,9 @@ function buildSnodeListRequests(): Array<GetServiceNodesSubRequest> {
  * This is exported for testing purpose only.
  */
 async function getSnodePoolFromSnode(targetNode: Snode): Promise<Array<Snode>> {
-  const requests = buildSnodeListRequests();
-  const results = await doSnodeBatchRequest(requests, targetNode, 4000, null);
+  const subrequest = new GetServiceNodesSubRequest();
+
+  const results = await doSnodeBatchRequest([subrequest.build()], targetNode, 4000, null);
 
   const firstResult = results[0];
 
@@ -60,7 +42,7 @@ async function getSnodePoolFromSnode(targetNode: Snode): Promise<Array<Snode>> {
     GetNetworkTime.handleTimestampOffsetFromNetwork('get_service_nodes', json.t);
 
     // we the return list by the snode is already made of uniq snodes
-    return _.compact(snodes);
+    return compact(snodes);
   } catch (e) {
     window?.log?.error('Invalid json response');
     return [];

@@ -15,17 +15,6 @@ import { getRandomSnode } from './snodePool';
 // do not define a regex but rather create it on the fly to avoid https://stackoverflow.com/questions/3891641/regex-test-only-works-every-other-time
 const onsNameRegex = '^\\w([\\w-]*[\\w])?$';
 
-function buildOnsResolveRequests(base64EncodedNameHash: string): Array<OnsResolveSubRequest> {
-  const request: OnsResolveSubRequest = {
-    method: 'oxend_request',
-    params: {
-      endpoint: 'ons_resolve',
-      params: { type: 0, name_hash: base64EncodedNameHash },
-    },
-  };
-  return [request];
-}
-
 async function getSessionIDForOnsName(onsNameCase: string) {
   const validationCount = 3;
 
@@ -34,14 +23,13 @@ async function getSessionIDForOnsName(onsNameCase: string) {
   const nameAsData = stringToUint8Array(onsNameLowerCase);
   const nameHash = sodium.crypto_generichash(sodium.crypto_generichash_BYTES, nameAsData);
   const base64EncodedNameHash = fromUInt8ArrayToBase64(nameHash);
-
-  const onsResolveRequests = buildOnsResolveRequests(base64EncodedNameHash);
+  const subRequest = new OnsResolveSubRequest(base64EncodedNameHash);
 
   // we do this request with validationCount snodes
   const promises = range(0, validationCount).map(async () => {
     const targetNode = await getRandomSnode();
 
-    const results = await doSnodeBatchRequest(onsResolveRequests, targetNode, 4000, null);
+    const results = await doSnodeBatchRequest([subRequest.build()], targetNode, 4000, null);
     const firstResult = results[0];
     if (!firstResult || firstResult.code !== 200 || !firstResult.body) {
       throw new Error('ONSresolve:Failed to resolve ONS');

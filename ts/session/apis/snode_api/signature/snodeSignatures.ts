@@ -16,14 +16,15 @@ import {
   SignedHashesParams,
   WithMessagesHashes,
   WithShortenOrExtend,
+  WithSignature,
   WithTimestamp,
 } from '../types';
 
-export type SnodeSignatureResult = WithTimestamp & {
-  signature: string;
-  pubkey_ed25519: string;
-  pubkey: string; // this is the x25519 key of the pubkey we are doing the request to (ourself for our swarm usually)
-};
+export type SnodeSignatureResult = WithSignature &
+  WithTimestamp & {
+    pubkey_ed25519: string;
+    pubkey: string; // this is the x25519 key of the pubkey we are doing the request to (ourself for our swarm usually)
+  };
 
 async function getSnodeSignatureByHashesParams({
   messagesHashes,
@@ -166,7 +167,7 @@ async function generateUpdateExpirySignature({
   WithTimestamp & {
     ed25519Privkey: Uint8Array; // len 64
     ed25519Pubkey: string;
-  }): Promise<{ signature: string; pubkey: string }> {
+  }): Promise<WithSignature & { pubkey: string }> {
   // "expire" || ShortenOrExtend || expiry || messages[0] || ... || messages[N]
   const verificationString = `expire${shortenOrExtend}${timestamp}${messagesHashes.join('')}`;
   const verificationData = StringUtils.encode(verificationString, 'utf8');
@@ -217,7 +218,7 @@ async function generateGetExpiriesOurSignature({
 }: {
   timestamp: number;
   messageHashes: Array<string>;
-}): Promise<{ signature: string; pubkey_ed25519: string } | null> {
+}): Promise<(WithSignature & { pubkey_ed25519: string }) | null> {
   const ourEd25519Key = await UserUtils.getUserED25519KeyPair();
   if (!ourEd25519Key) {
     const err =

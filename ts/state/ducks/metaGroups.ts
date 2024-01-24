@@ -22,6 +22,7 @@ import { getSwarmPollingInstance } from '../../session/apis/snode_api';
 import { GetNetworkTime } from '../../session/apis/snode_api/getNetworkTime';
 import { RevokeChanges, SnodeAPIRevoke } from '../../session/apis/snode_api/revokeSubaccount';
 import { SnodeGroupSignature } from '../../session/apis/snode_api/signature/groupSignature';
+import { WithSecretKey } from '../../session/apis/snode_api/types';
 import { ConvoHub } from '../../session/conversations';
 import { getSodiumRenderer } from '../../session/crypto';
 import { DisappearingMessages } from '../../session/disappearing_messages';
@@ -182,8 +183,8 @@ const initNewGroupInWrapper = createAsyncThunk(
 
       const result = await GroupSync.pushChangesToGroupSwarmIfNeeded({
         groupPk,
-        revokeParams: null,
-        unrevokeParams: null,
+        revokeSubRequest: null,
+        unrevokeSubRequest: null,
         supplementKeys: [],
         updateMessages: [],
       });
@@ -559,7 +560,12 @@ async function getPendingRevokeParams({
   withHistory,
   removed,
   groupPk,
-}: WithGroupPubkey & WithAddWithoutHistoryMembers & WithAddWithHistoryMembers & WithRemoveMembers) {
+  secretKey,
+}: WithGroupPubkey &
+  WithSecretKey &
+  WithAddWithoutHistoryMembers &
+  WithAddWithHistoryMembers &
+  WithRemoveMembers) {
   const revokeChanges: RevokeChanges = [];
   const unrevokeChanges: RevokeChanges = [];
 
@@ -579,7 +585,10 @@ async function getPendingRevokeParams({
     revokeChanges.push({ action: 'revoke_subaccount', tokenToRevokeHex: token });
   }
 
-  return SnodeAPIRevoke.getRevokeSubaccountParams(groupPk, { revokeChanges, unrevokeChanges });
+  return SnodeAPIRevoke.getRevokeSubaccountParams(groupPk, secretKey, {
+    revokeChanges,
+    unrevokeChanges,
+  });
 }
 
 function getConvoExpireDetailsForMsg(convo: ConversationModel) {
@@ -703,6 +712,7 @@ async function handleMemberAddedFromUIOrNot({
     withHistory,
     withoutHistory,
     removed: [],
+    secretKey: group.secretKey,
   });
 
   // then, handle the addition with history of messages by generating supplement keys.
@@ -814,6 +824,7 @@ async function handleMemberRemovedFromUIOrNot({
     withHistory: [],
     withoutHistory: [],
     removed,
+    secretKey: group.secretKey,
   });
 
   // Send the groupUpdateDeleteMessage that can still be decrypted by those removed members to namespace ClosedGroupRevokedRetrievableMessages. (not when handling a MEMBER_LEFT message)
@@ -949,8 +960,8 @@ async function handleNameChangeFromUI({
   const batchResult = await GroupSync.pushChangesToGroupSwarmIfNeeded({
     groupPk,
     supplementKeys: [],
-    revokeParams: null,
-    unrevokeParams: null,
+    revokeSubRequest: null,
+    unrevokeSubRequest: null,
     updateMessages,
   });
 

@@ -273,8 +273,8 @@ describe('GroupSyncJob pushChangesToGroupSwarmIfNeeded', () => {
   it('call savesDumpToDb even if no changes are required on the serverside', async () => {
     const result = await GroupSync.pushChangesToGroupSwarmIfNeeded({
       groupPk,
-      revokeParams: null,
-      unrevokeParams: null,
+      revokeSubRequest: null,
+      unrevokeSubRequest: null,
       supplementKeys: [],
       updateMessages: [],
     });
@@ -298,8 +298,8 @@ describe('GroupSyncJob pushChangesToGroupSwarmIfNeeded', () => {
     });
     const result = await GroupSync.pushChangesToGroupSwarmIfNeeded({
       groupPk,
-      revokeParams: null,
-      unrevokeParams: null,
+      revokeSubRequest: null,
+      unrevokeSubRequest: null,
       supplementKeys: [],
       updateMessages: [],
     });
@@ -363,8 +363,8 @@ describe('GroupSyncJob pushChangesToGroupSwarmIfNeeded', () => {
     ]);
     const result = await GroupSync.pushChangesToGroupSwarmIfNeeded({
       groupPk,
-      revokeParams: null,
-      unrevokeParams: null,
+      revokeSubRequest: null,
+      unrevokeSubRequest: null,
       supplementKeys: [],
       updateMessages: [],
     });

@@ -3,35 +3,41 @@ import {
   BatchStoreWithExtraParams,
   NotEmptyArrayOfBatchResults,
   SnodeApiSubRequests,
+  StoreOnNodeSubRequest,
+  SubaccountRevokeSubRequest,
+  SubaccountUnrevokeSubRequest,
   isDeleteByHashesParams,
-  isRevokeRequest,
-  isUnrevokeRequest,
 } from './SnodeRequestTypes';
 import { doSnodeBatchRequest } from './batchRequest';
 import { GetNetworkTime } from './getNetworkTime';
 
-function buildStoreRequests(params: Array<BatchStoreWithExtraParams>): Array<SnodeApiSubRequests> {
-  return params.map(p => {
-    if (isDeleteByHashesParams(p)) {
-      return {
-        method: 'delete' as const,
+async function buildStoreRequests(
+  params: Array<BatchStoreWithExtraParams>
+): Promise<Array<SnodeApiSubRequests>> {
+  const storeRequests = await Promise.all(
+    params.map(p => {
+      if (isDeleteByHashesParams(p)) {
+        return {
+          method: 'delete' as const,
+          params: p,
+        };
+      }
+
+      // those requests are already fully contained.
+      if (p instanceof SubaccountRevokeSubRequest || p instanceof SubaccountUnrevokeSubRequest) {
+        return p.buildAndSignParameters();
+      }
+
+      const storeRequest: StoreOnNodeSubRequest = {
+        method: 'store',
         params: p,
       };
-    }
 
-    if (isRevokeRequest(p)) {
-      return p;
-    }
+      return storeRequest;
+    })
+  );
 
-    if (isUnrevokeRequest(p)) {
-      return p;
-    }
-
-    return {
-      method: 'store',
-      params: p,
-    };
-  });
+  return storeRequests;
 }
 
 /**
@@ -44,10 +50,10 @@ async function batchStoreOnNode(
   method: 'batch' | 'sequence'
 ): Promise<NotEmptyArrayOfBatchResults> {
   try {
-    const subRequests = buildStoreRequests(params);
+    const subRequests = await buildStoreRequests(params);
     const asssociatedWith = (params[0] as any)?.pubkey as string | undefined;
     if (!asssociatedWith) {
-      // not ideal,
+      // not ideal
       throw new Error('batchStoreOnNode first subrequest pubkey needs to be set');
     }
     const result = await doSnodeBatchRequest(

@@ -9,15 +9,10 @@ import { Snode } from '../../../data/data';
 import { NetworkTimeSubRequest } from './SnodeRequestTypes';
 import { doSnodeBatchRequest } from './batchRequest';
 
-function getNetworkTimeSubRequests(): Array<NetworkTimeSubRequest> {
-  const request: NetworkTimeSubRequest = { method: 'info', params: {} };
-
-  return [request];
-}
-
 const getNetworkTime = async (snode: Snode): Promise<string | number> => {
-  const subRequests = getNetworkTimeSubRequests();
-  const result = await doSnodeBatchRequest(subRequests, snode, 4000, null);
+  const subrequest = new NetworkTimeSubRequest();
+
+  const result = await doSnodeBatchRequest([subrequest.build()], snode, 4000, null);
   if (!result || !result.length) {
     window?.log?.warn(`getNetworkTime on ${snode.ip}:${snode.port} returned falsish value`, result);
     throw new Error('getNetworkTime: Invalid result');

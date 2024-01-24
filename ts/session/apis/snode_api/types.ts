@@ -1,12 +1,8 @@
 import { GroupPubkeyType, PubkeyType } from 'libsession_util_nodejs';
 import { PubKey } from '../../types';
-import {
-  RevokeSubaccountParams,
-  RevokeSubaccountSubRequest,
-  UnrevokeSubaccountParams,
-  UnrevokeSubaccountSubRequest,
-} from './SnodeRequestTypes';
+
 import { SnodeNamespaces } from './namespaces';
+import { SubaccountRevokeSubRequest, SubaccountUnrevokeSubRequest } from './SnodeRequestTypes';
 
 export type RetrieveMessageItem = {
   hash: string;
@@ -46,15 +42,14 @@ export type DeleteMessageByHashesUserSubRequest = WithMessagesHashes & {
 export type RetrieveMessagesResultsBatched = Array<RetrieveRequestResult>;
 
 export type WithTimestamp = { timestamp: number };
+export type WithSignature = { signature: string };
+export type WithSecretKey = { secretKey: Uint8Array };
 export type ShortenOrExtend = 'extend' | 'shorten' | '';
 export type WithShortenOrExtend = { shortenOrExtend: ShortenOrExtend };
-export type WithSignedRevokeRequests = {
-  signedRevokeRequests: Array<RevokeSubaccountSubRequest | UnrevokeSubaccountSubRequest> | null;
-};
 
-export type WithRevokeParams = {
-  revokeParams: RevokeSubaccountParams | null;
-  unrevokeParams: UnrevokeSubaccountParams | null;
+export type WithRevokeSubRequest = {
+  revokeSubRequest: SubaccountRevokeSubRequest | null;
+  unrevokeSubRequest: SubaccountUnrevokeSubRequest | null;
 };
 export type WithMessagesToDeleteSubRequest = {
   messagesToDelete:
@@ -63,15 +58,13 @@ export type WithMessagesToDeleteSubRequest = {
     | null;
 };
 
-export type SignedHashesParams = {
-  signature: string;
+export type SignedHashesParams = WithSignature & {
   pubkey: PubkeyType;
   pubkey_ed25519: PubkeyType;
   messages: Array<string>;
 };
 
-export type SignedGroupHashesParams = {
-  signature: string;
+export type SignedGroupHashesParams = WithSignature & {
   pubkey: GroupPubkeyType;
   messages: Array<string>;
 };
@@ -83,7 +76,7 @@ export function isDeleteByHashesGroup(
 }
 
 /** inherits from  https://api.oxen.io/storage-rpc/#/recursive?id=recursive but we only care about these values */
-export type ExpireMessageResultItem = {
+export type ExpireMessageResultItem = WithSignature & {
   /** the expiry timestamp that was applied (which might be different from the request expiry */
   expiry: number;
   /** ( PUBKEY_HEX || EXPIRY || RMSGs... || UMSGs... || CMSG_EXPs... )
@@ -92,7 +85,6 @@ export type ExpireMessageResultItem = {
   CMSG_EXPs are (HASH || EXPIRY) values, ascii-sorted by hash, for the unchanged message hashes included in the "unchanged" field.
   The signature uses the node's ed25519 pubkey.
   */
-  signature: string;
   /** Record of <found hashes, current expiries>, but did not get updated due to "shorten"/"extend" in the request. This field is only included when "shorten /extend" is explicitly given. */
   unchanged?: Record<string, number>;
   /** ascii-sorted list of hashes that had their expiries changed (messages that were not found, and messages excluded by the shorten/extend options, are not included) */
