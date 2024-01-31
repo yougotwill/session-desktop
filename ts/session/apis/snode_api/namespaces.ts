@@ -1,4 +1,4 @@
-import { isNumber, last, orderBy } from 'lodash';
+import { last, orderBy } from 'lodash';
 import { PickEnum } from '../../../types/Enums';
 import { assertUnreachable } from '../../../types/sqlSharedTypes';
 
@@ -79,7 +79,7 @@ export type SnodeNamespacesGroup =
 
 export type SnodeNamespacesUser = PickEnum<SnodeNamespaces, SnodeNamespaces.Default>;
 
-export type UserConfigNamespaces = PickEnum<
+export type SnodeNamespacesUserConfig = PickEnum<
   SnodeNamespaces,
   | SnodeNamespaces.UserProfile
   | SnodeNamespaces.UserContacts
@@ -91,7 +91,7 @@ export type UserConfigNamespaces = PickEnum<
  * Returns true if that namespace is associated with the config of a user (not his messages, only configs)
  */
 // eslint-disable-next-line consistent-return
-function isUserConfigNamespace(namespace: SnodeNamespaces): namespace is UserConfigNamespaces {
+function isUserConfigNamespace(namespace: SnodeNamespaces): namespace is SnodeNamespacesUserConfig {
   switch (namespace) {
     case SnodeNamespaces.UserProfile:
     case SnodeNamespaces.UserContacts:
@@ -262,10 +262,7 @@ function toRole(namespace: number) {
   }
 }
 
-function toRoles(namespace: number | Array<number>) {
-  if (isNumber(namespace)) {
-    return [namespace].map(toRole);
-  }
+function toRoles(namespace: Array<number>) {
   return namespace.map(toRole);
 }
 
@@ -275,4 +272,5 @@ export const SnodeNamespace = {
   isGroupNamespace,
   maxSizeMap,
   toRoles,
+  toRole,
 };

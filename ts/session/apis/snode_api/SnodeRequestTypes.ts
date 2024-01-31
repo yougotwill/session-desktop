@@ -1,97 +1,182 @@
+import ByteBuffer from 'bytebuffer';
 import { GroupPubkeyType, PubkeyType, WithGroupPubkey } from 'libsession_util_nodejs';
 import { from_hex } from 'libsodium-wrappers-sumo';
 import { isEmpty } from 'lodash';
+import { AwaitedReturn, assertUnreachable } from '../../../types/sqlSharedTypes';
+import { UserGroupsWrapperActions } from '../../../webworker/workers/browser/libsession_worker_interface';
 import { concatUInt8Array } from '../../crypto';
+import { ed25519Str } from '../../onions/onionPath';
+import { PubKey } from '../../types';
 import { StringUtils, UserUtils } from '../../utils';
 import { GetNetworkTime } from './getNetworkTime';
 import {
+  SnodeNamespace,
   SnodeNamespaces,
   SnodeNamespacesGroup,
   SnodeNamespacesGroupConfig,
-  UserConfigNamespaces,
+  SnodeNamespacesUser,
+  SnodeNamespacesUserConfig,
 } from './namespaces';
-import { SnodeGroupSignature } from './signature/groupSignature';
+import { GroupDetailsNeededForSignature, SnodeGroupSignature } from './signature/groupSignature';
 import { SnodeSignature } from './signature/snodeSignatures';
 import {
-  SignedGroupHashesParams,
-  SignedHashesParams,
+  ShortenOrExtend,
   WithMessagesHashes,
   WithSecretKey,
   WithSignature,
   WithTimestamp,
 } from './types';
 
-type WithRetrieveMethod = { method: 'retrieve' };
-type WithMaxCountSize = { max_count?: number; max_size?: number };
-type WithPubkeyAsString = { pubkey: string };
-type WithPubkeyAsGroupPubkey = { pubkey: GroupPubkeyType };
+type WithMaxSize = { max_size?: number };
 export type WithShortenOrExtend = { shortenOrExtend: 'shorten' | 'extend' | '' };
-
-type RetrieveAlwaysNeeded = {
-  namespace: number;
-  last_hash: string;
-  timestamp?: number;
-};
-
-export type RetrievePubkeySubRequestType = WithRetrieveMethod & {
-  params: {
-    pubkey_ed25519: string;
-    namespace: number;
-  } & RetrieveAlwaysNeeded &
-    WithMaxCountSize &
-    WithPubkeyAsString &
-    WithSignature;
-};
-
-/** Those namespaces do not require to be authenticated for storing messages.
- *  -> 0 is used for our swarm, and anyone needs to be able to send message to us.
- *  -> -10 is used for legacy closed group and we do not have authentication for them yet (but we will with the new closed groups)
- *  -> others are currently unused
- *
- */
-// type UnauthenticatedStoreNamespaces = -30 | -20 | -10 | 0 | 10 | 20 | 30;
-
-export type RetrieveLegacyClosedGroupSubRequestType = WithRetrieveMethod & {
-  params: {
-    namespace: SnodeNamespaces.LegacyClosedGroup; // legacy closed groups retrieve are not authenticated because the clients do not have a shared key
-  } & RetrieveAlwaysNeeded &
-    WithMaxCountSize &
-    WithPubkeyAsString;
-};
-
-export type RetrieveGroupAdminSubRequestType = WithRetrieveMethod & {
-  params: {
-    namespace: SnodeNamespacesGroup;
-  } & RetrieveAlwaysNeeded &
-    WithMaxCountSize &
-    WithSignature;
-};
-
-export type RetrieveGroupSubAccountSubRequestType = WithRetrieveMethod & {
-  params: {
-    namespace: SnodeNamespacesGroup;
-    subaccount: string;
-    subaccount_sig: string;
-  } & RetrieveAlwaysNeeded &
-    WithMaxCountSize &
-    WithPubkeyAsGroupPubkey &
-    WithSignature;
-};
-
-export type RetrieveSubRequestType =
-  | RetrieveLegacyClosedGroupSubRequestType
-  | RetrievePubkeySubRequestType
-  | RetrieveGroupAdminSubRequestType
-  | UpdateExpiryOnNodeUserSubRequest
-  | UpdateExpiryOnNodeGroupSubRequest
-  | RetrieveGroupSubAccountSubRequestType;
 
 abstract class SnodeAPISubRequest {
   public abstract method: string;
+  public abstract loggingId(): string;
+}
+
+/**
+ * Retrieve for legacy was not authenticated
+ */
+export class RetrieveLegacyClosedGroupSubRequest extends SnodeAPISubRequest {
+  public method = 'retrieve' as const;
+  public readonly legacyGroupPk: PubkeyType;
+  public readonly last_hash: string;
+  public readonly max_size: number | undefined;
+  public readonly namespace = SnodeNamespaces.LegacyClosedGroup;
+
+  constructor({
+    last_hash,
+    legacyGroupPk,
+    max_size,
+  }: WithMaxSize & { last_hash: string; legacyGroupPk: PubkeyType }) {
+    super();
+    this.legacyGroupPk = legacyGroupPk;
+    this.last_hash = last_hash;
+    this.max_size = max_size;
+  }
+
+  public build() {
+    return {
+      method: this.method,
+      params: {
+        namespace: this.namespace, // legacy closed groups retrieve are not authenticated because the clients do not have a shared key
+        pubkey: this.legacyGroupPk,
+        last_hash: this.last_hash,
+        max_size: this.max_size,
+        // if we give a timestamp, a signature will be requested by the snode so this request for legacy does not take a timestamp
+      },
+    };
+  }
+
+  public loggingId(): string {
+    return `${this.method}-${SnodeNamespace.toRole(this.namespace)}`;
+  }
+}
+
+export class RetrieveUserSubRequest extends SnodeAPISubRequest {
+  public method = 'retrieve' as const;
+  public readonly last_hash: string;
+  public readonly max_size: number | undefined;
+  public readonly namespace: SnodeNamespacesUser | SnodeNamespacesUserConfig;
+
+  constructor({
+    last_hash,
+    max_size,
+    namespace,
+  }: WithMaxSize & {
+    last_hash: string;
+    namespace: SnodeNamespacesUser | SnodeNamespacesUserConfig;
+  }) {
+    super();
+    this.last_hash = last_hash;
+    this.max_size = max_size;
+    this.namespace = namespace;
+  }
+
+  public async buildAndSignParameters() {
+    const { pubkey, pubkey_ed25519, signature, timestamp } =
+      await SnodeSignature.getSnodeSignatureParamsUs({
+        method: this.method,
+        namespace: this.namespace,
+      });
+
+    return {
+      method: this.method,
+      params: {
+        namespace: this.namespace,
+        pubkey,
+        pubkey_ed25519,
+        signature,
+        timestamp, // we give a timestamp to force verification of the signature provided
+        last_hash: this.last_hash,
+        max_size: this.max_size,
+      },
+    };
+  }
+
+  public loggingId(): string {
+    return `${this.method}-${SnodeNamespace.toRole(this.namespace)}`;
+  }
+}
+
+/**
+ * Build and sign a request with either the admin key if we have it, or with our subaccount details
+ */
+export class RetrieveGroupSubRequest extends SnodeAPISubRequest {
+  public method = 'retrieve' as const;
+  public readonly last_hash: string;
+  public readonly max_size: number | undefined;
+  public readonly namespace: SnodeNamespacesGroup;
+  public readonly groupDetailsNeededForSignature: GroupDetailsNeededForSignature | null;
+
+  constructor({
+    last_hash,
+    max_size,
+    namespace,
+    groupDetailsNeededForSignature,
+  }: WithMaxSize & {
+    last_hash: string;
+    namespace: SnodeNamespacesGroup;
+    groupDetailsNeededForSignature: GroupDetailsNeededForSignature | null;
+  }) {
+    super();
+    this.last_hash = last_hash;
+    this.max_size = max_size;
+    this.namespace = namespace;
+    this.groupDetailsNeededForSignature = groupDetailsNeededForSignature;
+  }
+
+  public async buildAndSignParameters() {
+    /**
+     * This will return the signature details we can use with the admin secretKey if we have it,
+     * or with the subaccount details if we don't.
+     * If there is no valid groupDetails, this throws
+     */
+    const sigResult = await SnodeGroupSignature.getSnodeGroupSignature({
+      method: this.method,
+      namespace: this.namespace,
+      group: this.groupDetailsNeededForSignature,
+    });
+
+    return {
+      method: this.method,
+      params: {
+        namespace: this.namespace,
+        ...sigResult,
+        last_hash: this.last_hash,
+        max_size: this.max_size,
+      },
+    };
+  }
+
+  public loggingId(): string {
+    return `${this.method}-${SnodeNamespace.toRole(this.namespace)}`;
+  }
 }
 
 export class OnsResolveSubRequest extends SnodeAPISubRequest {
-  public method: string = 'oxend_request';
+  public method = 'oxend_request' as const;
   public readonly base64EncodedNameHash: string;
 
   constructor(base64EncodedNameHash: string) {
@@ -110,6 +195,10 @@ export class OnsResolveSubRequest extends SnodeAPISubRequest {
         },
       },
     };
+  }
+
+  public loggingId(): string {
+    return `${this.method}`;
   }
 }
 
@@ -132,6 +221,10 @@ export class GetServiceNodesSubRequest extends SnodeAPISubRequest {
         },
       },
     };
+  }
+
+  public loggingId(): string {
+    return `${this.method}`;
   }
 }
 
@@ -161,6 +254,10 @@ export class SwarmForSubRequest extends SnodeAPISubRequest {
       },
     } as const;
   }
+
+  public loggingId(): string {
+    return `${this.method}`;
+  }
 }
 
 export class NetworkTimeSubRequest extends SnodeAPISubRequest {
@@ -172,14 +269,18 @@ export class NetworkTimeSubRequest extends SnodeAPISubRequest {
       params: {},
     } as const;
   }
+
+  public loggingId(): string {
+    return `${this.method}`;
+  }
 }
 
-abstract class SubaccountRightsSubRequest extends SnodeAPISubRequest {
+abstract class AbstractRevokeSubRequest extends SnodeAPISubRequest {
   public readonly groupPk: GroupPubkeyType;
   public readonly timestamp: number;
   public readonly revokeTokenHex: Array<string>;
 
-  protected readonly secretKey: Uint8Array;
+  protected readonly adminSecretKey: Uint8Array;
 
   constructor({
     groupPk,
@@ -191,11 +292,14 @@ abstract class SubaccountRightsSubRequest extends SnodeAPISubRequest {
     this.groupPk = groupPk;
     this.timestamp = timestamp;
     this.revokeTokenHex = revokeTokenHex;
-    this.secretKey = secretKey;
+    this.adminSecretKey = secretKey;
+    if (this.revokeTokenHex.length === 0) {
+      throw new Error('AbstractRevokeSubRequest needs at least one token to do a change');
+    }
   }
 
-  public async sign() {
-    if (!this.secretKey) {
+  public async signWithAdminSecretKey() {
+    if (!this.adminSecretKey) {
       throw new Error('we need an admin secretkey');
     }
     const tokensBytes = from_hex(this.revokeTokenHex.join(''));
@@ -203,18 +307,22 @@ abstract class SubaccountRightsSubRequest extends SnodeAPISubRequest {
     const prefix = new Uint8Array(StringUtils.encode(`${this.method}${this.timestamp}`, 'utf8'));
     const sigResult = await SnodeGroupSignature.signDataWithAdminSecret(
       concatUInt8Array(prefix, tokensBytes),
-      { secretKey: this.secretKey }
+      { secretKey: this.adminSecretKey }
     );
 
     return sigResult.signature;
   }
+
+  public loggingId(): string {
+    return `${this.method}-${ed25519Str(this.groupPk)}`;
+  }
 }
 
-export class SubaccountRevokeSubRequest extends SubaccountRightsSubRequest {
+export class SubaccountRevokeSubRequest extends AbstractRevokeSubRequest {
   public method = 'revoke_subaccount' as const;
 
   public async buildAndSignParameters() {
-    const signature = await this.sign();
+    const signature = await this.signWithAdminSecretKey();
     return {
       method: this.method,
       params: {
@@ -227,14 +335,14 @@ export class SubaccountRevokeSubRequest extends SubaccountRightsSubRequest {
   }
 }
 
-export class SubaccountUnrevokeSubRequest extends SubaccountRightsSubRequest {
+export class SubaccountUnrevokeSubRequest extends AbstractRevokeSubRequest {
   public method = 'unrevoke_subaccount' as const;
 
   /**
    * For Revoke/unrevoke, this needs an admin signature
    */
   public async buildAndSignParameters() {
-    const signature = await this.sign();
+    const signature = await this.signWithAdminSecretKey();
 
     return {
       method: this.method,
@@ -254,16 +362,10 @@ export class SubaccountUnrevokeSubRequest extends SubaccountRightsSubRequest {
  */
 export class GetExpiriesFromNodeSubRequest extends SnodeAPISubRequest {
   public method = 'get_expiries' as const;
-  pubkey: string;
-  messageHashes: Array<string>;
+  public readonly messageHashes: Array<string>;
 
   constructor(args: WithMessagesHashes) {
     super();
-    const ourPubKey = UserUtils.getOurPubKeyStrFromCache();
-    if (!ourPubKey) {
-      throw new Error('[GetExpiriesFromNodeSubRequest] No pubkey found');
-    }
-    this.pubkey = ourPubKey;
     this.messageHashes = args.messagesHashes;
   }
   /**
@@ -272,6 +374,10 @@ export class GetExpiriesFromNodeSubRequest extends SnodeAPISubRequest {
   public async buildAndSignParameters() {
     const timestamp = GetNetworkTime.now();
 
+    const ourPubKey = UserUtils.getOurPubKeyStrFromCache();
+    if (!ourPubKey) {
+      throw new Error('[GetExpiriesFromNodeSubRequest] No pubkey found');
+    }
     const signResult = await SnodeSignature.generateGetExpiriesOurSignature({
       timestamp,
       messageHashes: this.messageHashes,
@@ -286,7 +392,7 @@ export class GetExpiriesFromNodeSubRequest extends SnodeAPISubRequest {
     return {
       method: this.method,
       params: {
-        pubkey: this.pubkey,
+        pubkey: ourPubKey,
         pubkey_ed25519: signResult.pubkey_ed25519.toUpperCase(),
         signature: signResult.signature,
         messages: this.messageHashes,
@@ -294,7 +400,497 @@ export class GetExpiriesFromNodeSubRequest extends SnodeAPISubRequest {
       },
     };
   }
+
+  public loggingId(): string {
+    return `${this.method}-us`;
+  }
 }
+
+// todo: to use where delete_all is currently manually called
+export class DeleteAllFromUserNodeSubRequest extends SnodeAPISubRequest {
+  public method = 'delete_all' as const;
+  public readonly namespace = 'all'; // we can only delete_all for all namespaces currently, but the backend allows more
+
+  public async buildAndSignParameters() {
+    const signResult = await SnodeSignature.getSnodeSignatureParamsUs({
+      method: this.method,
+      namespace: this.namespace,
+    });
+
+    if (!signResult) {
+      throw new Error(
+        `[DeleteAllFromUserNodeSubRequest] SnodeSignature.getSnodeSignatureParamsUs returned an empty result`
+      );
+    }
+
+    return {
+      method: this.method,
+      params: {
+        pubkey: signResult.pubkey,
+        pubkey_ed25519: signResult.pubkey_ed25519.toUpperCase(),
+        signature: signResult.signature,
+        timestamp: signResult.timestamp,
+        namespace: this.namespace,
+      },
+    };
+  }
+
+  public loggingId(): string {
+    return `${this.method}-${this.namespace}`;
+  }
+}
+
+// We don't need that one yet
+// export class DeleteAllFromGroupNodeSubRequest extends DeleteAllFromUserNodeSubRequest {}
+
+export class DeleteHashesFromUserNodeSubRequest extends SnodeAPISubRequest {
+  public method = 'delete' as const;
+  public readonly messageHashes: Array<string>;
+
+  constructor(args: WithMessagesHashes) {
+    super();
+    this.messageHashes = args.messagesHashes;
+  }
+
+  public async buildAndSignParameters() {
+    const signResult = await SnodeSignature.getSnodeSignatureByHashesParams({
+      method: this.method,
+      messagesHashes: this.messageHashes,
+      pubkey: UserUtils.getOurPubKeyStrFromCache(),
+    });
+
+    if (!signResult) {
+      throw new Error(
+        `[DeleteHashesFromUserNodeSubRequest] SnodeSignature.getSnodeSignatureParamsUs returned an empty result`
+      );
+    }
+
+    return {
+      method: this.method,
+      params: {
+        pubkey: signResult.pubkey,
+        pubkey_ed25519: signResult.pubkey_ed25519,
+        signature: signResult.signature,
+        messages: signResult.messages,
+        // timestamp is not needed for this one as the hashes can be deleted only once
+      },
+    };
+  }
+
+  public loggingId(): string {
+    return `${this.method}-us`;
+  }
+}
+
+export class DeleteHashesFromGroupNodeSubRequest extends SnodeAPISubRequest {
+  public method = 'delete' as const;
+  public readonly messageHashes: Array<string>;
+  public readonly groupPk: GroupPubkeyType;
+
+  constructor(args: WithMessagesHashes & WithGroupPubkey) {
+    super();
+    this.messageHashes = args.messagesHashes;
+    this.groupPk = args.groupPk;
+  }
+
+  public async buildAndSignParameters() {
+    const signResult = await SnodeGroupSignature.getGroupSignatureByHashesParams({
+      method: this.method,
+      messagesHashes: this.messageHashes,
+      groupPk: this.groupPk,
+    });
+
+    if (!signResult) {
+      throw new Error(
+        `[DeleteAllFromUserNodeSubRequest] SnodeSignature.getSnodeSignatureParamsUs returned an empty result`
+      );
+    }
+
+    return {
+      method: this.method,
+      params: {
+        pubkey: signResult.pubkey,
+        signature: signResult.signature,
+        messages: signResult.messages,
+        // pubkey_ed25519 is forbidden when doing the request for a group
+        // timestamp is not needed for this one as the hashes can be deleted only once
+      },
+    };
+  }
+
+  public loggingId(): string {
+    return `${this.method}-${ed25519Str(this.groupPk)}`;
+  }
+}
+
+export class UpdateExpiryOnNodeUserSubRequest extends SnodeAPISubRequest {
+  public method = 'expire' as const;
+  public readonly messageHashes: Array<string>;
+  public readonly expiryMs: number;
+  public readonly shortenOrExtend: ShortenOrExtend;
+
+  constructor(args: WithMessagesHashes & WithShortenOrExtend & { expiryMs: number }) {
+    super();
+    this.messageHashes = args.messagesHashes;
+    this.expiryMs = args.expiryMs;
+    this.shortenOrExtend = args.shortenOrExtend;
+  }
+
+  public async buildAndSignParameters() {
+    const signResult = await SnodeSignature.generateUpdateExpiryOurSignature({
+      shortenOrExtend: this.shortenOrExtend,
+      messagesHashes: this.messageHashes,
+      timestamp: this.expiryMs,
+    });
+
+    if (!signResult) {
+      throw new Error(
+        `[UpdateExpiryOnNodeUserSubRequest] SnodeSignature.getSnodeSignatureParamsUs returned an empty result`
+      );
+    }
+
+    const shortenOrExtend =
+      this.shortenOrExtend === 'extend'
+        ? { extend: true }
+        : this.shortenOrExtend === 'shorten'
+          ? { shorten: true }
+          : {};
+
+    return {
+      method: this.method,
+      params: {
+        pubkey: UserUtils.getOurPubKeyStrFromCache(),
+        pubkey_ed25519: signResult.pubkey,
+        signature: signResult.signature,
+        messages: this.messageHashes,
+        expiry: this.expiryMs,
+        ...shortenOrExtend,
+      },
+    };
+  }
+
+  public loggingId(): string {
+    return `${this.method}-us`;
+  }
+}
+
+export class UpdateExpiryOnNodeGroupSubRequest extends SnodeAPISubRequest {
+  public method = 'expire' as const;
+  public readonly messageHashes: Array<string>;
+  public readonly expiryMs: number;
+  public readonly shortenOrExtend: ShortenOrExtend;
+  public readonly groupDetailsNeededForSignature: GroupDetailsNeededForSignature;
+
+  constructor(
+    args: WithMessagesHashes &
+      WithShortenOrExtend & {
+        expiryMs: number;
+        groupDetailsNeededForSignature: GroupDetailsNeededForSignature;
+      }
+  ) {
+    super();
+    this.messageHashes = args.messagesHashes;
+    this.expiryMs = args.expiryMs;
+    this.shortenOrExtend = args.shortenOrExtend;
+    this.groupDetailsNeededForSignature = args.groupDetailsNeededForSignature;
+  }
+
+  public async buildAndSignParameters() {
+    const signResult = await SnodeGroupSignature.generateUpdateExpiryGroupSignature({
+      shortenOrExtend: this.shortenOrExtend,
+      messagesHashes: this.messageHashes,
+      expiryMs: this.expiryMs,
+      group: this.groupDetailsNeededForSignature,
+    });
+
+    if (!signResult) {
+      throw new Error(
+        `[UpdateExpiryOnNodeUserSubRequest] SnodeSignature.getSnodeSignatureParamsUs returned an empty result`
+      );
+    }
+
+    const shortenOrExtend =
+      this.shortenOrExtend === 'extend'
+        ? { extends: true }
+        : this.shortenOrExtend === 'shorten'
+          ? { shorten: true }
+          : {};
+
+    return {
+      method: this.method,
+      params: {
+        messages: this.messageHashes,
+        ...shortenOrExtend,
+        ...signResult,
+
+        // pubkey_ed25519 is forbidden for the group one
+      },
+    };
+  }
+
+  public loggingId(): string {
+    return `${this.method}-${ed25519Str(this.groupDetailsNeededForSignature.pubkeyHex)}`;
+  }
+}
+
+export class StoreGroupConfigOrMessageSubRequest extends SnodeAPISubRequest {
+  public method = 'store' as const;
+  public readonly namespace: SnodeNamespacesGroupConfig | SnodeNamespaces.ClosedGroupMessages;
+  public readonly destination: GroupPubkeyType;
+  public readonly ttlMs: number;
+  public readonly encryptedData: Uint8Array;
+
+  public readonly dbMessageIdentifier: string | null;
+
+  constructor(
+    args: WithGroupPubkey & {
+      namespace: SnodeNamespacesGroupConfig | SnodeNamespaces.ClosedGroupMessages;
+      ttlMs: number;
+      encryptedData: Uint8Array;
+      dbMessageIdentifier: string | null;
+    }
+  ) {
+    super();
+    this.namespace = args.namespace;
+    this.destination = args.groupPk;
+    this.ttlMs = args.ttlMs;
+    this.encryptedData = args.encryptedData;
+    this.dbMessageIdentifier = args.dbMessageIdentifier;
+
+    if (isEmpty(this.encryptedData)) {
+      throw new Error('this.encryptedData cannot be empty');
+    }
+    if (!PubKey.is03Pubkey(this.destination)) {
+      throw new Error(
+        'StoreGroupConfigOrMessageSubRequest: groupconfig namespace required a 03 pubkey'
+      );
+    }
+  }
+
+  public async buildAndSignParameters(): Promise<{
+    method: 'store';
+    params: StoreOnNodeNormalParams;
+  }> {
+    const encryptedDataBase64 = ByteBuffer.wrap(this.encryptedData).toString('base64');
+
+    const found = await UserGroupsWrapperActions.getGroup(this.destination);
+    if (SnodeNamespace.isGroupConfigNamespace(this.namespace) && isEmpty(found?.secretKey)) {
+      throw new Error(
+        `groupconfig namespace [${this.namespace}] require an adminSecretKey for signature but we found none`
+      );
+    }
+    // this will either sign with our admin key or with the subaccount key if the admin one isn't there
+    const signDetails = await SnodeGroupSignature.getSnodeGroupSignature({
+      method: this.method,
+      namespace: this.namespace,
+      group: found,
+    });
+
+    if (!signDetails) {
+      throw new Error(`[${this.loggingId()}] sign details is empty result`);
+    }
+
+    return {
+      method: this.method,
+      params: {
+        namespace: this.namespace,
+        ttl: this.ttlMs,
+        data: encryptedDataBase64,
+        ...signDetails,
+      },
+    };
+  }
+
+  public loggingId(): string {
+    return `${this.method}-${ed25519Str(this.destination)}-${SnodeNamespace.toRole(
+      this.namespace
+    )}`;
+  }
+}
+
+export class StoreUserConfigSubRequest extends SnodeAPISubRequest {
+  public method = 'store' as const;
+  public readonly namespace: SnodeNamespacesUserConfig;
+  public readonly ttlMs: number;
+  public readonly encryptedData: Uint8Array;
+  public readonly destination: PubkeyType;
+
+  constructor(args: {
+    namespace: SnodeNamespacesUserConfig;
+    ttlMs: number;
+    encryptedData: Uint8Array;
+  }) {
+    super();
+    this.namespace = args.namespace;
+    this.ttlMs = args.ttlMs;
+    this.encryptedData = args.encryptedData;
+    this.destination = UserUtils.getOurPubKeyStrFromCache();
+
+    if (isEmpty(this.encryptedData)) {
+      throw new Error('this.encryptedData cannot be empty');
+    }
+
+    if (isEmpty(this.destination)) {
+      throw new Error('this.destination cannot be empty');
+    }
+  }
+
+  public async buildAndSignParameters(): Promise<{
+    method: 'store';
+    params: StoreOnNodeNormalParams;
+  }> {
+    const encryptedDataBase64 = ByteBuffer.wrap(this.encryptedData).toString('base64');
+    const ourPrivKey = (await UserUtils.getUserED25519KeyPairBytes())?.privKeyBytes;
+    if (!ourPrivKey) {
+      throw new Error('getUserED25519KeyPairBytes is empty');
+    }
+
+    const signDetails = await SnodeSignature.getSnodeSignatureParamsUs({
+      method: this.method,
+      namespace: this.namespace,
+    });
+
+    if (!signDetails) {
+      throw new Error(`[StoreUserConfigSubRequest] signing returned an empty result`);
+    }
+
+    return {
+      method: this.method,
+      params: {
+        namespace: this.namespace,
+        ttl: this.ttlMs,
+        data: encryptedDataBase64,
+        ...signDetails,
+      },
+    };
+  }
+
+  public loggingId(): string {
+    return `${this.method}-${ed25519Str(this.destination)}-${SnodeNamespace.toRole(
+      this.namespace
+    )}`;
+  }
+}
+
+/**
+ * A request to send a message to the default namespace of another user (namespace 0 is not authenticated)
+ */
+export class StoreUserMessageSubRequest extends SnodeAPISubRequest {
+  public method = 'store' as const;
+  public readonly ttlMs: number;
+  public readonly encryptedData: Uint8Array;
+  public readonly namespace = SnodeNamespaces.Default;
+  public readonly destination: PubkeyType;
+  public readonly dbMessageIdentifier: string | null;
+
+  constructor(args: {
+    ttlMs: number;
+    encryptedData: Uint8Array;
+    destination: PubkeyType;
+    dbMessageIdentifier: string | null;
+  }) {
+    super();
+    this.ttlMs = args.ttlMs;
+    this.destination = args.destination;
+    this.encryptedData = args.encryptedData;
+    this.dbMessageIdentifier = args.dbMessageIdentifier;
+
+    if (isEmpty(this.encryptedData)) {
+      throw new Error('this.encryptedData cannot be empty');
+    }
+  }
+
+  public async buildAndSignParameters(): Promise<{
+    method: 'store';
+    params: StoreOnNodeNormalParams;
+  }> {
+    const encryptedDataBase64 = ByteBuffer.wrap(this.encryptedData).toString('base64');
+
+    return {
+      method: this.method,
+      params: {
+        pubkey: this.destination,
+        timestamp: GetNetworkTime.now(),
+        namespace: this.namespace,
+        ttl: this.ttlMs,
+        data: encryptedDataBase64,
+      },
+    };
+  }
+
+  public loggingId(): string {
+    return `${this.method}-${ed25519Str(this.destination)}-${SnodeNamespace.toRole(
+      this.namespace
+    )}`;
+  }
+}
+
+/**
+ * A request to send a message to the default namespace of another user (namespace 0 is not authenticated)
+ *
+ * TODO: this is almost an exact match of `StoreUserMessageSubRequest` due to be removed once we get rid of legacy groups.
+ */
+export class StoreLegacyGroupMessageSubRequest extends SnodeAPISubRequest {
+  public method = 'store' as const;
+  public readonly ttlMs: number;
+  public readonly encryptedData: Uint8Array;
+  public readonly namespace = SnodeNamespaces.LegacyClosedGroup;
+  public readonly destination: PubkeyType;
+  public readonly dbMessageIdentifier: string | null;
+
+  constructor(args: {
+    ttlMs: number;
+    encryptedData: Uint8Array;
+    destination: PubkeyType;
+    dbMessageIdentifier: string | null;
+  }) {
+    super();
+    this.ttlMs = args.ttlMs;
+    this.destination = args.destination;
+    this.encryptedData = args.encryptedData;
+    this.dbMessageIdentifier = args.dbMessageIdentifier;
+
+    if (isEmpty(this.encryptedData)) {
+      throw new Error('this.encryptedData cannot be empty');
+    }
+  }
+
+  public async buildAndSignParameters(): Promise<{
+    method: 'store';
+    params: StoreOnNodeNormalParams;
+  }> {
+    const encryptedDataBase64 = ByteBuffer.wrap(this.encryptedData).toString('base64');
+
+    return {
+      method: this.method,
+      params: {
+        // no signature required for a legacy group retrieve/store of message to namespace -10
+        pubkey: this.destination,
+        timestamp: GetNetworkTime.now(),
+        namespace: this.namespace,
+        ttl: this.ttlMs,
+        data: encryptedDataBase64,
+      },
+    };
+  }
+
+  public loggingId(): string {
+    return `${this.method}-${ed25519Str(this.destination)}-${SnodeNamespace.toRole(
+      this.namespace
+    )}`;
+  }
+}
+
+/**
+ * When sending group libsession push(), we can also include extra messages to store (update messages, supplemental keys, etc)
+ */
+export type StoreGroupExtraData = {
+  networkTimestamp: number;
+  data: Uint8Array;
+  ttl: number;
+  pubkey: GroupPubkeyType;
+  dbMessageIdentifier: string | null;
+} & { namespace: SnodeNamespacesGroupConfig | SnodeNamespaces.ClosedGroupMessages };
 
 /**
  * STORE SUBREQUESTS
@@ -305,7 +901,6 @@ type StoreOnNodeNormalParams = {
   timestamp: number;
   data: string;
   namespace: number;
-  // sig_timestamp?: number;
   signature?: string;
   pubkey_ed25519?: string;
 };
@@ -322,121 +917,83 @@ type StoreOnNodeSubAccountParams = Pick<
     // signature is mandatory for subaccount
   };
 
-export type StoreOnNodeParams = StoreOnNodeNormalParams | StoreOnNodeSubAccountParams;
+type StoreOnNodeParams = StoreOnNodeNormalParams | StoreOnNodeSubAccountParams;
 
-export type StoreOnNodeParamsNoSig = Pick<
-  StoreOnNodeParams,
-  'pubkey' | 'ttl' | 'timestamp' | 'ttl' | 'namespace'
-> & { data64: string };
-
-type StoreOnNodeShared = {
-  networkTimestamp: number;
-  data: Uint8Array;
-  ttl: number;
-};
-
-type StoreOnNodeGroupConfig = StoreOnNodeShared & {
-  pubkey: GroupPubkeyType;
-  namespace: SnodeNamespacesGroupConfig;
-};
-
-type StoreOnNodeGroupMessage = StoreOnNodeShared & {
-  pubkey: GroupPubkeyType;
-  namespace: SnodeNamespaces.ClosedGroupMessages;
-};
-
-type StoreOnNodeUserConfig = StoreOnNodeShared & {
-  pubkey: PubkeyType;
-  namespace: UserConfigNamespaces;
-};
-
-export type StoreOnNodeData =
-  | StoreOnNodeGroupConfig
-  | StoreOnNodeUserConfig
-  | StoreOnNodeGroupMessage;
-
-export type StoreOnNodeSubRequest = {
-  method: 'store';
-  params: StoreOnNodeParams | StoreOnNodeSubAccountParams;
-};
-
-/**
- * DELETE SUBREQUESTS
- */
-
-type DeleteFromNodeWithTimestampParams = {
-  timestamp: string | number;
-  namespace: number | null | 'all';
-} & (DeleteSigUserParameters | DeleteSigGroupParameters);
-
-export type DeleteByHashesFromNodeParams = { messages: Array<string> } & (
-  | DeleteSigUserParameters
-  | DeleteSigGroupParameters
-);
-
-type DeleteSigUserParameters = WithSignature & {
-  pubkey: PubkeyType;
-  pubkey_ed25519: string;
-};
-
-type DeleteSigGroupParameters = WithSignature & {
-  pubkey: GroupPubkeyType;
-};
-
-export type DeleteAllFromNodeSubRequest = {
-  method: 'delete_all';
-  params: DeleteFromNodeWithTimestampParams;
-};
-
-export type DeleteFromNodeSubRequest = {
-  method: 'delete';
-  params: DeleteByHashesFromNodeParams;
-};
-
-type UpdateExpireAlwaysNeeded = WithSignature & {
-  messages: Array<string>;
-  expiry: number;
-  extend?: boolean;
-  shorten?: boolean;
-};
-
-export type UpdateExpireNodeUserParams = WithPubkeyAsString &
-  UpdateExpireAlwaysNeeded & {
-    pubkey_ed25519: string;
-  };
-
-export type UpdateExpireNodeGroupParams = WithPubkeyAsGroupPubkey & UpdateExpireAlwaysNeeded;
-
-export type UpdateExpiryOnNodeUserSubRequest = {
-  method: 'expire';
-  params: UpdateExpireNodeUserParams;
-};
-
-export type UpdateExpiryOnNodeGroupSubRequest = {
-  method: 'expire';
-  params: UpdateExpireNodeGroupParams;
-};
-
-type UpdateExpiryOnNodeSubRequest =
-  | UpdateExpiryOnNodeUserSubRequest
-  | UpdateExpiryOnNodeGroupSubRequest;
+export type MethodBatchType = 'batch' | 'sequence';
 
 // Until the next storage server release is released, we need to have at least 2 hashes in the list for the `get_expiries` AND for the `update_expiries`
 export const fakeHash = '///////////////////////////////////////////';
 
-export type SnodeApiSubRequests =
-  | RetrieveSubRequestType
+export type RawSnodeSubRequests =
+  | RetrieveLegacyClosedGroupSubRequest
+  | RetrieveUserSubRequest
+  | RetrieveGroupSubRequest
+  | StoreGroupConfigOrMessageSubRequest
+  | StoreUserConfigSubRequest
+  | SwarmForSubRequest
+  | OnsResolveSubRequest
+  | GetServiceNodesSubRequest
+  | StoreUserMessageSubRequest
+  | StoreLegacyGroupMessageSubRequest
+  | NetworkTimeSubRequest
+  | DeleteHashesFromGroupNodeSubRequest
+  | DeleteHashesFromUserNodeSubRequest
+  | DeleteAllFromUserNodeSubRequest
+  | UpdateExpiryOnNodeUserSubRequest
+  | UpdateExpiryOnNodeGroupSubRequest
+  | SubaccountRevokeSubRequest
+  | SubaccountUnrevokeSubRequest
+  | GetExpiriesFromNodeSubRequest;
+
+export type BuiltSnodeSubRequests =
+  | ReturnType<RetrieveLegacyClosedGroupSubRequest['build']>
+  | AwaitedReturn<RetrieveUserSubRequest['buildAndSignParameters']>
+  | AwaitedReturn<RetrieveGroupSubRequest['buildAndSignParameters']>
+  | AwaitedReturn<StoreGroupConfigOrMessageSubRequest['buildAndSignParameters']>
+  | AwaitedReturn<StoreUserConfigSubRequest['buildAndSignParameters']>
   | ReturnType<SwarmForSubRequest['build']>
   | ReturnType<OnsResolveSubRequest['build']>
   | ReturnType<GetServiceNodesSubRequest['build']>
-  | StoreOnNodeSubRequest
   | ReturnType<NetworkTimeSubRequest['build']>
-  | DeleteFromNodeSubRequest
-  | DeleteAllFromNodeSubRequest
-  | UpdateExpiryOnNodeSubRequest
-  | Awaited<ReturnType<SubaccountRevokeSubRequest['buildAndSignParameters']>>
-  | Awaited<ReturnType<SubaccountUnrevokeSubRequest['buildAndSignParameters']>>
-  | Awaited<ReturnType<GetExpiriesFromNodeSubRequest['buildAndSignParameters']>>;
+  | AwaitedReturn<DeleteHashesFromGroupNodeSubRequest['buildAndSignParameters']>
+  | AwaitedReturn<DeleteHashesFromUserNodeSubRequest['buildAndSignParameters']>
+  | AwaitedReturn<DeleteAllFromUserNodeSubRequest['buildAndSignParameters']>
+  | AwaitedReturn<UpdateExpiryOnNodeUserSubRequest['buildAndSignParameters']>
+  | AwaitedReturn<UpdateExpiryOnNodeGroupSubRequest['buildAndSignParameters']>
+  | AwaitedReturn<SubaccountRevokeSubRequest['buildAndSignParameters']>
+  | AwaitedReturn<SubaccountUnrevokeSubRequest['buildAndSignParameters']>
+  | AwaitedReturn<GetExpiriesFromNodeSubRequest['buildAndSignParameters']>;
+
+export function builtRequestToLoggingId(request: BuiltSnodeSubRequests): string {
+  const { method, params } = request;
+  switch (method) {
+    case 'info':
+    case 'oxend_request':
+      return `${method}`;
+
+    case 'delete':
+    case 'delete_all':
+    case 'expire':
+    case 'get_expiries':
+    case 'get_swarm':
+    case 'revoke_subaccount':
+    case 'unrevoke_subaccount': {
+      const isUs = UserUtils.isUsFromCache(params.pubkey);
+      return `${method}-${isUs ? 'us' : ed25519Str(params.pubkey)}`;
+    }
+
+    case 'retrieve':
+    case 'store': {
+      const isUs = UserUtils.isUsFromCache(params.pubkey);
+      return `${method}-${isUs ? 'us' : ed25519Str(params.pubkey)}-${SnodeNamespace.toRole(
+        params.namespace
+      )}`;
+    }
+    default:
+      assertUnreachable(method, 'should be unreachable case');
+      throw new Error('should be unreachable case');
+  }
+}
 
 // eslint-disable-next-line @typescript-eslint/array-type
 export type NonEmptyArray<T> = [T, ...T[]];
@@ -452,13 +1009,7 @@ export const MAX_SUBREQUESTS_COUNT = 20;
 
 export type BatchStoreWithExtraParams =
   | StoreOnNodeParams
-  | SignedGroupHashesParams
-  | SignedHashesParams
+  | DeleteHashesFromGroupNodeSubRequest
+  | DeleteHashesFromUserNodeSubRequest
   | SubaccountRevokeSubRequest
   | SubaccountUnrevokeSubRequest;
-
-export function isDeleteByHashesParams(
-  request: BatchStoreWithExtraParams
-): request is SignedGroupHashesParams | SignedHashesParams {
-  return !isEmpty((request as SignedGroupHashesParams | SignedHashesParams)?.messages);
-}

@@ -1,20 +1,19 @@
 import { isArray } from 'lodash';
 import { Snode } from '../../../data/data';
+import { MessageSender } from '../../sending';
 import { processOnionRequestErrorAtDestination, SnodeResponse } from './onions';
 import { snodeRpc } from './sessionRpc';
 import {
+  builtRequestToLoggingId,
+  BuiltSnodeSubRequests,
   MAX_SUBREQUESTS_COUNT,
+  MethodBatchType,
   NotEmptyArrayOfBatchResults,
-  SnodeApiSubRequests,
+  RawSnodeSubRequests,
 } from './SnodeRequestTypes';
 
-function logSubRequests(_requests: Array<SnodeApiSubRequests>) {
-  return 'logSubRequests to do';
-  // return requests.map(m =>
-  //   m.method === 'retrieve' || m.method === 'store'
-  //     ? `${m.method}-${SnodeNamespace.toRoles(m.params.namespace)}`
-  //     : m.method
-  // );
+function logSubRequests(requests: Array<BuiltSnodeSubRequests>) {
+  return `[${requests.map(builtRequestToLoggingId).join(', ')}]`;
 }
 
 /**
@@ -28,13 +27,14 @@ function logSubRequests(_requests: Array<SnodeApiSubRequests>) {
  * @param method can be either batch or sequence. A batch call will run all calls even if one of them fails. A sequence call will stop as soon as the first one fails
  */
 export async function doSnodeBatchRequest(
-  subRequests: Array<SnodeApiSubRequests>,
+  subRequests: Array<BuiltSnodeSubRequests>,
   targetNode: Snode,
   timeout: number,
   associatedWith: string | null,
-  method: 'batch' | 'sequence' = 'batch'
+  method: MethodBatchType = 'batch'
 ): Promise<NotEmptyArrayOfBatchResults> {
   window.log.debug(`doSnodeBatchRequest "${method}":`, JSON.stringify(logSubRequests(subRequests)));
+
   if (subRequests.length > MAX_SUBREQUESTS_COUNT) {
     window.log.error(
       `batch subRequests count cannot be more than ${MAX_SUBREQUESTS_COUNT}. Got ${subRequests.length}`
@@ -74,6 +74,17 @@ export async function doSnodeBatchRequest(
   }
 
   return decoded;
+}
+
+export async function doUnsignedSnodeBatchRequest(
+  unsignedSubRequests: Array<RawSnodeSubRequests>,
+  targetNode: Snode,
+  timeout: number,
+  associatedWith: string | null,
+  method: MethodBatchType = 'batch'
+): Promise<NotEmptyArrayOfBatchResults> {
+  const signedSubRequests = await MessageSender.signSubRequests(unsignedSubRequests);
+  return doSnodeBatchRequest(signedSubRequests, targetNode, timeout, associatedWith, method);
 }
 
 /**

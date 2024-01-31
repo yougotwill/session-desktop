@@ -1,25 +1,21 @@
 import { GroupPubkeyType } from 'libsession_util_nodejs';
-import { omit } from 'lodash';
 import { Snode } from '../../../data/data';
 import { updateIsOnline } from '../../../state/ducks/onion';
-import { doSnodeBatchRequest } from './batchRequest';
 import { GetNetworkTime } from './getNetworkTime';
 import { SnodeNamespace, SnodeNamespaces, SnodeNamespacesGroup } from './namespaces';
 
 import { UserGroupsWrapperActions } from '../../../webworker/workers/browser/libsession_worker_interface';
 import { TTL_DEFAULT } from '../../constants';
+import { ed25519Str } from '../../onions/onionPath';
 import { PubKey } from '../../types';
-import { UserUtils } from '../../utils';
 import {
-  RetrieveGroupAdminSubRequestType,
-  RetrieveGroupSubAccountSubRequestType,
-  RetrieveLegacyClosedGroupSubRequestType,
-  RetrieveSubRequestType,
+  RetrieveGroupSubRequest,
+  RetrieveLegacyClosedGroupSubRequest,
+  RetrieveUserSubRequest,
   UpdateExpiryOnNodeGroupSubRequest,
   UpdateExpiryOnNodeUserSubRequest,
 } from './SnodeRequestTypes';
-import { SnodeGroupSignature } from './signature/groupSignature';
-import { SnodeSignature } from './signature/snodeSignatures';
+import { doUnsignedSnodeBatchRequest } from './batchRequest';
 import { RetrieveMessagesResultsBatched, RetrieveMessagesResultsContent } from './types';
 
 type RetrieveParams = {
@@ -31,23 +27,19 @@ type RetrieveParams = {
 
 async function retrieveRequestForUs({
   namespace,
-  ourPubkey,
   retrieveParam,
 }: {
-  ourPubkey: string;
   namespace: SnodeNamespaces;
   retrieveParam: RetrieveParams;
 }) {
   if (!SnodeNamespace.isUserConfigNamespace(namespace) && namespace !== SnodeNamespaces.Default) {
     throw new Error(`retrieveRequestForUs not a valid namespace to retrieve as us:${namespace}`);
   }
-  const signatureArgs = { ...retrieveParam, namespace, method: 'retrieve' as const, ourPubkey };
-  const signatureBuilt = await SnodeSignature.getSnodeSignatureParamsUs(signatureArgs);
-  const retrieveForUS: RetrieveSubRequestType = {
-    method: 'retrieve',
-    params: { ...retrieveParam, namespace, ...signatureBuilt },
-  };
-  return retrieveForUS;
+  return new RetrieveUserSubRequest({
+    last_hash: retrieveParam.last_hash,
+    max_size: retrieveParam.max_size,
+    namespace,
+  });
 }
 
 /**
@@ -64,7 +56,7 @@ function retrieveRequestForLegacyGroup({
   ourPubkey: string;
   retrieveParam: RetrieveParams;
 }) {
-  if (pubkey === ourPubkey || !pubkey.startsWith('05')) {
+  if (pubkey === ourPubkey || !PubKey.is05Pubkey(pubkey)) {
     throw new Error(
       'namespace -10 can only be used to retrieve messages from a legacy closed group (prefix 05)'
     );
@@ -72,16 +64,13 @@ function retrieveRequestForLegacyGroup({
   if (namespace !== SnodeNamespaces.LegacyClosedGroup) {
     throw new Error(`retrieveRequestForLegacyGroup namespace can only be -10`);
   }
-  const retrieveLegacyClosedGroup = {
-    ...retrieveParam,
-    namespace,
-  };
-  const retrieveParamsLegacy: RetrieveLegacyClosedGroupSubRequestType = {
-    method: 'retrieve',
-    params: omit(retrieveLegacyClosedGroup, 'timestamp'), // if we give a timestamp, a signature will be required by the service node, and we don't want to provide one as this is an unauthenticated namespace
-  };
 
-  return retrieveParamsLegacy;
+  // if we give a timestamp, a signature will be required by the service node, and we don't want to provide one as this is an unauthenticated namespace
+  return new RetrieveLegacyClosedGroupSubRequest({
+    last_hash: retrieveParam.last_hash,
+    max_size: retrieveParam.max_size,
+    legacyGroupPk: pubkey,
+  });
 }
 
 /**
@@ -104,26 +93,20 @@ async function retrieveRequestForGroup({
   }
   const group = await UserGroupsWrapperActions.getGroup(groupPk);
 
-  const sigResult = await SnodeGroupSignature.getSnodeGroupSignature({
-    method: 'retrieve',
+  return new RetrieveGroupSubRequest({
+    last_hash: retrieveParam.last_hash,
     namespace,
-    group,
+    max_size: retrieveParam.max_size,
+    groupDetailsNeededForSignature: group,
   });
-
-  const retrieveParamsGroup:
-    | RetrieveGroupSubAccountSubRequestType
-    | RetrieveGroupAdminSubRequestType = {
-    method: 'retrieve',
-    params: {
-      ...retrieveParam,
-      ...sigResult,
-
-      namespace,
-    },
-  };
-
-  return retrieveParamsGroup;
 }
+
+type RetrieveSubRequestType =
+  | RetrieveLegacyClosedGroupSubRequest
+  | RetrieveUserSubRequest
+  | RetrieveGroupSubRequest
+  | UpdateExpiryOnNodeUserSubRequest
+  | UpdateExpiryOnNodeGroupSubRequest;
 
 async function buildRetrieveRequest(
   lastHashes: Array<string>,
@@ -131,7 +114,7 @@ async function buildRetrieveRequest(
   namespaces: Array<SnodeNamespaces>,
   ourPubkey: string,
   configHashesToBump: Array<string> | null
-): Promise<Array<RetrieveSubRequestType>> {
+) {
   const isUs = pubkey === ourPubkey;
   const maxSizeMap = SnodeNamespace.maxSizeMap(namespaces);
   const now = GetNetworkTime.now();
@@ -160,52 +143,42 @@ async function buildRetrieveRequest(
 
       // all legacy closed group retrieves are unauthenticated and run above.
       // if we get here, this can only be a retrieve for our own swarm, which must be authenticated
-      return retrieveRequestForUs({ namespace, ourPubkey, retrieveParam });
+      return retrieveRequestForUs({ namespace, retrieveParam });
     })
   );
 
-  if (configHashesToBump?.length) {
-    const expiry = GetNetworkTime.now() + TTL_DEFAULT.CONFIG_MESSAGE;
-    if (isUs) {
-      const signResult = await SnodeSignature.generateUpdateExpiryOurSignature({
-        shortenOrExtend: '',
-        timestamp: expiry,
-        messagesHashes: configHashesToBump,
-      });
+  const expiryMs = GetNetworkTime.now() + TTL_DEFAULT.CONFIG_MESSAGE;
 
-      const expireParams: UpdateExpiryOnNodeUserSubRequest = {
-        method: 'expire',
-        params: {
-          messages: configHashesToBump,
-          pubkey: UserUtils.getOurPubKeyStrFromCache(),
-          expiry,
-          signature: signResult.signature,
-          pubkey_ed25519: signResult.pubkey,
-        },
-      };
-      retrieveRequestsParams.push(expireParams);
-    } else if (PubKey.is03Pubkey(pubkey)) {
-      const group = await UserGroupsWrapperActions.getGroup(pubkey);
+  if (configHashesToBump?.length && isUs) {
+    const request = new UpdateExpiryOnNodeUserSubRequest({
+      expiryMs,
+      messagesHashes: configHashesToBump,
+      shortenOrExtend: '',
+    });
+    retrieveRequestsParams.push(request);
+    return retrieveRequestsParams;
+  }
 
-      const signResult = await SnodeGroupSignature.generateUpdateExpiryGroupSignature({
-        shortenOrExtend: '',
-        timestamp: expiry,
-        messagesHashes: configHashesToBump,
-        group,
-      });
+  if (configHashesToBump?.length && PubKey.is03Pubkey(pubkey)) {
+    const group = await UserGroupsWrapperActions.getGroup(pubkey);
 
-      const expireParams: UpdateExpiryOnNodeGroupSubRequest = {
-        method: 'expire',
-        params: {
-          messages: configHashesToBump,
-          expiry,
-          ...omit(signResult, 'timestamp'),
-          pubkey,
-        },
-      };
-
-      retrieveRequestsParams.push(expireParams);
+    if (!group) {
+      window.log.warn(
+        `trying to retrieve fopr group ${ed25519Str(
+          pubkey
+        )} but we are missing the details in the usergroup wrapper`
+      );
+      throw new Error('retrieve request is missing group details');
     }
+
+    retrieveRequestsParams.push(
+      new UpdateExpiryOnNodeGroupSubRequest({
+        expiryMs,
+        messagesHashes: configHashesToBump,
+        shortenOrExtend: '',
+        groupDetailsNeededForSignature: group,
+      })
+    );
   }
   return retrieveRequestsParams;
 }
@@ -222,22 +195,18 @@ async function retrieveNextMessages(
     throw new Error('namespaces and lasthashes does not match');
   }
 
-  const retrieveRequestsParams = await buildRetrieveRequest(
+  const rawRequests = await buildRetrieveRequest(
     lastHashes,
     associatedWith,
     namespaces,
     ourPubkey,
     configHashesToBump
   );
+
   // let exceptions bubble up
   // no retry for this one as this a call we do every few seconds while polling for messages
 
-  const results = await doSnodeBatchRequest(
-    retrieveRequestsParams,
-    targetNode,
-    4000,
-    associatedWith
-  );
+  const results = await doUnsignedSnodeBatchRequest(rawRequests, targetNode, 4000, associatedWith);
   if (!results || !results.length) {
     window?.log?.warn(
       `_retrieveNextMessages - sessionRpc could not talk to ${targetNode.ip}:${targetNode.port}`

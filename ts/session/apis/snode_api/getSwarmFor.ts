@@ -3,7 +3,7 @@ import pRetry from 'p-retry';
 import { Snode } from '../../../data/data';
 import { PubKey } from '../../types';
 import { SwarmForSubRequest } from './SnodeRequestTypes';
-import { doSnodeBatchRequest } from './batchRequest';
+import { doUnsignedSnodeBatchRequest } from './batchRequest';
 import { GetNetworkTime } from './getNetworkTime';
 import { getRandomSnode } from './snodePool';
 
@@ -19,7 +19,7 @@ async function requestSnodesForPubkeyWithTargetNodeRetryable(
   }
   const subrequest = new SwarmForSubRequest(pubkey);
 
-  const result = await doSnodeBatchRequest([subrequest.build()], targetNode, 4000, pubkey);
+  const result = await doUnsignedSnodeBatchRequest([subrequest], targetNode, 4000, pubkey);
 
   if (!result || !result.length) {
     window?.log?.warn(

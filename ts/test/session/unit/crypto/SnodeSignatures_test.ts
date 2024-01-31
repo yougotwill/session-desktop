@@ -261,7 +261,7 @@ describe('SnodeSignature', () => {
           group: { pubkeyHex: null as any, secretKey: privKeyUint, authData: null },
           messagesHashes: ['[;p['],
           shortenOrExtend: '',
-          timestamp: hardcodedTimestamp,
+          expiryMs: hardcodedTimestamp,
         });
       };
       await expect(func()).to.be.rejectedWith(
@@ -280,7 +280,7 @@ describe('SnodeSignature', () => {
 
           messagesHashes: ['[;p['],
           shortenOrExtend: '',
-          timestamp: hardcodedTimestamp,
+          expiryMs: hardcodedTimestamp,
         });
       };
       await expect(func()).to.be.rejectedWith(
@@ -290,74 +290,74 @@ describe('SnodeSignature', () => {
 
     it('works with valid pubkey and privkey', async () => {
       const hashes = ['hash4321', 'hash4221'];
-      const timestamp = hardcodedTimestamp;
+      const expiryMs = hardcodedTimestamp;
       const shortenOrExtend = '';
       const ret = await SnodeGroupSignature.generateUpdateExpiryGroupSignature({
         group: { pubkeyHex: validGroupPk, secretKey: privKeyUint, authData: null },
         messagesHashes: hashes,
         shortenOrExtend: '',
-        timestamp,
+        expiryMs,
       });
 
       expect(ret.pubkey).to.be.eq(validGroupPk);
 
-      const verificationData = `expire${shortenOrExtend}${timestamp}${hashes.join('')}`;
+      const verificationData = `expire${shortenOrExtend}${expiryMs}${hashes.join('')}`;
       await verifySig(ret, verificationData);
     });
 
     it('fails with invalid timestamp', async () => {
       const hashes = ['hash4321', 'hash4221'];
-      const timestamp = hardcodedTimestamp;
+      const expiryMs = hardcodedTimestamp;
       const shortenOrExtend = '';
       const ret = await SnodeGroupSignature.generateUpdateExpiryGroupSignature({
         group: { pubkeyHex: validGroupPk, secretKey: privKeyUint, authData: null },
         messagesHashes: hashes,
         shortenOrExtend: '',
-        timestamp,
+        expiryMs,
       });
 
       expect(ret.pubkey).to.be.eq(validGroupPk);
 
-      const verificationData = `expire${shortenOrExtend}${timestamp}1${hashes.join('')}`;
+      const verificationData = `expire${shortenOrExtend}${expiryMs}1${hashes.join('')}`;
       const func = async () => verifySig(ret, verificationData);
       await expect(func()).rejectedWith('sig failed to be verified');
     });
 
     it('fails with invalid hashes', async () => {
       const hashes = ['hash4321', 'hash4221'];
-      const timestamp = hardcodedTimestamp;
+      const expiryMs = hardcodedTimestamp;
       const shortenOrExtend = '';
       const ret = await SnodeGroupSignature.generateUpdateExpiryGroupSignature({
         group: { pubkeyHex: validGroupPk, secretKey: privKeyUint, authData: null },
         messagesHashes: hashes,
         shortenOrExtend: '',
-        timestamp,
+        expiryMs,
       });
 
       expect(ret.pubkey).to.be.eq(validGroupPk);
 
       const overridenHash = hashes.slice();
       overridenHash[0] = '1111';
-      const verificationData = `expire${shortenOrExtend}${timestamp}${overridenHash.join('')}`;
+      const verificationData = `expire${shortenOrExtend}${expiryMs}${overridenHash.join('')}`;
       const func = async () => verifySig(ret, verificationData);
       await expect(func()).rejectedWith('sig failed to be verified');
     });
 
     it('fails with invalid number of hashes', async () => {
       const hashes = ['hash4321', 'hash4221'];
-      const timestamp = hardcodedTimestamp;
+      const expiryMs = hardcodedTimestamp;
       const shortenOrExtend = '';
       const ret = await SnodeGroupSignature.generateUpdateExpiryGroupSignature({
         group: { pubkeyHex: validGroupPk, secretKey: privKeyUint, authData: null },
         messagesHashes: hashes,
         shortenOrExtend: '',
-        timestamp,
+        expiryMs,
       });
 
       expect(ret.pubkey).to.be.eq(validGroupPk);
 
       const overridenHash = [hashes[0]];
-      const verificationData = `expire${shortenOrExtend}${timestamp}${overridenHash.join('')}`;
+      const verificationData = `expire${shortenOrExtend}${expiryMs}${overridenHash.join('')}`;
       const func = async () => verifySig(ret, verificationData);
       await expect(func()).rejectedWith('sig failed to be verified');
     });

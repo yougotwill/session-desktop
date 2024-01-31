@@ -8,7 +8,7 @@ import { NotEmptyArrayOfBatchResults } from '../../../../../../session/apis/snod
 import { GetNetworkTime } from '../../../../../../session/apis/snode_api/getNetworkTime';
 import {
   SnodeNamespaces,
-  UserConfigNamespaces,
+  SnodeNamespacesUserConfig,
 } from '../../../../../../session/apis/snode_api/namespaces';
 import { TTL_DEFAULT } from '../../../../../../session/constants';
 import { ConvoHub } from '../../../../../../session/conversations';
@@ -29,7 +29,7 @@ import { TypedStub, stubConfigDumpData } from '../../../../../test-utils/utils';
 
 function userChange(
   sodium: LibSodiumWrappers,
-  namespace: UserConfigNamespaces,
+  namespace: SnodeNamespacesUserConfig,
   seqno: number
 ): PendingChangesForUs {
   return {

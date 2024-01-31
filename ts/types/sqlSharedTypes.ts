@@ -24,6 +24,8 @@ export type AsyncWrapper<T extends (...args: any) => any> = (
   ...args: Parameters<T>
 ) => Promise<ReturnType<T>>;
 
+export type AwaitedReturn<T extends (...args: any) => any> = Awaited<ReturnType<T>>;
+
 /**
  * This type is used to build from an objectType filled with functions, a new object type where all the functions their async equivalent
  */

@@ -52,14 +52,14 @@ describe('MessageQueue', () => {
     Sinon.stub(UserUtils, 'getOurPubKeyStrFromCache').returns(ourNumber);
 
     // Message Sender Stubs
-    sendStub = Sinon.stub(MessageSender, 'send');
+    sendStub = Sinon.stub(MessageSender, 'sendSingleMessage');
     messageSentHandlerFailedStub = Sinon.stub(
       MessageSentHandler,
-      'handleMessageSentFailure'
+      'handleSwarmMessageSentFailure'
     ).resolves();
     messageSentHandlerSuccessStub = Sinon.stub(
       MessageSentHandler,
-      'handleMessageSentSuccess'
+      'handleSwarmMessageSentSuccess'
     ).resolves();
     messageSentPublicHandlerSuccessStub = Sinon.stub(
       MessageSentHandler,

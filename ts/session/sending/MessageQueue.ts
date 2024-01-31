@@ -43,16 +43,6 @@ import { GroupUpdateInviteMessage } from '../messages/outgoing/controlMessage/gr
 import { GroupUpdatePromoteMessage } from '../messages/outgoing/controlMessage/group_v2/to_user/GroupUpdatePromoteMessage';
 import { OpenGroupVisibleMessage } from '../messages/outgoing/visibleMessage/OpenGroupVisibleMessage';
 
-type ClosedGroupMessageType =
-  | ClosedGroupVisibleMessage
-  | ClosedGroupAddedMembersMessage
-  | ClosedGroupRemovedMembersMessage
-  | ClosedGroupNameChangeMessage
-  | ClosedGroupMemberLeftMessage
-  | ExpirationTimerUpdateMessage
-  | ClosedGroupEncryptionPairMessage
-  | UnsendMessage;
-
 // ClosedGroupEncryptionPairReplyMessage must be sent to a user pubkey. Not a group.
 
 export class MessageQueue {
@@ -96,7 +86,7 @@ export class MessageQueue {
     blinded: boolean;
     filesToLink: Array<number>;
   }) {
-    // Skipping the queue for Open Groups v2; the message is sent directly
+    // Skipping the MessageQueue for Open Groups v2; the message is sent directly
 
     try {
       // NOTE Reactions are handled separately
@@ -132,7 +122,7 @@ export class MessageQueue {
         `Failed to send message to open group: ${roomInfos.serverUrl}:${roomInfos.roomId}:`,
         e
       );
-      await MessageSentHandler.handleMessageSentFailure(
+      await MessageSentHandler.handlePublicMessageSentFailure(
         message,
         e || new Error('Failed to send message to open group.')
       );
@@ -172,7 +162,7 @@ export class MessageQueue {
         `Failed to send message to open group: ${roomInfos.serverUrl}:${roomInfos.roomId}:`,
         e.message
       );
-      await MessageSentHandler.handleMessageSentFailure(
+      await MessageSentHandler.handlePublicMessageSentFailure(
         message,
         e || new Error('Failed to send message to open group.')
       );
@@ -189,7 +179,15 @@ export class MessageQueue {
     groupPubKey,
     sentCb,
   }: {
-    message: ClosedGroupMessageType;
+    message:
+      | ClosedGroupVisibleMessage
+      | ClosedGroupAddedMembersMessage
+      | ClosedGroupRemovedMembersMessage
+      | ClosedGroupNameChangeMessage
+      | ClosedGroupMemberLeftMessage
+      | ExpirationTimerUpdateMessage
+      | ClosedGroupEncryptionPairMessage
+      | UnsendMessage;
     namespace: SnodeNamespacesLegacyGroup;
     sentCb?: (message: OutgoingRawMessage) => Promise<void>;
     groupPubKey?: PubKey;
@@ -251,6 +249,7 @@ export class MessageQueue {
       message,
       namespace: message.namespace,
       pubkey: PubKey.cast(message.destination),
+      isSyncMessage: false,
     });
   }
 
@@ -271,6 +270,7 @@ export class MessageQueue {
       message,
       namespace,
       pubkey: PubKey.cast(destination),
+      isSyncMessage: false,
     });
   }
 
@@ -314,7 +314,7 @@ export class MessageQueue {
       | GroupUpdatePromoteMessage;
     namespace: SnodeNamespaces.Default;
   }): Promise<number | null> {
-    return this.sendToPubKeyNonDurably({ message, namespace, pubkey });
+    return this.sendToPubKeyNonDurably({ message, namespace, pubkey, isSyncMessage: false });
   }
 
   /**
@@ -326,30 +326,55 @@ export class MessageQueue {
     namespace,
     message,
     pubkey,
+    isSyncMessage,
   }: {
     pubkey: PubKey;
     message: ContentMessage;
     namespace: SnodeNamespaces;
+    isSyncMessage: boolean;
   }): Promise<number | null> {
-    let rawMessage;
+    const rawMessage = await MessageUtils.toRawMessage(pubkey, message, namespace);
+    return this.sendSingleMessageAndHandleResult({ rawMessage, isSyncMessage });
+  }
+
+  private async sendSingleMessageAndHandleResult({
+    rawMessage,
+    isSyncMessage,
+  }: {
+    rawMessage: OutgoingRawMessage;
+    isSyncMessage: boolean;
+  }) {
     try {
-      rawMessage = await MessageUtils.toRawMessage(pubkey, message, namespace);
-      const { wrappedEnvelope, effectiveTimestamp } = await MessageSender.send({
+      const { wrappedEnvelope, effectiveTimestamp } = await MessageSender.sendSingleMessage({
         message: rawMessage,
-        isSyncMessage: false,
+        isSyncMessage,
       });
-      await MessageSentHandler.handleMessageSentSuccess(
+
+      await MessageSentHandler.handleSwarmMessageSentSuccess(
         rawMessage,
         effectiveTimestamp,
         wrappedEnvelope
       );
+      const cb = this.pendingMessageCache.callbacks.get(rawMessage.identifier);
+
+      if (cb) {
+        await cb(rawMessage);
+      }
+      this.pendingMessageCache.callbacks.delete(rawMessage.identifier);
+
       return effectiveTimestamp;
     } catch (error) {
-      window.log.error('failed to send message with: ', error.message);
+      window.log.error(
+        'sendSingleMessageAndHandleResult: failed to send message with: ',
+        error.message
+      );
       if (rawMessage) {
-        await MessageSentHandler.handleMessageSentFailure(rawMessage, error);
+        await MessageSentHandler.handleSwarmMessageSentFailure(rawMessage, error);
       }
       return null;
+    } finally {
+      // Remove from the cache because retrying is done in the sender
+      void this.pendingMessageCache.remove(rawMessage);
     }
   }
 
@@ -368,30 +393,7 @@ export class MessageQueue {
       if (!jobQueue.has(messageId)) {
         // We put the event handling inside this job to avoid sending duplicate events
         const job = async () => {
-          try {
-            const { wrappedEnvelope, effectiveTimestamp } = await MessageSender.send({
-              message,
-              isSyncMessage,
-            });
-
-            await MessageSentHandler.handleMessageSentSuccess(
-              message,
-              effectiveTimestamp,
-              wrappedEnvelope
-            );
-
-            const cb = this.pendingMessageCache.callbacks.get(message.identifier);
-
-            if (cb) {
-              await cb(message);
-            }
-            this.pendingMessageCache.callbacks.delete(message.identifier);
-          } catch (error) {
-            void MessageSentHandler.handleMessageSentFailure(message, error);
-          } finally {
-            // Remove from the cache because retrying is done in the sender
-            void this.pendingMessageCache.remove(message);
-          }
+          await this.sendSingleMessageAndHandleResult({ rawMessage: message, isSyncMessage });
         };
         await jobQueue.addWithId(messageId, job);
       }
@@ -420,9 +422,8 @@ export class MessageQueue {
     isGroup = false
   ): Promise<void> {
     // Don't send to ourselves
-    const us = UserUtils.getOurPubKeyFromCache();
     let isSyncMessage = false;
-    if (us && destinationPk.isEqual(us)) {
+    if (UserUtils.isUsFromCache(destinationPk)) {
       // We allow a message for ourselves only if it's a ClosedGroupNewMessage,
       // or a message with a syncTarget set.
 

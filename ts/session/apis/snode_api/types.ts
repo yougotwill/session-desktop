@@ -1,5 +1,4 @@
 import { GroupPubkeyType, PubkeyType } from 'libsession_util_nodejs';
-import { PubKey } from '../../types';
 
 import { SnodeNamespaces } from './namespaces';
 import { SubaccountRevokeSubRequest, SubaccountUnrevokeSubRequest } from './SnodeRequestTypes';
@@ -29,16 +28,6 @@ export type RetrieveRequestResult = {
 };
 export type WithMessagesHashes = { messagesHashes: Array<string> };
 
-export type DeleteMessageByHashesGroupSubRequest = WithMessagesHashes & {
-  pubkey: GroupPubkeyType;
-  method: 'delete';
-};
-
-export type DeleteMessageByHashesUserSubRequest = WithMessagesHashes & {
-  pubkey: PubkeyType;
-  method: 'delete';
-};
-
 export type RetrieveMessagesResultsBatched = Array<RetrieveRequestResult>;
 
 export type WithTimestamp = { timestamp: number };
@@ -51,12 +40,6 @@ export type WithRevokeSubRequest = {
   revokeSubRequest: SubaccountRevokeSubRequest | null;
   unrevokeSubRequest: SubaccountUnrevokeSubRequest | null;
 };
-export type WithMessagesToDeleteSubRequest = {
-  messagesToDelete:
-    | DeleteMessageByHashesUserSubRequest
-    | DeleteMessageByHashesGroupSubRequest
-    | null;
-};
 
 export type SignedHashesParams = WithSignature & {
   pubkey: PubkeyType;
@@ -68,12 +51,6 @@ export type SignedGroupHashesParams = WithSignature & {
   pubkey: GroupPubkeyType;
   messages: Array<string>;
 };
-
-export function isDeleteByHashesGroup(
-  request: DeleteMessageByHashesUserSubRequest | DeleteMessageByHashesGroupSubRequest
-): request is DeleteMessageByHashesGroupSubRequest {
-  return PubKey.is03Pubkey(request.pubkey);
-}
 
 /** inherits from  https://api.oxen.io/storage-rpc/#/recursive?id=recursive but we only care about these values */
 export type ExpireMessageResultItem = WithSignature & {

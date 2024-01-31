@@ -1,4 +1,4 @@
-import _ from 'lodash';
+import { union } from 'lodash';
 import { Data } from '../../data/data';
 import { SignalService } from '../../protobuf';
 import { PnServer } from '../apis/push_notification_api';
@@ -41,7 +41,27 @@ async function handlePublicMessageSentSuccess(
   }
 }
 
-async function handleMessageSentSuccess(
+async function handlePublicMessageSentFailure(sentMessage: OpenGroupVisibleMessage, error: any) {
+  const fetchedMessage = await fetchHandleMessageSentData(sentMessage.identifier);
+  if (!fetchedMessage) {
+    return;
+  }
+
+  if (error instanceof Error) {
+    await fetchedMessage.saveErrors(error);
+  }
+
+  // always mark the message as sent.
+  // the fact that we have errors on the sent is based on the saveErrors()
+  fetchedMessage.set({
+    sent: true,
+  });
+
+  await fetchedMessage.commit();
+  await fetchedMessage.getConversation()?.updateLastMessage();
+}
+
+async function handleSwarmMessageSentSuccess(
   sentMessage: OutgoingRawMessage,
   effectiveTimestamp: number,
   wrappedEnvelope?: Uint8Array
@@ -86,16 +106,10 @@ async function handleMessageSentSuccess(
   const hasBodyOrAttachments = Boolean(
     dataMessage && (dataMessage.body || (dataMessage.attachments && dataMessage.attachments.length))
   );
-  const shouldNotifyPushServer = hasBodyOrAttachments && !isOurDevice;
 
-  if (shouldNotifyPushServer) {
-    // notify the push notification server if needed
-    if (!wrappedEnvelope) {
-      window?.log?.warn('Should send PN notify but no wrapped envelope set.');
-    } else {
-      // we do not really care about the result, neither of waiting for it
-      void PnServer.notifyPnServer(wrappedEnvelope, sentMessage.device);
-    }
+  if (hasBodyOrAttachments && !isOurDevice && wrappedEnvelope) {
+    // we do not really care about the result, neither of waiting for it
+    void PnServer.notifyPnServer(wrappedEnvelope, sentMessage.device);
   }
 
   // Handle the sync logic here
@@ -119,7 +133,7 @@ async function handleMessageSentSuccess(
     fetchedMessage.set({ synced: true });
   }
 
-  sentTo = _.union(sentTo, [sentMessage.device]);
+  sentTo = union(sentTo, [sentMessage.device]);
 
   fetchedMessage.set({
     sent_to: sentTo,
@@ -133,10 +147,7 @@ async function handleMessageSentSuccess(
   fetchedMessage.getConversation()?.updateLastMessage();
 }
 
-async function handleMessageSentFailure(
-  sentMessage: OutgoingRawMessage | OpenGroupVisibleMessage,
-  error: any
-) {
+async function handleSwarmMessageSentFailure(sentMessage: OutgoingRawMessage, error: any) {
   const fetchedMessage = await fetchHandleMessageSentData(sentMessage.identifier);
   if (!fetchedMessage) {
     return;
@@ -168,7 +179,7 @@ async function handleMessageSentFailure(
       expirationStartTimestamp: undefined,
     });
     window.log.warn(
-      `[handleMessageSentFailure] Stopping a message from disppearing until we retry the send operation. messageId: ${fetchedMessage.get(
+      `[handleSwarmMessageSentFailure] Stopping a message from disppearing until we retry the send operation. messageId: ${fetchedMessage.get(
         'id'
       )}`
     );
@@ -198,6 +209,7 @@ async function fetchHandleMessageSentData(messageIdentifier: string) {
 
 export const MessageSentHandler = {
   handlePublicMessageSentSuccess,
-  handleMessageSentSuccess,
-  handleMessageSentFailure,
+  handlePublicMessageSentFailure,
+  handleSwarmMessageSentFailure,
+  handleSwarmMessageSentSuccess,
 };

@@ -1,14 +1,13 @@
 /* eslint-disable no-restricted-syntax */
 import { PubkeyType } from 'libsession_util_nodejs';
-import { isFinite, isNil, isNumber, sample } from 'lodash';
+import { isFinite, isNil, isNumber } from 'lodash';
 import pRetry from 'p-retry';
 import { Snode } from '../../../data/data';
 import { UserUtils } from '../../utils';
-import { EmptySwarmError } from '../../utils/errors';
 import { SeedNodeAPI } from '../seed_node_api';
 import { GetExpiriesFromNodeSubRequest, fakeHash } from './SnodeRequestTypes';
-import { doSnodeBatchRequest } from './batchRequest';
-import { getSwarmFor } from './snodePool';
+import { doUnsignedSnodeBatchRequest } from './batchRequest';
+import { getNodeFromSwarmOrThrow } from './snodePool';
 import { GetExpiriesResultsContent, WithMessagesHashes } from './types';
 
 export type GetExpiriesRequestResponseResults = Record<string, number>;
@@ -47,8 +46,13 @@ async function getExpiriesFromNodes(
 ) {
   try {
     const expireRequest = new GetExpiriesFromNodeSubRequest({ messagesHashes: messageHashes });
-    const signed = await expireRequest.buildAndSignParameters();
-    const result = await doSnodeBatchRequest([signed], targetNode, 4000, associatedWith, 'batch');
+    const result = await doUnsignedSnodeBatchRequest(
+      [expireRequest],
+      targetNode,
+      4000,
+      associatedWith,
+      'batch'
+    );
 
     if (!result || result.length !== 1) {
       throw Error(
@@ -113,17 +117,12 @@ export async function getExpiriesFromSnode({ messagesHashes }: WithMessagesHashe
     return [];
   }
 
-  let snode: Snode | undefined;
-
   try {
     const fetchedExpiries = await pRetry(
       async () => {
-        const swarm = await getSwarmFor(ourPubKey);
-        snode = sample(swarm);
-        if (!snode) {
-          throw new EmptySwarmError(ourPubKey, 'Ran out of swarm nodes to query');
-        }
-        return getExpiriesFromNodes(snode, messagesHashes, ourPubKey);
+        const targetNode = await getNodeFromSwarmOrThrow(ourPubKey);
+
+        return getExpiriesFromNodes(targetNode, messagesHashes, ourPubKey);
       },
       {
         retries: 3,
@@ -139,11 +138,10 @@ export async function getExpiriesFromSnode({ messagesHashes }: WithMessagesHashe
 
     return fetchedExpiries;
   } catch (e) {
-    const snodeStr = snode ? `${snode.ip}:${snode.port}` : 'null';
     window?.log?.warn(
       `[getExpiriesFromSnode] ${e.code ? `${e.code} ` : ''}${
         e.message || e
-      } by ${ourPubKey} for ${messagesHashes} via snode:${snodeStr}`
+      } by ${ourPubKey} for ${messagesHashes}`
     );
     throw e;
   }

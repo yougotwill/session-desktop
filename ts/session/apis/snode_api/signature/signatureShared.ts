@@ -28,10 +28,10 @@ export type SnodeSigParamsUs = SnodeSigParamsShared & {
 
 function getVerificationDataForStoreRetrieve(params: SnodeSigParamsShared) {
   const signatureTimestamp = GetNetworkTime.now();
-  const verificationData = StringUtils.encode(
-    `${params.method}${params.namespace === 0 ? '' : params.namespace}${signatureTimestamp}`,
-    'utf8'
-  );
+  const verificationString = `${params.method}${
+    params.namespace === 0 ? '' : params.namespace
+  }${signatureTimestamp}`;
+  const verificationData = StringUtils.encode(verificationString, 'utf8');
   return {
     toSign: new Uint8Array(verificationData),
     signatureTimestamp,

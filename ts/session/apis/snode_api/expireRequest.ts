@@ -1,21 +1,10 @@
 /* eslint-disable no-restricted-syntax */
-import {
-  chunk,
-  compact,
-  difference,
-  flatten,
-  isArray,
-  isEmpty,
-  isNumber,
-  sample,
-  uniqBy,
-} from 'lodash';
+import { chunk, compact, difference, flatten, isArray, isEmpty, isNumber, uniqBy } from 'lodash';
 import pRetry from 'p-retry';
 import { Snode } from '../../../data/data';
 import { getSodiumRenderer } from '../../crypto';
 import { StringUtils, UserUtils } from '../../utils';
 import { fromBase64ToArray, fromHexToArray } from '../../utils/String';
-import { EmptySwarmError } from '../../utils/errors';
 import { SeedNodeAPI } from '../seed_node_api';
 import {
   MAX_SUBREQUESTS_COUNT,
@@ -23,9 +12,8 @@ import {
   WithShortenOrExtend,
   fakeHash,
 } from './SnodeRequestTypes';
-import { doSnodeBatchRequest } from './batchRequest';
-import { SnodeSignature } from './signature/snodeSignatures';
-import { getSwarmFor } from './snodePool';
+import { doUnsignedSnodeBatchRequest } from './batchRequest';
+import { getNodeFromSwarmOrThrow } from './snodePool';
 import { ExpireMessageResultItem, ExpireMessagesResultsContent } from './types';
 
 export type verifyExpireMsgsResponseSignatureProps = ExpireMessageResultItem & {
@@ -158,7 +146,13 @@ async function updateExpiryOnNodes(
   expireRequests: Array<UpdateExpiryOnNodeUserSubRequest>
 ): Promise<Array<UpdatedExpiryWithHash>> {
   try {
-    const result = await doSnodeBatchRequest(expireRequests, targetNode, 4000, ourPubKey, 'batch');
+    const result = await doUnsignedSnodeBatchRequest(
+      expireRequests,
+      targetNode,
+      4000,
+      ourPubKey,
+      'batch'
+    );
 
     if (!result || result.length !== expireRequests.length) {
       window.log.error(
@@ -189,7 +183,7 @@ async function updateExpiryOnNodes(
           ourPubKey,
           targetNode,
           bodyIndex as ExpireMessagesResultsContent,
-          request.params.messages
+          request.messageHashes
         );
       })
     );
@@ -225,7 +219,7 @@ async function updateExpiryOnNodes(
     }
 
     const hashesRequestedButNotInResults = difference(
-      flatten(expireRequests.map(m => m.params.messages)),
+      flatten(expireRequests.map(m => m.messageHashes)),
       [...flatten(changesValid.map(c => c.messageHashes)), fakeHash]
     );
     if (!isEmpty(hashesRequestedButNotInResults)) {
@@ -300,30 +294,11 @@ export async function buildExpireRequestSingleExpiry(
 
   // NOTE for shortenOrExtend, '' means we want to hardcode the expiry to a TTL value, otherwise it's a shorten or extension of the TTL
 
-  const signResult = await SnodeSignature.generateUpdateExpiryOurSignature({
-    shortenOrExtend,
-    timestamp: expiryMs,
+  return new UpdateExpiryOnNodeUserSubRequest({
+    expiryMs,
     messagesHashes: messageHashes,
+    shortenOrExtend,
   });
-
-  if (!signResult) {
-    window.log.error(
-      `[buildExpireRequestSingleExpiry] SnodeSignature.generateUpdateExpirySignature returned an empty result`
-    );
-    return null;
-  }
-  return {
-    method: 'expire' as const,
-    params: {
-      pubkey: ourPubKey,
-      pubkey_ed25519: signResult.pubkey.toUpperCase(),
-      messages: messageHashes,
-      expiry: expiryMs,
-      extend: shortenOrExtend === 'extend' || undefined,
-      shorten: shortenOrExtend === 'shorten' || undefined,
-      signature: signResult?.signature,
-    },
-  };
 }
 
 type GroupedBySameExpiry = Record<string, Array<string>>;
@@ -402,8 +377,6 @@ export async function expireMessagesOnSnode(
     throw new Error('[expireMessagesOnSnode] No pubkey found');
   }
 
-  let snode: Snode | undefined;
-
   try {
     // key is a string even if it is really a number because Object.keys only knows strings...
     const groupedBySameExpiry = groupMsgByExpiry(expiringDetails);
@@ -432,12 +405,9 @@ export async function expireMessagesOnSnode(
       expireRequestsParams.map(chunkRequest =>
         pRetry(
           async () => {
-            const swarm = await getSwarmFor(ourPubKey);
-            snode = sample(swarm);
-            if (!snode) {
-              throw new EmptySwarmError(ourPubKey, 'Ran out of swarm nodes to query');
-            }
-            return updateExpiryOnNodes(snode, ourPubKey, chunkRequest);
+            const targetNode = await getNodeFromSwarmOrThrow(ourPubKey);
+
+            return updateExpiryOnNodes(targetNode, ourPubKey, chunkRequest);
           },
           {
             retries: 3,
@@ -455,12 +425,7 @@ export async function expireMessagesOnSnode(
 
     return flatten(compact(allSettled.map(m => (m.status === 'fulfilled' ? m.value : null))));
   } catch (e) {
-    const snodeStr = snode ? `${snode.ip}:${snode.port}` : 'null';
-    window?.log?.warn(
-      `[expireMessagesOnSnode] ${e.code || ''}${
-        e.message || e
-      } by ${ourPubKey} via snode:${snodeStr}`
-    );
+    window?.log?.warn(`[expireMessagesOnSnode] ${e.code || ''}${e.message || e} by ${ourPubKey}`);
     throw e;
   }
 }

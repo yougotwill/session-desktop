@@ -27,7 +27,7 @@ import {
   UserGroupsWrapperActions,
 } from '../../webworker/workers/browser/libsession_worker_interface';
 
-type WithEnvelopeTimestamp = { envelopeTimestamp: number };
+type WithSignatureTimestamp = { signatureTimestamp: number };
 type WithAuthor = { author: PubkeyType };
 
 type WithUncheckedSource = { source: string };
@@ -35,16 +35,16 @@ type WithUncheckedSenderIdentity = { senderIdentity: string };
 
 type GroupInviteDetails = {
   inviteMessage: SignalService.GroupUpdateInviteMessage;
-} & WithEnvelopeTimestamp &
+} & WithSignatureTimestamp &
   WithAuthor;
 
-type GroupUpdateGeneric<T> = { change: Omit<T, 'toJSON'> } & WithEnvelopeTimestamp &
+type GroupUpdateGeneric<T> = { change: Omit<T, 'toJSON'> } & WithSignatureTimestamp &
   WithGroupPubkey &
   WithAuthor;
 
 type GroupUpdateDetails = {
   updateMessage: SignalService.GroupUpdateMessage;
-} & WithEnvelopeTimestamp;
+} & WithSignatureTimestamp;
 
 /**
  * Send the invite response to the group's swarm. An admin will handle it and update our invite pending state to not pending.
@@ -68,7 +68,7 @@ async function sendInviteResponseToGroup({ groupPk }: { groupPk: GroupPubkeyType
 async function handleGroupInviteMessage({
   inviteMessage,
   author,
-  envelopeTimestamp,
+  signatureTimestamp,
 }: GroupInviteDetails) {
   const groupPk = inviteMessage.groupSessionId;
   if (!PubKey.is03Pubkey(groupPk)) {
@@ -89,7 +89,7 @@ async function handleGroupInviteMessage({
   const sigValid = await verifySig({
     pubKey: HexString.fromHexStringNoPrefix(groupPk),
     signature: inviteMessage.adminSignature,
-    data: stringToUint8Array(`INVITE${UserUtils.getOurPubKeyStrFromCache()}${envelopeTimestamp}`),
+    data: stringToUint8Array(`INVITE${UserUtils.getOurPubKeyStrFromCache()}${signatureTimestamp}`),
   });
 
   if (!sigValid) {
@@ -101,7 +101,7 @@ async function handleGroupInviteMessage({
 
   const convo = await ConvoHub.use().getOrCreateAndWait(groupPk, ConversationTypeEnum.GROUPV2);
   convo.set({
-    active_at: envelopeTimestamp,
+    active_at: signatureTimestamp,
     didApproveMe: true,
     conversationIdOrigin: author,
   });
@@ -180,13 +180,13 @@ async function verifySig({
 async function handleGroupInfoChangeMessage({
   change,
   groupPk,
-  envelopeTimestamp,
+  signatureTimestamp,
   author,
 }: GroupUpdateGeneric<SignalService.GroupUpdateInfoChangeMessage>) {
   const sigValid = await verifySig({
     pubKey: HexString.fromHexStringNoPrefix(groupPk),
     signature: change.adminSignature,
-    data: stringToUint8Array(`INFO_CHANGE${change.type}${envelopeTimestamp}`),
+    data: stringToUint8Array(`INFO_CHANGE${change.type}${signatureTimestamp}`),
   });
   if (!sigValid) {
     window.log.warn('received group info change with invalid signature. dropping');
@@ -203,7 +203,7 @@ async function handleGroupInfoChangeMessage({
         convo,
         diff: { type: 'name', newName: change.updatedName },
         sender: author,
-        sentAt: envelopeTimestamp,
+        sentAt: signatureTimestamp,
         expireUpdate: null,
       });
 
@@ -214,7 +214,7 @@ async function handleGroupInfoChangeMessage({
         convo,
         diff: { type: 'avatarChange' },
         sender: author,
-        sentAt: envelopeTimestamp,
+        sentAt: signatureTimestamp,
         expireUpdate: null,
       });
       break;
@@ -230,13 +230,13 @@ async function handleGroupInfoChangeMessage({
           convo,
           diff: { type: 'name', newName: change.updatedName },
           sender: author,
-          sentAt: envelopeTimestamp,
+          sentAt: signatureTimestamp,
           expireUpdate: null,
         });
         await convo.updateExpireTimer({
           providedExpireTimer: change.updatedExpiration,
           providedSource: author,
-          receivedAt: envelopeTimestamp,
+          receivedAt: signatureTimestamp,
           fromCurrentDevice: false,
           fromSync: false,
           fromConfigMessage: false,
@@ -249,14 +249,14 @@ async function handleGroupInfoChangeMessage({
   }
 
   convo.set({
-    active_at: envelopeTimestamp,
+    active_at: signatureTimestamp,
   });
 }
 
 async function handleGroupMemberChangeMessage({
   change,
   groupPk,
-  envelopeTimestamp,
+  signatureTimestamp,
   author,
 }: GroupUpdateGeneric<SignalService.GroupUpdateMemberChangeMessage>) {
   const convo = ConvoHub.use().get(groupPk);
@@ -267,7 +267,7 @@ async function handleGroupMemberChangeMessage({
   const sigValid = await verifySig({
     pubKey: HexString.fromHexStringNoPrefix(groupPk),
     signature: change.adminSignature,
-    data: stringToUint8Array(`MEMBER_CHANGE${change.type}${envelopeTimestamp}`),
+    data: stringToUint8Array(`MEMBER_CHANGE${change.type}${signatureTimestamp}`),
   });
   if (!sigValid) {
     window.log.warn('received group member change with invalid signature. dropping');
@@ -280,7 +280,12 @@ async function handleGroupMemberChangeMessage({
 
     return;
   }
-  const sharedDetails = { convo, sender: author, sentAt: envelopeTimestamp, expireUpdate: null };
+  const sharedDetails = {
+    convo,
+    sender: author,
+    sentAt: signatureTimestamp,
+    expireUpdate: null,
+  };
 
   switch (change.type) {
     case SignalService.GroupUpdateMemberChangeMessage.Type.ADDED: {
@@ -310,13 +315,13 @@ async function handleGroupMemberChangeMessage({
   }
 
   convo.set({
-    active_at: envelopeTimestamp,
+    active_at: signatureTimestamp,
   });
 }
 
 async function handleGroupMemberLeftMessage({
   groupPk,
-  envelopeTimestamp,
+  signatureTimestamp,
   author,
 }: GroupUpdateGeneric<SignalService.GroupUpdateMemberLeftMessage>) {
   // No need to verify sig, the author is already verified with the libsession.decrypt()
@@ -337,19 +342,19 @@ async function handleGroupMemberLeftMessage({
     convo,
     diff: { type: 'left', left: [author] },
     sender: author,
-    sentAt: envelopeTimestamp,
+    sentAt: signatureTimestamp,
     expireUpdate: null,
   });
 
   convo.set({
-    active_at: envelopeTimestamp,
+    active_at: signatureTimestamp,
   });
   // debugger TODO We should process this message type even if the sender is blocked
 }
 
 async function handleGroupDeleteMemberContentMessage({
   groupPk,
-  envelopeTimestamp,
+  signatureTimestamp,
   change,
 }: GroupUpdateGeneric<SignalService.GroupUpdateDeleteMemberContentMessage>) {
   const convo = ConvoHub.use().get(groupPk);
@@ -361,7 +366,7 @@ async function handleGroupDeleteMemberContentMessage({
     pubKey: HexString.fromHexStringNoPrefix(groupPk),
     signature: change.adminSignature,
     data: stringToUint8Array(
-      `DELETE_CONTENT${envelopeTimestamp}${change.memberSessionIds.join()}${change.messageHashes.join()}`
+      `DELETE_CONTENT${signatureTimestamp}${change.memberSessionIds.join()}${change.messageHashes.join()}`
     ),
   });
 
@@ -372,14 +377,14 @@ async function handleGroupDeleteMemberContentMessage({
 
   // TODO we should process this message type even if the sender is blocked
   convo.set({
-    active_at: envelopeTimestamp,
+    active_at: signatureTimestamp,
   });
   throw new Error('Not implemented');
 }
 
 async function handleGroupUpdateDeleteMessage({
   groupPk,
-  envelopeTimestamp,
+  signatureTimestamp,
   change,
 }: GroupUpdateGeneric<SignalService.GroupUpdateDeleteMessage>) {
   // TODO verify sig?
@@ -390,7 +395,7 @@ async function handleGroupUpdateDeleteMessage({
   const sigValid = await verifySig({
     pubKey: HexString.fromHexStringNoPrefix(groupPk),
     signature: change.adminSignature,
-    data: stringToUint8Array(`DELETE${envelopeTimestamp}${change.memberSessionIds.join()}`),
+    data: stringToUint8Array(`DELETE${signatureTimestamp}${change.memberSessionIds.join()}`),
   });
 
   if (!sigValid) {
@@ -398,7 +403,7 @@ async function handleGroupUpdateDeleteMessage({
     return;
   }
   convo.set({
-    active_at: envelopeTimestamp,
+    active_at: signatureTimestamp,
   });
   throw new Error('Not implemented');
   // TODO We should process this message type even if the sender is blocked
@@ -408,7 +413,7 @@ async function handleGroupUpdateInviteResponseMessage({
   groupPk,
   change,
   author,
-}: Omit<GroupUpdateGeneric<SignalService.GroupUpdateInviteResponseMessage>, 'envelopeTimestamp'>) {
+}: Omit<GroupUpdateGeneric<SignalService.GroupUpdateInviteResponseMessage>, 'signatureTimestamp'>) {
   // no sig verify for this type of message
   const convo = ConvoHub.use().get(groupPk);
   if (!convo) {

@@ -55,18 +55,20 @@ describe('ExpireRequest', () => {
         throw Error('nothing was returned when building the request');
       }
 
-      expect(request, "method should be 'expire'").to.have.property('method', 'expire');
-      expect(request.params.pubkey, 'should have a matching pubkey').to.equal(ourNumber);
-      expect(request.params.messages, 'messageHash should be in messages array').to.deep.equal(
+      const signedReq = await request.buildAndSignParameters();
+
+      expect(signedReq, "method should be 'expire'").to.have.property('method', 'expire');
+      expect(signedReq.params.pubkey, 'should have a matching pubkey').to.equal(ourNumber);
+      expect(signedReq.params.messages, 'messageHash should be in messages array').to.deep.equal(
         props.messageHashes
       );
       expect(
-        request.params.expiry && isValidUnixTimestamp(request?.params.expiry),
+        signedReq.params.expiry && isValidUnixTimestamp(signedReq.params.expiry),
         'expiry should be a valid unix timestamp'
       ).to.be.true;
-      expect(request.params.extend, 'extend should be undefined').to.be.undefined;
-      expect(request.params.shorten, 'shorten should be undefined').to.be.undefined;
-      expect(request.params.signature, 'signature should not be empty').to.not.be.empty;
+      expect(signedReq.params.extend, 'extend should be undefined').to.be.undefined;
+      expect(signedReq.params.shorten, 'shorten should be undefined').to.be.undefined;
+      expect(signedReq.params.signature, 'signature should not be empty').to.not.be.empty;
     });
     it('builds a request with extend enabled', async () => {
       const request: UpdateExpiryOnNodeUserSubRequest | null = await buildExpireRequestSingleExpiry(
@@ -81,19 +83,20 @@ describe('ExpireRequest', () => {
       if (!request) {
         throw Error('nothing was returned when building the request');
       }
+      const signedReq = await request.buildAndSignParameters();
 
-      expect(request, "method should be 'expire'").to.have.property('method', 'expire');
-      expect(request.params.pubkey, 'should have a matching pubkey').to.equal(ourNumber);
-      expect(request.params.messages, 'messageHash should be in messages array').to.equal(
+      expect(signedReq, "method should be 'expire'").to.have.property('method', 'expire');
+      expect(signedReq.params.pubkey, 'should have a matching pubkey').to.equal(ourNumber);
+      expect(signedReq.params.messages, 'messageHash should be in messages array').to.equal(
         props.messageHashes
       );
       expect(
-        request.params.expiry && isValidUnixTimestamp(request?.params.expiry),
+        signedReq.params.expiry && isValidUnixTimestamp(signedReq?.params.expiry),
         'expiry should be a valid unix timestamp'
       ).to.be.true;
-      expect(request.params.extend, 'extend should be true').to.be.true;
-      expect(request.params.shorten, 'shorten should be undefined').to.be.undefined;
-      expect(request.params.signature, 'signature should not be empty').to.not.be.empty;
+      expect(signedReq.params.extend, 'extend should be true').to.be.true;
+      expect(signedReq.params.shorten, 'shorten should be undefined').to.be.undefined;
+      expect(signedReq.params.signature, 'signature should not be empty').to.not.be.empty;
     });
     it('builds a request with shorten enabled', async () => {
       const request: UpdateExpiryOnNodeUserSubRequest | null = await buildExpireRequestSingleExpiry(
@@ -108,19 +111,20 @@ describe('ExpireRequest', () => {
       if (!request) {
         throw Error('nothing was returned when building the request');
       }
+      const signedReq = await request.buildAndSignParameters();
 
-      expect(request, "method should be 'expire'").to.have.property('method', 'expire');
-      expect(request.params.pubkey, 'should have a matching pubkey').to.equal(ourNumber);
-      expect(request.params.messages, 'messageHash should be in messages array').to.equal(
+      expect(signedReq, "method should be 'expire'").to.have.property('method', 'expire');
+      expect(signedReq.params.pubkey, 'should have a matching pubkey').to.equal(ourNumber);
+      expect(signedReq.params.messages, 'messageHash should be in messages array').to.equal(
         props.messageHashes
       );
       expect(
-        request.params.expiry && isValidUnixTimestamp(request?.params.expiry),
+        signedReq.params.expiry && isValidUnixTimestamp(signedReq?.params.expiry),
         'expiry should be a valid unix timestamp'
       ).to.be.true;
-      expect(request.params.extend, 'extend should be undefined').to.be.undefined;
-      expect(request.params.shorten, 'shorten should be true').to.be.true;
-      expect(request.params.signature, 'signature should not be empty').to.not.be.empty;
+      expect(signedReq.params.extend, 'extend should be undefined').to.be.undefined;
+      expect(signedReq.params.shorten, 'shorten should be true').to.be.true;
+      expect(signedReq.params.signature, 'signature should not be empty').to.not.be.empty;
     });
   });
 

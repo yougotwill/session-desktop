@@ -20,7 +20,7 @@ import {
   BatchResultEntry,
   NotEmptyArrayOfBatchResults,
 } from '../../apis/snode_api/SnodeRequestTypes';
-import { SnodeNamespaces, UserConfigNamespaces } from '../../apis/snode_api/namespaces';
+import { SnodeNamespaces, SnodeNamespacesUserConfig } from '../../apis/snode_api/namespaces';
 import { ed25519Str } from '../../onions/onionPath';
 import { PubKey } from '../../types';
 import { UserSync } from '../job_runners/jobs/UserSyncJob';
@@ -105,7 +105,7 @@ type PendingChangesShared = {
 
 export type PendingChangesForUs = PendingChangesShared & {
   seqno: Long;
-  namespace: UserConfigNamespaces;
+  namespace: SnodeNamespacesUserConfig;
 };
 
 type PendingChangesForGroupNonKey = PendingChangesShared & {
@@ -232,7 +232,7 @@ async function pendingChangesForGroup(groupPk: GroupPubkeyType): Promise<GroupDe
  * Return the wrapperId associated with a specific namespace.
  * WrapperIds are what we use in the database and with the libsession workers calls, and namespace is what we push to.
  */
-function userNamespaceToVariant(namespace: UserConfigNamespaces) {
+function userNamespaceToVariant(namespace: SnodeNamespacesUserConfig) {
   // TODO Might be worth migrating them to use directly the namespaces?
   switch (namespace) {
     case SnodeNamespaces.UserProfile:

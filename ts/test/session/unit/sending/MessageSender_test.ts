@@ -69,7 +69,7 @@ describe('MessageSender', () => {
 
       it('should not retry if an error occurred during encryption', async () => {
         encryptStub.throws(new Error('Failed to encrypt.'));
-        const promise = MessageSender.send({
+        const promise = MessageSender.sendSingleMessage({
           message: rawMessage,
           attempts: 3,
           retryMinTimeout: 10,
@@ -80,7 +80,7 @@ describe('MessageSender', () => {
       });
 
       it('should only call lokiMessageAPI once if no errors occured', async () => {
-        await MessageSender.send({
+        await MessageSender.sendSingleMessage({
           message: rawMessage,
           attempts: 3,
           retryMinTimeout: 10,
@@ -92,7 +92,7 @@ describe('MessageSender', () => {
       it('should only retry the specified amount of times before throwing', async () => {
         sessionMessageAPISendStub.throws(new Error('API error'));
         const attempts = 2;
-        const promise = MessageSender.send({
+        const promise = MessageSender.sendSingleMessage({
           message: rawMessage,
           attempts,
           retryMinTimeout: 10,
@@ -104,7 +104,7 @@ describe('MessageSender', () => {
 
       it('should not throw error if successful send occurs within the retry limit', async () => {
         sessionMessageAPISendStub.onFirstCall().throws(new Error('API error'));
-        await MessageSender.send({
+        await MessageSender.sendSingleMessage({
           message: rawMessage,
           attempts: 3,
           retryMinTimeout: 10,
@@ -135,7 +135,7 @@ describe('MessageSender', () => {
           SnodeNamespaces.Default
         );
 
-        await MessageSender.send({
+        await MessageSender.sendSingleMessage({
           message: rawMessage,
           attempts: 3,
           retryMinTimeout: 10,
@@ -166,7 +166,7 @@ describe('MessageSender', () => {
         );
         const offset = 200000;
         Sinon.stub(GetNetworkTime, 'getLatestTimestampOffset').returns(offset);
-        await MessageSender.send({
+        await MessageSender.sendSingleMessage({
           message: rawMessage,
           attempts: 3,
           retryMinTimeout: 10,
@@ -225,7 +225,7 @@ describe('MessageSender', () => {
             visibleMessage,
             SnodeNamespaces.Default
           );
-          await MessageSender.send({
+          await MessageSender.sendSingleMessage({
             message: rawMessage,
             attempts: 3,
             retryMinTimeout: 10,

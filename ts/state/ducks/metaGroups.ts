@@ -11,7 +11,6 @@ import {
 } from 'libsession_util_nodejs';
 import { base64_variants, from_base64 } from 'libsodium-wrappers-sumo';
 import { intersection, isEmpty, uniq } from 'lodash';
-import { v4 } from 'uuid';
 import { ConfigDumpData } from '../../data/configDump/configDump';
 import { ConversationModel } from '../../models/conversation';
 import { ConversationTypeEnum } from '../../models/conversationAttributes';
@@ -55,7 +54,6 @@ import { resetOverlayMode } from './section';
 type WithAddWithoutHistoryMembers = { withoutHistory: Array<PubkeyType> };
 type WithAddWithHistoryMembers = { withHistory: Array<PubkeyType> };
 type WithRemoveMembers = { removed: Array<PubkeyType> };
-type WithFromCurrentDevice = { fromCurrentDevice: boolean }; // there are some changes we want to do only when the current user do the change, and not when a network change triggers it.
 
 type WithFromMemberLeftMessage = { fromMemberLeftMessage: boolean }; // there are some changes we want to skip when doing changes triggered from a memberLeft message.
 export type GroupState = {
@@ -186,7 +184,6 @@ const initNewGroupInWrapper = createAsyncThunk(
         revokeSubRequest: null,
         unrevokeSubRequest: null,
         supplementKeys: [],
-        updateMessages: [],
       });
       if (result !== RunJobResult.Success) {
         window.log.warn('GroupSync.pushChangesToGroupSwarmIfNeeded during create failed');
@@ -511,13 +508,9 @@ async function handleRemoveMembersAndRekey({
   groupPk,
   removed,
   secretKey,
-  fromCurrentDevice,
   fromMemberLeftMessage,
-}: WithGroupPubkey &
-  WithRemoveMembers &
-  WithFromCurrentDevice &
-  WithFromMemberLeftMessage & { secretKey: Uint8Array }) {
-  if (!fromCurrentDevice || !removed.length) {
+}: WithGroupPubkey & WithRemoveMembers & WithFromMemberLeftMessage & { secretKey: Uint8Array }) {
+  if (!removed.length) {
     return;
   }
   const createAtNetworkTimestamp = GetNetworkTime.now();
@@ -609,91 +602,112 @@ function getConvoExpireDetailsForMsg(convo: ConversationModel) {
  * Those are not going to change the state, they are just here as a "notification".
  * i.e. "Alice was removed from the group"
  */
-async function getUpdateMessagesToPush({
+async function getRemovedControlMessage({
   convo,
-  withHistory,
-  withoutHistory,
-  fromCurrentDevice,
   groupPk,
   removed,
   adminSecretKey,
   createAtNetworkTimestamp,
   fromMemberLeftMessage,
-}: WithAddWithHistoryMembers &
-  WithAddWithoutHistoryMembers &
-  WithFromMemberLeftMessage &
+  dbMsgIdentifier,
+}: WithFromMemberLeftMessage &
   WithRemoveMembers &
-  WithFromCurrentDevice &
   WithGroupPubkey & {
+    convo: ConversationModel;
+    adminSecretKey: Uint8ArrayLen64;
+    createAtNetworkTimestamp: number;
+    dbMsgIdentifier: string;
+  }) {
+  const sodium = await getSodiumRenderer();
+
+  if (fromMemberLeftMessage || !removed.length) {
+    return null;
+  }
+
+  return new GroupUpdateMemberChangeMessage({
+    identifier: dbMsgIdentifier,
+    removed,
+    groupPk,
+    typeOfChange: 'removed',
+    createAtNetworkTimestamp,
+    secretKey: adminSecretKey,
+    sodium,
+    ...getConvoExpireDetailsForMsg(convo),
+  });
+}
+
+async function getWithoutHistoryControlMessage({
+  convo,
+  withoutHistory,
+  groupPk,
+  adminSecretKey,
+  createAtNetworkTimestamp,
+  dbMsgIdentifier,
+}: WithAddWithoutHistoryMembers &
+  WithGroupPubkey & {
+    dbMsgIdentifier: string;
     convo: ConversationModel;
     adminSecretKey: Uint8ArrayLen64;
     createAtNetworkTimestamp: number;
   }) {
   const sodium = await getSodiumRenderer();
 
-  const updateMessages: Array<GroupUpdateMemberChangeMessage> = [];
-
-  if (!fromCurrentDevice || fromMemberLeftMessage) {
-    return updateMessages;
+  if (!withoutHistory.length) {
+    return null;
   }
 
-  if (withoutHistory.length) {
-    updateMessages.push(
-      new GroupUpdateMemberChangeMessage({
-        identifier: v4(),
-        added: withoutHistory,
-        groupPk,
-        typeOfChange: 'added',
-        createAtNetworkTimestamp,
-        secretKey: adminSecretKey,
-        sodium,
-        ...getConvoExpireDetailsForMsg(convo),
-      })
-    );
-  }
-  if (withHistory.length) {
-    updateMessages.push(
-      new GroupUpdateMemberChangeMessage({
-        identifier: v4(),
-        added: withHistory,
-        groupPk,
-        typeOfChange: 'addedWithHistory',
-        createAtNetworkTimestamp,
-        secretKey: adminSecretKey,
-        sodium,
-        ...getConvoExpireDetailsForMsg(convo),
-      })
-    );
-  }
-  if (removed.length) {
-    updateMessages.push(
-      new GroupUpdateMemberChangeMessage({
-        identifier: v4(),
-        removed,
-        groupPk,
-        typeOfChange: 'removed',
-        createAtNetworkTimestamp,
-        secretKey: adminSecretKey,
-        sodium,
-        ...getConvoExpireDetailsForMsg(convo),
-      })
-    );
-  }
-  // TODO might need to add the promote case here
-
-  return updateMessages;
+  return new GroupUpdateMemberChangeMessage({
+    identifier: dbMsgIdentifier,
+    added: withoutHistory,
+    groupPk,
+    typeOfChange: 'added',
+    createAtNetworkTimestamp,
+    secretKey: adminSecretKey,
+    sodium,
+    ...getConvoExpireDetailsForMsg(convo),
+  });
 }
 
-async function handleMemberAddedFromUIOrNot({
+async function getWithHistoryControlMessage({
+  convo,
+  withHistory,
+  groupPk,
+  adminSecretKey,
+  createAtNetworkTimestamp,
+  dbMsgIdentifier,
+}: WithAddWithHistoryMembers &
+  WithGroupPubkey & {
+    dbMsgIdentifier: string;
+    convo: ConversationModel;
+    adminSecretKey: Uint8ArrayLen64;
+    createAtNetworkTimestamp: number;
+  }) {
+  const sodium = await getSodiumRenderer();
+
+  if (!withHistory.length) {
+    return null;
+  }
+
+  return new GroupUpdateMemberChangeMessage({
+    identifier: dbMsgIdentifier,
+    added: withHistory,
+    groupPk,
+    typeOfChange: 'addedWithHistory',
+    createAtNetworkTimestamp,
+    secretKey: adminSecretKey,
+    sodium,
+    ...getConvoExpireDetailsForMsg(convo),
+  });
+}
+
+async function handleMemberAddedFromUI({
   addMembersWithHistory,
   addMembersWithoutHistory,
   groupPk,
-  fromCurrentDevice,
-}: WithFromCurrentDevice &
-  WithGroupPubkey & {
-    addMembersWithHistory: Array<PubkeyType>;
-    addMembersWithoutHistory: Array<PubkeyType>;
-  }) {
+}: WithGroupPubkey & {
+  addMembersWithHistory: Array<PubkeyType>;
+  addMembersWithoutHistory: Array<PubkeyType>;
+}) {
   const group = await UserGroupsWrapperActions.getGroup(groupPk);
   if (!group || !group.secretKey || isEmpty(group.secretKey)) {
     throw new Error('tried to make change to group but we do not have the admin secret key');
@@ -724,25 +738,12 @@ async function handleMemberAddedFromUIOrNot({
   await handleWithoutHistoryMembers({ groupPk, withoutHistory });
   const createAtNetworkTimestamp = GetNetworkTime.now();
 
-  const updateMessages = await getUpdateMessagesToPush({
-    adminSecretKey: group.secretKey,
-    convo,
-    fromCurrentDevice,
-    groupPk,
-    removed: [],
-    withHistory,
-    withoutHistory,
-    createAtNetworkTimestamp,
-    fromMemberLeftMessage: false,
-  });
-
   await LibSessionUtil.saveDumpsToDb(groupPk);
 
   // push new members & key supplement in a single batch call
   const sequenceResult = await GroupSync.pushChangesToGroupSwarmIfNeeded({
     groupPk,
     supplementKeys,
-    updateMessages,
     ...revokeUnrevokeParams,
   });
   if (sequenceResult !== RunJobResult.Success) {
@@ -774,22 +775,46 @@ async function handleMemberAddedFromUIOrNot({
           : null,
     },
   };
-  const additionsWithoutHistory = updateMessages.find(m => m.typeOfChange === 'added');
-  const additionsWithHistory = updateMessages.find(m => m.typeOfChange === 'addedWithHistory');
-  if (additionsWithoutHistory) {
-    await ClosedGroup.addUpdateMessage({
-      diff: { type: 'add', added: additionsWithoutHistory.memberSessionIds, withHistory: false },
+
+  const updateMessagesToPush: Array<GroupUpdateMemberChangeMessage> = [];
+  if (withHistory.length) {
+    const msgModel = await ClosedGroup.addUpdateMessage({
+      diff: { type: 'add', added: withHistory, withHistory: false },
       ...shared,
     });
+    const groupChange = await getWithHistoryControlMessage({
+      adminSecretKey: group.secretKey,
+      convo,
+      groupPk,
+      withHistory,
+      createAtNetworkTimestamp,
+      dbMsgIdentifier: msgModel.id,
+    });
+    if (groupChange) {
+      updateMessagesToPush.push(groupChange);
+    }
   }
-  if (additionsWithHistory) {
-    await ClosedGroup.addUpdateMessage({
-      diff: { type: 'add', added: additionsWithHistory.memberSessionIds, withHistory: true },
+  if (withoutHistory.length) {
+    const msgModel = await ClosedGroup.addUpdateMessage({
+      diff: { type: 'add', added: withoutHistory, withHistory: true },
       ...shared,
     });
+    const groupChange = await getWithoutHistoryControlMessage({
+      adminSecretKey: group.secretKey,
+      convo,
+      groupPk,
+      withoutHistory,
+      createAtNetworkTimestamp,
+      dbMsgIdentifier: msgModel.id,
+    });
+    if (groupChange) {
+      updateMessagesToPush.push(groupChange);
+    }
+    console.warn(`diff: { type: ' should add case for addWithHistory here ?`);
   }
 
   await convo.commit();
+  await GroupSync.storeGroupUpdateMessages({ groupPk, updateMessages: updateMessagesToPush });
 }
 
 /**
@@ -797,13 +822,11 @@ async function handleMemberAddedFromUIOrNot({
  * - to udpate the state when kicking a member from the group from the UI
  * - to update the state when handling a MEMBER_LEFT message
  */
-async function handleMemberRemovedFromUIOrNot({
+async function handleMemberRemovedFromUI({
   groupPk,
   removeMembers,
-  fromCurrentDevice,
   fromMemberLeftMessage,
-}: WithFromCurrentDevice &
-  WithFromMemberLeftMessage &
+}: WithFromMemberLeftMessage &
   WithGroupPubkey & {
     removeMembers: Array<PubkeyType>;
   }) {
@@ -812,7 +835,11 @@ async function handleMemberRemovedFromUIOrNot({
     throw new Error('tried to make change to group but we do not have the admin secret key');
   }
 
-  await checkWeAreAdminOrThrow(groupPk, 'handleMemberRemovedFromUIOrNot');
+  await checkWeAreAdminOrThrow(groupPk, 'handleMemberRemovedFromUI');
+
+  if (removeMembers.length === 0) {
+    return;
+  }
 
   const { removed, convo, us } = validateMemberRemoveChange({
     groupPk,
@@ -833,30 +860,16 @@ async function handleMemberRemovedFromUIOrNot({
     groupPk,
     removed,
     secretKey: group.secretKey,
-    fromCurrentDevice,
     fromMemberLeftMessage,
   });
 
   const createAtNetworkTimestamp = GetNetworkTime.now();
-
-  const updateMessages = await getUpdateMessagesToPush({
-    adminSecretKey: group.secretKey,
-    convo,
-    fromCurrentDevice,
-    groupPk,
-    removed,
-    withHistory: [],
-    withoutHistory: [],
-    createAtNetworkTimestamp,
-    fromMemberLeftMessage,
-  });
 
   await LibSessionUtil.saveDumpsToDb(groupPk);
 
   // revoked pubkeys, update messages, and libsession groups config in a single batchcall
   const sequenceResult = await GroupSync.pushChangesToGroupSwarmIfNeeded({
     groupPk,
-    updateMessages,
     supplementKeys: [],
     ...revokeUnrevokeParams,
   });
@@ -887,26 +900,37 @@ async function handleMemberRemovedFromUIOrNot({
           : null,
     },
   };
+  await convo.commit();
 
-  const removals = updateMessages.find(m => m.typeOfChange === 'removed');
-
-  if (removals) {
-    await ClosedGroup.addUpdateMessage({
+  if (removed.length) {
+    const msgModel = await ClosedGroup.addUpdateMessage({
       diff: { type: 'kicked', kicked: removed },
       ...shared,
     });
+    const removedControlMessage = await getRemovedControlMessage({
+      adminSecretKey: group.secretKey,
+      convo,
+      groupPk,
+      removed,
+      createAtNetworkTimestamp,
+      fromMemberLeftMessage,
+      dbMsgIdentifier: msgModel.id,
+    });
+    if (removedControlMessage) {
+      await GroupSync.storeGroupUpdateMessages({
+        groupPk,
+        updateMessages: [removedControlMessage],
+      });
+    }
   }
-  await convo.commit();
 }
 
 async function handleNameChangeFromUI({
   groupPk,
   newName: uncheckedName,
-  fromCurrentDevice,
-}: WithFromCurrentDevice &
-  WithGroupPubkey & {
-    newName: string;
-  }) {
+}: WithGroupPubkey & {
+  newName: string;
+}) {
   const group = await UserGroupsWrapperActions.getGroup(groupPk);
   if (!group || !group.secretKey || isEmpty(group.secretKey)) {
     throw new Error('tried to make change to group but we do not have the admin secret key');
@@ -931,7 +955,6 @@ async function handleNameChangeFromUI({
   await MetaGroupWrapperActions.infoSet(groupPk, infos);
   const createAtNetworkTimestamp = GetNetworkTime.now();
 
-  const updateMessages: Array<GroupUpdateInfoChangeMessage> = [];
   // we want to add an update message even if the change was done remotely
   const msg = await ClosedGroup.addUpdateMessage({
     convo,
@@ -942,27 +965,22 @@ async function handleNameChangeFromUI({
   });
 
   // we want to send an update only if the change was made locally.
-  if (fromCurrentDevice) {
-    updateMessages.push(
-      new GroupUpdateInfoChangeMessage({
-        groupPk,
-        typeOfChange: SignalService.GroupUpdateInfoChangeMessage.Type.NAME,
-        updatedName: newName,
-        identifier: msg.id,
-        createAtNetworkTimestamp,
-        secretKey: group.secretKey,
-        sodium: await getSodiumRenderer(),
-        ...getConvoExpireDetailsForMsg(convo),
-      })
-    );
-  }
+  const nameChangeMsg = new GroupUpdateInfoChangeMessage({
+    groupPk,
+    typeOfChange: SignalService.GroupUpdateInfoChangeMessage.Type.NAME,
+    updatedName: newName,
+    identifier: msg.id,
+    createAtNetworkTimestamp,
+    secretKey: group.secretKey,
+    sodium: await getSodiumRenderer(),
+    ...getConvoExpireDetailsForMsg(convo),
+  });
 
   const batchResult = await GroupSync.pushChangesToGroupSwarmIfNeeded({
     groupPk,
     supplementKeys: [],
     revokeSubRequest: null,
     unrevokeSubRequest: null,
-    updateMessages,
   });
 
   if (batchResult !== RunJobResult.Success) {
@@ -972,6 +990,7 @@ async function handleNameChangeFromUI({
   }
 
   await UserSync.queueNewJobIfNeeded();
+  await GroupSync.storeGroupUpdateMessages({ groupPk, updateMessages: [nameChangeMsg] });
 
   convo.set({
     active_at: createAtNetworkTimestamp,
@@ -1005,16 +1024,14 @@ const currentDeviceGroupMembersChange = createAsyncThunk(
       );
     }
 
-    await handleMemberRemovedFromUIOrNot({
+    await handleMemberRemovedFromUI({
       groupPk,
       removeMembers: args.removeMembers,
-      fromCurrentDevice: true,
       fromMemberLeftMessage: false,
     });
 
-    await handleMemberAddedFromUIOrNot({
+    await handleMemberAddedFromUI({
       groupPk,
-      fromCurrentDevice: true,
       addMembersWithHistory: args.addMembersWithHistory,
       addMembersWithoutHistory: args.addMembersWithoutHistory,
     });
@@ -1051,10 +1068,9 @@ const handleMemberLeftMessage = createAsyncThunk(
       );
     }
 
-    await handleMemberRemovedFromUIOrNot({
+    await handleMemberRemovedFromUI({
       groupPk,
       removeMembers: [memberLeft],
-      fromCurrentDevice: true,
       fromMemberLeftMessage: true,
     });
 
@@ -1160,7 +1176,7 @@ const currentDeviceGroupNameChange = createAsyncThunk(
     }
     await checkWeAreAdminOrThrow(groupPk, 'currentDeviceGroupNameChange');
 
-    await handleNameChangeFromUI({ groupPk, ...args, fromCurrentDevice: true });
+    await handleNameChangeFromUI({ groupPk, ...args });
 
     return {
       groupPk,

@@ -31,7 +31,7 @@ import { HexString } from '../node/hexStrings';
 import {
   SnodeNamespace,
   SnodeNamespaces,
-  UserConfigNamespaces,
+  SnodeNamespacesUserConfig,
 } from '../session/apis/snode_api/namespaces';
 import { RetrieveMessageItemWithNamespace } from '../session/apis/snode_api/types';
 import { ClosedGroup, GroupInfo } from '../session/group/closed-group';
@@ -64,12 +64,12 @@ type IncomingUserResult = {
   needsDump: boolean;
   publicKey: string;
   latestEnvelopeTimestamp: number;
-  namespace: UserConfigNamespaces;
+  namespace: SnodeNamespacesUserConfig;
 };
 
 function byUserNamespace(incomingConfigs: Array<RetrieveMessageItemWithNamespace>) {
   const groupedByVariant: Map<
-    UserConfigNamespaces,
+    SnodeNamespacesUserConfig,
     Array<RetrieveMessageItemWithNamespace>
   > = new Map();
 

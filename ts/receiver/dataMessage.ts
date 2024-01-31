@@ -169,7 +169,7 @@ export async function handleSwarmDataMessage({
 
   if (cleanDataMessage.groupUpdateMessage) {
     await GroupV2Receiver.handleGroupUpdateMessage({
-      envelopeTimestamp: sentAtTimestamp,
+      signatureTimestamp: sentAtTimestamp,
       updateMessage: rawDataMessage.groupUpdateMessage as SignalService.GroupUpdateMessage,
       source: envelope.source,
       senderIdentity: envelope.senderIdentity,

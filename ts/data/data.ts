@@ -42,12 +42,12 @@ export type GuardNode = {
   ed25519PubKey: string;
 };
 
-export interface Snode {
+export type Snode = {
   ip: string;
   port: number;
   pubkey_x25519: string;
   pubkey_ed25519: string;
-}
+};
 
 export type SwarmNode = Snode & {
   address: string;
@@ -227,12 +227,12 @@ async function cleanLastHashes(): Promise<void> {
   await channels.cleanLastHashes();
 }
 
-async function saveSeenMessageHashes(
-  data: Array<{
-    expiresAt: number;
-    hash: string;
-  }>
-): Promise<void> {
+export type SeenMessageHashes = {
+  expiresAt: number;
+  hash: string;
+};
+
+async function saveSeenMessageHashes(data: Array<SeenMessageHashes>): Promise<void> {
   await channels.saveSeenMessageHashes(cleanData(data));
 }
 

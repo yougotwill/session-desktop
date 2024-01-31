@@ -4,6 +4,7 @@ import {
   Uint8ArrayLen100,
   Uint8ArrayLen64,
   UserGroupsGet,
+  WithGroupPubkey,
 } from 'libsession_util_nodejs';
 import { isEmpty, isString } from 'lodash';
 import {
@@ -18,12 +19,7 @@ import { fromUInt8ArrayToBase64, stringToUint8Array } from '../../../utils/Strin
 import { PreConditionFailed } from '../../../utils/errors';
 import { GetNetworkTime } from '../getNetworkTime';
 import { SnodeNamespacesGroup } from '../namespaces';
-import {
-  SignedGroupHashesParams,
-  WithMessagesHashes,
-  WithShortenOrExtend,
-  WithTimestamp,
-} from '../types';
+import { SignedGroupHashesParams, WithMessagesHashes, WithShortenOrExtend } from '../types';
 import { SignatureShared } from './signatureShared';
 import { SnodeSignatureResult } from './snodeSignatures';
 
@@ -112,25 +108,12 @@ export type SigResultSubAccount = SigResultAdmin & {
   subaccount_sig: string;
 };
 
-async function getSnodeGroupSignatureParams(params: SigParamsAdmin): Promise<SigResultAdmin>;
-async function getSnodeGroupSignatureParams(
-  params: SigParamsSubaccount
-): Promise<SigResultSubAccount>;
-
-async function getSnodeGroupSignatureParams(
-  params: SigParamsAdmin | SigParamsSubaccount
-): Promise<SigResultSubAccount | SigResultAdmin> {
-  if ('groupIdentityPrivKey' in params) {
-    return getSnodeGroupAdminSignatureParams(params);
-  }
-  return getSnodeGroupSubAccountSignatureParams(params);
-}
-
 async function getSnodeGroupSubAccountSignatureParams(
   params: SigParamsSubaccount
 ): Promise<SigResultSubAccount> {
   const { signatureTimestamp, toSign } =
     SignatureShared.getVerificationDataForStoreRetrieve(params);
+
   const sigResult = await MetaGroupWrapperActions.swarmSubaccountSign(
     params.groupPk,
     toSign,
@@ -153,7 +136,10 @@ async function getSnodeGroupAdminSignatureParams(params: SigParamsAdmin): Promis
   return { ...sigData, pubkey: params.groupPk };
 }
 
-type GroupDetailsNeededForSignature = Pick<UserGroupsGet, 'pubkeyHex' | 'authData' | 'secretKey'>;
+export type GroupDetailsNeededForSignature = Pick<
+  UserGroupsGet,
+  'pubkeyHex' | 'authData' | 'secretKey'
+>;
 
 async function getSnodeGroupSignature({
   group,
@@ -163,7 +149,7 @@ async function getSnodeGroupSignature({
   group: GroupDetailsNeededForSignature | null;
   method: 'store' | 'retrieve';
   namespace: SnodeNamespacesGroup;
-}) {
+}): Promise<SigResultSubAccount | SigResultAdmin> {
   if (!group) {
     throw new Error(`getSnodeGroupSignature: did not find group in wrapper`);
   }
@@ -173,7 +159,7 @@ async function getSnodeGroupSignature({
   const groupAuthData = authData && !isEmpty(authData) ? authData : null;
 
   if (groupSecretKey) {
-    return getSnodeGroupSignatureParams({
+    return getSnodeGroupAdminSignatureParams({
       method,
       namespace,
       groupPk,
@@ -181,7 +167,7 @@ async function getSnodeGroupSignature({
     });
   }
   if (groupAuthData) {
-    const subAccountSign = await getSnodeGroupSignatureParams({
+    const subAccountSign = await getSnodeGroupSubAccountSignatureParams({
       groupPk,
       method,
       namespace,
@@ -220,20 +206,20 @@ async function signDataWithAdminSecret(
 // this is kind of duplicated with `generateUpdateExpirySignature`, but needs to use the authData when secretKey is not available
 async function generateUpdateExpiryGroupSignature({
   shortenOrExtend,
-  timestamp,
+  expiryMs,
   messagesHashes,
   group,
 }: WithMessagesHashes &
-  WithShortenOrExtend &
-  WithTimestamp & {
+  WithShortenOrExtend & {
     group: GroupDetailsNeededForSignature | null;
+    expiryMs: number;
   }) {
   if (!group || isEmpty(group.pubkeyHex)) {
     throw new PreConditionFailed('generateUpdateExpiryGroupSignature groupPk is empty');
   }
 
   // "expire" || ShortenOrExtend || expiry || messages[0] || ... || messages[N]
-  const verificationString = `expire${shortenOrExtend}${timestamp}${messagesHashes.join('')}`;
+  const verificationString = `expire${shortenOrExtend}${expiryMs}${messagesHashes.join('')}`;
   const verificationData = StringUtils.encode(verificationString, 'utf8');
   const message = new Uint8Array(verificationData);
 
@@ -249,7 +235,7 @@ async function generateUpdateExpiryGroupSignature({
   }
 
   const sodium = await getSodiumRenderer();
-  const shared = { timestamp, pubkey: groupPk };
+  const shared = { expiry: expiryMs, pubkey: groupPk }; // expiry and the other fields come from what the expire endpoint expects
 
   if (groupSecretKey) {
     return {
@@ -257,36 +243,37 @@ async function generateUpdateExpiryGroupSignature({
       ...shared,
     };
   }
-
-  if (groupAuthData) {
-    const subaccountSign = await MetaGroupWrapperActions.swarmSubaccountSign(
-      groupPk,
-      message,
-      groupAuthData
+  if (!groupAuthData) {
+    // typescript should see this already but doesn't, so let's enforce it.
+    throw new Error(
+      `retrieveRequestForGroup: needs either groupSecretKey or authData but both are empty`
     );
-    return {
-      ...subaccountSign,
-      ...shared,
-    };
   }
-
-  throw new Error(`generateUpdateExpiryGroupSignature: needs either groupSecretKey or authData`);
+  const subaccountSign = await MetaGroupWrapperActions.swarmSubaccountSign(
+    groupPk,
+    message,
+    groupAuthData
+  );
+  return {
+    ...subaccountSign,
+    ...shared,
+  };
 }
 
 async function getGroupSignatureByHashesParams({
   messagesHashes,
   method,
-  pubkey,
-}: WithMessagesHashes & {
-  pubkey: GroupPubkeyType;
-  method: 'delete';
-}): Promise<SignedGroupHashesParams> {
+  groupPk,
+}: WithMessagesHashes &
+  WithGroupPubkey & {
+    method: 'delete';
+  }): Promise<SignedGroupHashesParams> {
   const verificationData = StringUtils.encode(`${method}${messagesHashes.join('')}`, 'utf8');
   const message = new Uint8Array(verificationData);
 
   const sodium = await getSodiumRenderer();
   try {
-    const group = await UserGroupsWrapperActions.getGroup(pubkey);
+    const group = await UserGroupsWrapperActions.getGroup(groupPk);
     if (!group || !group.secretKey || isEmpty(group.secretKey)) {
       throw new Error('getSnodeGroupSignatureByHashesParams needs admin secretKey');
     }
@@ -295,7 +282,7 @@ async function getGroupSignatureByHashesParams({
 
     return {
       signature: signatureBase64,
-      pubkey,
+      pubkey: groupPk,
       messages: messagesHashes,
     };
   } catch (e) {

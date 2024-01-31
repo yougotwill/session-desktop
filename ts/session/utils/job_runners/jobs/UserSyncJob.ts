@@ -7,8 +7,7 @@ import { ConfigDumpData } from '../../../../data/configDump/configDump';
 import { UserSyncJobDone } from '../../../../shims/events';
 import { isSignInByLinking } from '../../../../util/storage';
 import { GenericWrapperActions } from '../../../../webworker/workers/browser/libsession_worker_interface';
-import { StoreOnNodeData } from '../../../apis/snode_api/SnodeRequestTypes';
-import { GetNetworkTime } from '../../../apis/snode_api/getNetworkTime';
+import { StoreUserConfigSubRequest } from '../../../apis/snode_api/SnodeRequestTypes';
 import { TTL_DEFAULT } from '../../../constants';
 import { ConvoHub } from '../../../conversations';
 import { MessageSender } from '../../../sending/MessageSender';
@@ -86,18 +85,17 @@ async function pushChangesToUserSwarmIfNeeded() {
     triggerConfSyncJobDone();
     return RunJobResult.Success;
   }
-  const msgs: Array<StoreOnNodeData> = changesToPush.messages.map(item => {
-    return {
-      namespace: item.namespace,
-      pubkey: us,
-      networkTimestamp: GetNetworkTime.now(),
-      ttl: TTL_DEFAULT.CONFIG_MESSAGE,
-      data: item.ciphertext,
-    };
+
+  const storeRequests = changesToPush.messages.map(m => {
+    return new StoreUserConfigSubRequest({
+      encryptedData: m.ciphertext,
+      namespace: m.namespace,
+      ttlMs: TTL_DEFAULT.CONFIG_MESSAGE,
+    });
   });
 
   const result = await MessageSender.sendEncryptedDataToSnode({
-    encryptedData: msgs,
+    storeRequests,
     destination: us,
     messagesHashesToDelete: changesToPush.allOldHashes,
     revokeSubRequest: null,

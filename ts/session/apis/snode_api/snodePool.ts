@@ -1,14 +1,14 @@
-import _, { shuffle } from 'lodash';
+import _, { isEmpty, sample, shuffle } from 'lodash';
 import pRetry from 'p-retry';
 
 import { Data, Snode } from '../../../data/data';
 
-import { ed25519Str } from '../../onions/onionPath';
-import { OnionPaths } from '../../onions';
 import { Onions, SnodePool } from '.';
+import { OnionPaths } from '../../onions';
+import { ed25519Str } from '../../onions/onionPath';
 import { SeedNodeAPI } from '../seed_node_api';
-import { requestSnodesForPubkeyFromNetwork } from './getSwarmFor';
 import { ServiceNodesList } from './getServiceNodesList';
+import { requestSnodesForPubkeyFromNetwork } from './getSwarmFor';
 
 /**
  * If we get less than this snode in a swarm, we fetch new snodes for this pubkey
@@ -314,6 +314,20 @@ export async function getSwarmFor(pubkey: string): Promise<Array<Snode>> {
 
   // Request new node list from the network and save it
   return getSwarmFromNetworkAndSave(pubkey);
+}
+
+export async function getNodeFromSwarmOrThrow(pubkey: string): Promise<Snode> {
+  const swarm = await getSwarmFor(pubkey);
+  if (!isEmpty(swarm)) {
+    const node = sample(swarm);
+    if (node) {
+      return node;
+    }
+  }
+  window.log.warn(
+    `getNodeFromSwarmOrThrow: could not get one random node for pk ${ed25519Str(pubkey)}`
+  );
+  throw new Error(`getNodeFromSwarmOrThrow: could not get one random node`);
 }
 
 /**

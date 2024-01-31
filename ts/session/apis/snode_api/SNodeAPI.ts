@@ -1,19 +1,19 @@
 /* eslint-disable no-prototype-builtins */
 /* eslint-disable no-restricted-syntax */
-import { compact, sample } from 'lodash';
+import { compact } from 'lodash';
 import pRetry from 'p-retry';
-import { Snode } from '../../../data/data';
 import { getSodiumRenderer } from '../../crypto';
 import { ed25519Str } from '../../onions/onionPath';
 import { StringUtils, UserUtils } from '../../utils';
 import { fromBase64ToArray, fromHexToArray } from '../../utils/String';
 import { doSnodeBatchRequest } from './batchRequest';
 import { SnodeSignature } from './signature/snodeSignatures';
-import { getSwarmFor } from './snodePool';
+import { getNodeFromSwarmOrThrow } from './snodePool';
 
 export const ERROR_CODE_NO_CONNECT = 'ENETUNREACH: No network connection.';
 
 // TODOLATER we should merge those two functions together as they are almost exactly the same
+// TODO make this function use doUnsignedBatchRequest but we need to merge the verify logic into it
 const forceNetworkDeletion = async (): Promise<Array<string> | null> => {
   const sodium = await getSodiumRenderer();
   const usPk = UserUtils.getOurPubKeyStrFromCache();
@@ -30,13 +30,7 @@ const forceNetworkDeletion = async (): Promise<Array<string> | null> => {
   try {
     const maliciousSnodes = await pRetry(
       async () => {
-        const userSwarm = await getSwarmFor(usPk);
-        const snodeToMakeRequestTo: Snode | undefined = sample(userSwarm);
-
-        if (!snodeToMakeRequestTo) {
-          window?.log?.warn('Cannot forceNetworkDeletion, without a valid swarm node.');
-          return null;
-        }
+        const snodeToMakeRequestTo = await getNodeFromSwarmOrThrow(usPk);
 
         return pRetry(
           async () => {
@@ -196,13 +190,7 @@ const networkDeleteMessages = async (hashes: Array<string>): Promise<Array<strin
   try {
     const maliciousSnodes = await pRetry(
       async () => {
-        const userSwarm = await getSwarmFor(userX25519PublicKey);
-        const snodeToMakeRequestTo: Snode | undefined = sample(userSwarm);
-
-        if (!snodeToMakeRequestTo) {
-          window?.log?.warn('Cannot networkDeleteMessages, without a valid swarm node.');
-          return null;
-        }
+        const snodeToMakeRequestTo = await getNodeFromSwarmOrThrow(userX25519PublicKey);
 
         return pRetry(
           async () => {

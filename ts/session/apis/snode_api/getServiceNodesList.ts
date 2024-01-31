@@ -2,7 +2,7 @@ import { compact, intersectionWith, sampleSize } from 'lodash';
 import { SnodePool } from '.';
 import { Snode } from '../../../data/data';
 import { GetServiceNodesSubRequest } from './SnodeRequestTypes';
-import { doSnodeBatchRequest } from './batchRequest';
+import { doUnsignedSnodeBatchRequest } from './batchRequest';
 import { GetNetworkTime } from './getNetworkTime';
 import { minSnodePoolCount, requiredSnodesForAgreement } from './snodePool';
 
@@ -14,7 +14,7 @@ import { minSnodePoolCount, requiredSnodesForAgreement } from './snodePool';
 async function getSnodePoolFromSnode(targetNode: Snode): Promise<Array<Snode>> {
   const subrequest = new GetServiceNodesSubRequest();
 
-  const results = await doSnodeBatchRequest([subrequest.build()], targetNode, 4000, null);
+  const results = await doUnsignedSnodeBatchRequest([subrequest], targetNode, 4000, null);
 
   const firstResult = results[0];
 

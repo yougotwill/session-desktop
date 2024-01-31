@@ -26,6 +26,7 @@ import * as snodePool from './snodePool';
 
 import { ConversationModel } from '../../../models/conversation';
 import { ConversationTypeEnum } from '../../../models/conversationAttributes';
+import { EnvelopePlus } from '../../../receiver/types';
 import { updateIsOnline } from '../../../state/ducks/onion';
 import { assertUnreachable } from '../../../types/sqlSharedTypes';
 import {
@@ -40,7 +41,7 @@ import { StringUtils, UserUtils } from '../../utils';
 import { sleepFor } from '../../utils/Promise';
 import { PreConditionFailed } from '../../utils/errors';
 import { LibSessionUtil } from '../../utils/libsession/libsession_utils';
-import { SnodeNamespace, SnodeNamespaces, UserConfigNamespaces } from './namespaces';
+import { SnodeNamespace, SnodeNamespaces, SnodeNamespacesUserConfig } from './namespaces';
 import { PollForGroup, PollForLegacy, PollForUs } from './pollingTypes';
 import { SnodeAPIRetrieve } from './retrieveRequest';
 import { SwarmPollingGroupConfig } from './swarm_polling_config/SwarmPollingGroupConfig';
@@ -596,11 +597,8 @@ export class SwarmPolling {
 
     const closedGroupsOnly = convos.filter(
       (c: ConversationModel) =>
-        (c.isClosedGroupV2() &&
-          !c.isBlocked() &&
-          !c.isKickedFromGroup() &&
-          c.isApproved()) ||
-        (c.isClosedGroup() && !c.isBlocked() && !c.isKickedFromGroup() )
+        (c.isClosedGroupV2() && !c.isBlocked() && !c.isKickedFromGroup() && c.isApproved()) ||
+        (c.isClosedGroup() && !c.isBlocked() && !c.isKickedFromGroup())
     );
 
     closedGroupsOnly.forEach(c => {
@@ -637,7 +635,7 @@ export class SwarmPolling {
   // eslint-disable-next-line consistent-return
   public getNamespacesToPollFrom(type: ConversationTypeEnum) {
     if (type === ConversationTypeEnum.PRIVATE) {
-      const toRet: Array<UserConfigNamespaces | SnodeNamespaces.Default> = [
+      const toRet: Array<SnodeNamespacesUserConfig | SnodeNamespaces.Default> = [
         SnodeNamespaces.Default,
         SnodeNamespaces.UserProfile,
         SnodeNamespaces.UserContacts,
@@ -796,7 +794,10 @@ function filterMessagesPerTypeOfConvo<T extends ConversationTypeEnum>(
   }
 }
 
-async function decryptForGroupV2(retrieveResult: { groupPk: string; content: Uint8Array }) {
+async function decryptForGroupV2(retrieveResult: {
+  groupPk: string;
+  content: Uint8Array;
+}): Promise<EnvelopePlus | null> {
   window?.log?.info('received closed group message v2');
   try {
     const groupPk = retrieveResult.groupPk;
@@ -822,7 +823,6 @@ async function decryptForGroupV2(retrieveResult: { groupPk: string; content: Uin
       timestamp: parsedEnvelope.timestamp,
     };
   } catch (e) {
-    debugger;
     window.log.warn('failed to decrypt message with error: ', e.message);
     return null;
   }
@@ -844,6 +844,7 @@ async function handleMessagesForGroupV2(
         throw new Error('decryptForGroupV2 returned empty envelope');
       }
 
+      console.warn('envelopePlus', envelopePlus);
       // this is the processing of the message itself, which can be long.
       // We allow 1 minute per message at most, which should be plenty
       await Receiver.handleSwarmContentDecryptedWithTimeout({
