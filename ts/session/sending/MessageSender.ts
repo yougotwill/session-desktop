@@ -145,58 +145,88 @@ async function sendSingleMessage({
       }
 
       const subRequests: Array<RawSnodeSubRequests> = [];
-      if (
-        SnodeNamespace.isUserConfigNamespace(encryptedAndWrapped.namespace) &&
-        PubKey.is05Pubkey(destination)
-      ) {
-        subRequests.push(
-          new StoreUserConfigSubRequest({
-            encryptedData: encryptedAndWrapped.encryptedAndWrappedData,
-            namespace: encryptedAndWrapped.namespace,
-            ttlMs: overridenTtl,
-          })
-        );
-      } else if (
-        encryptedAndWrapped.namespace === SnodeNamespaces.Default &&
-        PubKey.is05Pubkey(destination)
-      ) {
-        subRequests.push(
-          new StoreUserMessageSubRequest({
-            encryptedData: encryptedAndWrapped.encryptedAndWrappedData,
-            dbMessageIdentifier: encryptedAndWrapped.identifier || null,
-            ttlMs: overridenTtl,
-            destination,
-          })
-        );
-      } else if (
-        SnodeNamespace.isGroupConfigNamespace(encryptedAndWrapped.namespace) &&
-        PubKey.is03Pubkey(destination)
-      ) {
-        subRequests.push(
-          new StoreGroupConfigOrMessageSubRequest({
-            encryptedData: encryptedAndWrapped.encryptedAndWrappedData,
-            namespace: encryptedAndWrapped.namespace,
-            ttlMs: overridenTtl,
-            groupPk: destination,
-            dbMessageIdentifier: encryptedAndWrapped.identifier || null,
-          })
-        );
-      } else if (
-        encryptedAndWrapped.namespace === SnodeNamespaces.ClosedGroupMessages &&
-        PubKey.is03Pubkey(destination)
-      ) {
-        subRequests.push(
-          new StoreGroupConfigOrMessageSubRequest({
-            encryptedData: encryptedAndWrapped.encryptedAndWrappedData,
-            namespace: encryptedAndWrapped.namespace,
-            ttlMs: overridenTtl,
-            groupPk: destination,
-            dbMessageIdentifier: encryptedAndWrapped.identifier || null,
-          })
-        );
+
+      if (PubKey.is05Pubkey(destination)) {
+        if (encryptedAndWrapped.namespace === SnodeNamespaces.Default) {
+          subRequests.push(
+            new StoreUserMessageSubRequest({
+              encryptedData: encryptedAndWrapped.encryptedAndWrappedData,
+              dbMessageIdentifier: encryptedAndWrapped.identifier || null,
+              ttlMs: overridenTtl,
+              destination,
+            })
+          );
+        } else if (SnodeNamespace.isUserConfigNamespace(encryptedAndWrapped.namespace)) {
+          subRequests.push(
+            new StoreUserConfigSubRequest({
+              encryptedData: encryptedAndWrapped.encryptedAndWrappedData,
+              namespace: encryptedAndWrapped.namespace,
+              ttlMs: overridenTtl,
+            })
+          );
+        } else if (encryptedAndWrapped.namespace === SnodeNamespaces.LegacyClosedGroup) {
+          subRequests.push(
+            new StoreUserMessageSubRequest({
+              encryptedData: encryptedAndWrapped.encryptedAndWrappedData,
+              dbMessageIdentifier: encryptedAndWrapped.identifier || null,
+              ttlMs: overridenTtl,
+              destination,
+            })
+          );
+        } else {
+          window.log.error(
+            `unhandled sendSingleMessage case with details: ${ed25519Str(destination)},namespace: ${
+              encryptedAndWrapped.namespace
+            }`
+          );
+          throw new Error(
+            `unhandled sendSingleMessage case for 05 ${ed25519Str(destination)} and namespace ${
+              encryptedAndWrapped.namespace
+            }`
+          );
+        }
+      } else if (PubKey.is03Pubkey(destination)) {
+        if (SnodeNamespace.isGroupConfigNamespace(encryptedAndWrapped.namespace)) {
+          subRequests.push(
+            new StoreGroupConfigOrMessageSubRequest({
+              encryptedData: encryptedAndWrapped.encryptedAndWrappedData,
+              namespace: encryptedAndWrapped.namespace,
+              ttlMs: overridenTtl,
+              groupPk: destination,
+              dbMessageIdentifier: encryptedAndWrapped.identifier || null,
+            })
+          );
+        } else if (encryptedAndWrapped.namespace === SnodeNamespaces.ClosedGroupMessages) {
+          subRequests.push(
+            new StoreGroupConfigOrMessageSubRequest({
+              encryptedData: encryptedAndWrapped.encryptedAndWrappedData,
+              namespace: encryptedAndWrapped.namespace,
+              ttlMs: overridenTtl,
+              groupPk: destination,
+              dbMessageIdentifier: encryptedAndWrapped.identifier || null,
+            })
+          );
+        } else {
+          window.log.error(
+            `unhandled sendSingleMessage case with details: ${ed25519Str(destination)},namespace: ${
+              encryptedAndWrapped.namespace
+            }`
+          );
+          throw new Error(
+            `unhandled sendSingleMessage case for 03 ${ed25519Str(destination)} and namespace ${
+              encryptedAndWrapped.namespace
+            }`
+          );
+        }
       } else {
-        window.log.error('unhandled sendSingleMessage case');
-        throw new Error('unhandled sendSingleMessage case');
+        window.log.error(
+          `unhandled sendSingleMessage case with details: ${ed25519Str(destination)},namespace: ${
+            encryptedAndWrapped.namespace
+          }`
+        );
+        throw new Error(
+          `unhandled sendSingleMessage case unsupported destination ${ed25519Str(destination)}`
+        );
       }
 
       const targetNode = await getNodeFromSwarmOrThrow(destination);

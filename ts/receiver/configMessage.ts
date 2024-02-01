@@ -264,7 +264,7 @@ async function handleUserProfileUpdate(result: IncomingUserResult): Promise<void
             : 'off',
         providedExpireTimer: wrapperNoteToSelfExpirySeconds,
         providedSource: ourConvo.id,
-        receivedAt: result.latestEnvelopeTimestamp,
+        sentAt: result.latestEnvelopeTimestamp,
         fromSync: true,
         shouldCommitConvo: false,
         fromCurrentDevice: false,
@@ -409,7 +409,7 @@ async function handleContactsUpdate(result: IncomingUserResult) {
           providedDisappearingMode: wrapperConvo.expirationMode,
           providedExpireTimer: wrapperConvo.expirationTimerSeconds,
           providedSource: wrapperConvo.id,
-          receivedAt: result.latestEnvelopeTimestamp, // this is most likely incorrect, but that's all we have
+          sentAt: result.latestEnvelopeTimestamp, // this is most likely incorrect, but that's all we have
           fromSync: true,
           fromCurrentDevice: false,
           shouldCommitConvo: false,
@@ -639,7 +639,7 @@ async function handleLegacyGroupUpdate(latestEnvelopeTimestamp: number) {
             : 'off',
         providedExpireTimer: fromWrapper.disappearingTimerSeconds,
         providedSource: legacyGroupConvo.id,
-        receivedAt: latestEnvelopeTimestamp,
+        sentAt: latestEnvelopeTimestamp,
         fromSync: true,
         shouldCommitConvo: false,
         fromCurrentDevice: false,

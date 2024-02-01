@@ -323,7 +323,7 @@ export async function handleNewClosedGroup(
               : 'legacy',
         providedExpireTimer: expireTimer,
         providedSource: sender,
-        receivedAt: GetNetworkTime.now(),
+        sentAt: GetNetworkTime.now(),
         fromSync: false,
         fromCurrentDevice: false,
         fromConfigMessage: false,

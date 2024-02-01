@@ -465,7 +465,7 @@ export async function handleMessageJob(
         providedExpireTimer: expireTimerUpdate,
         providedSource: source,
         fromSync: source === UserUtils.getOurPubKeyStrFromCache(),
-        receivedAt: messageModel.get('received_at'),
+        sentAt: messageModel.get('received_at'),
         existingMessage: messageModel,
         shouldCommitConvo: false,
         fromCurrentDevice: false,

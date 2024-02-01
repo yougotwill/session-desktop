@@ -220,23 +220,18 @@ async function handleGroupInfoChangeMessage({
       break;
     }
     case SignalService.GroupUpdateInfoChangeMessage.Type.DISAPPEARING_MESSAGES: {
+      const newTimerSeconds = change.updatedExpiration;
       if (
-        change.updatedExpiration &&
-        isNumber(change.updatedExpiration) &&
-        isFinite(change.updatedExpiration) &&
-        change.updatedExpiration >= 0
+        newTimerSeconds &&
+        isNumber(newTimerSeconds) &&
+        isFinite(newTimerSeconds) &&
+        newTimerSeconds >= 0
       ) {
-        await ClosedGroup.addUpdateMessage({
-          convo,
-          diff: { type: 'name', newName: change.updatedName },
-          sender: author,
-          sentAt: signatureTimestamp,
-          expireUpdate: null,
-        });
         await convo.updateExpireTimer({
-          providedExpireTimer: change.updatedExpiration,
+          providedExpireTimer: newTimerSeconds,
           providedSource: author,
-          receivedAt: signatureTimestamp,
+          providedDisappearingMode: newTimerSeconds > 0 ? 'deleteAfterSend' : 'off',
+          sentAt: signatureTimestamp,
           fromCurrentDevice: false,
           fromSync: false,
           fromConfigMessage: false,

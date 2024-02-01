@@ -252,9 +252,8 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
     let description = this.getDescription();
     if (description) {
       // regex with a 'g' to ignore part groups
-      const regex = new RegExp(`@${PubKey.regexForPubkeys}`, 'g');
-      const pubkeysInDesc = description.match(regex);
-      (pubkeysInDesc || []).forEach((pubkeyWithAt: string) => {
+      const regexWithAt = new RegExp(`@${PubKey.regexForPubkeys}`, 'g');
+      (description.match(regexWithAt) || []).forEach((pubkeyWithAt: string) => {
         const pubkey = pubkeyWithAt.slice(1);
         const isUS = isUsAnySogsFromCache(pubkey);
         const displayName = ConvoHub.use().getContactProfileNameOrShortenedPubKey(pubkey);
@@ -263,6 +262,12 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
         } else if (displayName && displayName.length) {
           description = description?.replace(pubkeyWithAt, `@${displayName}`);
         }
+      });
+
+      const regexWithoutAt = new RegExp(`${PubKey.regexForPubkeys}`, 'g');
+
+      (description.match(regexWithoutAt) || []).forEach((pubkeyWithoutAt: string) => {
+        description = description?.replace(pubkeyWithoutAt, `${PubKey.shorten(pubkeyWithoutAt)}`);
       });
       return description;
     }

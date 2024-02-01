@@ -609,7 +609,7 @@ describe('DisappearingMessage', () => {
           providedDisappearingMode: 'deleteAfterSend',
           providedExpireTimer: 600,
           providedSource: testPubkey,
-          receivedAt: GetNetworkTime.now(),
+          sentAt: GetNetworkTime.now(),
           fromSync: true,
           shouldCommitConvo: false,
           existingMessage: undefined,

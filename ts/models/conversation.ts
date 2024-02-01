@@ -846,7 +846,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
    * @param providedDisappearingMode
    * @param providedExpireTimer
    * @param providedSource the pubkey of the user who made the change
-   * @param receivedAt the timestamp of when the change was received
+   * @param sentAt the timestamp of when the change was sent (when receiving it)
    * @param fromSync if the change was made from a sync message
    * @param shouldCommitConvo if the conversation change should be committed to the DB
    * @param shouldCommitMessage if the timer update message change should be committed to the DB
@@ -857,7 +857,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     providedDisappearingMode,
     providedExpireTimer,
     providedSource,
-    receivedAt, // is set if it comes from outside
+    sentAt, // is set if it comes from outside
     fromSync, // if the update comes from sync message ONLY
     fromConfigMessage, // if the update comes from a libsession config message ONLY
     fromCurrentDevice,
@@ -867,16 +867,14 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     providedDisappearingMode?: DisappearingMessageConversationModeType;
     providedExpireTimer?: number;
     providedSource?: string;
-    receivedAt?: number; // is set if it comes from outside
+    sentAt?: number; // is set if it comes from outside
     fromSync: boolean;
     fromCurrentDevice: boolean;
     fromConfigMessage: boolean;
     shouldCommitConvo?: boolean;
     existingMessage?: MessageModel;
   }): Promise<boolean> {
-    const isRemoteChange = Boolean(
-      (receivedAt || fromSync || fromConfigMessage) && !fromCurrentDevice
-    );
+    const isRemoteChange = Boolean((sentAt || fromSync || fromConfigMessage) && !fromCurrentDevice);
 
     // we don't add an update message when this comes from a config message, as we already have the SyncedMessage itself with the right timestamp to display
     const shouldAddExpireUpdateMessage = !fromConfigMessage;
@@ -895,7 +893,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
 
     // When we add a disappearing messages notification to the conversation, we want it
     // to be above the message that initiated that change, hence the subtraction.
-    const createAtNetworkTimestamp = (receivedAt || GetNetworkTime.now()) - 1;
+    const createAtNetworkTimestamp = (sentAt || GetNetworkTime.now()) - 1;
 
     // NOTE when we turn the disappearing setting to off, we don't want it to expire with the previous expiration anymore
     const isV2DisappearReleased = ReleasedFeatures.isDisappearMessageV2FeatureReleasedCached();
@@ -953,7 +951,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     };
 
     if (!message) {
-      if (!receivedAt) {
+      if (!sentAt) {
         // outgoing message
         message = await this.addSingleOutgoingMessage({
           ...commonAttributes,
@@ -993,7 +991,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     // if change was made remotely, don't send it to the contact/group
     if (isRemoteChange) {
       window.log.debug(
-        `[updateExpireTimer] remote change, not sending message again. receivedAt: ${receivedAt} fromSync: ${fromSync} fromCurrentDevice: ${fromCurrentDevice} for ${ed25519Str(
+        `[updateExpireTimer] remote change, not sending message again. sentAt: ${sentAt} fromSync: ${fromSync} fromCurrentDevice: ${fromCurrentDevice} for ${ed25519Str(
           this.id
         )}`
       );
@@ -1029,7 +1027,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     // We would have returned if that message sending part was not needed
     //
     const expireUpdate = {
-      identifier: message.id,
+      identifier: message.id as string,
       createAtNetworkTimestamp,
       expirationType,
       expireTimer,
@@ -1054,11 +1052,33 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       await getMessageQueue().sendToPubKey(pubkey, expirationTimerMessage, SnodeNamespaces.Default);
       return true;
     }
-    window?.log?.warn('TODO: Expiration update for closed groups are to be updated');
 
     if (this.isClosedGroup()) {
       if (this.isAdmin(UserUtils.getOurPubKeyStrFromCache())) {
-        // NOTE: we agreed that outgoing ExpirationTimerUpdate **for groups** are not expiring,
+        if (this.isClosedGroupV2()) {
+          const group = await UserGroupsWrapperActions.getGroup(this.id);
+          if (!group || !group.secretKey) {
+            throw new Error(
+              'trying to change timer for a group we do not have the secretKey is not possible'
+            );
+          }
+          const v2groupMessage = new GroupUpdateInfoChangeMessage({
+            typeOfChange: SignalService.GroupUpdateInfoChangeMessage.Type.DISAPPEARING_MESSAGES,
+            ...expireUpdate,
+            groupPk: this.id,
+            identifier: message.get('id'),
+            sodium: await getSodiumRenderer(),
+            secretKey: group.secretKey,
+            updatedExpirationSeconds: expireUpdate.expireTimer,
+          });
+
+          await getMessageQueue().sendToGroupV2({
+            message: v2groupMessage,
+          });
+          return true;
+        }
+
+        // NOTE: we agreed that outgoing ExpirationTimerUpdate **for legacy groups** are not expiring,
         // but they still need the content to be right(as this is what we use for the change itself)
 
         const expireUpdateForGroup = {
