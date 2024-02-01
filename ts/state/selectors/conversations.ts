@@ -300,21 +300,6 @@ const _getLeftPaneConversationIds = (
     .map(m => m.id);
 };
 
-const _getPrivateFriendsConversations = (
-  sortedConversations: Array<ReduxConversationType>
-): Array<ReduxConversationType> => {
-  return sortedConversations.filter(convo => {
-    return (
-      convo.isPrivate &&
-      !convo.isMe &&
-      !convo.isBlocked &&
-      convo.isApproved &&
-      convo.didApproveMe &&
-      convo.activeAt !== undefined
-    );
-  });
-};
-
 const _getGlobalUnreadCount = (sortedConversations: Array<ReduxConversationType>): number => {
   let globalUnreadCount = 0;
   for (const conversation of sortedConversations) {
@@ -449,11 +434,29 @@ export const getLeftPaneConversationIds = createSelector(
   _getLeftPaneConversationIds
 );
 
-const getDirectContacts = createSelector(getSortedConversations, _getPrivateFriendsConversations);
+const getPrivateFriendsConversations = (
+  sortedConversations: Array<ReduxConversationType>
+): Array<ReduxConversationType> => {
+  return sortedConversations.filter(convo => {
+    return (
+      convo.isPrivate &&
+      !convo.isMe &&
+      !convo.isBlocked &&
+      convo.isApproved &&
+      (window.sessionFeatureFlags.useClosedGroupV2 || convo.didApproveMe) && // with groupv2, we can invite contacts which did not approve us yet
+      convo.activeAt !== undefined
+    );
+  });
+};
 
-export const getPrivateContactsPubkeys = createSelector(getDirectContacts, state =>
-  state.map(m => m.id)
-);
+const getDirectContacts = createSelector(getSortedConversations, getPrivateFriendsConversations);
+
+const getPrivateContactsPubkeys = createSelector(getDirectContacts, state => state.map(m => m.id));
+
+export const useContactsToInviteToGroup = () => {
+  const contacts = useSelector(getPrivateContactsPubkeys);
+  return contacts;
+};
 
 export const getDirectContactsCount = createSelector(
   getDirectContacts,

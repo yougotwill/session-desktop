@@ -3,7 +3,7 @@ import useKey from 'react-use/lib/useKey';
 
 import { PubkeyType } from 'libsession_util_nodejs';
 import _ from 'lodash';
-import { useDispatch, useSelector } from 'react-redux';
+import { useDispatch } from 'react-redux';
 import { ConversationTypeEnum } from '../../models/conversationAttributes';
 import { VALIDATION } from '../../session/constants';
 import { ConvoHub } from '../../session/conversations';
@@ -23,7 +23,7 @@ import { ClosedGroup } from '../../session/group/closed-group';
 import { PubKey } from '../../session/types';
 import { SessionUtilUserGroups } from '../../session/utils/libsession/libsession_utils_user_groups';
 import { groupInfoActions } from '../../state/ducks/metaGroups';
-import { getPrivateContactsPubkeys } from '../../state/selectors/conversations';
+import { useContactsToInviteToGroup } from '../../state/selectors/conversations';
 import { useMemberGroupChangePending } from '../../state/selectors/groups';
 import { MemberListItem } from '../MemberListItem';
 import { SessionWrapperModal } from '../SessionWrapperModal';
@@ -112,7 +112,7 @@ const InviteContactsDialogInner = (props: Props) => {
   const { conversationId } = props;
   const dispatch = useDispatch();
 
-  const privateContactPubkeys = useSelector(getPrivateContactsPubkeys);
+  const privateContactPubkeys = useContactsToInviteToGroup();
   let validContactsForInvite = _.clone(privateContactPubkeys) as Array<PubkeyType>;
 
   const isProcessingUIChange = useMemberGroupChangePending();

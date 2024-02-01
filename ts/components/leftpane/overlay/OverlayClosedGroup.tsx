@@ -17,7 +17,9 @@ import { createClosedGroup } from '../../../session/conversations/createClosedGr
 import { ToastUtils } from '../../../session/utils';
 import { groupInfoActions } from '../../../state/ducks/metaGroups';
 import { resetOverlayMode } from '../../../state/ducks/section';
-import { getPrivateContactsPubkeys } from '../../../state/selectors/conversations';
+import {
+  useContactsToInviteToGroup
+} from '../../../state/selectors/conversations';
 import { useIsCreatingGroupFromUIPending } from '../../../state/selectors/groups';
 import { getSearchResultsContactOnly, isSearching } from '../../../state/selectors/search';
 import { useOurPkStr } from '../../../state/selectors/user';
@@ -96,7 +98,7 @@ async function createClosedGroupWithToasts(
 export const OverlayClosedGroupV2 = () => {
   const dispatch = useDispatch();
   const us = useOurPkStr();
-  const privateContactsPubkeys = useSelector(getPrivateContactsPubkeys);
+  const privateContactsPubkeys = useContactsToInviteToGroup();
   const isCreatingGroup = useIsCreatingGroupFromUIPending();
   const [groupName, setGroupName] = useState('');
   const {
@@ -210,7 +212,7 @@ export const OverlayClosedGroupV2 = () => {
 
 export const OverlayLegacyClosedGroup = () => {
   const dispatch = useDispatch();
-  const privateContactsPubkeys = useSelector(getPrivateContactsPubkeys);
+  const privateContactsPubkeys = useContactsToInviteToGroup();
   const [groupName, setGroupName] = useState('');
   const [loading, setLoading] = useState(false);
   const {
