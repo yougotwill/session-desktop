@@ -131,6 +131,9 @@ async function sendToGroupMembers(
           title: invitesTitle,
           message: window.i18n('closedGroupInviteSuccessMessage'),
           hideCancel: true,
+          onClickClose: () => {
+            window.inboxStore?.dispatch(updateConfirmModal(null));
+          },
         })
       );
     }
@@ -169,6 +172,9 @@ async function sendToGroupMembers(
             isRetrySend
           );
         }
+      },
+      onClickClose: () => {
+        window.inboxStore?.dispatch(updateConfirmModal(null));
       },
     })
   );

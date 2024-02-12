@@ -11,6 +11,7 @@ import {
   toggleSelectedMessageId,
 } from '../../../../state/ducks/conversations';
 import { StateType } from '../../../../state/reducer';
+import { useMessageSelected } from '../../../../state/selectors';
 import {
   getMessageAttachmentProps,
   isMessageSelectionMode,
@@ -32,7 +33,7 @@ import { AudioPlayerWithEncryptedFile } from '../../H5AudioPlayer';
 import { ImageGrid } from '../../ImageGrid';
 import { LightBoxOptions } from '../../SessionConversation';
 import { ClickToTrustSender } from './ClickToTrustSender';
-import { StyledMessageHighlighter } from './MessageContent';
+import { MessageHighlighter } from './MessageHighlighter';
 
 export type MessageAttachmentSelectorProps = Pick<
   MessageRenderingProps,
@@ -53,7 +54,7 @@ type Props = {
   highlight?: boolean;
 };
 
-const StyledAttachmentContainer = styled.div<{
+const StyledImageGridContainer = styled.div<{
   messageDirection: MessageModelType;
 }>`
   text-align: center;
@@ -61,6 +62,10 @@ const StyledAttachmentContainer = styled.div<{
   overflow: hidden;
   display: flex;
   justify-content: ${props => (props.messageDirection === 'incoming' ? 'flex-start' : 'flex-end')};
+`;
+
+const StyledGenericAttachmentContainer = styled(MessageHighlighter)<{ selected: boolean }>`
+  ${props => props.selected && 'box-shadow: var(--drop-shadow);'}
 `;
 
 export const MessageAttachment = (props: Props) => {
@@ -72,6 +77,7 @@ export const MessageAttachment = (props: Props) => {
   );
 
   const multiSelectMode = useSelector(isMessageSelectionMode);
+  const selected = useMessageSelected(messageId);
   const onClickOnImageGrid = useCallback(
     (attachment: AttachmentTypeWithPath | AttachmentType) => {
       if (multiSelectMode) {
@@ -138,21 +144,22 @@ export const MessageAttachment = (props: Props) => {
       (isVideo(attachments) && hasVideoScreenshot(attachments)))
   ) {
     return (
-      <StyledMessageHighlighter highlight={highlight}>
-        <StyledAttachmentContainer messageDirection={direction}>
+      <MessageHighlighter highlight={highlight}>
+        <StyledImageGridContainer messageDirection={direction}>
           <ImageGrid
+            messageId={messageId}
             attachments={attachments}
             onError={handleImageError}
             onClickAttachment={onClickOnImageGrid}
           />
-        </StyledAttachmentContainer>
-      </StyledMessageHighlighter>
+        </StyledImageGridContainer>
+      </MessageHighlighter>
     );
   }
 
   if (!firstAttachment.pending && !firstAttachment.error && isAudio(attachments)) {
     return (
-      <StyledMessageHighlighter
+      <MessageHighlighter
         highlight={highlight}
         role="main"
         onClick={(e: any) => {
@@ -168,14 +175,18 @@ export const MessageAttachment = (props: Props) => {
           contentType={firstAttachment.contentType}
           messageId={messageId}
         />
-      </StyledMessageHighlighter>
+      </MessageHighlighter>
     );
   }
   const { pending, fileName, fileSize, contentType } = firstAttachment;
   const extension = getExtensionForDisplay({ contentType, fileName });
 
   return (
-    <StyledMessageHighlighter highlight={highlight} className="module-message__generic-attachment">
+    <StyledGenericAttachmentContainer
+      highlight={highlight}
+      selected={selected}
+      className={'module-message__generic-attachment'}
+    >
       {pending ? (
         <div className="module-message__generic-attachment__spinner-container">
           <Spinner size="small" />
@@ -211,12 +222,53 @@ export const MessageAttachment = (props: Props) => {
           {fileSize}
         </div>
       </div>
-    </StyledMessageHighlighter>
+    </StyledGenericAttachmentContainer>
   );
 };
 
 function attachmentIsAttachmentTypeWithPath(attac: any): attac is AttachmentTypeWithPath {
   return attac.path !== undefined;
+}
+
+export async function showLightboxFromAttachmentProps(
+  messageId: string,
+  selected: AttachmentTypeWithPath | AttachmentType | PropsForAttachment
+) {
+  const found = await Data.getMessageById(messageId);
+  if (!found) {
+    window.log.warn(`showLightboxFromAttachmentProps Message not found ${messageId}}`);
+    return;
+  }
+
+  const msgAttachments = found.getPropsForMessage().attachments;
+
+  let index = -1;
+
+  const media = (msgAttachments || []).map(attachmentForMedia => {
+    index++;
+    const messageTimestamp =
+      found.get('timestamp') || found.get('serverTimestamp') || found.get('received_at');
+
+    return {
+      index: clone(index),
+      objectURL: attachmentForMedia.url || undefined,
+      contentType: attachmentForMedia.contentType,
+      attachment: attachmentForMedia,
+      messageSender: found.getSource(),
+      messageTimestamp,
+      messageId,
+    };
+  });
+
+  if (attachmentIsAttachmentTypeWithPath(selected)) {
+    const lightBoxOptions: LightBoxOptions = {
+      media: media as any,
+      attachment: selected,
+    };
+    window.inboxStore?.dispatch(showLightBox(lightBoxOptions));
+  } else {
+    window.log.warn('Attachment is not of the right type');
+  }
 }
 
 const onClickAttachment = async (onClickProps: {

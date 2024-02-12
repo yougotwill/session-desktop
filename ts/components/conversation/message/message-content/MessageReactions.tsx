@@ -147,6 +147,7 @@ type Props = {
   inModal?: boolean;
   onSelected?: (emoji: string) => boolean;
   noAvatar: boolean;
+  isDetailView?: boolean;
 };
 
 export const MessageReactions = (props: Props) => {
@@ -160,6 +161,7 @@ export const MessageReactions = (props: Props) => {
     inModal = false,
     onSelected,
     noAvatar,
+    isDetailView,
   } = props;
   const [reactions, setReactions] = useState<SortedReactionList>([]);
 
@@ -202,10 +204,10 @@ export const MessageReactions = (props: Props) => {
     inGroup,
     handlePopupX: setPopupX,
     handlePopupY: setPopupY,
-    onClick,
+    onClick: !isDetailView ? onClick : undefined,
     popupReaction,
     onSelected,
-    handlePopupReaction: setPopupReaction,
+    handlePopupReaction: !isDetailView ? setPopupReaction : undefined,
     handlePopupClick: onPopupClick,
   };
 

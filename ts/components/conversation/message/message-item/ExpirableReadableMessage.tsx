@@ -84,6 +84,7 @@ export interface ExpirableReadableMessageProps
   extends Omit<ReadableMessageProps, 'receivedAt' | 'isUnread'> {
   messageId: string;
   isControlMessage?: boolean;
+  isDetailView?: boolean;
 }
 
 function ExpireTimerControlMessage({
@@ -124,10 +125,17 @@ export const ExpirableReadableMessage = (props: ExpirableReadableMessageProps) =
     return null;
   }
 
-  const { messageId, direction, receivedAt, isUnread, expirationDurationMs, expirationTimestamp } =
-    selected;
+  const {
+    messageId,
+    direction,
+    receivedAt,
+    isUnread,
+    expirationDurationMs,
+    expirationTimestamp,
+  } = selected;
 
-  const isIncoming = direction === 'incoming';
+  // NOTE we want messages on the left in the message detail view regardless of direction
+  const isIncoming = props.isDetailView ? true : direction === 'incoming';
 
   return (
     <StyledReadableMessage

@@ -431,6 +431,8 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     }
 
     // -- Handle the last message status, if present --
+    const lastMessageInteractionType = this.get('lastMessageInteractionType');
+    const lastMessageInteractionStatus = this.get('lastMessageInteractionStatus');
     const lastMessageText = this.get('lastMessage');
     if (lastMessageText && lastMessageText.length) {
       const lastMessageStatus = this.get('lastMessageStatus');
@@ -438,8 +440,20 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       toRet.lastMessage = {
         status: lastMessageStatus,
         text: lastMessageText,
+        interactionType: lastMessageInteractionType,
+        interactionStatus: lastMessageInteractionStatus,
+      };
+    } else if (lastMessageInteractionType && lastMessageInteractionStatus) {
+      // if there is no last message, we still want to display the interaction status
+
+      toRet.lastMessage = {
+        text: '',
+        status: 'sent',
+        interactionType: lastMessageInteractionType,
+        interactionStatus: lastMessageInteractionStatus,
       };
     }
+
     return toRet;
   }
 
@@ -821,6 +835,15 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       active_at: networkTimestamp,
     });
 
+    const interactionNotification = messageModel.getInteractionNotification();
+
+    if (interactionNotification) {
+      this.set({
+        lastMessageInteractionType: interactionNotification?.interactionType,
+        lastMessageInteractionStatus: interactionNotification?.interactionStatus,
+      });
+    }
+
     await this.commit();
 
     void this.queueJob(async () => {
@@ -1149,9 +1172,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     };
 
     // if the message is trying to be added unread, make sure that it shouldn't be already read from our other devices
-
     markAttributesAsReadIfNeeded(toBeAddedAttributes);
-
     return this.addSingleMessage(toBeAddedAttributes);
   }
 
@@ -2179,6 +2200,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     });
   }
 
+  // tslint:disable-next-line cyclomatic-complexity
   private async bouncyUpdateLastMessage() {
     if (!this.id || !this.getActiveAt() || this.isHidden()) {
       return;
@@ -2197,22 +2219,41 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       return;
     }
     const lastMessageModel = messages.at(0);
+    const interactionNotification = lastMessageModel.getInteractionNotification();
+
+    const lastMessageInteractionType = interactionNotification?.interactionType;
+    const lastMessageInteractionStatus = lastMessageModel.getInteractionNotification()
+      ?.interactionStatus;
     const lastMessageStatus = lastMessageModel.getMessagePropStatus() || undefined;
     const lastMessageNotificationText = lastMessageModel.getNotificationText() || undefined;
     // we just want to set the `status` to `undefined` if there are no `lastMessageNotificationText`
-    const lastMessageUpdate = !isEmpty(lastMessageNotificationText)
-      ? {
-          lastMessage: lastMessageNotificationText || '',
-          lastMessageStatus,
-        }
-      : { lastMessage: '', lastMessageStatus: undefined };
+    const lastMessageUpdate =
+      !!lastMessageNotificationText && !isEmpty(lastMessageNotificationText)
+        ? {
+            lastMessage: lastMessageNotificationText || '',
+            lastMessageStatus,
+            lastMessageInteractionType,
+            lastMessageInteractionStatus,
+          }
+        : {
+            lastMessage: '',
+            lastMessageStatus: undefined,
+            lastMessageInteractionType: undefined,
+            lastMessageInteractionStatus: undefined,
+          };
+    const existingLastMessageInteractionType = this.get('lastMessageInteractionType');
+    const existingLastMessageInteractionStatus = this.get('lastMessageInteractionStatus');
 
     if (
       lastMessageUpdate.lastMessage !== existingLastMessageAttribute ||
-      lastMessageUpdate.lastMessageStatus !== existingLastMessageStatus
+      lastMessageUpdate.lastMessageStatus !== existingLastMessageStatus ||
+      lastMessageUpdate.lastMessageInteractionType !== existingLastMessageInteractionType ||
+      lastMessageUpdate.lastMessageInteractionStatus !== existingLastMessageInteractionStatus
     ) {
       if (
         lastMessageUpdate.lastMessageStatus === existingLastMessageStatus &&
+        lastMessageUpdate.lastMessageInteractionType === existingLastMessageInteractionType &&
+        lastMessageUpdate.lastMessageInteractionStatus === existingLastMessageInteractionStatus &&
         lastMessageUpdate.lastMessage &&
         lastMessageUpdate.lastMessage.length > 40 &&
         existingLastMessageAttribute &&
@@ -2729,7 +2770,7 @@ async function cleanUpExpireHistoryFromConvo(conversationId: string, isPrivate: 
     conversationId,
     isPrivate
   );
-  window.inboxStore.dispatch(
+  window?.inboxStore?.dispatch(
     messagesDeleted(updateIdsRemoved.map(m => ({ conversationKey: conversationId, messageId: m })))
   );
 }

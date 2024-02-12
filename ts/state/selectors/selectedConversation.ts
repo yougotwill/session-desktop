@@ -10,7 +10,11 @@ import { UserUtils } from '../../session/utils';
 import { ReleasedFeatures } from '../../util/releaseFeature';
 import { ReduxConversationType } from '../ducks/conversations';
 import { StateType } from '../reducer';
-import { getIsMessageSelectionMode, getSelectedConversation } from './conversations';
+import {
+  getIsMessageSelectionMode,
+  getSelectedConversation,
+  getSelectedMessageIds,
+} from './conversations';
 import { getLibMembersPubkeys, useLibGroupName } from './groups';
 import { getCanWrite, getModerators, getSubscriberCount } from './sogsRoomInfo';
 
@@ -416,4 +420,12 @@ export function useSelectedWeAreModerator() {
 
 export function useIsMessageSelectionMode() {
   return useSelector(getIsMessageSelectionMode);
+}
+
+export function useSelectedLastMessage() {
+  return useSelector((state: StateType) => getSelectedConversation(state)?.lastMessage);
+}
+
+export function useSelectedMessageIds() {
+  return useSelector(getSelectedMessageIds);
 }

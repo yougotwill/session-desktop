@@ -7,6 +7,10 @@ import { QuotedAttachmentType } from '../../components/conversation/message/mess
 import { LightBoxOptions } from '../../components/conversation/SessionConversation';
 import { Data } from '../../data/data';
 import {
+  ConversationInteractionStatus,
+  ConversationInteractionType,
+} from '../../interactions/conversationInteractions';
+import {
   CONVERSATION_PRIORITIES,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   ConversationAttributes,
@@ -43,6 +47,7 @@ export type MessageModelPropsWithoutConvoProps = {
   propsForCallNotification?: PropsForCallNotification;
   propsForMessageRequestResponse?: PropsForMessageRequestResponse;
   propsForQuote?: PropsForQuote;
+  propsForInteractionNotification?: PropsForInteractionNotification;
 };
 
 export type MessageModelPropsWithConvoProps = SortedMessageModelProps & {
@@ -56,16 +61,6 @@ export type ContactPropsMessageDetail = {
   profileName?: string | null;
   avatarPath?: string | null;
   errors?: Array<Error>;
-};
-
-export type MessagePropsDetails = {
-  sentAt: number;
-  receivedAt: number;
-  errors: Array<Error>;
-  contacts: Array<ContactPropsMessageDetail>;
-  convoId: string;
-  messageId: string;
-  direction: MessageModelType;
 };
 
 export type LastMessageStatusType = 'sending' | 'sent' | 'read' | 'error' | undefined;
@@ -160,6 +155,7 @@ export type PropsForAttachment = {
   size: number;
   width?: number;
   height?: number;
+  duration?: string;
   url: string;
   path: string;
   fileSize: string | null;
@@ -184,13 +180,21 @@ export type PropsForAttachment = {
 };
 
 export type PropsForQuote = {
+  text?: string;
   attachment?: QuotedAttachmentType;
   author: string;
   convoId?: string;
   id?: string; // this is the quoted message timestamp
   isFromMe?: boolean;
   referencedMessageNotFound?: boolean;
-  text?: string;
+};
+
+export type PropsForInteractionNotification = {
+  notificationType: InteractionNotificationType;
+  convoId: string;
+  messageId: string;
+  receivedAt: number;
+  isUnread: boolean;
 };
 
 export type PropsForMessageWithoutConvoProps = {
@@ -235,6 +239,13 @@ export type PropsForMessageWithConvoProps = PropsForMessageWithoutConvoProps & {
 export type LastMessageType = {
   status: LastMessageStatusType;
   text: string | null;
+  interactionType: ConversationInteractionType | null;
+  interactionStatus: ConversationInteractionStatus | null;
+};
+
+export type InteractionNotificationType = {
+  interactionType: ConversationInteractionType;
+  interactionStatus: ConversationInteractionStatus;
 };
 
 /**
@@ -311,7 +322,7 @@ export type ConversationsStateType = {
   // NOTE the messages quoted by other messages which are in view
   quotes: QuoteLookupType;
   firstUnreadMessageId: string | undefined;
-  messageDetailProps?: MessagePropsDetails;
+  messageInfoId: string | undefined;
   showRightPanel: boolean;
   selectedMessageIds: Array<string>;
   lightBox?: LightBoxOptions;
@@ -510,7 +521,7 @@ export function getEmptyConversationState(): ConversationsStateType {
     conversationLookup: {},
     messages: [],
     quotes: {},
-    messageDetailProps: undefined,
+    messageInfoId: undefined,
     showRightPanel: false,
     selectedMessageIds: [],
     areMoreMessagesBeingFetched: false, // top or bottom
@@ -664,16 +675,9 @@ const conversationsSlice = createSlice({
   name: 'conversations',
   initialState: getEmptyConversationState(),
   reducers: {
-    showMessageDetailsView(
-      state: ConversationsStateType,
-      action: PayloadAction<MessagePropsDetails>
-    ) {
+    showMessageInfoView(state: ConversationsStateType, action: PayloadAction<string>) {
       // force the right panel to be hidden when showing message detail view
-      return { ...state, messageDetailProps: action.payload, showRightPanel: false };
-    },
-
-    closeMessageDetailsView(state: ConversationsStateType) {
-      return { ...state, messageDetailProps: undefined };
+      return { ...state, messageInfoId: action.payload, showRightPanel: false };
     },
 
     openRightPanel(state: ConversationsStateType) {
@@ -693,7 +697,7 @@ const conversationsSlice = createSlice({
       return state;
     },
     closeRightPanel(state: ConversationsStateType) {
-      return { ...state, showRightPanel: false };
+      return { ...state, showRightPanel: false, messageInfoId: undefined };
     },
     addMessageIdToSelection(state: ConversationsStateType, action: PayloadAction<string>) {
       if (state.selectedMessageIds.some(id => id === action.payload)) {
@@ -874,7 +878,7 @@ const conversationsSlice = createSlice({
         selectedMessageIds: [],
 
         lightBox: undefined,
-        messageDetailProps: undefined,
+        messageInfoId: undefined,
         quotedMessage: undefined,
 
         nextMessageToPlay: undefined,
@@ -1121,8 +1125,7 @@ export const {
   resetOldBottomMessageId,
   markConversationFullyRead,
   // layout stuff
-  showMessageDetailsView,
-  closeMessageDetailsView,
+  showMessageInfoView,
   openRightPanel,
   closeRightPanel,
   addMessageIdToSelection,

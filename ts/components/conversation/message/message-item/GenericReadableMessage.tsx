@@ -7,9 +7,9 @@ import styled, { keyframes } from 'styled-components';
 import { MessageRenderingProps } from '../../../../models/messageType';
 import { ConvoHub } from '../../../../session/conversations';
 import { StateType } from '../../../../state/reducer';
+import { useMessageSelected } from '../../../../state/selectors';
 import {
   getGenericReadableMessageSelectorProps,
-  getIsMessageSelected,
   isMessageSelectionMode,
 } from '../../../../state/selectors/conversations';
 import { MessageContentWithStatuses } from '../message-content/MessageContentWithStatus';
@@ -41,11 +41,13 @@ const highlightedMessageAnimation = keyframes`
 const StyledReadableMessage = styled.div<{
   selected: boolean;
   isRightClicked: boolean;
+  isDetailView?: boolean;
 }>`
   display: flex;
   align-items: center;
   width: 100%;
   letter-spacing: 0.03rem;
+  padding: ${props => (props.isDetailView ? '0' : 'var(--margins-xs) var(--margins-lg) 0')};
 
   &.message-highlighted {
     animation: ${highlightedMessageAnimation} 1s ease-in-out;
@@ -60,18 +62,6 @@ const StyledReadableMessage = styled.div<{
     `
     background-color: var(--conversation-tab-background-selected-color);
   `}
-
-  ${props =>
-    props.selected &&
-    `
-    &.message-selected {
-      .module-message {
-        &__container {
-          box-shadow: var(--drop-shadow);
-        }
-      }
-    }
-    `}
 `;
 
 export const GenericReadableMessage = (props: Props) => {
@@ -83,9 +73,8 @@ export const GenericReadableMessage = (props: Props) => {
     getGenericReadableMessageSelectorProps(state, props.messageId)
   );
 
-  const isMessageSelected = useSelector((state: StateType) =>
-    getIsMessageSelected(state, props.messageId)
-  );
+  const isMessageSelected = useMessageSelected(props.messageId);
+
   const multiSelectMode = useSelector(isMessageSelectionMode);
 
   const [isRightClicked, setIsRightClicked] = useState(false);
@@ -151,8 +140,9 @@ export const GenericReadableMessage = (props: Props) => {
   return (
     <StyledReadableMessage
       selected={selected}
+      isDetailView={isDetailView}
       isRightClicked={isRightClicked}
-      className={classNames(selected && 'message-selected')}
+      className={classNames(selected ? 'message-selected' : undefined)}
       onContextMenu={handleContextMenu}
       key={`readable-message-${messageId}`}
     >

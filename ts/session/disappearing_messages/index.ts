@@ -12,6 +12,7 @@ import { ExpiringDetails, expireMessagesOnSnode } from '../apis/snode_api/expire
 import { GetNetworkTime } from '../apis/snode_api/getNetworkTime';
 import { ConvoHub } from '../conversations';
 import { isValidUnixTimestamp } from '../utils/Timestamps';
+import { UpdateMsgExpirySwarm } from '../utils/job_runners/jobs/UpdateMsgExpirySwarmJob';
 import {
   checkIsLegacyDisappearingDataMessage,
   couldBeLegacyDisappearingMessageContent,
@@ -58,7 +59,9 @@ export async function destroyMessagesAndUpdateRedux(
 
   // trigger a refresh the last message for all those uniq conversation
   conversationWithChanges.forEach(convoIdToUpdate => {
-    ConvoHub.use().get(convoIdToUpdate)?.updateLastMessage();
+    ConvoHub.use()
+      .get(convoIdToUpdate)
+      ?.updateLastMessage();
   });
 }
 
@@ -88,8 +91,12 @@ async function destroyExpiredMessages() {
     window.log.info('destroyExpiredMessages: convosToRefresh:', convosToRefresh);
     await Promise.all(
       convosToRefresh.map(async c => {
-        ConvoHub.use().get(c)?.updateLastMessage();
-        return ConvoHub.use().get(c)?.refreshInMemoryDetails();
+        ConvoHub.use()
+          .get(c)
+          ?.updateLastMessage();
+        return ConvoHub.use()
+          .get(c)
+          ?.refreshInMemoryDetails();
       })
     );
   } catch (error) {
@@ -271,7 +278,9 @@ function changeToDisappearingMessageType(
  * This should only be used for DataExtractionNotification and CallMessages (the ones saved to the DB) currently.
  * Note: this can only be called for private conversations, excluding ourselves as it throws otherwise (this wouldn't be right)
  * */
-function forcedDeleteAfterReadMsgSetting(convo: ConversationModel): {
+function forcedDeleteAfterReadMsgSetting(
+  convo: ConversationModel
+): {
   expirationType: Exclude<DisappearingMessageType, 'deleteAfterSend'>;
   expireTimer: number;
 } {
@@ -298,7 +307,9 @@ function forcedDeleteAfterReadMsgSetting(convo: ConversationModel): {
  * This should only be used for the outgoing CallMessages that we keep locally only (not synced, just the "you started a call" notification)
  * Note: this can only be called for private conversations, excluding ourselves as it throws otherwise (this wouldn't be right)
  * */
-function forcedDeleteAfterSendMsgSetting(convo: ConversationModel): {
+function forcedDeleteAfterSendMsgSetting(
+  convo: ConversationModel
+): {
   expirationType: Exclude<DisappearingMessageType, 'deleteAfterRead'>;
   expireTimer: number;
 } {
@@ -354,8 +365,7 @@ async function checkForExpireUpdateInContentMessage(
 ): Promise<DisappearingMessageUpdate | undefined> {
   const dataMessage = content.dataMessage as SignalService.DataMessage | undefined;
   // We will only support legacy disappearing messages for a short period before disappearing messages v2 is unlocked
-  const isDisappearingMessagesV2Released =
-    await ReleasedFeatures.checkIsDisappearMessageV2FeatureReleased();
+  const isDisappearingMessagesV2Released = await ReleasedFeatures.checkIsDisappearMessageV2FeatureReleased();
 
   const couldBeLegacyContentMessage = couldBeLegacyDisappearingMessageContent(content);
   const isLegacyDataMessage =
@@ -540,30 +550,55 @@ function getMessageReadyToDisappear(
     messageExpirationFromRetrieve &&
     messageExpirationFromRetrieve > 0
   ) {
-    const expirationStartTimestamp = messageExpirationFromRetrieve - expireTimer * 1000;
-    const expires_at = messageExpirationFromRetrieve;
-    // TODO a message might be added even when it expired, but the period cleaning of expired message will pick it up and remove it soon enough
-    window.log.debug(
-      `incoming DaR message already read by another device, forcing readAt ${
-        (Date.now() - expirationStartTimestamp) / 1000
-      }s ago, so with ${(expires_at - Date.now()) / 1000}s left`
-    );
-    messageModel.set({
-      expirationStartTimestamp,
-      expires_at,
-    });
+    /**
+     * Edge case: when we send a message before we poll for a message sent earlier, our convo volatile update will
+     * mark that incoming message as read right away (because it was sent earlier than our latest convolatile lastRead).
+     * To take care of this case, we need to check if an incoming DaR message is in a read state but its expiration has not been updated yet.
+     * The way we do it, is by checking that the swarm expiration is before (now + expireTimer).
+     * If it looks like this expiration was not updated yet, we need to trigger a UpdateExpiryJob for that message.
+     */
+    const now = GetNetworkTime.now();
+    const expirationNowPlusTimer = now + expireTimer * 1000;
+    const msgExpirationWasAlreadyUpdated = messageExpirationFromRetrieve <= expirationNowPlusTimer;
+    // Note: a message might be added even when it expired, but the periodic cleaning of expired message will pick it up and remove it soon enough
+
+    if (msgExpirationWasAlreadyUpdated) {
+      const expirationStartTimestamp = messageExpirationFromRetrieve - expireTimer * 1000;
+      window.log.debug(
+        `incoming DaR message already read by another device, forcing readAt ${(Date.now() -
+          expirationStartTimestamp) /
+          1000}s ago, so with ${(messageExpirationFromRetrieve - Date.now()) / 1000}s left`
+      );
+      messageModel.set({
+        expirationStartTimestamp,
+        expires_at: messageExpirationFromRetrieve,
+      });
+    } else {
+      window.log.debug(
+        `incoming DaR message already read by another device but swarmExpiration seems NOT updated, forcing readAt NOW and triggering UpdateExpiryJob with ${expireTimer}s left`
+      );
+      messageModel.set({
+        expirationStartTimestamp: now,
+        expires_at: expirationNowPlusTimer,
+      });
+      // Ideally we would batch call those UpdateExpiry, but we can't currently and disappear v2 is already too complex as it is.
+      void UpdateMsgExpirySwarm.queueNewJobIfNeeded([messageModel.id]);
+    }
   } else if (
     expirationType === 'deleteAfterSend' &&
     expireTimer > 0 &&
     messageExpirationFromRetrieve &&
     messageExpirationFromRetrieve > 0
   ) {
-    const expirationStartTimestamp = messageExpirationFromRetrieve - expireTimer * 1000;
-    const expires_at = messageExpirationFromRetrieve;
-    messageModel.set({
-      expirationStartTimestamp,
-      expires_at,
-    });
+    // Note: closed groups control message do not disappear
+    if (!conversationModel.isClosedGroup() && !messageModel.isControlMessage()) {
+      const expirationStartTimestamp = messageExpirationFromRetrieve - expireTimer * 1000;
+      const expires_at = messageExpirationFromRetrieve;
+      messageModel.set({
+        expirationStartTimestamp,
+        expires_at,
+      });
+    }
   }
 
   return messageModel;

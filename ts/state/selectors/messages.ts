@@ -4,10 +4,11 @@ import {
   LastMessageStatusType,
   MessageModelPropsWithConvoProps,
   PropsForAttachment,
+  PropsForQuote,
   ReduxConversationType,
 } from '../ducks/conversations';
 import { StateType } from '../reducer';
-import { getMessagePropsByMessageId } from './conversations';
+import { getIsMessageSelected, getMessagePropsByMessageId } from './conversations';
 import { useSelectedIsPrivate } from './selectedConversation';
 
 function useMessagePropsByMessageId(messageId: string | undefined) {
@@ -107,19 +108,23 @@ export const useMessageStatus = (
   return useMessagePropsByMessageId(messageId)?.propsForMessage.status;
 };
 
-export function useMessageSender(messageId: string) {
+export function useMessageSender(messageId: string | undefined) {
   return useMessagePropsByMessageId(messageId)?.propsForMessage.sender;
 }
 
-export function useMessageIsDeletableForEveryone(messageId: string) {
+export function useMessageIsDeletableForEveryone(messageId: string | undefined) {
   return useMessagePropsByMessageId(messageId)?.propsForMessage.isDeletableForEveryone;
 }
 
-export function useMessageServerTimestamp(messageId: string) {
+export function useMessageServerTimestamp(messageId: string | undefined) {
   return useMessagePropsByMessageId(messageId)?.propsForMessage.serverTimestamp;
 }
 
-export function useMessageTimestamp(messageId: string) {
+export function useMessageReceivedAt(messageId: string | undefined) {
+  return useMessagePropsByMessageId(messageId)?.propsForMessage.receivedAt;
+}
+
+export function useMessageTimestamp(messageId: string | undefined) {
   return useMessagePropsByMessageId(messageId)?.propsForMessage.timestamp;
 }
 
@@ -127,8 +132,40 @@ export function useMessageBody(messageId: string) {
   return useMessagePropsByMessageId(messageId)?.propsForMessage.text;
 }
 
+export const useMessageQuote = (messageId: string | undefined): PropsForQuote | undefined => {
+  return useMessagePropsByMessageId(messageId)?.propsForMessage.quote;
+};
+
+export const useMessageHash = (messageId: string | undefined) => {
+  return useMessagePropsByMessageId(messageId)?.propsForMessage.messageHash;
+};
+
+export const useMessageExpirationType = (messageId: string | undefined) => {
+  return useMessagePropsByMessageId(messageId)?.propsForMessage.expirationType;
+};
+
+export const useMessageExpirationDurationMs = (messageId: string | undefined) => {
+  return useMessagePropsByMessageId(messageId)?.propsForMessage.expirationDurationMs;
+};
+
+export const useMessageExpirationTimestamp = (messageId: string | undefined) => {
+  return useMessagePropsByMessageId(messageId)?.propsForMessage.expirationTimestamp;
+};
+
+export const useMessageServerId = (messageId: string | undefined) => {
+  return useMessagePropsByMessageId(messageId)?.propsForMessage.serverId;
+};
+
+export const useMessageText = (messageId: string | undefined): string | undefined => {
+  return useMessagePropsByMessageId(messageId)?.propsForMessage.text;
+};
+
 export function useHideAvatarInMsgList(messageId?: string) {
   const msgProps = useMessagePropsByMessageId(messageId);
   const selectedIsPrivate = useSelectedIsPrivate();
   return msgProps?.propsForMessage.direction === 'outgoing' || selectedIsPrivate;
+}
+
+export function useMessageSelected(messageId?: string) {
+  return useSelector((state: StateType) => getIsMessageSelected(state, messageId));
 }

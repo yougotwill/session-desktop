@@ -19,7 +19,7 @@ declare global {
     Events: any;
     Session: any;
     Whisper: any;
-    clearLocalData: any;
+    clearLocalData: () => Promise<void>;
     clipboard: any;
     getSettingValue: (id: string, comparisonValue?: any) => any;
     setSettingValue: (id: string, value: any) => Promise<void>;
@@ -43,7 +43,7 @@ declare global {
     persistStore?: Persistor;
     restart: () => void;
     getSeedNodeList: () => Array<string> | undefined;
-    setPassword: (passPhrase: string | null, oldPhrase: string | null) => Promise<void>;
+    setPassword: (newPassword: string | null, oldPassword: string | null) => Promise<void>;
     isOnline: boolean;
     toggleMediaPermissions: () => Promise<void>;
     toggleCallMediaPermissionsTo: (enabled: boolean) => Promise<void>;
@@ -53,7 +53,6 @@ declare global {
     primaryColor: PrimaryColorStateType;
     theme: ThemeStateType;
     setTheme: (newTheme: string) => Promise<void>;
-    isDev?: () => boolean;
     userConfig: any;
     versionInfo: any;
     readyForUpdates: () => void;

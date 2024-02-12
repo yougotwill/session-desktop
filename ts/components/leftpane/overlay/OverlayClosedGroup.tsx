@@ -16,7 +16,7 @@ import { VALIDATION } from '../../../session/constants';
 import { createClosedGroup } from '../../../session/conversations/createClosedGroup';
 import { ToastUtils } from '../../../session/utils';
 import { groupInfoActions } from '../../../state/ducks/metaGroups';
-import { resetOverlayMode } from '../../../state/ducks/section';
+import { resetLeftOverlayMode } from '../../../state/ducks/section';
 import { getPrivateContactsPubkeys } from '../../../state/selectors/conversations';
 import { useIsCreatingGroupFromUIPending } from '../../../state/selectors/groups';
 import { getSearchResultsContactOnly, isSearching } from '../../../state/selectors/search';
@@ -99,16 +99,14 @@ export const OverlayClosedGroupV2 = () => {
   const privateContactsPubkeys = useSelector(getPrivateContactsPubkeys);
   const isCreatingGroup = useIsCreatingGroupFromUIPending();
   const [groupName, setGroupName] = useState('');
-  const {
-    uniqueValues: members,
-    addTo: addToSelected,
-    removeFrom: removeFromSelected,
-  } = useSet<string>([]);
+  const { uniqueValues: members, addTo: addToSelected, removeFrom: removeFromSelected } = useSet<
+    string
+  >([]);
   const isSearch = useSelector(isSearching);
   const searchResultContactsOnly = useSelector(getSearchResultsContactOnly);
 
   function closeOverlay() {
-    dispatch(resetOverlayMode());
+    dispatch(resetLeftOverlayMode());
   }
 
   async function onEnterPressed() {
@@ -222,7 +220,7 @@ export const OverlayLegacyClosedGroup = () => {
   const searchResultContactsOnly = useSelector(getSearchResultsContactOnly);
 
   function closeOverlay() {
-    dispatch(resetOverlayMode());
+    dispatch(resetLeftOverlayMode());
   }
 
   async function onEnterPressed() {

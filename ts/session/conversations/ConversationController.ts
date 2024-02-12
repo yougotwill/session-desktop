@@ -47,6 +47,8 @@ const getConvoHub = () => {
   return instance;
 };
 
+type DeleteOptions = { fromSyncMessage: boolean };
+
 class ConvoController {
   private readonly conversations: ConversationCollection;
   private _initialFetchComplete: boolean = false;
@@ -205,21 +207,22 @@ class ConvoController {
 
   public async deleteClosedGroup(
     groupId: string,
-    { fromSyncMessage, sendLeaveMessage }: { fromSyncMessage: boolean; sendLeaveMessage: boolean }
+    { sendLeaveMessage, fromSyncMessage }: DeleteOptions & { sendLeaveMessage: boolean }
   ) {
     if (!PubKey.is03Pubkey(groupId) && !PubKey.is05Pubkey(groupId)) {
       return;
     }
     const typeOfDelete: ConvoVolatileType = PubKey.is03Pubkey(groupId) ? 'Group' : 'LegacyGroup';
-    const conversation = await this.deleteConvoInitialChecks(groupId, typeOfDelete);
+    const conversation = await this.deleteConvoInitialChecks(groupId, typeOfDelete, false);
     if (!conversation || !conversation.isClosedGroup()) {
       return;
     }
-    window.log.info(`deleteClosedGroup: ${groupId}, sendLeaveMessage?:${sendLeaveMessage}`);
     getSwarmPollingInstance().removePubkey(groupId, 'deleteClosedGroup'); // we don't need to keep polling anymore.
     // send the leave message before we delete everything for this group (including the key!)
+
     if (sendLeaveMessage) {
       await leaveClosedGroup(groupId, fromSyncMessage);
+      window.log.info(`deleteClosedGroup: ${groupId}, sendLeaveMessage?:${sendLeaveMessage}`);
     }
 
     // if we were kicked or sent our left message, we have nothing to do more with that group.
@@ -236,8 +239,8 @@ class ConvoController {
     }
   }
 
-  public async deleteCommunity(convoId: string, options: { fromSyncMessage: boolean }) {
-    const conversation = await this.deleteConvoInitialChecks(convoId, 'Community');
+  public async deleteCommunity(convoId: string, options: DeleteOptions) {
+    const conversation = await this.deleteConvoInitialChecks(convoId, 'Community', false);
     if (!conversation || !conversation.isPublic()) {
       return;
     }
@@ -257,9 +260,10 @@ class ConvoController {
 
   public async delete1o1(
     id: string,
-    options: { fromSyncMessage: boolean; justHidePrivate?: boolean }
+    options: DeleteOptions & { justHidePrivate?: boolean; keepMessages: boolean }
   ) {
-    const conversation = await this.deleteConvoInitialChecks(id, '1o1');
+    const conversation = await this.deleteConvoInitialChecks(id, '1o1', options.keepMessages);
+
     if (!conversation || !conversation.isPrivate()) {
       return;
     }
@@ -391,7 +395,11 @@ class ConvoController {
     this.conversations.reset([]);
   }
 
-  private async deleteConvoInitialChecks(convoId: string, deleteType: ConvoVolatileType) {
+  private async deleteConvoInitialChecks(
+    convoId: string,
+    deleteType: ConvoVolatileType,
+    keepMessages: boolean
+  ) {
     if (!this._initialFetchComplete) {
       throw new Error(`ConvoHub.${deleteType}  needs complete initial fetch`);
     }
@@ -404,10 +412,14 @@ class ConvoController {
       return null;
     }
 
-    // those are the stuff to do for all conversation types
-    window.log.info(`${deleteType} destroyingMessages: ${ed25519Str(convoId)}`);
-    await deleteAllMessagesByConvoIdNoConfirmation(convoId);
-    window.log.info(`${deleteType} messages destroyed: ${ed25519Str(convoId)}`);
+    // Note in some cases (hiding a conversation) we don't want to delete the messages
+    if (!keepMessages) {
+      // those are the stuff to do for all conversation types
+      window.log.info(`${deleteType} destroyingMessages: ${ed25519Str(convoId)}`);
+      await deleteAllMessagesByConvoIdNoConfirmation(convoId);
+      window.log.info(`${deleteType} messages destroyed: ${ed25519Str(convoId)}`);
+    }
+
     return conversation;
   }
 
