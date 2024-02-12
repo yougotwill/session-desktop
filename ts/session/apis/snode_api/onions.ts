@@ -1,12 +1,10 @@
 import https from 'https';
 // eslint-disable import/no-named-default
-// eslint-disable-next-line import/no-named-default
 import { AbortSignal } from 'abort-controller';
 import ByteBuffer from 'bytebuffer';
 import { to_string } from 'libsodium-wrappers-sumo';
 import { cloneDeep, isEmpty, isString, omit } from 'lodash';
-// eslint-disable-next-line import/no-named-default
-import { RequestInit, Response, default as insecureNodeFetch } from 'node-fetch';
+import insecureNodeFetch, { RequestInit, Response } from 'node-fetch';
 import pRetry from 'p-retry';
 // eslint-disable-next-line import/no-unresolved
 import { AbortSignal as AbortSignalNode } from 'node-fetch/externals';
@@ -89,11 +87,9 @@ async function encryptOnionV4RequestForPubkey(
 ) {
   const plaintext = encodeV4Request(requestInfo);
 
-  return callUtilsWorker(
-    'encryptForPubkey',
-    pubKeyX25519hex,
-    plaintext
-  ) as Promise<DestinationContext>;
+  return callUtilsWorker('encryptForPubkey', pubKeyX25519hex, plaintext) as Promise<
+    DestinationContext
+  >;
 }
 // Returns the actual ciphertext, symmetric key that will be used
 // for decryption, and an ephemeral_key to send to the next hop
@@ -103,11 +99,9 @@ async function encryptForPubKey(
 ): Promise<DestinationContext> {
   const plaintext = new TextEncoder().encode(JSON.stringify(requestInfo));
 
-  return callUtilsWorker(
-    'encryptForPubkey',
-    pubKeyX25519hex,
-    plaintext
-  ) as Promise<DestinationContext>;
+  return callUtilsWorker('encryptForPubkey', pubKeyX25519hex, plaintext) as Promise<
+    DestinationContext
+  >;
 }
 
 export type DestinationRelayV2 = {

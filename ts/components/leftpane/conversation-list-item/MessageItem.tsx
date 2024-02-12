@@ -16,6 +16,7 @@ import { TypingAnimation } from '../../conversation/TypingAnimation';
 import { MessageBody } from '../../conversation/message/message-content/MessageBody';
 import { SessionIcon } from '../../icon';
 import { useConvoIdFromContext } from './ConvoIdContext';
+import { InteractionItem } from './InteractionItem';
 
 export const MessageItem = () => {
   const conversationId = useConvoIdFromContext();
@@ -28,9 +29,14 @@ export const MessageItem = () => {
 
   const isSearchingMode = useSelector(isSearching);
 
+  if (lastMessage?.interactionType && lastMessage?.interactionStatus) {
+    return <InteractionItem conversationId={conversationId} lastMessage={lastMessage} />;
+  }
+
   if (!lastMessage && !isConvoTyping) {
     return null;
   }
+
   const text = lastMessage?.text || '';
 
   if (isEmpty(text)) {

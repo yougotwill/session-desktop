@@ -1,7 +1,7 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { EditProfilePictureModalProps } from '../../components/dialog/EditProfilePictureModal';
 import { SessionConfirmDialogProps } from '../../components/dialog/SessionConfirm';
 import { PasswordAction } from '../../components/dialog/SessionPasswordDialog';
-import { EditProfilePictureModalProps } from '../../components/dialog/EditProfilePictureModal';
 import { Noop } from '../../types/Util';
 
 export type BanType = 'ban' | 'unban';
@@ -21,7 +21,6 @@ export type RemoveModeratorsModalState = InviteContactModalState;
 export type UpdateGroupMembersModalState = InviteContactModalState;
 export type UpdateGroupNameModalState = WithConvoId | null;
 export type ChangeNickNameModalState = InviteContactModalState;
-export type AdminLeaveClosedGroupModalState = InviteContactModalState;
 export type EditProfileModalState = object | null;
 export type OnionPathModalState = EditProfileModalState;
 export type RecoveryPhraseModalState = EditProfileModalState;
@@ -55,7 +54,6 @@ export type ModalState = {
   editProfileModal: EditProfileModalState;
   onionPathModal: OnionPathModalState;
   recoveryPhraseModal: RecoveryPhraseModalState;
-  adminLeaveClosedGroup: AdminLeaveClosedGroupModalState;
   sessionPasswordModal: SessionPasswordModalState;
   deleteAccountModal: DeleteAccountModalState;
   reactListModalState: ReactModalsState;
@@ -76,7 +74,6 @@ export const initialModalState: ModalState = {
   editProfileModal: null,
   onionPathModal: null,
   recoveryPhraseModal: null,
-  adminLeaveClosedGroup: null,
   sessionPasswordModal: null,
   deleteAccountModal: null,
   reactListModalState: null,
@@ -124,9 +121,6 @@ const ModalSlice = createSlice({
     recoveryPhraseModal(state, action: PayloadAction<RecoveryPhraseModalState | null>) {
       return { ...state, recoveryPhraseModal: action.payload };
     },
-    adminLeaveClosedGroup(state, action: PayloadAction<AdminLeaveClosedGroupModalState | null>) {
-      return { ...state, adminLeaveClosedGroup: action.payload };
-    },
     sessionPassword(state, action: PayloadAction<SessionPasswordModalState>) {
       return { ...state, sessionPasswordModal: action.payload };
     },
@@ -158,7 +152,6 @@ export const {
   editProfileModal,
   onionPathModal,
   recoveryPhraseModal,
-  adminLeaveClosedGroup,
   sessionPassword,
   updateDeleteAccountModal,
   updateBanOrUnbanUserModal,

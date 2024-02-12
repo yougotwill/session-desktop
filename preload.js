@@ -2,6 +2,8 @@
 const { clipboard, ipcRenderer, webFrame } = require('electron/main');
 const { Storage } = require('./ts/util/storage');
 
+const { isTestNet, isTestIntegration } = require('./ts/shared/env_vars');
+
 const url = require('url');
 
 const _ = require('lodash');
@@ -22,19 +24,14 @@ window.getTitle = () => title;
 window.getEnvironment = () => configAny.environment;
 window.getAppInstance = () => configAny.appInstance;
 window.getVersion = () => configAny.version;
-window.isDev = () => config.environment === 'development';
 window.getCommitHash = () => configAny.commitHash;
 window.getNodeVersion = () => configAny.node_version;
 
 window.sessionFeatureFlags = {
   useOnionRequests: true,
-  useTestNet: Boolean(
-    process.env.NODE_APP_INSTANCE && process.env.NODE_APP_INSTANCE.includes('testnet')
-  ),
-  integrationTestEnv: Boolean(
-    process.env.NODE_APP_INSTANCE && process.env.NODE_APP_INSTANCE.includes('test-integration')
-  ),
-  useClosedGroupV2: true, // TODO DO NOT MERGE Remove after QA
+  useTestNet: isTestNet(),
+  integrationTestEnv: isTestIntegration(),
+  useClosedGroupV3: true, // TODO DO NOT MERGE Remove after QA
   debug: {
     debugLogging: !_.isEmpty(process.env.SESSION_DEBUG),
     debugLibsessionDumps: !_.isEmpty(process.env.SESSION_DEBUG_LIBSESSION_DUMPS),

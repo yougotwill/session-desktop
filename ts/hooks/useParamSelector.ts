@@ -304,19 +304,6 @@ export function useZombies(convoId?: string) {
   });
 }
 
-export function useLastMessage(convoId?: string) {
-  return useSelector((state: StateType) => {
-    if (!convoId) {
-      return null;
-    }
-    const convo = state.conversations.conversationLookup[convoId];
-    if (!convo) {
-      return null;
-    }
-    return convo.lastMessage;
-  });
-}
-
 export function useMessageReactsPropsById(messageId?: string) {
   return useSelector((state: StateType) => {
     if (!messageId) {
@@ -365,29 +352,28 @@ export function useIsTyping(conversationId?: string): boolean {
   return useConversationPropsById(conversationId)?.isTyping || false;
 }
 
-const getMessageExpirationProps = createSelector(
-  getMessagePropsByMessageId,
-  (props): PropsForExpiringMessage | undefined => {
-    if (!props || isEmpty(props)) {
-      return undefined;
-    }
-
-    const msgProps: PropsForExpiringMessage = {
-      ...pick(props.propsForMessage, [
-        'convoId',
-        'direction',
-        'receivedAt',
-        'isUnread',
-        'expirationTimestamp',
-        'expirationDurationMs',
-        'isExpired',
-      ]),
-      messageId: props.propsForMessage.id,
-    };
-
-    return msgProps;
+const getMessageExpirationProps = createSelector(getMessagePropsByMessageId, (props):
+  | PropsForExpiringMessage
+  | undefined => {
+  if (!props || isEmpty(props)) {
+    return undefined;
   }
-);
+
+  const msgProps: PropsForExpiringMessage = {
+    ...pick(props.propsForMessage, [
+      'convoId',
+      'direction',
+      'receivedAt',
+      'isUnread',
+      'expirationTimestamp',
+      'expirationDurationMs',
+      'isExpired',
+    ]),
+    messageId: props.propsForMessage.id,
+  };
+
+  return msgProps;
+});
 
 export function useMessageExpirationPropsById(messageId?: string) {
   return useSelector((state: StateType) => {
@@ -444,7 +430,9 @@ export function useTimerOptionsByMode(disappearingMessageMode?: string, hasOnlyO
   }, [disappearingMessageMode, hasOnlyOneMode]);
 }
 
-export function useQuoteAuthorName(authorId?: string): {
+export function useQuoteAuthorName(
+  authorId?: string
+): {
   authorName: string | undefined;
   isMe: boolean;
 } {
@@ -454,8 +442,8 @@ export function useQuoteAuthorName(authorId?: string): {
   const authorName = isMe
     ? window.i18n('you')
     : convoProps?.nickname || convoProps?.isPrivate
-      ? convoProps?.displayNameInProfile
-      : undefined;
+    ? convoProps?.displayNameInProfile
+    : undefined;
 
   return { authorName, isMe };
 }
@@ -482,4 +470,55 @@ export function useSortedGroupMembers(convoId: string | undefined): Array<Pubkey
   }
   // we need to clone the array before being able to call sort() it
   return (compact(members?.slice()?.sort()) || []) as Array<PubkeyType>;
+}
+
+export function useDisappearingMessageSettingText({
+  convoId,
+  abbreviate,
+  separator = ' - ',
+}: {
+  convoId?: string;
+  abbreviate?: boolean;
+  separator?: string;
+}): string {
+  const convoProps = useConversationPropsById(convoId);
+  if (!convoProps) {
+    return '';
+  }
+
+  const { expirationMode, expireTimer, isMe, isPublic } = convoProps;
+
+  const isGroup = !convoProps.isPrivate && !convoProps.isPublic;
+
+  // TODO legacy messages support will be removed in a future release
+  const expirationModeText =
+    expirationMode === 'deleteAfterRead'
+      ? window.i18n('disappearingMessagesModeAfterRead')
+      : expirationMode === 'deleteAfterSend'
+      ? window.i18n('disappearingMessagesModeAfterSend')
+      : expirationMode === 'legacy'
+      ? isMe || (isGroup && !isPublic)
+        ? window.i18n('disappearingMessagesModeAfterSend')
+        : window.i18n('disappearingMessagesModeAfterRead')
+      : null;
+
+  const expireTimerText = isNumber(expireTimer)
+    ? abbreviate
+      ? TimerOptions.getAbbreviated(expireTimer)
+      : TimerOptions.getName(expireTimer)
+    : null;
+
+  return expireTimer && expirationModeText
+    ? `${expirationModeText}${expireTimerText ? `${separator}${expireTimerText}` : ''}`
+    : '';
+}
+
+export function useLastMessage(convoId?: string) {
+  const convoProps = useConversationPropsById(convoId);
+
+  if (!convoId || !convoProps) {
+    return null;
+  }
+
+  return convoProps.lastMessage;
 }

@@ -4,22 +4,25 @@ import moment from 'moment';
 import React, { createContext, useCallback, useContext, useLayoutEffect, useState } from 'react';
 import { InView } from 'react-intersection-observer';
 import { useSelector } from 'react-redux';
-import styled, { css, keyframes } from 'styled-components';
+import styled from 'styled-components';
 import { MessageModelType, MessageRenderingProps } from '../../../../models/messageType';
 import { StateType } from '../../../../state/reducer';
-import { useHideAvatarInMsgList, useMessageIsDeleted } from '../../../../state/selectors';
+import {
+  useHideAvatarInMsgList,
+  useMessageIsDeleted,
+  useMessageSelected,
+} from '../../../../state/selectors';
 import {
   getMessageContentSelectorProps,
   getQuotedMessageToAnimate,
   getShouldHighlightMessage,
 } from '../../../../state/selectors/conversations';
-import {
-  useSelectedIsGroup,
-  useSelectedIsPrivate,
-} from '../../../../state/selectors/selectedConversation';
+import { useSelectedIsPrivate } from '../../../../state/selectors/selectedConversation';
+import { canDisplayImage } from '../../../../types/Attachment';
 import { ScrollToLoadedMessageContext } from '../../SessionMessagesListContainer';
 import { MessageAttachment } from './MessageAttachment';
 import { MessageAvatar } from './MessageAvatar';
+import { MessageHighlighter } from './MessageHighlighter';
 import { MessageLinkPreview } from './MessageLinkPreview';
 import { MessageQuote } from './MessageQuote';
 import { MessageText } from './MessageText';
@@ -52,41 +55,13 @@ function onClickOnMessageInnerContainer(event: React.MouseEvent<HTMLDivElement>)
 
 const StyledMessageContent = styled.div<{ msgDirection: MessageModelType }>`
   display: flex;
-
   align-self: ${props => (props.msgDirection === 'incoming' ? 'flex-start' : 'flex-end')};
 `;
 
-const opacityAnimation = keyframes`
-    0% {
-      opacity: 1;
-    }
-    25% {
-      opacity: 0.2;
-    }
-    50% {
-      opacity: 1;
-    }
-    75% {
-      opacity: 0.2;
-    }
-    100% {
-      opacity: 1;
-    }
-`;
-
-export const StyledMessageHighlighter = styled.div<{
-  highlight: boolean;
-}>`
-  ${props =>
-    props.highlight &&
-    css`
-      animation: ${opacityAnimation} 1s linear;
-    `}
-`;
-
-const StyledMessageOpaqueContent = styled(StyledMessageHighlighter)<{
+const StyledMessageOpaqueContent = styled(MessageHighlighter)<{
   isIncoming: boolean;
   highlight: boolean;
+  selected: boolean;
 }>`
   background: ${props =>
     props.isIncoming
@@ -96,13 +71,13 @@ const StyledMessageOpaqueContent = styled(StyledMessageHighlighter)<{
   padding: var(--padding-message-content);
   border-radius: var(--border-radius-message-box);
   width: 100%;
+
+  ${props => props.selected && `box-shadow: var(--drop-shadow);`}
 `;
 
 export const IsMessageVisibleContext = createContext(false);
 
-// NOTE aligns group member avatars with the ExpireTimer
-const StyledAvatarContainer = styled.div<{ hideAvatar: boolean; isGroup: boolean }>`
-  /* margin-inline-start: ${props => (!props.hideAvatar && props.isGroup ? '-11px' : '')}; */
+const StyledAvatarContainer = styled.div`
   align-self: flex-end;
 `;
 
@@ -117,16 +92,12 @@ export const MessageContent = (props: Props) => {
 
   const scrollToLoadedMessage = useContext(ScrollToLoadedMessageContext);
   const selectedIsPrivate = useSelectedIsPrivate();
-  const isGroup = useSelectedIsGroup();
   const hideAvatar = useHideAvatarInMsgList(props.messageId);
 
   const [imageBroken, setImageBroken] = useState(false);
 
-  const onVisible = (inView: boolean | object) => {
-    if (
-      inView === true ||
-      ((inView as any).type === 'focus' && (inView as any).returnValue === true)
-    ) {
+  const onVisible = (inView: boolean, _: IntersectionObserverEntry) => {
+    if (inView) {
       if (isMessageVisible !== true) {
         setMessageIsVisible(true);
       }
@@ -140,6 +111,7 @@ export const MessageContent = (props: Props) => {
   const quotedMessageToAnimate = useSelector(getQuotedMessageToAnimate);
   const shouldHighlightMessage = useSelector(getShouldHighlightMessage);
   const isQuotedMessageToAnimate = quotedMessageToAnimate === props.messageId;
+  const selected = useMessageSelected(props.messageId);
 
   useLayoutEffect(() => {
     if (isQuotedMessageToAnimate) {
@@ -173,11 +145,22 @@ export const MessageContent = (props: Props) => {
     return null;
   }
 
-  const { direction, text, timestamp, serverTimestamp, previews, quote } = contentProps;
+  const {
+    direction,
+    text,
+    timestamp,
+    serverTimestamp,
+    previews,
+    quote,
+    attachments,
+  } = contentProps;
 
   const hasContentBeforeAttachment = !isEmpty(previews) || !isEmpty(quote) || !isEmpty(text);
 
   const toolTipTitle = moment(serverTimestamp || timestamp).format('llll');
+
+  const isDetailViewAndSupportsAttachmentCarousel =
+    props.isDetailView && canDisplayImage(attachments);
 
   return (
     <StyledMessageContent
@@ -187,7 +170,7 @@ export const MessageContent = (props: Props) => {
       title={toolTipTitle}
       msgDirection={direction}
     >
-      <StyledAvatarContainer hideAvatar={hideAvatar} isGroup={isGroup}>
+      <StyledAvatarContainer>
         <MessageAvatar
           messageId={props.messageId}
           hideAvatar={hideAvatar}
@@ -197,6 +180,7 @@ export const MessageContent = (props: Props) => {
 
       <InView
         id={`inview-content-${props.messageId}`}
+        as={'div'}
         onChange={onVisible}
         threshold={0}
         rootMargin="500px 0px 500px 0px"
@@ -209,7 +193,11 @@ export const MessageContent = (props: Props) => {
       >
         <IsMessageVisibleContext.Provider value={isMessageVisible}>
           {hasContentBeforeAttachment && (
-            <StyledMessageOpaqueContent isIncoming={direction === 'incoming'} highlight={highlight}>
+            <StyledMessageOpaqueContent
+              isIncoming={direction === 'incoming'}
+              highlight={highlight}
+              selected={selected}
+            >
               {!isDeleted && (
                 <>
                   <MessageQuote messageId={props.messageId} />
@@ -222,7 +210,7 @@ export const MessageContent = (props: Props) => {
               <MessageText messageId={props.messageId} />
             </StyledMessageOpaqueContent>
           )}
-          {!isDeleted && (
+          {!isDeleted && isDetailViewAndSupportsAttachmentCarousel && !imageBroken ? null : (
             <MessageAttachment
               messageId={props.messageId}
               imageBroken={imageBroken}

@@ -6,14 +6,11 @@ import { GroupPubkeyType, PubkeyType } from 'libsession_util_nodejs';
 import {
   cloneDeep,
   debounce,
-  groupBy,
   isEmpty,
   size as lodashSize,
   map,
   partition,
   pick,
-  reject,
-  sortBy,
   uniq,
 } from 'lodash';
 import { SignalService } from '../protobuf';
@@ -45,6 +42,10 @@ import {
 import { Data } from '../data/data';
 import { OpenGroupData } from '../data/opengroups';
 import { SettingsKey } from '../data/settings-key';
+import {
+  ConversationInteractionStatus,
+  ConversationInteractionType,
+} from '../interactions/conversationInteractions';
 import { isUsAnySogsFromCache } from '../session/apis/open_group_api/sogsv3/knownBlindedkeys';
 import { GetNetworkTime } from '../session/apis/snode_api/getNetworkTime';
 import { SnodeNamespaces } from '../session/apis/snode_api/namespaces';
@@ -70,7 +71,6 @@ import {
   FindAndFormatContactType,
   LastMessageStatusType,
   MessageModelPropsWithoutConvoProps,
-  MessagePropsDetails,
   PropsForAttachment,
   PropsForExpirationTimer,
   PropsForExpiringMessage,
@@ -96,12 +96,13 @@ import {
 } from '../types/MessageAttachment';
 import { ReactionList } from '../types/Reaction';
 import { getAttachmentMetadata } from '../types/message/initializeAttachmentMetadata';
-import { roomHasBlindEnabled } from '../types/sqlSharedTypes';
+import { assertUnreachable, roomHasBlindEnabled } from '../types/sqlSharedTypes';
 import { LinkPreviews } from '../util/linkPreviews';
 import { Notifications } from '../util/notifications';
 import { Storage } from '../util/storage';
 import { ConversationModel } from './conversation';
 import { READ_MESSAGE_STATE } from './conversationAttributes';
+// tslint:disable: cyclomatic-complexity
 
 /**
  * @returns true if the array contains only a single item being 'You', 'you' or our device pubkey
@@ -152,6 +153,8 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
     const propsForMessageRequestResponse = this.getPropsForMessageRequestResponse();
     const propsForQuote = this.getPropsForQuote();
     const callNotificationType = this.get('callNotificationType');
+    const interactionNotification = this.getInteractionNotification();
+
     const messageProps: MessageModelPropsWithoutConvoProps = {
       propsForMessage: this.getPropsForMessage(),
     };
@@ -187,6 +190,16 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
       };
     }
 
+    if (interactionNotification) {
+      messageProps.propsForInteractionNotification = {
+        notificationType: interactionNotification,
+        convoId: this.get('conversationId'),
+        messageId: this.id,
+        receivedAt: this.get('received_at') || Date.now(),
+        isUnread: this.isUnread(),
+      };
+    }
+
     return messageProps;
   }
 
@@ -206,7 +219,7 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
     return (
       this.isExpirationTimerUpdate() ||
       this.isDataExtractionNotification() ||
-      this.isMessageRequestResponse ||
+      this.isMessageRequestResponse() ||
       this.isGroupUpdate()
     );
   }
@@ -246,6 +259,13 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
   }
   public isCallNotification() {
     return !!this.get('callNotificationType');
+  }
+  public isInteractionNotification() {
+    return !!this.getInteractionNotification();
+  }
+
+  public getInteractionNotification() {
+    return this.get('interactionNotification');
   }
 
   public getNotificationText() {
@@ -532,7 +552,11 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
       return undefined;
     }
 
-    if (this.isDataExtractionNotification() || this.isCallNotification()) {
+    if (
+      this.isDataExtractionNotification() ||
+      this.isCallNotification() ||
+      this.isInteractionNotification()
+    ) {
       return undefined;
     }
 
@@ -723,53 +747,6 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
     };
   }
 
-  public async getPropsForMessageDetail(): Promise<MessagePropsDetails> {
-    // We include numbers we didn't successfully send to so we can display errors.
-    // Older messages don't have the recipients included on the message, so we fall
-    //   back to the conversation's current recipients
-    const contacts: Array<string> = this.isIncoming()
-      ? [this.get('source')]
-      : this.get('sent_to') || [];
-
-    // This will make the error message for outgoing key errors a bit nicer
-    const allErrors = (this.get('errors') || []).map((error: any) => {
-      return error;
-    });
-
-    // If an error has a specific number it's associated with, we'll show it next to
-    //   that contact. Otherwise, it will be a standalone entry.
-    const errors = reject(allErrors, error => Boolean(error.number));
-    const errorsGroupedById = groupBy(allErrors, 'number');
-    const finalContacts = await Promise.all(
-      (contacts || []).map(async id => {
-        const errorsForContact = errorsGroupedById[id];
-
-        const contact = findAndFormatContact(id);
-        return {
-          ...contact,
-          status: this.getMessagePropStatus(),
-          errors: errorsForContact,
-          profileName: contact.profileName,
-        };
-      })
-    );
-
-    // sort by pubkey
-    const sortedContacts = sortBy(finalContacts, contact => contact.pubkey);
-
-    const toRet: MessagePropsDetails = {
-      sentAt: this.get('sent_at') || 0,
-      receivedAt: this.get('received_at') || 0,
-      convoId: this.get('conversationId'),
-      messageId: this.get('id'),
-      errors,
-      direction: this.get('direction'),
-      contacts: sortedContacts || [],
-    };
-
-    return toRet;
-  }
-
   /**
    * Uploads attachments, previews and quotes.
    *
@@ -786,8 +763,9 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
     const quoteWithData = await loadQuoteData(this.get('quote'));
     const previewWithData = await loadPreviewData(this.get('preview'));
 
-    const { hasAttachments, hasVisualMediaAttachments, hasFileAttachments } =
-      getAttachmentMetadata(this);
+    const { hasAttachments, hasVisualMediaAttachments, hasFileAttachments } = getAttachmentMetadata(
+      this
+    );
     this.set({ hasAttachments, hasVisualMediaAttachments, hasFileAttachments });
     await this.commit();
 
@@ -838,9 +816,8 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
     }
 
     window.log.info(
-      `Upload of message data for message ${this.idForLogging()} is finished in ${
-        Date.now() - start
-      }ms.`
+      `Upload of message data for message ${this.idForLogging()} is finished in ${Date.now() -
+        start}ms.`
     );
     return {
       body,
@@ -893,7 +870,7 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
       const conversation: ConversationModel | undefined = this.getConversation();
       if (!conversation) {
         window?.log?.info(
-          'cannot retry send message, the corresponding conversation was not found.'
+          '[retrySend] Cannot retry send message, the corresponding conversation was not found.'
         );
         return null;
       }
@@ -911,7 +888,7 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
         };
         const roomInfos = OpenGroupData.getV2OpenGroupRoom(conversation.id);
         if (!roomInfos) {
-          throw new Error('Could not find roomInfos for this conversation');
+          throw new Error('[retrySend] Could not find roomInfos for this conversation');
         }
 
         const openGroupMessage = new OpenGroupVisibleMessage(openGroupParams);
@@ -964,7 +941,7 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
       // as they are all polling from the same group swarm pubkey
       if (!conversation.isClosedGroup()) {
         throw new Error(
-          'We should only end up with a closed group here. Anything else is an error'
+          '[retrySend] We should only end up with a closed group here. Anything else is an error'
         );
       }
 
@@ -1289,18 +1266,18 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
     const left: Array<string> | undefined = Array.isArray(groupUpdate.left)
       ? groupUpdate.left
       : groupUpdate.left
-        ? [groupUpdate.left]
-        : undefined;
+      ? [groupUpdate.left]
+      : undefined;
     const kicked: Array<string> | undefined = Array.isArray(groupUpdate.kicked)
       ? groupUpdate.kicked
       : groupUpdate.kicked
-        ? [groupUpdate.kicked]
-        : undefined;
+      ? [groupUpdate.kicked]
+      : undefined;
     const joined: Array<string> | undefined = Array.isArray(groupUpdate.joined)
       ? groupUpdate.joined
       : groupUpdate.joined
-        ? [groupUpdate.joined]
-        : undefined;
+      ? [groupUpdate.joined]
+      : undefined;
 
     const forcedArrayUpdate: MessageGroupUpdate = {};
 
@@ -1325,17 +1302,19 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
       if (arrayContainsUsOnly(groupUpdate.kicked)) {
         return window.i18n('youGotKickedFromGroup');
       }
+
       if (arrayContainsUsOnly(groupUpdate.left)) {
         return window.i18n('youLeftTheGroup');
-      }
-      if (groupUpdate.name) {
-        return window.i18n('titleIsNow', [groupUpdate.name]);
       }
 
       if (groupUpdate.left && groupUpdate.left.length === 1) {
         return window.i18n('leftTheGroup', [
           ConvoHub.use().getContactProfileNameOrShortenedPubKey(groupUpdate.left[0]),
         ]);
+      }
+
+      if (groupUpdate.name) {
+        return window.i18n('titleIsNow', [groupUpdate.name]);
       }
 
       if (groupUpdate.joined && groupUpdate.joined.length) {
@@ -1366,9 +1345,11 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
       }
       return null;
     }
+
     if (this.isIncoming() && this.hasErrors()) {
       return window.i18n('incomingError');
     }
+
     if (this.isGroupInvitation()) {
       return `😎 ${window.i18n('openGroupInvitation')}`;
     }
@@ -1402,6 +1383,39 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
         return window.i18n('answeredACall', [displayName]);
       }
     }
+
+    const interactionNotification = this.getInteractionNotification();
+    if (interactionNotification) {
+      const { interactionType, interactionStatus } = interactionNotification;
+
+      // NOTE For now we only show interaction errors in the message history
+      if (interactionStatus === ConversationInteractionStatus.Error) {
+        const convo = ConvoHub.use().get(this.get('conversationId'));
+
+        if (convo) {
+          const isGroup = !convo.isPrivate();
+          const isCommunity = convo.isPublic();
+
+          switch (interactionType) {
+            case ConversationInteractionType.Hide:
+              // there is no text for hiding changes
+              return '';
+            case ConversationInteractionType.Leave:
+              return isCommunity
+                ? window.i18n('leaveCommunityFailed')
+                : isGroup
+                ? window.i18n('leaveGroupFailed')
+                : window.i18n('deleteConversationFailed');
+            default:
+              assertUnreachable(
+                interactionType,
+                `Message.getDescription: Missing case error "${interactionType}"`
+              );
+          }
+        }
+      }
+    }
+
     if (this.get('reaction')) {
       const reaction = this.get('reaction');
       if (reaction && reaction.emoji && reaction.emoji !== '') {
