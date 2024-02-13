@@ -94,7 +94,6 @@ function decodeBatchRequest(snodeResponse: SnodeResponse): NotEmptyArrayOfBatchR
   try {
     // console.error('decodeBatch: ', snodeResponse);
     if (snodeResponse.status !== 200) {
-      debugger;
       throw new Error(`decodeBatchRequest invalid status code: ${snodeResponse.status}`);
     }
     const parsed = JSON.parse(snodeResponse.body);

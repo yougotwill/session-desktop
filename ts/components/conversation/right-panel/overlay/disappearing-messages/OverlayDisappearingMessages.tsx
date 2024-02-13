@@ -172,8 +172,8 @@ export const OverlayDisappearingMessages = () => {
             {singleMode === 'deleteAfterRead'
               ? window.i18n('disappearingMessagesModeAfterReadSubtitle')
               : singleMode === 'deleteAfterSend'
-              ? window.i18n('disappearingMessagesModeAfterSendSubtitle')
-              : window.i18n('settingAppliesToYourMessages')}
+                ? window.i18n('disappearingMessagesModeAfterSendSubtitle')
+                : window.i18n('settingAppliesToYourMessages')}
           </HeaderSubtitle>
         </Header>
         <DisappearingModes
@@ -194,8 +194,8 @@ export const OverlayDisappearingMessages = () => {
                 singleMode
                   ? disappearingModeOptions[singleMode]
                   : modeSelected
-                  ? disappearingModeOptions[modeSelected]
-                  : undefined
+                    ? disappearingModeOptions[modeSelected]
+                    : undefined
               }
             />
           </>
@@ -217,8 +217,8 @@ export const OverlayDisappearingMessages = () => {
               singleMode
                 ? disappearingModeOptions[singleMode]
                 : modeSelected
-                ? disappearingModeOptions[modeSelected]
-                : undefined
+                  ? disappearingModeOptions[modeSelected]
+                  : undefined
             }
             dataTestId={'disappear-set-button'}
           >

@@ -125,14 +125,8 @@ export const ExpirableReadableMessage = (props: ExpirableReadableMessageProps) =
     return null;
   }
 
-  const {
-    messageId,
-    direction,
-    receivedAt,
-    isUnread,
-    expirationDurationMs,
-    expirationTimestamp,
-  } = selected;
+  const { messageId, direction, receivedAt, isUnread, expirationDurationMs, expirationTimestamp } =
+    selected;
 
   // NOTE we want messages on the left in the message detail view regardless of direction
   const isIncoming = props.isDetailView ? true : direction === 'incoming';

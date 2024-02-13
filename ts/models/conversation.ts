@@ -2243,8 +2243,8 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     const interactionNotification = lastMessageModel.getInteractionNotification();
 
     const lastMessageInteractionType = interactionNotification?.interactionType;
-    const lastMessageInteractionStatus = lastMessageModel.getInteractionNotification()
-      ?.interactionStatus;
+    const lastMessageInteractionStatus =
+      lastMessageModel.getInteractionNotification()?.interactionStatus;
     const lastMessageStatus = lastMessageModel.getMessagePropStatus() || undefined;
     const lastMessageNotificationText = lastMessageModel.getNotificationText() || undefined;
     // we just want to set the `status` to `undefined` if there are no `lastMessageNotificationText`

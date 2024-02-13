@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import useKey from 'react-use/lib/useKey';
 
 import { PubkeyType } from 'libsession_util_nodejs';
@@ -25,10 +25,12 @@ import { SessionUtilUserGroups } from '../../session/utils/libsession/libsession
 import { groupInfoActions } from '../../state/ducks/metaGroups';
 import { useContactsToInviteToGroup } from '../../state/selectors/conversations';
 import { useMemberGroupChangePending } from '../../state/selectors/groups';
+import { useSelectedIsGroupV2 } from '../../state/selectors/selectedConversation';
 import { MemberListItem } from '../MemberListItem';
 import { SessionWrapperModal } from '../SessionWrapperModal';
 import { SessionButton, SessionButtonColor, SessionButtonType } from '../basic/SessionButton';
 import { SessionSpinner } from '../basic/SessionSpinner';
+import { SessionToggle } from '../basic/SessionToggle';
 
 type Props = {
   conversationId: string;
@@ -122,6 +124,8 @@ const InviteContactsDialogInner = (props: Props) => {
   const membersFromRedux = useSortedGroupMembers(conversationId);
   const zombiesFromRedux = useZombies(conversationId);
   const displayName = useConversationUsername(conversationId);
+  const isGroupV2 = useSelectedIsGroupV2();
+  const [shareHistory, setShareHistory] = useState(false);
 
   const { uniqueValues: selectedContacts, addTo, removeFrom } = useSet<string>();
 
@@ -149,9 +153,10 @@ const InviteContactsDialogInner = (props: Props) => {
         void submitForOpenGroup(conversationId, selectedContacts);
       } else {
         if (PubKey.is03Pubkey(conversationId)) {
+          const forcedAsPubkeys = selectedContacts as Array<PubkeyType>;
           const action = groupInfoActions.currentDeviceGroupMembersChange({
-            addMembersWithoutHistory: selectedContacts as Array<PubkeyType>,
-            addMembersWithHistory: [],
+            addMembersWithoutHistory: shareHistory ? [] : forcedAsPubkeys,
+            addMembersWithHistory: shareHistory ? forcedAsPubkeys : [],
             removeMembers: [],
             groupPk: conversationId,
           });
@@ -184,7 +189,12 @@ const InviteContactsDialogInner = (props: Props) => {
   return (
     <SessionWrapperModal title={titleText} onClose={closeDialog}>
       <SpacerLG />
-
+      {isGroupV2 && (
+        <span style={{ display: 'flex', alignItems: 'center' }}>
+          Share History?{'  '}
+          <SessionToggle active={shareHistory} onClick={() => setShareHistory(!shareHistory)} />
+        </span>
+      )}
       <div className="contact-selection-list">
         {hasContacts ? (
           validContactsForInvite.map((member: string) => (
@@ -208,7 +218,6 @@ const InviteContactsDialogInner = (props: Props) => {
       <SpacerLG />
       <SessionSpinner loading={isProcessingUIChange} />
       <SpacerLG />
-
       <div className="session-modal__button-group">
         <SessionButton
           text={okText}

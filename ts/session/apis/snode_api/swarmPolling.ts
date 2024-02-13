@@ -728,17 +728,16 @@ function retrieveItemWithNamespace(
 ): Array<RetrieveMessageItemWithNamespace> {
   return flatten(
     compact(
-      results.map(
-        result =>
-          result.messages.messages?.map(r => {
-            // throws if the result is not expected
-            const parsedItem = retrieveItemSchema.parse(r);
-            return {
-              ...omit(parsedItem, 'timestamp'),
-              namespace: result.namespace,
-              storedAt: parsedItem.timestamp,
-            };
-          })
+      results.map(result =>
+        result.messages.messages?.map(r => {
+          // throws if the result is not expected
+          const parsedItem = retrieveItemSchema.parse(r);
+          return {
+            ...omit(parsedItem, 'timestamp'),
+            namespace: result.namespace,
+            storedAt: parsedItem.timestamp,
+          };
+        })
       )
     )
   );

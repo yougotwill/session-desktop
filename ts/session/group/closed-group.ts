@@ -166,7 +166,11 @@ export async function addUpdateMessage({
   if (diff.type === 'name' && diff.newName) {
     groupUpdate.name = diff.newName;
   } else if (diff.type === 'add' && diff.added) {
-    groupUpdate.joined = diff.added;
+    if (diff.withHistory) {
+      groupUpdate.joinedWithHistory = diff.added;
+    } else {
+      groupUpdate.joined = diff.added;
+    }
   } else if (diff.type === 'left' && diff.left) {
     groupUpdate.left = diff.left;
   } else if (diff.type === 'kicked' && diff.kicked) {

@@ -784,7 +784,7 @@ async function handleMemberAddedFromUI({
   const updateMessagesToPush: Array<GroupUpdateMemberChangeMessage> = [];
   if (withHistory.length) {
     const msgModel = await ClosedGroup.addUpdateMessage({
-      diff: { type: 'add', added: withHistory, withHistory: false },
+      diff: { type: 'add', added: withHistory, withHistory: true },
       ...shared,
     });
     const groupChange = await getWithHistoryControlMessage({
@@ -801,7 +801,7 @@ async function handleMemberAddedFromUI({
   }
   if (withoutHistory.length) {
     const msgModel = await ClosedGroup.addUpdateMessage({
-      diff: { type: 'add', added: withoutHistory, withHistory: true },
+      diff: { type: 'add', added: withoutHistory, withHistory: false },
       ...shared,
     });
     const groupChange = await getWithoutHistoryControlMessage({

@@ -87,9 +87,11 @@ async function encryptOnionV4RequestForPubkey(
 ) {
   const plaintext = encodeV4Request(requestInfo);
 
-  return callUtilsWorker('encryptForPubkey', pubKeyX25519hex, plaintext) as Promise<
-    DestinationContext
-  >;
+  return callUtilsWorker(
+    'encryptForPubkey',
+    pubKeyX25519hex,
+    plaintext
+  ) as Promise<DestinationContext>;
 }
 // Returns the actual ciphertext, symmetric key that will be used
 // for decryption, and an ephemeral_key to send to the next hop
@@ -99,9 +101,11 @@ async function encryptForPubKey(
 ): Promise<DestinationContext> {
   const plaintext = new TextEncoder().encode(JSON.stringify(requestInfo));
 
-  return callUtilsWorker('encryptForPubkey', pubKeyX25519hex, plaintext) as Promise<
-    DestinationContext
-  >;
+  return callUtilsWorker(
+    'encryptForPubkey',
+    pubKeyX25519hex,
+    plaintext
+  ) as Promise<DestinationContext>;
 }
 
 export type DestinationRelayV2 = {

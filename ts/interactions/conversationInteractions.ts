@@ -206,9 +206,7 @@ export const declineConversationWithConfirm = ({
   const okKey: LocalizerKeys = alsoBlock ? 'block' : 'delete';
   const nameToBlock =
     alsoBlock && !!conversationIdOrigin
-      ? ConvoHub.use()
-          .get(conversationIdOrigin)
-          ?.getContactProfileNameOrShortenedPubKey()
+      ? ConvoHub.use().get(conversationIdOrigin)?.getContactProfileNameOrShortenedPubKey()
       : null;
   const messageKey: LocalizerKeys = isGroupV2
     ? alsoBlock && nameToBlock
@@ -621,9 +619,7 @@ export async function uploadOurAvatar(newAvatarDecrypted?: ArrayBuffer) {
   } else {
     // this is a reupload. no need to generate a new profileKey
     const ourConvoProfileKey =
-      ConvoHub.use()
-        .get(UserUtils.getOurPubKeyStrFromCache())
-        ?.getProfileKey() || null;
+      ConvoHub.use().get(UserUtils.getOurPubKeyStrFromCache())?.getProfileKey() || null;
 
     profileKey = ourConvoProfileKey ? fromHexToArray(ourConvoProfileKey) : null;
     if (!profileKey) {

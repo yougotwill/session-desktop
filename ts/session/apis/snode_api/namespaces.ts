@@ -257,6 +257,8 @@ function toRole(namespace: number) {
       return 'groupInfo';
     case SnodeNamespaces.ClosedGroupMembers:
       return 'groupMembers';
+    case SnodeNamespaces.ClosedGroupRevokedRetrievableMessages:
+      return 'groupRevoked';
     default:
       return `${namespace}`;
   }
