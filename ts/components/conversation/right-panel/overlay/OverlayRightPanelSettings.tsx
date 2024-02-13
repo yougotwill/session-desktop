@@ -41,15 +41,13 @@ import { AttachmentTypeWithPath } from '../../../../types/Attachment';
 import { getAbsoluteAttachmentPath } from '../../../../types/MessageAttachment';
 import { Avatar, AvatarSize } from '../../../avatar/Avatar';
 import { Flex } from '../../../basic/Flex';
-import { SpacerMD } from '../../../basic/Text';
+import { SpacerLG, SpacerMD, SpacerXL } from '../../../basic/Text';
 import { PanelButtonGroup, PanelIconButton } from '../../../buttons';
 import { MediaItemType } from '../../../lightbox/LightboxGallery';
 import { MediaGallery } from '../../media-gallery/MediaGallery';
 import { Header, StyledScrollContainer } from './components';
 
-async function getMediaGalleryProps(
-  conversationId: string
-): Promise<{
+async function getMediaGalleryProps(conversationId: string): Promise<{
   documents: Array<MediaItemType>;
   media: Array<MediaItemType>;
 }> {
@@ -258,18 +256,18 @@ export const OverlayRightPanelSettings = () => {
   const leaveGroupString = isPublic
     ? window.i18n('leaveCommunity')
     : lastMessage?.interactionType === ConversationInteractionType.Leave &&
-      lastMessage?.interactionStatus === ConversationInteractionStatus.Error
-    ? window.i18n('deleteConversation')
-    : isKickedFromGroup
-    ? window.i18n('youGotKickedFromGroup')
-    : window.i18n('leaveGroup');
+        lastMessage?.interactionStatus === ConversationInteractionStatus.Error
+      ? window.i18n('deleteConversation')
+      : isKickedFromGroup
+        ? window.i18n('youGotKickedFromGroup')
+        : window.i18n('leaveGroup');
 
   const showUpdateGroupNameButton = isGroup && weAreAdmin && !commonNoShow; // legacy groups non-admin cannot change groupname anymore
   const showAddRemoveModeratorsButton = weAreAdmin && !commonNoShow && isPublic;
   const showUpdateGroupMembersButton = !isPublic && isGroup && !commonNoShow;
 
-  const deleteConvoAction = async () => {
-    await showLeaveGroupByConvoId(selectedConvoKey, selectedUsername);
+  const deleteConvoAction = () => {
+    void showLeaveGroupByConvoId(selectedConvoKey, selectedUsername);
   };
 
   return (
@@ -338,7 +336,7 @@ export const OverlayRightPanelSettings = () => {
             <PanelIconButton
               text={leaveGroupString}
               dataTestId="leave-group-button"
-              disabled={isKickedFromGroup || left}
+              disabled={isKickedFromGroup}
               onClick={() => void deleteConvoAction()}
               color={'var(--danger-color)'}
               iconType={'delete'}

@@ -341,6 +341,7 @@ async function deleteContactsFromDB(contactsToRemove: Array<string>) {
       await ConvoHub.use().delete1o1(contactToRemove, {
         fromSyncMessage: true,
         justHidePrivate: false,
+        keepMessages: false,
       });
     } catch (e) {
       window.log.warn(

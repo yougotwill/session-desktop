@@ -49,7 +49,7 @@ import {
 } from '../../webworker/workers/browser/libsession_worker_interface';
 import { StateType } from '../reducer';
 import { openConversationWithMessages } from './conversations';
-import { resetOverlayMode } from './section';
+import { resetLeftOverlayMode } from './section';
 
 type WithAddWithoutHistoryMembers = { withoutHistory: Array<PubkeyType> };
 type WithAddWithHistoryMembers = { withHistory: Array<PubkeyType> };
@@ -195,7 +195,7 @@ const initNewGroupInWrapper = createAsyncThunk(
       convo.set({ active_at: Date.now() });
       await convo.commit();
       convo.updateLastMessage();
-      dispatch(resetOverlayMode());
+      dispatch(resetLeftOverlayMode());
 
       // Everything is setup for this group, we now need to send the invites to each members,
       // privately and asynchronously, and gracefully handle errors with toasts.

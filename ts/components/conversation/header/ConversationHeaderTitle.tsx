@@ -82,34 +82,6 @@ export const ConversationHeaderTitle = () => {
     return null;
   }, [i18n, isGroup, isKickedFromGroup, isPublic, selectedMembersCount, subscriberCount]);
 
-<<<<<<< HEAD
-  // TODO legacy messages support will be removed in a future release
-  // NOTE If disappearing messages is defined we must show it first
-  const disappearingMessageSubtitle = useMemo(() => {
-    const disappearingMessageSettingText =
-      expirationMode === 'deleteAfterRead'
-        ? window.i18n('disappearingMessagesModeAfterRead')
-        : expirationMode === 'deleteAfterSend'
-          ? window.i18n('disappearingMessagesModeAfterSend')
-          : expirationMode === 'legacy'
-            ? isMe || (isGroup && !isPublic)
-              ? window.i18n('disappearingMessagesModeAfterSend')
-              : window.i18n('disappearingMessagesModeAfterRead')
-            : null;
-
-    const abbreviatedExpireTime = isNumber(expireTimer)
-      ? TimerOptions.getAbbreviated(expireTimer)
-      : null;
-
-    return expireTimer && disappearingMessageSettingText
-      ? `${disappearingMessageSettingText}${
-          abbreviatedExpireTime ? ` - ${abbreviatedExpireTime}` : ''
-        }`
-      : null;
-  }, [expirationMode, expireTimer, isGroup, isMe, isPublic]);
-
-=======
->>>>>>> unstable
   const handleRightPanelToggle = () => {
     if (isRightPanelOn) {
       dispatch(closeRightPanel());
