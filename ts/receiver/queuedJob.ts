@@ -16,7 +16,7 @@ import { PubKey } from '../session/types';
 import { UserUtils } from '../session/utils';
 import { PropsForMessageWithoutConvoProps, lookupQuote } from '../state/ducks/conversations';
 import { showMessageRequestBannerOutsideRedux } from '../state/ducks/userConfig';
-import { getMemberInvitePendingOutsideRedux } from '../state/selectors/groups';
+import { getMemberInviteSentOutsideRedux } from '../state/selectors/groups';
 import { getHideMessageRequestBannerOutsideRedux } from '../state/selectors/userConfig';
 import { GoogleChrome } from '../util';
 import { LinkPreviews } from '../util/linkPreviews';
@@ -262,8 +262,8 @@ async function handleMessageFromPendingMember(
     return;
   }
 
-  const isMemberInvitePending = getMemberInvitePendingOutsideRedux(source, convoId);
-  if (!isMemberInvitePending) {
+  const isMemberInviteSent = getMemberInviteSentOutsideRedux(source, convoId);
+  if (!isMemberInviteSent) {
     return; // nothing else to do
   }
   // we are an admin and we received a message from a member whose invite is `pending`. Update that member state now and push a change.

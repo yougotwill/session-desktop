@@ -31,7 +31,7 @@ window.sessionFeatureFlags = {
   useOnionRequests: true,
   useTestNet: isTestNet(),
   integrationTestEnv: isTestIntegration(),
-  useClosedGroupV3: true, // TODO DO NOT MERGE Remove after QA
+  useClosedGroupV2: true, // TODO DO NOT MERGE Remove after QA debugger
   debug: {
     debugLogging: !_.isEmpty(process.env.SESSION_DEBUG),
     debugLibsessionDumps: !_.isEmpty(process.env.SESSION_DEBUG_LIBSESSION_DUMPS),

@@ -9,9 +9,11 @@ import { GroupInvite } from '../session/utils/job_runners/jobs/GroupInviteJob';
 import { GroupPromote } from '../session/utils/job_runners/jobs/GroupPromoteJob';
 import {
   useMemberInviteFailed,
-  useMemberInvitePending,
+  useMemberInviteSending,
+  useMemberInviteSent,
+  useMemberPromoteSending,
   useMemberPromotionFailed,
-  useMemberPromotionPending,
+  useMemberPromotionSent,
 } from '../state/selectors/groups';
 import { Avatar, AvatarSize, CrownIcon } from './avatar/Avatar';
 import { Flex } from './basic/Flex';
@@ -129,24 +131,32 @@ const StyledGroupStatusText = styled.span<{ isFailure: boolean }>`
   color: ${props => (props.isFailure ? 'var(--danger-color)' : 'var(--text-secondary-color)')};
   font-size: var(--font-size-xs);
   margin-top: var(--margins-xs);
+  min-width: 100px; // min-width so that the dialog does not resize when the status change to sending
+  text-align: left;
 `;
 
 const GroupStatusText = ({ groupPk, pubkey }: { pubkey: PubkeyType; groupPk: GroupPubkeyType }) => {
   const groupInviteFailed = useMemberInviteFailed(pubkey, groupPk);
   const groupPromotionFailed = useMemberPromotionFailed(pubkey, groupPk);
+  const groupPromotionSending = useMemberPromoteSending(groupPk, pubkey);
 
-  const groupInvitePending = useMemberInvitePending(pubkey, groupPk);
-  const groupPromotionPending = useMemberPromotionPending(pubkey, groupPk);
+  const groupInviteSent = useMemberInviteSent(pubkey, groupPk);
+  const groupPromotionSent = useMemberPromotionSent(pubkey, groupPk);
+  const groupInviteSending = useMemberInviteSending(groupPk, pubkey);
 
   const statusText = groupPromotionFailed
     ? window.i18n('promotionFailed')
     : groupInviteFailed
       ? window.i18n('inviteFailed')
-      : groupInvitePending
-        ? window.i18n('invitePending')
-        : groupPromotionPending
-          ? window.i18n('promotionPending')
-          : null;
+      : groupInviteSending
+        ? window.i18n('inviteSending')
+        : groupPromotionSending
+          ? window.i18n('promotionSending')
+          : groupInviteSent
+            ? window.i18n('inviteSent')
+            : groupPromotionSent
+              ? window.i18n('promotionSent')
+              : null;
 
   if (!statusText) {
     return null;
@@ -208,7 +218,7 @@ const ResendPromoteButton = ({
       buttonShape={SessionButtonShape.Square}
       buttonType={SessionButtonType.Solid}
       buttonColor={SessionButtonColor.Danger}
-      text="ReSEND PRomote"
+      text="PrOmOtE"
       onClick={() => {
         void GroupPromote.addJob({ groupPk, member: pubkey });
       }}

@@ -99,7 +99,7 @@ async function checkIsUserConfigFeatureReleased() {
 async function checkIsDisappearMessageV2FeatureReleased() {
   return true;
   //   ((await checkIsFeatureReleased('disappearing_messages')) ||
-  //   !!process.env.MULTI?.toLocaleLowerCase().includes('disappear_v2') // FIXME to remove after QA
+  //   !!process.env.MULTI?.toLocaleLowerCase().includes('disappear_v2') // FIXME to remove after QA debugger
   // );
 }
 

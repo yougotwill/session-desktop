@@ -1,5 +1,5 @@
 /* eslint-disable no-await-in-loop */
-import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
+import { createAsyncThunk, createSlice, PayloadAction } from '@reduxjs/toolkit';
 import {
   GroupInfoGet,
   GroupMemberGet,
@@ -8,6 +8,7 @@ import {
   Uint8ArrayLen64,
   UserGroupsGet,
   WithGroupPubkey,
+  WithPubkey,
 } from 'libsession_util_nodejs';
 import { base64_variants, from_base64 } from 'libsodium-wrappers-sumo';
 import { intersection, isEmpty, uniq } from 'lodash';
@@ -31,13 +32,13 @@ import { GroupUpdateMemberChangeMessage } from '../../session/messages/outgoing/
 import { GroupUpdateDeleteMessage } from '../../session/messages/outgoing/controlMessage/group_v2/to_user/GroupUpdateDeleteMessage';
 import { PubKey } from '../../session/types';
 import { UserUtils } from '../../session/utils';
-import { getUserED25519KeyPairBytes } from '../../session/utils/User';
 import { PreConditionFailed } from '../../session/utils/errors';
-import { RunJobResult } from '../../session/utils/job_runners/PersistedJob';
 import { GroupInvite } from '../../session/utils/job_runners/jobs/GroupInviteJob';
 import { GroupSync } from '../../session/utils/job_runners/jobs/GroupSyncJob';
 import { UserSync } from '../../session/utils/job_runners/jobs/UserSyncJob';
+import { RunJobResult } from '../../session/utils/job_runners/PersistedJob';
 import { LibSessionUtil } from '../../session/utils/libsession/libsession_utils';
+import { getUserED25519KeyPairBytes } from '../../session/utils/User';
 import { stringify, toFixedUint8ArrayOfLength } from '../../types/sqlSharedTypes';
 import {
   getGroupPubkeyFromWrapperType,
@@ -62,6 +63,8 @@ export type GroupState = {
   creationFromUIPending: boolean;
   memberChangesFromUIPending: boolean;
   nameChangesFromUIPending: boolean;
+  membersInviteSending: Record<GroupPubkeyType, Array<PubkeyType>>;
+  membersPromoteSending: Record<GroupPubkeyType, Array<PubkeyType>>;
 };
 
 export const initialGroupState: GroupState = {
@@ -70,6 +73,8 @@ export const initialGroupState: GroupState = {
   creationFromUIPending: false,
   memberChangesFromUIPending: false,
   nameChangesFromUIPending: false,
+  membersInviteSending: {},
+  membersPromoteSending: {},
 };
 
 type GroupDetailsUpdate = {
@@ -1186,13 +1191,64 @@ const currentDeviceGroupNameChange = createAsyncThunk(
   }
 );
 
+function deleteGroupPkEntriesFromState(state: GroupState, groupPk: GroupPubkeyType) {
+  delete state.infos[groupPk];
+  delete state.members[groupPk];
+  delete state.membersInviteSending[groupPk];
+  delete state.membersPromoteSending[groupPk];
+}
+
+function applySendingStateChange({
+  groupPk,
+  pubkey,
+  sending,
+  state,
+  changeType,
+}: WithGroupPubkey &
+  WithPubkey & { sending: boolean; changeType: 'invite' | 'promote'; state: GroupState }) {
+  if (changeType === 'invite' && !state.membersInviteSending[groupPk]) {
+    state.membersInviteSending[groupPk] = [];
+  } else if (changeType === 'promote' && !state.membersPromoteSending[groupPk]) {
+    state.membersPromoteSending[groupPk] = [];
+  }
+  const arrRef =
+    changeType === 'invite'
+      ? state.membersInviteSending[groupPk]
+      : state.membersPromoteSending[groupPk];
+
+  const foundAt = arrRef.findIndex(p => p === pubkey);
+
+  if (sending && foundAt === -1) {
+    arrRef.push(pubkey);
+    return state;
+  }
+  if (!sending && foundAt >= 0) {
+    arrRef.splice(foundAt, 1);
+  }
+  return state;
+}
+
 /**
  * This slice is the one holding the default joinable rooms fetched once in a while from the default opengroup v2 server.
  */
 const metaGroupSlice = createSlice({
   name: 'metaGroup',
   initialState: initialGroupState,
-  reducers: {},
+  reducers: {
+    setInvitePending(
+      state: GroupState,
+      { payload }: PayloadAction<{ sending: boolean } & WithGroupPubkey & WithPubkey>
+    ) {
+      return applySendingStateChange({ changeType: 'invite', ...payload, state });
+    },
+
+    setPromotionPending(
+      state: GroupState,
+      { payload }: PayloadAction<{ pubkey: PubkeyType; groupPk: GroupPubkeyType; sending: boolean }>
+    ) {
+      return applySendingStateChange({ changeType: 'promote', ...payload, state });
+    },
+  },
   extraReducers: builder => {
     builder.addCase(initNewGroupInWrapper.fulfilled, (state, action) => {
       const { groupPk, infos, members } = action.payload;
@@ -1238,8 +1294,7 @@ const metaGroupSlice = createSlice({
           `refreshGroupDetailsFromWrapper no details found, removing from slice: ${groupPk}}`
         );
 
-        delete state.infos[groupPk];
-        delete state.members[groupPk];
+        deleteGroupPkEntriesFromState(state, groupPk);
       }
       return state;
     });
@@ -1249,8 +1304,7 @@ const metaGroupSlice = createSlice({
     builder.addCase(destroyGroupDetails.fulfilled, (state, action) => {
       const { groupPk } = action.payload;
       // FIXME destroyGroupDetails marks the info as destroyed, but does not really remove the wrapper currently
-      delete state.infos[groupPk];
-      delete state.members[groupPk];
+      deleteGroupPkEntriesFromState(state, groupPk);
     });
     builder.addCase(destroyGroupDetails.rejected, (_state, action) => {
       window.log.error('a destroyGroupDetails was rejected', action.error);
@@ -1268,8 +1322,7 @@ const metaGroupSlice = createSlice({
           `handleUserGroupUpdate no details found, removing from slice: ${groupPk}}`
         );
 
-        delete state.infos[groupPk];
-        delete state.members[groupPk];
+        deleteGroupPkEntriesFromState(state, groupPk);
       }
     });
     builder.addCase(handleUserGroupUpdate.rejected, (_state, action) => {
@@ -1363,6 +1416,7 @@ export const groupInfoActions = {
   inviteResponseReceived,
   handleMemberLeftMessage,
   currentDeviceGroupNameChange,
+
   ...metaGroupSlice.actions,
 };
 export const groupReducer = metaGroupSlice.reducer;

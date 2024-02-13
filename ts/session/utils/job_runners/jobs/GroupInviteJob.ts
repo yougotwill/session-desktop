@@ -2,6 +2,7 @@ import { GroupPubkeyType, PubkeyType } from 'libsession_util_nodejs';
 import { debounce, difference, isNumber } from 'lodash';
 import { v4 } from 'uuid';
 import { ToastUtils, UserUtils } from '../..';
+import { groupInfoActions } from '../../../../state/ducks/metaGroups';
 import {
   MetaGroupWrapperActions,
   UserGroupsWrapperActions,
@@ -51,6 +52,9 @@ async function addJob({ groupPk, member }: JobExtraArgs) {
     });
     window.log.debug(`addGroupInviteJob: adding group invite for ${groupPk}:${member} `);
     await runners.groupInviteJobRunner.addJob(groupInviteJob);
+    window?.inboxStore?.dispatch(
+      groupInfoActions.setInvitePending({ groupPk, pubkey: member, sending: true })
+    );
   }
 }
 
@@ -151,6 +155,10 @@ class GroupInviteJob extends PersistedJob<GroupInvitePersistedData> {
         failed = false;
       }
     } finally {
+      window?.inboxStore?.dispatch(
+        groupInfoActions.setInvitePending({ groupPk, pubkey: member, sending: false })
+      );
+
       updateFailedStateForMember(groupPk, member, failed);
       try {
         await MetaGroupWrapperActions.memberSetInvited(groupPk, member, failed);

@@ -5,6 +5,8 @@ import { GroupState } from '../ducks/metaGroups';
 import { StateType } from '../reducer';
 
 const getLibGroupsState = (state: StateType): GroupState => state.groups;
+const getInviteSendingState = (state: StateType) => getLibGroupsState(state).membersInviteSending;
+const getPromoteSendingState = (state: StateType) => getLibGroupsState(state).membersPromoteSending;
 
 function getMembersOfGroup(state: StateType, convo?: string): Array<GroupMemberGet> {
   if (!convo) {
@@ -47,8 +49,9 @@ function getMemberInviteFailed(state: StateType, pubkey: PubkeyType, convo?: Gro
   return findMemberInMembers(members, pubkey)?.inviteFailed || false;
 }
 
-function getMemberInvitePending(state: StateType, pubkey: PubkeyType, convo?: GroupPubkeyType) {
+function getMemberInviteSent(state: StateType, pubkey: PubkeyType, convo?: GroupPubkeyType) {
   const members = getMembersOfGroup(state, convo);
+
   return findMemberInMembers(members, pubkey)?.invitePending || false;
 }
 
@@ -62,7 +65,7 @@ function getMemberPromotionFailed(state: StateType, pubkey: PubkeyType, convo?: 
   return findMemberInMembers(members, pubkey)?.promotionFailed || false;
 }
 
-function getMemberPromotionPending(state: StateType, pubkey: PubkeyType, convo?: GroupPubkeyType) {
+function getMemberPromotionSent(state: StateType, pubkey: PubkeyType, convo?: GroupPubkeyType) {
   const members = getMembersOfGroup(state, convo);
   return findMemberInMembers(members, pubkey)?.promotionPending || false;
 }
@@ -110,12 +113,12 @@ export function getLibGroupAdminsOutsideRedux(convoId: string): Array<string> {
   return state ? getLibAdminsPubkeys(state, convoId) : [];
 }
 
-export function getMemberInvitePendingOutsideRedux(
+export function getMemberInviteSentOutsideRedux(
   member: PubkeyType,
   convoId: GroupPubkeyType
 ): boolean {
   const state = window.inboxStore?.getState();
-  return state ? getMemberInvitePending(state, member, convoId) : false;
+  return state ? getMemberInviteSent(state, member, convoId) : false;
 }
 
 export function useIsCreatingGroupFromUIPending() {
@@ -126,9 +129,10 @@ export function useMemberInviteFailed(member: PubkeyType, groupPk: GroupPubkeyTy
   return useSelector((state: StateType) => getMemberInviteFailed(state, member, groupPk));
 }
 
-export function useMemberInvitePending(member: PubkeyType, groupPk: GroupPubkeyType) {
-  return useSelector((state: StateType) => getMemberInvitePending(state, member, groupPk));
+export function useMemberInviteSent(member: PubkeyType, groupPk: GroupPubkeyType) {
+  return useSelector((state: StateType) => getMemberInviteSent(state, member, groupPk));
 }
+
 export function useMemberIsPromoted(member: PubkeyType, groupPk: GroupPubkeyType) {
   return useSelector((state: StateType) => getMemberIsPromoted(state, member, groupPk));
 }
@@ -137,10 +141,32 @@ export function useMemberPromotionFailed(member: PubkeyType, groupPk: GroupPubke
   return useSelector((state: StateType) => getMemberPromotionFailed(state, member, groupPk));
 }
 
-export function useMemberPromotionPending(member: PubkeyType, groupPk: GroupPubkeyType) {
-  return useSelector((state: StateType) => getMemberPromotionPending(state, member, groupPk));
+export function useMemberPromotionSent(member: PubkeyType, groupPk: GroupPubkeyType) {
+  return useSelector((state: StateType) => getMemberPromotionSent(state, member, groupPk));
 }
 
 export function useMemberGroupChangePending() {
   return useSelector(getIsMemberGroupChangePendingFromUI);
+}
+
+/**
+ * The selectors above are all deriving data from libsession.
+ * There is also some data that we only need in memory, not part of libsession (and so unsaved).
+ * An example is the "sending invite" or "sending promote" state of a member in a group.
+ */
+
+function useMembersInviteSending(groupPk: GroupPubkeyType) {
+  return useSelector((state: StateType) => getInviteSendingState(state)[groupPk] || []);
+}
+
+export function useMemberInviteSending(groupPk: GroupPubkeyType, memberPk: PubkeyType) {
+  return useMembersInviteSending(groupPk).includes(memberPk);
+}
+
+function useMembersPromoteSending(groupPk: GroupPubkeyType) {
+  return useSelector((state: StateType) => getPromoteSendingState(state)[groupPk] || []);
+}
+
+export function useMemberPromoteSending(groupPk: GroupPubkeyType, memberPk: PubkeyType) {
+  return useMembersPromoteSending(groupPk).includes(memberPk);
 }

@@ -2,6 +2,7 @@ import { GroupPubkeyType, PubkeyType } from 'libsession_util_nodejs';
 import { isNumber } from 'lodash';
 import { v4 } from 'uuid';
 import { UserUtils } from '../..';
+import { groupInfoActions } from '../../../../state/ducks/metaGroups';
 import {
   MetaGroupWrapperActions,
   UserGroupsWrapperActions,
@@ -43,6 +44,9 @@ async function addJob({ groupPk, member }: JobExtraArgs) {
     });
     window.log.debug(`addGroupPromoteJob: adding group promote for ${groupPk}:${member} `);
     await runners.groupPromoteJobRunner.addJob(groupPromoteJob);
+    window?.inboxStore?.dispatch(
+      groupInfoActions.setPromotionPending({ groupPk, pubkey: member, sending: true })
+    );
   }
 }
 
@@ -109,6 +113,9 @@ class GroupPromoteJob extends PersistedJob<GroupPromotePersistedData> {
         failed = false;
       }
     } finally {
+      window?.inboxStore?.dispatch(
+        groupInfoActions.setPromotionPending({ groupPk, pubkey: member, sending: false })
+      );
       try {
         await MetaGroupWrapperActions.memberSetPromoted(groupPk, member, failed);
       } catch (e) {

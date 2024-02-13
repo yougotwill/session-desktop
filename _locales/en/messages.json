@@ -306,9 +306,11 @@
   "groupOthersPromoted": "<b>$name$</b> and <b>$count$ others</b> were promoted to Admin.",
 
   "inviteFailed": "Invite Failed",
-  "invitePending": "Invite Pending",
+  "inviteSent": "Invite Sent",
+  "inviteSending": "Sending Invite",
   "promotionFailed": "Promotion Failed",
-  "promotionPending": "Promotion Pending",
+  "promotionSent": "Promotion Sent",
+  "promotionSending": "Sending Promotion",
   "groupInviteFailedOne": "Failed to invite <b>$name$</b> to <b>$groupname$</b>",
   "groupInviteFailedTwo": "Failed to invite <b>$first$</b> and <b>$second$</b> to <b>$groupname$</b>",
   "groupInviteFailedOthers": "Failed to invite <b>$first$</b> and <b>$count$ others</b> to <b>$groupname$</b>",
