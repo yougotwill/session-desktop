@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import useKey from 'react-use/lib/useKey';
 
 import { PubkeyType } from 'libsession_util_nodejs';
-import _ from 'lodash';
+import _, { difference, uniq } from 'lodash';
 import { useDispatch } from 'react-redux';
 import { ConversationTypeEnum } from '../../models/conversationAttributes';
 import { VALIDATION } from '../../session/constants';
@@ -114,15 +114,14 @@ const InviteContactsDialogInner = (props: Props) => {
   const { conversationId } = props;
   const dispatch = useDispatch();
 
-  const privateContactPubkeys = useContactsToInviteToGroup();
-  let validContactsForInvite = _.clone(privateContactPubkeys) as Array<PubkeyType>;
+  const privateContactPubkeys = useContactsToInviteToGroup() as Array<PubkeyType>;
 
   const isProcessingUIChange = useMemberGroupChangePending();
 
   const isPrivate = useIsPrivate(conversationId);
   const isPublic = useIsPublic(conversationId);
-  const membersFromRedux = useSortedGroupMembers(conversationId);
-  const zombiesFromRedux = useZombies(conversationId);
+  const membersFromRedux = useSortedGroupMembers(conversationId) || [];
+  const zombiesFromRedux = useZombies(conversationId) || [];
   const displayName = useConversationUsername(conversationId);
   const isGroupV2 = useSelectedIsGroupV2();
   const [shareHistory, setShareHistory] = useState(false);
@@ -132,14 +131,12 @@ const InviteContactsDialogInner = (props: Props) => {
   if (isPrivate) {
     throw new Error('InviteContactsDialogInner must be a group');
   }
-  if (!isPublic) {
-    // filter our zombies and current members from the list of contact we can add
-    const members = membersFromRedux || [];
-    const zombies = zombiesFromRedux || [];
-    validContactsForInvite = validContactsForInvite.filter(
-      d => !members.includes(d) && !zombies.includes(d)
-    );
-  }
+  const zombiesAndMembers = uniq([...membersFromRedux, ...zombiesFromRedux]);
+  // filter our zombies and current members from the list of contact we can add
+
+  const validContactsForInvite = isPublic
+    ? privateContactPubkeys
+    : difference(privateContactPubkeys, zombiesAndMembers);
 
   const chatName = displayName || window.i18n('unknown');
 

@@ -152,7 +152,11 @@ export async function declineConversationWithoutConfirm({
   // Note: do not set the active_at undefined as this would make that conversation not synced with the libsession wrapper
   await conversationToDecline.setIsApproved(false, false);
   await conversationToDecline.setDidApproveMe(false, false);
-  await conversationToDecline.setOriginConversationID('', false);
+
+  if (conversationToDecline.isClosedGroupV2()) {
+    // this can only be done for groupv2 convos
+    await conversationToDecline.setOriginConversationID('', false);
+  }
   // this will update the value in the wrapper if needed but not remove the entry if we want it gone. The remove is done below with removeContactFromWrapper
   await conversationToDecline.commit();
   if (alsoBlock) {

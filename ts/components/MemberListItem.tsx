@@ -199,7 +199,7 @@ const ResendInviteButton = ({
       buttonType={SessionButtonType.Solid}
       text={window.i18n('resend')}
       onClick={() => {
-        void GroupInvite.addJob({ groupPk, member: pubkey });
+        void GroupInvite.addJob({ groupPk, member: pubkey }); // TODO audric: do we need to take care if that user was invited withHistory or not
       }}
     />
   );

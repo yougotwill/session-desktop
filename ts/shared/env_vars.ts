@@ -8,9 +8,15 @@ function envAppInstanceIncludes(prefix: string) {
 export function isDevProd() {
   return envAppInstanceIncludes('devprod');
 }
+
+export function isAutoLogin() {
+  return !!process.env.SESSION_AUTO_REGISTER;
+}
+
 export function isTestNet() {
   return envAppInstanceIncludes('testnet');
 }
+
 export function isTestIntegration() {
   return envAppInstanceIncludes('test-integration');
 }
