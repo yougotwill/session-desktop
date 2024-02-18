@@ -88,6 +88,9 @@ export const OverlayMessageRequest = () => {
 
           await forceSyncConfigurationNowIfNeeded();
         },
+        onClickClose: () => {
+          window.inboxStore?.dispatch(updateConfirmModal(null));
+        },
       })
     );
   }

@@ -900,7 +900,6 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     const isRemoteChange = Boolean((sentAt || fromSync || fromConfigMessage) && !fromCurrentDevice);
 
     // we don't add an update message when this comes from a config message, as we already have the SyncedMessage itself with the right timestamp to display
-    const shouldAddExpireUpdateMessage = !fromConfigMessage;
 
     if (this.isPublic()) {
       throw new Error("updateExpireTimer() Disappearing messages aren't supported in communities");
@@ -913,6 +912,15 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       expirationMode = 'off';
       expireTimer = 0;
     }
+    const shouldAddExpireUpdateMessage =
+      (this.isPrivate() && !fromConfigMessage) ||
+      (this.isClosedGroup() &&
+        !PubKey.is03Pubkey(this.id) &&
+        !fromConfigMessage &&
+        expirationMode !== this.get('expirationMode') &&
+        expireTimer !== this.get('expireTimer') &&
+        expirationMode !== 'off' &&
+        expireTimer !== 0);
 
     // When we add a disappearing messages notification to the conversation, we want it
     // to be above the message that initiated that change, hence the subtraction.

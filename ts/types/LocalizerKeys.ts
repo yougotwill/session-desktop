@@ -333,6 +333,7 @@ export type LocalizerKeys =
   | 'messageRequestAcceptedOursNoName'
   | 'messageRequestPending'
   | 'messageRequests'
+  | 'messageWillDisappear'
   | 'messagesHeader'
   | 'moreInformation'
   | 'multipleJoinedTheGroup'
