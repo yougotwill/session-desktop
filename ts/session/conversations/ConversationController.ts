@@ -224,15 +224,14 @@ class ConvoController {
       await leaveClosedGroup(groupId, fromSyncMessage);
       window.log.info(`deleteClosedGroup: ${groupId}, sendLeaveMessage?:${sendLeaveMessage}`);
     }
-
-    // if we were kicked or sent our left message, we have nothing to do more with that group.
-    // Just delete everything related to it, not trying to add update message or send a left message.
-    await this.removeGroupOrCommunityFromDBAndRedux(groupId);
     if (PubKey.is03Pubkey(groupId)) {
       await remove03GroupFromWrappers(groupId);
     } else {
       await removeLegacyGroupFromWrappers(groupId);
     }
+    // if we were kicked or sent our left message, we have nothing to do more with that group.
+    // Just delete everything related to it, not trying to add update message or send a left message.
+    await this.removeGroupOrCommunityFromDBAndRedux(groupId);
 
     if (!fromSyncMessage) {
       await UserSync.queueNewJobIfNeeded();
@@ -456,6 +455,7 @@ class ConvoController {
 
 /**
  * You most likely don't want to call this function directly, but instead use the deleteLegacyGroup() from the ConversationController as it will take care of more cleaningup.
+ * This throws if a leaveMessage needs to be sent, but fails to be sent.
  *
  * Note: `fromSyncMessage` is used to know if we need to send a leave group message to the group first.
  * So if the user made the action on this device, fromSyncMessage should be false, but if it happened from a linked device polled update, set this to true.
@@ -512,20 +512,17 @@ async function leaveClosedGroup(groupPk: PubkeyType | GroupPubkeyType, fromSyncM
 
     // We might not be able to send our leaving messages (no encryption keypair, we were already removed, no network, etc).
     // If that happens, we should just remove everything from our current user.
-    try {
-      const wasSent = await getMessageQueue().sendToGroupV2NonDurably({
-        message: ourLeavingMessage,
-      });
-      if (!wasSent) {
-        throw new Error(
-          `Even with the retries, leaving message for group ${ed25519Str(
-            groupPk
-          )} failed to be sent... Still deleting everything`
-        );
-      }
-    } catch (e) {
-      window.log.warn('leaving groupv2 error:', e.message);
+    const wasSent = await getMessageQueue().sendToGroupV2NonDurably({
+      message: ourLeavingMessage,
+    });
+    if (!wasSent) {
+      throw new Error(
+        `Even with the retries, leaving message for group ${ed25519Str(
+          groupPk
+        )} failed to be sent...`
+      );
     }
+
     // the rest of the cleaning of that conversation is done in the `deleteClosedGroup()`
 
     return;
@@ -579,12 +576,7 @@ async function removeLegacyGroupFromWrappers(groupId: string) {
 }
 
 async function remove03GroupFromWrappers(groupPk: GroupPubkeyType) {
-  getSwarmPollingInstance().removePubkey(groupPk, 'remove03GroupFromWrappers');
-
-  await UserGroupsWrapperActions.eraseGroup(groupPk);
-  await SessionUtilConvoInfoVolatile.removeGroupFromWrapper(groupPk);
   window?.inboxStore?.dispatch(groupInfoActions.destroyGroupDetails({ groupPk }));
-  window.log.info(`removed 03 from metagroup wrapper ${ed25519Str(groupPk)}`);
 }
 
 async function removeCommunityFromWrappers(conversationId: string) {

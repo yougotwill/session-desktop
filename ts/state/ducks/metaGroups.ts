@@ -30,6 +30,7 @@ import { ClosedGroup } from '../../session/group/closed-group';
 import { GroupUpdateInfoChangeMessage } from '../../session/messages/outgoing/controlMessage/group_v2/to_group/GroupUpdateInfoChangeMessage';
 import { GroupUpdateMemberChangeMessage } from '../../session/messages/outgoing/controlMessage/group_v2/to_group/GroupUpdateMemberChangeMessage';
 import { GroupUpdateDeleteMessage } from '../../session/messages/outgoing/controlMessage/group_v2/to_user/GroupUpdateDeleteMessage';
+import { ed25519Str } from '../../session/onions/onionPath';
 import { PubKey } from '../../session/types';
 import { UserUtils } from '../../session/utils';
 import { PreConditionFailed } from '../../session/utils/errors';
@@ -38,6 +39,7 @@ import { GroupSync } from '../../session/utils/job_runners/jobs/GroupSyncJob';
 import { UserSync } from '../../session/utils/job_runners/jobs/UserSyncJob';
 import { RunJobResult } from '../../session/utils/job_runners/PersistedJob';
 import { LibSessionUtil } from '../../session/utils/libsession/libsession_utils';
+import { SessionUtilConvoInfoVolatile } from '../../session/utils/libsession/libsession_utils_convo_info_volatile';
 import { getUserED25519KeyPairBytes } from '../../session/utils/User';
 import { stringify, toFixedUint8ArrayOfLength } from '../../types/sqlSharedTypes';
 import {
@@ -382,14 +384,36 @@ const refreshGroupDetailsFromWrapper = createAsyncThunk(
 const destroyGroupDetails = createAsyncThunk(
   'group/destroyGroupDetails',
   async ({ groupPk }: { groupPk: GroupPubkeyType }) => {
-    try {
-      await UserGroupsWrapperActions.eraseGroup(groupPk);
-      await ConfigDumpData.deleteDumpFor(groupPk);
+    debugger;
+    const us = UserUtils.getOurPubKeyStrFromCache();
+    const weAreAdmin = await checkWeAreAdmin(groupPk);
+    const allMembers = await MetaGroupWrapperActions.memberGetAll(groupPk);
+    const otherAdminsCount = allMembers
+      .filter(m => m.admin || m.promoted)
+      .filter(m => m.pubkeyHex !== us).length;
+
+    // we are the last admin promoted
+    if (weAreAdmin && otherAdminsCount === 0) {
+      // this marks the group info as deleted. We need to push those details
       await MetaGroupWrapperActions.infoDestroy(groupPk);
-      getSwarmPollingInstance().removePubkey(groupPk, 'destroyGroupDetails');
-    } catch (e) {
-      window.log.warn(`destroyGroupDetails for ${groupPk} failed with ${e.message}`);
+      const lastPushResult = await GroupSync.pushChangesToGroupSwarmIfNeeded({
+        groupPk,
+        revokeSubRequest: null,
+        unrevokeSubRequest: null,
+        supplementKeys: [],
+      });
+      if (lastPushResult !== RunJobResult.Success) {
+        throw new Error(`Failed to destroyGroupDetails for pk ${ed25519Str(groupPk)}`);
+      }
     }
+
+    // this deletes the secretKey if we had it. If we need it for something, it has to be done before this call.
+    await UserGroupsWrapperActions.eraseGroup(groupPk);
+    await SessionUtilConvoInfoVolatile.removeGroupFromWrapper(groupPk);
+    await ConfigDumpData.deleteDumpFor(groupPk);
+
+    getSwarmPollingInstance().removePubkey(groupPk, 'destroyGroupDetails');
+
     return { groupPk };
   }
 );
@@ -1073,11 +1097,13 @@ const handleMemberLeftMessage = createAsyncThunk(
       );
     }
 
-    await handleMemberRemovedFromUI({
-      groupPk,
-      removeMembers: [memberLeft],
-      fromMemberLeftMessage: true,
-    });
+    if (await checkWeAreAdmin(groupPk)) {
+      await handleMemberRemovedFromUI({
+        groupPk,
+        removeMembers: [memberLeft],
+        fromMemberLeftMessage: true,
+      });
+    }
 
     return {
       groupPk,
@@ -1303,7 +1329,7 @@ const metaGroupSlice = createSlice({
     });
     builder.addCase(destroyGroupDetails.fulfilled, (state, action) => {
       const { groupPk } = action.payload;
-      // FIXME destroyGroupDetails marks the info as destroyed, but does not really remove the wrapper currently
+      window.log.info(`removed 03 from metagroup wrapper ${ed25519Str(groupPk)}`);
       deleteGroupPkEntriesFromState(state, groupPk);
     });
     builder.addCase(destroyGroupDetails.rejected, (_state, action) => {

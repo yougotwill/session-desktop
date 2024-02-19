@@ -397,9 +397,9 @@ export async function showLeaveGroupByConvoId(conversationId: string, name: stri
 
   const isClosedGroup = conversation.isClosedGroup() || false;
   const isPublic = conversation.isPublic() || false;
-  const admins = conversation.get('groupAdmins') || [];
+  const admins = conversation.getGroupAdmins();
   const isAdmin = admins.includes(UserUtils.getOurPubKeyStrFromCache());
-  const showOnlyGroupAdminWarning = isClosedGroup && isAdmin && admins.length === 1;
+  const showOnlyGroupAdminWarning = isClosedGroup && isAdmin;
   const lastMessageInteractionType = conversation.get('lastMessageInteractionType');
   const lastMessageInteractionStatus = conversation.get('lastMessageInteractionStatus');
 
@@ -432,7 +432,9 @@ export async function showLeaveGroupByConvoId(conversationId: string, name: stri
     window?.inboxStore?.dispatch(
       updateConfirmModal({
         title: window.i18n('leaveGroup'),
-        message: window.i18n('leaveGroupConrirmationOnlyAdminLegacy', name ? [name] : ['']),
+        message: window.i18n('leaveGroupConfirmationOnlyAdminLegacy', [
+          name || window.i18n('unknown'),
+        ]),
         onClickOk,
         okText: window.i18n('leave'),
         okTheme: SessionButtonColor.Danger,
@@ -440,7 +442,7 @@ export async function showLeaveGroupByConvoId(conversationId: string, name: stri
         conversationId,
       })
     );
-    // TODO Only to be used after the closed group rebuild
+    // TODO AUDRIC this is chunk3 stuff: Only to be used after the closed group rebuild chunk3
     // const onClickOkLastAdmin = () => {
     //   /* TODO */
     // };

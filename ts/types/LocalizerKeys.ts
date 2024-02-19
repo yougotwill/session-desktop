@@ -291,7 +291,7 @@ export type LocalizerKeys =
   | 'leaveGroupConfirmationAdmin'
   | 'leaveGroupConfirmationOnlyAdmin'
   | 'leaveGroupConfirmationOnlyAdminWarning'
-  | 'leaveGroupConrirmationOnlyAdminLegacy'
+  | 'leaveGroupConfirmationOnlyAdminLegacy'
   | 'leaveGroupFailed'
   | 'leaveGroupFailedPleaseTryAgain'
   | 'leaving'

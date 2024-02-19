@@ -342,7 +342,7 @@
   "leaveAndRemoveForEveryone": "Leave Group and Remove for Everyone",
   "leaveGroupConfirmation": "Are you sure you want to leave <b>$name$</b>?",
   "leaveGroupConfirmationAdmin": "As you are the admin of this group, if you leave it it will be removed for every current members. Are you sure you want to leave this group?",
-  "leaveGroupConrirmationOnlyAdminLegacy": "Because you are the creator of this group it will be deleted for everyone. This cannot be undone.",
+  "leaveGroupConfirmationOnlyAdminLegacy": "Because you are the creator of this group it will be deleted for everyone. This cannot be undone.",
   "leaveGroupConfirmationOnlyAdmin": "You are the only admin in <b>$name$</b>",
   "leaveGroupConfirmationOnlyAdminWarning": "Group settings and members cannot be changed without an admin",
   "leaveGroupFailed": "Failed to leave Group!",

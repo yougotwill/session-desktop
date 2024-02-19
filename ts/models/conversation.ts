@@ -1401,7 +1401,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     if (!pubKey) {
       throw new Error('isAdmin() pubKey is falsy');
     }
-    const groupAdmins = getLibGroupAdminsOutsideRedux(this.id) || this.getGroupAdmins();
+    const groupAdmins = this.getGroupAdmins();
     return Array.isArray(groupAdmins) && groupAdmins.includes(pubKey);
   }
 
@@ -1956,7 +1956,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
   }
 
   public getGroupAdmins(): Array<string> {
-    const groupAdmins = this.get('groupAdmins');
+    const groupAdmins = getLibGroupAdminsOutsideRedux(this.id) || this.get('groupAdmins');
 
     return groupAdmins && groupAdmins.length > 0 ? groupAdmins : [];
   }
