@@ -173,7 +173,7 @@ export const reducer = (
       return {
         ...state,
         focusedSection: payload,
-        focusedSettingsSection: SessionSettingCategory.Privacy,
+        focusedSettingsSection: 'privacy',
       };
     case FOCUS_SETTINGS_SECTION:
       return {

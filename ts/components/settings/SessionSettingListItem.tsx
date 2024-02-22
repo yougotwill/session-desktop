@@ -1,6 +1,7 @@
 import React from 'react';
 import styled from 'styled-components';
 
+import { Noop } from '../../types/Util';
 import {
   SessionButton,
   SessionButtonColor,
@@ -10,7 +11,6 @@ import {
 import { SessionToggle } from '../basic/SessionToggle';
 import { SessionConfirmDialogProps } from '../dialog/SessionConfirm';
 import { SessionIconButton } from '../icon';
-import { Noop } from '../../types/Util';
 
 type ButtonSettingsProps = {
   title?: string;
@@ -19,7 +19,7 @@ type ButtonSettingsProps = {
   buttonType?: SessionButtonType;
   buttonShape?: SessionButtonShape;
   buttonText: string;
-  dataTestId?: string;
+  dataTestId?: React.SessionDataTestId;
   onClick: () => void;
 };
 
@@ -130,7 +130,7 @@ export const SessionToggleWithDescription = (props: {
   onClickToggle: () => void;
   confirmationDialogParams?: SessionConfirmDialogProps;
   childrenDescription?: React.ReactNode; // if set, those elements will be appended next to description field (only used for typing message settings as of now)
-  dataTestId?: string;
+  dataTestId?: React.SessionDataTestId;
 }) => {
   const {
     title,

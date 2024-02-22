@@ -1,6 +1,6 @@
+import autoBind from 'auto-bind';
 import { shell } from 'electron';
 import React from 'react';
-import autoBind from 'auto-bind';
 import styled from 'styled-components';
 
 import { SettingsHeader } from './SessionSettingsHeader';
@@ -9,15 +9,15 @@ import { SessionIconButton } from '../icon';
 
 import { SessionNotificationGroupSettings } from './SessionNotificationGroupSettings';
 
-import { CategoryConversations } from './section/CategoryConversations';
-import { SettingsCategoryPrivacy } from './section/CategoryPrivacy';
-import { SettingsCategoryAppearance } from './section/CategoryAppearance';
 import { Data } from '../../data/data';
-import { SettingsCategoryPermissions } from './section/CategoryPermissions';
-import { SettingsCategoryHelp } from './section/CategoryHelp';
 import { sessionPassword } from '../../state/ducks/modalDialog';
-import { PasswordAction } from '../dialog/SessionPasswordDialog';
 import { SectionType, showLeftPaneSection } from '../../state/ducks/section';
+import { PasswordAction } from '../dialog/SessionPasswordDialog';
+import { SettingsCategoryAppearance } from './section/CategoryAppearance';
+import { CategoryConversations } from './section/CategoryConversations';
+import { SettingsCategoryHelp } from './section/CategoryHelp';
+import { SettingsCategoryPermissions } from './section/CategoryPermissions';
+import { SettingsCategoryPrivacy } from './section/CategoryPrivacy';
 
 export function displayPasswordModal(
   passwordAction: PasswordAction,
@@ -41,17 +41,16 @@ export function getCallMediaPermissionsSettings() {
   return window.getSettingValue('call-media-permissions');
 }
 
-export enum SessionSettingCategory {
-  Privacy = 'privacy',
-  Notifications = 'notifications',
-  Conversations = 'conversations',
-  MessageRequests = 'messageRequests',
-  Appearance = 'appearance',
-  Permissions = 'permissions',
-  Help = 'help',
-  RecoveryPhrase = 'recoveryPhrase',
-  ClearData = 'ClearData',
-}
+export type SessionSettingCategory =
+  | 'privacy'
+  | 'notifications'
+  | 'conversations'
+  | 'messageRequests'
+  | 'appearance'
+  | 'permissions'
+  | 'help'
+  | 'recoveryPhrase'
+  | 'ClearData';
 
 export interface SettingsViewProps {
   category: SessionSettingCategory;
@@ -120,25 +119,25 @@ const SettingInCategory = (props: {
   }
   switch (category) {
     // special case for blocked user
-    case SessionSettingCategory.Conversations:
+    case 'conversations':
       return <CategoryConversations />;
-    case SessionSettingCategory.Appearance:
+    case 'appearance':
       return <SettingsCategoryAppearance hasPassword={hasPassword} />;
-    case SessionSettingCategory.Notifications:
+    case 'notifications':
       return <SessionNotificationGroupSettings hasPassword={hasPassword} />;
-    case SessionSettingCategory.Privacy:
+    case 'privacy':
       return (
         <SettingsCategoryPrivacy onPasswordUpdated={onPasswordUpdated} hasPassword={hasPassword} />
       );
-    case SessionSettingCategory.Help:
+    case 'help':
       return <SettingsCategoryHelp hasPassword={hasPassword} />;
-    case SessionSettingCategory.Permissions:
+    case 'permissions':
       return <SettingsCategoryPermissions hasPassword={hasPassword} />;
 
     // these three down there have no options, they are just a button
-    case SessionSettingCategory.ClearData:
-    case SessionSettingCategory.MessageRequests:
-    case SessionSettingCategory.RecoveryPhrase:
+    case 'ClearData':
+    case 'messageRequests':
+    case 'recoveryPhrase':
     default:
       return null;
   }

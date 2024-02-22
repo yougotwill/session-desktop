@@ -1,5 +1,5 @@
-import React, { ReactNode } from 'react';
 import classNames from 'classnames';
+import React, { ReactNode } from 'react';
 import styled from 'styled-components';
 
 export enum SessionButtonType {
@@ -112,7 +112,7 @@ type Props = {
   onClick: any;
   children?: ReactNode;
   margin?: string;
-  dataTestId?: string;
+  dataTestId?: React.SessionDataTestId;
 };
 
 export const SessionButton = (props: Props) => {

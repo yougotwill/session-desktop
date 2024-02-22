@@ -391,8 +391,18 @@ export async function deleteMessagesById(messageIds: Array<string>, conversation
         : window.i18n('deleteMessageQuestion'),
       radioOptions: !isMe
         ? [
-            { label: window.i18n('deleteJustForMe'), value: 'deleteJustForMe' },
-            { label: window.i18n('deleteForEveryone'), value: 'deleteForEveryone' },
+            {
+              label: window.i18n('deleteJustForMe'),
+              value: 'deleteJustForMe',
+              inputDatatestId: 'input-deleteJustForMe',
+              labelDatatestId: 'label-deleteJustForMe',
+            },
+            {
+              label: window.i18n('deleteForEveryone'),
+              value: 'deleteForEveryone',
+              inputDatatestId: 'input-deleteForEveryone',
+              labelDatatestId: 'label-deleteForEveryone',
+            },
           ]
         : undefined,
       okText: window.i18n('delete'),

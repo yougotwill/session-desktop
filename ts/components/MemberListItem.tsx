@@ -95,7 +95,7 @@ type MemberListItemProps = {
   isAdmin?: boolean; // if true,  we add a small crown on top of their avatar
   onSelect?: (pubkey: string) => void;
   onUnselect?: (pubkey: string) => void;
-  dataTestId?: string;
+  dataTestId?: React.SessionDataTestId;
   displayGroupStatus?: boolean;
   groupPk?: string;
 };
@@ -162,7 +162,10 @@ const GroupStatusText = ({ groupPk, pubkey }: { pubkey: PubkeyType; groupPk: Gro
     return null;
   }
   return (
-    <StyledGroupStatusText isFailure={groupPromotionFailed || groupInviteFailed}>
+    <StyledGroupStatusText
+      data-testid={'group_member_status_text'}
+      isFailure={groupPromotionFailed || groupInviteFailed}
+    >
       {statusText}
     </StyledGroupStatusText>
   );
@@ -194,7 +197,7 @@ const ResendInviteButton = ({
 }) => {
   return (
     <SessionButton
-      dataTestId="resend-invite-button"
+      dataTestId={'resend_invite_button'}
       buttonShape={SessionButtonShape.Square}
       buttonType={SessionButtonType.Solid}
       text={window.i18n('resend')}
@@ -214,7 +217,7 @@ const ResendPromoteButton = ({
 }) => {
   return (
     <SessionButton
-      dataTestId="resend-promote-button"
+      dataTestId={'resend_promote_button'}
       buttonShape={SessionButtonShape.Square}
       buttonType={SessionButtonType.Solid}
       buttonColor={SessionButtonColor.Danger}
@@ -268,7 +271,7 @@ export const MemberListItem = ({
           margin="0 var(--margins-md)"
           alignItems="flex-start"
         >
-          <StyledName>{memberName}</StyledName>
+          <StyledName data-testid={'group_member_name'}>{memberName}</StyledName>
           <GroupStatusContainer
             pubkey={pubkey}
             displayGroupStatus={displayGroupStatus}

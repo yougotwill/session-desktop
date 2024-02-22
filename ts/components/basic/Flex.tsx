@@ -1,3 +1,4 @@
+import { SessionDataTestId } from 'react';
 import styled from 'styled-components';
 import { HTMLDirection } from '../../util/i18n';
 
@@ -5,7 +6,7 @@ export interface FlexProps {
   children?: any;
   className?: string;
   container?: boolean;
-  dataTestId?: string;
+  dataTestId?: SessionDataTestId;
   // Container Props
   flexDirection?: 'row' | 'row-reverse' | 'column' | 'column-reverse';
   justifyContent?:

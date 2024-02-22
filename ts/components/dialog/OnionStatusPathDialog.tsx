@@ -1,5 +1,5 @@
 import { shell } from 'electron';
-import React from 'react';
+import React, { SessionDataTestId } from 'react';
 
 import { useDispatch, useSelector } from 'react-redux';
 import useHover from 'react-use/lib/useHover';
@@ -25,7 +25,7 @@ export type StatusLightType = {
   glowStartDelay: number;
   glowDuration: number;
   color?: string;
-  dataTestId?: string;
+  dataTestId?: SessionDataTestId;
 };
 
 const StyledCountry = styled.div`
@@ -143,7 +143,7 @@ const OnionPathModalInner = () => {
 export type OnionNodeStatusLightType = {
   glowStartDelay: number;
   glowDuration: number;
-  dataTestId?: string;
+  dataTestId?: SessionDataTestId;
 };
 
 /**

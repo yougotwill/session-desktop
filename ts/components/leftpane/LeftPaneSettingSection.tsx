@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { SessionDataTestId } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import styled from 'styled-components';
 
@@ -45,73 +45,75 @@ const StyledSettingsListItem = styled.div<{ active: boolean }>`
 const getCategories = () => {
   return [
     {
-      id: SessionSettingCategory.Privacy,
+      id: 'privacy' as const,
       title: window.i18n('privacySettingsTitle'),
     },
     {
-      id: SessionSettingCategory.Notifications,
+      id: 'notifications' as const,
       title: window.i18n('notificationsSettingsTitle'),
     },
     {
-      id: SessionSettingCategory.Conversations,
+      id: 'conversations' as const,
       title: window.i18n('conversationsSettingsTitle'),
     },
     {
-      id: SessionSettingCategory.MessageRequests,
+      id: 'messageRequests' as const,
       title: window.i18n('openMessageRequestInbox'),
     },
     {
-      id: SessionSettingCategory.Appearance,
+      id: 'appearance' as const,
       title: window.i18n('appearanceSettingsTitle'),
     },
     {
-      id: SessionSettingCategory.Permissions,
+      id: 'permissions' as const,
       title: window.i18n('permissionsSettingsTitle'),
     },
     {
-      id: SessionSettingCategory.Help,
+      id: 'help' as const,
       title: window.i18n('helpSettingsTitle'),
     },
     {
-      id: SessionSettingCategory.RecoveryPhrase,
+      id: 'recoveryPhrase' as const,
       title: window.i18n('recoveryPhrase'),
     },
     {
-      id: SessionSettingCategory.ClearData,
+      id: 'ClearData' as const,
       title: window.i18n('clearDataSettingsTitle'),
     },
-  ];
+  ].map(m => ({ ...m, dataTestId: `${m.id}-settings-menu-item` as const }));
 };
 
 const LeftPaneSettingsCategoryRow = (props: {
-  item: { id: SessionSettingCategory; title: string };
+  item: {
+    id: SessionSettingCategory;
+    title: string;
+    dataTestId: SessionDataTestId;
+  };
 }) => {
   const { item } = props;
   const { id, title } = item;
   const dispatch = useDispatch();
   const focusedSettingsSection = useSelector(getFocusedSettingsSection);
 
-  const dataTestId = `${title.toLowerCase().replace(' ', '-')}-settings-menu-item`;
-
-  const isClearData = id === SessionSettingCategory.ClearData;
+  const isClearData = id === 'ClearData';
 
   return (
     <StyledSettingsListItem
-      data-testid={dataTestId}
+      data-testid={item.dataTestId}
       key={id}
       active={id === focusedSettingsSection}
       role="link"
       onClick={() => {
         switch (id) {
-          case SessionSettingCategory.MessageRequests:
+          case 'messageRequests':
             dispatch(showLeftPaneSection(SectionType.Message));
             dispatch(setLeftOverlayMode('message-requests'));
             dispatch(resetConversationExternal());
             break;
-          case SessionSettingCategory.RecoveryPhrase:
+          case 'recoveryPhrase':
             dispatch(recoveryPhraseModal({}));
             break;
-          case SessionSettingCategory.ClearData:
+          case 'ClearData':
             dispatch(updateDeleteAccountModal({}));
             break;
           default:

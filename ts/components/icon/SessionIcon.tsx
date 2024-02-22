@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { SessionDataTestId } from 'react';
 import styled, { css, keyframes } from 'styled-components';
 
 import { icons, SessionIconSize, SessionIconType } from '.';
@@ -15,7 +15,7 @@ export type SessionIconProps = {
   glowStartDelay?: number;
   noScale?: boolean;
   backgroundColor?: string;
-  dataTestId?: string;
+  dataTestId?: SessionDataTestId;
 };
 
 const getIconDimensionFromIconSize = (iconSize: SessionIconSize | number) => {
@@ -146,7 +146,7 @@ const SessionSvg = (props: {
   borderRadius?: string;
   backgroundColor?: string;
   iconPadding?: string;
-  dataTestId?: string;
+  dataTestId?: SessionDataTestId;
 }) => {
   const colorSvg = props.iconColor ? props.iconColor : '--button-icon-stroke-color';
   const pathArray = props.path instanceof Array ? props.path : [props.path];

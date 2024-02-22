@@ -1,18 +1,21 @@
-import React from 'react';
 import classNames from 'classnames';
+import React from 'react';
 import { CSSProperties } from 'styled-components';
 
-import { Emojify } from './Emojify';
 import {
-  useNicknameOrProfileNameOrShortenedPubkey,
   useIsPrivate,
+  useNicknameOrProfileNameOrShortenedPubkey,
 } from '../../hooks/useParamSelector';
+import { Emojify } from './Emojify';
 
 type Props = {
   pubkey: string;
   name?: string | null;
   profileName?: string | null;
-  module?: string;
+  module?:
+    | 'module-conversation__user'
+    | 'module-message-search-result__header__name'
+    | 'module-message__author';
   boldProfileName?: boolean;
   compact?: boolean;
   shouldShowPubkey: boolean;
@@ -38,7 +41,7 @@ export const ContactName = (props: Props) => {
     <span
       className={classNames(prefix, compact && 'compact')}
       dir="auto"
-      data-testid={`${prefix}__profile-name`}
+      data-testid={`${prefix}__profile-name` as const}
       style={{ textOverflow: 'inherit' }}
     >
       {shouldShowProfile ? (

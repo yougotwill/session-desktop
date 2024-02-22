@@ -384,7 +384,6 @@ const refreshGroupDetailsFromWrapper = createAsyncThunk(
 const destroyGroupDetails = createAsyncThunk(
   'group/destroyGroupDetails',
   async ({ groupPk }: { groupPk: GroupPubkeyType }) => {
-    debugger;
     const us = UserUtils.getOurPubKeyStrFromCache();
     const weAreAdmin = await checkWeAreAdmin(groupPk);
     const allMembers = await MetaGroupWrapperActions.memberGetAll(groupPk);

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { SessionDataTestId } from 'react';
 import { useSelector } from 'react-redux';
 import styled from 'styled-components';
 import {
@@ -42,7 +42,7 @@ const TextInner = styled.div`
   max-width: 390px;
 `;
 
-function TextNotification({ html, dataTestId }: { html: string; dataTestId: string }) {
+function TextNotification({ html, dataTestId }: { html: string; dataTestId: SessionDataTestId }) {
   return (
     <Container data-testid={dataTestId}>
       <TextInner>
