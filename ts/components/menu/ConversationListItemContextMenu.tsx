@@ -4,9 +4,10 @@ import { Item, Menu } from 'react-contexify';
 import { useSelector } from 'react-redux';
 import { useIsPinned, useIsPrivate, useIsPrivateAndFriend } from '../../hooks/useParamSelector';
 import { ConvoHub } from '../../session/conversations';
+import { isSearching } from '../../state/selectors/search';
 import { getIsMessageSection } from '../../state/selectors/section';
-import { useConvoIdFromContext } from '../leftpane/conversation-list-item/ConvoIdContext';
 import { SessionContextMenuContainer } from '../SessionContextMenuContainer';
+import { useConvoIdFromContext } from '../leftpane/conversation-list-item/ConvoIdContext';
 import {
   AcceptMsgRequestMenuItem,
   BanMenuItem,
@@ -17,16 +18,15 @@ import {
   DeclineAndBlockMsgRequestMenuItem,
   DeclineMsgRequestMenuItem,
   DeleteMessagesMenuItem,
+  DeletePrivateConversationMenuItem,
   InviteContactMenuItem,
   LeaveGroupOrCommunityMenuItem,
   MarkAllReadMenuItem,
   MarkConversationUnreadMenuItem,
+  NotificationForConvoMenuItem,
   ShowUserDetailsMenuItem,
   UnbanMenuItem,
-  DeletePrivateConversationMenuItem,
-  NotificationForConvoMenuItem,
 } from './Menu';
-import { isSearching } from '../../state/selectors/search';
 
 export type PropsContextConversationItem = {
   triggerId: string;

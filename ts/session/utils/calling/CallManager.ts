@@ -24,7 +24,7 @@ import { PubKey } from '../../types';
 import { getMessageQueue } from '../..';
 import { getCallMediaPermissionsSettings } from '../../../components/settings/SessionSettings';
 import { Data } from '../../../data/data';
-import { approveConvoAndSendResponse } from '../../../interactions/conversationInteractions';
+import { handleAcceptConversationRequest } from '../../../interactions/conversationInteractions';
 import { READ_MESSAGE_STATE } from '../../../models/conversationAttributes';
 import { PnServer } from '../../apis/push_notification_api';
 import { GetNetworkTime } from '../../apis/snode_api/getNetworkTime';
@@ -533,7 +533,7 @@ export async function USER_callRecipient(recipient: string) {
   weAreCallerOnCurrentCall = true;
 
   // initiating a call is analogous to sending a message request
-  await approveConvoAndSendResponse(recipient);
+  await handleAcceptConversationRequest({ convoId: recipient, sendResponse: false });
 
   // Note: we do the sending of the preoffer manually as the sendTo1o1NonDurably rely on having a message saved to the db for MessageSentSuccess
   // which is not the case for a pre offer message (the message only exists in memory)
@@ -932,8 +932,10 @@ export async function USER_acceptIncomingCallRequest(fromSender: string) {
   await buildAnswerAndSendIt(fromSender, msgIdentifier);
 
   // consider the conversation completely approved
-  await callerConvo.setDidApproveMe(true);
-  await approveConvoAndSendResponse(fromSender);
+  await handleAcceptConversationRequest({
+    convoId: fromSender,
+    sendResponse: true,
+  });
 }
 
 export async function rejectCallAlreadyAnotherCall(fromSender: string, forcedUUID: string) {

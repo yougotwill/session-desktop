@@ -10,15 +10,19 @@ import { SessionButtonColor } from '../components/basic/SessionButton';
 import { getCallMediaPermissionsSettings } from '../components/settings/SessionSettings';
 import { Data } from '../data/data';
 import { SettingsKey } from '../data/settings-key';
+import { GroupV2Receiver } from '../receiver/groupv2/handleGroupV2Message';
 import { uploadFileToFsWithOnionV4 } from '../session/apis/file_server_api/FileServerApi';
 import { OpenGroupUtils } from '../session/apis/open_group_api/utils';
+import { getSwarmPollingInstance } from '../session/apis/snode_api';
 import { GetNetworkTime } from '../session/apis/snode_api/getNetworkTime';
 import { ConvoHub } from '../session/conversations';
 import { getSodiumRenderer } from '../session/crypto';
 import { getDecryptedMediaUrl } from '../session/crypto/DecryptedAttachmentsManager';
 import { DisappearingMessageConversationModeType } from '../session/disappearing_messages/types';
+import { ed25519Str } from '../session/onions/onionPath';
 import { PubKey } from '../session/types';
 import { perfEnd, perfStart } from '../session/utils/Performance';
+import { sleepFor } from '../session/utils/Promise';
 import { fromHexToArray, toHex } from '../session/utils/String';
 import { UserSync } from '../session/utils/job_runners/jobs/UserSyncJob';
 import { SessionUtilContact } from '../session/utils/libsession/libsession_utils_contacts';
@@ -109,21 +113,53 @@ export async function unblockConvoById(conversationId: string) {
   await conversation.commit();
 }
 
-/**
- * marks the conversation's approval fields, sends messageRequestResponse
- */
-export const approveConvoAndSendResponse = async (conversationId: string) => {
-  const convoToApprove = ConvoHub.use().get(conversationId);
-
-  if (!convoToApprove) {
-    window?.log?.info('Conversation is already approved.');
-    return;
+export const handleAcceptConversationRequest = async ({
+  convoId,
+  sendResponse,
+}: {
+  convoId: string;
+  sendResponse: boolean;
+}) => {
+  const convo = ConvoHub.use().get(convoId);
+  if (!convo) {
+    return null;
   }
+  await convo.setDidApproveMe(true, false);
+  await convo.setIsApproved(true, false);
+  await convo.commit();
 
-  await convoToApprove.setIsApproved(true, false);
-
-  await convoToApprove.commit();
-  await convoToApprove.sendMessageRequestResponse();
+  if (convo.isPrivate()) {
+    await convo.addOutgoingApprovalMessage(Date.now());
+    if (sendResponse) {
+      await convo.sendMessageRequestResponse();
+    }
+    return null;
+  }
+  if (PubKey.is03Pubkey(convoId)) {
+    const found = await UserGroupsWrapperActions.getGroup(convoId);
+    if (!found) {
+      window.log.warn('cannot approve a non existing group in usergroup');
+      return null;
+    }
+    // this updates the wrapper and refresh the redux slice
+    await UserGroupsWrapperActions.setGroup({ ...found, invitePending: false });
+    const acceptedPromise = new Promise(resolve => {
+      getSwarmPollingInstance().addGroupId(convoId, async () => {
+        // we need to do a first poll to fetch the keys etc before we can send our invite response
+        // this is pretty hacky, but also an admin seeing a message from that user in the group will mark it as not pending anymore
+        await sleepFor(2000);
+        if (sendResponse) {
+          await GroupV2Receiver.sendInviteResponseToGroup({ groupPk: convoId });
+        }
+        window.log.info(
+          `handleAcceptConversationRequest: first poll for group ${ed25519Str(convoId)} happened, we should have encryption keys now`
+        );
+        return resolve(true);
+      });
+    });
+    await acceptedPromise;
+  }
+  return null;
 };
 
 export async function declineConversationWithoutConfirm({

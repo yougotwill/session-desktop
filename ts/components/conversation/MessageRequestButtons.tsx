@@ -2,14 +2,9 @@ import React from 'react';
 import styled from 'styled-components';
 import { useIsIncomingRequest } from '../../hooks/useParamSelector';
 import {
-  approveConvoAndSendResponse,
   declineConversationWithConfirm,
+  handleAcceptConversationRequest,
 } from '../../interactions/conversationInteractions';
-import { GroupV2Receiver } from '../../receiver/groupv2/handleGroupV2Message';
-import { getSwarmPollingInstance } from '../../session/apis/snode_api/swarmPolling';
-import { ConvoHub } from '../../session/conversations';
-import { PubKey } from '../../session/types';
-import { sleepFor } from '../../session/utils/Promise';
 import {
   useSelectedConversationIdOrigin,
   useSelectedConversationKey,
@@ -17,7 +12,6 @@ import {
   useSelectedIsPrivateFriend,
 } from '../../state/selectors/selectedConversation';
 import { useLibGroupInvitePending } from '../../state/selectors/userGroups';
-import { UserGroupsWrapperActions } from '../../webworker/workers/browser/libsession_worker_interface';
 import { SessionButton, SessionButtonColor } from '../basic/SessionButton';
 import { InvitedToGroupControlMessage, MessageRequestExplanation } from './SubtleNotification';
 
@@ -77,34 +71,6 @@ const handleDeclineAndBlockConversationRequest = (
   });
 };
 
-const handleAcceptConversationRequest = async (convoId: string) => {
-  const convo = ConvoHub.use().get(convoId);
-  if (!convo) {
-    return;
-  }
-  await convo.setDidApproveMe(true, false);
-  await convo.setIsApproved(true, false);
-  await convo.commit();
-  if (convo.isPrivate()) {
-    await convo.addOutgoingApprovalMessage(Date.now());
-    await approveConvoAndSendResponse(convoId);
-  } else if (PubKey.is03Pubkey(convoId)) {
-    const found = await UserGroupsWrapperActions.getGroup(convoId);
-    if (!found) {
-      window.log.warn('cannot approve a non existing group in usergroup');
-      return;
-    }
-    // this updates the wrapper and refresh the redux slice
-    await UserGroupsWrapperActions.setGroup({ ...found, invitePending: false });
-    getSwarmPollingInstance().addGroupId(convoId, async () => {
-      // we need to do a first poll to fetch the keys etc before we can send our invite response
-      // this is pretty hacky, but also an admin seeing a message from that user in the group will mark it as not pending anymore
-      await sleepFor(2000);
-      await GroupV2Receiver.sendInviteResponseToGroup({ groupPk: convoId });
-    });
-  }
-};
-
 export const ConversationMessageRequestButtons = () => {
   const selectedConvoId = useSelectedConversationKey();
   const isIncomingRequest = useIsIncomingRequest(selectedConvoId);
@@ -131,7 +97,7 @@ export const ConversationMessageRequestButtons = () => {
       <ConversationBannerRow>
         <SessionButton
           onClick={async () => {
-            await handleAcceptConversationRequest(selectedConvoId);
+            await handleAcceptConversationRequest({ convoId: selectedConvoId, sendResponse: true });
           }}
           text={window.i18n('accept')}
           dataTestId="accept-message-request"

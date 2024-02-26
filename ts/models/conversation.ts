@@ -127,6 +127,7 @@ import {
   getSubscriberCountOutsideRedux,
 } from '../state/selectors/sogsRoomInfo'; // decide it it makes sense to move this to a redux slice?
 
+import { handleAcceptConversationRequest } from '../interactions/conversationInteractions';
 import { DisappearingMessages } from '../session/disappearing_messages';
 import { DisappearingMessageConversationModeType } from '../session/disappearing_messages/types';
 import { GroupUpdateInfoChangeMessage } from '../session/messages/outgoing/controlMessage/group_v2/to_group/GroupUpdateInfoChangeMessage';
@@ -2034,7 +2035,8 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
         lokiProfile: UserUtils.getOurProfile(),
       };
 
-      const shouldApprove = !this.isApproved() && this.isPrivate();
+      const shouldApprove = !this.isApproved() && (this.isPrivate() || this.isClosedGroupV2());
+
       const incomingMessageCount = await Data.getMessageCountByType(
         this.id,
         MessageDirection.incoming
@@ -2048,6 +2050,10 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       }
 
       if (shouldApprove) {
+        await handleAcceptConversationRequest({
+          convoId: this.id,
+          sendResponse: !message,
+        });
         await this.setIsApproved(true);
         if (hasIncomingMessages) {
           // have to manually add approval for local client here as DB conditional approval check in config msg handling will prevent this from running

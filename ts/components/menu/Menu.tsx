@@ -23,12 +23,12 @@ import {
 import {
   ConversationInteractionStatus,
   ConversationInteractionType,
-  approveConvoAndSendResponse,
   blockConvoById,
   clearNickNameByConvoId,
   copyPublicKeyByConvoId,
   declineConversationWithConfirm,
   deleteAllMessagesByConvoIdWithConfirmation,
+  handleAcceptConversationRequest,
   markAllReadByConvoId,
   setNotificationForConvoId,
   showAddModeratorsByConvoId,
@@ -441,17 +441,17 @@ export const DeletePrivateConversationMenuItem = () => {
 export const AcceptMsgRequestMenuItem = () => {
   const convoId = useConvoIdFromContext();
   const isRequest = useIsIncomingRequest(convoId);
-  const convo = ConvoHub.use().get(convoId);
   const isPrivate = useIsPrivate(convoId);
 
-  if (isRequest && isPrivate) {
+  if (isRequest && (isPrivate || PubKey.is03Pubkey(convoId))) {
     return (
       <Item
         // eslint-disable-next-line @typescript-eslint/no-misused-promises
         onClick={async () => {
-          await convo.setDidApproveMe(true);
-          await convo.addOutgoingApprovalMessage(Date.now());
-          await approveConvoAndSendResponse(convoId);
+          await handleAcceptConversationRequest({
+            convoId,
+            sendResponse: true,
+          });
         }}
       >
         {window.i18n('accept')}
