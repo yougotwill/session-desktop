@@ -40,7 +40,9 @@ describe('ClosedGroupVisibleMessage', () => {
     expect(decoded.dataMessage).to.have.deep.property('body', 'body');
 
     // we use the timestamp of the chatMessage as parent timestamp
-    expect(message).to.have.property('timestamp').to.be.equal(chatMessage.createAtNetworkTimestamp);
+    expect(message)
+      .to.have.property('createAtNetworkTimestamp')
+      .to.be.equal(chatMessage.createAtNetworkTimestamp);
   });
 
   it('correct ttl', () => {
@@ -75,7 +77,7 @@ describe('ClosedGroupVisibleMessage', () => {
     const chatMessage = new VisibleMessage({
       createAtNetworkTimestamp,
       body: 'body',
-      identifier: 'chatMessage',
+      identifier: 'closedGroupMessage',
       expirationType: null,
       expireTimer: null,
     });

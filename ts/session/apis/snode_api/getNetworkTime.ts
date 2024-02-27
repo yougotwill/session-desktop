@@ -7,12 +7,12 @@
 import { isNumber } from 'lodash';
 import { Snode } from '../../../data/data';
 import { NetworkTimeSubRequest } from './SnodeRequestTypes';
-import { doUnsignedSnodeBatchRequest } from './batchRequest';
+import { BatchRequests } from './batchRequest';
 
 const getNetworkTime = async (snode: Snode): Promise<string | number> => {
   const subrequest = new NetworkTimeSubRequest();
 
-  const result = await doUnsignedSnodeBatchRequest([subrequest], snode, 4000, null);
+  const result = await BatchRequests.doUnsignedSnodeBatchRequest([subrequest], snode, 4000, null);
   if (!result || !result.length) {
     window?.log?.warn(`getNetworkTime on ${snode.ip}:${snode.port} returned falsish value`, result);
     throw new Error('getNetworkTime: Invalid result');

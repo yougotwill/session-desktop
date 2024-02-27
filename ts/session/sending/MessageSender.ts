@@ -39,7 +39,7 @@ import {
   UpdateExpiryOnNodeGroupSubRequest,
   UpdateExpiryOnNodeUserSubRequest,
 } from '../apis/snode_api/SnodeRequestTypes';
-import { doUnsignedSnodeBatchRequest } from '../apis/snode_api/batchRequest';
+import { BatchRequests } from '../apis/snode_api/batchRequest';
 import { GetNetworkTime } from '../apis/snode_api/getNetworkTime';
 import { SnodeNamespace, SnodeNamespaces } from '../apis/snode_api/namespaces';
 import {
@@ -48,7 +48,7 @@ import {
   SnodeGroupSignature,
 } from '../apis/snode_api/signature/groupSignature';
 import { SnodeSignature, SnodeSignatureResult } from '../apis/snode_api/signature/snodeSignatures';
-import { getNodeFromSwarmOrThrow } from '../apis/snode_api/snodePool';
+import { SnodePool } from '../apis/snode_api/snodePool';
 import { WithMessagesHashes, WithRevokeSubRequest } from '../apis/snode_api/types';
 import { TTL_DEFAULT } from '../constants';
 import { ConvoHub } from '../conversations';
@@ -129,7 +129,6 @@ async function sendSingleMessage({
         found.set({ sent_at: encryptedAndWrapped.networkTimestamp });
         await found.commit();
       }
-
       const isSyncedDeleteAfterReadMessage =
         found &&
         UserUtils.isUsFromCache(recipient.key) &&
@@ -145,7 +144,6 @@ async function sendSingleMessage({
       }
 
       const subRequests: Array<RawSnodeSubRequests> = [];
-
       if (PubKey.is05Pubkey(destination)) {
         if (encryptedAndWrapped.namespace === SnodeNamespaces.Default) {
           subRequests.push(
@@ -229,9 +227,8 @@ async function sendSingleMessage({
         );
       }
 
-      const targetNode = await getNodeFromSwarmOrThrow(destination);
-
-      const batchResult = await doUnsignedSnodeBatchRequest(
+      const targetNode = await SnodePool.getNodeFromSwarmOrThrow(destination);
+      const batchResult = await BatchRequests.doUnsignedSnodeBatchRequest(
         subRequests,
         targetNode,
         6000,
@@ -380,10 +377,10 @@ async function sendMessagesDataToSnode(
     unrevokeSubRequest,
   ]);
 
-  const targetNode = await getNodeFromSwarmOrThrow(asssociatedWith);
+  const targetNode = await SnodePool.getNodeFromSwarmOrThrow(asssociatedWith);
 
   try {
-    const storeResults = await doUnsignedSnodeBatchRequest(
+    const storeResults = await BatchRequests.doUnsignedSnodeBatchRequest(
       rawRequests,
       targetNode,
       4000,

@@ -265,7 +265,7 @@ describe('SnodeSignature', () => {
         });
       };
       await expect(func()).to.be.rejectedWith(
-        'generateUpdateExpiryGroupSignature groupPrivKey or groupPk is empty'
+        'generateUpdateExpiryGroupSignature groupPk is empty'
       );
     });
 
@@ -284,7 +284,7 @@ describe('SnodeSignature', () => {
         });
       };
       await expect(func()).to.be.rejectedWith(
-        'generateUpdateExpiryGroupSignature groupPrivKey or groupPk is empty'
+        'retrieveRequestForGroup: needs either groupSecretKey or authData'
       );
     });
 

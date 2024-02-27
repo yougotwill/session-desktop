@@ -6,9 +6,9 @@ import { getSodiumRenderer } from '../../crypto';
 import { ed25519Str } from '../../onions/onionPath';
 import { StringUtils, UserUtils } from '../../utils';
 import { fromBase64ToArray, fromHexToArray } from '../../utils/String';
-import { doSnodeBatchRequest } from './batchRequest';
+import { BatchRequests } from './batchRequest';
 import { SnodeSignature } from './signature/snodeSignatures';
-import { getNodeFromSwarmOrThrow } from './snodePool';
+import { SnodePool } from './snodePool';
 
 export const ERROR_CODE_NO_CONNECT = 'ENETUNREACH: No network connection.';
 
@@ -30,7 +30,7 @@ const forceNetworkDeletion = async (): Promise<Array<string> | null> => {
   try {
     const maliciousSnodes = await pRetry(
       async () => {
-        const snodeToMakeRequestTo = await getNodeFromSwarmOrThrow(usPk);
+        const snodeToMakeRequestTo = await SnodePool.getNodeFromSwarmOrThrow(usPk);
 
         return pRetry(
           async () => {
@@ -39,7 +39,7 @@ const forceNetworkDeletion = async (): Promise<Array<string> | null> => {
               namespace,
             });
 
-            const ret = await doSnodeBatchRequest(
+            const ret = await BatchRequests.doSnodeBatchRequest(
               [{ method, params: { ...signOpts, namespace, pubkey: usPk } }],
               snodeToMakeRequestTo,
               10000,
@@ -190,7 +190,7 @@ const networkDeleteMessages = async (hashes: Array<string>): Promise<Array<strin
   try {
     const maliciousSnodes = await pRetry(
       async () => {
-        const snodeToMakeRequestTo = await getNodeFromSwarmOrThrow(userX25519PublicKey);
+        const snodeToMakeRequestTo = await SnodePool.getNodeFromSwarmOrThrow(userX25519PublicKey);
 
         return pRetry(
           async () => {
@@ -200,7 +200,7 @@ const networkDeleteMessages = async (hashes: Array<string>): Promise<Array<strin
               pubkey: userX25519PublicKey,
             });
 
-            const ret = await doSnodeBatchRequest(
+            const ret = await BatchRequests.doSnodeBatchRequest(
               [{ method, params: signOpts }],
               snodeToMakeRequestTo,
               10000,

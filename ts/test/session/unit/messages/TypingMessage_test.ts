@@ -1,6 +1,5 @@
 import { expect } from 'chai';
 
-import { toNumber } from 'lodash';
 import Long from 'long';
 import { SignalService } from '../../../../protobuf';
 import { Constants } from '../../../../session';
@@ -31,18 +30,6 @@ describe('TypingMessage', () => {
       'action',
       SignalService.TypingMessage.Action.STOPPED
     );
-  });
-
-  it('has typingTimestamp set if value passed', () => {
-    const message = new TypingMessage({
-      createAtNetworkTimestamp: Date.now(),
-      isTyping: true,
-      typingTimestamp: 111111111,
-    });
-    const plainText = message.plainTextBuffer();
-    const decoded = SignalService.Content.decode(plainText);
-    const decodedtimestamp = toNumber(decoded.typingMessage?.timestamp);
-    expect(decodedtimestamp).to.be.equal(111111111);
   });
 
   it('has typingTimestamp set with Date.now() if value not passed', () => {

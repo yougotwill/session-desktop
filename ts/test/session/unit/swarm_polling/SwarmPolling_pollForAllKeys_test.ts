@@ -10,9 +10,10 @@ import {
 } from 'libsession_util_nodejs';
 import { ConversationModel, Convo } from '../../../../models/conversation';
 import { ConversationTypeEnum } from '../../../../models/conversationAttributes';
-import { SnodePool, getSwarmPollingInstance } from '../../../../session/apis/snode_api';
+import { getSwarmPollingInstance } from '../../../../session/apis/snode_api';
 import { resetHardForkCachedValues } from '../../../../session/apis/snode_api/hfHandling';
 import { SnodeAPIRetrieve } from '../../../../session/apis/snode_api/retrieveRequest';
+import { SnodePool } from '../../../../session/apis/snode_api/snodePool';
 import { SwarmPolling } from '../../../../session/apis/snode_api/swarmPolling';
 import { ConvoHub } from '../../../../session/conversations';
 import { PubKey } from '../../../../session/types';

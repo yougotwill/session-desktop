@@ -9,7 +9,7 @@ import pRetry from 'p-retry';
 // eslint-disable-next-line import/no-unresolved
 import { AbortSignal as AbortSignalNode } from 'node-fetch/externals';
 
-import { dropSnodeFromSnodePool, dropSnodeFromSwarmIfNeeded, updateSwarmFor } from './snodePool';
+import { SnodePool } from './snodePool';
 
 import { OnionPaths } from '../../onions';
 import { ed25519Str, incrementBadPathCountOrDrop } from '../../onions/onionPath';
@@ -343,10 +343,10 @@ async function handleNodeNotFound({
   window?.log?.warn('Handling NODE NOT FOUND with: ', shortNodeNotFound);
 
   if (associatedWith) {
-    await dropSnodeFromSwarmIfNeeded(associatedWith, ed25519NotFound);
+    await SnodePool.dropSnodeFromSwarmIfNeeded(associatedWith, ed25519NotFound);
   }
 
-  await dropSnodeFromSnodePool(ed25519NotFound);
+  await SnodePool.dropSnodeFromSnodePool(ed25519NotFound);
   snodeFailureCount[ed25519NotFound] = 0;
   // try to remove the not found snode from any of the paths if it's there.
   // it may not be here, as the snode note found might be the target snode of the request.
@@ -736,11 +736,11 @@ async function handle421InvalidSwarm({
         parsedBody.snodes.map((s: any) => ed25519Str(s.pubkey_ed25519))
       );
 
-      await updateSwarmFor(associatedWith, parsedBody.snodes);
+      await SnodePool.updateSwarmFor(associatedWith, parsedBody.snodes);
       throw new pRetry.AbortError(ERROR_421_HANDLED_RETRY_REQUEST);
     }
     // remove this node from the swarm of this pubkey
-    await dropSnodeFromSwarmIfNeeded(associatedWith, destinationSnodeEd25519);
+    await SnodePool.dropSnodeFromSwarmIfNeeded(associatedWith, destinationSnodeEd25519);
   } catch (e) {
     if (e.message !== ERROR_421_HANDLED_RETRY_REQUEST) {
       window?.log?.warn(
@@ -748,7 +748,7 @@ async function handle421InvalidSwarm({
         e
       );
       // could not parse result. Consider that this snode as invalid
-      await dropSnodeFromSwarmIfNeeded(associatedWith, destinationSnodeEd25519);
+      await SnodePool.dropSnodeFromSwarmIfNeeded(associatedWith, destinationSnodeEd25519);
     }
   }
   await Onions.incrementBadSnodeCountOrDrop({
@@ -789,9 +789,9 @@ async function incrementBadSnodeCountOrDrop({
     );
 
     if (associatedWith) {
-      await dropSnodeFromSwarmIfNeeded(associatedWith, snodeEd25519);
+      await SnodePool.dropSnodeFromSwarmIfNeeded(associatedWith, snodeEd25519);
     }
-    await dropSnodeFromSnodePool(snodeEd25519);
+    await SnodePool.dropSnodeFromSnodePool(snodeEd25519);
     snodeFailureCount[snodeEd25519] = 0;
 
     await OnionPaths.dropSnodeFromPath(snodeEd25519);

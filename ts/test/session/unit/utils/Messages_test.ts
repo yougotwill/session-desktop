@@ -42,7 +42,7 @@ describe('Message Utils', () => {
         SnodeNamespaces.UserContacts
       );
 
-      expect(Object.keys(rawMessage)).to.have.length(6);
+      expect(Object.keys(rawMessage)).to.have.length(7);
 
       expect(rawMessage.identifier).to.exist;
       expect(rawMessage.namespace).to.exist;
@@ -50,12 +50,14 @@ describe('Message Utils', () => {
       expect(rawMessage.encryption).to.exist;
       expect(rawMessage.plainTextBuffer).to.exist;
       expect(rawMessage.ttl).to.exist;
+      expect(rawMessage.networkTimestampCreated).to.exist;
 
       expect(rawMessage.identifier).to.equal(message.identifier);
       expect(rawMessage.device).to.equal(device.key);
       expect(rawMessage.plainTextBuffer).to.deep.equal(message.plainTextBuffer());
       expect(rawMessage.ttl).to.equal(message.ttl());
       expect(rawMessage.namespace).to.equal(3);
+      expect(rawMessage.networkTimestampCreated).to.eq(message.createAtNetworkTimestamp);
     });
 
     it('should generate valid plainTextBuffer', async () => {

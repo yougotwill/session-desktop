@@ -12,6 +12,7 @@ import {
 import { GetNetworkTime } from '../../../../session/apis/snode_api/getNetworkTime';
 import { ConvoHub } from '../../../../session/conversations';
 import { UserUtils } from '../../../../session/utils';
+import { toHex } from '../../../../session/utils/String';
 import { SessionUtilUserGroups } from '../../../../session/utils/libsession/libsession_utils_user_groups';
 import { TestUtils } from '../../../test-utils';
 import { generateFakeECKeyPair, stubWindowLog } from '../../../test-utils/utils';
@@ -64,7 +65,7 @@ describe('libsession_user_groups', () => {
       const validLegacyGroupArgs = {
         ...validArgs,
         type: ConversationTypeEnum.GROUP,
-        id: '05123456564',
+        id: TestUtils.generateFakePubKeyStr(),
       } as ConversationAttributes;
 
       it('includes legacy group', () => {
@@ -78,14 +79,7 @@ describe('libsession_user_groups', () => {
       });
 
       it('exclude legacy group left', () => {
-        expect(
-          SessionUtilUserGroups.isUserGroupToStoreInWrapper(
-            new ConversationModel({
-              ...validLegacyGroupArgs,
-              left: true,
-            })
-          )
-        ).to.be.eq(false);
+        // we cannot have a left group anymore. It's removed entirely when we leave it
       });
       it('exclude legacy group kicked', () => {
         expect(
@@ -168,12 +162,13 @@ describe('libsession_user_groups', () => {
 
   describe('LegacyGroups', () => {
     describe('insertGroupsFromDBIntoWrapperAndRefresh', () => {
+      const asHex = toHex(groupECKeyPair.publicKeyData);
       const groupArgs = {
-        id: groupECKeyPair.publicKeyData.toString(),
+        id: asHex,
         displayNameInProfile: 'Test Group',
         expirationMode: 'off',
         expireTimer: 0,
-        members: [groupECKeyPair.publicKeyData.toString()],
+        members: [asHex],
       } as ConversationAttributes;
 
       it('returns wrapper values that match with the inputted group', async () => {

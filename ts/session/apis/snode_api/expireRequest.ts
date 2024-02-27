@@ -12,8 +12,8 @@ import {
   WithShortenOrExtend,
   fakeHash,
 } from './SnodeRequestTypes';
-import { doUnsignedSnodeBatchRequest } from './batchRequest';
-import { getNodeFromSwarmOrThrow } from './snodePool';
+import { BatchRequests } from './batchRequest';
+import { SnodePool } from './snodePool';
 import { ExpireMessageResultItem, ExpireMessagesResultsContent } from './types';
 
 export type verifyExpireMsgsResponseSignatureProps = ExpireMessageResultItem & {
@@ -146,7 +146,7 @@ async function updateExpiryOnNodes(
   expireRequests: Array<UpdateExpiryOnNodeUserSubRequest>
 ): Promise<Array<UpdatedExpiryWithHash>> {
   try {
-    const result = await doUnsignedSnodeBatchRequest(
+    const result = await BatchRequests.doUnsignedSnodeBatchRequest(
       expireRequests,
       targetNode,
       4000,
@@ -405,7 +405,7 @@ export async function expireMessagesOnSnode(
       expireRequestsParams.map(chunkRequest =>
         pRetry(
           async () => {
-            const targetNode = await getNodeFromSwarmOrThrow(ourPubKey);
+            const targetNode = await SnodePool.getNodeFromSwarmOrThrow(ourPubKey);
 
             return updateExpiryOnNodes(targetNode, ourPubKey, chunkRequest);
           },

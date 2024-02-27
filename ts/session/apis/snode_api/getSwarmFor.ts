@@ -3,9 +3,9 @@ import pRetry from 'p-retry';
 import { Snode } from '../../../data/data';
 import { PubKey } from '../../types';
 import { SwarmForSubRequest } from './SnodeRequestTypes';
-import { doUnsignedSnodeBatchRequest } from './batchRequest';
+import { BatchRequests } from './batchRequest';
 import { GetNetworkTime } from './getNetworkTime';
-import { getRandomSnode } from './snodePool';
+import { SnodePool } from './snodePool';
 
 /**
  * get snodes for pubkey from random snode. Uses an existing snode
@@ -19,7 +19,12 @@ async function requestSnodesForPubkeyWithTargetNodeRetryable(
   }
   const subrequest = new SwarmForSubRequest(pubkey);
 
-  const result = await doUnsignedSnodeBatchRequest([subrequest], targetNode, 4000, pubkey);
+  const result = await BatchRequests.doUnsignedSnodeBatchRequest(
+    [subrequest],
+    targetNode,
+    4000,
+    pubkey
+  );
 
   if (!result || !result.length) {
     window?.log?.warn(
@@ -87,7 +92,7 @@ async function requestSnodesForPubkeyRetryable(pubKey: string): Promise<Array<Sn
   // the idea is that the requestSnodesForPubkeyWithTargetNode will remove a failing targetNode
   return pRetry(
     async () => {
-      const targetNode = await getRandomSnode();
+      const targetNode = await SnodePool.getRandomSnode();
 
       return requestSnodesForPubkeyWithTargetNode(pubKey, targetNode);
     },

@@ -5,7 +5,6 @@ import { MessageParams } from '../Message';
 
 interface TypingMessageParams extends MessageParams {
   isTyping: boolean;
-  typingTimestamp?: number;
 }
 
 export class TypingMessage extends ContentMessage {

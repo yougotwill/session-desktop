@@ -32,6 +32,7 @@ describe('SwarmPolling:getNamespacesToPollFrom', () => {
 
   it('for group v2 (03 prefix) ', () => {
     expect(swarmPolling.getNamespacesToPollFrom(ConversationTypeEnum.GROUPV2)).to.deep.equal([
+      SnodeNamespaces.ClosedGroupRevokedRetrievableMessages,
       SnodeNamespaces.ClosedGroupMessages,
       SnodeNamespaces.ClosedGroupInfo,
       SnodeNamespaces.ClosedGroupMembers,

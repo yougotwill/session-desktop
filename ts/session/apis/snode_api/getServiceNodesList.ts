@@ -1,10 +1,9 @@
 import { compact, intersectionWith, sampleSize } from 'lodash';
-import { SnodePool } from '.';
 import { Snode } from '../../../data/data';
 import { GetServiceNodesSubRequest } from './SnodeRequestTypes';
-import { doUnsignedSnodeBatchRequest } from './batchRequest';
+import { BatchRequests } from './batchRequest';
 import { GetNetworkTime } from './getNetworkTime';
-import { minSnodePoolCount, requiredSnodesForAgreement } from './snodePool';
+import { SnodePool } from './snodePool';
 
 /**
  * Returns a list of unique snodes got from the specified targetNode.
@@ -14,7 +13,12 @@ import { minSnodePoolCount, requiredSnodesForAgreement } from './snodePool';
 async function getSnodePoolFromSnode(targetNode: Snode): Promise<Array<Snode>> {
   const subrequest = new GetServiceNodesSubRequest();
 
-  const results = await doUnsignedSnodeBatchRequest([subrequest], targetNode, 4000, null);
+  const results = await BatchRequests.doUnsignedSnodeBatchRequest(
+    [subrequest],
+    targetNode,
+    4000,
+    null
+  );
 
   const firstResult = results[0];
 
@@ -58,7 +62,7 @@ async function getSnodePoolFromSnode(targetNode: Snode): Promise<Array<Snode>> {
  */
 async function getSnodePoolFromSnodes() {
   const existingSnodePool = await SnodePool.getSnodePoolFromDBOrFetchFromSeed();
-  if (existingSnodePool.length <= minSnodePoolCount) {
+  if (existingSnodePool.length <= SnodePool.minSnodePoolCount) {
     window?.log?.warn(
       'getSnodePoolFromSnodes: Cannot get snodes list from snodes; not enough snodes',
       existingSnodePool.length
@@ -95,9 +99,9 @@ async function getSnodePoolFromSnodes() {
     }
   );
   // We want the snodes to agree on at least this many snodes
-  if (commonSnodes.length < requiredSnodesForAgreement) {
+  if (commonSnodes.length < SnodePool.requiredSnodesForAgreement) {
     throw new Error(
-      `Inconsistent snode pools. We did not get at least ${requiredSnodesForAgreement} in common`
+      `Inconsistent snode pools. We did not get at least ${SnodePool.requiredSnodesForAgreement} in common`
     );
   }
   return commonSnodes;

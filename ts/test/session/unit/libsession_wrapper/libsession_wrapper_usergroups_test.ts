@@ -8,6 +8,7 @@ import {
 } from '../../../../models/conversationAttributes';
 import { UserUtils } from '../../../../session/utils';
 import { SessionUtilUserGroups } from '../../../../session/utils/libsession/libsession_utils_user_groups';
+import { TestUtils } from '../../../test-utils';
 
 describe('libsession_groups', () => {
   describe('filter user groups for wrapper', () => {
@@ -46,7 +47,7 @@ describe('libsession_groups', () => {
       const validLegacyGroupArgs = {
         ...validArgs,
         type: ConversationTypeEnum.GROUP,
-        id: '05123456564',
+        id: TestUtils.generateFakePubKeyStr(),
       } as any;
 
       it('includes legacy group', () => {
@@ -60,14 +61,7 @@ describe('libsession_groups', () => {
       });
 
       it('exclude legacy group left', () => {
-        expect(
-          SessionUtilUserGroups.isUserGroupToStoreInWrapper(
-            new ConversationModel({
-              ...validLegacyGroupArgs,
-              left: true,
-            })
-          )
-        ).to.be.eq(false);
+        // we cannot have a left group anymore. It's removed entirely when we leave it
       });
       it('exclude legacy group kicked', () => {
         expect(

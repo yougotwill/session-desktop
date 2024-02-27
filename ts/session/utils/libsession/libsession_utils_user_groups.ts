@@ -31,10 +31,9 @@ function isCommunityToStoreInWrapper(convo: ConversationModel): boolean {
 function isLegacyGroupToStoreInWrapper(convo: ConversationModel): boolean {
   return (
     convo.isGroup() &&
-    !convo.isPublic() &&
-    convo.id.startsWith('05') && // new closed groups won't start with 05
+    PubKey.is05Pubkey(convo.id) && // we only check legacy group here
     convo.isActive() &&
-    !convo.isKickedFromGroup()
+    !convo.isKickedFromGroup() // we cannot have a left group anymore. We remove it when we leave it.
   );
 }
 

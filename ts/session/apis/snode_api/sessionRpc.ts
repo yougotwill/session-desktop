@@ -109,7 +109,7 @@ async function doRequest({
  *  -> if the targetNode gets too many errors => we will need to try to do this request again with another target node
  * The
  */
-export async function snodeRpc(
+async function snodeRpc(
   {
     method,
     params,
@@ -147,3 +147,5 @@ export async function snodeRpc(
     timeout,
   });
 }
+
+export const SessionRpc = { snodeRpc };

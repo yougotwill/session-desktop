@@ -71,22 +71,38 @@ describe('GetExpiriesRequest', () => {
       ).to.be.true;
       expect(request.params.signature, 'signature should not be empty').to.not.be.empty;
     });
-    it('fails to build a request if our pubkey is missing', async () => {
+    it('fails to build a request if our pubkey is missing, and throws', async () => {
       // Modify the stub behavior for this test only we need to return an unsupported type to simulate a missing pubkey
       (getOurPubKeyStrFromCacheStub as any).returns(undefined);
-      const unsigned = new GetExpiriesFromNodeSubRequest(props);
-      const request = await unsigned.buildAndSignParameters();
+      let errorStr = 'fakeerror';
+      try {
+        const unsigned = new GetExpiriesFromNodeSubRequest(props);
+        const request = await unsigned.buildAndSignParameters();
+        if (request) {
+          throw new Error('we should not have been able to build a request');
+        }
+      } catch (e) {
+        errorStr = e.message;
+      }
 
-      expect(request, 'should return null').to.be.null;
+      expect(errorStr).to.be.eq('[GetExpiriesFromNodeSubRequest] No pubkey found');
     });
     it('fails to build a request if our signature is missing', async () => {
       // Modify the stub behavior for this test only we need to return an unsupported type to simulate a missing pubkey
       Sinon.stub(SnodeSignature, 'generateGetExpiriesOurSignature').resolves(null);
-      // TODO audric this should throw debugger
-      const unsigned = new GetExpiriesFromNodeSubRequest(props);
-      const request = await unsigned.buildAndSignParameters();
 
-      expect(request, 'should return null').to.be.null;
+      const unsigned = new GetExpiriesFromNodeSubRequest(props);
+      try {
+        const request = await unsigned.buildAndSignParameters();
+        if (request) {
+          throw new Error('should not be able to build the request');
+        }
+        throw new Error('fake error');
+      } catch (e) {
+        expect(e.message).to.be.eq(
+          '[GetExpiriesFromNodeSubRequest] SnodeSignature.generateUpdateExpirySignature returned an empty result messageHash'
+        );
+      }
     });
   });
 

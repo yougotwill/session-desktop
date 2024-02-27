@@ -37,10 +37,7 @@ import { LeftPaneSectionContainer } from './LeftPaneSectionContainer';
 
 import { SettingsKey } from '../../data/settings-key';
 import { getLatestReleaseFromFileServer } from '../../session/apis/file_server_api/FileServerApi';
-import {
-  forceRefreshRandomSnodePool,
-  getFreshSwarmFor,
-} from '../../session/apis/snode_api/snodePool';
+import { SnodePool } from '../../session/apis/snode_api/snodePool';
 import { UserSync } from '../../session/utils/job_runners/jobs/UserSyncJob';
 import { forceSyncConfigurationNowIfNeeded } from '../../session/utils/sync/syncUtils';
 import { isDarkTheme } from '../../state/selectors/theme';
@@ -210,7 +207,7 @@ const doAppStartUp = async () => {
   void triggerSyncIfNeeded();
   void getSwarmPollingInstance().start();
   void loadDefaultRooms();
-  void getFreshSwarmFor(UserUtils.getOurPubKeyStrFromCache()); // refresh our swarm on start to speed up the first message fetching event
+  void SnodePool.getFreshSwarmFor(UserUtils.getOurPubKeyStrFromCache()); // refresh our swarm on start to speed up the first message fetching event
 
   // TODOLATER make this a job of the JobRunner
   debounce(triggerAvatarReUploadIfNeeded, 200);
@@ -292,7 +289,7 @@ export const ActionsPanel = () => {
     }
     // trigger an updates from the snodes every hour
 
-    void forceRefreshRandomSnodePool();
+    void SnodePool.forceRefreshRandomSnodePool();
   }, DURATION.HOURS * 1);
 
   useTimeoutFn(() => {
@@ -300,7 +297,7 @@ export const ActionsPanel = () => {
       return;
     }
     // trigger an updates from the snodes after 5 minutes, once
-    void forceRefreshRandomSnodePool();
+    void SnodePool.forceRefreshRandomSnodePool();
   }, DURATION.MINUTES * 5);
 
   useInterval(() => {

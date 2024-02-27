@@ -2,7 +2,7 @@ import { isArray } from 'lodash';
 import { Snode } from '../../../data/data';
 import { MessageSender } from '../../sending';
 import { processOnionRequestErrorAtDestination, SnodeResponse } from './onions';
-import { snodeRpc } from './sessionRpc';
+import { SessionRpc } from './sessionRpc';
 import {
   builtRequestToLoggingId,
   BuiltSnodeSubRequests,
@@ -26,7 +26,7 @@ function logSubRequests(requests: Array<BuiltSnodeSubRequests>) {
  * @param associatedWith used mostly for handling 421 errors, we need the pubkey the change is associated to
  * @param method can be either batch or sequence. A batch call will run all calls even if one of them fails. A sequence call will stop as soon as the first one fails
  */
-export async function doSnodeBatchRequest(
+async function doSnodeBatchRequest(
   subRequests: Array<BuiltSnodeSubRequests>,
   targetNode: Snode,
   timeout: number,
@@ -43,7 +43,7 @@ export async function doSnodeBatchRequest(
       `batch subRequests count cannot be more than ${MAX_SUBREQUESTS_COUNT}. Got ${subRequests.length}`
     );
   }
-  const result = await snodeRpc({
+  const result = await SessionRpc.snodeRpc({
     method,
     params: { requests: subRequests },
     targetNode,
@@ -76,7 +76,7 @@ export async function doSnodeBatchRequest(
   return decoded;
 }
 
-export async function doUnsignedSnodeBatchRequest(
+async function doUnsignedSnodeBatchRequest(
   unsignedSubRequests: Array<RawSnodeSubRequests>,
   targetNode: Snode,
   timeout: number,
@@ -84,7 +84,13 @@ export async function doUnsignedSnodeBatchRequest(
   method: MethodBatchType = 'batch'
 ): Promise<NotEmptyArrayOfBatchResults> {
   const signedSubRequests = await MessageSender.signSubRequests(unsignedSubRequests);
-  return doSnodeBatchRequest(signedSubRequests, targetNode, timeout, associatedWith, method);
+  return BatchRequests.doSnodeBatchRequest(
+    signedSubRequests,
+    targetNode,
+    timeout,
+    associatedWith,
+    method
+  );
 }
 
 /**
@@ -113,3 +119,8 @@ function decodeBatchRequest(snodeResponse: SnodeResponse): NotEmptyArrayOfBatchR
   }
   // "{"results":[{"body":"retrieve signature verification failed","code":401}]}"
 }
+
+export const BatchRequests = {
+  doSnodeBatchRequest,
+  doUnsignedSnodeBatchRequest,
+};

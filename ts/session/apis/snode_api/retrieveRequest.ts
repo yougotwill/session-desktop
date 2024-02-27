@@ -15,7 +15,7 @@ import {
   UpdateExpiryOnNodeGroupSubRequest,
   UpdateExpiryOnNodeUserSubRequest,
 } from './SnodeRequestTypes';
-import { doUnsignedSnodeBatchRequest } from './batchRequest';
+import { BatchRequests } from './batchRequest';
 import { RetrieveMessagesResultsBatched, RetrieveMessagesResultsContent } from './types';
 
 type RetrieveParams = {
@@ -206,7 +206,12 @@ async function retrieveNextMessages(
   // let exceptions bubble up
   // no retry for this one as this a call we do every few seconds while polling for messages
 
-  const results = await doUnsignedSnodeBatchRequest(rawRequests, targetNode, 4000, associatedWith);
+  const results = await BatchRequests.doUnsignedSnodeBatchRequest(
+    rawRequests,
+    targetNode,
+    4000,
+    associatedWith
+  );
   if (!results || !results.length) {
     window?.log?.warn(
       `_retrieveNextMessages - sessionRpc could not talk to ${targetNode.ip}:${targetNode.port}`

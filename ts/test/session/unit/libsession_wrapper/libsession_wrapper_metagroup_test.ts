@@ -156,19 +156,22 @@ describe('libsession_metagroup', () => {
   describe('members', () => {
     it('all fields are accounted for', () => {
       const memberCreated = metaGroupWrapper.memberGetOrConstruct(member);
+      console.info('Object.keys(memberCreated) ', JSON.stringify(Object.keys(memberCreated)));
       expect(Object.keys(memberCreated).length).to.be.eq(
-        8, // if you change this value, also make sure you add a test, testing that new field, below
+        9, // if you change this value, also make sure you add a test, testing that new field, below
         'this test is designed to fail if you need to add tests to test a new field of libsession'
       );
     });
 
-    it('can add member by setting its promoted state', () => {
+    it('can add member by setting its promoted state, both ok and nok', () => {
       metaGroupWrapper.memberSetPromoted(member, false);
       expect(metaGroupWrapper.memberGetAll().length).to.be.deep.eq(1);
       expect(metaGroupWrapper.memberGetAll()[0]).to.be.deep.eq({
         ...emptyMember(member),
         promoted: true,
         promotionPending: true,
+        promotionFailed: false,
+        admin: false,
       });
 
       metaGroupWrapper.memberSetPromoted(member2, true);
@@ -179,15 +182,19 @@ describe('libsession_metagroup', () => {
         promoted: true,
         promotionFailed: true,
         promotionPending: true,
+        admin: false,
       });
+
+      // we test the admin: true case below
     });
 
-    it('can add member by setting its invited state', () => {
+    it('can add member by setting its invited state, both ok and nok', () => {
       metaGroupWrapper.memberSetInvited(member, false); // with invite success
       expect(metaGroupWrapper.memberGetAll().length).to.be.deep.eq(1);
       expect(metaGroupWrapper.memberGetAll()[0]).to.be.deep.eq({
         ...emptyMember(member),
         invitePending: true,
+        inviteFailed: false,
       });
 
       metaGroupWrapper.memberSetInvited(member2, true); // with invite failed
@@ -249,6 +256,20 @@ describe('libsession_metagroup', () => {
       metaGroupWrapper.memberSetProfilePicture(member, pic);
       expect(metaGroupWrapper.memberGetAll().length).to.be.deep.eq(1);
       const expected = { ...emptyMember(member), profilePicture: pic };
+
+      expect(metaGroupWrapper.memberGetAll()[0]).to.be.deep.eq(expected);
+    });
+
+    it('can add via admin set', () => {
+      metaGroupWrapper.memberSetAdmin(member);
+      expect(metaGroupWrapper.memberGetAll().length).to.be.deep.eq(1);
+      const expected: GroupMemberGet = {
+        ...emptyMember(member),
+        admin: true,
+        promoted: true,
+        promotionFailed: false,
+        promotionPending: false,
+      };
 
       expect(metaGroupWrapper.memberGetAll()[0]).to.be.deep.eq(expected);
     });

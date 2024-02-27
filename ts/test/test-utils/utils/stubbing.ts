@@ -6,6 +6,8 @@ import { ConfigDumpData } from '../../../data/configDump/configDump';
 import { Data } from '../../../data/data';
 import { OpenGroupData } from '../../../data/opengroups';
 
+import { TestUtils } from '..';
+import { SnodePool } from '../../../session/apis/snode_api/snodePool';
 import { BlockedNumberController } from '../../../util';
 import * as libsessionWorker from '../../../webworker/workers/browser/libsession_worker_interface';
 import * as utilWorker from '../../../webworker/workers/browser/util_worker_interface';
@@ -122,3 +124,13 @@ export type TypedStub<T extends Record<string, unknown>, K extends keyof T> = T[
 ) => any
   ? Sinon.SinonStub<Parameters<T[K]>, ReturnType<T[K]>>
   : never;
+
+export function stubValidSnodeSwarm() {
+  const snodes = TestUtils.generateFakeSnodes(20);
+  SnodePool.TEST_resetState(snodes);
+  const swarm = snodes.slice(0, 6);
+
+  Sinon.stub(SnodePool, 'getSwarmFor').resolves(swarm);
+
+  return { snodes, swarm };
+}

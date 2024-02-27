@@ -271,13 +271,14 @@ describe('GroupSyncJob pushChangesToGroupSwarmIfNeeded', () => {
   });
 
   it('call savesDumpToDb even if no changes are required on the serverside', async () => {
+    pendingChangesForGroupStub.resolves({ allOldHashes: new Set(), messages: [] });
+
     const result = await GroupSync.pushChangesToGroupSwarmIfNeeded({
       groupPk,
       revokeSubRequest: null,
       unrevokeSubRequest: null,
       supplementKeys: [],
     });
-    pendingChangesForGroupStub.resolves(undefined);
     expect(result).to.be.eq(RunJobResult.Success);
     expect(sendStub.callCount).to.be.eq(0);
     expect(pendingChangesForGroupStub.callCount).to.be.eq(1);
@@ -286,6 +287,8 @@ describe('GroupSyncJob pushChangesToGroupSwarmIfNeeded', () => {
   });
 
   it('calls sendEncryptedDataToSnode with the right data and retry if network returned nothing', async () => {
+    TestUtils.stubLibSessionWorker(undefined);
+
     const info = validInfo(sodium);
     const member = validMembers(sodium);
     const networkTimestamp = 4444;
@@ -311,24 +314,34 @@ describe('GroupSyncJob pushChangesToGroupSwarmIfNeeded', () => {
 
     function expected(details: any) {
       return {
+        dbMessageIdentifier: null,
         namespace: details.namespace,
-        data: details.ciphertext,
-        ttl,
-        networkTimestamp,
-        pubkey: groupPk,
+        encryptedData: details.ciphertext,
+        ttlMs: ttl,
+        destination: groupPk,
+        method: 'store',
       };
     }
 
     const expectedInfo = expected(info);
     const expectedMember = expected(member);
-    expect(sendStub.firstCall.args).to.be.deep.eq([
-      [expectedInfo, expectedMember],
-      groupPk,
-      new Set('123'),
-    ]);
+
+    const callArgs = sendStub.firstCall.args[0];
+    // we don't want to check the content of the request in this unit test, just the structure/count of them
+    // callArgs.storeRequests = callArgs.storeRequests.map(_m => null) as any;
+    const expectedArgs = {
+      storeRequests: [expectedInfo, expectedMember],
+      destination: groupPk,
+      messagesHashesToDelete: new Set('123'),
+      unrevokeSubRequest: null,
+      revokeSubRequest: null,
+    };
+    expect(callArgs).to.be.deep.eq(expectedArgs);
   });
 
   it('calls sendEncryptedDataToSnode with the right data (and keys) and retry if network returned nothing', async () => {
+    TestUtils.stubLibSessionWorker(undefined);
+
     const info = validInfo(sodium);
     const member = validMembers(sodium);
     const keys = validKeys(sodium);

@@ -7,9 +7,9 @@ import {
   toHex,
 } from '../../utils/String';
 import { OnsResolveSubRequest } from './SnodeRequestTypes';
-import { doUnsignedSnodeBatchRequest } from './batchRequest';
+import { BatchRequests } from './batchRequest';
 import { GetNetworkTime } from './getNetworkTime';
-import { getRandomSnode } from './snodePool';
+import { SnodePool } from './snodePool';
 
 // ONS name can have [a-zA-Z0-9_-] except that - is not allowed as start or end
 // do not define a regex but rather create it on the fly to avoid https://stackoverflow.com/questions/3891641/regex-test-only-works-every-other-time
@@ -27,9 +27,14 @@ async function getSessionIDForOnsName(onsNameCase: string) {
 
   // we do this request with validationCount snodes
   const promises = range(0, validationCount).map(async () => {
-    const targetNode = await getRandomSnode();
+    const targetNode = await SnodePool.getRandomSnode();
 
-    const results = await doUnsignedSnodeBatchRequest([subRequest], targetNode, 4000, null);
+    const results = await BatchRequests.doUnsignedSnodeBatchRequest(
+      [subRequest],
+      targetNode,
+      4000,
+      null
+    );
     const firstResult = results[0];
     if (!firstResult || firstResult.code !== 200 || !firstResult.body) {
       throw new Error('ONSresolve:Failed to resolve ONS');

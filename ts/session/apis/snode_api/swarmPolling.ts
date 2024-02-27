@@ -22,7 +22,6 @@ import { SignalService } from '../../../protobuf';
 import * as Receiver from '../../../receiver/receiver';
 import { PubKey } from '../../types';
 import { ERROR_CODE_NO_CONNECT } from './SNodeAPI';
-import * as snodePool from './snodePool';
 
 import { ConversationModel } from '../../../models/conversation';
 import { ConversationTypeEnum } from '../../../models/conversationAttributes';
@@ -44,6 +43,7 @@ import { LibSessionUtil } from '../../utils/libsession/libsession_utils';
 import { SnodeNamespace, SnodeNamespaces, SnodeNamespacesUserConfig } from './namespaces';
 import { PollForGroup, PollForLegacy, PollForUs } from './pollingTypes';
 import { SnodeAPIRetrieve } from './retrieveRequest';
+import { SnodePool } from './snodePool';
 import { SwarmPollingGroupConfig } from './swarm_polling_config/SwarmPollingGroupConfig';
 import { SwarmPollingUserConfig } from './swarm_polling_config/SwarmPollingUserConfig';
 import {
@@ -339,7 +339,7 @@ export class SwarmPolling {
    */
   public async pollOnceForKey([pubkey, type]: PollForUs | PollForLegacy | PollForGroup) {
     const namespaces = this.getNamespacesToPollFrom(type);
-    const swarmSnodes = await snodePool.getSwarmFor(pubkey);
+    const swarmSnodes = await SnodePool.getSwarmFor(pubkey);
 
     // Select nodes for which we already have lastHashes
     const alreadyPolled = swarmSnodes.filter((n: Snode) => this.lastHashes[n.pubkey_ed25519]);

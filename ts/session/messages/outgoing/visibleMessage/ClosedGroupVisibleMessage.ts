@@ -34,7 +34,8 @@ export class ClosedGroupVisibleMessage extends ClosedGroupMessage {
     this.chatMessage = params.chatMessage;
     if (
       this.chatMessage.expirationType !== 'deleteAfterSend' &&
-      this.chatMessage.expirationType !== 'unknown'
+      this.chatMessage.expirationType !== 'unknown' &&
+      this.chatMessage.expirationType !== null
     ) {
       throw new Error('group visible msg only support DaS and off Disappearing options');
     }

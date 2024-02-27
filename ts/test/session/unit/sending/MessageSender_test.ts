@@ -7,6 +7,7 @@ import { SignalService } from '../../../../protobuf';
 import { OpenGroupMessageV2 } from '../../../../session/apis/open_group_api/opengroupV2/OpenGroupMessageV2';
 import { OpenGroupPollingUtils } from '../../../../session/apis/open_group_api/opengroupV2/OpenGroupPollingUtils';
 import { SogsBlinding } from '../../../../session/apis/open_group_api/sogsv3/sogsBlinding';
+import { BatchRequests } from '../../../../session/apis/snode_api/batchRequest';
 import { GetNetworkTime } from '../../../../session/apis/snode_api/getNetworkTime';
 import { SnodeNamespaces } from '../../../../session/apis/snode_api/namespaces';
 import { Onions } from '../../../../session/apis/snode_api/onions';
@@ -19,7 +20,14 @@ import { OutgoingRawMessage, PubKey } from '../../../../session/types';
 import { MessageUtils, UserUtils } from '../../../../session/utils';
 import { fromBase64ToArrayBuffer } from '../../../../session/utils/String';
 import { TestUtils } from '../../../test-utils';
-import { stubCreateObjectUrl, stubData, stubUtilWorker } from '../../../test-utils/utils';
+import {
+  TypedStub,
+  expectAsyncToThrow,
+  stubCreateObjectUrl,
+  stubData,
+  stubUtilWorker,
+  stubValidSnodeSwarm,
+} from '../../../test-utils/utils';
 import { TEST_identityKeyPair } from '../crypto/MessageEncrypter_test';
 
 describe('MessageSender', () => {
@@ -40,12 +48,13 @@ describe('MessageSender', () => {
 
   describe('send', () => {
     const ourNumber = TestUtils.generateFakePubKeyStr();
-    let sessionMessageAPISendStub: sinon.SinonStub<any>;
+    let sessionMessageAPISendStub: TypedStub<typeof MessageSender, 'sendMessagesDataToSnode'>;
+    let doSnodeBatchRequestStub: TypedStub<typeof BatchRequests, 'doSnodeBatchRequest'>;
     let encryptStub: sinon.SinonStub<[PubKey, Uint8Array, SignalService.Envelope.Type]>;
 
     beforeEach(() => {
       sessionMessageAPISendStub = Sinon.stub(MessageSender, 'sendMessagesDataToSnode').resolves();
-
+      doSnodeBatchRequestStub = Sinon.stub(BatchRequests, 'doSnodeBatchRequest').resolves();
       stubData('getMessageById').resolves();
 
       encryptStub = Sinon.stub(MessageEncrypter, 'encrypt').resolves({
@@ -68,29 +77,34 @@ describe('MessageSender', () => {
       });
 
       it('should not retry if an error occurred during encryption', async () => {
-        encryptStub.throws(new Error('Failed to encrypt.'));
-        const promise = MessageSender.sendSingleMessage({
-          message: rawMessage,
-          attempts: 3,
-          retryMinTimeout: 10,
-          isSyncMessage: false,
-        });
-        await expect(promise).is.rejectedWith('Failed to encrypt.');
+        encryptStub.throws(new Error('Failed to encrypt'));
+
+        const promise = () =>
+          MessageSender.sendSingleMessage({
+            message: rawMessage,
+            attempts: 3,
+            retryMinTimeout: 10,
+            isSyncMessage: false,
+          });
+        await expectAsyncToThrow(promise, 'Failed to encrypt');
         expect(sessionMessageAPISendStub.callCount).to.equal(0);
       });
 
       it('should only call lokiMessageAPI once if no errors occured', async () => {
+        stubValidSnodeSwarm();
         await MessageSender.sendSingleMessage({
           message: rawMessage,
           attempts: 3,
           retryMinTimeout: 10,
           isSyncMessage: false,
         });
-        expect(sessionMessageAPISendStub.callCount).to.equal(1);
+        expect(doSnodeBatchRequestStub.callCount).to.equal(1);
       });
 
       it('should only retry the specified amount of times before throwing', async () => {
-        sessionMessageAPISendStub.throws(new Error('API error'));
+        stubValidSnodeSwarm();
+
+        doSnodeBatchRequestStub.throws(new Error('API error'));
         const attempts = 2;
         const promise = MessageSender.sendSingleMessage({
           message: rawMessage,
@@ -99,18 +113,19 @@ describe('MessageSender', () => {
           isSyncMessage: false,
         });
         await expect(promise).is.rejectedWith('API error');
-        expect(sessionMessageAPISendStub.callCount).to.equal(attempts);
+        expect(doSnodeBatchRequestStub.callCount).to.equal(attempts);
       });
 
       it('should not throw error if successful send occurs within the retry limit', async () => {
-        sessionMessageAPISendStub.onFirstCall().throws(new Error('API error'));
+        stubValidSnodeSwarm();
+        doSnodeBatchRequestStub.onFirstCall().throws(new Error('API error'));
         await MessageSender.sendSingleMessage({
           message: rawMessage,
           attempts: 3,
           retryMinTimeout: 10,
           isSyncMessage: false,
         });
-        expect(sessionMessageAPISendStub.callCount).to.equal(2);
+        expect(doSnodeBatchRequestStub.callCount).to.equal(2);
       });
     });
 
@@ -125,6 +140,8 @@ describe('MessageSender', () => {
       });
 
       it('should pass the correct values to lokiMessageAPI', async () => {
+        TestUtils.setupTestWithSending();
+
         const device = TestUtils.generateFakePubKey();
         const visibleMessage = TestUtils.generateVisibleMessage();
         Sinon.stub(ConvoHub.use(), 'get').returns(undefined as any);
@@ -142,17 +159,27 @@ describe('MessageSender', () => {
           isSyncMessage: false,
         });
 
-        const args = sessionMessageAPISendStub.getCall(0).args;
-        expect(args[1]).to.equal(device.key);
+        const args = doSnodeBatchRequestStub.getCall(0).args;
+
+        expect(args[3]).to.equal(device.key);
         const firstArg = args[0];
         expect(firstArg.length).to.equal(1);
+
+        if (firstArg[0].method !== 'store') {
+          throw new Error('expected a store request with data');
+        }
+
         // expect(args[3]).to.equal(visibleMessage.timestamp); the timestamp is overwritten on sending by the network clock offset
-        expect(firstArg[0].ttl).to.equal(visibleMessage.ttl());
-        expect(firstArg[0].pubkey).to.equal(device.key);
-        expect(firstArg[0].namespace).to.equal(SnodeNamespaces.Default);
+        expect(firstArg[0].params.ttl).to.equal(visibleMessage.ttl());
+        expect(firstArg[0].params.pubkey).to.equal(device.key);
+        expect(firstArg[0].params.namespace).to.equal(SnodeNamespaces.Default);
+        // the request timestamp is always used fresh with the offset as the request will be denied with a 406 otherwise (clock out of sync)
+        expect(firstArg[0].params.timestamp).to.be.above(Date.now() - 10);
+        expect(firstArg[0].params.timestamp).to.be.below(Date.now() + 10);
       });
 
-      it('should correctly build the envelope and override the timestamp', async () => {
+      it('should correctly build the envelope and override the request timestamp but not the msg one', async () => {
+        TestUtils.setupTestWithSending();
         messageEncyrptReturnEnvelopeType = SignalService.Envelope.Type.SESSION_MESSAGE;
 
         // This test assumes the encryption stub returns the plainText passed into it.
@@ -173,9 +200,12 @@ describe('MessageSender', () => {
           isSyncMessage: false,
         });
 
-        const firstArg = sessionMessageAPISendStub.getCall(0).args[0];
-        const { data64 } = firstArg[0];
-        const data = fromBase64ToArrayBuffer(data64);
+        const firstArg = doSnodeBatchRequestStub.getCall(0).args[0];
+
+        if (firstArg[0].method !== 'store') {
+          throw new Error('expected a store request with data');
+        }
+        const data = fromBase64ToArrayBuffer(firstArg[0].params.data);
         const webSocketMessage = SignalService.WebSocketMessage.decode(new Uint8Array(data));
         expect(webSocketMessage.request?.body).to.not.equal(
           undefined,
@@ -192,33 +222,22 @@ describe('MessageSender', () => {
         expect(envelope.type).to.equal(SignalService.Envelope.Type.SESSION_MESSAGE);
         expect(envelope.source).to.equal('');
 
-        // the timestamp is overridden on sending with the network offset
-        const expectedTimestamp = Date.now() - offset;
+        // the timestamp in the message is not overridden on sending as it should be set with the network offset when created.
+        // we need that timestamp to not be overriden as the signature of the message depends on it.
         const decodedTimestampFromSending = _.toNumber(envelope.timestamp);
-        expect(decodedTimestampFromSending).to.be.above(expectedTimestamp - 10);
-        expect(decodedTimestampFromSending).to.be.below(expectedTimestamp + 10);
+        expect(decodedTimestampFromSending).to.be.eq(visibleMessage.createAtNetworkTimestamp);
 
-        // then make sure the plaintextBuffer was overridden too
-        const visibleMessageExpected = TestUtils.generateVisibleMessage({
-          timestamp: decodedTimestampFromSending,
-        });
-        const rawMessageExpected = await MessageUtils.toRawMessage(
-          device,
-          visibleMessageExpected,
-          0
-        );
-
-        expect(envelope.content).to.deep.equal(rawMessageExpected.plainTextBuffer);
+        // then, make sure that
       });
 
       describe('SESSION_MESSAGE', () => {
         it('should set the envelope source to be empty', async () => {
+          TestUtils.setupTestWithSending();
           messageEncyrptReturnEnvelopeType = SignalService.Envelope.Type.SESSION_MESSAGE;
           Sinon.stub(ConvoHub.use(), 'get').returns(undefined as any);
 
           // This test assumes the encryption stub returns the plainText passed into it.
           const device = TestUtils.generateFakePubKey();
-
           const visibleMessage = TestUtils.generateVisibleMessage();
           const rawMessage = await MessageUtils.toRawMessage(
             device,
@@ -232,9 +251,12 @@ describe('MessageSender', () => {
             isSyncMessage: false,
           });
 
-          const firstArg = sessionMessageAPISendStub.getCall(0).args[0];
-          const { data64 } = firstArg[0];
-          const data = fromBase64ToArrayBuffer(data64);
+          const firstArg = doSnodeBatchRequestStub.getCall(0).args[0];
+
+          if (firstArg[0].method !== 'store') {
+            throw new Error('expected a store request with data');
+          }
+          const data = fromBase64ToArrayBuffer(firstArg[0].params.data);
           const webSocketMessage = SignalService.WebSocketMessage.decode(new Uint8Array(data));
           expect(webSocketMessage.request?.body).to.not.equal(
             undefined,

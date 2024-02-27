@@ -25,7 +25,7 @@ import { PendingMessageCacheStub } from '../../../test-utils/stubs';
 
 import { SnodeNamespaces } from '../../../../session/apis/snode_api/namespaces';
 import { MessageSentHandler } from '../../../../session/sending/MessageSentHandler';
-import { stubData } from '../../../test-utils/utils';
+import { TypedStub, stubData } from '../../../test-utils/utils';
 
 chai.use(chaiAsPromised as any);
 chai.should();
@@ -39,9 +39,23 @@ describe('MessageQueue', () => {
 
   // Initialize new stubbed queue
   let pendingMessageCache: PendingMessageCacheStub;
-  let messageSentHandlerFailedStub: sinon.SinonStub;
-  let messageSentHandlerSuccessStub: sinon.SinonStub;
-  let messageSentPublicHandlerSuccessStub: sinon.SinonStub;
+  let messageSentHandlerFailedStub: TypedStub<
+    typeof MessageSentHandler,
+    'handleSwarmMessageSentFailure'
+  >;
+  let messageSentHandlerSuccessStub: TypedStub<
+    typeof MessageSentHandler,
+    'handleSwarmMessageSentSuccess'
+  >;
+  let messageSentPublicHandlerSuccessStub: TypedStub<
+    typeof MessageSentHandler,
+    'handlePublicMessageSentSuccess'
+  >;
+  let handlePublicMessageSentFailureStub: TypedStub<
+    typeof MessageSentHandler,
+    'handlePublicMessageSentFailure'
+  >;
+
   let messageQueueStub: MessageQueue;
 
   // Message Sender Stubs
@@ -64,6 +78,10 @@ describe('MessageQueue', () => {
     messageSentPublicHandlerSuccessStub = Sinon.stub(
       MessageSentHandler,
       'handlePublicMessageSentSuccess'
+    ).resolves();
+    handlePublicMessageSentFailureStub = Sinon.stub(
+      MessageSentHandler,
+      'handlePublicMessageSentFailure'
     ).resolves();
 
     // Init Queue
@@ -267,6 +285,7 @@ describe('MessageQueue', () => {
 
         it('should emit a fail event if something went wrong', async () => {
           sendToOpenGroupV2Stub.resolves({ serverId: -1, serverTimestamp: -1 });
+          stubData('getMessageById').resolves();
           const message = TestUtils.generateOpenGroupVisibleMessage();
           const roomInfos = TestUtils.generateOpenGroupV2RoomInfos();
 
@@ -276,8 +295,8 @@ describe('MessageQueue', () => {
             blinded: false,
             filesToLink: [],
           });
-          expect(messageSentHandlerFailedStub.callCount).to.equal(1);
-          expect(messageSentHandlerFailedStub.lastCall.args[0].identifier).to.equal(
+          expect(handlePublicMessageSentFailureStub.callCount).to.equal(1);
+          expect(handlePublicMessageSentFailureStub.lastCall.args[0].identifier).to.equal(
             message.identifier
           );
         });

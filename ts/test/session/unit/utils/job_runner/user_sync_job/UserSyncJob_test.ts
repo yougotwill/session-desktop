@@ -299,20 +299,27 @@ describe('UserSyncJob pushChangesToUserSwarmIfNeeded', () => {
     function expected(details: any) {
       return {
         namespace: details.namespace,
-        data: details.ciphertext,
-        ttl,
-        networkTimestamp,
-        pubkey: sessionId,
+        encryptedData: details.ciphertext,
+        ttlMs: ttl,
+        destination: sessionId,
+        method: 'store',
       };
     }
 
     const expectedProfile = expected(profile);
     const expectedContact = expected(contact);
-    expect(sendStub.firstCall.args).to.be.deep.eq([
-      [expectedProfile, expectedContact],
-      sessionId,
-      new Set('123'),
-    ]);
+
+    const callArgs = sendStub.firstCall.args[0];
+    // we don't want to check the content of the request in this unit test, just the structure/count of them
+    const expectedArgs = {
+      storeRequests: [expectedProfile, expectedContact],
+      destination: sessionId,
+      messagesHashesToDelete: new Set('123'),
+      unrevokeSubRequest: null,
+      revokeSubRequest: null,
+    };
+    // callArgs.storeRequests = callArgs.storeRequests.map(_m => null) as any;
+    expect(callArgs).to.be.deep.eq(expectedArgs);
   });
 
   it('calls sendEncryptedDataToSnode with the right data x3 and retry if network returned nothing then success', async () => {

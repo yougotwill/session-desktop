@@ -2,12 +2,12 @@
 /* eslint-disable no-await-in-loop */
 /* eslint-disable no-restricted-syntax */
 import { expect } from 'chai';
-import Sinon from 'sinon';
 import * as _ from 'lodash';
+import Sinon from 'sinon';
+import { SnodeNamespaces } from '../../../../session/apis/snode_api/namespaces';
+import { PendingMessageCache } from '../../../../session/sending/PendingMessageCache';
 import { MessageUtils } from '../../../../session/utils';
 import { TestUtils } from '../../../test-utils';
-import { PendingMessageCache } from '../../../../session/sending/PendingMessageCache';
-import { SnodeNamespaces } from '../../../../session/apis/snode_api/namespaces';
 
 // Equivalent to Data.StorageItem
 interface StorageItem {
@@ -300,8 +300,8 @@ describe('PendingMessageCache', () => {
       expect(buffersCompare).to.equal(true, 'buffers were not loaded properly from database');
 
       // Compare all other valures
-      const trimmedAdded = _.omit(addedMessage, ['plainTextBuffer']);
-      const trimmedRebuilt = _.omit(message, ['plainTextBuffer']);
+      const trimmedAdded = _.omit(addedMessage, ['plainTextBuffer', 'plainTextBufferHex']);
+      const trimmedRebuilt = _.omit(message, ['plainTextBuffer', 'plainTextBufferHex']);
 
       expect(_.isEqual(trimmedAdded, trimmedRebuilt)).to.equal(
         true,

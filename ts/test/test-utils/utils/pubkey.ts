@@ -5,8 +5,10 @@ import _ from 'lodash';
 import { Snode } from '../../../data/data';
 import { getSodiumNode } from '../../../node/sodiumNode';
 import { ECKeyPair } from '../../../receiver/keypairs';
+import { SnodePool } from '../../../session/apis/snode_api/snodePool';
 import { PubKey } from '../../../session/types';
 import { ByteKeyPair } from '../../../session/utils/User';
+import { stubData } from './stubbing';
 
 export function generateFakePubKey(): PubKey {
   // Generates a mock pubkey for testing
@@ -91,9 +93,13 @@ export function generateFakePubKeys(amount: number): Array<PubKey> {
   return new Array(numPubKeys).fill(0).map(() => generateFakePubKey());
 }
 
+export function generateFakeSwarmFor(): Array<string> {
+  return generateFakePubKeys(6).map(m => m.key);
+}
+
 export function generateFakeSnode(): Snode {
   return {
-    ip: `136.243.${Math.random() * 255}.${Math.random() * 255}`,
+    ip: `136.243.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`,
     port: 22116,
     pubkey_x25519: generateFakePubKeyStr(),
     pubkey_ed25519: generateFakePubKeyStr(),
@@ -112,4 +118,16 @@ export function generateFakeSnodeWithEdKey(ed25519Pubkey: string): Snode {
 export function generateFakeSnodes(amount: number): Array<Snode> {
   const ar: Array<Snode> = _.times(amount, generateFakeSnode);
   return ar;
+}
+
+/**
+ * this function can be used to setup unit test which relies on fetching a snodepool
+ */
+export function setupTestWithSending() {
+  const snodes = generateFakeSnodes(20);
+  const swarm = snodes.slice(0, 6);
+  SnodePool.TEST_resetState(snodes);
+
+  stubData('getSwarmNodesForPubkey').resolves(swarm.map(m => m.pubkey_ed25519));
+  return { snodes, swarm };
 }

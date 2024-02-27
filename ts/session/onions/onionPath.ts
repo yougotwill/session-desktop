@@ -11,7 +11,7 @@ import { updateOnionPaths } from '../../state/ducks/onion';
 import { APPLICATION_JSON } from '../../types/MIME';
 import { ERROR_CODE_NO_CONNECT } from '../apis/snode_api/SNodeAPI';
 import { Onions, snodeHttpsAgent } from '../apis/snode_api/onions';
-import * as SnodePool from '../apis/snode_api/snodePool';
+import { SnodePool } from '../apis/snode_api/snodePool';
 import { UserUtils } from '../utils';
 import { allowOnlyOneAtATime } from '../utils/Promise';
 

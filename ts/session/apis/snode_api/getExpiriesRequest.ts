@@ -6,8 +6,8 @@ import { Snode } from '../../../data/data';
 import { UserUtils } from '../../utils';
 import { SeedNodeAPI } from '../seed_node_api';
 import { GetExpiriesFromNodeSubRequest, fakeHash } from './SnodeRequestTypes';
-import { doUnsignedSnodeBatchRequest } from './batchRequest';
-import { getNodeFromSwarmOrThrow } from './snodePool';
+import { BatchRequests } from './batchRequest';
+import { SnodePool } from './snodePool';
 import { GetExpiriesResultsContent, WithMessagesHashes } from './types';
 
 export type GetExpiriesRequestResponseResults = Record<string, number>;
@@ -46,7 +46,7 @@ async function getExpiriesFromNodes(
 ) {
   try {
     const expireRequest = new GetExpiriesFromNodeSubRequest({ messagesHashes: messageHashes });
-    const result = await doUnsignedSnodeBatchRequest(
+    const result = await BatchRequests.doUnsignedSnodeBatchRequest(
       [expireRequest],
       targetNode,
       4000,
@@ -120,7 +120,7 @@ export async function getExpiriesFromSnode({ messagesHashes }: WithMessagesHashe
   try {
     const fetchedExpiries = await pRetry(
       async () => {
-        const targetNode = await getNodeFromSwarmOrThrow(ourPubKey);
+        const targetNode = await SnodePool.getNodeFromSwarmOrThrow(ourPubKey);
 
         return getExpiriesFromNodes(targetNode, messagesHashes, ourPubKey);
       },
