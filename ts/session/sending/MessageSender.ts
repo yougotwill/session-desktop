@@ -228,7 +228,7 @@ async function sendSingleMessage({
       }
 
       const targetNode = await SnodePool.getNodeFromSwarmOrThrow(destination);
-      const batchResult = await BatchRequests.doUnsignedSnodeBatchRequest(
+      const batchResult = await BatchRequests.doUnsignedSnodeBatchRequestNoRetries(
         subRequests,
         targetNode,
         6000,
@@ -380,7 +380,7 @@ async function sendMessagesDataToSnode(
   const targetNode = await SnodePool.getNodeFromSwarmOrThrow(asssociatedWith);
 
   try {
-    const storeResults = await BatchRequests.doUnsignedSnodeBatchRequest(
+    const storeResults = await BatchRequests.doUnsignedSnodeBatchRequestNoRetries(
       rawRequests,
       targetNode,
       4000,
@@ -390,10 +390,10 @@ async function sendMessagesDataToSnode(
 
     if (!storeResults || !storeResults.length) {
       window?.log?.warn(
-        `SessionSnodeAPI::doSnodeBatchRequest on ${targetNode.ip}:${targetNode.port} returned falsish value`,
+        `SessionSnodeAPI::doUnsignedSnodeBatchRequestNoRetries on ${targetNode.ip}:${targetNode.port} returned falsish value`,
         storeResults
       );
-      throw new Error('doSnodeBatchRequest: Invalid result');
+      throw new Error('doUnsignedSnodeBatchRequestNoRetries: Invalid result');
     }
 
     const firstResult = storeResults[0];

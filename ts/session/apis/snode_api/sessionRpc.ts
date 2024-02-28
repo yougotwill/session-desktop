@@ -20,9 +20,10 @@ export interface LokiFetchOptions {
 
 /**
  * A small wrapper around node-fetch which deserializes response
- * returns insecureNodeFetch response or false
+ * returned by insecureNodeFetch or false.
+ * Does not do any retries, nor eject snodes if needed
  */
-async function doRequest({
+async function doRequestNoRetries({
   options,
   url,
   associatedWith,
@@ -51,7 +52,7 @@ async function doRequest({
         ? true
         : window.sessionFeatureFlags?.useOnionRequests;
     if (useOnionRequests && targetNode) {
-      const fetchResult = await Onions.lokiOnionFetch({
+      const fetchResult = await Onions.lokiOnionFetchWithRetries({
         targetNode,
         body: fetchOptions.body,
         headers: fetchOptions.headers,
@@ -109,7 +110,7 @@ async function doRequest({
  *  -> if the targetNode gets too many errors => we will need to try to do this request again with another target node
  * The
  */
-async function snodeRpc(
+async function snodeRpcNoRetries(
   {
     method,
     params,
@@ -139,7 +140,7 @@ async function snodeRpc(
     agent: null,
   };
 
-  return doRequest({
+  return doRequestNoRetries({
     url,
     options: fetchOptions,
     targetNode,
@@ -148,4 +149,4 @@ async function snodeRpc(
   });
 }
 
-export const SessionRpc = { snodeRpc };
+export const SessionRpc = { snodeRpcNoRetries };

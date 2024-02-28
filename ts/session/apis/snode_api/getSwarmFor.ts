@@ -19,7 +19,7 @@ async function requestSnodesForPubkeyWithTargetNodeRetryable(
   }
   const subrequest = new SwarmForSubRequest(pubkey);
 
-  const result = await BatchRequests.doUnsignedSnodeBatchRequest(
+  const result = await BatchRequests.doUnsignedSnodeBatchRequestNoRetries(
     [subrequest],
     targetNode,
     4000,

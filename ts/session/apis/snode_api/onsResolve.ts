@@ -29,7 +29,7 @@ async function getSessionIDForOnsName(onsNameCase: string) {
   const promises = range(0, validationCount).map(async () => {
     const targetNode = await SnodePool.getRandomSnode();
 
-    const results = await BatchRequests.doUnsignedSnodeBatchRequest(
+    const results = await BatchRequests.doUnsignedSnodeBatchRequestNoRetries(
       [subRequest],
       targetNode,
       4000,

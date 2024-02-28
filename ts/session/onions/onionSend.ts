@@ -159,7 +159,7 @@ const sendViaOnionV4ToNonSnodeWithRetries = async (
          * call above will call us again with the same params but a different path.
          * If the error is not recoverable, it throws a pRetry.AbortError.
          */
-        const onionV4Response = await Onions.sendOnionRequestHandlingSnodeEject({
+        const onionV4Response = await Onions.sendOnionRequestHandlingSnodeEjectNoRetries({
           nodePath: pathNodes,
           destSnodeX25519: destinationX25519Key,
           finalDestOptions: payloadObj,
@@ -171,7 +171,7 @@ const sendViaOnionV4ToNonSnodeWithRetries = async (
 
         if (window.sessionFeatureFlags?.debug.debugNonSnodeRequests) {
           window.log.info(
-            'sendViaOnionV4ToNonSnodeWithRetries: sendOnionRequestHandlingSnodeEject returned: ',
+            'sendViaOnionV4ToNonSnodeWithRetries: sendOnionRequestHandlingSnodeEjectNoRetries returned: ',
             JSON.stringify(onionV4Response)
           );
         }

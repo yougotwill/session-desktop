@@ -20,20 +20,25 @@ function logSubRequests(requests: Array<BuiltSnodeSubRequests>) {
  * This is the equivalent to the batch send on sogs. The target node runs each sub request and returns a list of all the sub status and bodies.
  * If the global status code is not 200, an exception is thrown.
  * The body is already parsed from json and is enforced to be an Array of at least one element
+ * Note: This function does not retry by itself.
+ *
  * @param subRequests the list of requests to do
  * @param targetNode the node to do the request to, once all the onion routing is done
  * @param timeout the timeout at which we should cancel this request.
  * @param associatedWith used mostly for handling 421 errors, we need the pubkey the change is associated to
  * @param method can be either batch or sequence. A batch call will run all calls even if one of them fails. A sequence call will stop as soon as the first one fails
  */
-async function doSnodeBatchRequest(
+async function doSnodeBatchRequestNoRetries(
   subRequests: Array<BuiltSnodeSubRequests>,
   targetNode: Snode,
   timeout: number,
   associatedWith: string | null,
   method: MethodBatchType = 'batch'
 ): Promise<NotEmptyArrayOfBatchResults> {
-  window.log.debug(`doSnodeBatchRequest "${method}":`, JSON.stringify(logSubRequests(subRequests)));
+  window.log.debug(
+    `doSnodeBatchRequestNoRetries "${method}":`,
+    JSON.stringify(logSubRequests(subRequests))
+  );
 
   if (subRequests.length > MAX_SUBREQUESTS_COUNT) {
     window.log.error(
@@ -43,7 +48,7 @@ async function doSnodeBatchRequest(
       `batch subRequests count cannot be more than ${MAX_SUBREQUESTS_COUNT}. Got ${subRequests.length}`
     );
   }
-  const result = await SessionRpc.snodeRpc({
+  const result = await SessionRpc.snodeRpcNoRetries({
     method,
     params: { requests: subRequests },
     targetNode,
@@ -52,10 +57,10 @@ async function doSnodeBatchRequest(
   });
   if (!result) {
     window?.log?.warn(
-      `doSnodeBatchRequest - sessionRpc could not talk to ${targetNode.ip}:${targetNode.port}`
+      `doSnodeBatchRequestNoRetries - sessionRpc could not talk to ${targetNode.ip}:${targetNode.port}`
     );
     throw new Error(
-      `doSnodeBatchRequest - sessionRpc could not talk to ${targetNode.ip}:${targetNode.port}`
+      `doSnodeBatchRequestNoRetries - sessionRpc could not talk to ${targetNode.ip}:${targetNode.port}`
     );
   }
   const decoded = decodeBatchRequest(result);
@@ -76,7 +81,19 @@ async function doSnodeBatchRequest(
   return decoded;
 }
 
-async function doUnsignedSnodeBatchRequest(
+/**
+ * This function can be called to make the sign the subrequests and then call doSnodeBatchRequestNoRetries with the signed requests.
+ *
+ * Note: this function does not retry.
+ *
+ * @param unsignedSubRequests the unsigned sub requests to make
+ * @param targetNode the snode to make the request to
+ * @param timeout the max timeout to wait for a reply
+ * @param associatedWith the pubkey associated with this request (used to remove snode failing to reply from that users' swarm)
+ * @param method the type of request to make batch or sequence
+ * @returns
+ */
+async function doUnsignedSnodeBatchRequestNoRetries(
   unsignedSubRequests: Array<RawSnodeSubRequests>,
   targetNode: Snode,
   timeout: number,
@@ -84,7 +101,7 @@ async function doUnsignedSnodeBatchRequest(
   method: MethodBatchType = 'batch'
 ): Promise<NotEmptyArrayOfBatchResults> {
   const signedSubRequests = await MessageSender.signSubRequests(unsignedSubRequests);
-  return BatchRequests.doSnodeBatchRequest(
+  return BatchRequests.doSnodeBatchRequestNoRetries(
     signedSubRequests,
     targetNode,
     timeout,
@@ -121,6 +138,6 @@ function decodeBatchRequest(snodeResponse: SnodeResponse): NotEmptyArrayOfBatchR
 }
 
 export const BatchRequests = {
-  doSnodeBatchRequest,
-  doUnsignedSnodeBatchRequest,
+  doSnodeBatchRequestNoRetries,
+  doUnsignedSnodeBatchRequestNoRetries,
 };

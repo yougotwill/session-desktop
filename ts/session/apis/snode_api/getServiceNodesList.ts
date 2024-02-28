@@ -13,7 +13,7 @@ import { SnodePool } from './snodePool';
 async function getSnodePoolFromSnode(targetNode: Snode): Promise<Array<Snode>> {
   const subrequest = new GetServiceNodesSubRequest();
 
-  const results = await BatchRequests.doUnsignedSnodeBatchRequest(
+  const results = await BatchRequests.doUnsignedSnodeBatchRequestNoRetries(
     [subrequest],
     targetNode,
     4000,

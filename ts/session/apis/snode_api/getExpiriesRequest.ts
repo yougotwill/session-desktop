@@ -39,14 +39,14 @@ export async function processGetExpiriesRequestResponse(
   return results;
 }
 
-async function getExpiriesFromNodes(
+async function getExpiriesFromNodesNoRetries(
   targetNode: Snode,
   messageHashes: Array<string>,
   associatedWith: PubkeyType
 ) {
   try {
     const expireRequest = new GetExpiriesFromNodeSubRequest({ messagesHashes: messageHashes });
-    const result = await BatchRequests.doUnsignedSnodeBatchRequest(
+    const result = await BatchRequests.doUnsignedSnodeBatchRequestNoRetries(
       [expireRequest],
       targetNode,
       4000,
@@ -67,7 +67,7 @@ async function getExpiriesFromNodes(
     const firstResult = result[0];
 
     if (firstResult.code !== 200) {
-      throw Error(`getExpiriesFromNodes result is not 200 but ${firstResult.code}`);
+      throw Error(`getExpiriesFromNodesNoRetries result is not 200 but ${firstResult.code}`);
     }
 
     // expirationResults is a record of {messageHash: currentExpiry}
@@ -122,7 +122,7 @@ export async function getExpiriesFromSnode({ messagesHashes }: WithMessagesHashe
       async () => {
         const targetNode = await SnodePool.getNodeFromSwarmOrThrow(ourPubKey);
 
-        return getExpiriesFromNodes(targetNode, messagesHashes, ourPubKey);
+        return getExpiriesFromNodesNoRetries(targetNode, messagesHashes, ourPubKey);
       },
       {
         retries: 3,

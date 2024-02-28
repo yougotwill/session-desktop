@@ -39,7 +39,7 @@ const forceNetworkDeletion = async (): Promise<Array<string> | null> => {
               namespace,
             });
 
-            const ret = await BatchRequests.doSnodeBatchRequest(
+            const ret = await BatchRequests.doSnodeBatchRequestNoRetries(
               [{ method, params: { ...signOpts, namespace, pubkey: usPk } }],
               snodeToMakeRequestTo,
               10000,
@@ -200,7 +200,7 @@ const networkDeleteMessages = async (hashes: Array<string>): Promise<Array<strin
               pubkey: userX25519PublicKey,
             });
 
-            const ret = await BatchRequests.doSnodeBatchRequest(
+            const ret = await BatchRequests.doSnodeBatchRequestNoRetries(
               [{ method, params: signOpts }],
               snodeToMakeRequestTo,
               10000,

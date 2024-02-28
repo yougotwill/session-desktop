@@ -140,13 +140,13 @@ export async function processExpireRequestResponse(
 type UpdatedExpiryWithHashes = { messageHashes: Array<string>; updatedExpiryMs: number };
 type UpdatedExpiryWithHash = { messageHash: string; updatedExpiryMs: number };
 
-async function updateExpiryOnNodes(
+async function updateExpiryOnNodesNoRetries(
   targetNode: Snode,
   ourPubKey: string,
   expireRequests: Array<UpdateExpiryOnNodeUserSubRequest>
 ): Promise<Array<UpdatedExpiryWithHash>> {
   try {
-    const result = await BatchRequests.doUnsignedSnodeBatchRequest(
+    const result = await BatchRequests.doUnsignedSnodeBatchRequestNoRetries(
       expireRequests,
       targetNode,
       4000,
@@ -407,7 +407,7 @@ export async function expireMessagesOnSnode(
           async () => {
             const targetNode = await SnodePool.getNodeFromSwarmOrThrow(ourPubKey);
 
-            return updateExpiryOnNodes(targetNode, ourPubKey, chunkRequest);
+            return updateExpiryOnNodesNoRetries(targetNode, ourPubKey, chunkRequest);
           },
           {
             retries: 3,

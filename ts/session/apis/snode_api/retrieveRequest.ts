@@ -193,7 +193,7 @@ async function buildRetrieveRequest(
   return retrieveRequestsParams;
 }
 
-async function retrieveNextMessages(
+async function retrieveNextMessagesNoRetries(
   targetNode: Snode,
   associatedWith: string,
   namespacesAndLastHashes: Array<NamespaceAndLastHash>,
@@ -209,8 +209,7 @@ async function retrieveNextMessages(
 
   // let exceptions bubble up
   // no retry for this one as this a call we do every few seconds while polling for messages
-
-  const results = await BatchRequests.doUnsignedSnodeBatchRequest(
+  const results = await BatchRequests.doUnsignedSnodeBatchRequestNoRetries(
     rawRequests,
     targetNode,
     4000,
@@ -239,7 +238,7 @@ async function retrieveNextMessages(
   const firstResult = results[0];
 
   if (firstResult.code !== 200) {
-    window?.log?.warn(`retrieveNextMessages result is not 200 but ${firstResult.code}`);
+    window?.log?.warn(`retrieveNextMessagesNoRetries result is not 200 but ${firstResult.code}`);
     throw new Error(
       `_retrieveNextMessages - retrieve result is not 200 with ${targetNode.ip}:${targetNode.port} but ${firstResult.code}`
     );
@@ -268,4 +267,4 @@ async function retrieveNextMessages(
   }
 }
 
-export const SnodeAPIRetrieve = { retrieveNextMessages, buildRetrieveRequest };
+export const SnodeAPIRetrieve = { retrieveNextMessagesNoRetries, buildRetrieveRequest };

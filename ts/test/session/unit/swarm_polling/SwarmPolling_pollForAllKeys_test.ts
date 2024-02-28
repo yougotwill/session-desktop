@@ -74,7 +74,7 @@ describe('SwarmPolling:pollForAllKeys', () => {
     TestUtils.stubLibSessionWorker(undefined);
 
     Sinon.stub(SnodePool, 'getSwarmFor').resolves(generateFakeSnodes(5));
-    Sinon.stub(SnodeAPIRetrieve, 'retrieveNextMessages').resolves([]);
+    Sinon.stub(SnodeAPIRetrieve, 'retrieveNextMessagesNoRetries').resolves([]);
 
     TestUtils.stubWindow('inboxStore', undefined);
     TestUtils.stubWindow('getGlobalOnlineStatus', () => true);

@@ -808,7 +808,7 @@ async function incrementBadSnodeCountOrDrop({
  * This call tries to send the request via onion. If we get a bad path, it handles the snode removing of the swarm and snode pool.
  * But the caller needs to handle the retry (and rebuild the path on his side if needed)
  */
-async function sendOnionRequestHandlingSnodeEject({
+async function sendOnionRequestHandlingSnodeEjectNoRetries({
   destSnodeX25519,
   finalDestOptions,
   nodePath,
@@ -828,7 +828,7 @@ async function sendOnionRequestHandlingSnodeEject({
   throwErrors: boolean;
 }): Promise<SnodeResponse | SnodeResponseV4 | undefined> {
   // this sendOnionRequestNoRetries() call has to be the only one like this.
-  // If you need to call it, call it through sendOnionRequestHandlingSnodeEject because this is the one handling path rebuilding and known errors
+  // If you need to call it, call it through sendOnionRequestHandlingSnodeEjectNoRetries because this is the one handling path rebuilding and known errors
   let response;
   let decodingSymmetricKey;
   try {
@@ -844,7 +844,7 @@ async function sendOnionRequestHandlingSnodeEject({
 
     if (window.sessionFeatureFlags?.debug.debugOnionRequests) {
       window.log.info(
-        `sendOnionRequestHandlingSnodeEject: sendOnionRequestNoRetries: useV4:${useV4} destSnodeX25519:${destSnodeX25519}; \nfinalDestOptions:${JSON.stringify(
+        `sendOnionRequestHandlingSnodeEjectNoRetries: sendOnionRequestNoRetries: useV4:${useV4} destSnodeX25519:${destSnodeX25519}; \nfinalDestOptions:${JSON.stringify(
           finalDestOptions
         )}; \nfinalRelayOptions:${JSON.stringify(finalRelayOptions)}\n\n result: ${JSON.stringify(
           result
@@ -1098,14 +1098,14 @@ const sendOnionRequestNoRetries = async ({
   return { response, decodingSymmetricKey: destCtx.symmetricKey };
 };
 
-async function sendOnionRequestSnodeDest(
+async function sendOnionRequestSnodeDestNoRetries(
   onionPath: Array<Snode>,
   targetNode: Snode,
   headers: Record<string, any>,
   plaintext: string | null,
   associatedWith?: string
 ) {
-  return Onions.sendOnionRequestHandlingSnodeEject({
+  return Onions.sendOnionRequestHandlingSnodeEjectNoRetries({
     nodePath: onionPath,
     destSnodeX25519: targetNode.pubkey_x25519,
     finalDestOptions: {
@@ -1126,7 +1126,7 @@ function getPathString(pathObjArr: Array<{ ip: string; port: number }>): string 
 /**
  * If the fetch throws a retryable error we retry this call with a new path at most 3 times. If another error happens, we return it. If we have a result we just return it.
  */
-async function lokiOnionFetch({
+async function lokiOnionFetchWithRetries({
   targetNode,
   associatedWith,
   body,
@@ -1142,7 +1142,7 @@ async function lokiOnionFetch({
       async () => {
         // Get a path excluding `targetNode`:
         const path = await OnionPaths.getOnionPath({ toExclude: targetNode });
-        const result = await sendOnionRequestSnodeDest(
+        const result = await sendOnionRequestSnodeDestNoRetries(
           path,
           targetNode,
           headers,
@@ -1179,12 +1179,12 @@ async function lokiOnionFetch({
 }
 
 export const Onions = {
-  sendOnionRequestHandlingSnodeEject,
+  sendOnionRequestHandlingSnodeEjectNoRetries,
   incrementBadSnodeCountOrDrop,
   decodeOnionResult,
-  lokiOnionFetch,
+  lokiOnionFetchWithRetries,
   getPathString,
-  sendOnionRequestSnodeDest,
+  sendOnionRequestSnodeDestNoRetries,
   processOnionResponse,
   processOnionResponseV4,
   isFinalDestinationSnode,

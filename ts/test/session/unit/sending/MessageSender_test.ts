@@ -49,12 +49,15 @@ describe('MessageSender', () => {
   describe('send', () => {
     const ourNumber = TestUtils.generateFakePubKeyStr();
     let sessionMessageAPISendStub: TypedStub<typeof MessageSender, 'sendMessagesDataToSnode'>;
-    let doSnodeBatchRequestStub: TypedStub<typeof BatchRequests, 'doSnodeBatchRequest'>;
+    let doSnodeBatchRequestStub: TypedStub<typeof BatchRequests, 'doSnodeBatchRequestNoRetries'>;
     let encryptStub: sinon.SinonStub<[PubKey, Uint8Array, SignalService.Envelope.Type]>;
 
     beforeEach(() => {
       sessionMessageAPISendStub = Sinon.stub(MessageSender, 'sendMessagesDataToSnode').resolves();
-      doSnodeBatchRequestStub = Sinon.stub(BatchRequests, 'doSnodeBatchRequest').resolves();
+      doSnodeBatchRequestStub = Sinon.stub(
+        BatchRequests,
+        'doSnodeBatchRequestNoRetries'
+      ).resolves();
       stubData('getMessageById').resolves();
 
       encryptStub = Sinon.stub(MessageEncrypter, 'encrypt').resolves({
@@ -317,7 +320,7 @@ describe('MessageSender', () => {
     it('should call sendOnionRequestHandlingSnodeEjectStub', async () => {
       const sendOnionRequestHandlingSnodeEjectStub = Sinon.stub(
         Onions,
-        'sendOnionRequestHandlingSnodeEject'
+        'sendOnionRequestHandlingSnodeEjectNoRetries'
       ).resolves({} as any);
       Sinon.stub(OnionV4, 'decodeV4Response').returns({
         metadata: { code: 200 },
@@ -336,7 +339,7 @@ describe('MessageSender', () => {
     it('should retry sendOnionRequestHandlingSnodeEjectStub ', async () => {
       const message = TestUtils.generateOpenGroupVisibleMessage();
       const roomInfos = TestUtils.generateOpenGroupV2RoomInfos();
-      Sinon.stub(Onions, 'sendOnionRequestHandlingSnodeEject').resolves({} as any);
+      Sinon.stub(Onions, 'sendOnionRequestHandlingSnodeEjectNoRetries').resolves({} as any);
 
       Sinon.stub(OnionSending, 'getMinTimeoutForSogs').returns(5);
 
@@ -356,7 +359,7 @@ describe('MessageSender', () => {
     it('should not retry more than 3 sendOnionRequestHandlingSnodeEjectStub ', async () => {
       const message = TestUtils.generateOpenGroupVisibleMessage();
       const roomInfos = TestUtils.generateOpenGroupV2RoomInfos();
-      Sinon.stub(Onions, 'sendOnionRequestHandlingSnodeEject').resolves({} as any);
+      Sinon.stub(Onions, 'sendOnionRequestHandlingSnodeEjectNoRetries').resolves({} as any);
       Sinon.stub(OnionSending, 'getMinTimeoutForSogs').returns(5);
 
       const decodev4responseStub = Sinon.stub(OnionV4, 'decodeV4Response');

@@ -519,7 +519,7 @@ export class SwarmPolling {
         })
       );
 
-      let results = await SnodeAPIRetrieve.retrieveNextMessages(
+      let results = await SnodeAPIRetrieve.retrieveNextMessagesNoRetries(
         node,
         pubkey,
         namespacesAndLastHashes,
