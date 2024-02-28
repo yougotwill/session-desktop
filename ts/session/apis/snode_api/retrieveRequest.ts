@@ -42,6 +42,8 @@ async function retrieveRequestForUs({
   });
 }
 
+type NamespaceAndLastHash = { lastHash: string | null; namespace: SnodeNamespaces };
+
 /**
  * Retrieve for legacy groups are not authenticated so no need to sign the request
  */
@@ -108,23 +110,31 @@ type RetrieveSubRequestType =
   | UpdateExpiryOnNodeUserSubRequest
   | UpdateExpiryOnNodeGroupSubRequest;
 
+/**
+ * build the Array of retrieveRequests to do on the next poll, given the specified namespaces, lastHash, pubkey and hashes to bump (expiry)
+ * Note: exported only for testing purposes
+ * @param namespacesAndLastHashes
+ * @param pubkey
+ * @param ourPubkey
+ * @param configHashesToBump
+ * @returns
+ */
 async function buildRetrieveRequest(
-  lastHashes: Array<string>,
+  namespacesAndLastHashes: Array<NamespaceAndLastHash>,
   pubkey: string,
-  namespaces: Array<SnodeNamespaces>,
   ourPubkey: string,
   configHashesToBump: Array<string> | null
 ) {
   const isUs = pubkey === ourPubkey;
-  const maxSizeMap = SnodeNamespace.maxSizeMap(namespaces);
+  const maxSizeMap = SnodeNamespace.maxSizeMap(namespacesAndLastHashes.map(m => m.namespace));
   const now = GetNetworkTime.now();
 
   const retrieveRequestsParams: Array<RetrieveSubRequestType> = await Promise.all(
-    namespaces.map(async (namespace, index) => {
+    namespacesAndLastHashes.map(async ({ lastHash, namespace }) => {
       const foundMaxSize = maxSizeMap.find(m => m.namespace === namespace)?.maxSize;
       const retrieveParam = {
         pubkey,
-        last_hash: lastHashes.at(index) || '',
+        last_hash: lastHash || '',
         timestamp: now,
         max_size: foundMaxSize,
       };
@@ -185,20 +195,14 @@ async function buildRetrieveRequest(
 
 async function retrieveNextMessages(
   targetNode: Snode,
-  lastHashes: Array<string>,
   associatedWith: string,
-  namespaces: Array<SnodeNamespaces>,
+  namespacesAndLastHashes: Array<NamespaceAndLastHash>,
   ourPubkey: string,
   configHashesToBump: Array<string> | null
 ): Promise<RetrieveMessagesResultsBatched> {
-  if (namespaces.length !== lastHashes.length) {
-    throw new Error('namespaces and lasthashes does not match');
-  }
-
   const rawRequests = await buildRetrieveRequest(
-    lastHashes,
+    namespacesAndLastHashes,
     associatedWith,
-    namespaces,
     ourPubkey,
     configHashesToBump
   );
@@ -222,9 +226,12 @@ async function retrieveNextMessages(
   }
 
   // the +1 is to take care of the extra `expire` method added once user config is released
-  if (results.length !== namespaces.length && results.length !== namespaces.length + 1) {
+  if (
+    results.length !== namespacesAndLastHashes.length &&
+    results.length !== namespacesAndLastHashes.length + 1
+  ) {
     throw new Error(
-      `We asked for updates about ${namespaces.length} messages but got results of length ${results.length}`
+      `We asked for updates about ${namespacesAndLastHashes.length} messages but got results of length ${results.length}`
     );
   }
 
@@ -250,7 +257,7 @@ async function retrieveNextMessages(
     return results.map((result, index) => ({
       code: result.code,
       messages: result.body as RetrieveMessagesResultsContent,
-      namespace: namespaces[index],
+      namespace: namespacesAndLastHashes[index].namespace,
     }));
   } catch (e) {
     window?.log?.warn('exception while parsing json of nextMessage:', e);
@@ -261,4 +268,4 @@ async function retrieveNextMessages(
   }
 }
 
-export const SnodeAPIRetrieve = { retrieveNextMessages };
+export const SnodeAPIRetrieve = { retrieveNextMessages, buildRetrieveRequest };

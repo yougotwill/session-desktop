@@ -511,16 +511,18 @@ export class SwarmPolling {
     const snodeEdkey = node.pubkey_ed25519;
 
     try {
-      const prevHashes = await Promise.all(
-        namespaces.map(namespace => this.getLastHash(snodeEdkey, pubkey, namespace))
-      );
       const configHashesToBump = await this.getHashesToBump(type, pubkey);
+      const namespacesAndLastHashes = await Promise.all(
+        namespaces.map(async namespace => {
+          const lastHash = await this.getLastHash(snodeEdkey, pubkey, namespace);
+          return { namespace, lastHash };
+        })
+      );
 
       let results = await SnodeAPIRetrieve.retrieveNextMessages(
         node,
-        prevHashes,
         pubkey,
-        namespaces,
+        namespacesAndLastHashes,
         UserUtils.getOurPubKeyStrFromCache(),
         configHashesToBump
       );
