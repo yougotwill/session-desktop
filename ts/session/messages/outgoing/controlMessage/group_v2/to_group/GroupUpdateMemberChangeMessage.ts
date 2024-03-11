@@ -111,6 +111,10 @@ export class GroupUpdateMemberChangeMessage extends GroupUpdateMessage {
       ),
     });
 
+    if (type === Type.ADDED && this.typeOfChange === 'addedWithHistory') {
+      memberChangeMessage.historyShared = true;
+    }
+
     return new SignalService.DataMessage({ groupUpdateMessage: { memberChangeMessage } });
   }
 

@@ -96,8 +96,8 @@ export const ConversationMessageRequestButtons = () => {
       <InvitedToGroupControlMessage />
       <ConversationBannerRow>
         <SessionButton
-          onClick={async () => {
-            await handleAcceptConversationRequest({ convoId: selectedConvoId, sendResponse: true });
+          onClick={() => {
+            void handleAcceptConversationRequest({ convoId: selectedConvoId });
           }}
           text={window.i18n('accept')}
           dataTestId="accept-message-request"

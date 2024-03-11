@@ -31,6 +31,7 @@ import {
   useSelectedIsActive,
   useSelectedIsBlocked,
   useSelectedIsGroupOrCommunity,
+  useSelectedIsGroupV2,
   useSelectedIsKickedFromGroup,
   useSelectedIsPublic,
   useSelectedLastMessage,
@@ -125,13 +126,19 @@ const HeaderItem = () => {
   const isBlocked = useSelectedIsBlocked();
   const isKickedFromGroup = useSelectedIsKickedFromGroup();
   const isGroup = useSelectedIsGroupOrCommunity();
+  const isGroupV2 = useSelectedIsGroupV2();
+  const isPublic = useSelectedIsPublic();
   const subscriberCount = useSelectedSubscriberCount();
+  const weAreAdmin = useSelectedWeAreAdmin();
 
   if (!selectedConvoKey) {
     return null;
   }
 
-  const showInviteContacts = isGroup && !isKickedFromGroup && !isBlocked;
+  const showInviteLegacyGroup =
+    !isPublic && !isGroupV2 && isGroup && !isKickedFromGroup && !isBlocked;
+  const showInviteGroupV2 = isGroupV2 && !isKickedFromGroup && !isBlocked && weAreAdmin;
+  const showInviteContacts = isPublic || showInviteLegacyGroup || showInviteGroupV2;
   const showMemberCount = !!(subscriberCount && subscriberCount > 0);
 
   return (

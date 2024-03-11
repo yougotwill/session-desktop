@@ -120,6 +120,18 @@ export function arrayContainsOneItemOnly(arrayToCheck: Array<string> | undefined
   return arrayToCheck && arrayToCheck.length === 1;
 }
 
+function formatJoined(joined: Array<string>) {
+  const names = joined.map(ConvoHub.use().getContactProfileNameOrShortenedPubKey);
+  const messages = [];
+
+  if (names.length > 1) {
+    messages.push(window.i18n('multipleJoinedTheGroup', [names.join(', ')]));
+  } else {
+    messages.push(window.i18n('joinedTheGroup', names));
+  }
+  return messages.join(' ');
+}
+
 export class MessageModel extends Backbone.Model<MessageAttributes> {
   constructor(attributes: MessageAttributesOptionals & { skipTimerInit?: boolean }) {
     const filledAttrs = fillMessageAttributesWithDefaults(attributes);
@@ -1328,15 +1340,11 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
       }
 
       if (groupUpdate.joined && groupUpdate.joined.length) {
-        const names = groupUpdate.joined.map(ConvoHub.use().getContactProfileNameOrShortenedPubKey);
-        const messages = [];
+        return formatJoined(groupUpdate.joined);
+      }
 
-        if (names.length > 1) {
-          messages.push(window.i18n('multipleJoinedTheGroup', [names.join(', ')]));
-        } else {
-          messages.push(window.i18n('joinedTheGroup', names));
-        }
-        return messages.join(' ');
+      if (groupUpdate.joinedWithHistory && groupUpdate.joinedWithHistory.length) {
+        return formatJoined(groupUpdate.joinedWithHistory);
       }
 
       if (groupUpdate.kicked && groupUpdate.kicked.length) {

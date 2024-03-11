@@ -1,6 +1,7 @@
 import React from 'react';
 
 import { PubkeyType } from 'libsession_util_nodejs';
+import { cloneDeep } from 'lodash';
 import { useConversationsUsernameWithQuoteOrShortPk } from '../../../../hooks/useParamSelector';
 import { arrayContainsUsOnly } from '../../../../models/message';
 import { PreConditionFailed } from '../../../../session/utils/errors';
@@ -49,7 +50,10 @@ function moveUsToStart(
   if (!usItem) {
     throw new PreConditionFailed('"we" should have been there');
   }
-  return { sortedWithUsFirst: [usItem, ...changed.slice(usAt, 1)] };
+  // deepClone because splice mutates the array
+  const changedCopy = cloneDeep(changed);
+  changedCopy.splice(usAt, 1);
+  return { sortedWithUsFirst: [usItem, ...changedCopy] };
 }
 
 function changeOfMembersV2({
@@ -84,10 +88,12 @@ function changeOfMembersV2({
           : ('Removed' as const);
   const key = `group${subject}${action}` as const;
 
-  return window.i18n(
-    key,
-    sortedWithUsFirst.map(m => m.name)
-  );
+  const sortedWithUsOrCount =
+    subject === 'Others'
+      ? [sortedWithUsFirst[0].name, (sortedWithUsFirst.length - 1).toString()]
+      : sortedWithUsFirst.map(m => m.name);
+
+  return window.i18n(key, sortedWithUsOrCount);
 }
 
 // TODO those lookups might need to be memoized

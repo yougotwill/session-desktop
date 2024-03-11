@@ -4,6 +4,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import useKey from 'react-use/lib/useKey';
 import styled from 'styled-components';
 import { declineConversationWithoutConfirm } from '../../../interactions/conversationInteractions';
+import { ed25519Str } from '../../../session/onions/onionPath';
 import { forceSyncConfigurationNowIfNeeded } from '../../../session/utils/sync/syncUtils';
 import { updateConfirmModal } from '../../../state/ducks/modalDialog';
 import { resetLeftOverlayMode } from '../../../state/ducks/section';
@@ -76,14 +77,20 @@ export const OverlayMessageRequest = () => {
 
           for (let index = 0; index < messageRequests.length; index++) {
             const convoId = messageRequests[index];
-            // eslint-disable-next-line no-await-in-loop
-            await declineConversationWithoutConfirm({
-              alsoBlock: false,
-              conversationId: convoId,
-              currentlySelectedConvo,
-              syncToDevices: false,
-              conversationIdOrigin: null, // block is false, no need for conversationIdOrigin
-            });
+            try {
+              // eslint-disable-next-line no-await-in-loop
+              await declineConversationWithoutConfirm({
+                alsoBlock: false,
+                conversationId: convoId,
+                currentlySelectedConvo,
+                syncToDevices: false,
+                conversationIdOrigin: null, // block is false, no need for conversationIdOrigin
+              });
+            } catch (e) {
+              window.log.warn(
+                `failed to decline msg request ${ed25519Str(convoId)} with error: ${e.message}`
+              );
+            }
           }
 
           await forceSyncConfigurationNowIfNeeded();

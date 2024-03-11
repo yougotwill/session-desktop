@@ -23,9 +23,8 @@ async function updateOurProfileSync({ displayName, profileUrl, profileKey, prior
   }
 
   await updateProfileOfContact(us, displayName, profileUrl, profileKey);
-  if (priority !== null && ourConvo.getPriority() !== priority) {
-    ourConvo.set('priority', priority);
-    await ourConvo.commit();
+  if (priority !== null) {
+    await ourConvo.setPriorityFromWrapper(priority, true);
   }
 }
 

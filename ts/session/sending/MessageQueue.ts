@@ -368,9 +368,11 @@ export class MessageQueue {
         'sendSingleMessageAndHandleResult: failed to send message with: ',
         error.message
       );
-      if (rawMessage) {
-        await MessageSentHandler.handleSwarmMessageSentFailure(rawMessage, error);
-      }
+      await MessageSentHandler.handleSwarmMessageSentFailure(
+        { device: rawMessage.device, identifier: rawMessage.identifier },
+        error
+      );
+
       return null;
     } finally {
       // Remove from the cache because retrying is done in the sender

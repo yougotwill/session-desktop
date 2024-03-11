@@ -20,6 +20,7 @@ import { concatUInt8Array, getSodiumRenderer } from '../session/crypto';
 import { removeMessagePadding } from '../session/crypto/BufferPadding';
 import { DisappearingMessages } from '../session/disappearing_messages';
 import { ReadyToDisappearMsgUpdate } from '../session/disappearing_messages/types';
+import { ed25519Str } from '../session/onions/onionPath';
 import { ProfileManager } from '../session/profile_manager/ProfileManager';
 import { GroupUtils, UserUtils } from '../session/utils';
 import { perfEnd, perfStart } from '../session/utils/Performance';
@@ -722,12 +723,7 @@ async function handleMessageRequestResponse(
   envelope: EnvelopePlus,
   messageRequestResponse: SignalService.MessageRequestResponse
 ) {
-  const { isApproved } = messageRequestResponse;
-  if (!isApproved) {
-    await IncomingMessageCache.removeFromCache(envelope);
-    return;
-  }
-  if (!messageRequestResponse) {
+  if (!messageRequestResponse || !messageRequestResponse.isApproved) {
     window?.log?.error('handleMessageRequestResponse: Invalid parameters -- dropping message.');
     await IncomingMessageCache.removeFromCache(envelope);
     return;
@@ -738,6 +734,14 @@ async function handleMessageRequestResponse(
   const convosToMerge = findCachedBlindedMatchOrLookupOnAllServers(envelope.source, sodium);
   const unblindedConvoId = envelope.source;
 
+  if (!PubKey.is05Pubkey(unblindedConvoId)) {
+    window?.log?.warn(
+      'handleMessageRequestResponse: Invalid unblindedConvoId -- dropping message.'
+    );
+    await IncomingMessageCache.removeFromCache(envelope);
+    return;
+  }
+
   const conversationToApprove = await ConvoHub.use().getOrCreateAndWait(
     unblindedConvoId,
     ConversationTypeEnum.PRIVATE
@@ -747,12 +751,14 @@ async function handleMessageRequestResponse(
     mostRecentActiveAt = toNumber(envelope.timestamp);
   }
 
+  const previousApprovedMe = conversationToApprove.didApproveMe();
+  await conversationToApprove.setDidApproveMe(true, false);
+
   conversationToApprove.set({
     active_at: mostRecentActiveAt,
-    isApproved: true,
-    didApproveMe: true,
   });
   await conversationToApprove.unhideIfNeeded(false);
+  await conversationToApprove.commit();
 
   if (convosToMerge.length) {
     // merge fields we care by hand
@@ -809,23 +815,21 @@ async function handleMessageRequestResponse(
     );
   }
 
-  if (!conversationToApprove || conversationToApprove.didApproveMe()) {
-    await conversationToApprove?.commit();
-    window?.log?.info(
-      'Conversation already contains the correct value for the didApproveMe field.'
+  if (previousApprovedMe) {
+    await conversationToApprove.commit();
+
+    window.log.inf(
+      `convo ${ed25519Str(conversationToApprove.id)} previousApprovedMe is already true. Nothing to do `
     );
     await IncomingMessageCache.removeFromCache(envelope);
-
     return;
   }
 
-  await conversationToApprove.setDidApproveMe(true, true);
   // Conversation was not approved before so a sync is needed
   await conversationToApprove.addIncomingApprovalMessage(
     toNumber(envelope.timestamp),
     unblindedConvoId
   );
-
   await IncomingMessageCache.removeFromCache(envelope);
 }
 

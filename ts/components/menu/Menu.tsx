@@ -450,7 +450,6 @@ export const AcceptMsgRequestMenuItem = () => {
         onClick={async () => {
           await handleAcceptConversationRequest({
             convoId,
-            sendResponse: true,
           });
         }}
       >

@@ -376,14 +376,13 @@ async function sendMessagesDataToSnode(
     revokeSubRequest,
     unrevokeSubRequest,
   ]);
-
   const targetNode = await SnodePool.getNodeFromSwarmOrThrow(asssociatedWith);
 
   try {
     const storeResults = await BatchRequests.doUnsignedSnodeBatchRequestNoRetries(
       rawRequests,
       targetNode,
-      4000,
+      6000,
       asssociatedWith,
       method
     );
@@ -395,6 +394,11 @@ async function sendMessagesDataToSnode(
       );
       throw new Error('doUnsignedSnodeBatchRequestNoRetries: Invalid result');
     }
+    await handleBatchResultWithSubRequests({
+      batchResult: storeResults,
+      subRequests: rawRequests,
+      destination: asssociatedWith,
+    });
 
     const firstResult = storeResults[0];
 
@@ -545,6 +549,9 @@ async function encryptMessagesAndWrap(
 
 /**
  * Send an array of preencrypted data to the corresponding swarm.
+ * Warning:
+ *   This does not handle result of messages and marking messages as read, syncing them currently.
+ *   For this, use the `MessageQueue.sendSingleMessage()` for now.
  *
  * @param params the data to deposit
  * @param destination the pubkey we should deposit those message to
@@ -700,6 +707,10 @@ export const MessageSender = {
   signSubRequests,
 };
 
+/**
+ * Note: this function does not handle the syncing logic of messages yet.
+ * Use it to push message to group, to note to self, or with user messages which do not require a syncing logic
+ */
 async function handleBatchResultWithSubRequests({
   batchResult,
   destination,
@@ -756,7 +767,21 @@ async function handleBatchResultWithSubRequests({
           const foundMessage = await Data.getMessageById(subRequest.dbMessageIdentifier);
           if (foundMessage) {
             await foundMessage.updateMessageHash(storedHash);
+            // - a message pushed to a group is always synced
+            // - a message sent to ourself when it was a marked as sentSync is a synced message to ourself
+            if (
+              isDestinationClosedGroup ||
+              (subRequest.destination === us && foundMessage.get('sentSync'))
+            ) {
+              foundMessage.set({ synced: true });
+            }
+            foundMessage.set({
+              sent_to: [subRequest.destination],
+              sent: true,
+              sent_at: storedAt,
+            });
             await foundMessage.commit();
+            await foundMessage.getConversation()?.updateLastMessage();
             window?.log?.info(`updated message ${foundMessage.get('id')} with hash: ${storedHash}`);
           }
           /* eslint-enable no-await-in-loop */

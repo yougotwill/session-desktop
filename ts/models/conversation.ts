@@ -17,6 +17,7 @@ import {
   xor,
 } from 'lodash';
 
+import { DisappearingMessageConversationModeType } from 'libsession_util_nodejs';
 import { v4 } from 'uuid';
 import { SignalService } from '../protobuf';
 import { getMessageQueue } from '../session';
@@ -29,7 +30,7 @@ import { PubKey } from '../session/types';
 import { ToastUtils, UserUtils } from '../session/utils';
 import { BlockedNumberController } from '../util';
 import { MessageModel } from './message';
-import { MessageAttributesOptionals, MessageDirection } from './messageType';
+import { MessageAttributesOptionals } from './messageType';
 
 import { Data } from '../data/data';
 import { OpenGroupRequestCommonType } from '../session/apis/open_group_api/opengroupV2/ApiUtil';
@@ -81,7 +82,6 @@ import { UserSync } from '../session/utils/job_runners/jobs/UserSyncJob';
 import { SessionUtilContact } from '../session/utils/libsession/libsession_utils_contacts';
 import { SessionUtilConvoInfoVolatile } from '../session/utils/libsession/libsession_utils_convo_info_volatile';
 import { SessionUtilUserGroups } from '../session/utils/libsession/libsession_utils_user_groups';
-import { forceSyncConfigurationNowIfNeeded } from '../session/utils/sync/syncUtils';
 import { getOurProfile } from '../session/utils/User';
 import {
   deleteExternalFilesOfConversation,
@@ -129,7 +129,6 @@ import {
 
 import { handleAcceptConversationRequest } from '../interactions/conversationInteractions';
 import { DisappearingMessages } from '../session/disappearing_messages';
-import { DisappearingMessageConversationModeType } from '../session/disappearing_messages/types';
 import { GroupUpdateInfoChangeMessage } from '../session/messages/outgoing/controlMessage/group_v2/to_group/GroupUpdateInfoChangeMessage';
 import { FetchMsgExpirySwarm } from '../session/utils/job_runners/jobs/FetchMsgExpirySwarmJob';
 import { UpdateMsgExpirySwarm } from '../session/utils/job_runners/jobs/UpdateMsgExpirySwarmJob';
@@ -150,7 +149,7 @@ type InMemoryConvoInfos = {
 const inMemoryConvoInfos: Map<string, InMemoryConvoInfos> = new Map();
 
 export class ConversationModel extends Backbone.Model<ConversationAttributes> {
-  public updateLastMessage: () => unknown; // unknown because it is a Promise that we do not wait to await
+  public updateLastMessage: () => unknown; // unknown because it is a Promise that we do not want to await
   public throttledBumpTyping: () => void;
   public throttledNotify: (message: MessageModel) => void;
   public markConversationRead: (opts: {
@@ -237,7 +236,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
 
   public isClosedGroup(): boolean {
     return Boolean(
-      (this.get('type') === ConversationTypeEnum.GROUP && this.id.startsWith('05')) ||
+      (this.get('type') === ConversationTypeEnum.GROUP && PubKey.is05Pubkey(this.id)) ||
         this.isClosedGroupV2()
     );
   }
@@ -254,7 +253,9 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     return this.isPrivate() && PubKey.isBlinded(this.id);
   }
 
-  // returns true if this is a closed/medium or open group
+  /**
+   * @returns true if this is a legacy, closed or community
+   */
   public isGroup() {
     return isOpenOrClosedGroup(this.get('type'));
   }
@@ -298,6 +299,14 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
   }
 
   public getPriority() {
+    if (PubKey.is05Pubkey(this.id) && this.isPrivate()) {
+      // TODO once we have a libsession state, we can make this used accross the app without repeating as much
+      // if a private chat, trust the value from the Libsession wrapper cached first
+      const contact = SessionUtilContact.getContactCached(this.id);
+      if (contact) {
+        return contact.priority;
+      }
+    }
     return this.get('priority') || CONVERSATION_PRIORITIES.default;
   }
 
@@ -325,8 +334,8 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       toRet.priority = priorityFromDb;
     }
 
-    if (this.get('markedAsUnread')) {
-      toRet.isMarkedUnread = !!this.get('markedAsUnread');
+    if (this.isMarkedUnread()) {
+      toRet.isMarkedUnread = this.isMarkedUnread();
     }
 
     const blocksSogsMsgReqsTimestamp = this.get('blocksSogsMsgReqsTimestamp');
@@ -380,17 +389,17 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     if (this.getRealSessionUsername()) {
       toRet.displayNameInProfile = this.getRealSessionUsername();
     }
-    if (this.get('nickname')) {
-      toRet.nickname = this.get('nickname');
+    if (this.getNickname()) {
+      toRet.nickname = this.getNickname();
     }
     if (BlockedNumberController.isBlocked(this.id)) {
       toRet.isBlocked = true;
     }
-    if (this.get('didApproveMe')) {
-      toRet.didApproveMe = this.get('didApproveMe');
+    if (this.didApproveMe()) {
+      toRet.didApproveMe = this.didApproveMe();
     }
-    if (this.get('isApproved')) {
-      toRet.isApproved = this.get('isApproved');
+    if (this.isApproved()) {
+      toRet.isApproved = this.isApproved();
     }
     if (this.getExpireTimer()) {
       toRet.expireTimer = this.getExpireTimer();
@@ -601,32 +610,16 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
         expireTimer,
       };
 
-      const shouldApprove = !this.isApproved() && this.isPrivate();
-      const incomingMessageCount = await Data.getMessageCountByType(
-        this.id,
-        MessageDirection.incoming
-      );
-      const hasIncomingMessages = incomingMessageCount > 0;
-
       if (PubKey.isBlinded(this.id)) {
         window.log.info('Sending a blinded message react to this user: ', this.id);
         await this.sendBlindedMessageRequest(chatMessageParams);
         return;
       }
 
-      if (shouldApprove) {
-        await this.setIsApproved(true);
-        if (hasIncomingMessages) {
-          // have to manually add approval for local client here as DB conditional approval check in config msg handling will prevent this from running
-          await this.addOutgoingApprovalMessage(Date.now());
-          if (!this.didApproveMe()) {
-            await this.setDidApproveMe(true);
-          }
-          // should only send once
-          await this.sendMessageRequestResponse();
-          void forceSyncConfigurationNowIfNeeded();
-        }
-      }
+      // handleAcceptConversationRequest will take care of sending response depending on the type of conversation, if needed
+      await handleAcceptConversationRequest({
+        convoId: this.id,
+      });
 
       if (this.isOpenGroupV2()) {
         // communities have no expiration timer support, so enforce it here.
@@ -739,7 +732,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
 
   /**
    * When you have accepted another users message request
-   * @param timestamp for determining the order for this message to appear like a regular message
+   * Note: you shouldn't need to use this directly. Instead use `handleAcceptConversationRequest()`
    */
   public async addOutgoingApprovalMessage(timestamp: number) {
     await this.addSingleOutgoingMessage({
@@ -772,8 +765,9 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
   }
 
   /**
-   * Sends an accepted message request response.
+   * Sends an accepted message request response to a private chat
    * Currently, we never send anything for denied message requests.
+   * Note: you souldn't to use this directly. Instead use `handleAcceptConversationRequest()`
    */
   public async sendMessageRequestResponse() {
     if (!this.isPrivate()) {
@@ -1547,7 +1541,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
   public async setIsApproved(value: boolean, shouldCommit: boolean = true) {
     const valueForced = Boolean(value);
 
-    if (!this.isPrivate()) {
+    if (!this.isPrivate() && !this.isClosedGroupV2()) {
       return;
     }
 
@@ -1752,11 +1746,20 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
   }
 
   public didApproveMe() {
-    return Boolean(this.get('didApproveMe'));
+    if (PubKey.is05Pubkey(this.id) && this.isPrivate()) {
+      // if a private chat, trust the value from the Libsession wrapper cached first
+      // TODO once we have a libsession state, we can make this used accross the app without repeating as much
+      return SessionUtilContact.getContactCached(this.id)?.approvedMe ?? !!this.get('didApproveMe');
+    }
+    return !!this.get('didApproveMe');
   }
 
   public isApproved() {
-    return Boolean(this.get('isApproved'));
+    if (PubKey.is05Pubkey(this.id) && this.isPrivate()) {
+      // if a private chat, trust the value from the Libsession wrapper cached first
+      return SessionUtilContact.getContactCached(this.id)?.approved ?? !!this.get('isApproved');
+    }
+    return !!this.get('isApproved');
   }
 
   /**
@@ -2035,37 +2038,16 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
         lokiProfile: UserUtils.getOurProfile(),
       };
 
-      const shouldApprove = !this.isApproved() && (this.isPrivate() || this.isClosedGroupV2());
-
-      const incomingMessageCount = await Data.getMessageCountByType(
-        this.id,
-        MessageDirection.incoming
-      );
-      const hasIncomingMessages = incomingMessageCount > 0;
-
       if (PubKey.isBlinded(this.id)) {
         window.log.info('Sending a blinded message to this user: ', this.id);
         await this.sendBlindedMessageRequest(chatMessageParams);
         return;
       }
 
-      if (shouldApprove) {
-        await handleAcceptConversationRequest({
-          convoId: this.id,
-          sendResponse: !message,
-        });
-        await this.setIsApproved(true);
-        if (hasIncomingMessages) {
-          // have to manually add approval for local client here as DB conditional approval check in config msg handling will prevent this from running
-          await this.addOutgoingApprovalMessage(Date.now());
-          if (!this.didApproveMe()) {
-            await this.setDidApproveMe(true);
-          }
-          // should only send once
-          await this.sendMessageRequestResponse();
-          void forceSyncConfigurationNowIfNeeded();
-        }
-      }
+      // handleAcceptConversationRequest will take care of sending response depending on the type of conversation
+      await handleAcceptConversationRequest({
+        convoId: this.id,
+      });
 
       if (this.isOpenGroupV2()) {
         const chatMessageOpenGroupV2 = new OpenGroupVisibleMessage(chatMessageParams);
@@ -2262,20 +2244,19 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     const lastMessageStatus = lastMessageModel.getMessagePropStatus() || undefined;
     const lastMessageNotificationText = lastMessageModel.getNotificationText() || undefined;
     // we just want to set the `status` to `undefined` if there are no `lastMessageNotificationText`
-    const lastMessageUpdate =
-      !!lastMessageNotificationText && !isEmpty(lastMessageNotificationText)
-        ? {
-            lastMessage: lastMessageNotificationText || '',
-            lastMessageStatus,
-            lastMessageInteractionType,
-            lastMessageInteractionStatus,
-          }
-        : {
-            lastMessage: '',
-            lastMessageStatus: undefined,
-            lastMessageInteractionType: undefined,
-            lastMessageInteractionStatus: undefined,
-          };
+    const lastMessageUpdate = !isEmpty(lastMessageNotificationText)
+      ? {
+          lastMessage: lastMessageNotificationText || '',
+          lastMessageStatus,
+          lastMessageInteractionType,
+          lastMessageInteractionStatus,
+        }
+      : {
+          lastMessage: '',
+          lastMessageStatus: undefined,
+          lastMessageInteractionType: undefined,
+          lastMessageInteractionStatus: undefined,
+        };
     const existingLastMessageInteractionType = this.get('lastMessageInteractionType');
     const existingLastMessageInteractionStatus = this.get('lastMessageInteractionStatus');
 
@@ -2444,7 +2425,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     ) {
       return false;
     }
-    return Boolean(this.get('isApproved'));
+    return this.isApproved();
   }
 
   private async bumpTyping() {

@@ -144,6 +144,11 @@ export class SwarmPolling {
     if (this.groupPolling.findIndex(m => m.pubkey.key === pk.key) === -1) {
       window?.log?.info('Swarm addGroupId: adding pubkey to polling', pk.key);
       this.groupPolling.push({ pubkey: pk, lastPolledTimestamp: 0, callbackFirstPoll });
+    } else if (callbackFirstPoll) {
+      // group is already polled. Hopefully we already have keys for it to decrypt messages?
+      void sleepFor(2000).then(() => {
+        void callbackFirstPoll();
+      });
     }
   }
 
@@ -547,7 +552,7 @@ export class SwarmPolling {
         }
         results = results.slice(0, results.length - 1);
       }
-      console.warn('results what when we get kicked out?: ', results);
+      // console.warn('results what when we get kicked out?: ', results); // debugger
       const lastMessages = results.map(r => {
         return last(r.messages.messages);
       });
@@ -845,7 +850,6 @@ async function handleMessagesForGroupV2(
         throw new Error('decryptForGroupV2 returned empty envelope');
       }
 
-      console.warn('envelopePlus', envelopePlus);
       // this is the processing of the message itself, which can be long.
       // We allow 1 minute per message at most, which should be plenty
       await Receiver.handleSwarmContentDecryptedWithTimeout({

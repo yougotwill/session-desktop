@@ -4,7 +4,7 @@ import {
   ConversationTypeEnum,
   READ_MESSAGE_STATE,
 } from '../models/conversationAttributes';
-import { CallManager, SyncUtils, ToastUtils, UserUtils } from '../session/utils';
+import { CallManager, PromiseUtils, SyncUtils, ToastUtils, UserUtils } from '../session/utils';
 
 import { SessionButtonColor } from '../components/basic/SessionButton';
 import { getCallMediaPermissionsSettings } from '../components/settings/SessionSettings';
@@ -113,26 +113,25 @@ export async function unblockConvoById(conversationId: string) {
   await conversation.commit();
 }
 
-export const handleAcceptConversationRequest = async ({
-  convoId,
-  sendResponse,
-}: {
-  convoId: string;
-  sendResponse: boolean;
-}) => {
+export const handleAcceptConversationRequest = async ({ convoId }: { convoId: string }) => {
   const convo = ConvoHub.use().get(convoId);
-  if (!convo) {
+  if (!convo || (!convo.isPrivate() && !convo.isClosedGroupV2())) {
     return null;
   }
-  await convo.setDidApproveMe(true, false);
+  const previousIsApproved = convo.isApproved();
+  const previousDidApprovedMe = convo.didApproveMe();
+  // Note: we don't mark as approvedMe = true, as we do not know if they did send us a message yet.
   await convo.setIsApproved(true, false);
   await convo.commit();
+  void forceSyncConfigurationNowIfNeeded();
 
   if (convo.isPrivate()) {
-    await convo.addOutgoingApprovalMessage(Date.now());
-    if (sendResponse) {
+    // we only need the approval message (and sending a reply) when we are accepting a message request. i.e. someone sent us a message already and we didn't accept it yet.
+    if (!previousIsApproved && previousDidApprovedMe) {
+      await convo.addOutgoingApprovalMessage(Date.now());
       await convo.sendMessageRequestResponse();
     }
+
     return null;
   }
   if (PubKey.is03Pubkey(convoId)) {
@@ -143,12 +142,17 @@ export const handleAcceptConversationRequest = async ({
     }
     // this updates the wrapper and refresh the redux slice
     await UserGroupsWrapperActions.setGroup({ ...found, invitePending: false });
-    const acceptedPromise = new Promise(resolve => {
+
+    // nothing else to do (and especially not wait for first poll) when the convo was already approved
+    if (previousIsApproved) {
+      return null;
+    }
+    const pollAndSendResponsePromise = new Promise(resolve => {
       getSwarmPollingInstance().addGroupId(convoId, async () => {
         // we need to do a first poll to fetch the keys etc before we can send our invite response
         // this is pretty hacky, but also an admin seeing a message from that user in the group will mark it as not pending anymore
         await sleepFor(2000);
-        if (sendResponse) {
+        if (!previousIsApproved) {
           await GroupV2Receiver.sendInviteResponseToGroup({ groupPk: convoId });
         }
         window.log.info(
@@ -157,7 +161,17 @@ export const handleAcceptConversationRequest = async ({
         return resolve(true);
       });
     });
-    await acceptedPromise;
+
+    // try at most 10s for the keys, and everything to come before continuing processing.
+    // Note: this is important as otherwise the polling just hangs when sending a message to a group (as the cb in addGroupId() is never called back)
+    const timeout = 10000;
+    try {
+      await PromiseUtils.timeout(pollAndSendResponsePromise, timeout);
+    } catch (e) {
+      window.log.warn(
+        `handleAcceptConversationRequest: waited ${timeout}ms for first poll of group ${ed25519Str(convoId)} to happen, but timedout with: ${e.message}`
+      );
+    }
   }
   return null;
 };

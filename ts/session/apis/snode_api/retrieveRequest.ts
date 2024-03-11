@@ -253,10 +253,10 @@ async function retrieveNextMessagesNoRetries(
     GetNetworkTime.handleTimestampOffsetFromNetwork('retrieve', bodyFirstResult.t);
 
     // merge results with their corresponding namespaces
-    return results.map((result, index) => ({
-      code: result.code,
-      messages: result.body as RetrieveMessagesResultsContent,
-      namespace: namespacesAndLastHashes[index].namespace,
+    return namespacesAndLastHashes.map((n, index) => ({
+      code: results[index].code,
+      messages: results[index].body as RetrieveMessagesResultsContent,
+      namespace: n.namespace,
     }));
   } catch (e) {
     window?.log?.warn('exception while parsing json of nextMessage:', e);

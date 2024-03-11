@@ -147,7 +147,10 @@ async function handleSwarmMessageSentSuccess(
   fetchedMessage.getConversation()?.updateLastMessage();
 }
 
-async function handleSwarmMessageSentFailure(sentMessage: OutgoingRawMessage, error: any) {
+async function handleSwarmMessageSentFailure(
+  sentMessage: Pick<OutgoingRawMessage, 'device' | 'identifier'>,
+  error: any
+) {
   const fetchedMessage = await fetchHandleMessageSentData(sentMessage.identifier);
   if (!fetchedMessage) {
     return;
@@ -157,14 +160,12 @@ async function handleSwarmMessageSentFailure(sentMessage: OutgoingRawMessage, er
     await fetchedMessage.saveErrors(error);
   }
 
-  if (!(sentMessage instanceof OpenGroupVisibleMessage)) {
-    const isOurDevice = UserUtils.isUsFromCache(sentMessage.device);
-    // if this message was for ourself, and it was not already synced,
-    // it means that we failed to sync it.
-    // so just remove the flag saying that we are currently sending the sync message
-    if (isOurDevice && !fetchedMessage.get('sync')) {
-      fetchedMessage.set({ sentSync: false });
-    }
+  const isOurDevice = UserUtils.isUsFromCache(sentMessage.device);
+  // if this message was for ourself, and it was not already synced,
+  // it means that we failed to sync it.
+  // so just remove the flag saying that we are currently sending the sync message
+  if (isOurDevice && !fetchedMessage.get('sync')) {
+    fetchedMessage.set({ sentSync: false });
   }
 
   // always mark the message as sent.

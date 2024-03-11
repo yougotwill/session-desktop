@@ -163,7 +163,7 @@ const GroupStatusText = ({ groupPk, pubkey }: { pubkey: PubkeyType; groupPk: Gro
   }
   return (
     <StyledGroupStatusText
-      data-testid={'group_member_status_text'}
+      data-testid={'group-member-status-text'}
       isFailure={groupPromotionFailed || groupInviteFailed}
     >
       {statusText}
@@ -197,7 +197,7 @@ const ResendInviteButton = ({
 }) => {
   return (
     <SessionButton
-      dataTestId={'resend_invite_button'}
+      dataTestId={'resend-invite-button'}
       buttonShape={SessionButtonShape.Square}
       buttonType={SessionButtonType.Solid}
       text={window.i18n('resend')}
@@ -217,7 +217,7 @@ const ResendPromoteButton = ({
 }) => {
   return (
     <SessionButton
-      dataTestId={'resend_promote_button'}
+      dataTestId={'resend-promote-button'}
       buttonShape={SessionButtonShape.Square}
       buttonType={SessionButtonType.Solid}
       buttonColor={SessionButtonColor.Danger}
@@ -271,7 +271,7 @@ export const MemberListItem = ({
           margin="0 var(--margins-md)"
           alignItems="flex-start"
         >
-          <StyledName data-testid={'group_member_name'}>{memberName}</StyledName>
+          <StyledName data-testid={'group-member-name'}>{memberName}</StyledName>
           <GroupStatusContainer
             pubkey={pubkey}
             displayGroupStatus={displayGroupStatus}

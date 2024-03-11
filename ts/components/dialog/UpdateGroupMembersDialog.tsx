@@ -293,6 +293,7 @@ export const UpdateGroupMembersDialog = (props: Props) => {
             onClick={onClickOK}
             buttonType={SessionButtonType.Simple}
             disabled={isProcessingUIChange}
+            dataTestId="session-confirm-ok-button"
           />
         )}
         <SessionButton
@@ -301,6 +302,7 @@ export const UpdateGroupMembersDialog = (props: Props) => {
           buttonType={SessionButtonType.Simple}
           onClick={closeDialog}
           disabled={isProcessingUIChange}
+          dataTestId="session-confirm-cancel-button"
         />
       </div>
     </SessionWrapperModal>

@@ -136,7 +136,6 @@ const initNewGroupInWrapper = createAsyncThunk(
         throw new Error('groupSecretKey was empty just after creation.');
       }
       newGroup.name = groupName; // this will be used by the linked devices until they fetch the info from the groups swarm
-
       // the `GroupSync` below will need the secretKey of the group to be saved in the wrapper. So save it!
       await UserGroupsWrapperActions.setGroup(newGroup);
       const ourEd25519KeypairBytes = await UserUtils.getUserED25519KeyPairBytes();
@@ -183,8 +182,7 @@ const initNewGroupInWrapper = createAsyncThunk(
 
       const convo = await ConvoHub.use().getOrCreateAndWait(groupPk, ConversationTypeEnum.GROUPV2);
       await convo.setIsApproved(true, false);
-
-      console.warn('updateMessages for new group might need an update message?');
+      await convo.commit(); // commit here too, as the poll needs it to be approved
 
       const result = await GroupSync.pushChangesToGroupSwarmIfNeeded({
         groupPk,
@@ -196,6 +194,36 @@ const initNewGroupInWrapper = createAsyncThunk(
         window.log.warn('GroupSync.pushChangesToGroupSwarmIfNeeded during create failed');
         throw new Error('failed to pushChangesToGroupSwarmIfNeeded');
       }
+
+      // push one group change message were initial members are added to the group
+      if (membersFromWrapper.length) {
+        const membersHex = uniq(membersFromWrapper.map(m => m.pubkeyHex));
+        const sentAt = GetNetworkTime.now();
+        const msgModel = await ClosedGroup.addUpdateMessage({
+          diff: { type: 'add', added: membersHex, withHistory: false },
+          expireUpdate: null,
+          sender: us,
+          sentAt,
+          convo,
+        });
+        const groupChange = await getWithoutHistoryControlMessage({
+          adminSecretKey: groupSecretKey,
+          convo,
+          groupPk,
+          withoutHistory: membersHex,
+          createAtNetworkTimestamp: sentAt,
+          dbMsgIdentifier: msgModel.id,
+        });
+        if (groupChange) {
+          await GroupSync.storeGroupUpdateMessages({
+            groupPk,
+            updateMessages: [groupChange],
+          });
+        }
+      }
+
+      await convo.commit();
+
       getSwarmPollingInstance().addGroupId(new PubKey(groupPk));
 
       await convo.unhideIfNeeded();
@@ -838,7 +866,6 @@ async function handleMemberAddedFromUI({
     if (groupChange) {
       updateMessagesToPush.push(groupChange);
     }
-    console.warn(`diff: { type: ' should add case for addWithHistory here ?`);
   }
 
   await convo.commit();
