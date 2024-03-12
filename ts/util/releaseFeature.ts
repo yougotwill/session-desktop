@@ -97,10 +97,7 @@ async function checkIsUserConfigFeatureReleased() {
 }
 
 async function checkIsDisappearMessageV2FeatureReleased() {
-  return true;
-  //   ((await checkIsFeatureReleased('disappearing_messages')) ||
-  //   !!process.env.MULTI?.toLocaleLowerCase().includes('disappear_v2') // FIXME to remove after QA debugger
-  // );
+  return checkIsFeatureReleased('disappearing_messages');
 }
 
 function isUserConfigFeatureReleasedCached(): boolean {
@@ -109,11 +106,7 @@ function isUserConfigFeatureReleasedCached(): boolean {
 
 // NOTE Make sure to call checkIsDisappearMessageV2FeatureReleased at least once and then use this. It's mostly used in components that are rendered where we don't want to do async calls
 function isDisappearMessageV2FeatureReleasedCached(): boolean {
-  return true;
-  // return (
-  //   !!isDisappearingMessageFeatureReleased ||
-  //   !!process.env.MULTI?.toLocaleLowerCase().includes('disappear_v2') // FIXME to remove after QA
-  // );
+  return !!isDisappearingMessageFeatureReleased;
 }
 
 export const ReleasedFeatures = {
