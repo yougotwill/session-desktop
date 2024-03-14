@@ -176,9 +176,8 @@ describe('DisappearingMessage', () => {
     it("if it's a Group Conversation and expireTimer > 0 then the message's expirationType is always deleteAfterSend", async () => {
       const ourConversation = new ConversationModel({
         ...conversationArgs,
-        type: ConversationTypeEnum.GROUP,
-        // TODO update to 03 prefix when we release new groups
-        id: '05123456564',
+        type: ConversationTypeEnum.GROUPV2,
+        id: TestUtils.generateFakeClosedGroupV2PkStr(),
       });
       const expireTimer = 60; // seconds
       const expirationMode = 'deleteAfterRead'; // not correct
@@ -238,9 +237,8 @@ describe('DisappearingMessage', () => {
     it("if it's a Group Conversation and expireTimer > 0 then the conversation mode is always deleteAfterSend", async () => {
       const ourConversation = new ConversationModel({
         ...conversationArgs,
-        type: ConversationTypeEnum.GROUP,
-        // TODO update to 03 prefix when we release new groups
-        id: '05123456564',
+        type: ConversationTypeEnum.GROUPV2,
+        id: TestUtils.generateFakeClosedGroupV2PkStr(),
       });
       const expirationType = 'deleteAfterRead'; // not correct
       const expireTimer = 60; // seconds

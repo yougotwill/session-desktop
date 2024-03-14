@@ -1280,6 +1280,20 @@ function applySendingStateChange({
   return state;
 }
 
+function refreshConvosModelProps(convoIds: Array<string>) {
+  /**
+   *
+   * This is not ideal, but some fields stored in this slice are ALSO stored in the conversation slice. Things like admins,members, groupName, kicked, etc...
+   * So, anytime a change is made in this metaGroup slice, we need to make sure the conversation slice is updated too.
+   * The way to update the conversation slice is to call `triggerUIRefresh` on the corresponding conversation object.
+   * Eventually, we will have a centralized state with libsession used accross the app, and those slices will only expose data from the libsession state.
+   *
+   */
+  setTimeout(() => {
+    convoIds.map(id => ConvoHub.use().get(id)).map(c => c?.triggerUIRefresh());
+  }, 1000);
+}
+
 /**
  * This slice is the one holding the default joinable rooms fetched once in a while from the default opengroup v2 server.
  */
@@ -1307,6 +1321,7 @@ const metaGroupSlice = createSlice({
       state.infos[groupPk] = infos;
       state.members[groupPk] = members;
       state.creationFromUIPending = false;
+      refreshConvosModelProps([groupPk]);
       return state;
     });
     builder.addCase(initNewGroupInWrapper.rejected, (state, action) => {
@@ -1327,6 +1342,7 @@ const metaGroupSlice = createSlice({
         state.infos[element.groupPk] = element.infos;
         state.members[element.groupPk] = element.members;
       });
+      refreshConvosModelProps(loaded.map(m => m.groupPk));
       return state;
     });
     builder.addCase(loadMetaDumpsFromDB.rejected, (state, action) => {
@@ -1341,6 +1357,7 @@ const metaGroupSlice = createSlice({
 
         // window.log.debug(`groupInfo after merge: ${stringify(infos)}`);
         // window.log.debug(`groupMembers after merge: ${stringify(members)}`);
+        refreshConvosModelProps([groupPk]);
       } else {
         window.log.debug(
           `refreshGroupDetailsFromWrapper no details found, removing from slice: ${groupPk}}`
@@ -1366,6 +1383,7 @@ const metaGroupSlice = createSlice({
       if (infos && members) {
         state.infos[groupPk] = infos;
         state.members[groupPk] = members;
+        refreshConvosModelProps([groupPk]);
 
         window.log.debug(`groupInfo after handleUserGroupUpdate: ${stringify(infos)}`);
         window.log.debug(`groupMembers after handleUserGroupUpdate: ${stringify(members)}`);
@@ -1386,6 +1404,7 @@ const metaGroupSlice = createSlice({
       const { infos, members, groupPk } = action.payload;
       state.infos[groupPk] = infos;
       state.members[groupPk] = members;
+      refreshConvosModelProps([groupPk]);
 
       window.log.debug(`groupInfo after currentDeviceGroupMembersChange: ${stringify(infos)}`);
       window.log.debug(`groupMembers after currentDeviceGroupMembersChange: ${stringify(members)}`);
@@ -1405,6 +1424,7 @@ const metaGroupSlice = createSlice({
       const { infos, members, groupPk } = action.payload;
       state.infos[groupPk] = infos;
       state.members[groupPk] = members;
+      refreshConvosModelProps([groupPk]);
 
       window.log.debug(`groupInfo after currentDeviceGroupNameChange: ${stringify(infos)}`);
       window.log.debug(`groupMembers after currentDeviceGroupNameChange: ${stringify(members)}`);
@@ -1422,6 +1442,7 @@ const metaGroupSlice = createSlice({
       const { infos, members, groupPk } = action.payload;
       state.infos[groupPk] = infos;
       state.members[groupPk] = members;
+      refreshConvosModelProps([groupPk]);
 
       window.log.debug(`groupInfo after handleMemberLeftMessage: ${stringify(infos)}`);
       window.log.debug(`groupMembers after handleMemberLeftMessage: ${stringify(members)}`);
@@ -1435,6 +1456,7 @@ const metaGroupSlice = createSlice({
       const { infos, members, groupPk } = action.payload;
       state.infos[groupPk] = infos;
       state.members[groupPk] = members;
+      refreshConvosModelProps([groupPk]);
 
       window.log.debug(`groupInfo after markUsAsAdmin: ${stringify(infos)}`);
       window.log.debug(`groupMembers after markUsAsAdmin: ${stringify(members)}`);
@@ -1447,6 +1469,7 @@ const metaGroupSlice = createSlice({
       const { infos, members, groupPk } = action.payload;
       state.infos[groupPk] = infos;
       state.members[groupPk] = members;
+      refreshConvosModelProps([groupPk]);
 
       window.log.debug(`groupInfo after inviteResponseReceived: ${stringify(infos)}`);
       window.log.debug(`groupMembers after inviteResponseReceived: ${stringify(members)}`);

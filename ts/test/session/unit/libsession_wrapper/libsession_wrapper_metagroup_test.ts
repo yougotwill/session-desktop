@@ -54,6 +54,7 @@ describe('libsession_metagroup', () => {
       metaDumped: null,
       userEd25519Secretkey: toFixedUint8ArrayOfLength(us.ed25519KeyPair.privateKey, 64).buffer,
     });
+    metaGroupWrapper.keyRekey();
     member = TestUtils.generateFakePubKeyStr();
     member2 = TestUtils.generateFakePubKeyStr();
   });
