@@ -1816,12 +1816,12 @@ available-typed-arrays@^1.0.5:
   resolved "https://registry.yarnpkg.com/available-typed-arrays/-/available-typed-arrays-1.0.5.tgz#92f95616501069d07d10edb2fc37d3e1c65123b7"
   integrity sha512-DMD0KiN46eipeziST1LPP/STfDU0sufISXmjSgvVsoU2tqxctQeASejWcfNtxYKqETM1UxQ8sp2OrSBWpHY6sw==
 
-axios@^1.3.2:
-  version "1.6.2"
-  resolved "https://registry.yarnpkg.com/axios/-/axios-1.6.2.tgz#de67d42c755b571d3e698df1b6504cde9b0ee9f2"
-  integrity sha512-7i24Ri4pmDRfJTR7LDBhsOTtcm+9kjX5WiY1X3wIisx6G9So3pfMkEiU7emUBe46oceVImccTEM3k6C5dbVW8A==
+axios@^1.6.5:
+  version "1.6.7"
+  resolved "https://registry.yarnpkg.com/axios/-/axios-1.6.7.tgz#7b48c2e27c96f9c68a2f8f31e2ab19f59b06b0a7"
+  integrity sha512-/hDJGff6/c7u0hDkvkGxR/oy6CbCs8ziCsC7SqmhjfozqiJGc8Z11wrv9z9lYfY4K8l+H9TpjcMDX0xOZmx+RA==
   dependencies:
-    follow-redirects "^1.15.0"
+    follow-redirects "^1.15.4"
     form-data "^4.0.0"
     proxy-from-env "^1.1.0"
 
@@ -2324,23 +2324,23 @@ clsx@^1.0.4, clsx@^1.1.1, clsx@^1.2.1:
   integrity sha512-EcR6r5a8bj6pu3ycsa/E/cKVGuTgZJZdsyUYHOksG/UHIiKfjxzRxYJpyVBwYaQeOvghal9fcc4PidlgzugAQg==
 
 cmake-js@^7.2.1:
-  version "7.2.1"
-  resolved "https://registry.yarnpkg.com/cmake-js/-/cmake-js-7.2.1.tgz#757c0d39994121b084bab96290baf115ee7712cd"
-  integrity sha512-AdPSz9cSIJWdKvm0aJgVu3X8i0U3mNTswJkSHzZISqmYVjZk7Td4oDFg0mCBA383wO+9pG5Ix7pEP1CZH9x2BA==
+  version "7.3.0"
+  resolved "https://registry.yarnpkg.com/cmake-js/-/cmake-js-7.3.0.tgz#6fd6234b7aeec4545c1c806f9e3f7ffacd9798b2"
+  integrity sha512-dXs2zq9WxrV87bpJ+WbnGKv8WUBXDw8blNiwNHoRe/it+ptscxhQHKB1SJXa1w+kocLMeP28Tk4/eTCezg4o+w==
   dependencies:
-    axios "^1.3.2"
+    axios "^1.6.5"
     debug "^4"
-    fs-extra "^10.1.0"
+    fs-extra "^11.2.0"
     lodash.isplainobject "^4.0.6"
     memory-stream "^1.0.0"
-    node-api-headers "^0.0.2"
+    node-api-headers "^1.1.0"
     npmlog "^6.0.2"
     rc "^1.2.7"
-    semver "^7.3.8"
-    tar "^6.1.11"
+    semver "^7.5.4"
+    tar "^6.2.0"
     url-join "^4.0.1"
     which "^2.0.2"
-    yargs "^17.6.0"
+    yargs "^17.7.2"
 
 color-convert@^1.9.0:
   version "1.9.3"
@@ -3663,10 +3663,10 @@ flatted@^3.2.7:
   resolved "https://registry.yarnpkg.com/flatted/-/flatted-3.2.7.tgz#609f39207cb614b89d0765b477cb2d437fbf9787"
   integrity sha512-5nqDSxl8nn5BSNxyR3n4I6eDmbolI6WT+QqR547RwxQapgjQBmtktdP+HTBb/a/zLsbzERTONyUB5pefh5TtjQ==
 
-follow-redirects@^1.15.0:
-  version "1.15.3"
-  resolved "https://registry.yarnpkg.com/follow-redirects/-/follow-redirects-1.15.3.tgz#fe2f3ef2690afce7e82ed0b44db08165b207123a"
-  integrity sha512-1VzOtuEM8pC9SFU1E+8KfTjZyMztRsgEfwQl44z8A25uy13jSzTj6dyK2Df52iV0vgHCfBwLhDWevLn95w5v6Q==
+follow-redirects@^1.15.4:
+  version "1.15.5"
+  resolved "https://registry.yarnpkg.com/follow-redirects/-/follow-redirects-1.15.5.tgz#54d4d6d062c0fa7d9d17feb008461550e3ba8020"
+  integrity sha512-vSFWUON1B+yAw1VN4xMfxgn5fTUiaOzAJCKBwIIgT/+7CuGy9+r+5gITvP62j3RmaD5Ph65UaERdOSRGUzZtgw==
 
 for-each@^0.3.3:
   version "0.3.3"
@@ -3716,6 +3716,15 @@ fs-extra@^11.0.0:
   version "11.1.1"
   resolved "https://registry.yarnpkg.com/fs-extra/-/fs-extra-11.1.1.tgz#da69f7c39f3b002378b0954bb6ae7efdc0876e2d"
   integrity sha512-MGIE4HOvQCeUCzmlHs0vXpih4ysz4wg9qiSAu6cd42lVwPbTM1TjV7RusoyQqMmk/95gdQZX72u+YW+c3eEpFQ==
+  dependencies:
+    graceful-fs "^4.2.0"
+    jsonfile "^6.0.1"
+    universalify "^2.0.0"
+
+fs-extra@^11.2.0:
+  version "11.2.0"
+  resolved "https://registry.yarnpkg.com/fs-extra/-/fs-extra-11.2.0.tgz#e70e17dfad64232287d01929399e0ea7c86b0e5b"
+  integrity sha512-PmDi3uwK5nFuXh7XDTlVnS17xJS7vW36is2+w3xcv8SVxiB4NyATf4ctkVY5bkSjX0Y4nbvZCq1/EjtEyr9ktw==
   dependencies:
     graceful-fs "^4.2.0"
     jsonfile "^6.0.1"
@@ -4901,9 +4910,9 @@ levn@~0.3.0:
     prelude-ls "~1.1.2"
     type-check "~0.3.2"
 
-"libsession_util_nodejs@https://github.com/oxen-io/libsession-util-nodejs/releases/download/v0.3.1/libsession_util_nodejs-v0.3.1.tar.gz":
-  version "0.3.1"
-  resolved "https://github.com/oxen-io/libsession-util-nodejs/releases/download/v0.3.1/libsession_util_nodejs-v0.3.1.tar.gz#d2c94bfaae6e3ef594609abb08cf8be485fa5d39"
+"libsession_util_nodejs@https://github.com/oxen-io/libsession-util-nodejs/releases/download/v0.4.3/libsession_util_nodejs-v0.4.3.tar.gz":
+  version "0.4.3"
+  resolved "https://github.com/oxen-io/libsession-util-nodejs/releases/download/v0.4.3/libsession_util_nodejs-v0.4.3.tar.gz#f5b6b11e5df5ba7268ffa196a1eea3d7b583944d"
   dependencies:
     cmake-js "^7.2.1"
     node-addon-api "^6.1.0"
@@ -5484,10 +5493,10 @@ node-addon-api@^6.1.0:
   resolved "https://registry.yarnpkg.com/node-addon-api/-/node-addon-api-6.1.0.tgz#ac8470034e58e67d0c6f1204a18ae6995d9c0d76"
   integrity sha512-+eawOlIgy680F0kBzPUNFhMZGtJ1YmqM6l4+Crf4IkImjYrO/mqPwRMh352g23uIaQKFItcQ64I7KMaJxHgAVA==
 
-node-api-headers@^0.0.2:
-  version "0.0.2"
-  resolved "https://registry.yarnpkg.com/node-api-headers/-/node-api-headers-0.0.2.tgz#31f4c6c2750b63e598128e76a60aefca6d76ac5d"
-  integrity sha512-YsjmaKGPDkmhoNKIpkChtCsPVaRE0a274IdERKnuc/E8K1UJdBZ4/mvI006OijlQZHCfpRNOH3dfHQs92se8gg==
+node-api-headers@^1.1.0:
+  version "1.1.0"
+  resolved "https://registry.yarnpkg.com/node-api-headers/-/node-api-headers-1.1.0.tgz#3f9dd7bb10b29e1c3e3db675979605a308b2373c"
+  integrity sha512-ucQW+SbYCUPfprvmzBsnjT034IGRB2XK8rRc78BgjNKhTdFKgAwAmgW704bKIBmcYW48it0Gkjpkd39Azrwquw==
 
 node-fetch@^2.6.7:
   version "2.7.0"
@@ -5972,10 +5981,10 @@ prelude-ls@~1.1.2:
   resolved "https://registry.yarnpkg.com/prelude-ls/-/prelude-ls-1.1.2.tgz#21932a549f5e52ffd9a827f570e04be62a97da54"
   integrity sha512-ESF23V4SKG6lVSGZgYNpbsiaAkdab6ZgOxe52p7+Kid3W3u3bxR4Vfd/o21dmN7jSt0IwgZ4v5MUd26FEtXE9w==
 
-prettier@1.19.0:
-  version "1.19.0"
-  resolved "https://registry.yarnpkg.com/prettier/-/prettier-1.19.0.tgz#3bec4489d5eebcd52b95ddd2c22467b5c852fde1"
-  integrity sha512-GlAIjk6DjkNT6u/Bw5QCWrbzh9YlLKwwmJT//1YiCR3WDpZDnyss64aXHQZgF8VKeGlWnX6+tGsKSVxsZT/gtA==
+prettier@^3.0.3:
+  version "3.2.5"
+  resolved "https://registry.yarnpkg.com/prettier/-/prettier-3.2.5.tgz#e52bc3090586e824964a8813b09aba6233b28368"
+  integrity sha512-3/GWa9aOC0YeD7LUfvOG2NiDyhOWRvt1k+rcKhOuYnMY24iiCphgneUfJDyFXd6rZCAnuLBv6UeAULtrhT/F4A==
 
 progress@^2.0.3:
   version "2.0.3"
@@ -7186,7 +7195,7 @@ tapable@^2.1.1, tapable@^2.2.0:
   resolved "https://registry.yarnpkg.com/tapable/-/tapable-2.2.1.tgz#1967a73ef4060a82f12ab96af86d52fdb76eeca0"
   integrity sha512-GNzQvQTOIP6RyTfE2Qxb8ZVlNmw0n88vp1szwWRimP02mnTsx3Wtn5qRdqY9w2XduFNUgvOwhNnQsjwCp+kqaQ==
 
-tar@^6.1.0, tar@^6.1.11:
+tar@^6.1.0, tar@^6.1.11, tar@^6.2.0:
   version "6.2.0"
   resolved "https://registry.yarnpkg.com/tar/-/tar-6.2.0.tgz#b14ce49a79cb1cd23bc9b016302dea5474493f73"
   integrity sha512-/Wo7DcT0u5HUV486xg675HtjNd3BXZ6xDbzsCUZPt5iw8bTQ63bP0Raut3mvro9u+CUyq7YQd8Cx55fsZXxqLQ==
@@ -7963,7 +7972,7 @@ yargs@16.2.0:
     y18n "^5.0.5"
     yargs-parser "^20.2.2"
 
-yargs@^17.0.0, yargs@^17.0.1, yargs@^17.6.0:
+yargs@^17.0.0, yargs@^17.0.1, yargs@^17.7.2:
   version "17.7.2"
   resolved "https://registry.yarnpkg.com/yargs/-/yargs-17.7.2.tgz#991df39aca675a192b816e1e0363f9d75d2aa269"
   integrity sha512-7dSzzRQ++CKnNI/krKnYRV7JKKPUXMEh61soaHKg9mrWEhzFWhFnxPxGl+69cD1Ou63C13NUPCnmIcrvqCuM6w==
@@ -7993,3 +8002,8 @@ yocto-queue@^0.1.0:
   version "0.1.0"
   resolved "https://registry.yarnpkg.com/yocto-queue/-/yocto-queue-0.1.0.tgz#0294eb3dee05028d31ee1a5fa2c556a6aaf10a1b"
   integrity sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==
+
+zod@^3.22.4:
+  version "3.22.4"
+  resolved "https://registry.yarnpkg.com/zod/-/zod-3.22.4.tgz#f31c3a9386f61b1f228af56faa9255e845cf3fff"
+  integrity sha512-iC+8Io04lddc+mVqQ9AZ7OQ2MrUKGN+oIQyq1vemgt46jwCwLfhq7/pwnBnNXXXZb8VTVLKwp9EDkx+ryxIWmg==
