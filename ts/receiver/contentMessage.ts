@@ -475,7 +475,7 @@ export async function innerHandleSwarmContentMessage({
      * For a private conversation message, this is just the conversation with that user
      */
     if (!isPrivateConversationMessage) {
-      console.warn('conversationModelForUIUpdate might need to be checked for groupv2 case');
+      console.info('conversationModelForUIUpdate might need to be checked for groupv2 case'); // debugger
       // this is a closed group message, we have a second conversation to make sure exists
       conversationModelForUIUpdate = await ConvoHub.use().getOrCreateAndWait(
         envelope.source,
@@ -818,7 +818,7 @@ async function handleMessageRequestResponse(
   if (previousApprovedMe) {
     await conversationToApprove.commit();
 
-    window.log.inf(
+    window.log.info(
       `convo ${ed25519Str(conversationToApprove.id)} previousApprovedMe is already true. Nothing to do `
     );
     await IncomingMessageCache.removeFromCache(envelope);

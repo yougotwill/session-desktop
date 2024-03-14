@@ -53,6 +53,7 @@ async function handleGroupSharedConfigMessages(
     );
     // do the merge with our current state
     await MetaGroupWrapperActions.metaMerge(groupPk, toMerge);
+
     // save updated dumps to the DB right away
     await LibSessionUtil.saveDumpsToDb(groupPk);
 

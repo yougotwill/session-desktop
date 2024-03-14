@@ -12,6 +12,7 @@ import { mnDecode } from '../../session/crypto/mnemonic';
 import { recoveryPhraseModal } from '../../state/ducks/modalDialog';
 import { SpacerSM } from '../basic/Text';
 
+import { isAutoLogin } from '../../shared/env_vars';
 import { saveQRCode } from '../../util/saveQRCode';
 import { getCurrentRecoveryPhrase } from '../../util/storage';
 import { SessionWrapperModal } from '../SessionWrapperModal';
@@ -131,6 +132,12 @@ const Seed = (props: SeedProps) => {
     dispatch(recoveryPhraseModal(null));
   };
 
+  useMount(() => {
+    if (isAutoLogin()) {
+      copyRecoveryPhrase(recoveryPhrase);
+    }
+  });
+
   return (
     <>
       <div className="session-modal__centered text-center">
@@ -186,7 +193,7 @@ interface ModalInnerProps {
   onClickOk?: () => any;
 }
 
-const SessionSeedModalInner = (props: ModalInnerProps) => {
+export const SessionSeedModal = (props: ModalInnerProps) => {
   const { onClickOk } = props;
   const [loadingPassword, setLoadingPassword] = useState(true);
   const [loadingSeed, setLoadingSeed] = useState(true);
@@ -247,5 +254,3 @@ const SessionSeedModalInner = (props: ModalInnerProps) => {
     </>
   );
 };
-
-export const SessionSeedModal = SessionSeedModalInner;

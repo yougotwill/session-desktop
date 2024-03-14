@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useState } from 'react';
 import useTimeoutFn from 'react-use/lib/useTimeoutFn';
-import { isAutoLogin, isDevProd } from '../../shared/env_vars';
+import { isAutoLogin } from '../../shared/env_vars';
 import { Noop } from '../../types/Util';
 import { Flex } from '../basic/Flex';
 import { SessionButton } from '../basic/SessionButton';
@@ -23,7 +23,7 @@ const CreateSessionIdButton = ({ createSessionID }: { createSessionID: any }) =>
 
 function useAutoContinue(props: { continueSignUp: () => void }) {
   useTimeoutFn(() => {
-    if (isDevProd() && isAutoLogin()) {
+    if (isAutoLogin()) {
       props.continueSignUp();
     }
   }, 100);

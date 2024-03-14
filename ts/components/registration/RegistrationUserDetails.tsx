@@ -1,5 +1,6 @@
 import classNames from 'classnames';
 import React from 'react';
+import useMount from 'react-use/lib/useMount';
 import useTimeoutFn from 'react-use/lib/useTimeoutFn';
 import { MAX_USERNAME_BYTES } from '../../session/constants';
 import { isAutoLogin, isDevProd } from '../../shared/env_vars';
@@ -26,7 +27,7 @@ function useAutoRegister(props: DisplayNameProps) {
   }, 100);
 
   useTimeoutFn(() => {
-    if (isDevProd() && props.displayName) {
+    if (isAutoLogin() && props.displayName) {
       props.handlePressEnter();
     }
   }, 200);
@@ -56,6 +57,14 @@ const RecoveryPhraseInput = (props: {
   handlePressEnter: () => any;
   stealAutoFocus?: boolean;
 }) => {
+  useMount(() => {
+    if (isAutoLogin()) {
+      const seed = window.clipboard.readText() as string | undefined;
+      if (seed?.split(' ').length === 13) {
+        props.onSeedChanged(seed);
+      }
+    }
+  });
   return (
     <SessionInput
       label={window.i18n('recoveryPhrase')}

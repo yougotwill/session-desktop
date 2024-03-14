@@ -17,6 +17,7 @@ import { TTL_DEFAULT } from '../../../constants';
 import { ConvoHub } from '../../../conversations';
 import { GroupUpdateInfoChangeMessage } from '../../../messages/outgoing/controlMessage/group_v2/to_group/GroupUpdateInfoChangeMessage';
 import { GroupUpdateMemberChangeMessage } from '../../../messages/outgoing/controlMessage/group_v2/to_group/GroupUpdateMemberChangeMessage';
+import { ed25519Str } from '../../../onions/onionPath';
 import { MessageSender } from '../../../sending/MessageSender';
 import { PubKey } from '../../../types';
 import { allowOnlyOneAtATime } from '../../Promise';
@@ -288,9 +289,9 @@ class GroupSyncJob extends PersistedJob<GroupSyncPersistedData> {
 
   public async run(): Promise<RunJobResult> {
     const start = Date.now();
+    const thisJobDestination = this.persistedData.identifier;
 
     try {
-      const thisJobDestination = this.persistedData.identifier;
       if (!PubKey.is03Pubkey(thisJobDestination)) {
         return RunJobResult.PermanentFailure;
       }
@@ -318,7 +319,9 @@ class GroupSyncJob extends PersistedJob<GroupSyncPersistedData> {
     } catch (e) {
       throw e;
     } finally {
-      window.log.debug(`UserSyncJob run() took ${Date.now() - start}ms`);
+      window.log.debug(
+        `GroupSyncJob ${ed25519Str(thisJobDestination)} run() took ${Date.now() - start}ms`
+      );
 
       // this is a simple way to make sure whatever happens here, we update the lastest timestamp.
       // (a finally statement is always executed (no matter if exception or returns in other try/catch block)

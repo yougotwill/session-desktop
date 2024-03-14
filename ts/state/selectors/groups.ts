@@ -40,7 +40,6 @@ function getIsMemberGroupChangePendingFromUI(state: StateType): boolean {
 
 export function getLibAdminsPubkeys(state: StateType, convo?: string): Array<string> {
   const members = getMembersOfGroup(state, convo);
-
   return members.filter(m => m.promoted).map(m => m.pubkeyHex);
 }
 

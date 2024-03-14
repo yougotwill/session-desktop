@@ -86,9 +86,9 @@ async function insertConvoFromDBIntoWrapperAndRefresh(convoId: string): Promise<
       ? timestampFromDbMs
       : 0;
 
-  window.log.debug(
-    `inserting into convoVolatile wrapper: ${convoId} lastMessageReadTimestamp:${lastReadMessageTimestamp} forcedUnread:${isForcedUnread}...`
-  );
+  // window.log.debug(
+  //   `inserting into convoVolatile wrapper: ${convoId} lastMessageReadTimestamp:${lastReadMessageTimestamp} forcedUnread:${isForcedUnread}...`
+  // );
 
   const convoType = getConvoType(foundConvo);
   switch (convoType) {
