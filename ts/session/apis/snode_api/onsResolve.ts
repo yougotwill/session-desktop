@@ -1,4 +1,5 @@
 import _, { range } from 'lodash';
+import { isTestNet } from '../../../shared/env_vars';
 import { getSodiumRenderer } from '../../crypto';
 import {
   fromHexToArray,
@@ -24,6 +25,9 @@ async function getSessionIDForOnsName(onsNameCase: string) {
   const nameHash = sodium.crypto_generichash(sodium.crypto_generichash_BYTES, nameAsData);
   const base64EncodedNameHash = fromUInt8ArrayToBase64(nameHash);
   const subRequest = new OnsResolveSubRequest(base64EncodedNameHash);
+  if (isTestNet()) {
+    window.log.info('OnsResolve response are not registered to anything on testnet');
+  }
 
   // we do this request with validationCount snodes
   const promises = range(0, validationCount).map(async () => {
