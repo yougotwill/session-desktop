@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/no-misused-promises */
-import classNames from 'classnames';
 import React, { useState } from 'react';
 
 import { useDispatch } from 'react-redux';
 import useKey from 'react-use/lib/useKey';
+import styled from 'styled-components';
 import { useIsClosedGroup, useIsPublic } from '../../hooks/useParamSelector';
 import { ConvoHub } from '../../session/conversations';
 import { ClosedGroup } from '../../session/group/closed-group';
@@ -49,6 +49,13 @@ function GroupAvatar({
     </div>
   );
 }
+
+const StyledError = styled.p`
+  text-align: center;
+  color: var(--danger-color);
+  display: block;
+  user-select: none;
+`;
 
 export function UpdateGroupNameDialog(props: { conversationId: string }) {
   const dispatch = useDispatch();
@@ -112,7 +119,7 @@ export function UpdateGroupNameDialog(props: { conversationId: string }) {
           });
           dispatch(updateNameAction as any);
 
-          return; // keeping the dialog open until the async thunk is done
+          return; // keeping the dialog open until the async thunk is done (via isNameChangePending)
         }
 
         void ClosedGroup.initiateClosedGroupUpdate(conversationId, trimmedGroupName, null);
@@ -135,8 +142,6 @@ export function UpdateGroupNameDialog(props: { conversationId: string }) {
     originalGroupName || window.i18n('unknown'),
   ]);
 
-  const errorMessageClasses = classNames('error-message', errorMsg ? 'error-shown' : 'error-faded');
-
   const isAdmin = !isCommunity;
   // return null;
 
@@ -149,7 +154,7 @@ export function UpdateGroupNameDialog(props: { conversationId: string }) {
       {errorMsg ? (
         <>
           <SpacerMD />
-          <p className={errorMessageClasses}>{errorMsg}</p>
+          <StyledError>{errorMsg}</StyledError>
           <SpacerMD />
         </>
       ) : null}
