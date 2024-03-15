@@ -26,7 +26,6 @@ import url from 'url';
 
 import Logger from 'bunyan';
 import _, { isEmpty } from 'lodash';
-import pify from 'pify';
 
 import { setupGlobalErrorHandler } from '../node/global_errors'; // checked - only node
 import { setup as setupSpellChecker } from '../node/spell_check'; // checked - only node
@@ -36,7 +35,7 @@ import packageJson from '../../package.json'; // checked - only node
 
 setupGlobalErrorHandler();
 
-const getRealPath = pify(fs.realpath);
+const getRealPath = (p: string) => fs.realpathSync(p);
 
 // Hardcoding appId to prevent build failures on release.
 // const appUserModelId = packageJson.build.appId;
@@ -730,8 +729,8 @@ async function saveDebugLog(_event: any, logText: any) {
 // Some APIs can only be used after this event occurs.
 let ready = false;
 app.on('ready', async () => {
-  const userDataPath = await getRealPath(app.getPath('userData'));
-  const installPath = await getRealPath(join(app.getAppPath(), '..', '..'));
+  const userDataPath = getRealPath(app.getPath('userData'));
+  const installPath = getRealPath(join(app.getAppPath(), '..', '..'));
 
   installFileHandler({
     protocol: electronProtocol,
@@ -783,7 +782,7 @@ function getDefaultSQLKey() {
 
 async function removeDB() {
   // this don't remove attachments and stuff like that...
-  const userDir = await getRealPath(app.getPath('userData'));
+  const userDir = getRealPath(app.getPath('userData'));
   sqlNode.removeDB(userDir);
 
   try {
@@ -797,7 +796,7 @@ async function removeDB() {
 }
 
 async function showMainWindow(sqlKey: string, passwordAttempt = false) {
-  const userDataPath = await getRealPath(app.getPath('userData'));
+  const userDataPath = getRealPath(app.getPath('userData'));
 
   await sqlNode.initializeSql({
     configDir: userDataPath,

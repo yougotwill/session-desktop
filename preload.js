@@ -30,7 +30,6 @@ window.getNodeVersion = () => configAny.node_version;
 window.sessionFeatureFlags = {
   useOnionRequests: true,
   useTestNet: isTestNet(),
-  integrationTestEnv: isTestIntegration(),
   useClosedGroupV2: true, // TODO DO NOT MERGE Remove after QA debugger
   debug: {
     debugLogging: !_.isEmpty(process.env.SESSION_DEBUG),
