@@ -205,6 +205,7 @@ async function handleGroupInfoChangeMessage({
         sender: author,
         sentAt: signatureTimestamp,
         expireUpdate: null,
+        markAlreadySent: true,
       });
 
       break;
@@ -216,6 +217,7 @@ async function handleGroupInfoChangeMessage({
         sender: author,
         sentAt: signatureTimestamp,
         expireUpdate: null,
+        markAlreadySent: true,
       });
       break;
     }
@@ -280,6 +282,7 @@ async function handleGroupMemberChangeMessage({
     sender: author,
     sentAt: signatureTimestamp,
     expireUpdate: null,
+    markAlreadySent: true,
   };
 
   switch (change.type) {
@@ -339,6 +342,7 @@ async function handleGroupMemberLeftMessage({
     sender: author,
     sentAt: signatureTimestamp,
     expireUpdate: null,
+    markAlreadySent: true,
   });
 
   convo.set({

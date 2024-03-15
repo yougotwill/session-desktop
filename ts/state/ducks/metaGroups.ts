@@ -205,6 +205,7 @@ const initNewGroupInWrapper = createAsyncThunk(
           sender: us,
           sentAt,
           convo,
+          markAlreadySent: false, // the store below will mark the message as sent with dbMsgIdentifier
         });
         const groupChange = await getWithoutHistoryControlMessage({
           adminSecretKey: groupSecretKey,
@@ -830,6 +831,7 @@ async function handleMemberAddedFromUI({
           ? createAtNetworkTimestamp + expiringDetails.expireTimer
           : null,
     },
+    markAlreadySent: false, // the store below will mark the message as sent with dbMsgIdentifier
   };
 
   const updateMessagesToPush: Array<GroupUpdateMemberChangeMessage> = [];
@@ -961,6 +963,7 @@ async function handleMemberRemovedFromUI({
     const msgModel = await ClosedGroup.addUpdateMessage({
       diff: { type: 'kicked', kicked: removed },
       ...shared,
+      markAlreadySent: false, // the store below will mark the message as sent with dbMsgIdentifier
     });
     const removedControlMessage = await getRemovedControlMessage({
       adminSecretKey: group.secretKey,
@@ -1017,6 +1020,7 @@ async function handleNameChangeFromUI({
     sender: us,
     sentAt: createAtNetworkTimestamp,
     expireUpdate: null,
+    markAlreadySent: false, // the store below will mark the message as sent with dbMsgIdentifier
   });
 
   // we want to send an update only if the change was made locally.

@@ -78,6 +78,7 @@ declare global {
     setMenuBarVisibility: (val: boolean) => void;
     contextMenuShown: boolean;
     inboxStore?: Store;
+    getState: () => unknown;
     openConversationWithMessages: (args: {
       conversationKey: string;
       messageId: string | null;

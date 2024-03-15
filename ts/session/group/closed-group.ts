@@ -115,6 +115,7 @@ async function initiateClosedGroupUpdate(
     // Note: we agreed that legacy group control messages do not expire
     expireUpdate: null,
     convo,
+    markAlreadySent: false,
   };
 
   if (diff.type === 'name' && diff.newName?.length) {
@@ -155,12 +156,14 @@ export async function addUpdateMessage({
   sender,
   sentAt,
   expireUpdate,
+  markAlreadySent,
 }: {
   convo: ConversationModel;
   diff: GroupDiff;
   sender: string;
   sentAt: number;
   expireUpdate: DisappearingMessageUpdate | null;
+  markAlreadySent: boolean;
 }): Promise<MessageModel> {
   const groupUpdate: MessageGroupUpdate = {};
 
@@ -185,7 +188,7 @@ export async function addUpdateMessage({
   }
 
   const isUs = UserUtils.isUsFromCache(sender);
-  const msgModel: MessageAttributesOptionals = {
+  const msgAttrs: MessageAttributesOptionals = {
     sent_at: sentAt,
     group_update: groupUpdate,
     source: sender,
@@ -193,16 +196,26 @@ export async function addUpdateMessage({
     type: isUs ? 'outgoing' : 'incoming',
   };
 
+  /**
+   * When we receive an update from our linked device, it is an outgoing message
+   *   but which was obviously already synced (as we got it).
+   * When that's the case we need to makr the message as sent right away,
+   *   so the MessageStatus 'sending' state is not shown for the last message in the left pane.
+   */
+  if (msgAttrs.type === 'outgoing' && markAlreadySent) {
+    msgAttrs.sent = true;
+  }
+
   if (convo && expireUpdate && expireUpdate.expirationType && expireUpdate.expirationTimer > 0) {
     const { expirationTimer, expirationType, isLegacyDataMessage } = expireUpdate;
 
-    msgModel.expirationType = expirationType === 'deleteAfterSend' ? 'deleteAfterSend' : 'unknown';
-    msgModel.expireTimer = msgModel.expirationType === 'deleteAfterSend' ? expirationTimer : 0;
+    msgAttrs.expirationType = expirationType === 'deleteAfterSend' ? 'deleteAfterSend' : 'unknown';
+    msgAttrs.expireTimer = msgAttrs.expirationType === 'deleteAfterSend' ? expirationTimer : 0;
 
     // NOTE Triggers disappearing for an incoming groupUpdate message
     // TODO legacy messages support will be removed in a future release
     if (isLegacyDataMessage || expirationType === 'deleteAfterSend') {
-      msgModel.expirationStartTimestamp = DisappearingMessages.setExpirationStartTimestamp(
+      msgAttrs.expirationStartTimestamp = DisappearingMessages.setExpirationStartTimestamp(
         isLegacyDataMessage ? 'legacy' : expirationType === 'unknown' ? 'off' : expirationType,
         sentAt,
         'addUpdateMessage'
@@ -211,9 +224,9 @@ export async function addUpdateMessage({
   }
 
   return isUs
-    ? convo.addSingleOutgoingMessage(msgModel)
+    ? convo.addSingleOutgoingMessage(msgAttrs)
     : convo.addSingleIncomingMessage({
-        ...msgModel,
+        ...msgAttrs,
         source: sender,
       });
 }
