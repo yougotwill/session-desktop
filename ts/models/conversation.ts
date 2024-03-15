@@ -1968,7 +1968,10 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
   }
 
   public getGroupAdmins(): Array<string> {
-    const groupAdmins = getLibGroupAdminsOutsideRedux(this.id) || this.get('groupAdmins');
+    if (this.isClosedGroupV2()) {
+      return getLibGroupAdminsOutsideRedux(this.id);
+    }
+    const groupAdmins = this.get('groupAdmins');
 
     return groupAdmins && groupAdmins.length > 0 ? groupAdmins : [];
   }
@@ -2553,7 +2556,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
 
       switch (type) {
         case 'admins':
-          return this.updateGroupAdmins(replacedWithOurRealSessionId, false);
+          return this.updateGroupAdmins(replacedWithOurRealSessionId, true);
         case 'mods':
           ReduxSogsRoomInfos.setModeratorsOutsideRedux(this.id, replacedWithOurRealSessionId);
           return false;
