@@ -56,7 +56,7 @@ export type GroupDiff = PropsForGroupUpdateType;
 async function initiateClosedGroupUpdate(
   groupId: string,
   groupName: string,
-  members: Array<string>
+  members: Array<string> | null
 ) {
   const isGroupV2 = PubKey.is03Pubkey(groupId);
   if (isGroupV2) {
@@ -76,14 +76,16 @@ async function initiateClosedGroupUpdate(
     throw new Error(`Groups cannot be deleteAfterRead`);
   }
 
+  const updatedMembers = members === null ? convo.getGroupMembers() : members;
+
   // do not give an admins field here. We don't want to be able to update admins and
   // updateOrCreateClosedGroup() will update them if given the choice.
   const groupDetails: GroupInfo = {
     id: groupId,
     name: groupName,
-    members,
+    members: updatedMembers,
     // remove from the zombies list the zombies not which are not in the group anymore
-    zombies: convo.getGroupZombies()?.filter(z => members.includes(z)),
+    zombies: convo.getGroupZombies()?.filter(z => updatedMembers.includes(z)),
     activeAt: Date.now(),
     expirationType,
     expireTimer,
@@ -102,7 +104,7 @@ async function initiateClosedGroupUpdate(
   const updateObj: GroupInfo = {
     id: groupId,
     name: groupName,
-    members,
+    members: updatedMembers,
     admins: convo.getGroupAdmins(),
     expireTimer: convo.get('expireTimer'),
   };
@@ -142,8 +144,7 @@ async function initiateClosedGroupUpdate(
       diff: leavingOnlyDiff,
       ...sharedDetails,
     });
-    const stillMembers = members;
-    await sendRemovedMembers(convo, diff.kicked, stillMembers, dbMessageLeaving.id as string);
+    await sendRemovedMembers(convo, diff.kicked, updatedMembers, dbMessageLeaving.id as string);
   }
   await convo.commit();
 }

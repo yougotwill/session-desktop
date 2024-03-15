@@ -30,7 +30,6 @@ declare global {
       useOnionRequests: boolean;
       useTestNet: boolean;
       useClosedGroupV2: boolean;
-      integrationTestEnv: boolean;
       debug: {
         debugLogging: boolean;
         debugLibsessionDumps: boolean;

@@ -38,6 +38,10 @@ function getIsMemberGroupChangePendingFromUI(state: StateType): boolean {
   return getLibGroupsState(state).memberChangesFromUIPending;
 }
 
+function getGroupNameChangeFromUIPending(state: StateType): boolean {
+  return getLibGroupsState(state).nameChangesFromUIPending;
+}
+
 export function getLibAdminsPubkeys(state: StateType, convo?: string): Array<string> {
   const members = getMembersOfGroup(state, convo);
   return members.filter(m => m.promoted).map(m => m.pubkeyHex);
@@ -146,6 +150,10 @@ export function useMemberPromotionSent(member: PubkeyType, groupPk: GroupPubkeyT
 
 export function useMemberGroupChangePending() {
   return useSelector(getIsMemberGroupChangePendingFromUI);
+}
+
+export function useGroupNameChangeFromUIPending() {
+  return useSelector(getGroupNameChangeFromUIPending);
 }
 
 /**

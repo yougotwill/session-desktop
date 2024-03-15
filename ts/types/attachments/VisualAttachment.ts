@@ -10,6 +10,7 @@ import {
   getDecryptedMediaUrl,
 } from '../../session/crypto/DecryptedAttachmentsManager';
 import { ToastUtils } from '../../session/utils';
+import { isTestIntegration } from '../../shared/env_vars';
 import { GoogleChrome } from '../../util';
 import { autoScaleForAvatar, autoScaleForThumbnail } from '../../util/attachmentsUtil';
 import { isAudio } from '../MIME';
@@ -205,7 +206,7 @@ export async function autoScaleAvatarBlob(file: File) {
  * Shows the system file picker for images, scale the image down for avatar/opengroup measurements and return the blob objectURL on success
  */
 export async function pickFileForAvatar(): Promise<string | null> {
-  if (window.sessionFeatureFlags.integrationTestEnv) {
+  if (isTestIntegration()) {
     window.log.info(
       'shorting pickFileForAvatar as it does not work in playwright/notsending the filechooser event'
     );

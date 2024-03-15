@@ -1430,7 +1430,7 @@ const metaGroupSlice = createSlice({
       window.log.debug(`groupMembers after currentDeviceGroupNameChange: ${stringify(members)}`);
     });
     builder.addCase(currentDeviceGroupNameChange.rejected, (state, action) => {
-      window.log.error('a currentDeviceGroupNameChange was rejected', action.error);
+      window.log.error(`a ${currentDeviceGroupNameChange.name} was rejected`, action.error);
       state.nameChangesFromUIPending = false;
     });
     builder.addCase(currentDeviceGroupNameChange.pending, state => {

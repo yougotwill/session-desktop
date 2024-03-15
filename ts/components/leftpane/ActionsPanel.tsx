@@ -208,6 +208,7 @@ const doAppStartUp = async () => {
   void getSwarmPollingInstance().start();
   void loadDefaultRooms();
   void SnodePool.getFreshSwarmFor(UserUtils.getOurPubKeyStrFromCache()); // refresh our swarm on start to speed up the first message fetching event
+  void Data.cleanupOrphanedAttachments();
 
   // TODOLATER make this a job of the JobRunner
   debounce(triggerAvatarReUploadIfNeeded, 200);

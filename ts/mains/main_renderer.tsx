@@ -201,9 +201,6 @@ Storage.onready(async () => {
 
   if (newVersion) {
     window.log.info(`New version detected: ${currentVersion}; previous: ${lastVersion}`);
-
-    await Data.cleanupOrphanedAttachments();
-
     await deleteAllLogs();
   }
 
