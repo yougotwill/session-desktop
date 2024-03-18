@@ -1,7 +1,7 @@
 import { app, ipcMain } from 'electron';
-import { sqlNode } from './sql'; // checked - only node
-import { userConfig } from './config/user_config'; // checked - only node
 import { ephemeralConfig } from './config/ephemeral_config'; // checked - only node
+import { userConfig } from './config/user_config'; // checked - only node
+import { sqlNode } from './sql'; // checked - only node
 
 let initialized = false;
 
@@ -13,14 +13,15 @@ export function initializeSqlChannel() {
     throw new Error('sqlChannels: already initialized!');
   }
 
-  ipcMain.on(SQL_CHANNEL_KEY, (event, jobId, callName, ...args) => {
+  // eslint-disable-next-line @typescript-eslint/no-misused-promises
+  ipcMain.on(SQL_CHANNEL_KEY, async (event, jobId, callName, ...args) => {
     try {
       const fn = (sqlNode as any)[callName];
       if (!fn) {
         throw new Error(`sql channel: ${callName} is not an available function`);
       }
 
-      const result = fn(...args);
+      const result = await fn(...args);
 
       event.sender.send(`${SQL_CHANNEL_KEY}-done`, jobId, null, result);
     } catch (error) {

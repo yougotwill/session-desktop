@@ -5,7 +5,7 @@ import { isString, map } from 'lodash';
 import path from 'path';
 import rimraf from 'rimraf';
 
-import { createDeleter, getAttachmentsPath } from '../shared/attachments/shared_attachments';
+import { getAttachmentsPath } from '../shared/attachments/shared_attachments';
 import { sqlNode } from './sql'; // checked - only node
 
 let initialized = false;
@@ -21,24 +21,6 @@ const ensureDirectory = async (userDataPath: string) => {
   await fse.ensureDir(getAttachmentsPath(userDataPath));
 };
 
-const deleteAll = async ({
-  userDataPath,
-  attachments,
-}: {
-  userDataPath: string;
-  attachments: any;
-}) => {
-  const deleteFromDisk = createDeleter(getAttachmentsPath(userDataPath));
-
-  for (let index = 0, max = attachments.length; index < max; index += 1) {
-    const file = attachments[index];
-    // eslint-disable-next-line no-await-in-loop
-    await deleteFromDisk(file);
-  }
-
-  console.log(`deleteAll: deleted ${attachments.length} files`);
-};
-
 const getAllAttachments = async (userDataPath: string) => {
   const dir = getAttachmentsPath(userDataPath);
   const pattern = path.join(dir, '**', '*');
@@ -50,7 +32,7 @@ const getAllAttachments = async (userDataPath: string) => {
 async function cleanupOrphanedAttachments(userDataPath: string) {
   const allAttachments = await getAllAttachments(userDataPath);
   const orphanedAttachments = sqlNode.removeKnownAttachments(allAttachments);
-  await deleteAll({
+  await sqlNode.deleteAll({
     userDataPath,
     attachments: orphanedAttachments,
   });

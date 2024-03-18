@@ -1,5 +1,6 @@
 // eslint:disable: no-require-imports no-var-requires one-variable-per-declaration no-void-expression function-name
 
+import { GroupPubkeyType } from 'libsession_util_nodejs';
 import _, { isEmpty } from 'lodash';
 import { MessageResultProps } from '../components/search/MessageSearchResults';
 import { ConversationModel } from '../models/conversation';
@@ -282,6 +283,20 @@ async function removeMessage(id: string): Promise<void> {
  */
 async function removeMessagesByIds(ids: Array<string>): Promise<void> {
   await channels.removeMessagesByIds(ids);
+}
+
+async function removeAllMessagesInConversationSentBefore(args: {
+  deleteBeforeSeconds: number;
+  conversationId: GroupPubkeyType;
+}): Promise<Array<string>> {
+  return channels.removeAllMessagesInConversationSentBefore(args);
+}
+
+async function removeAllAttachmentsInConversationSentBefore(args: {
+  deleteAttachBeforeSeconds: number;
+  conversationId: GroupPubkeyType;
+}): Promise<Array<string>> {
+  return channels.removeAllAttachmentsInConversationSentBefore(args);
 }
 
 async function getMessageIdsFromServerIds(
@@ -823,6 +838,8 @@ export const Data = {
   saveMessages,
   removeMessage,
   removeMessagesByIds,
+  removeAllMessagesInConversationSentBefore,
+  removeAllAttachmentsInConversationSentBefore,
   cleanUpExpirationTimerUpdateHistory,
   getMessageIdsFromServerIds,
   getMessageById,
