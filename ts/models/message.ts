@@ -301,12 +301,11 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
     return '';
   }
 
-  public onDestroy() {
-    void this.cleanup();
-  }
-
   public async cleanup() {
-    await deleteExternalMessageFiles(this.attributes);
+    const changed = await deleteExternalMessageFiles(this.attributes);
+    if (changed) {
+      await this.commit();
+    }
   }
 
   public getPropsForExpiringMessage(): PropsForExpiringMessage {

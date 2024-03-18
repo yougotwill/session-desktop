@@ -1,6 +1,7 @@
 import { GroupPubkeyType } from 'libsession_util_nodejs';
 import { isFinite, isNumber } from 'lodash';
 import { Data } from '../../../../data/data';
+import { messagesExpired } from '../../../../state/ducks/conversations';
 import { groupInfoActions } from '../../../../state/ducks/metaGroups';
 import { MetaGroupWrapperActions } from '../../../../webworker/workers/browser/libsession_worker_interface';
 import { ed25519Str } from '../../../onions/onionPath';
@@ -22,7 +23,13 @@ async function handleMetaMergeResults(groupPk: GroupPubkeyType) {
       deleteBeforeSeconds: infos.deleteBeforeSeconds,
       conversationId: groupPk,
     });
-    console.warn('deletedMsgIds', deletedMsgIds);
+    window.log.info(
+      `removeAllMessagesInConversationSentBefore of ${ed25519Str(groupPk)} before ${infos.deleteBeforeSeconds}: `,
+      deletedMsgIds
+    );
+    await window.inboxStore.dispatch(
+      messagesExpired(deletedMsgIds.map(messageId => ({ conversationKey: groupPk, messageId })))
+    );
   }
 
   if (
@@ -32,11 +39,22 @@ async function handleMetaMergeResults(groupPk: GroupPubkeyType) {
     infos.deleteAttachBeforeSeconds > 0
   ) {
     // delete any attachments in this conversation sent before that timestamp (in seconds)
-    const impactedMsgids = await Data.removeAllAttachmentsInConversationSentBefore({
+    const impactedMsgModels = await Data.getAllMessagesWithAttachmentsInConversationSentBefore({
       deleteAttachBeforeSeconds: infos.deleteAttachBeforeSeconds,
       conversationId: groupPk,
     });
-    console.warn('impactedMsgids', impactedMsgids);
+    window.log.info(
+      `getAllMessagesWithAttachmentsInConversationSentBefore of ${ed25519Str(groupPk)} before ${infos.deleteAttachBeforeSeconds}: impactedMsgModelsIds `,
+      impactedMsgModels.map(m => m.id)
+    );
+
+    for (let index = 0; index < impactedMsgModels.length; index++) {
+      const msg = impactedMsgModels[index];
+
+      // eslint-disable-next-line no-await-in-loop
+      // eslint-disable-next-line no-await-in-loop
+      await msg?.cleanup();
+    }
   }
 }
 

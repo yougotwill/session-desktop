@@ -292,11 +292,13 @@ async function removeAllMessagesInConversationSentBefore(args: {
   return channels.removeAllMessagesInConversationSentBefore(args);
 }
 
-async function removeAllAttachmentsInConversationSentBefore(args: {
+async function getAllMessagesWithAttachmentsInConversationSentBefore(args: {
   deleteAttachBeforeSeconds: number;
   conversationId: GroupPubkeyType;
-}): Promise<Array<string>> {
-  return channels.removeAllAttachmentsInConversationSentBefore(args);
+}): Promise<Array<MessageModel>> {
+  const msgAttrs = await channels.getAllMessagesWithAttachmentsInConversationSentBefore(args);
+
+  return msgAttrs.map((msg: any) => new MessageModel(msg));
 }
 
 async function getMessageIdsFromServerIds(
@@ -839,7 +841,7 @@ export const Data = {
   removeMessage,
   removeMessagesByIds,
   removeAllMessagesInConversationSentBefore,
-  removeAllAttachmentsInConversationSentBefore,
+  getAllMessagesWithAttachmentsInConversationSentBefore,
   cleanUpExpirationTimerUpdateHistory,
   getMessageIdsFromServerIds,
   getMessageById,

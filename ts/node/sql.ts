@@ -1003,7 +1003,7 @@ function removeAllMessagesInConversationSentBefore(
     .prepare(
       `SELECT id FROM ${MESSAGES_TABLE} WHERE conversationId = $conversationId AND sent_at <= $beforeMs;`
     )
-    .all({ conversationId, beforeMs: deleteBeforeSeconds * 1000 }) as Array<string>;
+    .all({ conversationId, beforeMs: deleteBeforeSeconds * 1000 });
 
   assertGlobalInstanceOrInstance(instance)
     .prepare(
@@ -1011,10 +1011,10 @@ function removeAllMessagesInConversationSentBefore(
     )
     .run({ conversationId, beforeMs: deleteBeforeSeconds * 1000 });
   console.info('removeAllMessagesInConversationSentBefore deleted msgIds:', JSON.stringify(msgIds));
-  return msgIds;
+  return msgIds.map(m => m.id);
 }
 
-async function removeAllAttachmentsInConversationSentBefore(
+async function getAllMessagesWithAttachmentsInConversationSentBefore(
   {
     deleteAttachBeforeSeconds,
     conversationId,
@@ -1023,29 +1023,14 @@ async function removeAllAttachmentsInConversationSentBefore(
 ) {
   const rows = assertGlobalInstanceOrInstance(instance)
     .prepare(
-      `SELECT json FROM ${MESSAGES_TABLE} WHERE conversationId = $conversationId AND sent_at <= $beforeMs`
+      `SELECT json FROM ${MESSAGES_TABLE} WHERE conversationId = $conversationId AND sent_at <= $beforeMs;`
     )
     .all({ conversationId, beforeMs: deleteAttachBeforeSeconds * 1000 });
   const messages = map(rows, row => jsonToObject(row.json));
-
-  const externalFiles: Array<string> = [];
-  const msgIdsWithChanges: Array<string> = [];
-  forEach(messages, message => {
-    const externalFilesMsg = getExternalFilesForMessage(message);
-    if (externalFilesMsg.length) {
-      externalFiles.push(...externalFilesMsg);
-      msgIdsWithChanges.push();
-    }
+  const messagesWithAttachments = messages.filter(m => {
+    return getExternalFilesForMessage(m).some(a => !isEmpty(a) && isString(a)); // when we remove an attachment, we set the path to '' so it should be excluded here
   });
-  const uniqPathsToRemove = uniq(externalFiles);
-  console.info('removeAllAttachmentsInConversationSentBefore removing attachments:', externalFiles);
-  console.info(
-    'removeAllAttachmentsInConversationSentBefore impacted msgIds:',
-    JSON.stringify(msgIdsWithChanges)
-  );
-
-  const userDataPath = app.getPath('userData');
-  await deleteAll({ userDataPath, attachments: uniqPathsToRemove });
+  return messagesWithAttachments;
 }
 
 function removeAllMessagesInConversation(
@@ -2553,7 +2538,7 @@ export const sqlNode = {
   removeMessage,
   removeMessagesByIds,
   removeAllMessagesInConversationSentBefore,
-  removeAllAttachmentsInConversationSentBefore,
+  getAllMessagesWithAttachmentsInConversationSentBefore,
   cleanUpExpirationTimerUpdateHistory,
   removeAllMessagesInConversation,
   getUnreadByConversation,

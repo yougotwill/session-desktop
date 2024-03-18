@@ -41,7 +41,7 @@ const channelsToMake = new Set([
   'saveMessages',
   'removeMessage',
   'removeMessagesByIds',
-  'removeAllAttachmentsInConversationSentBefore',
+  'getAllMessagesWithAttachmentsInConversationSentBefore',
   'removeAllMessagesInConversationSentBefore',
   'cleanUpExpirationTimerUpdateHistory',
   'getUnreadByConversation',
