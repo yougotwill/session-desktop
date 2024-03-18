@@ -131,6 +131,7 @@ import { handleAcceptConversationRequest } from '../interactions/conversationInt
 import { DisappearingMessages } from '../session/disappearing_messages';
 import { GroupUpdateInfoChangeMessage } from '../session/messages/outgoing/controlMessage/group_v2/to_group/GroupUpdateInfoChangeMessage';
 import { FetchMsgExpirySwarm } from '../session/utils/job_runners/jobs/FetchMsgExpirySwarmJob';
+import { GroupSync } from '../session/utils/job_runners/jobs/GroupSyncJob';
 import { UpdateMsgExpirySwarm } from '../session/utils/job_runners/jobs/UpdateMsgExpirySwarmJob';
 import { getLibGroupKickedOutsideRedux } from '../state/selectors/userGroups';
 import { ReleasedFeatures } from '../util/releaseFeature';
@@ -896,8 +897,10 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
 
     // we don't add an update message when this comes from a config message, as we already have the SyncedMessage itself with the right timestamp to display
 
-    if (this.isPublic()) {
-      throw new Error("updateExpireTimer() Disappearing messages aren't supported in communities");
+    if (!this.isClosedGroup() && !this.isPrivate()) {
+      throw new Error(
+        'updateExpireTimer() Disappearing messages are only supported int groups and private chats'
+      );
     }
     let expirationMode = providedDisappearingMode;
     let expireTimer = providedExpireTimer;
@@ -916,14 +919,18 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
      * - effectively changes the setting
      * - ignores a off setting for a legacy group (as we can get a setting from restored from configMessage, and a newgroup can still be in the swarm when linking a device
      */
-    const shouldAddExpireUpdateMsgGroup =
+    const shouldAddExpireUpdateMsgLegacyGroup =
       isLegacyGroup &&
       !fromConfigMessage &&
       (expirationMode !== this.get('expirationMode') || expireTimer !== this.get('expireTimer')) &&
       expirationMode !== 'off';
 
+    const shouldAddExpireUpdateMsgGroupV2 = this.isClosedGroupV2() && !fromConfigMessage;
+
     const shouldAddExpireUpdateMessage =
-      shouldAddExpireUpdateMsgPrivate || shouldAddExpireUpdateMsgGroup;
+      shouldAddExpireUpdateMsgPrivate ||
+      shouldAddExpireUpdateMsgLegacyGroup ||
+      shouldAddExpireUpdateMsgGroupV2;
 
     // When we add a disappearing messages notification to the conversation, we want it
     // to be above the message that initiated that change, hence the subtraction.
@@ -1106,8 +1113,9 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
             updatedExpirationSeconds: expireUpdate.expireTimer,
           });
 
-          await getMessageQueue().sendToGroupV2({
-            message: v2groupMessage,
+          await GroupSync.storeGroupUpdateMessages({
+            groupPk: this.id,
+            updateMessages: [v2groupMessage],
           });
           return true;
         }
@@ -2094,13 +2102,14 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
           return;
         }
 
-        if (message.get('groupInvitation')) {
-          const groupInvitation = message.get('groupInvitation');
+        const communityInvitation = message.getCommunityInvitation();
+
+        if (communityInvitation && communityInvitation.url) {
           const groupInviteMessage = new GroupInvitationMessage({
             identifier: id,
             createAtNetworkTimestamp: networkTimestamp,
-            name: groupInvitation.name,
-            url: groupInvitation.url,
+            name: communityInvitation.name,
+            url: communityInvitation.url,
             expirationType: chatMessageParams.expirationType,
             expireTimer: chatMessageParams.expireTimer,
           });

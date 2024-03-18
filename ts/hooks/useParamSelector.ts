@@ -93,6 +93,13 @@ function usernameForQuoteOrFullPk(pubkey: string, state: StateType) {
   return nameGot?.length ? nameGot : null;
 }
 
+export function usernameForQuoteOrFullPkOutsideRedux(pubkey: string) {
+  if (window?.inboxStore?.getState()) {
+    return usernameForQuoteOrFullPk(pubkey, window.inboxStore.getState()) || PubKey.shorten(pubkey);
+  }
+  return PubKey.shorten(pubkey);
+}
+
 /**
  * Returns either the nickname, the profileName, in '"' or the full pubkeys given
  */

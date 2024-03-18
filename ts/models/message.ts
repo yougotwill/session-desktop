@@ -3,16 +3,7 @@ import Backbone from 'backbone';
 import autoBind from 'auto-bind';
 import filesize from 'filesize';
 import { GroupPubkeyType, PubkeyType } from 'libsession_util_nodejs';
-import {
-  cloneDeep,
-  debounce,
-  isEmpty,
-  size as lodashSize,
-  map,
-  partition,
-  pick,
-  uniq,
-} from 'lodash';
+import { cloneDeep, debounce, isEmpty, size as lodashSize, partition, pick, uniq } from 'lodash';
 import { SignalService } from '../protobuf';
 import { getMessageQueue } from '../session';
 import { ConvoHub } from '../session/conversations';
@@ -29,7 +20,6 @@ import {
   uploadQuoteThumbnailsToFileServer,
 } from '../session/utils';
 import {
-  DataExtractionNotificationMsg,
   MessageAttributes,
   MessageAttributesOptionals,
   MessageGroupUpdate,
@@ -42,10 +32,7 @@ import {
 import { Data } from '../data/data';
 import { OpenGroupData } from '../data/opengroups';
 import { SettingsKey } from '../data/settings-key';
-import {
-  ConversationInteractionStatus,
-  ConversationInteractionType,
-} from '../interactions/conversationInteractions';
+import { FormatNotifications } from '../notifications/formatNotifications';
 import { isUsAnySogsFromCache } from '../session/apis/open_group_api/sogsv3/knownBlindedkeys';
 import { GetNetworkTime } from '../session/apis/snode_api/getNetworkTime';
 import { SnodeNamespaces } from '../session/apis/snode_api/namespaces';
@@ -96,41 +83,13 @@ import {
 } from '../types/MessageAttachment';
 import { ReactionList } from '../types/Reaction';
 import { getAttachmentMetadata } from '../types/message/initializeAttachmentMetadata';
-import { assertUnreachable, roomHasBlindEnabled } from '../types/sqlSharedTypes';
+import { roomHasBlindEnabled } from '../types/sqlSharedTypes';
 import { LinkPreviews } from '../util/linkPreviews';
 import { Notifications } from '../util/notifications';
 import { Storage } from '../util/storage';
 import { ConversationModel } from './conversation';
 import { READ_MESSAGE_STATE } from './conversationAttributes';
 // tslint:disable: cyclomatic-complexity
-
-/**
- * @returns true if the array contains only a single item being 'You', 'you' or our device pubkey
- */
-export function arrayContainsUsOnly(arrayToCheck: Array<string> | undefined) {
-  return (
-    arrayToCheck &&
-    arrayToCheck.length === 1 &&
-    (arrayToCheck[0] === UserUtils.getOurPubKeyStrFromCache() ||
-      arrayToCheck[0].toLowerCase() === 'you')
-  );
-}
-
-export function arrayContainsOneItemOnly(arrayToCheck: Array<string> | undefined) {
-  return arrayToCheck && arrayToCheck.length === 1;
-}
-
-function formatJoined(joined: Array<string>) {
-  const names = joined.map(ConvoHub.use().getContactProfileNameOrShortenedPubKey);
-  const messages = [];
-
-  if (names.length > 1) {
-    messages.push(window.i18n('multipleJoinedTheGroup', [names.join(', ')]));
-  } else {
-    messages.push(window.i18n('joinedTheGroup', names));
-  }
-  return messages.join(' ');
-}
 
 export class MessageModel extends Backbone.Model<MessageAttributes> {
   constructor(attributes: MessageAttributesOptionals & { skipTimerInit?: boolean }) {
@@ -258,8 +217,11 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
     this.set(attributes);
   }
 
-  public isGroupInvitation() {
-    return !!this.get('groupInvitation');
+  public isCommunityInvitation() {
+    return !!this.getCommunityInvitation();
+  }
+  public getCommunityInvitation() {
+    return this.get('groupInvitation');
   }
 
   public isMessageRequestResponse() {
@@ -267,15 +229,22 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
   }
 
   public isDataExtractionNotification() {
-    return !!this.get('dataExtractionNotification');
+    return !!this.getDataExtractionNotification();
   }
+  public getDataExtractionNotification() {
+    return this.get('dataExtractionNotification');
+  }
+
   public isCallNotification() {
-    return !!this.get('callNotificationType');
+    return !!this.getCallNotification();
   }
+  public getCallNotification() {
+    return this.get('callNotificationType');
+  }
+
   public isInteractionNotification() {
     return !!this.getInteractionNotification();
   }
-
   public getInteractionNotification() {
     return this.get('interactionNotification');
   }
@@ -406,10 +375,10 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
   }
 
   public getPropsForGroupInvitation(): PropsForGroupInvitation | null {
-    if (!this.isGroupInvitation()) {
+    const invitation = this.getCommunityInvitation();
+    if (!invitation || !invitation.url) {
       return null;
     }
-    const invitation = this.get('groupInvitation');
     let serverAddress = '';
 
     try {
@@ -433,7 +402,7 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
     if (!this.isDataExtractionNotification()) {
       return null;
     }
-    const dataExtractionNotification = this.get('dataExtractionNotification');
+    const dataExtractionNotification = this.getDataExtractionNotification();
 
     if (!dataExtractionNotification) {
       window.log.warn('dataExtractionNotification should not happen');
@@ -477,7 +446,6 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
 
   public getPropsForGroupUpdateMessage(): PropsForGroupUpdate | null {
     const groupUpdate = this.getGroupUpdateAsArray();
-
     if (!groupUpdate || isEmpty(groupUpdate)) {
       return null;
     }
@@ -1267,179 +1235,84 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
   }
 
   /**
-   * Before, group_update attributes could be just the string 'You' and not an array.
-   * Using this method to get the group update makes sure than the joined, kicked, or left are always an array of string, or undefined
+   * A long time ago, group_update attributes could be just the string 'You' and not an array of pubkeys.
+   * Using this method to get the group update makes sure than the joined, kicked, or left are always an array of string, or undefined.
+   * This is legacy code, our joined, kicked, left, etc should have been saved as an Array for a long time now.
    */
   private getGroupUpdateAsArray() {
     const groupUpdate = this.get('group_update');
     if (!groupUpdate || isEmpty(groupUpdate)) {
       return undefined;
     }
-    const left: Array<string> | undefined = Array.isArray(groupUpdate.left)
-      ? groupUpdate.left
-      : groupUpdate.left
-        ? [groupUpdate.left]
-        : undefined;
-    const kicked: Array<string> | undefined = Array.isArray(groupUpdate.kicked)
-      ? groupUpdate.kicked
-      : groupUpdate.kicked
-        ? [groupUpdate.kicked]
-        : undefined;
-    const joined: Array<string> | undefined = Array.isArray(groupUpdate.joined)
+    const forcedArrayUpdate: MessageGroupUpdate = {};
+
+    forcedArrayUpdate.joined = Array.isArray(groupUpdate.joined)
       ? groupUpdate.joined
       : groupUpdate.joined
         ? [groupUpdate.joined]
         : undefined;
-    const joinedWithHistory: Array<string> | undefined = Array.isArray(
-      groupUpdate.joinedWithHistory
-    )
+
+    forcedArrayUpdate.joinedWithHistory = Array.isArray(groupUpdate.joinedWithHistory)
       ? groupUpdate.joinedWithHistory
       : groupUpdate.joinedWithHistory
         ? [groupUpdate.joinedWithHistory]
         : undefined;
 
-    const forcedArrayUpdate: MessageGroupUpdate = {};
+    forcedArrayUpdate.kicked = Array.isArray(groupUpdate.kicked)
+      ? groupUpdate.kicked
+      : groupUpdate.kicked
+        ? [groupUpdate.kicked]
+        : undefined;
 
-    if (left) {
-      forcedArrayUpdate.left = left;
-    }
-    if (joinedWithHistory) {
-      forcedArrayUpdate.joinedWithHistory = joinedWithHistory;
-    }
-    if (joined) {
-      forcedArrayUpdate.joined = joined;
-    }
-    if (kicked) {
-      forcedArrayUpdate.kicked = kicked;
-    }
-    if (groupUpdate.name) {
-      forcedArrayUpdate.name = groupUpdate.name;
-    }
+    forcedArrayUpdate.left = Array.isArray(groupUpdate.left)
+      ? groupUpdate.left
+      : groupUpdate.left
+        ? [groupUpdate.left]
+        : undefined;
+
+    forcedArrayUpdate.name = groupUpdate.name;
+    forcedArrayUpdate.avatarChange = groupUpdate.avatarChange;
+
     return forcedArrayUpdate;
   }
 
   private getDescription() {
     const groupUpdate = this.getGroupUpdateAsArray();
-    if (groupUpdate) {
-      if (arrayContainsUsOnly(groupUpdate.kicked)) {
-        return window.i18n('youGotKickedFromGroup');
-      }
-
-      if (arrayContainsUsOnly(groupUpdate.left)) {
-        return window.i18n('youLeftTheGroup');
-      }
-
-      if (groupUpdate.left && groupUpdate.left.length === 1) {
-        return window.i18n('leftTheGroup', [
-          ConvoHub.use().getContactProfileNameOrShortenedPubKey(groupUpdate.left[0]),
-        ]);
-      }
-
-      if (groupUpdate.name) {
-        return window.i18n('titleIsNow', [groupUpdate.name]);
-      }
-
-      if (groupUpdate.joined && groupUpdate.joined.length) {
-        return formatJoined(groupUpdate.joined);
-      }
-
-      if (groupUpdate.joinedWithHistory && groupUpdate.joinedWithHistory.length) {
-        return formatJoined(groupUpdate.joinedWithHistory);
-      }
-
-      if (groupUpdate.kicked && groupUpdate.kicked.length) {
-        const names = map(
-          groupUpdate.kicked,
-          ConvoHub.use().getContactProfileNameOrShortenedPubKey
-        );
-        const messages = [];
-
-        if (names.length > 1) {
-          messages.push(window.i18n('multipleKickedFromTheGroup', [names.join(', ')]));
-        } else {
-          messages.push(window.i18n('kickedFromTheGroup', names));
-        }
-        return messages.join(' ');
-      }
-      return null;
+    if (!isEmpty(groupUpdate)) {
+      return FormatNotifications.formatGroupUpdateNotification(groupUpdate);
     }
 
-    if (this.isIncoming() && this.hasErrors()) {
-      return window.i18n('incomingError');
-    }
-
-    if (this.isGroupInvitation()) {
+    const communityInvitation = this.getCommunityInvitation();
+    if (communityInvitation) {
       return `😎 ${window.i18n('openGroupInvitation')}`;
     }
 
-    if (this.isDataExtractionNotification()) {
-      const dataExtraction = this.get(
-        'dataExtractionNotification'
-      ) as DataExtractionNotificationMsg;
-      if (dataExtraction.type === SignalService.DataExtractionNotification.Type.SCREENSHOT) {
-        return window.i18n('tookAScreenshot', [
-          ConvoHub.use().getContactProfileNameOrShortenedPubKey(dataExtraction.source),
-        ]);
-      }
-
-      return window.i18n('savedTheFile', [
-        ConvoHub.use().getContactProfileNameOrShortenedPubKey(dataExtraction.source),
-      ]);
+    const dataExtractionNotification = this.getDataExtractionNotification();
+    if (dataExtractionNotification) {
+      return FormatNotifications.formatDataExtractionNotification(dataExtractionNotification);
     }
-    if (this.isCallNotification()) {
-      const displayName = ConvoHub.use().getContactProfileNameOrShortenedPubKey(
+
+    const callNotification = this.getCallNotification();
+    if (callNotification) {
+      return FormatNotifications.formatCallNotification(
+        callNotification,
         this.get('conversationId')
       );
-      const callNotificationType = this.get('callNotificationType');
-      if (callNotificationType === 'missed-call') {
-        return window.i18n('callMissed', [displayName]);
-      }
-      if (callNotificationType === 'started-call') {
-        return window.i18n('startedACall', [displayName]);
-      }
-      if (callNotificationType === 'answered-a-call') {
-        return window.i18n('answeredACall', [displayName]);
-      }
     }
 
     const interactionNotification = this.getInteractionNotification();
     if (interactionNotification) {
-      const { interactionType, interactionStatus } = interactionNotification;
-
-      // NOTE For now we only show interaction errors in the message history
-      if (interactionStatus === ConversationInteractionStatus.Error) {
-        const convo = ConvoHub.use().get(this.get('conversationId'));
-
-        if (convo) {
-          const isGroup = !convo.isPrivate();
-          const isCommunity = convo.isPublic();
-
-          switch (interactionType) {
-            case ConversationInteractionType.Hide:
-              // there is no text for hiding changes
-              return '';
-            case ConversationInteractionType.Leave:
-              return isCommunity
-                ? window.i18n('leaveCommunityFailed')
-                : isGroup
-                  ? window.i18n('leaveGroupFailed')
-                  : window.i18n('deleteConversationFailed');
-            default:
-              assertUnreachable(
-                interactionType,
-                `Message.getDescription: Missing case error "${interactionType}"`
-              );
-          }
-        }
-      }
+      return FormatNotifications.formatInteractionNotification(
+        interactionNotification,
+        this.get('conversationId')
+      );
     }
 
-    if (this.get('reaction')) {
-      const reaction = this.get('reaction');
-      if (reaction && reaction.emoji && reaction.emoji !== '') {
-        return window.i18n('reactionNotification', [reaction.emoji]);
-      }
+    const reaction = this.get('reaction');
+    if (reaction && reaction.emoji && reaction.emoji !== '') {
+      return window.i18n('reactionNotification', [reaction.emoji]);
     }
+
     return this.get('body');
   }
 

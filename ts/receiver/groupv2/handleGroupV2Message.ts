@@ -223,12 +223,7 @@ async function handleGroupInfoChangeMessage({
     }
     case SignalService.GroupUpdateInfoChangeMessage.Type.DISAPPEARING_MESSAGES: {
       const newTimerSeconds = change.updatedExpiration;
-      if (
-        newTimerSeconds &&
-        isNumber(newTimerSeconds) &&
-        isFinite(newTimerSeconds) &&
-        newTimerSeconds >= 0
-      ) {
+      if (isNumber(newTimerSeconds) && isFinite(newTimerSeconds) && newTimerSeconds >= 0) {
         await convo.updateExpireTimer({
           providedExpireTimer: newTimerSeconds,
           providedSource: author,

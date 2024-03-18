@@ -21,8 +21,10 @@ import {
   showRemoveModeratorsByConvoId,
   showUpdateGroupMembersByConvoId,
   showUpdateGroupNameByConvoId,
+  triggerFakeAvatarUpdate,
 } from '../../../../interactions/conversationInteractions';
 import { Constants } from '../../../../session';
+import { isDevProd } from '../../../../shared/env_vars';
 import { closeRightPanel } from '../../../../state/ducks/conversations';
 import { resetRightOverlayMode, setRightOverlayMode } from '../../../../state/ducks/section';
 import {
@@ -204,6 +206,7 @@ export const OverlayRightPanelSettings = () => {
   const isBlocked = useSelectedIsBlocked();
   const isKickedFromGroup = useSelectedIsKickedFromGroup();
   const isGroup = useSelectedIsGroupOrCommunity();
+  const isGroupV2 = useSelectedIsGroupV2();
   const isPublic = useSelectedIsPublic();
   const weAreAdmin = useSelectedWeAreAdmin();
   const disappearingMessagesSubtitle = useDisappearingMessageSettingText({
@@ -292,6 +295,17 @@ export const OverlayRightPanelSettings = () => {
               dataTestId="edit-group-name"
             />
           )}
+
+          {isDevProd() && isGroupV2 ? (
+            <PanelIconButton
+              iconType={'group'}
+              text={'trigger avatar message'} // debugger FIXME Audric
+              onClick={() => {
+                void triggerFakeAvatarUpdate(selectedConvoKey);
+              }}
+              dataTestId="edit-group-name"
+            />
+          ) : null}
 
           {showAddRemoveModeratorsButton && (
             <>

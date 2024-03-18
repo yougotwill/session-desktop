@@ -1,9 +1,8 @@
 import React from 'react';
 
 import { PubkeyType } from 'libsession_util_nodejs';
-import { cloneDeep } from 'lodash';
 import { useConversationsUsernameWithQuoteOrShortPk } from '../../../../hooks/useParamSelector';
-import { arrayContainsUsOnly } from '../../../../models/message';
+import { FormatNotifications } from '../../../../notifications/formatNotifications';
 import { PreConditionFailed } from '../../../../session/utils/errors';
 import {
   PropsForGroupUpdate,
@@ -15,87 +14,6 @@ import { assertUnreachable } from '../../../../types/sqlSharedTypes';
 import { ExpirableReadableMessage } from './ExpirableReadableMessage';
 import { NotificationBubble } from './notification-bubble/NotificationBubble';
 
-type IdWithName = { sessionId: PubkeyType; name: string };
-
-function mapIdsWithNames(changed: Array<PubkeyType>, names: Array<string>): Array<IdWithName> {
-  if (!changed.length || !names.length) {
-    throw new PreConditionFailed('mapIdsWithNames needs a change');
-  }
-  if (changed.length !== names.length) {
-    throw new PreConditionFailed('mapIdsWithNames needs a the same length to map them together');
-  }
-  return changed.map((sessionId, index) => {
-    return { sessionId, name: names[index] };
-  });
-}
-
-/**
- * When we are part of a change, we display the You first, and then others.
- * This function is used to check if we are part of the list.
- *  - if yes: returns {weArePart: true, others: changedWithoutUs}
- *  - if yes: returns {weArePart: false, others: changed}
- */
-function moveUsToStart(
-  changed: Array<IdWithName>,
-  us: PubkeyType
-): {
-  sortedWithUsFirst: Array<IdWithName>;
-} {
-  const usAt = changed.findIndex(m => m.sessionId === us);
-  if (usAt <= -1) {
-    // we are not in it
-    return { sortedWithUsFirst: changed };
-  }
-  const usItem = changed.at(usAt);
-  if (!usItem) {
-    throw new PreConditionFailed('"we" should have been there');
-  }
-  // deepClone because splice mutates the array
-  const changedCopy = cloneDeep(changed);
-  changedCopy.splice(usAt, 1);
-  return { sortedWithUsFirst: [usItem, ...changedCopy] };
-}
-
-function changeOfMembersV2({
-  changedWithNames,
-  type,
-  us,
-}: {
-  type: 'added' | 'addedWithHistory' | 'promoted' | 'removed';
-  changedWithNames: Array<IdWithName>;
-  us: PubkeyType;
-}): string {
-  const { sortedWithUsFirst } = moveUsToStart(changedWithNames, us);
-  if (changedWithNames.length === 0) {
-    throw new PreConditionFailed('change must always have an associated change');
-  }
-  const subject =
-    sortedWithUsFirst.length === 1 && sortedWithUsFirst[0].sessionId === us
-      ? 'You'
-      : sortedWithUsFirst.length === 1
-        ? 'One'
-        : sortedWithUsFirst.length === 2
-          ? 'Two'
-          : 'Others';
-
-  const action =
-    type === 'addedWithHistory'
-      ? 'JoinedWithHistory'
-      : type === 'added'
-        ? 'Joined'
-        : type === 'promoted'
-          ? 'Promoted'
-          : ('Removed' as const);
-  const key = `group${subject}${action}` as const;
-
-  const sortedWithUsOrCount =
-    subject === 'Others'
-      ? [sortedWithUsFirst[0].name, (sortedWithUsFirst.length - 1).toString()]
-      : sortedWithUsFirst.map(m => m.name);
-
-  return window.i18n(key, sortedWithUsOrCount);
-}
-
 // TODO those lookups might need to be memoized
 const ChangeItemJoined = (added: Array<PubkeyType>, withHistory: boolean): string => {
   if (!added.length) {
@@ -105,8 +23,8 @@ const ChangeItemJoined = (added: Array<PubkeyType>, withHistory: boolean): strin
   const isGroupV2 = useSelectedIsGroupV2();
   const us = useOurPkStr();
   if (isGroupV2) {
-    return changeOfMembersV2({
-      changedWithNames: mapIdsWithNames(added, names),
+    return FormatNotifications.changeOfMembersV2({
+      changedWithNames: FormatNotifications.mapIdsWithNames(added, names),
       type: withHistory ? 'addedWithHistory' : 'added',
       us,
     });
@@ -123,14 +41,15 @@ const ChangeItemKicked = (removed: Array<PubkeyType>): string => {
   const isGroupV2 = useSelectedIsGroupV2();
   const us = useOurPkStr();
   if (isGroupV2) {
-    return changeOfMembersV2({
-      changedWithNames: mapIdsWithNames(removed, names),
+    return FormatNotifications.changeOfMembersV2({
+      changedWithNames: FormatNotifications.mapIdsWithNames(removed, names),
       type: 'removed',
       us,
     });
   }
 
-  if (arrayContainsUsOnly(removed)) {
+  // legacy groups
+  if (FormatNotifications.arrayContainsUsOnly(removed)) {
     return window.i18n('youGotKickedFromGroup');
   }
 
@@ -146,8 +65,8 @@ const ChangeItemPromoted = (promoted: Array<PubkeyType>): string => {
   const isGroupV2 = useSelectedIsGroupV2();
   const us = useOurPkStr();
   if (isGroupV2) {
-    return changeOfMembersV2({
-      changedWithNames: mapIdsWithNames(promoted, names),
+    return FormatNotifications.changeOfMembersV2({
+      changedWithNames: FormatNotifications.mapIdsWithNames(promoted, names),
       type: 'promoted',
       us,
     });
@@ -170,7 +89,7 @@ const ChangeItemLeft = (left: Array<PubkeyType>): string => {
 
   const names = useConversationsUsernameWithQuoteOrShortPk(left);
 
-  if (arrayContainsUsOnly(left)) {
+  if (FormatNotifications.arrayContainsUsOnly(left)) {
     return window.i18n('youLeftTheGroup');
   }
 
