@@ -10,13 +10,26 @@ import { LibSessionUtil } from '../../../utils/libsession/libsession_utils';
 import { SnodeNamespaces } from '../namespaces';
 import { RetrieveMessageItemWithNamespace } from '../types';
 
+/**
+ * This is a basic optimization to avoid running the logic when the `deleteBeforeSeconds`
+ *  and the `deleteAttachBeforeSeconds` does not change between each polls.
+ * Essentially, when the `deleteBeforeSeconds` is set in the group info config,
+ *   - on start that map will be empty so we will run the logic to delete any messages sent before that.
+ *   - after each poll, we will only rerun the logic if the new `deleteBeforeSeconds` is higher than the current setting.
+ *
+ */
+const lastAppliedRemoveMsgSentBeforeSeconds = new Map<GroupPubkeyType, number>();
+const lastAppliedRemoveAttachmentSentBeforeSeconds = new Map<GroupPubkeyType, number>();
+
 async function handleMetaMergeResults(groupPk: GroupPubkeyType) {
   const infos = await MetaGroupWrapperActions.infoGet(groupPk);
   if (
     infos &&
     isNumber(infos.deleteBeforeSeconds) &&
     isFinite(infos.deleteBeforeSeconds) &&
-    infos.deleteBeforeSeconds > 0
+    infos.deleteBeforeSeconds > 0 &&
+    (lastAppliedRemoveMsgSentBeforeSeconds.get(groupPk) || Number.MAX_SAFE_INTEGER) >
+      infos.deleteBeforeSeconds
   ) {
     // delete any messages in this conversation sent before that timestamp (in seconds)
     const deletedMsgIds = await Data.removeAllMessagesInConversationSentBefore({
@@ -27,16 +40,19 @@ async function handleMetaMergeResults(groupPk: GroupPubkeyType) {
       `removeAllMessagesInConversationSentBefore of ${ed25519Str(groupPk)} before ${infos.deleteBeforeSeconds}: `,
       deletedMsgIds
     );
-    await window.inboxStore.dispatch(
+    window.inboxStore.dispatch(
       messagesExpired(deletedMsgIds.map(messageId => ({ conversationKey: groupPk, messageId })))
     );
+    lastAppliedRemoveMsgSentBeforeSeconds.set(groupPk, infos.deleteBeforeSeconds);
   }
 
   if (
     infos &&
     isNumber(infos.deleteAttachBeforeSeconds) &&
     isFinite(infos.deleteAttachBeforeSeconds) &&
-    infos.deleteAttachBeforeSeconds > 0
+    infos.deleteAttachBeforeSeconds > 0 &&
+    (lastAppliedRemoveAttachmentSentBeforeSeconds.get(groupPk) || Number.MAX_SAFE_INTEGER) >
+      infos.deleteAttachBeforeSeconds
   ) {
     // delete any attachments in this conversation sent before that timestamp (in seconds)
     const impactedMsgModels = await Data.getAllMessagesWithAttachmentsInConversationSentBefore({
@@ -55,6 +71,7 @@ async function handleMetaMergeResults(groupPk: GroupPubkeyType) {
       // eslint-disable-next-line no-await-in-loop
       await msg?.cleanup();
     }
+    lastAppliedRemoveAttachmentSentBeforeSeconds.set(groupPk, infos.deleteAttachBeforeSeconds);
   }
 }
 

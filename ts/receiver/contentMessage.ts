@@ -30,7 +30,10 @@ import { assertUnreachable } from '../types/sqlSharedTypes';
 import { BlockedNumberController } from '../util';
 import { ReadReceipts } from '../util/readReceipts';
 import { Storage } from '../util/storage';
-import { ContactsWrapperActions } from '../webworker/workers/browser/libsession_worker_interface';
+import {
+  ContactsWrapperActions,
+  MetaGroupWrapperActions,
+} from '../webworker/workers/browser/libsession_worker_interface';
 import { handleCallMessage } from './callMessage';
 import { getAllCachedECKeyPair, sentAtMoreRecentThanWrapper } from './closedGroups';
 import { ECKeyPair } from './keypairs';
@@ -401,6 +404,37 @@ function shouldDropBlockedUserMessage(
   return !isControlDataMessageOnly;
 }
 
+async function dropIncomingGroupMessage(envelope: EnvelopePlus, sentAtTimestamp: number) {
+  try {
+    if (PubKey.is03Pubkey(envelope.source)) {
+      const infos = await MetaGroupWrapperActions.infoGet(envelope.source);
+
+      if (!infos) {
+        return false;
+      }
+
+      if (
+        sentAtTimestamp &&
+        ((infos.deleteAttachBeforeSeconds &&
+          sentAtTimestamp <= infos.deleteAttachBeforeSeconds * 1000) ||
+          (infos.deleteBeforeSeconds && sentAtTimestamp <= infos.deleteBeforeSeconds * 1000))
+      ) {
+        window?.log?.info(
+          `Incoming message sent before the group ${ed25519Str(envelope.source)} deleteBeforeSeconds or deleteAttachBeforeSeconds. Dropping it.`
+        );
+        await IncomingMessageCache.removeFromCache(envelope);
+        return true;
+      }
+    }
+  } catch (e) {
+    window?.log?.warn(
+      `dropIncomingGroupMessage failed for group ${ed25519Str(envelope.source)} with `,
+      e.message
+    );
+  }
+  return false;
+}
+
 export async function innerHandleSwarmContentMessage({
   contentDecrypted,
   envelope,
@@ -437,6 +471,11 @@ export async function innerHandleSwarmContentMessage({
         return;
       }
       window?.log?.info('Allowing group-control message only from blocked user');
+    }
+
+    if (await dropIncomingGroupMessage(envelope, sentAtTimestamp)) {
+      // message removed from cache in `dropIncomingGroupMessage` already
+      return;
     }
 
     // if this is a direct message, envelope.senderIdentity is undefined
