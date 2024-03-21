@@ -19,7 +19,7 @@ import { ToastUtils, UserUtils } from '../../session/utils';
 import { closeRightPanel, resetSelectedMessageIds } from '../../state/ducks/conversations';
 import { updateConfirmModal } from '../../state/ducks/modalDialog';
 import { resetRightOverlayMode } from '../../state/ducks/section';
-import { MetaGroupWrapperActions } from '../../webworker/workers/browser/libsession_worker_interface';
+import { UserGroupsWrapperActions } from '../../webworker/workers/browser/libsession_worker_interface';
 
 async function unsendMessagesForEveryone1o1AndLegacy(
   conversation: ConversationModel,
@@ -66,16 +66,22 @@ async function unsendMessagesForEveryone1o1AndLegacy(
   }
 }
 
-async function unsendMessagesForEveryoneGroupV2(
-  conversation: ConversationModel,
-  groupPk: GroupPubkeyType,
-  msgsToDelete: Array<MessageModel>
-) {
+async function unsendMessagesForEveryoneGroupV2({
+  allMessagesFrom,
+  conversation,
+  groupPk,
+  msgsToDelete,
+}: {
+  conversation: ConversationModel;
+  groupPk: GroupPubkeyType;
+  msgsToDelete: Array<MessageModel>;
+  allMessagesFrom: Array<PubkeyType>;
+}) {
   const messageHashesToUnsend = await getMessageHashes(msgsToDelete);
-  const group = await MetaGroupWrapperActions.infoGet(groupPk);
+  const group = await UserGroupsWrapperActions.getGroup(groupPk);
 
-  if (!messageHashesToUnsend.length) {
-    window.log.info('unsendMessagesForEveryoneGroupV2: no hashes to remove');
+  if (!messageHashesToUnsend.length && !allMessagesFrom.length) {
+    window.log.info('unsendMessagesForEveryoneGroupV2: no hashes nor author to remove');
     return;
   }
 
@@ -89,10 +95,10 @@ async function unsendMessagesForEveryoneGroupV2(
       expirationType: 'unknown',
       expireTimer: 0,
       groupPk,
-      memberSessionIds: [],
+      memberSessionIds: allMessagesFrom,
       messageHashes: messageHashesToUnsend,
       sodium: await getSodiumRenderer(),
-      secretKey: group.secretKey,
+      secretKey: group?.secretKey || undefined,
     }),
   });
 }
@@ -127,7 +133,12 @@ async function unsendMessagesForEveryone(
     if (!PubKey.is03Pubkey(destinationId)) {
       throw new Error('invalid conversation id (03)  for unsendMessageForEveryone');
     }
-    await unsendMessagesForEveryoneGroupV2(conversation, destinationId, msgsToDelete);
+    await unsendMessagesForEveryoneGroupV2({
+      conversation,
+      groupPk: destinationId,
+      msgsToDelete,
+      allMessagesFrom: [], // currently we cannot remove all the messages from a specific pubkey
+    });
   }
   await deleteMessagesFromSwarmAndCompletelyLocally(conversation, msgsToDelete);
 
@@ -392,9 +403,9 @@ const doDeleteSelectedMessages = async ({
       }
       // only lookup adminKey if we need to
       if (!areAllOurs) {
-        const group = await MetaGroupWrapperActions.infoGet(convoId);
-        const weAreAdmin = !isEmpty(group.secretKey);
-        if (!weAreAdmin) {
+        const group = await UserGroupsWrapperActions.getGroup(convoId);
+        const weHaveAdminKey = !isEmpty(group?.secretKey);
+        if (!weHaveAdminKey) {
           ToastUtils.pushMessageDeleteForbidden();
           window.inboxStore?.dispatch(resetSelectedMessageIds());
           return;

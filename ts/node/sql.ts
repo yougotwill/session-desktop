@@ -1067,9 +1067,9 @@ function deleteAllMessageFromSendersInConversation(
   }
   return assertGlobalInstanceOrInstance(instance)
     .prepare(
-      `DELETE FROM ${MESSAGES_TABLE} WHERE conversationId = $conversationId AND source IN ( ${toRemove.map(() => '?').join(', ')} ) RETURNING id`
+      `DELETE FROM ${MESSAGES_TABLE} WHERE conversationId = ? AND source IN ( ${toRemove.map(() => '?').join(', ')} ) RETURNING id`
     )
-    .all(groupPk, toRemove)
+    .all(groupPk, ...toRemove)
     .map(m => m.id);
 }
 

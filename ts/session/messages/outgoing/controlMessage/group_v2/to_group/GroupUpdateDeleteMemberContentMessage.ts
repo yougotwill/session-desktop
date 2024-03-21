@@ -1,5 +1,5 @@
 import { PubkeyType } from 'libsession_util_nodejs';
-import { isEmpty } from 'lodash';
+import _, { isEmpty } from 'lodash';
 import { SignalService } from '../../../../../../protobuf';
 import { SnodeNamespaces } from '../../../../../apis/snode_api/namespaces';
 import { stringToUint8Array } from '../../../../../utils/String';
@@ -55,7 +55,7 @@ export class GroupUpdateDeleteMemberContentMessage extends GroupUpdateMessage {
     // If we have the secretKey, we can delete it for anyone `"DELETE_CONTENT" || timestamp || sessionId[0] || ... || messageHashes[0] || ...`
 
     let adminSignature = new Uint8Array();
-    if (this.secretKey && this.sodium) {
+    if (this.secretKey && !_.isEmpty(this.secretKey) && this.sodium) {
       adminSignature = this.sodium.crypto_sign_detached(
         stringToUint8Array(
           `DELETE_CONTENT${this.createAtNetworkTimestamp}${this.memberSessionIds.join('')}${this.messageHashes.join('')}`
