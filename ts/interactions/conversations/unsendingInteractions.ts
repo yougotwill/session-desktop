@@ -1,4 +1,5 @@
-import { compact } from 'lodash';
+import { GroupPubkeyType, PubkeyType } from 'libsession_util_nodejs';
+import { compact, isEmpty } from 'lodash';
 import { SessionButtonColor } from '../../components/basic/SessionButton';
 import { Data } from '../../data/data';
 import { ConversationModel } from '../../models/conversation';
@@ -6,41 +7,37 @@ import { MessageModel } from '../../models/message';
 import { getMessageQueue } from '../../session';
 import { deleteSogsMessageByServerIds } from '../../session/apis/open_group_api/sogsv3/sogsV3DeleteMessages';
 import { SnodeAPI } from '../../session/apis/snode_api/SNodeAPI';
+import { GetNetworkTime } from '../../session/apis/snode_api/getNetworkTime';
 import { SnodeNamespaces } from '../../session/apis/snode_api/namespaces';
 import { ConvoHub } from '../../session/conversations';
+import { getSodiumRenderer } from '../../session/crypto';
 import { UnsendMessage } from '../../session/messages/outgoing/controlMessage/UnsendMessage';
+import { GroupUpdateDeleteMemberContentMessage } from '../../session/messages/outgoing/controlMessage/group_v2/to_group/GroupUpdateDeleteMemberContentMessage';
 import { ed25519Str } from '../../session/onions/onionPath';
 import { PubKey } from '../../session/types';
 import { ToastUtils, UserUtils } from '../../session/utils';
 import { closeRightPanel, resetSelectedMessageIds } from '../../state/ducks/conversations';
 import { updateConfirmModal } from '../../state/ducks/modalDialog';
 import { resetRightOverlayMode } from '../../state/ducks/section';
+import { MetaGroupWrapperActions } from '../../webworker/workers/browser/libsession_worker_interface';
 
-/**
- * Deletes messages for everyone in a 1-1 or everyone in a closed group conversation.
- */
-async function unsendMessagesForEveryone(
+async function unsendMessagesForEveryone1o1AndLegacy(
   conversation: ConversationModel,
+  destination: PubkeyType,
   msgsToDelete: Array<MessageModel>
 ) {
-  window?.log?.info('Deleting messages for all users in this conversation');
-  const destinationId = conversation.id;
-  if (!destinationId) {
-    return;
+  const unsendMsgObjects = getUnsendMessagesObjects1o1OrLegacyGroups(msgsToDelete);
+
+  if (conversation.isClosedGroupV2()) {
+    throw new Error('unsendMessagesForEveryone1o1AndLegacy not compatible with group v2');
   }
-  if (conversation.isOpenGroupV2()) {
-    throw new Error(
-      'Cannot unsend a message for an opengroup v2. This has to be a deleteMessage api call'
-    );
-  }
-  const unsendMsgObjects = getUnsendMessagesObjects(msgsToDelete);
 
   if (conversation.isPrivate()) {
     // sending to recipient all the messages separately for now
     await Promise.all(
       unsendMsgObjects.map(unsendObject =>
         getMessageQueue()
-          .sendToPubKey(new PubKey(destinationId), unsendObject, SnodeNamespaces.Default)
+          .sendToPubKey(new PubKey(destination), unsendObject, SnodeNamespaces.Default)
           .catch(window?.log?.error)
       )
     );
@@ -51,7 +48,9 @@ async function unsendMessagesForEveryone(
           .catch(window?.log?.error)
       )
     );
-  } else if (conversation.isClosedGroup()) {
+    return;
+  }
+  if (conversation.isClosedGroup()) {
     // sending to recipient all the messages separately for now
     await Promise.all(
       unsendMsgObjects.map(unsendObject => {
@@ -59,11 +58,76 @@ async function unsendMessagesForEveryone(
           .sendToGroup({
             message: unsendObject,
             namespace: SnodeNamespaces.LegacyClosedGroup,
-            groupPubKey: new PubKey(destinationId),
+            groupPubKey: new PubKey(destination),
           })
           .catch(window?.log?.error);
       })
     );
+  }
+}
+
+async function unsendMessagesForEveryoneGroupV2(
+  conversation: ConversationModel,
+  groupPk: GroupPubkeyType,
+  msgsToDelete: Array<MessageModel>
+) {
+  const messageHashesToUnsend = await getMessageHashes(msgsToDelete);
+  const group = await MetaGroupWrapperActions.infoGet(groupPk);
+
+  if (!messageHashesToUnsend.length) {
+    window.log.info('unsendMessagesForEveryoneGroupV2: no hashes to remove');
+    return;
+  }
+
+  if (!conversation.isClosedGroupV2()) {
+    throw new Error('unsendMessagesForEveryoneGroupV2 needs a group v2');
+  }
+
+  await getMessageQueue().sendToGroupV2NonDurably({
+    message: new GroupUpdateDeleteMemberContentMessage({
+      createAtNetworkTimestamp: GetNetworkTime.now(),
+      expirationType: 'unknown',
+      expireTimer: 0,
+      groupPk,
+      memberSessionIds: [],
+      messageHashes: messageHashesToUnsend,
+      sodium: await getSodiumRenderer(),
+      secretKey: group.secretKey,
+    }),
+  });
+}
+
+/**
+ * Deletes messages for everyone in a 1-1 or everyone in a closed group conversation.
+ */
+async function unsendMessagesForEveryone(
+  conversation: ConversationModel,
+  msgsToDelete: Array<MessageModel>
+) {
+  window?.log?.info('Deleting messages for all users in this conversation');
+  const destinationId = conversation.id as string;
+  if (!destinationId) {
+    return;
+  }
+  if (conversation.isOpenGroupV2()) {
+    throw new Error(
+      'Cannot unsend a message for an opengroup v2. This has to be a deleteMessage api call'
+    );
+  }
+
+  if (
+    conversation.isPrivate() ||
+    (conversation.isClosedGroup() && !conversation.isClosedGroupV2())
+  ) {
+    if (!PubKey.is05Pubkey(conversation.id)) {
+      throw new Error('unsendMessagesForEveryone1o1AndLegacy requires a 05 key');
+    }
+    await unsendMessagesForEveryone1o1AndLegacy(conversation, conversation.id, msgsToDelete);
+  } else if (conversation.isClosedGroupV2()) {
+    if (!PubKey.is03Pubkey(destinationId)) {
+      throw new Error('invalid conversation id (03)  for unsendMessageForEveryone');
+    }
+    await unsendMessagesForEveryoneGroupV2(conversation, destinationId, msgsToDelete);
   }
   await deleteMessagesFromSwarmAndCompletelyLocally(conversation, msgsToDelete);
 
@@ -71,7 +135,7 @@ async function unsendMessagesForEveryone(
   ToastUtils.pushDeleted(msgsToDelete.length);
 }
 
-function getUnsendMessagesObjects(messages: Array<MessageModel>) {
+function getUnsendMessagesObjects1o1OrLegacyGroups(messages: Array<MessageModel>) {
   // #region building request
   return compact(
     messages.map(message => {
@@ -93,6 +157,14 @@ function getUnsendMessagesObjects(messages: Array<MessageModel>) {
     })
   );
   // #endregion
+}
+
+async function getMessageHashes(messages: Array<MessageModel>) {
+  return compact(
+    messages.map(message => {
+      return message.get('messageHash');
+    })
+  );
 }
 
 /**
@@ -221,7 +293,7 @@ async function unsendMessageJustForThisUser(
 ) {
   window?.log?.warn('Deleting messages just for this user');
 
-  const unsendMsgObjects = getUnsendMessagesObjects(msgsToDelete);
+  const unsendMsgObjects = getUnsendMessagesObjects1o1OrLegacyGroups(msgsToDelete);
 
   // sending to our other devices all the messages separately for now
   await Promise.all(
@@ -302,15 +374,37 @@ const doDeleteSelectedMessages = async ({
     return;
   }
 
-  const areAllOurs = selectedMessages.every(message => ourDevicePubkey === message.getSource());
+  const areAllOurs = selectedMessages.every(message => message.getSource() === ourDevicePubkey);
   if (conversation.isPublic()) {
     await doDeleteSelectedMessagesInSOGS(selectedMessages, conversation, areAllOurs);
     return;
   }
 
-  // #region deletion for 1-1 and closed groups
+  /**
+   * Note: groupv2 support deleteForEveryone only.
+   * For groupv2, a user can delete only his messages, but an admin can delete the messages of anyone.
+   *  */
+  if (deleteForEveryone || conversation.isClosedGroupV2()) {
+    if (conversation.isClosedGroupV2()) {
+      const convoId = conversation.id;
+      if (!PubKey.is03Pubkey(convoId)) {
+        throw new Error('unsend request for groupv2 but not a 03 key is impossible possible');
+      }
+      // only lookup adminKey if we need to
+      if (!areAllOurs) {
+        const group = await MetaGroupWrapperActions.infoGet(convoId);
+        const weAreAdmin = !isEmpty(group.secretKey);
+        if (!weAreAdmin) {
+          ToastUtils.pushMessageDeleteForbidden();
+          window.inboxStore?.dispatch(resetSelectedMessageIds());
+          return;
+        }
+      }
+      // if they are all ours, of not but we are an admin, we can move forward
+      await unsendMessagesForEveryone(conversation, selectedMessages);
+      return;
+    }
 
-  if (deleteForEveryone) {
     if (!areAllOurs) {
       ToastUtils.pushMessageDeleteForbidden();
       window.inboxStore?.dispatch(resetSelectedMessageIds());
@@ -320,7 +414,7 @@ const doDeleteSelectedMessages = async ({
     return;
   }
 
-  // delete just for me in a closed group only means delete locally
+  // delete just for me in a legacy closed group only means delete locally
   if (conversation.isClosedGroup()) {
     await deleteMessagesFromSwarmAndCompletelyLocally(conversation, selectedMessages);
 
@@ -331,8 +425,6 @@ const doDeleteSelectedMessages = async ({
   }
   // otherwise, delete that message locally, from our swarm and from our other devices
   await unsendMessageJustForThisUser(conversation, selectedMessages);
-
-  // #endregion
 };
 
 export async function deleteMessagesByIdForEveryone(

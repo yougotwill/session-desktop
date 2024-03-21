@@ -1,5 +1,6 @@
 import { GroupPubkeyType, PubkeyType, WithGroupPubkey } from 'libsession_util_nodejs';
 import { isEmpty, isFinite, isNumber } from 'lodash';
+import { Data } from '../../data/data';
 import { ConversationTypeEnum } from '../../models/conversationAttributes';
 import { HexString } from '../../node/hexStrings';
 import { SignalService } from '../../protobuf';
@@ -19,6 +20,7 @@ import { PreConditionFailed } from '../../session/utils/errors';
 import { UserSync } from '../../session/utils/job_runners/jobs/UserSyncJob';
 import { LibSessionUtil } from '../../session/utils/libsession/libsession_utils';
 import { SessionUtilConvoInfoVolatile } from '../../session/utils/libsession/libsession_utils_convo_info_volatile';
+import { messagesExpired } from '../../state/ducks/conversations';
 import { groupInfoActions } from '../../state/ducks/metaGroups';
 import { toFixedUint8ArrayOfLength } from '../../types/sqlSharedTypes';
 import { BlockedNumberController } from '../../util';
@@ -343,16 +345,41 @@ async function handleGroupMemberLeftMessage({
   convo.set({
     active_at: signatureTimestamp,
   });
-  // debugger TODO We should process this message type even if the sender is blocked
+  // TODO We should process this message type even if the sender is blocked
 }
 
 async function handleGroupDeleteMemberContentMessage({
   groupPk,
   signatureTimestamp,
   change,
+  author,
 }: GroupUpdateGeneric<SignalService.GroupUpdateDeleteMemberContentMessage>) {
   const convo = ConvoHub.use().get(groupPk);
   if (!convo) {
+    return;
+  }
+
+  /**
+   * When handling a GroupUpdateDeleteMemberContentMessage we need to do a few things.
+   * When `adminSignature` is empty,
+   *   1. we only delete the messageHashes which are in the change.messageHashes AND sent by that same author.
+   * When `adminSignature` is not empty and valid,
+   *   2. we delete all the messages in the group sent by any of change.memberSessionIds AND
+   *   3. we delete all the messageHashes in the conversation matching the change.messageHashes (even if not from the right sender)
+   */
+
+  if (isEmpty(change.adminSignature)) {
+    // this is step 1.
+    const msgsDeleted = await Data.deleteAllMessageHashesInConversationMatchingAuthor({
+      author,
+      groupPk,
+      messageHashes: change.messageHashes,
+    });
+
+    window.inboxStore.dispatch(
+      messagesExpired(msgsDeleted.map(m => ({ conversationKey: groupPk, messageId: m })))
+    );
+    convo.updateLastMessage();
     return;
   }
 
@@ -360,7 +387,7 @@ async function handleGroupDeleteMemberContentMessage({
     pubKey: HexString.fromHexStringNoPrefix(groupPk),
     signature: change.adminSignature,
     data: stringToUint8Array(
-      `DELETE_CONTENT${signatureTimestamp}${change.memberSessionIds.join()}${change.messageHashes.join()}`
+      `DELETE_CONTENT${signatureTimestamp}${change.memberSessionIds.join('')}${change.messageHashes.join('')}`
     ),
   });
 
@@ -369,11 +396,27 @@ async function handleGroupDeleteMemberContentMessage({
     return;
   }
 
+  const toRemove = change.memberSessionIds.filter(PubKey.is05Pubkey);
+
+  const deletedBySenders = await Data.deleteAllMessageFromSendersInConversation({
+    groupPk,
+    toRemove,
+  }); // this is step 2.
+  const deletedByHashes = await Data.deleteAllMessageHashesInConversation({
+    groupPk,
+    messageHashes: change.messageHashes,
+  }); // this is step 3.
+
+  window.inboxStore.dispatch(
+    messagesExpired(
+      [...deletedByHashes, ...deletedBySenders].map(m => ({
+        conversationKey: groupPk,
+        messageId: m,
+      }))
+    )
+  );
+  convo.updateLastMessage();
   // TODO we should process this message type even if the sender is blocked
-  convo.set({
-    active_at: signatureTimestamp,
-  });
-  throw new Error('Not implemented');
 }
 
 async function handleGroupUpdateDeleteMessage({
@@ -389,7 +432,7 @@ async function handleGroupUpdateDeleteMessage({
   const sigValid = await verifySig({
     pubKey: HexString.fromHexStringNoPrefix(groupPk),
     signature: change.adminSignature,
-    data: stringToUint8Array(`DELETE${signatureTimestamp}${change.memberSessionIds.join()}`),
+    data: stringToUint8Array(`DELETE${signatureTimestamp}${change.memberSessionIds.join('')}`),
   });
 
   if (!sigValid) {

@@ -498,7 +498,7 @@ describe('SwarmPolling:pollForAllKeys', () => {
         );
 
         stubWithLegacyGroups([]);
-        stubWithGroups([convo.id]);
+        stubWithGroups([convo.id as GroupPubkeyType]);
 
         convo.set('active_at', Date.now());
         groupConvoPubkey = PubKey.cast(convo.id as string);

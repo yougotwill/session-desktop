@@ -242,7 +242,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     );
   }
 
-  public isClosedGroupV2(): boolean {
+  public isClosedGroupV2() {
     return Boolean(this.get('type') === ConversationTypeEnum.GROUPV2 && PubKey.is03Pubkey(this.id));
   }
 
@@ -1097,6 +1097,9 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     if (this.isClosedGroup()) {
       if (this.isAdmin(UserUtils.getOurPubKeyStrFromCache())) {
         if (this.isClosedGroupV2()) {
+          if (!PubKey.is03Pubkey(this.id)) {
+            throw new Error('updateExpireTimer v2 group requires a 03 key');
+          }
           const group = await UserGroupsWrapperActions.getGroup(this.id);
           if (!group || !group.secretKey) {
             throw new Error(
@@ -2162,6 +2165,9 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
   }
 
   private async sendMessageToGroupV2(chatMessageParams: VisibleMessageParams) {
+    if (!PubKey.is03Pubkey(this.id)) {
+      throw new Error('sendMessageToGroupV2 needs a 03 key');
+    }
     const visibleMessage = new VisibleMessage(chatMessageParams);
     const groupVisibleMessage = new ClosedGroupV2VisibleMessage({
       chatMessage: visibleMessage,

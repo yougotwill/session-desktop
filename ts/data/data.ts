@@ -26,6 +26,12 @@ import { channels } from './channels';
 import * as dataInit from './dataInit';
 import { cleanData } from './dataUtils';
 import { SNODE_POOL_ITEM_ID } from './settings-key';
+import {
+  DataCallArgs,
+  DeleteAllMessageFromSendersInConversationType,
+  DeleteAllMessageHashesInConversationMatchingAuthorType,
+  DeleteAllMessageHashesInConversationType,
+} from './sharedDataTypes';
 
 const ERASE_SQL_KEY = 'erase-sql-key';
 const ERASE_ATTACHMENTS_KEY = 'erase-attachments';
@@ -586,6 +592,24 @@ async function removeAllMessagesInConversation(conversationId: string): Promise<
   );
 }
 
+async function deleteAllMessageFromSendersInConversation(
+  args: DataCallArgs<DeleteAllMessageFromSendersInConversationType>
+): ReturnType<DeleteAllMessageFromSendersInConversationType> {
+  return channels.deleteAllMessageFromSendersInConversation(args);
+}
+
+async function deleteAllMessageHashesInConversation(
+  args: DataCallArgs<DeleteAllMessageHashesInConversationType>
+): ReturnType<DeleteAllMessageHashesInConversationType> {
+  return channels.deleteAllMessageHashesInConversation(args);
+}
+
+async function deleteAllMessageHashesInConversationMatchingAuthor(
+  args: DataCallArgs<DeleteAllMessageHashesInConversationMatchingAuthorType>
+): ReturnType<DeleteAllMessageHashesInConversationMatchingAuthorType> {
+  return channels.deleteAllMessageHashesInConversationMatchingAuthor(args);
+}
+
 async function getMessagesBySentAt(sentAt: number): Promise<MessageCollection> {
   const messages = await channels.getMessagesBySentAt(sentAt);
   return new MessageCollection(messages);
@@ -866,6 +890,9 @@ export const Data = {
   getLastHashBySnode,
   getSeenMessagesByHashList,
   removeAllMessagesInConversation,
+  deleteAllMessageFromSendersInConversation,
+  deleteAllMessageHashesInConversation,
+  deleteAllMessageHashesInConversationMatchingAuthor,
   getMessagesBySentAt,
   getExpiredMessages,
   getOutgoingWithoutExpiresAt,

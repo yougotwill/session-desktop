@@ -53,6 +53,7 @@ import { StorageItem } from './storage_item'; // checked - only node
 
 import { OpenGroupV2Room } from '../data/opengroups';
 import {
+  AwaitedReturn,
   CONFIG_DUMP_TABLE,
   MsgDuplicateSearchOpenGroup,
   roomHasBlindEnabled,
@@ -63,6 +64,12 @@ import {
 } from '../types/sqlSharedTypes';
 
 import { KNOWN_BLINDED_KEYS_ITEM, SettingsKey } from '../data/settings-key';
+import {
+  DataCallArgs,
+  DeleteAllMessageFromSendersInConversationType,
+  DeleteAllMessageHashesInConversationMatchingAuthorType,
+  DeleteAllMessageHashesInConversationType,
+} from '../data/sharedDataTypes';
 import { MessageAttributes } from '../models/messageType';
 import { SignalService } from '../protobuf';
 import { Quote } from '../receiver/types';
@@ -804,6 +811,7 @@ function saveMessage(data: MessageAttributes) {
     expireTimer,
     expirationStartTimestamp,
     flags,
+    messageHash,
   } = data;
 
   if (!id) {
@@ -836,6 +844,7 @@ function saveMessage(data: MessageAttributes) {
     type: type || '',
     unread,
     flags: flags ?? 0,
+    messageHash,
   };
 
   assertGlobalInstance()
@@ -860,7 +869,8 @@ function saveMessage(data: MessageAttributes) {
     source,
     type,
     unread,
-    flags
+    flags,
+    messageHash
   ) values (
     $id,
     $json,
@@ -881,7 +891,8 @@ function saveMessage(data: MessageAttributes) {
     $source,
     $type,
     $unread,
-    $flags
+    $flags,
+    $messageHash
   );`
     )
     .run(payload);
@@ -1045,6 +1056,56 @@ function removeAllMessagesInConversation(
   inst
     .prepare(`DELETE FROM ${MESSAGES_TABLE} WHERE conversationId = $conversationId`)
     .run({ conversationId });
+}
+
+function deleteAllMessageFromSendersInConversation(
+  { groupPk, toRemove }: DataCallArgs<DeleteAllMessageFromSendersInConversationType>,
+  instance?: BetterSqlite3.Database
+): AwaitedReturn<DeleteAllMessageFromSendersInConversationType> {
+  if (!groupPk || !toRemove.length) {
+    return [];
+  }
+  return assertGlobalInstanceOrInstance(instance)
+    .prepare(
+      `DELETE FROM ${MESSAGES_TABLE} WHERE conversationId = $conversationId AND source IN ( ${toRemove.map(() => '?').join(', ')} ) RETURNING id`
+    )
+    .all(groupPk, toRemove)
+    .map(m => m.id);
+}
+
+function deleteAllMessageHashesInConversation(
+  { groupPk, messageHashes }: DataCallArgs<DeleteAllMessageHashesInConversationType>,
+  instance?: BetterSqlite3.Database
+): AwaitedReturn<DeleteAllMessageHashesInConversationType> {
+  if (!groupPk || !messageHashes.length) {
+    return [];
+  }
+  return assertGlobalInstanceOrInstance(instance)
+    .prepare(
+      `DELETE FROM ${MESSAGES_TABLE} WHERE conversationId = ? AND messageHash IN ( ${messageHashes.map(() => '?').join(', ')} ) RETURNING id`
+    )
+    .all(groupPk, ...messageHashes)
+    .map(m => m.id);
+}
+
+function deleteAllMessageHashesInConversationMatchingAuthor(
+  {
+    author,
+    groupPk,
+    messageHashes,
+  }: DataCallArgs<DeleteAllMessageHashesInConversationMatchingAuthorType>,
+  instance?: BetterSqlite3.Database
+): AwaitedReturn<DeleteAllMessageHashesInConversationMatchingAuthorType> {
+  if (!groupPk || !author || !messageHashes.length) {
+    return [];
+  }
+  console.warn('messageHashes', messageHashes);
+  return assertGlobalInstanceOrInstance(instance)
+    .prepare(
+      `DELETE FROM ${MESSAGES_TABLE} WHERE conversationId = ? AND source = ? AND messageHash IN ( ${messageHashes.map(() => '?').join(', ')} ) RETURNING id`
+    )
+    .all(groupPk, author, ...messageHashes)
+    .map(m => m.id);
 }
 
 function cleanUpExpirationTimerUpdateHistory(
@@ -2541,6 +2602,9 @@ export const sqlNode = {
   getAllMessagesWithAttachmentsInConversationSentBefore,
   cleanUpExpirationTimerUpdateHistory,
   removeAllMessagesInConversation,
+  deleteAllMessageFromSendersInConversation,
+  deleteAllMessageHashesInConversation,
+  deleteAllMessageHashesInConversationMatchingAuthor,
   getUnreadByConversation,
   getUnreadDisappearingByConversation,
   markAllAsReadByConversationNoExpiration,

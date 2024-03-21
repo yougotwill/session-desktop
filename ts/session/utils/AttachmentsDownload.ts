@@ -8,10 +8,8 @@ import { downloadAttachment, downloadAttachmentSogsV3 } from '../../receiver/att
 import { initializeAttachmentLogic, processNewAttachment } from '../../types/MessageAttachment';
 import { getAttachmentMetadata } from '../../types/message/initializeAttachmentMetadata';
 import { AttachmentDownloadMessageDetails } from '../../types/sqlSharedTypes';
-import { MetaGroupWrapperActions } from '../../webworker/workers/browser/libsession_worker_interface';
 import { was404Error } from '../apis/snode_api/onions';
 import * as Constants from '../constants';
-import { PubKey } from '../types';
 
 // this may cause issues if we increment that value to > 1, but only having one job will block the whole queue while one attachment is downloading
 const MAX_ATTACHMENT_JOB_PARALLELISM = 3;
@@ -139,34 +137,6 @@ async function _maybeStartJob() {
   }
 }
 
-async function shouldSkipGroupAttachmentDownload({
-  groupPk,
-  messageModel,
-}: {
-  groupPk: string;
-  messageModel: MessageModel;
-}) {
-  if (!PubKey.is03Pubkey(groupPk)) {
-    return false;
-  }
-  try {
-    const infos = await MetaGroupWrapperActions.infoGet(groupPk);
-    const sentAt = messageModel.get('sent_at');
-    if (!sentAt) {
-      return false;
-    }
-    if (
-      (infos.deleteAttachBeforeSeconds && sentAt <= infos.deleteAttachBeforeSeconds * 1000) ||
-      (infos.deleteBeforeSeconds && sentAt <= infos.deleteBeforeSeconds * 1000)
-    ) {
-      return true;
-    }
-  } catch (e) {
-    window.log.warn('shouldSkipGroupAttachmentDownload failed with ', e.message);
-  }
-  return false; // try to download it
-}
-
 async function _runJob(job: any) {
   const { id, messageId, attachment, type, index, attempts, isOpenGroupV2, openGroupV2Details } =
     job || {};
@@ -179,16 +149,6 @@ async function _runJob(job: any) {
     found = await Data.getMessageById(messageId);
     if (!found) {
       logger.error('_runJob: Source message not found, deleting job');
-      await _finishJob(null, id);
-      return;
-    }
-    const shouldSkipJobForGroup = await shouldSkipGroupAttachmentDownload({
-      groupPk: found.get('conversationId'),
-      messageModel: found,
-    });
-
-    if (shouldSkipJobForGroup) {
-      logger.info('_runJob: shouldSkipGroupAttachmentDownload is true, deleting job');
       await _finishJob(null, id);
       return;
     }

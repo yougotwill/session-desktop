@@ -105,6 +105,7 @@ const LOKI_SCHEMA_VERSIONS = [
   updateToSessionSchemaVersion34,
   updateToSessionSchemaVersion35,
   updateToSessionSchemaVersion36,
+  updateToSessionSchemaVersion37,
 ];
 
 function updateToSessionSchemaVersion1(currentVersion: number, db: BetterSqlite3.Database) {
@@ -1945,6 +1946,38 @@ function updateToSessionSchemaVersion36(currentVersion: number, db: BetterSqlite
       expirationType,
       unread,
       sent_at
+    );`);
+    writeSessionSchemaVersion(targetVersion, db);
+  })();
+
+  console.log(`updateToSessionSchemaVersion${targetVersion}: success!`);
+}
+
+function updateToSessionSchemaVersion37(currentVersion: number, db: BetterSqlite3.Database) {
+  const targetVersion = 37;
+  if (currentVersion >= targetVersion) {
+    return;
+  }
+
+  console.log(`updateToSessionSchemaVersion${targetVersion}: starting...`);
+
+  db.transaction(() => {
+    db.exec(`ALTER TABLE ${MESSAGES_TABLE} ADD COLUMN messageHash TEXT;
+      UPDATE ${MESSAGES_TABLE} SET
+      messageHash = json_extract(json, '$.messageHash');
+        `);
+
+    db.exec(`CREATE INDEX messages_t_messageHash ON ${MESSAGES_TABLE} (
+      messageHash
+    );`);
+    db.exec(`CREATE INDEX messages_t_messageHash_author ON ${MESSAGES_TABLE} (
+      messageHash,
+      source
+    );`);
+    db.exec(`CREATE INDEX messages_t_messageHash_author_convoId ON ${MESSAGES_TABLE} (
+      messageHash,
+      source,
+      conversationId
     );`);
     writeSessionSchemaVersion(targetVersion, db);
   })();
