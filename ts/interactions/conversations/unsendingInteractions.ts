@@ -137,7 +137,7 @@ async function unsendMessagesForEveryone(
       conversation,
       groupPk: destinationId,
       msgsToDelete,
-      allMessagesFrom: [], // currently we cannot remove all the messages from a specific pubkey
+      allMessagesFrom: [], // currently we cannot remove all the messages from a specific pubkey but we do already handle them on the receiving side
     });
   }
   await deleteMessagesFromSwarmAndCompletelyLocally(conversation, msgsToDelete);

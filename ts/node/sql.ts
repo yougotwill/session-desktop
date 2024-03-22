@@ -1059,7 +1059,11 @@ function removeAllMessagesInConversation(
 }
 
 function deleteAllMessageFromSendersInConversation(
-  { groupPk, toRemove }: DataCallArgs<DeleteAllMessageFromSendersInConversationType>,
+  {
+    groupPk,
+    toRemove,
+    signatureTimestamp,
+  }: DataCallArgs<DeleteAllMessageFromSendersInConversationType>,
   instance?: BetterSqlite3.Database
 ): AwaitedReturn<DeleteAllMessageFromSendersInConversationType> {
   if (!groupPk || !toRemove.length) {
@@ -1067,14 +1071,18 @@ function deleteAllMessageFromSendersInConversation(
   }
   return assertGlobalInstanceOrInstance(instance)
     .prepare(
-      `DELETE FROM ${MESSAGES_TABLE} WHERE conversationId = ? AND source IN ( ${toRemove.map(() => '?').join(', ')} ) RETURNING id`
+      `DELETE FROM ${MESSAGES_TABLE} WHERE conversationId = ? AND sent_at <= ? AND source IN ( ${toRemove.map(() => '?').join(', ')} ) RETURNING id`
     )
-    .all(groupPk, ...toRemove)
+    .all(groupPk, signatureTimestamp, ...toRemove)
     .map(m => m.id);
 }
 
 function deleteAllMessageHashesInConversation(
-  { groupPk, messageHashes }: DataCallArgs<DeleteAllMessageHashesInConversationType>,
+  {
+    groupPk,
+    messageHashes,
+    signatureTimestamp,
+  }: DataCallArgs<DeleteAllMessageHashesInConversationType>,
   instance?: BetterSqlite3.Database
 ): AwaitedReturn<DeleteAllMessageHashesInConversationType> {
   if (!groupPk || !messageHashes.length) {
@@ -1082,9 +1090,9 @@ function deleteAllMessageHashesInConversation(
   }
   return assertGlobalInstanceOrInstance(instance)
     .prepare(
-      `DELETE FROM ${MESSAGES_TABLE} WHERE conversationId = ? AND messageHash IN ( ${messageHashes.map(() => '?').join(', ')} ) RETURNING id`
+      `DELETE FROM ${MESSAGES_TABLE} WHERE conversationId = ? AND sent_at <= ? AND messageHash IN ( ${messageHashes.map(() => '?').join(', ')} ) RETURNING id`
     )
-    .all(groupPk, ...messageHashes)
+    .all(groupPk, signatureTimestamp, ...messageHashes)
     .map(m => m.id);
 }
 
@@ -1093,18 +1101,18 @@ function deleteAllMessageHashesInConversationMatchingAuthor(
     author,
     groupPk,
     messageHashes,
+    signatureTimestamp,
   }: DataCallArgs<DeleteAllMessageHashesInConversationMatchingAuthorType>,
   instance?: BetterSqlite3.Database
 ): AwaitedReturn<DeleteAllMessageHashesInConversationMatchingAuthorType> {
   if (!groupPk || !author || !messageHashes.length) {
     return [];
   }
-  console.warn('messageHashes', messageHashes);
   return assertGlobalInstanceOrInstance(instance)
     .prepare(
-      `DELETE FROM ${MESSAGES_TABLE} WHERE conversationId = ? AND source = ? AND messageHash IN ( ${messageHashes.map(() => '?').join(', ')} ) RETURNING id`
+      `DELETE FROM ${MESSAGES_TABLE} WHERE conversationId = ? AND source = ? AND sent_at <= ? AND messageHash IN ( ${messageHashes.map(() => '?').join(', ')} ) RETURNING id`
     )
-    .all(groupPk, author, ...messageHashes)
+    .all(groupPk, author, signatureTimestamp, ...messageHashes)
     .map(m => m.id);
 }
 

@@ -374,6 +374,7 @@ async function handleGroupDeleteMemberContentMessage({
       author,
       groupPk,
       messageHashes: change.messageHashes,
+      signatureTimestamp,
     });
 
     window.inboxStore.dispatch(
@@ -401,10 +402,12 @@ async function handleGroupDeleteMemberContentMessage({
   const deletedBySenders = await Data.deleteAllMessageFromSendersInConversation({
     groupPk,
     toRemove,
+    signatureTimestamp,
   }); // this is step 2.
   const deletedByHashes = await Data.deleteAllMessageHashesInConversation({
     groupPk,
     messageHashes: change.messageHashes,
+    signatureTimestamp,
   }); // this is step 3.
 
   window.inboxStore.dispatch(
