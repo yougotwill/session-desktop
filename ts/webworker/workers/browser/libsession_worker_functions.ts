@@ -4,6 +4,7 @@ import {
   ConvoInfoVolatileConfigActionsType,
   GroupPubkeyType,
   MetaGroupActionsType,
+  MultiEncryptActionsType,
   UserConfigActionsType,
   UserGroupsConfigActionsType,
 } from 'libsession_util_nodejs';
@@ -15,8 +16,10 @@ export type UserGroupsConfig = 'UserGroupsConfig';
 export type ConvoInfoVolatileConfig = 'ConvoInfoVolatileConfig';
 
 export const MetaGroupConfigValue = 'MetaGroupConfig-';
+export const MultiEncryptConfigValue = 'MultiEncrypt';
 type MetaGroupConfigType = typeof MetaGroupConfigValue;
 export type MetaGroupConfig = `${MetaGroupConfigType}${GroupPubkeyType}`;
+export type MultiEncryptConfig = typeof MultiEncryptConfigValue;
 
 export type ConfigWrapperUser =
   | UserConfig
@@ -26,7 +29,10 @@ export type ConfigWrapperUser =
 
 export type ConfigWrapperGroup = MetaGroupConfig;
 
-export type ConfigWrapperObjectTypesMeta = ConfigWrapperUser | ConfigWrapperGroup;
+export type ConfigWrapperObjectTypesMeta =
+  | ConfigWrapperUser
+  | ConfigWrapperGroup
+  | MultiEncryptConfig;
 
 export type ConfigWrapperGroupDetailed = 'GroupInfo' | 'GroupMember' | 'GroupKeys';
 
@@ -48,12 +54,15 @@ type ConvoInfoVolatileConfigFunctions =
 // Group-related calls
 type MetaGroupFunctions = [MetaGroupConfig, ...MetaGroupActionsType];
 
+type MultiEncryptFunctions = [MultiEncryptConfig, ...MultiEncryptActionsType];
+
 export type LibSessionWorkerFunctions =
   | UserConfigFunctions
   | ContactsConfigFunctions
   | UserGroupsConfigFunctions
   | ConvoInfoVolatileConfigFunctions
-  | MetaGroupFunctions;
+  | MetaGroupFunctions
+  | MultiEncryptFunctions;
 
 export function isUserConfigWrapperType(
   config: ConfigWrapperObjectTypesMeta
@@ -68,6 +77,12 @@ export function isUserConfigWrapperType(
 
 export function isMetaWrapperType(config: ConfigWrapperObjectTypesMeta): config is MetaGroupConfig {
   return config.startsWith(MetaGroupConfigValue);
+}
+
+export function isMultiEncryptWrapperType(
+  config: ConfigWrapperObjectTypesMeta
+): config is MultiEncryptConfig {
+  return config === 'MultiEncrypt';
 }
 
 export function getGroupPubkeyFromWrapperType(type: ConfigWrapperGroup): GroupPubkeyType {

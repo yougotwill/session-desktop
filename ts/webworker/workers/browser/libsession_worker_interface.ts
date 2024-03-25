@@ -11,6 +11,7 @@ import {
   LegacyGroupInfo,
   MergeSingle,
   MetaGroupWrapperActionsCalls,
+  MultiEncryptActionsCalls,
   ProfilePicture,
   PubkeyType,
   Uint8ArrayLen100,
@@ -636,6 +637,21 @@ export const MetaGroupWrapperActions: MetaGroupWrapperActionsCalls = {
       ReturnType<MetaGroupWrapperActionsCalls['loadAdminKeys']>
     >;
   },
+};
+
+export const MultiEncryptWrapperActions: MultiEncryptActionsCalls = {
+  /* Reuse the GenericWrapperActions with the UserConfig argument */
+  ...createBaseActionsFor('UserConfig'),
+
+  /** UserConfig wrapper specific actions */
+  multiEncrypt: async args =>
+    callLibSessionWorker(['MultiEncrypt', 'multiEncrypt', args]) as Promise<
+      ReturnType<MultiEncryptActionsCalls['multiEncrypt']>
+    >,
+    multiDecryptEd25519: async args =>
+    callLibSessionWorker(['MultiEncrypt', 'multiDecryptEd25519', args]) as Promise<
+      ReturnType<MultiEncryptActionsCalls['multiDecryptEd25519']>
+    >,
 };
 
 export const callLibSessionWorker = async (

@@ -723,7 +723,6 @@ async function saveDebugLog(_event: any, logText: any) {
     console.error('Error saving debug log', err);
   }
 }
-
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.

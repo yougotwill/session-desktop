@@ -46,6 +46,7 @@ import { switchThemeTo } from '../../themes/switchTheme';
 import { getOppositeTheme } from '../../util/theme';
 
 import { ReleasedFeatures } from '../../util/releaseFeature';
+import { MultiEncryptWrapperActions } from '../../webworker/workers/browser/libsession_worker_interface';
 
 const Section = (props: { type: SectionType }) => {
   const ourNumber = useSelector(getOurNumber);
@@ -82,6 +83,7 @@ const Section = (props: { type: SectionType }) => {
   };
 
   if (type === SectionType.Profile) {
+    void MultiEncryptWrapperActions.multiEncrypt({});
     return (
       <Avatar
         size={AvatarSize.XS}

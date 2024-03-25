@@ -7,6 +7,7 @@ import {
   GroupPubkeyType,
   GroupWrapperConstructor,
   MetaGroupWrapperNode,
+  MultiEncryptWrapperNode,
   UserConfigWrapperNode,
   UserGroupsWrapperNode,
 } from 'libsession_util_nodejs';
@@ -17,7 +18,9 @@ import {
   ConfigWrapperObjectTypesMeta,
   ConfigWrapperUser,
   MetaGroupConfig,
+  MultiEncryptConfig,
   isMetaWrapperType,
+  isMultiEncryptWrapperType,
   isUserConfigWrapperType,
 } from '../../browser/libsession_worker_functions';
 
@@ -110,6 +113,13 @@ function getCorrespondingGroupWrapper(wrapperType: MetaGroupConfig): MetaGroupWr
     wrapperType,
     `getCorrespondingGroupWrapper missing global handling for "${wrapperType}"`
   );
+}
+
+function getMultiEncryptWrapper(wrapperType: MultiEncryptConfig): MultiEncryptWrapperNode {
+  if (isMultiEncryptWrapperType(wrapperType)) {
+    return MultiEncryptWrapperNode;
+  }
+  assertUnreachable(wrapperType, `getMultiEncrypt missing global handling for "${wrapperType}"`);
 }
 
 function isUInt8Array(value: any) {
@@ -227,11 +237,17 @@ onmessage = async (e: { data: [number, ConfigWrapperObjectTypesMeta, string, ...
       throw new Error(`Unhandled init wrapper type: ${config}`);
     }
 
+    if (action === 'multiEncrypt') {
+      await MultiEncryptWrapperNode.multiEncrypt(args[0]);
+    }
+
     const wrapper = isUserConfigWrapperType(config)
       ? getCorrespondingUserWrapper(config)
       : isMetaWrapperType(config)
         ? getCorrespondingGroupWrapper(config)
-        : undefined;
+        : isMultiEncryptWrapperType(config)
+          ? getMultiEncryptWrapper(config)
+          : undefined;
     if (!wrapper) {
       throw new Error(`did not find an already built wrapper for config: "${config}"`);
     }

@@ -40,6 +40,7 @@ import {
   ConfigWrapperObjectTypesMeta,
   ConfigWrapperUser,
   getGroupPubkeyFromWrapperType,
+  isMultiEncryptWrapperType,
   isUserConfigWrapperType,
 } from '../webworker/workers/browser/libsession_worker_functions';
 // eslint-disable-next-line import/no-unresolved, import/extensions
@@ -92,6 +93,9 @@ async function printDumpForDebug(prefix: string, variant: ConfigWrapperObjectTyp
   if (isUserConfigWrapperType(variant)) {
     window.log.info(prefix, StringUtils.toHex(await GenericWrapperActions.makeDump(variant)));
     return;
+  }
+  if (isMultiEncryptWrapperType(variant)) {
+    return; // nothing to print for this one
   }
   const metaGroupDumps = await MetaGroupWrapperActions.metaMakeDump(
     getGroupPubkeyFromWrapperType(variant)
