@@ -1,7 +1,17 @@
 /* eslint-disable no-await-in-loop */
 /* eslint-disable more/no-then */
 /* eslint-disable @typescript-eslint/no-misused-promises */
-import { compact, concat, difference, flatten, last, sample, toNumber, uniqBy } from 'lodash';
+import {
+  compact,
+  concat,
+  difference,
+  flatten,
+  isEmpty,
+  last,
+  sample,
+  toNumber,
+  uniqBy,
+} from 'lodash';
 import { Data, Snode } from '../../../data/data';
 import { SignalService } from '../../../protobuf';
 import * as Receiver from '../../../receiver/receiver';
@@ -26,6 +36,7 @@ import { IncomingMessage } from '../../messages/incoming/IncomingMessage';
 import { ed25519Str } from '../../onions/onionPath';
 import { StringUtils, UserUtils } from '../../utils';
 import { perfEnd, perfStart } from '../../utils/Performance';
+import { NotFoundError } from '../../utils/errors';
 import { LibSessionUtil } from '../../utils/libsession/libsession_utils';
 import { SnodeNamespace, SnodeNamespaces } from './namespaces';
 import { SnodeAPIRetrieve } from './retrieveRequest';
@@ -657,33 +668,57 @@ export class SwarmPolling {
     return this.lastHashes[nodeEdKey][pubkey][namespace];
   }
 
-  /**
-   * Only exposed as public for testing
-   */
-  public async pollOnceForDisplayName(pubkey: PubKey): Promise<string> {
-    const polledPubkey = pubkey.key;
-    const swarmSnodes = await snodePool.getSwarmFor(polledPubkey);
-
-    // Select nodes for which we already have lastHashes
-    const alreadyPolled = swarmSnodes.filter((n: Snode) => this.lastHashes[n.pubkey_ed25519]);
-    let toPollFrom = alreadyPolled.length ? alreadyPolled[0] : null;
-
-    // If we need more nodes, select randomly from the remaining nodes:
-    if (!toPollFrom) {
-      const notPolled = difference(swarmSnodes, alreadyPolled);
-      toPollFrom = sample(notPolled) as Snode;
-    }
-
-    let resultsFromUserProfile: RetrieveMessagesResultsBatched | null;
-
+  public async pollOnceForOurDisplayName(): Promise<string> {
     try {
-      resultsFromUserProfile = await SnodeAPIRetrieve.retrieveDisplayName(
+      const pubkey = UserUtils.getOurPubKeyFromCache();
+      const polledPubkey = pubkey.key;
+      const swarmSnodes = await snodePool.getSwarmFor(polledPubkey);
+
+      // Select nodes for which we already have lastHashes
+      const alreadyPolled = swarmSnodes.filter((n: Snode) => this.lastHashes[n.pubkey_ed25519]);
+      let toPollFrom = alreadyPolled.length ? alreadyPolled[0] : null;
+
+      // If we need more nodes, select randomly from the remaining nodes:
+      if (!toPollFrom) {
+        const notPolled = difference(swarmSnodes, alreadyPolled);
+        toPollFrom = sample(notPolled) as Snode;
+      }
+
+      const resultsFromUserProfile = await SnodeAPIRetrieve.retrieveDisplayName(
         toPollFrom,
-        UserUtils.getOurPubKeyStrFromCache()
+        pubkey.key
       );
+
       window.log.debug(
-        `WIP: [resultsFromUserProfile] resultsFromUserProfile: ${JSON.stringify(resultsFromUserProfile)}`
+        `WIP: [pollOnceForDisplayName] resultsFromUserProfile: ${JSON.stringify(resultsFromUserProfile)}`
       );
+
+      // check if we just fetched the details from the config namespaces.
+      // If yes, merge them together and exclude them from the rest of the messages.
+      if (!resultsFromUserProfile?.length) {
+        throw new Error('resultsFromUserProfile is empty');
+      }
+
+      const userConfigMessages = resultsFromUserProfile
+        .filter(m => SnodeNamespace.isUserConfigNamespace(m.namespace))
+        .map(r => r.messages.messages);
+
+      const userConfigMessagesMerged = flatten(compact(userConfigMessages));
+      if (!userConfigMessagesMerged.length) {
+        throw new Error('after merging there are no user config messages');
+      }
+      window.log.info(
+        `[pollOnceForDisplayName] received userConfigMessages count: ${userConfigMessagesMerged.length} for key ${pubkey.key}`
+      );
+
+      const displayName = await this.handleSharedConfigMessages(userConfigMessagesMerged, true);
+      window.log.debug(`WIP: [pollForOurDisplayName] displayName ${displayName}`);
+
+      if (isEmpty(displayName)) {
+        throw new NotFoundError('Got a config message from network but without a displayName...');
+      }
+
+      return displayName;
     } catch (e) {
       if (e.message === ERROR_CODE_NO_CONNECT) {
         if (window.inboxStore?.getState().onionPaths.isOnline) {
@@ -692,48 +727,7 @@ export class SwarmPolling {
       } else if (!window.inboxStore?.getState().onionPaths.isOnline) {
         window.inboxStore?.dispatch(updateIsOnline(true));
       }
-
-      window.log.warn(
-        `pollOnceForDisplayName of ${pubkey} namespace: SnodeNamespaces.UserProfile failed with: ${e.message}`
-      );
-      resultsFromUserProfile = null;
-    }
-
-    // check if we just fetched the details from the config namespaces.
-    // If yes, merge them together and exclude them from the rest of the messages.
-    if (resultsFromUserProfile?.length) {
-      const userConfigMessages = resultsFromUserProfile
-        .filter(m => SnodeNamespace.isUserConfigNamespace(m.namespace))
-        .map(r => r.messages.messages);
-
-      const userConfigMessagesMerged = flatten(compact(userConfigMessages));
-
-      if (userConfigMessagesMerged.length) {
-        window.log.info(
-          `[pollOnceForDisplayName] received userConfigMessages count: ${userConfigMessagesMerged.length} for key ${pubkey.key}`
-        );
-
-        const displayName = await this.handleSharedConfigMessages(userConfigMessagesMerged, true);
-        return displayName;
-      }
-    }
-    return '';
-  }
-
-  public async pollForOurDisplayName(): Promise<string> {
-    if (!window.getGlobalOnlineStatus()) {
-      window?.log?.error('pollForOurDisplayName: offline');
-      // Very important to set up a new polling call so we do retry at some point
-      setTimeout(this.pollForOurDisplayName.bind(this), SWARM_POLLING_TIMEOUT.ACTIVE);
-      return '';
-    }
-
-    try {
-      const displayName = await this.pollOnceForDisplayName(UserUtils.getOurPubKeyFromCache());
-      window.log.debug(`WIP: [pollForOurDisplayName] displayName ${displayName}`);
-      return displayName;
-    } catch (e) {
-      window?.log?.warn('pollForOurDisplayName exception: ', e);
+      window.log.debug(`WIP: [pollForOurDisplayName] no displayName found`, e);
       throw e;
     }
   }

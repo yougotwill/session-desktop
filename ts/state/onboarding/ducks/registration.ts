@@ -64,6 +64,7 @@ export const registrationSlice = createSlice({
   initialState,
   reducers: {
     resetOnboardingState() {
+      window.log.debug('WIP: [OnboardingState] resetting onboarding state');
       return { ...initialState };
     },
     setRecoveryPassword(state, action: PayloadAction<string>) {

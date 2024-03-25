@@ -31,7 +31,6 @@ export async function resetRegistration() {
 
 export type RecoverDetails = {
   recoveryPassword: string;
-  errorCallback: (error: Error) => void;
   displayName?: string;
 };
 

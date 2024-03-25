@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import { useMount } from 'react-use';
 import { SettingsKey } from '../../../data/settings-key';
@@ -17,13 +16,12 @@ import {
 import {
   useDisplayName,
   useDisplayNameError,
-  useOnboardAccountCreationStep,
-  useOnboardHexGeneratedPubKey,
   useRecoveryPassword,
 } from '../../../state/onboarding/selectors/registration';
 import {
   generateMnemonic,
   registerSingleDevice,
+  registrationDone,
   sessionGenerateKeyPair,
 } from '../../../util/accountManager';
 import { Storage, setSignWithRecoveryPhrase } from '../../../util/storage';
@@ -37,28 +35,26 @@ import { BackButtonWithininContainer } from '../components/BackButton';
 import { displayNameIsValid, sanitizeDisplayNameOrToast } from '../utils';
 
 async function signUp(signUpDetails: RecoverDetails) {
-  const { displayName, recoveryPassword, errorCallback } = signUpDetails;
+  const { displayName, recoveryPassword } = signUpDetails;
   window.log.debug(`WIP: [signUp] starting sign up....`);
 
   try {
     const trimName = displayNameIsValid(displayName);
 
     await resetRegistration();
-    await registerSingleDevice(recoveryPassword, 'english', trimName);
+    const ourPubkey = await registerSingleDevice(recoveryPassword, 'english', trimName);
     await Storage.put(SettingsKey.hasSyncedInitialConfigurationItem, Date.now());
     await setSignWithRecoveryPhrase(false);
+    await registrationDone(ourPubkey, trimName);
     trigger('openInbox');
   } catch (e) {
     await resetRegistration();
-    void errorCallback(e);
-    window.log.debug(`WIP: [signUp] exception during registration: ${e.message || e}`);
+    throw e;
   }
 }
 
 export const CreateAccount = () => {
-  const step = useOnboardAccountCreationStep();
   const recoveryPassword = useRecoveryPassword();
-  const hexGeneratedPubKey = useOnboardHexGeneratedPubKey();
   const displayName = useDisplayName();
   const displayNameError = useDisplayNameError();
 
@@ -88,12 +84,6 @@ export const CreateAccount = () => {
     void generateMnemonicAndKeyPair();
   });
 
-  useEffect(() => {
-    if (step === AccountCreation.DisplayName && hexGeneratedPubKey) {
-      window.Session.setNewSessionID(hexGeneratedPubKey);
-    }
-  }, [step, hexGeneratedPubKey]);
-
   const signUpWithDetails = async () => {
     if (!(!!displayName && !displayNameError)) {
       return;
@@ -103,10 +93,6 @@ export const CreateAccount = () => {
       await signUp({
         displayName,
         recoveryPassword,
-        errorCallback: e => {
-          dispatch(setDisplayNameError(e.message || String(e)));
-          throw e;
-        },
       });
 
       dispatch(setAccountCreationStep(AccountCreation.Done));
@@ -114,6 +100,7 @@ export const CreateAccount = () => {
       window.log.debug(
         `WIP: [recoverAndFetchDisplayName] AccountRestoration.RecoveryPassword failed to fetch display name so we need to enter it manually. Error: ${e}`
       );
+      dispatch(setDisplayNameError(e.message || String(e)));
       dispatch(setAccountCreationStep(AccountCreation.DisplayName));
     }
   };

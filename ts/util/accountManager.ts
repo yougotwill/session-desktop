@@ -63,20 +63,6 @@ const generateKeypair = async (
 };
 
 /**
- * Sign in with a recovery phrase. We won't try to recover an existing profile name
- * @param mnemonic the mnemonic the user duly saved in a safe place. We will restore his sessionID based on this.
- * @param mnemonicLanguage 'english' only is supported
- * @param profileName the displayName to use for this user
- */
-export async function signInWithRecovery(
-  mnemonic: string,
-  mnemonicLanguage: string,
-  profileName: string
-) {
-  return registerSingleDevice(mnemonic, mnemonicLanguage, profileName);
-}
-
-/**
  * Sign in with a recovery phrase and try to recover display name and avatar from the first encountered configuration message.
  * @param mnemonic the mnemonic the user duly saved in a safe place. We will restore his sessionID based on this.
  * @param mnemonicLanguage 'english' only is supported
@@ -103,7 +89,7 @@ export async function signInByLinkingDevice(
   await saveRecoveryPhrase(mnemonic);
   const pubKeyString = toHex(identityKeyPair.pubKey);
   // fetch configuration message to get the user's display name.
-  const displayName = await getSwarmPollingInstance().pollForOurDisplayName();
+  const displayName = await getSwarmPollingInstance().pollOnceForOurDisplayName();
 
   if (isEmpty(displayName)) {
     throw new NotFoundError('Got a config message from network but without a displayName...');
@@ -115,34 +101,39 @@ export async function signInByLinkingDevice(
   trigger(configurationMessageReceived, displayName, pubKeyString);
 }
 /**
- * This signs up a new user account. User has no recovery and does not try to link a device
+ * This registers a user account. If a user recovery fails and does not try to link a device it can also be used
  * @param mnemonic The mnemonic generated on first app loading and to use for this brand new user
  * @param mnemonicLanguage only 'english' is supported
- * @param profileName the display name to register, character limit is MAX_NAME_LENGTH_BYTES
+ * @param displayName the display name to register, character limit is MAX_NAME_LENGTH_BYTES
  */
 export async function registerSingleDevice(
   generatedMnemonic: string,
   mnemonicLanguage: string,
-  profileName: string
+  displayName: string
 ) {
   if (!generatedMnemonic) {
     throw new Error('Session always needs a mnemonic. Either generated or given by the user');
-  }
-  if (!profileName) {
-    throw new Error('We always needs a profileName');
   }
   if (!mnemonicLanguage) {
     throw new Error('We always needs a mnemonicLanguage');
   }
 
+  if (isEmpty(displayName)) {
+    throw new NotFoundError('Got a config message from network but without a displayName...');
+  }
+
   const identityKeyPair = await generateKeypair(generatedMnemonic, mnemonicLanguage);
+  const ourPubkey = toHex(identityKeyPair.pubKey);
+
+  if (isEmpty(ourPubkey)) {
+    throw new NotFoundError('Got a display name but no a pubkey...');
+  }
 
   await createAccount(identityKeyPair);
   await saveRecoveryPhrase(generatedMnemonic);
   await setLastProfileUpdateTimestamp(Date.now());
 
-  const pubKeyString = toHex(identityKeyPair.pubKey);
-  await registrationDone(pubKeyString, profileName);
+  return ourPubkey;
 }
 
 export async function generateMnemonic() {
@@ -201,7 +192,7 @@ async function createAccount(identityKeyPair: SessionKeyPair) {
  */
 export async function registrationDone(ourPubkey: string, displayName: string) {
   window?.log?.info(
-    `registration done with user provided displayName "${displayName}" and pubkey "${ourPubkey}"`
+    `WIP: [registrationDone] registration done with user provided displayName "${displayName}" and pubkey "${ourPubkey}"`
   );
 
   // initializeLibSessionUtilWrappers needs our publicKey to be set
@@ -237,6 +228,6 @@ export async function registrationDone(ourPubkey: string, displayName: string) {
   window.inboxStore?.dispatch(userActions.userChanged(user));
 
   window?.log?.info('dispatching registration event');
-  // this will make the poller start fetching messages, needed to find a configuration message
+  // this will make the poller start fetching messages
   trigger('registration_done');
 }

@@ -45,21 +45,19 @@ import { displayNameIsValid, sanitizeDisplayNameOrToast } from '../utils';
  * We will handle a ConfigurationMessage
  */
 async function signInWithNewDisplayName(signInDetails: RecoverDetails) {
-  const { displayName, recoveryPassword, errorCallback } = signInDetails;
+  const { displayName, recoveryPassword } = signInDetails;
   window.log.debug(`WIP: [signInWithNewDisplayName] starting sign in with new display name....`);
 
   try {
     const trimName = displayNameIsValid(displayName);
 
     await resetRegistration();
-    await registerSingleDevice(recoveryPassword, 'english', trimName);
+    const ourPubkey = await registerSingleDevice(recoveryPassword, 'english', trimName);
     await setSignWithRecoveryPhrase(true);
+    await registrationDone(ourPubkey, trimName);
   } catch (e) {
     await resetRegistration();
-    errorCallback(e);
-    window.log.debug(
-      `WIP: [signInWithNewDisplayName] exception during registration: ${e.message || e}`
-    );
+    throw e;
   }
 }
 
@@ -97,21 +95,22 @@ async function signInAndFetchDisplayName(
 
           displayNameFromNetwork = displayName;
           ourPubkey = pubkey;
+          window.log.debug(
+            `WIP: [signInAndFetchDisplayName] signed in with displayName: "${displayNameFromNetwork}" and pubkey: "${ourPubkey}`
+          );
+          await registrationDone(ourPubkey, displayNameFromNetwork);
           done(displayName);
         }
       );
     }, ONBOARDING_TIMES.RECOVERY_TIMEOUT);
 
-    await Promise.all([promiseLink, promiseWait]);
+    await Promise.any([promiseLink, promiseWait]);
   } catch (e) {
     await resetRegistration();
     throw e;
   }
 
-  window.log.debug(
-    `WIP: [signInAndFetchDisplayName] signed in with displayName: "${displayNameFromNetwork}" and pubkey: "${ourPubkey}`
-  );
-  return { displayNameFromNetwork, ourPubkey };
+  return displayNameFromNetwork;
 }
 
 export const RestoreAccount = () => {
@@ -133,17 +132,13 @@ export const RestoreAccount = () => {
 
     dispatch(setProgress(0));
     try {
-      const { displayNameFromNetwork, ourPubkey } = await signInAndFetchDisplayName({
+      const displayNameFromNetwork = await signInAndFetchDisplayName({
         recoveryPassword,
-        errorCallback: e => {
-          throw e;
-        },
         loadingAnimationCallback: () => {
           dispatch(setAccountRestorationStep(AccountRestoration.Loading));
         },
       });
       dispatch(setDisplayName(displayNameFromNetwork));
-      await registrationDone(ourPubkey, displayName);
       dispatch(setAccountRestorationStep(AccountRestoration.Finishing));
     } catch (e) {
       if (e instanceof NotFoundError || e instanceof TaskTimedOutError) {
@@ -178,16 +173,13 @@ export const RestoreAccount = () => {
       await signInWithNewDisplayName({
         displayName,
         recoveryPassword,
-        errorCallback: e => {
-          dispatch(setDisplayNameError(e.message || String(e)));
-          throw e;
-        },
       });
       dispatch(setAccountRestorationStep(AccountRestoration.Complete));
     } catch (e) {
       window.log.debug(
         `WIP: [recoverAndEnterDisplayName] AccountRestoration.DisplayName failed to set the display name. Error: ${e}`
       );
+      dispatch(setDisplayNameError(e.message || String(e)));
       dispatch(setAccountRestorationStep(AccountRestoration.DisplayName));
     }
   };
