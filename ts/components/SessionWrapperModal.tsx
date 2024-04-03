@@ -3,9 +3,25 @@ import FocusTrap from 'focus-trap-react';
 import React, { useRef } from 'react';
 import useKey from 'react-use/lib/useKey';
 
+import styled from 'styled-components';
 import { SessionIconButton } from './icon';
 
+import { Flex } from './basic/Flex';
 import { SessionButton, SessionButtonColor, SessionButtonType } from './basic/SessionButton';
+
+const StyledWrapperHeader = styled(Flex)`
+  font-family: var(--font-default);
+  font-size: var(--font-size-lg);
+  font-weight: 500;
+  text-align: center;
+  line-height: 18px;
+  padding: var(--margins-lg);
+
+  .session-modal__header__close,
+  .session-modal__header__icons {
+    width: 60px;
+  }
+`;
 
 export type SessionWrapperModalType = {
   title?: string;
@@ -76,8 +92,19 @@ export const SessionWrapperModal = (props: SessionWrapperModalType) => {
         <div className="session-confirm-wrapper">
           <div ref={modalRef} className="session-modal">
             {showHeader ? (
-              <div className={classNames('session-modal__header', headerReverse && 'reverse')}>
-                <div className="session-modal__header__close">
+              <StyledWrapperHeader
+                container={true}
+                flexDirection={headerReverse ? 'row-reverse' : 'row'}
+                justifyContent="space-between"
+                alignItems="center"
+                className={classNames('session-modal__header')}
+              >
+                <Flex
+                  container={true}
+                  justifyContent={headerReverse ? 'flex-end' : 'flex-start'}
+                  alignItems="center"
+                  className="session-modal__header__close"
+                >
                   {showExitIcon ? (
                     <SessionIconButton
                       iconType="exit"
@@ -86,9 +113,14 @@ export const SessionWrapperModal = (props: SessionWrapperModalType) => {
                       dataTestId="modal-close-button"
                     />
                   ) : null}
-                </div>
+                </Flex>
                 <div className="session-modal__header__title">{title}</div>
-                <div className="session-modal__header__icons">
+                <Flex
+                  container={true}
+                  justifyContent={headerReverse ? 'flex-start' : 'flex-end'}
+                  alignItems="center"
+                  className="session-modal__header__icons"
+                >
                   {headerIconButtons
                     ? headerIconButtons.map((iconItem: any) => {
                         return (
@@ -102,8 +134,8 @@ export const SessionWrapperModal = (props: SessionWrapperModalType) => {
                         );
                       })
                     : null}
-                </div>
-              </div>
+                </Flex>
+              </StyledWrapperHeader>
             ) : null}
 
             <div className="session-modal__body">
