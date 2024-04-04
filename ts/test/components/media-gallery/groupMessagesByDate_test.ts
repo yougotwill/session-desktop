@@ -8,6 +8,7 @@ import {
 import { MediaItemType } from '../../../components/lightbox/LightboxGallery';
 import { IMAGE_JPEG } from '../../../types/MIME';
 import { TestUtils } from '../../test-utils';
+import { stubToastUtils } from '../../test-utils/utils';
 
 const generatedMessageSenderKey = TestUtils.generateFakePubKey().key;
 
@@ -31,6 +32,7 @@ const toMediaItem = (date: Date): MediaItemType => ({
 });
 
 describe('groupMediaItemsByDate', () => {
+  stubToastUtils();
   it('should group mediaItems', () => {
     const referenceTime = new Date('2018-04-12T18:00Z').getTime(); // Thu
     const input: Array<MediaItemType> = shuffle([

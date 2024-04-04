@@ -5,6 +5,7 @@ import { ConfigDumpData } from '../../../data/configDump/configDump';
 import { Data } from '../../../data/data';
 import { OpenGroupData } from '../../../data/opengroups';
 
+import { ToastUtils } from '../../../session/utils/Toast';
 import * as libsessionWorker from '../../../webworker/workers/browser/libsession_worker_interface';
 import * as utilWorker from '../../../webworker/workers/browser/util_worker_interface';
 
@@ -108,3 +109,13 @@ export async function expectAsyncToThrow(toAwait: () => Promise<any>, errorMessa
     expect(e.message).to.be.eq(errorMessageToCatch);
   }
 }
+
+/** We need to stub all toast methods that use <SessionToast /> because it calls hooks outside of a react context (testing) */
+export const stubToastUtils = () => {
+  Sinon.stub(ToastUtils, 'pushToastError').callsFake(() => {});
+  Sinon.stub(ToastUtils, 'pushToastWarning').callsFake(() => {});
+  Sinon.stub(ToastUtils, 'pushToastInfo').callsFake(() => {});
+  Sinon.stub(ToastUtils, 'pushToastSuccess').callsFake(() => {});
+  Sinon.stub(ToastUtils, 'pushedMissedCallCauseOfPermission').callsFake(() => {});
+  Sinon.stub(ToastUtils, 'pushVideoCallPermissionNeeded').callsFake(() => {});
+};

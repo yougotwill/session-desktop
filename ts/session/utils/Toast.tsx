@@ -51,14 +51,21 @@ function pushToastSuccess(id: string, title: string, description?: string, icon?
 
 function pushLoadAttachmentFailure(message?: string) {
   if (message) {
-    pushToastError('unableToLoadAttachment', `${window.i18n('unableToLoadAttachment')} ${message}`);
+    ToastUtils.pushToastError(
+      'unableToLoadAttachment',
+      `${window.i18n('unableToLoadAttachment')} ${message}`
+    );
   } else {
-    pushToastError('unableToLoadAttachment', window.i18n('unableToLoadAttachment'));
+    ToastUtils.pushToastError('unableToLoadAttachment', window.i18n('unableToLoadAttachment'));
   }
 }
 
 function pushFileSizeError(limit: number, units: string) {
-  pushToastError('fileSizeWarning', window.i18n('fileSizeWarning'), `Max size: ${limit} ${units}`);
+  ToastUtils.pushToastError(
+    'fileSizeWarning',
+    window.i18n('fileSizeWarning'),
+    `Max size: ${limit} ${units}`
+  );
 }
 
 function pushFileSizeErrorAsByte(bytesCount: number) {
@@ -73,62 +80,66 @@ function pushFileSizeErrorAsByte(bytesCount: number) {
 }
 
 function pushMultipleNonImageError() {
-  pushToastError(
+  ToastUtils.pushToastError(
     'cannotMixImageAndNonImageAttachments',
     window.i18n('cannotMixImageAndNonImageAttachments')
   );
 }
 
 function pushCannotMixError() {
-  pushToastError('oneNonImageAtATimeToast', window.i18n('oneNonImageAtATimeToast'));
+  ToastUtils.pushToastError('oneNonImageAtATimeToast', window.i18n('oneNonImageAtATimeToast'));
 }
 
 function pushMaximumAttachmentsError() {
-  pushToastError('maximumAttachments', window.i18n('maximumAttachments'));
+  ToastUtils.pushToastError('maximumAttachments', window.i18n('maximumAttachments'));
 }
 
 function pushMessageBodyMissing() {
-  pushToastError('messageBodyMissing', window.i18n('messageBodyMissing'));
+  ToastUtils.pushToastError('messageBodyMissing', window.i18n('messageBodyMissing'));
 }
 
 function pushCopiedToClipBoard() {
-  pushToastInfo('copiedToClipboard', window.i18n('copiedToClipboard'));
+  ToastUtils.pushToastInfo('copiedToClipboard', window.i18n('copiedToClipboard'));
 }
 
 function pushRestartNeeded() {
-  pushToastInfo('restartNeeded', window.i18n('spellCheckDirty'));
+  ToastUtils.pushToastInfo('restartNeeded', window.i18n('spellCheckDirty'));
 }
 
 function pushAlreadyMemberOpenGroup() {
-  pushToastInfo('publicChatExists', window.i18n('publicChatExists'));
+  ToastUtils.pushToastInfo('publicChatExists', window.i18n('publicChatExists'));
 }
 
 function pushUserBanSuccess() {
-  pushToastSuccess('userBanned', window.i18n('userBanned'));
+  ToastUtils.pushToastSuccess('userBanned', window.i18n('userBanned'));
 }
 
 function pushUserBanFailure() {
-  pushToastError('userBanFailed', window.i18n('userBanFailed'));
+  ToastUtils.pushToastError('userBanFailed', window.i18n('userBanFailed'));
 }
 
 function pushUserUnbanSuccess() {
-  pushToastSuccess('userUnbanned', window.i18n('userUnbanned'));
+  ToastUtils.pushToastSuccess('userUnbanned', window.i18n('userUnbanned'));
 }
 
 function pushUserUnbanFailure() {
-  pushToastError('userUnbanFailed', window.i18n('userUnbanFailed'));
+  ToastUtils.pushToastError('userUnbanFailed', window.i18n('userUnbanFailed'));
 }
 
 function pushMessageDeleteForbidden() {
-  pushToastError('messageDeletionForbidden', window.i18n('messageDeletionForbidden'));
+  ToastUtils.pushToastError('messageDeletionForbidden', window.i18n('messageDeletionForbidden'));
 }
 
 function pushUnableToCall() {
-  pushToastError('unableToCall', window.i18n('unableToCallTitle'), window.i18n('unableToCall'));
+  ToastUtils.pushToastError(
+    'unableToCall',
+    window.i18n('unableToCallTitle'),
+    window.i18n('unableToCall')
+  );
 }
 
 function pushedMissedCall(conversationName: string) {
-  pushToastInfo(
+  ToastUtils.pushToastInfo(
     'missedCall',
     window.i18n('callMissedTitle'),
     window.i18n('callMissed', [conversationName])
@@ -154,7 +165,7 @@ function pushedMissedCallCauseOfPermission(conversationName: string) {
 }
 
 function pushedMissedCallNotApproved(displayName: string) {
-  pushToastInfo(
+  ToastUtils.pushToastInfo(
     'missedCall',
     window.i18n('callMissedTitle'),
     window.i18n('callMissedNotApproved', [displayName])
@@ -162,7 +173,7 @@ function pushedMissedCallNotApproved(displayName: string) {
 }
 
 function pushVideoCallPermissionNeeded() {
-  pushToastInfo(
+  ToastUtils.pushToastInfo(
     'videoCallPermissionNeeded',
     window.i18n('cameraPermissionNeededTitle'),
     window.i18n('cameraPermissionNeeded'),
@@ -171,7 +182,7 @@ function pushVideoCallPermissionNeeded() {
 }
 
 function pushAudioPermissionNeeded() {
-  pushToastInfo(
+  ToastUtils.pushToastInfo(
     'audioPermissionNeeded',
     window.i18n('audioPermissionNeededTitle'),
     window.i18n('audioPermissionNeeded'),
@@ -180,31 +191,31 @@ function pushAudioPermissionNeeded() {
 }
 
 function pushOriginalNotFound() {
-  pushToastError('originalMessageNotFound', window.i18n('originalMessageNotFound'));
+  ToastUtils.pushToastError('originalMessageNotFound', window.i18n('originalMessageNotFound'));
 }
 
 function pushTooManyMembers() {
-  pushToastError('tooManyMembers', window.i18n('closedGroupMaxSize'));
+  ToastUtils.pushToastError('tooManyMembers', window.i18n('closedGroupMaxSize'));
 }
 
 function pushMessageRequestPending() {
-  pushToastInfo('messageRequestPending', window.i18n('messageRequestPending'));
+  ToastUtils.pushToastInfo('messageRequestPending', window.i18n('messageRequestPending'));
 }
 
 function pushUnblockToSend() {
-  pushToastInfo('unblockToSend', window.i18n('unblockToSend'));
+  ToastUtils.pushToastInfo('unblockToSend', window.i18n('unblockToSend'));
 }
 
 function pushYouLeftTheGroup() {
-  pushToastError('youLeftTheGroup', window.i18n('youLeftTheGroup'));
+  ToastUtils.pushToastError('youLeftTheGroup', window.i18n('youLeftTheGroup'));
 }
 
 function someDeletionsFailed() {
-  pushToastWarning('deletionError', 'Deletion error');
+  ToastUtils.pushToastWarning('deletionError', 'Deletion error');
 }
 
 function pushDeleted(messageCount: number) {
-  pushToastSuccess(
+  ToastUtils.pushToastSuccess(
     'deleted',
     window.i18n('deleted', [messageCount.toString()]),
     undefined,
@@ -213,7 +224,7 @@ function pushDeleted(messageCount: number) {
 }
 
 function pushCannotRemoveCreatorFromGroup() {
-  pushToastWarning(
+  ToastUtils.pushToastWarning(
     'cannotRemoveCreatorFromGroup',
     window.i18n('cannotRemoveCreatorFromGroup'),
     window.i18n('cannotRemoveCreatorFromGroupDesc')
@@ -221,7 +232,7 @@ function pushCannotRemoveCreatorFromGroup() {
 }
 
 function pushOnlyAdminCanRemove() {
-  pushToastInfo(
+  ToastUtils.pushToastInfo(
     'onlyAdminCanRemoveMembers',
     window.i18n('onlyAdminCanRemoveMembers'),
     window.i18n('onlyAdminCanRemoveMembersDesc')
@@ -229,47 +240,53 @@ function pushOnlyAdminCanRemove() {
 }
 
 function pushFailedToAddAsModerator() {
-  pushToastWarning('failedToAddAsModerator', window.i18n('failedToAddAsModerator'));
+  ToastUtils.pushToastWarning('failedToAddAsModerator', window.i18n('failedToAddAsModerator'));
 }
 
 function pushFailedToRemoveFromModerator() {
-  pushToastWarning('failedToRemoveFromModerator', window.i18n('failedToRemoveFromModerator'));
+  ToastUtils.pushToastWarning(
+    'failedToRemoveFromModerator',
+    window.i18n('failedToRemoveFromModerator')
+  );
 }
 
 function pushUserAddedToModerators() {
-  pushToastSuccess('userAddedToModerators', window.i18n('userAddedToModerators'));
+  ToastUtils.pushToastSuccess('userAddedToModerators', window.i18n('userAddedToModerators'));
 }
 
 function pushUserRemovedFromModerators() {
-  pushToastSuccess('userRemovedFromModerators', window.i18n('userRemovedFromModerators'));
+  ToastUtils.pushToastSuccess(
+    'userRemovedFromModerators',
+    window.i18n('userRemovedFromModerators')
+  );
 }
 
 function pushInvalidPubKey() {
-  pushToastSuccess('invalidPubKey', window.i18n('invalidPubkeyFormat'));
+  ToastUtils.pushToastSuccess('invalidPubKey', window.i18n('invalidPubkeyFormat'));
 }
 
 function pushNoCameraFound() {
-  pushToastWarning('noCameraFound', window.i18n('noCameraFound'));
+  ToastUtils.pushToastWarning('noCameraFound', window.i18n('noCameraFound'));
 }
 
 function pushNoAudioInputFound() {
-  pushToastWarning('noAudioInputFound', window.i18n('noAudioInputFound'));
+  ToastUtils.pushToastWarning('noAudioInputFound', window.i18n('noAudioInputFound'));
 }
 
 function pushNoAudioOutputFound() {
-  pushToastWarning('noAudioOutputFound', window.i18n('noAudioOutputFound'));
+  ToastUtils.pushToastWarning('noAudioOutputFound', window.i18n('noAudioOutputFound'));
 }
 
 function pushNoMediaUntilApproved() {
-  pushToastError('noMediaUntilApproved', window.i18n('noMediaUntilApproved'));
+  ToastUtils.pushToastError('noMediaUntilApproved', window.i18n('noMediaUntilApproved'));
 }
 
 function pushMustBeApproved() {
-  pushToastError('mustBeApproved', window.i18n('mustBeApproved'));
+  ToastUtils.pushToastError('mustBeApproved', window.i18n('mustBeApproved'));
 }
 
 function pushRateLimitHitReactions() {
-  pushToastInfo('reactRateLimit', '', window?.i18n?.('rateLimitReactMessage')); // because otherwise test fails
+  ToastUtils.pushToastInfo('reactRateLimit', '', window?.i18n?.('rateLimitReactMessage')); // because otherwise test fails
 }
 
 // export an object for testing purposes as we need to stub some of the methods
