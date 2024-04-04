@@ -5,7 +5,7 @@ import { PureComponent, useEffect } from 'react';
 import { toast } from 'react-toastify';
 import styled from 'styled-components';
 
-import { SessionButton, SessionButtonColor, SessionButtonType } from './basic/SessionButton';
+import { SessionButton } from './basic/SessionButton';
 // import { SessionSpinner } from './basic/SessionSpinner';
 import { SessionTheme } from '../themes/SessionTheme';
 import { switchPrimaryColorTo } from '../themes/switchPrimaryColor';
@@ -13,6 +13,7 @@ import { switchThemeTo } from '../themes/switchTheme';
 import { SessionToastContainer } from './SessionToastContainer';
 import { SessionWrapperModal } from './SessionWrapperModal';
 import { SessionToast } from './basic/SessionToast';
+import { SessionButtonColor, SessionButtonType } from './buttons/types';
 import { SessionSpinner } from './loading';
 
 interface State {

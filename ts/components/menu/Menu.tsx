@@ -54,7 +54,7 @@ import {
 import { getIsMessageSection } from '../../state/selectors/section';
 import { useSelectedConversationKey } from '../../state/selectors/selectedConversation';
 import { LocalizerKeys } from '../../types/LocalizerKeys';
-import { SessionButtonColor } from '../basic/SessionButton';
+import { SessionButtonColor } from '../buttons/types';
 
 /** Menu items standardized */
 

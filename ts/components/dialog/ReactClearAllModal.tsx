@@ -7,7 +7,8 @@ import { getConversationController } from '../../session/conversations';
 import { updateReactClearAllModal } from '../../state/ducks/modalDialog';
 import { SessionWrapperModal } from '../SessionWrapperModal';
 import { Flex } from '../basic/Flex';
-import { SessionButton, SessionButtonColor, SessionButtonType } from '../basic/SessionButton';
+import { SessionButton } from '../basic/SessionButton';
+import { SessionButtonColor, SessionButtonType } from '../buttons/types';
 import { SessionSpinner } from '../loading';
 
 type Props = {

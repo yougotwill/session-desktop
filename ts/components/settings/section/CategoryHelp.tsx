@@ -1,7 +1,6 @@
 import { ipcRenderer, shell } from 'electron';
 
-import { SessionButtonShape, SessionButtonType } from '../../basic/SessionButton';
-
+import { SessionButtonShape, SessionButtonType } from '../../buttons/types';
 import { SessionSettingButtonItem, SessionSettingsTitleWithLink } from '../SessionSettingListItem';
 
 export const SettingsCategoryHelp = () => {

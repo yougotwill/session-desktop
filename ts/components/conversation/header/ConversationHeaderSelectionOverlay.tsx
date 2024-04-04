@@ -9,12 +9,8 @@ import {
   useSelectedConversationKey,
   useSelectedIsPublic,
 } from '../../../state/selectors/selectedConversation';
-import {
-  SessionButton,
-  SessionButtonColor,
-  SessionButtonShape,
-  SessionButtonType,
-} from '../../basic/SessionButton';
+import { SessionButton } from '../../basic/SessionButton';
+import { SessionButtonColor, SessionButtonShape, SessionButtonType } from '../../buttons/types';
 import { SessionIconButton } from '../../icon';
 
 export const SelectionOverlay = () => {

@@ -23,8 +23,8 @@ import { ExpirableReadableMessage } from './message/message-item/ExpirableReadab
 import { ConversationInteraction } from '../../interactions';
 import { getConversationController } from '../../session/conversations';
 import { updateConfirmModal } from '../../state/ducks/modalDialog';
-import { SessionButtonColor } from '../basic/SessionButton';
 import { SessionHtmlRenderer } from '../basic/SessionHTMLRenderer';
+import { SessionButtonColor } from '../buttons/types';
 import { SessionIcon } from '../icon';
 
 const FollowSettingButton = styled.button`

@@ -16,7 +16,8 @@ import { SessionUtilUserGroups } from '../../session/utils/libsession/libsession
 import { getPrivateContactsPubkeys } from '../../state/selectors/conversations';
 import { MemberListItem } from '../MemberListItem';
 import { SessionWrapperModal } from '../SessionWrapperModal';
-import { SessionButton, SessionButtonColor, SessionButtonType } from '../basic/SessionButton';
+import { SessionButton } from '../basic/SessionButton';
+import { SessionButtonColor, SessionButtonType } from '../buttons/types';
 
 type Props = {
   conversationId: string;

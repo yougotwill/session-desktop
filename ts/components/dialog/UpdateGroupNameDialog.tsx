@@ -12,8 +12,9 @@ import { updateGroupNameModal } from '../../state/ducks/modalDialog';
 import { pickFileForAvatar } from '../../types/attachments/VisualAttachment';
 import { SessionWrapperModal } from '../SessionWrapperModal';
 import { Avatar, AvatarSize } from '../avatar/Avatar';
-import { SessionButton, SessionButtonColor, SessionButtonType } from '../basic/SessionButton';
+import { SessionButton } from '../basic/SessionButton';
 import { SpacerMD } from '../basic/Text';
+import { SessionButtonColor, SessionButtonType } from '../buttons/types';
 
 type Props = {
   conversationId: string;

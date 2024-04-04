@@ -11,10 +11,11 @@ import {
 } from '../../interactions/conversationInteractions';
 import { updateConfirmModal } from '../../state/ducks/modalDialog';
 import { SessionWrapperModal } from '../SessionWrapperModal';
-import { SessionButton, SessionButtonColor, SessionButtonType } from '../basic/SessionButton';
+import { SessionButton } from '../basic/SessionButton';
 import { SessionHtmlRenderer } from '../basic/SessionHTMLRenderer';
 import { SessionRadioGroup, SessionRadioItems } from '../basic/SessionRadioGroup';
 import { SpacerLG } from '../basic/Text';
+import { SessionButtonColor, SessionButtonType } from '../buttons/types';
 import { SessionIcon, SessionIconSize, SessionIconType } from '../icon';
 import { SessionSpinner } from '../loading';
 

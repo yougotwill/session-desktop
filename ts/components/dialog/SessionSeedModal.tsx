@@ -15,7 +15,8 @@ import { SpacerSM } from '../basic/Text';
 import { saveQRCode } from '../../util/saveQRCode';
 import { getCurrentRecoveryPhrase } from '../../util/storage';
 import { SessionWrapperModal } from '../SessionWrapperModal';
-import { SessionButton, SessionButtonColor, SessionButtonType } from '../basic/SessionButton';
+import { SessionButton } from '../basic/SessionButton';
+import { SessionButtonColor, SessionButtonType } from '../buttons/types';
 
 interface PasswordProps {
   setPasswordValid: (val: boolean) => any;

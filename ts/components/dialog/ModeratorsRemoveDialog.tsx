@@ -12,7 +12,8 @@ import { sogsV3RemoveAdmins } from '../../session/apis/open_group_api/sogsv3/sog
 import { updateRemoveModeratorsModal } from '../../state/ducks/modalDialog';
 import { MemberListItem } from '../MemberListItem';
 import { SessionWrapperModal } from '../SessionWrapperModal';
-import { SessionButton, SessionButtonColor, SessionButtonType } from '../basic/SessionButton';
+import { SessionButton } from '../basic/SessionButton';
+import { SessionButtonColor, SessionButtonType } from '../buttons/types';
 import { SessionSpinner } from '../loading';
 
 type Props = {

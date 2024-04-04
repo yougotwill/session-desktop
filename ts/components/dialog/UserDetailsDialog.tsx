@@ -9,9 +9,10 @@ import { ToastUtils } from '../../session/utils';
 import { openConversationWithMessages } from '../../state/ducks/conversations';
 import { updateUserDetailsModal, UserDetailsModalState } from '../../state/ducks/modalDialog';
 import { Avatar, AvatarSize } from '../avatar/Avatar';
-import { SessionButton, SessionButtonType } from '../basic/SessionButton';
+import { SessionButton } from '../basic/SessionButton';
 import { SessionIdEditable } from '../basic/SessionIdEditable';
 import { SpacerLG } from '../basic/Text';
+import { SessionButtonType } from '../buttons/types';
 import { SessionWrapperModal } from '../SessionWrapperModal';
 
 export const UserDetailsDialog = (props: UserDetailsModalState) => {

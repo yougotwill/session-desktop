@@ -6,7 +6,7 @@ import {
 } from '../models/conversationAttributes';
 import { CallManager, SyncUtils, ToastUtils, UserUtils } from '../session/utils';
 
-import { SessionButtonColor } from '../components/basic/SessionButton';
+import { SessionButtonColor } from '../components/buttons/types';
 import { getCallMediaPermissionsSettings } from '../components/settings/SessionSettings';
 import { Data } from '../data/data';
 import { SettingsKey } from '../data/settings-key';

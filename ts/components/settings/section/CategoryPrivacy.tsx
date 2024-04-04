@@ -4,7 +4,6 @@ import useUpdate from 'react-use/lib/useUpdate';
 import { SettingsKey } from '../../../data/settings-key';
 import { ConversationTypeEnum } from '../../../models/conversationAttributes';
 import { updateConfirmModal } from '../../../state/ducks/modalDialog';
-import { SessionButtonColor } from '../../basic/SessionButton';
 import { SpacerLG } from '../../basic/Text';
 import { TypingBubble } from '../../conversation/TypingBubble';
 
@@ -16,6 +15,7 @@ import {
   useHasLinkPreviewEnabled,
 } from '../../../state/selectors/settings';
 import { Storage } from '../../../util/storage';
+import { SessionButtonColor } from '../../buttons/types';
 import { SessionSettingButtonItem, SessionToggleWithDescription } from '../SessionSettingListItem';
 import { displayPasswordModal } from '../SessionSettings';
 

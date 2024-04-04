@@ -5,8 +5,9 @@ import { ed25519Str } from '../../session/onions/onionPath';
 import { forceSyncConfigurationNowIfNeeded } from '../../session/utils/sync/syncUtils';
 import { updateConfirmModal, updateDeleteAccountModal } from '../../state/ducks/modalDialog';
 import { SessionWrapperModal } from '../SessionWrapperModal';
-import { SessionButton, SessionButtonColor, SessionButtonType } from '../basic/SessionButton';
+import { SessionButton } from '../basic/SessionButton';
 import { SpacerLG } from '../basic/Text';
+import { SessionButtonColor, SessionButtonType } from '../buttons/types';
 import { SessionSpinner } from '../loading';
 
 import { Data } from '../../data/data';

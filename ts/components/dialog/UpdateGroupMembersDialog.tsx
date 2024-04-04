@@ -8,8 +8,9 @@ import { ToastUtils, UserUtils } from '../../session/utils';
 import { updateGroupMembersModal } from '../../state/ducks/modalDialog';
 import { MemberListItem } from '../MemberListItem';
 import { SessionWrapperModal } from '../SessionWrapperModal';
-import { SessionButton, SessionButtonColor, SessionButtonType } from '../basic/SessionButton';
+import { SessionButton } from '../basic/SessionButton';
 import { SpacerLG, Text } from '../basic/Text';
+import { SessionButtonColor, SessionButtonType } from '../buttons/types';
 
 import { useConversationPropsById, useWeAreAdmin } from '../../hooks/useParamSelector';
 

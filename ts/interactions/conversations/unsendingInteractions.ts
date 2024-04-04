@@ -1,5 +1,5 @@
 import { compact } from 'lodash';
-import { SessionButtonColor } from '../../components/basic/SessionButton';
+import { SessionButtonColor } from '../../components/buttons/types';
 import { Data } from '../../data/data';
 import { ConversationModel } from '../../models/conversation';
 import { MessageModel } from '../../models/message';

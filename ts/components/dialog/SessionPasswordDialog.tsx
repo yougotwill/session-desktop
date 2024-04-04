@@ -10,8 +10,9 @@ import { LocalizerKeys } from '../../types/LocalizerKeys';
 import { assertUnreachable } from '../../types/sqlSharedTypes';
 import { matchesHash, validatePassword } from '../../util/passwordUtils';
 import { SessionWrapperModal } from '../SessionWrapperModal';
-import { SessionButton, SessionButtonColor, SessionButtonType } from '../basic/SessionButton';
+import { SessionButton } from '../basic/SessionButton';
 import { SpacerSM } from '../basic/Text';
+import { SessionButtonColor, SessionButtonType } from '../buttons/types';
 
 export type PasswordAction = 'set' | 'change' | 'remove' | 'enter';
 

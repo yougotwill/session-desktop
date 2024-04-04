@@ -5,7 +5,8 @@ import useKey from 'react-use/lib/useKey';
 
 import { SessionIconButton } from './icon';
 
-import { SessionButton, SessionButtonColor, SessionButtonType } from './basic/SessionButton';
+import { SessionButton } from './basic/SessionButton';
+import { SessionButtonColor, SessionButtonType } from './buttons/types';
 
 export type SessionWrapperModalType = {
   title?: string;

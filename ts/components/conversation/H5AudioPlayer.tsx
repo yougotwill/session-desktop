@@ -12,7 +12,8 @@ import {
   isMessageSelectionMode,
 } from '../../state/selectors/conversations';
 import { getAudioAutoplay } from '../../state/selectors/userConfig';
-import { SessionButton, SessionButtonType } from '../basic/SessionButton';
+import { SessionButton } from '../basic/SessionButton';
+import { SessionButtonType } from '../buttons/types';
 import { SessionIcon } from '../icon';
 
 const StyledSpeedButton = styled.div`

@@ -6,8 +6,9 @@ import { useSet } from '../../hooks/useSet';
 import { ToastUtils } from '../../session/utils';
 import { BlockedNumberController } from '../../util';
 import { MemberListItem } from '../MemberListItem';
-import { SessionButton, SessionButtonColor } from '../basic/SessionButton';
+import { SessionButton } from '../basic/SessionButton';
 import { SpacerLG } from '../basic/Text';
+import { SessionButtonColor } from '../buttons/types';
 import { SessionIconButton } from '../icon';
 import { SettingsTitleAndDescription } from './SessionSettingListItem';
 

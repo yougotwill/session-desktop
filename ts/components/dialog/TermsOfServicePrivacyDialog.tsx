@@ -4,8 +4,9 @@ import styled from 'styled-components';
 import { updateTermsOfServicePrivacyModal } from '../../state/onboarding/ducks/modals';
 import { SessionWrapperModal } from '../SessionWrapperModal';
 import { Flex } from '../basic/Flex';
-import { SessionButton, SessionButtonShape, SessionButtonType } from '../basic/SessionButton';
+import { SessionButton } from '../basic/SessionButton';
 import { SpacerSM } from '../basic/Text';
+import { SessionButtonShape, SessionButtonType } from '../buttons/types';
 
 // NOTE we want to bypass the padding on the modal body so the buttons take up the full space
 const ConfirmButtonContainer = styled(Flex)`

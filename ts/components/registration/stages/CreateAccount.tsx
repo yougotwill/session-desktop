@@ -25,8 +25,9 @@ import {
 } from '../../../util/accountManager';
 import { Storage, setSignWithRecoveryPhrase } from '../../../util/storage';
 import { Flex } from '../../basic/Flex';
-import { SessionButton, SessionButtonColor } from '../../basic/SessionButton';
+import { SessionButton } from '../../basic/SessionButton';
 import { SpacerLG, SpacerSM } from '../../basic/Text';
+import { SessionButtonColor } from '../../buttons/types';
 import { SessionInput } from '../../inputs';
 import { resetRegistration } from '../RegistrationStages';
 import { OnboardDescription, OnboardHeading } from '../components';

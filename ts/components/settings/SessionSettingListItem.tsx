@@ -2,13 +2,9 @@ import styled from 'styled-components';
 
 import { ReactNode } from 'react';
 import { Noop } from '../../types/Util';
-import {
-  SessionButton,
-  SessionButtonColor,
-  SessionButtonShape,
-  SessionButtonType,
-} from '../basic/SessionButton';
+import { SessionButton } from '../basic/SessionButton';
 import { SessionToggle } from '../basic/SessionToggle';
+import { SessionButtonColor, SessionButtonShape, SessionButtonType } from '../buttons/types';
 import { SessionConfirmDialogProps } from '../dialog/SessionConfirm';
 import { SessionIconButton } from '../icon';
 

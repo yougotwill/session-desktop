@@ -9,7 +9,8 @@ import { callTimeoutMs } from '../../session/utils/calling/CallManager';
 import { getHasIncomingCall, getHasIncomingCallFrom } from '../../state/selectors/call';
 import { SessionWrapperModal } from '../SessionWrapperModal';
 import { Avatar, AvatarSize } from '../avatar/Avatar';
-import { SessionButton, SessionButtonColor, SessionButtonType } from '../basic/SessionButton';
+import { SessionButton } from '../basic/SessionButton';
+import { SessionButtonColor, SessionButtonType } from '../buttons/types';
 
 export const CallWindow = styled.div`
   position: absolute;

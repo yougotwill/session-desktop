@@ -3,7 +3,9 @@ import styled from 'styled-components';
 import { SessionTheme } from '../themes/SessionTheme';
 import { switchThemeTo } from '../themes/switchTheme';
 import { fetch } from '../util/logging';
-import { SessionButton, SessionButtonType } from './basic/SessionButton';
+import { SessionButton } from './basic/SessionButton';
+
+import { SessionButtonType } from './buttons/types';
 import { SessionIconButton } from './icon';
 
 const StyledContent = styled.div`

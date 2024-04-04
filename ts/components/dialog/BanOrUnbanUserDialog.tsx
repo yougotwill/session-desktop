@@ -16,8 +16,9 @@ import { isDarkTheme } from '../../state/selectors/theme';
 import { SessionHeaderSearchInput } from '../SessionHeaderSearchInput';
 import { SessionWrapperModal } from '../SessionWrapperModal';
 import { Flex } from '../basic/Flex';
-import { SessionButton, SessionButtonColor, SessionButtonType } from '../basic/SessionButton';
+import { SessionButton } from '../basic/SessionButton';
 import { SpacerSM } from '../basic/Text';
+import { SessionButtonColor, SessionButtonType } from '../buttons/types';
 import { SessionSpinner } from '../loading';
 
 async function banOrUnBanUserCall(

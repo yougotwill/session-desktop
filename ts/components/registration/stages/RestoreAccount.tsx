@@ -32,8 +32,9 @@ import {
 } from '../../../util/accountManager';
 import { setSignInByLinking, setSignWithRecoveryPhrase } from '../../../util/storage';
 import { Flex } from '../../basic/Flex';
-import { SessionButton, SessionButtonColor } from '../../basic/SessionButton';
+import { SessionButton } from '../../basic/SessionButton';
 import { SpacerLG, SpacerSM } from '../../basic/Text';
+import { SessionButtonColor } from '../../buttons/types';
 import { SessionIcon } from '../../icon';
 import { SessionInput } from '../../inputs';
 import { SessionProgressBar } from '../../loading';

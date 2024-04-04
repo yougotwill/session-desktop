@@ -17,7 +17,8 @@ import { editProfileModal, updateEditProfilePictureModel } from '../../state/duc
 import { saveQRCode } from '../../util/saveQRCode';
 import { setLastProfileUpdateTimestamp } from '../../util/storage';
 import { SessionWrapperModal } from '../SessionWrapperModal';
-import { SessionButton, SessionButtonType } from '../basic/SessionButton';
+import { SessionButton } from '../basic/SessionButton';
+import { SessionButtonType } from '../buttons/types';
 import { SessionIconButton } from '../icon';
 import { SessionSpinner } from '../loading';
 

@@ -7,8 +7,9 @@ import { updateConfirmModal } from '../../../state/ducks/modalDialog';
 import { resetLeftOverlayMode } from '../../../state/ducks/section';
 import { getConversationRequestsIds } from '../../../state/selectors/conversations';
 import { useSelectedConversationKey } from '../../../state/selectors/selectedConversation';
-import { SessionButton, SessionButtonColor } from '../../basic/SessionButton';
+import { SessionButton } from '../../basic/SessionButton';
 import { SpacerLG } from '../../basic/Text';
+import { SessionButtonColor } from '../../buttons/types';
 import { ConversationListItem } from '../conversation-list-item/ConversationListItem';
 
 const MessageRequestListPlaceholder = styled.div`

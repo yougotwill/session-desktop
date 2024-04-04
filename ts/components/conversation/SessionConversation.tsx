@@ -47,7 +47,7 @@ import { AttachmentUtil, GoogleChrome, arrayBufferToObjectURL } from '../../util
 import { getCurrentRecoveryPhrase } from '../../util/storage';
 import { EmptyMessageView } from '../EmptyMessageView';
 import { SplitViewContainer } from '../SplitViewContainer';
-import { SessionButtonColor } from '../basic/SessionButton';
+import { SessionButtonColor } from '../buttons/types';
 import { InConversationCallContainer } from '../calling/InConversationCallContainer';
 import { LightboxGallery, MediaItemType } from '../lightbox/LightboxGallery';
 import { NoMessageInConversation } from './SubtleNotification';

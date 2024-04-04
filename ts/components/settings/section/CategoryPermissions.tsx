@@ -4,8 +4,8 @@ import useUpdate from 'react-use/lib/useUpdate';
 import { SettingsKey } from '../../../data/settings-key';
 import { CallManager, ToastUtils } from '../../../session/utils';
 import { updateConfirmModal } from '../../../state/ducks/modalDialog';
-import { SessionButtonColor } from '../../basic/SessionButton';
 
+import { SessionButtonColor } from '../../buttons/types';
 import { SessionToggleWithDescription } from '../SessionSettingListItem';
 
 const toggleCallMediaPermissions = async (triggerUIUpdate: () => void) => {

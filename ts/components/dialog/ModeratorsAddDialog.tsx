@@ -10,7 +10,8 @@ import { isDarkTheme } from '../../state/selectors/theme';
 import { SessionHeaderSearchInput } from '../SessionHeaderSearchInput';
 import { SessionWrapperModal } from '../SessionWrapperModal';
 import { Flex } from '../basic/Flex';
-import { SessionButton, SessionButtonType } from '../basic/SessionButton';
+import { SessionButton } from '../basic/SessionButton';
+import { SessionButtonType } from '../buttons/types';
 import { SessionSpinner } from '../loading';
 
 type Props = {
