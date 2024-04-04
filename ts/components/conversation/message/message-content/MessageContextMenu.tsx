@@ -16,7 +16,7 @@ import {
   removeSenderFromModerator,
 } from '../../../../interactions/messageInteractions';
 import { MessageRenderingProps } from '../../../../models/messageType';
-import { pushUnblockToSend } from '../../../../session/utils/Toast';
+import { ToastUtils } from '../../../../session/utils';
 import {
   openRightPanel,
   showMessageInfoView,
@@ -245,7 +245,7 @@ export const MessageContextMenu = (props: Props) => {
 
   const onReply = useCallback(() => {
     if (isSelectedBlocked) {
-      pushUnblockToSend();
+      ToastUtils.pushUnblockToSend();
       return;
     }
     void replyToMessage(messageId);

@@ -1,13 +1,13 @@
 import { assert } from 'chai';
 import { shuffle } from 'lodash';
 
-import { IMAGE_JPEG } from '../../../types/MIME';
 import {
   groupMediaItemsByDate,
   Section,
 } from '../../../components/conversation/media-gallery/groupMediaItemsByDate';
-import { TestUtils } from '../../test-utils';
 import { MediaItemType } from '../../../components/lightbox/LightboxGallery';
+import { IMAGE_JPEG } from '../../../types/MIME';
+import { TestUtils } from '../../test-utils';
 
 const generatedMessageSenderKey = TestUtils.generateFakePubKey().key;
 
