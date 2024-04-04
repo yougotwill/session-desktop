@@ -1,7 +1,8 @@
-import styled from 'styled-components';
+import { MouseEvent } from 'react';
+import styled, { CSSProperties } from 'styled-components';
 import { HTMLDirection } from '../../util/i18n';
 
-export interface FlexProps {
+export type FlexProps = {
   children?: any;
   className?: string;
   container?: boolean;
@@ -39,9 +40,13 @@ export interface FlexProps {
   maxHeight?: string;
   // RTL support
   dir?: HTMLDirection;
-}
+  // Html Props
+  id?: string;
+  onClick?: (e: MouseEvent<HTMLDivElement>) => void;
+  style?: CSSProperties;
+};
 
-export const Flex = styled.div<FlexProps>`
+const StyledFlex = styled.div<FlexProps>`
   display: ${props => (props.container ? 'flex' : 'block')};
   justify-content: ${props => props.justifyContent || 'flex-start'};
   flex-direction: ${props => props.flexDirection || 'row'};
@@ -58,3 +63,7 @@ export const Flex = styled.div<FlexProps>`
   min-width: ${props => props.minWidth || 'none'};
   direction: ${props => props.dir || undefined};
 `;
+
+export const Flex = (props: FlexProps) => {
+  return <StyledFlex {...props} />;
+};
