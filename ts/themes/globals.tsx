@@ -177,7 +177,7 @@ export function declareCSSVariables(variables: Record<string, string>) {
   // eslint-disable-next-line no-restricted-syntax
   for (const [key, value] of Object.entries(variables)) {
     output += `${key}: ${value};\n`;
+    document.documentElement.style.setProperty(key, value);
   }
-
   return output;
 }
