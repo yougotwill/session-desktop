@@ -2,6 +2,7 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { EditProfilePictureModalProps } from '../../components/dialog/EditProfilePictureModal';
 import { SessionConfirmDialogProps } from '../../components/dialog/SessionConfirm';
 import { PasswordAction } from '../../components/dialog/SessionPasswordDialog';
+import { CommandPaletteModalProps } from '../../components/palette/CommandPalette';
 import { Noop } from '../../types/Util';
 
 export type BanType = 'ban' | 'unban';
@@ -38,6 +39,8 @@ export type ReactModalsState = {
 
 export type EditProfilePictureModalState = EditProfilePictureModalProps | null;
 
+export type CommandPaletteModalState = CommandPaletteModalProps | null;
+
 export type ModalState = {
   confirmModal: ConfirmModalState;
   inviteContactModal: InviteContactModalState;
@@ -56,6 +59,7 @@ export type ModalState = {
   reactListModalState: ReactModalsState;
   reactClearAllModalState: ReactModalsState;
   editProfilePictureModalState: EditProfilePictureModalState;
+  commandPaletteModalState: CommandPaletteModalState;
 };
 
 export const initialModalState: ModalState = {
@@ -76,6 +80,7 @@ export const initialModalState: ModalState = {
   reactListModalState: null,
   reactClearAllModalState: null,
   editProfilePictureModalState: null,
+  commandPaletteModalState: null,
 };
 
 const ModalSlice = createSlice({
@@ -133,6 +138,9 @@ const ModalSlice = createSlice({
     updateEditProfilePictureModel(state, action: PayloadAction<EditProfilePictureModalState>) {
       return { ...state, editProfilePictureModalState: action.payload };
     },
+    updateCommandPaletteModal(state, action: PayloadAction<CommandPaletteModalProps | null>) {
+      return { ...state, commandPaletteModalState: action.payload };
+    },
   },
 });
 
@@ -155,5 +163,6 @@ export const {
   updateReactListModal,
   updateReactClearAllModal,
   updateEditProfilePictureModel,
+  updateCommandPaletteModal,
 } = actions;
 export const modalReducer = reducer;

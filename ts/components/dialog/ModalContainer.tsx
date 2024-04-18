@@ -3,6 +3,7 @@ import {
   getAddModeratorsModal,
   getBanOrUnbanUserModalState,
   getChangeNickNameDialog,
+  getCommandPaletteModalState,
   getConfirmModal,
   getDeleteAccountModalState,
   getEditProfileDialog,
@@ -18,6 +19,7 @@ import {
   getUpdateGroupNameModal,
   getUserDetailsModal,
 } from '../../state/selectors/modal';
+import { CommandPalette } from '../palette/CommandPalette';
 import { BanOrUnBanUserDialog } from './BanOrUnbanUserDialog';
 import { DeleteAccountModal } from './DeleteAccountModal';
 import { EditProfileDialog } from './EditProfileDialog';
@@ -54,6 +56,7 @@ export const ModalContainer = () => {
   const reactListModalState = useSelector(getReactListDialog);
   const reactClearAllModalState = useSelector(getReactClearAllDialog);
   const editProfilePictureModalState = useSelector(getEditProfilePictureModalState);
+  const commandPaletteModalState = useSelector(getCommandPaletteModalState);
 
   return (
     <>
@@ -78,6 +81,7 @@ export const ModalContainer = () => {
       {editProfilePictureModalState && (
         <EditProfilePictureModal {...editProfilePictureModalState} />
       )}
+      {commandPaletteModalState && <CommandPalette {...commandPaletteModalState} />}
     </>
   );
 };

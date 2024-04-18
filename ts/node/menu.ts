@@ -1,10 +1,10 @@
 import { isString } from 'lodash';
-import { LocaleMessagesType } from './locale';
 import { Noop } from '../types/Util';
+import { LocaleMessagesType } from './locale';
 
 export const createTemplate = (
   options: {
-    openReleaseNotes: () => void;
+    openReleaseNotes: (appVersion: string) => void;
     openSupportPage: () => void;
     platform: string;
     showAbout: () => void;

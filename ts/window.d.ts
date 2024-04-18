@@ -26,6 +26,8 @@ declare global {
     setSettingValue: (id: string, value: any) => Promise<void>;
 
     i18n: LocalizerType;
+    // TODO add typings
+    commands: any;
     log: any;
     sessionFeatureFlags: {
       useOnionRequests: boolean;

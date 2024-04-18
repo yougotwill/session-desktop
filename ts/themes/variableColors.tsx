@@ -204,6 +204,12 @@ export type ThemeColorVariables = {
   /* File Dropzone */
   '--file-dropzone-background-color': string;
   '--file-dropzone-border-color': string;
+
+  /* Command Palette */
+  '--command-palette-background-color': string;
+  '--command-palette-background-hover-color': string;
+  '--command-palette-background-selected-color': string;
+  '--command-palette-text-color': string;
 };
 
 export function loadThemeColors(variables: ThemeColorVariables) {

@@ -161,6 +161,7 @@ import { setLastestRelease } from '../node/latest_desktop_release';
 import { load as loadLocale, LocaleMessagesWithNameType } from '../node/locale';
 import { isDevProd, isTestIntegration } from '../shared/env_vars';
 import { classicDark } from '../themes';
+import { openReleaseNotes, openSupportPage } from '../util/commands';
 
 // Both of these will be set after app fires the 'ready' event
 let logger: Logger | null = null;
@@ -515,16 +516,6 @@ ipc.once('ready-for-updates', readyForUpdates);
 const TEN_MINUTES = 10 * 60 * 1000;
 setTimeout(readyForUpdates, TEN_MINUTES);
 
-function openReleaseNotes() {
-  void shell.openExternal(
-    `https://github.com/oxen-io/session-desktop/releases/tag/v${app.getVersion()}`
-  );
-}
-
-function openSupportPage() {
-  void shell.openExternal('https://docs.oxen.io/products-built-on-oxen/session');
-}
-
 let passwordWindow: BrowserWindow | null = null;
 async function showPasswordWindow() {
   if (passwordWindow) {
@@ -843,7 +834,7 @@ function setupMenu() {
     showDebugLog: showDebugLogWindow,
     showWindow,
     showAbout,
-    openReleaseNotes,
+    openReleaseNotes: () => openReleaseNotes(app.getVersion()),
     openSupportPage,
     platform,
   };

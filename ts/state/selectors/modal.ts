@@ -4,6 +4,7 @@ import {
   AddModeratorsModalState,
   BanOrUnbanUserModalState,
   ChangeNickNameModalState,
+  CommandPaletteModalState,
   ConfirmModalState,
   DeleteAccountModalState,
   EditProfileModalState,
@@ -108,4 +109,9 @@ export const getReactClearAllDialog = createSelector(
 export const getEditProfilePictureModalState = createSelector(
   getModal,
   (state: ModalState): EditProfilePictureModalState => state.editProfilePictureModalState
+);
+
+export const getCommandPaletteModalState = createSelector(
+  getModal,
+  (state: ModalState): CommandPaletteModalState => state.commandPaletteModalState
 );

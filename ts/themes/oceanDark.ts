@@ -163,4 +163,9 @@ export const oceanDark: ThemeColorVariables = {
 
   '--file-dropzone-background-color': 'var(--message-link-preview-background-color)',
   '--file-dropzone-border-color': 'var(--primary-color)',
+
+  '--command-palette-background-color': 'var(--background-primary-color)',
+  '--command-palette-background-hover-color': THEMES.OCEAN_DARK.COLOR3,
+  '--command-palette-background-selected-color': THEMES.OCEAN_DARK.COLOR2,
+  '--command-palette-text-color': 'var(--text-primary-color)',
 };

@@ -163,4 +163,9 @@ export const oceanLight: ThemeColorVariables = {
 
   '--file-dropzone-background-color': 'var(--message-link-preview-background-color)',
   '--file-dropzone-border-color': 'var(--text-primary-color)',
+
+  '--command-palette-background-color': 'var(--background-primary-color)',
+  '--command-palette-background-hover-color': THEMES.OCEAN_LIGHT.COLOR5,
+  '--command-palette-background-selected-color': THEMES.OCEAN_LIGHT.COLOR6,
+  '--command-palette-text-color': 'var(--text-primary-color)',
 };
