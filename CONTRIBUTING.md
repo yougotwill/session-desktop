@@ -14,17 +14,16 @@ You're most likely to have your pull request accepted if it addresses an existin
 
 Of course we encourage community developers to work on ANY issue filed on our Github regardless of how it’s tagged, however if you pick up or create an issue without the “Good first issue” tag it would be best if you leave a comment on the issue so that the core team can give you any guidance required, especially around UI heavy features or issues which require cross platform integration.
 
-## Developer Setup
+## Developer Setup Tips
 
-First, you'll need [Node.js](https://nodejs.org/) which matches our current version.
-You can check [`.nvmrc` in the `clearnet` branch](https://github.com/oxen-io/session-desktop/blob/clearnet/.nvmrc) to see what the current version is. If you have [nvm](https://github.com/creationix/nvm)
-you can just run `nvm use` in the project directory and it will switch to the project's
-desired Node.js version.
+## Node.js
 
-If you are using Windows [nvm for windows](https://github.com/coreybutler/nvm-windows) is
-still useful, but it doesn't support `.nvmrc` files. In this case you will need to `nvm install` the projects node version and `nvm use` the installed version
+You'll need a [Node.js](https://nodejs.org/) version which matches our current version. You can check [`.nvmrc` in the `unstable` branch](https://github.com/oxen-io/session-desktop/blob/unstable/.nvmrc) to see what the current version is.
 
-Then you need `git`, if you don't have that yet: https://git-scm.com/
+If you use other node versions you might have or need a node version manager.
+
+- [nvm](https://github.com/creationix/nvm) - you can run `nvm use` in the project directory and it will use the node version specified in `.nvmrc`.
+- Some node version management tools can read from the `.nvmrc` file and automatically make the change. If you use [asdf](https://asdf-vm.com/) you can make a [config change](https://asdf-vm.com/guide/getting-started.html#using-existing-tool-version-files) to support the `.nvmrc` file.
 
 ## Platform Specific Instructions
 
