@@ -33,7 +33,89 @@ If you use other node versions you might have or need a node version manager.
 
 ### Windows
 
-Building on Windows is a pain, but is possible see our CI/Windows build machine prerequisites here [Windows-2022 GH image](https://github.com/actions/runner-images/blob/main/images/win/Windows2022-Readme.md)
+Building on Windows can be a bit tricky. You can set this up manually, but we recommend using [Chocolatey](https://chocolatey.org/) to install the necessary dependencies.
+
+The following instructions will install the following:
+
+- [Git](https://git-scm.com/download/win)
+- [CMake](https://cmake.org/download/)
+- [Visual Studio 2022](https://visualstudio.microsoft.com/downloads/)
+- [Visual Studio C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/)
+- [Node.js](https://nodejs.org/en/download/)
+- [Python](https://www.python.org/downloads/)
+
+Setup instructions for Windows using Chocolatey:
+
+- Open PowerShell as Administrator
+
+- Install [Chocolatey](https://docs.chocolatey.org/en-us/choco/setup#installing-chocolatey-cli)
+
+  ```PowerShell
+  Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+  ```
+
+- Install [Git](https://git-scm.com/download/win)
+
+  ```shell
+  choco install git
+  ```
+
+- Install [CMake](https://cmake.org/download/)
+
+  CMake does not add itself to the system path by default, so you'll need specify the `ADD_CMAKE_TO_PATH` argument.
+
+  ```shell
+  choco install cmake --installargs 'ADD_CMAKE_TO_PATH=System'
+  ```
+
+- Install [Visual Studio 2022](https://visualstudio.microsoft.com/downloads/)
+
+  ```shell
+  choco install visualstudio2022community
+  ```
+
+- Install [Visual C++ build tools workload for Visual Studio 2022](https://community.chocolatey.org/packages/visualstudio2022-workload-vctools)
+
+  ```shell
+  choco install visualstudio2022-workload-vctools
+  ```
+
+- Install [Node.js](https://nodejs.org/en/download/) 18.15.0
+
+  If you have multiple node version installed and/or use a node version manager you should install a Node how you normally would.
+
+  If you are using [nvm for windows](https://github.com/coreybutler/nvm-windows) you will need to run `nvm install <version>` and `nvm use <version>` as it doesn't support `.nvmrc` files.
+
+  ```shell
+  choco install nodejs --version 18.15.0
+  ```
+
+- Install [Python](https://www.python.org/downloads/) 3.12.2
+
+  ```shell
+  choco install python --version 3.12.2
+  ```
+
+- Install [setuptools](https://pypi.org/project/setuptools/)
+
+  Setuptools was removed in python 3.12, so you'll need to install it manually.
+
+  ```shell
+  pip install setuptools
+  ```
+
+- Install [Yarn Classic](https://classic.yarnpkg.com/en/docs/install/#windows-stable)
+
+  ```shell
+  npm install --global yarn
+  ```
+
+  You'll likely encounter an issue with windows preventing you from running scripts when you run the `yarn` command, See: [Exclusion Policies](https:/go.microsoft.com/fwlink/?LinkID=135170). If you do, you can fix it by running the following command:
+
+  ```PowerShell
+  Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+  ```
+
 
 ### Linux
 
