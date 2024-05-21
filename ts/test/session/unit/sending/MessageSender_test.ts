@@ -12,7 +12,6 @@ import { GetNetworkTime } from '../../../../session/apis/snode_api/getNetworkTim
 import { SnodeNamespaces } from '../../../../session/apis/snode_api/namespaces';
 import { Onions } from '../../../../session/apis/snode_api/onions';
 import { ConvoHub } from '../../../../session/conversations/ConversationController';
-import { MessageEncrypter } from '../../../../session/crypto';
 import { OnionSending } from '../../../../session/onions/onionSend';
 import { OnionV4 } from '../../../../session/onions/onionv4';
 import { MessageSender } from '../../../../session/sending';
@@ -29,6 +28,7 @@ import {
   stubValidSnodeSwarm,
 } from '../../../test-utils/utils';
 import { TEST_identityKeyPair } from '../crypto/MessageEncrypter_test';
+import { MessageEncrypter } from '../../../../session/crypto/MessageEncrypter';
 
 describe('MessageSender', () => {
   afterEach(() => {

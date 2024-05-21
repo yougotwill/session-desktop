@@ -31,6 +31,8 @@ export enum KeyPrefixType {
 export class PubKey {
   public static readonly PUBKEY_LEN = 66;
   public static readonly PUBKEY_LEN_NO_PREFIX = PubKey.PUBKEY_LEN - 2;
+  public static readonly PUBKEY_BYTE_COUNT = PubKey.PUBKEY_LEN / 2;
+  public static readonly PUBKEY_BYTE_COUNT_NO_PREFIX = PubKey.PUBKEY_BYTE_COUNT - 1;
   public static readonly HEX = '[0-9a-fA-F]';
 
   // This is a temporary fix to allow groupPubkeys created from mobile to be handled correctly
@@ -41,7 +43,7 @@ export class PubKey {
   public static readonly PREFIX_GROUP_TEXTSECURE = '__textsecure_group__!';
   // prettier-ignore
   private static readonly regex: RegExp = new RegExp(
-    `^(${PubKey.PREFIX_GROUP_TEXTSECURE})?(${KeyPrefixType.standard}|${KeyPrefixType.blinded15}|${KeyPrefixType.blinded25}|${KeyPrefixType.unblinded}|${KeyPrefixType.groupV2})?(${PubKey.HEX}{64}|${PubKey.HEX}{32})$`
+    `^(${PubKey.PREFIX_GROUP_TEXTSECURE})?(${KeyPrefixType.standard}|${KeyPrefixType.blinded15}|${KeyPrefixType.blinded25}|${KeyPrefixType.unblinded}|${KeyPrefixType.groupV2})?(${PubKey.HEX}{64}|${PubKey.HEX}{${PubKey.PUBKEY_BYTE_COUNT_NO_PREFIX}})$`
   );
   /**
    * If you want to update this regex. Be sure that those are matches ;
@@ -140,7 +142,7 @@ export class PubKey {
     const len = pubkey.length;
 
     // we do not support blinded prefix, see Note above
-    const isProdOrDevValid = len === 33 * 2 && /^05/.test(pubkey); // prod pubkey can have only 66 chars and the 05 only.
+    const isProdOrDevValid = len === PubKey.PUBKEY_LEN && /^05/.test(pubkey); // prod pubkey can have only 66 chars and the 05 only.
 
     // dev pubkey on testnet are now 66 chars too with the prefix, so every sessionID needs 66 chars and the prefix to be valid
     if (!isProdOrDevValid) {

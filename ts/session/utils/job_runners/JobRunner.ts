@@ -7,6 +7,7 @@ import {
   AvatarDownloadPersistedData,
   FetchMsgExpirySwarmPersistedData,
   GroupInvitePersistedData,
+  GroupPendingRemovalsPersistedData,
   GroupPromotePersistedData,
   GroupSyncPersistedData,
   PersistedJob,
@@ -373,6 +374,11 @@ const groupPromoteJobRunner = new PersistedJobRunner<GroupPromotePersistedData>(
   null
 );
 
+const groupPendingRemovalJobRunner = new PersistedJobRunner<GroupPendingRemovalsPersistedData>(
+  'GroupPendingRemovalJob',
+  null
+);
+
 const updateMsgExpiryRunner = new PersistedJobRunner<UpdateMsgExpirySwarmPersistedData>(
   'UpdateMsgExpirySwarmJob',
   null
@@ -391,4 +397,5 @@ export const runners = {
   avatarDownloadRunner,
   groupInviteJobRunner,
   groupPromoteJobRunner,
+  groupPendingRemovalJobRunner,
 };

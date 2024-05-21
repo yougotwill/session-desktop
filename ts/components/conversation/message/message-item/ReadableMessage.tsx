@@ -1,6 +1,5 @@
 import { debounce, noop } from 'lodash';
 import React, {
-  AriaRole,
   MouseEventHandler,
   SessionDataTestId,
   useCallback,
@@ -39,7 +38,7 @@ export type ReadableMessageProps = {
   isUnread: boolean;
   onClick?: MouseEventHandler<HTMLElement>;
   onDoubleClickCapture?: MouseEventHandler<HTMLElement>;
-  role?: AriaRole;
+  role?: string;
   dataTestId: SessionDataTestId;
   onContextMenu?: (e: React.MouseEvent<HTMLElement>) => void;
   isControlMessage?: boolean;

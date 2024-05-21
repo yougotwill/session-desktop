@@ -33,6 +33,7 @@ async function doSnodeBatchRequestNoRetries(
   targetNode: Snode,
   timeout: number,
   associatedWith: string | null,
+  allow401s: boolean,
   method: MethodBatchType = 'batch'
 ): Promise<NotEmptyArrayOfBatchResults> {
   window.log.debug(
@@ -53,6 +54,7 @@ async function doSnodeBatchRequestNoRetries(
     params: { requests: subRequests },
     targetNode,
     associatedWith,
+    allow401s,
     timeout,
   });
   if (!result) {
@@ -74,6 +76,7 @@ async function doSnodeBatchRequestNoRetries(
         body: JSON.stringify(resultRow.body),
         associatedWith: associatedWith || undefined,
         destinationSnodeEd25519: targetNode.pubkey_ed25519,
+        allow401s,
       });
     }
   }
@@ -98,6 +101,7 @@ async function doUnsignedSnodeBatchRequestNoRetries(
   targetNode: Snode,
   timeout: number,
   associatedWith: string | null,
+  allow401s: boolean,
   method: MethodBatchType = 'batch'
 ): Promise<NotEmptyArrayOfBatchResults> {
   const signedSubRequests = await MessageSender.signSubRequests(unsignedSubRequests);
@@ -106,6 +110,7 @@ async function doUnsignedSnodeBatchRequestNoRetries(
     targetNode,
     timeout,
     associatedWith,
+    allow401s,
     method
   );
 }

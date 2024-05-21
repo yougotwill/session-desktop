@@ -16,8 +16,9 @@ async function getSnodePoolFromSnode(targetNode: Snode): Promise<Array<Snode>> {
   const results = await BatchRequests.doUnsignedSnodeBatchRequestNoRetries(
     [subrequest],
     targetNode,
-    4000,
-    null
+    10000,
+    null,
+    false
   );
 
   const firstResult = results[0];

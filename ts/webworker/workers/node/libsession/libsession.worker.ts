@@ -236,9 +236,15 @@ onmessage = async (e: { data: [number, ConfigWrapperObjectTypesMeta, string, ...
       }
       throw new Error(`Unhandled init wrapper type: ${config}`);
     }
-
-    if (action === 'multiEncrypt') {
-      await MultiEncryptWrapperNode.multiEncrypt(args[0]);
+    if (action === 'free') {
+      if (isMetaWrapperType(config)) {
+        const pk = getGroupPubkeyFromWrapperType(config);
+        metaGroupWrappers.delete(pk);
+        postMessage([jobId, null, null]);
+        return;
+      }
+      // We will need to merge onboarding's code to handle the other type of wrappers
+      throw new Error(`Unhandled init wrapper type: ${config}`);
     }
 
     const wrapper = isUserConfigWrapperType(config)

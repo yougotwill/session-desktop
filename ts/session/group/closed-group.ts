@@ -18,7 +18,7 @@ import { GetNetworkTime } from '../apis/snode_api/getNetworkTime';
 import { SnodeNamespaces } from '../apis/snode_api/namespaces';
 import { ConvoHub } from '../conversations';
 import { generateCurve25519KeyPairWithoutPrefix } from '../crypto';
-import { encryptUsingSessionProtocol } from '../crypto/MessageEncrypter';
+import { MessageEncrypter } from '../crypto/MessageEncrypter';
 import { DisappearingMessages } from '../disappearing_messages';
 import { DisappearAfterSendOnly, DisappearingMessageUpdate } from '../disappearing_messages/types';
 import { ClosedGroupAddedMembersMessage } from '../messages/outgoing/controlMessage/group/ClosedGroupAddedMembersMessage';
@@ -521,7 +521,10 @@ async function buildEncryptionKeyPairWrappers(
 
   const wrappers = await Promise.all(
     targetMembers.map(async pubkey => {
-      const ciphertext = await encryptUsingSessionProtocol(PubKey.cast(pubkey), plaintext);
+      const ciphertext = await MessageEncrypter.encryptUsingSessionProtocol(
+        PubKey.cast(pubkey),
+        plaintext
+      );
       return new SignalService.DataMessage.ClosedGroupControlMessage.KeyPairWrapper({
         encryptedKeyPair: ciphertext,
         publicKey: fromHexToArray(pubkey),

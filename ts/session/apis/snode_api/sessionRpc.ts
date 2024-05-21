@@ -29,12 +29,14 @@ async function doRequestNoRetries({
   associatedWith,
   targetNode,
   timeout,
+  allow401s,
 }: {
   url: string;
   options: LokiFetchOptions;
   targetNode?: Snode;
   associatedWith: string | null;
   timeout: number;
+  allow401s: boolean;
 }): Promise<undefined | SnodeResponse> {
   const method = options.method || 'GET';
 
@@ -57,6 +59,7 @@ async function doRequestNoRetries({
         body: fetchOptions.body,
         headers: fetchOptions.headers,
         associatedWith: associatedWith || undefined,
+        allow401s,
       });
       if (!fetchResult) {
         return undefined;
@@ -116,6 +119,7 @@ async function snodeRpcNoRetries(
     params,
     targetNode,
     associatedWith,
+    allow401s,
     timeout = 10000,
   }: {
     method: string;
@@ -123,6 +127,7 @@ async function snodeRpcNoRetries(
     targetNode: Snode;
     associatedWith: string | null;
     timeout?: number;
+    allow401s: boolean;
   } // the user pubkey this call is for. if the onion request fails, this is used to handle the error for this user swarm for instance
 ): Promise<undefined | SnodeResponse> {
   const url = `https://${targetNode.ip}:${targetNode.port}/storage_rpc/v1`;
@@ -146,6 +151,7 @@ async function snodeRpcNoRetries(
     targetNode,
     associatedWith,
     timeout,
+    allow401s,
   });
 }
 

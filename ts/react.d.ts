@@ -34,6 +34,7 @@ declare module 'react' {
     | 'header-conversation-name'
     | 'disappear-messages-type-and-time'
     | 'message-input'
+    | 'message-input-text-area'
     | 'messages-container'
     | 'decline-and-block-message-request'
     | 'session-dropdown'

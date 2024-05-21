@@ -19,7 +19,7 @@ import {
 import { getFocusedSection } from '../../state/selectors/section';
 import { getOurNumber } from '../../state/selectors/user';
 
-import { cleanUpOldDecryptedMedias } from '../../session/crypto/DecryptedAttachmentsManager';
+import { DecryptedAttachmentsManager } from '../../session/crypto/DecryptedAttachmentsManager';
 
 import { DURATION } from '../../session/constants';
 
@@ -46,7 +46,6 @@ import { switchThemeTo } from '../../themes/switchTheme';
 import { getOppositeTheme } from '../../util/theme';
 
 import { ReleasedFeatures } from '../../util/releaseFeature';
-import { MultiEncryptWrapperActions } from '../../webworker/workers/browser/libsession_worker_interface';
 
 const Section = (props: { type: SectionType }) => {
   const ourNumber = useSelector(getOurNumber);
@@ -83,7 +82,6 @@ const Section = (props: { type: SectionType }) => {
   };
 
   if (type === SectionType.Profile) {
-    void MultiEncryptWrapperActions.multiEncrypt({});
     return (
       <Avatar
         size={AvatarSize.XS}
@@ -270,7 +268,10 @@ export const ActionsPanel = () => {
     return () => clearTimeout(timeout);
   }, []);
 
-  useInterval(cleanUpOldDecryptedMedias, startCleanUpMedia ? cleanUpMediasInterval : null);
+  useInterval(
+    DecryptedAttachmentsManager.cleanUpOldDecryptedMedias,
+    startCleanUpMedia ? cleanUpMediasInterval : null
+  );
 
   useInterval(() => {
     if (!ourPrimaryConversation) {

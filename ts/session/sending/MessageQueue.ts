@@ -38,7 +38,6 @@ import { GroupUpdateDeleteMemberContentMessage } from '../messages/outgoing/cont
 import { GroupUpdateInfoChangeMessage } from '../messages/outgoing/controlMessage/group_v2/to_group/GroupUpdateInfoChangeMessage';
 import { GroupUpdateMemberChangeMessage } from '../messages/outgoing/controlMessage/group_v2/to_group/GroupUpdateMemberChangeMessage';
 import { GroupUpdateMemberLeftMessage } from '../messages/outgoing/controlMessage/group_v2/to_group/GroupUpdateMemberLeftMessage';
-import { GroupUpdateDeleteMessage } from '../messages/outgoing/controlMessage/group_v2/to_user/GroupUpdateDeleteMessage';
 import { GroupUpdateInviteMessage } from '../messages/outgoing/controlMessage/group_v2/to_user/GroupUpdateInviteMessage';
 import { GroupUpdatePromoteMessage } from '../messages/outgoing/controlMessage/group_v2/to_user/GroupUpdatePromoteMessage';
 import { OpenGroupVisibleMessage } from '../messages/outgoing/visibleMessage/OpenGroupVisibleMessage';
@@ -238,8 +237,7 @@ export class MessageQueue {
       | GroupUpdateMemberChangeMessage
       | GroupUpdateInfoChangeMessage
       | GroupUpdateDeleteMemberContentMessage
-      | GroupUpdateMemberLeftMessage
-      | GroupUpdateDeleteMessage;
+      | GroupUpdateMemberLeftMessage;
   }) {
     if (!message.destination || !PubKey.is03Pubkey(message.destination)) {
       throw new Error('Invalid group message passed in sendToGroupV2NonDurably.');

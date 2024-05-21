@@ -5,10 +5,7 @@ import { blobToArrayBuffer, dataURLToBlob } from 'blob-util';
 import moment from 'moment';
 import { toLogFormat } from './Errors';
 
-import {
-  getDecryptedBlob,
-  getDecryptedMediaUrl,
-} from '../../session/crypto/DecryptedAttachmentsManager';
+import { DecryptedAttachmentsManager } from '../../session/crypto/DecryptedAttachmentsManager';
 import { ToastUtils } from '../../session/utils';
 import { isTestIntegration } from '../../shared/env_vars';
 import { GoogleChrome } from '../../util';
@@ -42,7 +39,7 @@ export const getImageDimensions = async ({
       reject(error);
     });
     // image/jpg is hard coded here but does not look to cause any issues
-    void getDecryptedMediaUrl(objectUrl, 'image/jpg', false)
+    void DecryptedAttachmentsManager.getDecryptedMediaUrl(objectUrl, 'image/jpg', false)
       .then(decryptedUrl => {
         image.src = decryptedUrl;
       })
@@ -62,7 +59,7 @@ export const makeImageThumbnailBuffer = async ({
       'makeImageThumbnailBuffer can only be called with what GoogleChrome image type supports'
     );
   }
-  const decryptedBlob = await getDecryptedBlob(objectUrl, contentType);
+  const decryptedBlob = await DecryptedAttachmentsManager.getDecryptedBlob(objectUrl, contentType);
   const scaled = await autoScaleForThumbnail({ contentType, blob: decryptedBlob });
 
   return blobToArrayBuffer(scaled.blob);
@@ -102,11 +99,13 @@ export const makeVideoScreenshot = async ({
       reject(error);
     });
 
-    void getDecryptedMediaUrl(objectUrl, contentType, false).then(decryptedUrl => {
-      video.src = decryptedUrl;
-      video.muted = true;
-      void video.play(); // for some reason, this is to be started, otherwise the generated thumbnail will be empty
-    });
+    void DecryptedAttachmentsManager.getDecryptedMediaUrl(objectUrl, contentType, false).then(
+      decryptedUrl => {
+        video.src = decryptedUrl;
+        video.muted = true;
+        void video.play(); // for some reason, this is to be started, otherwise the generated thumbnail will be empty
+      }
+    );
   });
 
 export async function getVideoDuration({
@@ -129,7 +128,7 @@ export async function getVideoDuration({
       reject(error);
     });
 
-    void getDecryptedMediaUrl(objectUrl, contentType, false)
+    void DecryptedAttachmentsManager.getDecryptedMediaUrl(objectUrl, contentType, false)
       .then(decryptedUrl => {
         video.src = decryptedUrl;
       })
@@ -163,7 +162,7 @@ export async function getAudioDuration({
       reject(error);
     });
 
-    void getDecryptedMediaUrl(objectUrl, contentType, false)
+    void DecryptedAttachmentsManager.getDecryptedMediaUrl(objectUrl, contentType, false)
       .then(decryptedUrl => {
         audio.src = decryptedUrl;
       })

@@ -5,7 +5,10 @@ import { useSelector } from 'react-redux';
 import { useIsPinned, useIsPrivate, useIsPrivateAndFriend } from '../../hooks/useParamSelector';
 import { ConvoHub } from '../../session/conversations';
 import { isSearching } from '../../state/selectors/search';
-import { getIsMessageSection } from '../../state/selectors/section';
+import {
+  getIsMessageRequestOverlayShown,
+  getIsMessageSection,
+} from '../../state/selectors/section';
 import { SessionContextMenuContainer } from '../SessionContextMenuContainer';
 import { useConvoIdFromContext } from '../leftpane/conversation-list-item/ConvoIdContext';
 import {
@@ -80,8 +83,9 @@ export const PinConversationMenuItem = (): JSX.Element | null => {
   const isPrivateAndFriend = useIsPrivateAndFriend(conversationId);
   const isPrivate = useIsPrivate(conversationId);
   const isPinned = useIsPinned(conversationId);
+  const isMessageRequest = useSelector(getIsMessageRequestOverlayShown);
 
-  if (isMessagesSection && (!isPrivate || (isPrivate && isPrivateAndFriend))) {
+  if (isMessagesSection && !isMessageRequest && (!isPrivate || (isPrivate && isPrivateAndFriend))) {
     const conversation = ConvoHub.use().get(conversationId);
 
     const togglePinConversation = () => {

@@ -8,7 +8,7 @@ interface Params extends GroupUpdateMessageParams {
 }
 
 /**
- * GroupUpdateDeleteMessage is sent as a 1o1 message to the recipient, not through the group's swarm.
+ * GroupUpdatePromoteMessage is sent as a 1o1 message to the recipient, not through the group's swarm.
  */
 export class GroupUpdatePromoteMessage extends GroupUpdateMessage {
   public readonly groupIdentitySeed: Params['groupIdentitySeed'];

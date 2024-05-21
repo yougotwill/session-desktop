@@ -85,11 +85,6 @@ message GroupUpdateInviteMessage {
   required bytes          adminSignature         = 4;
 }
 
-message GroupUpdateDeleteMessage {
- repeated string         memberSessionIds   = 1;
- required bytes          adminSignature     = 2;
-}
-
 message GroupUpdateInfoChangeMessage {
 	enum Type {
     NAME                  = 1;
@@ -139,13 +134,12 @@ message GroupUpdateDeleteMemberContentMessage {
 
 message GroupUpdateMessage {
   optional GroupUpdateInviteMessage               inviteMessage          = 1;
-  optional GroupUpdateDeleteMessage               deleteMessage          = 2;
-  optional GroupUpdateInfoChangeMessage           infoChangeMessage      = 3;
-  optional GroupUpdateMemberChangeMessage         memberChangeMessage    = 4;
-  optional GroupUpdatePromoteMessage              promoteMessage         = 5;
-  optional GroupUpdateMemberLeftMessage           memberLeftMessage      = 6;
-	optional GroupUpdateInviteResponseMessage       inviteResponse         = 7;
-	optional GroupUpdateDeleteMemberContentMessage  deleteMemberContent    = 8;
+  optional GroupUpdateInfoChangeMessage           infoChangeMessage      = 2;
+  optional GroupUpdateMemberChangeMessage         memberChangeMessage    = 3;
+  optional GroupUpdatePromoteMessage              promoteMessage         = 4;
+  optional GroupUpdateMemberLeftMessage           memberLeftMessage      = 5;
+	optional GroupUpdateInviteResponseMessage       inviteResponse         = 6;
+	optional GroupUpdateDeleteMemberContentMessage  deleteMemberContent    = 7;
 }
 
 

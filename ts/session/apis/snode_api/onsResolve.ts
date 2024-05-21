@@ -36,8 +36,9 @@ async function getSessionIDForOnsName(onsNameCase: string) {
     const results = await BatchRequests.doUnsignedSnodeBatchRequestNoRetries(
       [subRequest],
       targetNode,
-      4000,
-      null
+      10000,
+      null,
+      false
     );
     const firstResult = results[0];
     if (!firstResult || firstResult.code !== 200 || !firstResult.body) {

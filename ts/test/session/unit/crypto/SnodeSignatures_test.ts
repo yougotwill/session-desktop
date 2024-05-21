@@ -1,5 +1,6 @@
 import { expect, use } from 'chai';
 import chaiAsPromised from 'chai-as-promised';
+import { UserGroupsGet } from 'libsession_util_nodejs';
 import Sinon from 'sinon';
 import { HexString } from '../../../../node/hexStrings';
 import { getSodiumNode } from '../../../../node/sodiumNode';
@@ -14,23 +15,42 @@ import { fromBase64ToArray, fromHexToArray } from '../../../../session/utils/Str
 
 use(chaiAsPromised);
 
-const validGroupPk = '03eef710fcaaa73fd50c4311333f5c496e0fdbbe9e8a70fdfa95e7ec62d5032f5c';
+const validGroupPk = '030442ca9b758eefe0c42370696688b28f48f44bf44941fae4f3d5b41f6358c41d';
 const privKeyUint = concatUInt8Array(
-  fromHexToArray('cd8488c39bf9972739046d627e7796b2bc0e38e2fa99fc4edd59205c28f2cdb1'),
+  fromHexToArray('4db38882cf0a0fffcbb971eb2b1420c92bc836c6946cd97bdc0c2787b806549d'),
   fromHexToArray(validGroupPk.slice(2))
 ); // len 64
 
 const userEd25519Keypair = {
-  pubKey: '37e1631b002de498caf7c5c1712718bde7f257c6dadeed0c21abf5e939e6c309',
+  pubKey: 'bdd5eaf00eaf965ca63b7e8b119d8122d4647ffd5bb58daa1f78dfc54dd53989',
   privKey:
-    'be1d11154ff9b6de77873f0b6b0bcc460000000000000000000000000000000037e1631b002de498caf7c5c1712718bde7f257c6dadeed0c21abf5e939e6c309',
+    'b0e12943e22e8f71774c2c4205fed59800000000000000000000000000000000bdd5eaf00eaf965ca63b7e8b119d8122d4647ffd5bb58daa1f78dfc54dd53989',
 };
+
+// Keep the line below as we might need it for tests, and it is linked to the values above
+// const _currentUserSubAccountAuthData = fromHexToArray(
+// eslint-disable-next-line max-len
+//   '03030000cdbc07f46c4b322767675240d5945e902c75f0d3c46f36735b93773577d69e037c5d75d378a8e7183f9012b39bc27de7f81afe9c7000aa924fbcad8a7e6f12fec809adae65a1c427feb9c4b1ad453df403079f62203aa0563533b2b114f31b07'
+// );
+
+function getEmptyUserGroup() {
+  return {
+    secretKey: null,
+    authData: null,
+    invitePending: false,
+    joinedAtSeconds: 1234,
+    kicked: false,
+    name: '1243',
+    priority: 0,
+    pubkeyHex: validGroupPk,
+  } as UserGroupsGet;
+}
 
 const hardcodedTimestamp = 1234;
 
 async function verifySig(ret: WithSignature & { pubkey: string }, verificationData: string) {
   const without03 =
-    ret.pubkey.startsWith('03') || ret.pubkey.startsWith('05') ? ret.pubkey.slice(2) : ret.pubkey; //
+    ret.pubkey.startsWith('03') || ret.pubkey.startsWith('05') ? ret.pubkey.slice(2) : ret.pubkey;
   const pk = HexString.fromHexString(without03);
   const sodium = await getSodiumNode();
   const verified = sodium.crypto_sign_verify_detached(
@@ -161,98 +181,60 @@ describe('SnodeSignature', () => {
     });
   });
 
-  // describe('getSnodeGroupSubAccountSignatureParams', () => {
-  //   beforeEach(() => {
-  //     Sinon.stub(GetNetworkTime, 'now').returns(hardcodedTimestamp);
-  //   });
+  describe('getGroupSignatureByHashesParams', () => {
+    beforeEach(() => {
+      Sinon.stub(GetNetworkTime, 'now').returns(hardcodedTimestamp);
+    });
 
-  //   describe('retrieve', () => {
-  //     it('retrieve namespace ClosedGroupInfo', async () => {
-  //       const ret = await SnodeSignature.getSnodeGroupSignatureParams({
-  //         method: 'retrieve',
-  //         namespace: SnodeNamespaces.ClosedGroupInfo,
-  //         groupPk: validGroupPk,
-  //         groupIdentityPrivKey: privKeyUint,
-  //       });
-  //       expect(ret.pubkey).to.be.eq(validGroupPk);
+    describe('delete', () => {
+      it('can sign a delete with admin secretkey', async () => {
+        const hashes = ['hash4321', 'hash4221'];
+        const group = getEmptyUserGroup();
 
-  //       expect(ret.timestamp).to.be.eq(hardcodedTimestamp);
-  //       const verificationData = `retrieve${SnodeNamespaces.ClosedGroupInfo}${hardcodedTimestamp}`;
-  //       await verifySig(ret, verificationData);
-  //     });
+        const ret = await SnodeGroupSignature.getGroupSignatureByHashesParams({
+          method: 'delete',
+          groupPk: validGroupPk,
+          messagesHashes: hashes,
+          group: { ...group, secretKey: privKeyUint },
+        });
+        expect(ret.pubkey).to.be.eq(validGroupPk);
+        expect(ret.messages).to.be.deep.eq(hashes);
 
-  //     it('retrieve namespace ClosedGroupKeys', async () => {
-  //       const ret = await SnodeSignature.getSnodeGroupSignatureParams({
-  //         method: 'retrieve',
-  //         namespace: SnodeNamespaces.ClosedGroupKeys,
-  //         groupIdentityPrivKey: privKeyUint,
-  //         groupPk: validGroupPk,
-  //       });
-  //       expect(ret.pubkey).to.be.eq(validGroupPk);
+        const verificationData = `delete${hashes.join('')}`;
+        await verifySig(ret, verificationData);
+      });
 
-  //       expect(ret.timestamp).to.be.eq(hardcodedTimestamp);
-  //       const verificationData = `retrieve${SnodeNamespaces.ClosedGroupKeys}${hardcodedTimestamp}`;
+      it.skip('can sign a delete with authData if adminSecretKey is empty', async () => {
+        // we can't really test this atm. We'd need the full env of wrapper setup as we need need for the subaccountSign itself, part of the wrapper
+        // const hashes = ['hash4321', 'hash4221'];
+        // const group = getEmptyUserGroup();
+        // const ret = await SnodeGroupSignature.getGroupSignatureByHashesParams({
+        //   method: 'delete',
+        //   groupPk: validGroupPk,
+        //   messagesHashes: hashes,
+        //   group: { ...group, authData: currentUserSubAccountAuthData },
+        // });
+        // expect(ret.pubkey).to.be.eq(validGroupPk);
+        // expect(ret.messages).to.be.deep.eq(hashes);
+        // const verificationData = `delete${hashes.join('')}`;
+        // await verifySig(ret, verificationData);
+      });
 
-  //       await verifySig(ret, verificationData);
-  //     });
+      it('throws if none are set', async () => {
+        const hashes = ['hash4321', 'hash4221'];
 
-  //     it('retrieve namespace ClosedGroupMessages', async () => {
-  //       const ret = await SnodeSignature.getSnodeGroupSignatureParams({
-  //         method: 'retrieve',
-  //         namespace: SnodeNamespaces.ClosedGroupMessages,
-  //         groupIdentityPrivKey: privKeyUint,
-  //         groupPk: validGroupPk,
-  //       });
-  //       expect(ret.pubkey).to.be.eq(validGroupPk);
-
-  //       expect(ret.timestamp).to.be.eq(hardcodedTimestamp);
-  //       const verificationData = `retrieve${SnodeNamespaces.ClosedGroupMessages}${hardcodedTimestamp}`;
-  //       await verifySig(ret, verificationData);
-  //     });
-  //   });
-
-  //   describe('store', () => {
-  //     it('store namespace ClosedGroupInfo', async () => {
-  //       const ret = await SnodeSignature.getSnodeGroupSignatureParams({
-  //         method: 'store',
-  //         namespace: SnodeNamespaces.ClosedGroupInfo,
-  //         groupIdentityPrivKey: privKeyUint,
-  //         groupPk: validGroupPk,
-  //       });
-  //       expect(ret.pubkey).to.be.eq(validGroupPk);
-  //       expect(ret.timestamp).to.be.eq(hardcodedTimestamp);
-
-  //       const verificationData = `store${SnodeNamespaces.ClosedGroupInfo}${hardcodedTimestamp}`;
-  //       await verifySig(ret, verificationData);
-  //     });
-
-  //     it('store namespace ClosedGroupKeys', async () => {
-  //       const ret = await SnodeSignature.getSnodeGroupSubAccountSignatureParams({
-  //         method: 'store',
-  //         namespace: SnodeNamespaces.ClosedGroupKeys,
-  //         groupIdentityPrivKey: privKeyUint,
-  //         groupPk: validGroupPk,
-  //       });
-  //       expect(ret.pubkey).to.be.eq(validGroupPk);
-
-  //       expect(ret.timestamp).to.be.eq(hardcodedTimestamp);
-  //       const verificationData = `store${SnodeNamespaces.ClosedGroupKeys}${hardcodedTimestamp}`;
-  //       await verifySig(ret, verificationData);
-  //     });
-
-  //     it('store namespace ClosedGroupMessages', async () => {
-  //       const ret = await SnodeSignature.getSnodeGroupSubAccountSignatureParams({
-  //         method: 'store',
-  //         namespace: SnodeNamespaces.ClosedGroupMessages,
-  //         groupPk: validGroupPk,
-  //       });
-  //       expect(ret.groupPk).to.be.eq(validGroupPk);
-  //       expect(ret.timestamp).to.be.eq(hardcodedTimestamp);
-  //       const verificationData = `store${SnodeNamespaces.ClosedGroupMessages}${hardcodedTimestamp}`;
-  //       await verifySig(ret, verificationData);
-  //     });
-  //   });
-  // });
+        const group = getEmptyUserGroup();
+        const fn = async () =>
+          SnodeGroupSignature.getGroupSignatureByHashesParams({
+            method: 'delete',
+            groupPk: validGroupPk,
+            messagesHashes: hashes,
+            group,
+          });
+        expect(fn).to.throw;
+      });
+    });
+  });
 
   describe('generateUpdateExpiryGroupSignature', () => {
     it('throws if groupPk not given', async () => {

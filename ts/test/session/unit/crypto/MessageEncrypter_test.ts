@@ -5,7 +5,7 @@ import * as crypto from 'crypto';
 import Sinon, * as sinon from 'sinon';
 
 import { SignalService } from '../../../../protobuf';
-import { concatUInt8Array, getSodiumRenderer, MessageEncrypter } from '../../../../session/crypto';
+import { concatUInt8Array, getSodiumRenderer } from '../../../../session/crypto';
 import { TestUtils } from '../../../test-utils';
 
 import { StringUtils, UserUtils } from '../../../../session/utils';
@@ -14,6 +14,7 @@ import { SessionKeyPair } from '../../../../receiver/keypairs';
 import { addMessagePadding } from '../../../../session/crypto/BufferPadding';
 import { PubKey } from '../../../../session/types';
 import { fromHex, toHex } from '../../../../session/utils/String';
+import { MessageEncrypter } from '../../../../session/crypto/MessageEncrypter';
 
 export const TEST_identityKeyPair: SessionKeyPair = {
   pubKey: new Uint8Array([

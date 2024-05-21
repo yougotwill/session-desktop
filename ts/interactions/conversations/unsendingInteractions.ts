@@ -66,27 +66,21 @@ async function unsendMessagesForEveryone1o1AndLegacy(
   }
 }
 
-async function unsendMessagesForEveryoneGroupV2({
+export async function unsendMessagesForEveryoneGroupV2({
   allMessagesFrom,
-  conversation,
   groupPk,
   msgsToDelete,
 }: {
-  conversation: ConversationModel;
   groupPk: GroupPubkeyType;
   msgsToDelete: Array<MessageModel>;
   allMessagesFrom: Array<PubkeyType>;
 }) {
-  const messageHashesToUnsend = await getMessageHashes(msgsToDelete);
+  const messageHashesToUnsend = getMessageHashes(msgsToDelete);
   const group = await UserGroupsWrapperActions.getGroup(groupPk);
 
   if (!messageHashesToUnsend.length && !allMessagesFrom.length) {
     window.log.info('unsendMessagesForEveryoneGroupV2: no hashes nor author to remove');
     return;
-  }
-
-  if (!conversation.isClosedGroupV2()) {
-    throw new Error('unsendMessagesForEveryoneGroupV2 needs a group v2');
   }
 
   await getMessageQueue().sendToGroupV2NonDurably({
@@ -134,7 +128,6 @@ async function unsendMessagesForEveryone(
       throw new Error('invalid conversation id (03)  for unsendMessageForEveryone');
     }
     await unsendMessagesForEveryoneGroupV2({
-      conversation,
       groupPk: destinationId,
       msgsToDelete,
       allMessagesFrom: [], // currently we cannot remove all the messages from a specific pubkey but we do already handle them on the receiving side
@@ -170,12 +163,16 @@ function getUnsendMessagesObjects1o1OrLegacyGroups(messages: Array<MessageModel>
   // #endregion
 }
 
-async function getMessageHashes(messages: Array<MessageModel>) {
+function getMessageHashes(messages: Array<MessageModel>) {
   return compact(
     messages.map(message => {
       return message.get('messageHash');
     })
   );
+}
+
+function isStringArray(value: unknown): value is Array<string> {
+  return Array.isArray(value) && value.every(val => typeof val === 'string');
 }
 
 /**
@@ -185,19 +182,32 @@ async function getMessageHashes(messages: Array<MessageModel>) {
  *
  * Returns true if no errors happened, false in an error happened
  */
-export async function deleteMessagesFromSwarmOnly(messages: Array<MessageModel>) {
+export async function deleteMessagesFromSwarmOnly(
+  messages: Array<MessageModel> | Array<string>,
+  pubkey: PubkeyType | GroupPubkeyType
+) {
+  const deletionMessageHashes = isStringArray(messages) ? messages : getMessageHashes(messages);
   try {
-    const deletionMessageHashes = compact(messages.map(m => m.get('messageHash')));
-    if (deletionMessageHashes.length > 0) {
-      const errorOnSnode = await SnodeAPI.networkDeleteMessages(deletionMessageHashes);
-      return errorOnSnode === null || errorOnSnode.length === 0;
+    if (messages.length === 0) {
+      return false;
     }
-    window.log?.warn(
-      'deleteMessagesFromSwarmOnly: We do not have hashes for some of those messages'
+
+    if (!deletionMessageHashes.length) {
+      window.log?.warn(
+        'deleteMessagesFromSwarmOnly: We do not have hashes for some of those messages'
+      );
+      return false;
+    }
+    const errorOnAtLeastOneSnode = await SnodeAPI.networkDeleteMessages(
+      deletionMessageHashes,
+      pubkey
     );
-    return false;
+    return errorOnAtLeastOneSnode;
   } catch (e) {
-    window.log?.error('deleteMessagesFromSwarmOnly: Error deleting message from swarm', e);
+    window.log?.error(
+      `deleteMessagesFromSwarmOnly: Error deleting message from swarm of ${ed25519Str(pubkey)}, hashes: ${deletionMessageHashes}`,
+      e
+    );
     return false;
   }
 }
@@ -210,7 +220,17 @@ export async function deleteMessagesFromSwarmAndCompletelyLocally(
   conversation: ConversationModel,
   messages: Array<MessageModel>
 ) {
-  if (conversation.isClosedGroup()) {
+  const pubkey = conversation.id;
+  if (!PubKey.is03Pubkey(pubkey) && !PubKey.is05Pubkey(pubkey)) {
+    throw new Error('deleteMessagesFromSwarmAndCompletelyLocally needs a 03 or 05 pk');
+  }
+  if (PubKey.is05Pubkey(pubkey) && pubkey !== UserUtils.getOurPubKeyStrFromCache()) {
+    throw new Error(
+      'deleteMessagesFromSwarmAndCompletelyLocally with 05 pk can only delete for ourself'
+    );
+  }
+  // LEGACY GROUPS -- we cannot delete on the swarm (just unsend which is done separately)
+  if (conversation.isClosedGroup() && PubKey.is05Pubkey(pubkey)) {
     window.log.info('Cannot delete message from a closed group swarm, so we just complete delete.');
     await Promise.all(
       messages.map(async message => {
@@ -219,13 +239,13 @@ export async function deleteMessagesFromSwarmAndCompletelyLocally(
     );
     return;
   }
-  window.log.warn(
+  window.log.info(
     'Deleting from swarm of ',
-    ed25519Str(conversation.id),
+    ed25519Str(pubkey),
     ' hashes: ',
     messages.map(m => m.get('messageHash'))
   );
-  const deletedFromSwarm = await deleteMessagesFromSwarmOnly(messages);
+  const deletedFromSwarm = await deleteMessagesFromSwarmOnly(messages, pubkey);
   if (!deletedFromSwarm) {
     window.log.warn(
       'deleteMessagesFromSwarmAndCompletelyLocally: some messages failed to be deleted. Maybe they were already deleted?'
@@ -246,8 +266,11 @@ export async function deleteMessagesFromSwarmAndMarkAsDeletedLocally(
   conversation: ConversationModel,
   messages: Array<MessageModel>
 ) {
-  if (conversation.isClosedGroup()) {
-    window.log.info('Cannot delete messages from a closed group swarm, so we just markDeleted.');
+  // legacy groups cannot delete messages on the swarm (just "unsend")
+  if (conversation.isClosedGroup() && PubKey.is05Pubkey(conversation.id)) {
+    window.log.info(
+      'Cannot delete messages from a legacy closed group swarm, so we just markDeleted.'
+    );
     await Promise.all(
       messages.map(async message => {
         return deleteMessageLocallyOnly({ conversation, message, deletionType: 'markDeleted' });
@@ -255,7 +278,25 @@ export async function deleteMessagesFromSwarmAndMarkAsDeletedLocally(
     );
     return;
   }
-  const deletedFromSwarm = await deleteMessagesFromSwarmOnly(messages);
+  if (conversation.isClosedGroupV2() && PubKey.is03Pubkey(conversation.id)) {
+    window.log.info(
+      'Cannot delete messages from a legacy closed group swarm, so we just markDeleted.'
+    );
+    await Promise.all(
+      messages.map(async message => {
+        return deleteMessageLocallyOnly({ conversation, message, deletionType: 'markDeleted' });
+      })
+    );
+    return;
+  }
+
+  // we can only delete messages on the swarm when they are on our own swarm, or it is a groupv2 that we are the admin off
+  const pubkeyToDeleteFrom = PubKey.is03Pubkey(conversation.id)
+    ? conversation.id
+    : UserUtils.getOurPubKeyStrFromCache();
+
+  // if this is a groupv2 and we don't have the admin key, it will fail and return false.
+  const deletedFromSwarm = await deleteMessagesFromSwarmOnly(messages, pubkeyToDeleteFrom);
   if (!deletedFromSwarm) {
     window.log.warn(
       'deleteMessagesFromSwarmAndMarkAsDeletedLocally: some messages failed to be deleted but still removing the messages content... '

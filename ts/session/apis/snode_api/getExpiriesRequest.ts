@@ -49,8 +49,9 @@ async function getExpiriesFromNodesNoRetries(
     const result = await BatchRequests.doUnsignedSnodeBatchRequestNoRetries(
       [expireRequest],
       targetNode,
-      4000,
+      10000,
       associatedWith,
+      false,
       'batch'
     );
 

@@ -130,6 +130,7 @@ function createBaseActionsFor(wrapperType: ConfigWrapperUser) {
     currentHashes: async () => GenericWrapperActions.currentHashes(wrapperType),
     merge: async (toMerge: Array<MergeSingle>) => GenericWrapperActions.merge(wrapperType, toMerge),
     storageNamespace: async () => GenericWrapperActions.storageNamespace(wrapperType),
+    free: async () => {},
   };
 }
 
@@ -447,6 +448,12 @@ export const MetaGroupWrapperActions: MetaGroupWrapperActionsCalls = {
     callLibSessionWorker([`MetaGroupConfig-${groupPk}`, 'init', options]) as Promise<
       ReturnType<MetaGroupWrapperActionsCalls['init']>
     >,
+
+  free: async (groupPk: GroupPubkeyType) =>
+    callLibSessionWorker([`MetaGroupConfig-${groupPk}`, 'free']) as Promise<
+      ReturnType<MetaGroupWrapperActionsCalls['free']>
+    >,
+
   needsPush: async (groupPk: GroupPubkeyType) =>
     callLibSessionWorker([`MetaGroupConfig-${groupPk}`, 'needsPush']) as Promise<
       ReturnType<MetaGroupWrapperActionsCalls['needsPush']>
@@ -511,10 +518,25 @@ export const MetaGroupWrapperActions: MetaGroupWrapperActionsCalls = {
     callLibSessionWorker([`MetaGroupConfig-${groupPk}`, 'memberGetAll']) as Promise<
       ReturnType<MetaGroupWrapperActionsCalls['memberGetAll']>
     >,
+  memberGetAllPendingRemovals: async (groupPk: GroupPubkeyType) =>
+    callLibSessionWorker([`MetaGroupConfig-${groupPk}`, 'memberGetAllPendingRemovals']) as Promise<
+      ReturnType<MetaGroupWrapperActionsCalls['memberGetAllPendingRemovals']>
+    >,
   memberEraseAndRekey: async (groupPk: GroupPubkeyType, members: Array<PubkeyType>) =>
     callLibSessionWorker([`MetaGroupConfig-${groupPk}`, 'memberEraseAndRekey', members]) as Promise<
       ReturnType<MetaGroupWrapperActionsCalls['memberEraseAndRekey']>
     >,
+  membersMarkPendingRemoval: async (
+    groupPk: GroupPubkeyType,
+    members: Array<PubkeyType>,
+    withMessages: boolean
+  ) =>
+    callLibSessionWorker([
+      `MetaGroupConfig-${groupPk}`,
+      'membersMarkPendingRemoval',
+      members,
+      withMessages,
+    ]) as Promise<ReturnType<MetaGroupWrapperActionsCalls['membersMarkPendingRemoval']>>,
   memberSetAccepted: async (groupPk: GroupPubkeyType, pubkeyHex: PubkeyType) =>
     callLibSessionWorker([`MetaGroupConfig-${groupPk}`, 'memberSetAccepted', pubkeyHex]) as Promise<
       ReturnType<MetaGroupWrapperActionsCalls['memberSetAccepted']>
@@ -588,6 +610,10 @@ export const MetaGroupWrapperActions: MetaGroupWrapperActionsCalls = {
       data,
       timestampMs,
     ]) as Promise<ReturnType<MetaGroupWrapperActionsCalls['loadKeyMessage']>>,
+  keyGetCurrentGen: async (groupPk: GroupPubkeyType) =>
+    callLibSessionWorker([`MetaGroupConfig-${groupPk}`, 'keyGetCurrentGen']) as Promise<
+      ReturnType<MetaGroupWrapperActionsCalls['keyGetCurrentGen']>
+    >,
   encryptMessages: async (groupPk: GroupPubkeyType, plaintexts: Array<Uint8Array>) =>
     callLibSessionWorker([`MetaGroupConfig-${groupPk}`, 'encryptMessages', plaintexts]) as Promise<
       ReturnType<MetaGroupWrapperActionsCalls['encryptMessages']>
@@ -648,11 +674,13 @@ export const MultiEncryptWrapperActions: MultiEncryptActionsCalls = {
     callLibSessionWorker(['MultiEncrypt', 'multiEncrypt', args]) as Promise<
       ReturnType<MultiEncryptActionsCalls['multiEncrypt']>
     >,
-    multiDecryptEd25519: async args =>
+  multiDecryptEd25519: async args =>
     callLibSessionWorker(['MultiEncrypt', 'multiDecryptEd25519', args]) as Promise<
       ReturnType<MultiEncryptActionsCalls['multiDecryptEd25519']>
     >,
 };
+
+export const EncryptionDomains = ['SessionGroupKickedMessage'] as const;
 
 export const callLibSessionWorker = async (
   callToMake: LibSessionWorkerFunctions

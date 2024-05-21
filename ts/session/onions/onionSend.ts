@@ -167,6 +167,7 @@ const sendViaOnionV4ToNonSnodeWithRetries = async (
           abortSignal,
           useV4: true,
           throwErrors,
+          allow401s: false,
         });
 
         if (window.sessionFeatureFlags?.debug.debugNonSnodeRequests) {

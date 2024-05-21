@@ -5,7 +5,7 @@ import { arrayBufferToBlob } from 'blob-util';
 import loadImage, { LoadImageOptions } from 'blueimp-load-image';
 import { StagedAttachmentType } from '../components/conversation/composition/CompositionBox';
 import { SignalService } from '../protobuf';
-import { getDecryptedMediaUrl } from '../session/crypto/DecryptedAttachmentsManager';
+import { DecryptedAttachmentsManager } from '../session/crypto/DecryptedAttachmentsManager';
 import { sendDataExtractionNotification } from '../session/messages/outgoing/controlMessage/DataExtractionNotificationMessage';
 import { AttachmentType, save } from '../types/Attachment';
 import { IMAGE_GIF, IMAGE_JPEG, IMAGE_PNG, IMAGE_TIFF, IMAGE_UNKNOWN } from '../types/MIME';
@@ -395,7 +395,11 @@ export const saveAttachmentToDisk = async ({
   conversationId: string;
   index: number;
 }) => {
-  const decryptedUrl = await getDecryptedMediaUrl(attachment.url, attachment.contentType, false);
+  const decryptedUrl = await DecryptedAttachmentsManager.getDecryptedMediaUrl(
+    attachment.url,
+    attachment.contentType,
+    false
+  );
   save({
     attachment: { ...attachment, url: decryptedUrl },
     document,

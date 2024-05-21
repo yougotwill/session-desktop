@@ -1,13 +1,8 @@
 import crypto from 'crypto';
 import libsodiumwrappers from 'libsodium-wrappers-sumo';
 
-import * as DecryptedAttachmentsManager from './DecryptedAttachmentsManager';
-import * as MessageEncrypter from './MessageEncrypter';
-
 import { ECKeyPair } from '../../receiver/keypairs';
 import { toHex } from '../utils/String';
-
-export { DecryptedAttachmentsManager, MessageEncrypter };
 
 export type LibSodiumWrappers = typeof libsodiumwrappers;
 

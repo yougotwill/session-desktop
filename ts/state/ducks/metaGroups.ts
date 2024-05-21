@@ -10,31 +10,31 @@ import {
   WithGroupPubkey,
   WithPubkey,
 } from 'libsession_util_nodejs';
-import { base64_variants, from_base64 } from 'libsodium-wrappers-sumo';
 import { intersection, isEmpty, uniq } from 'lodash';
 import { ConfigDumpData } from '../../data/configDump/configDump';
 import { ConversationModel } from '../../models/conversation';
 import { ConversationTypeEnum } from '../../models/conversationAttributes';
 import { HexString } from '../../node/hexStrings';
 import { SignalService } from '../../protobuf';
-import { getMessageQueue } from '../../session';
 import { getSwarmPollingInstance } from '../../session/apis/snode_api';
 import { GetNetworkTime } from '../../session/apis/snode_api/getNetworkTime';
-import { RevokeChanges, SnodeAPIRevoke } from '../../session/apis/snode_api/revokeSubaccount';
-import { SnodeGroupSignature } from '../../session/apis/snode_api/signature/groupSignature';
-import { WithSecretKey } from '../../session/apis/snode_api/types';
 import { ConvoHub } from '../../session/conversations';
 import { getSodiumRenderer } from '../../session/crypto';
 import { DisappearingMessages } from '../../session/disappearing_messages';
 import { ClosedGroup } from '../../session/group/closed-group';
 import { GroupUpdateInfoChangeMessage } from '../../session/messages/outgoing/controlMessage/group_v2/to_group/GroupUpdateInfoChangeMessage';
 import { GroupUpdateMemberChangeMessage } from '../../session/messages/outgoing/controlMessage/group_v2/to_group/GroupUpdateMemberChangeMessage';
-import { GroupUpdateDeleteMessage } from '../../session/messages/outgoing/controlMessage/group_v2/to_user/GroupUpdateDeleteMessage';
 import { ed25519Str } from '../../session/onions/onionPath';
 import { PubKey } from '../../session/types';
 import { UserUtils } from '../../session/utils';
 import { PreConditionFailed } from '../../session/utils/errors';
 import { GroupInvite } from '../../session/utils/job_runners/jobs/GroupInviteJob';
+import {
+  GroupPendingRemovals,
+  WithAddWithHistoryMembers,
+  WithAddWithoutHistoryMembers,
+  WithRemoveMembers,
+} from '../../session/utils/job_runners/jobs/GroupPendingRemovalsJob';
 import { GroupSync } from '../../session/utils/job_runners/jobs/GroupSyncJob';
 import { UserSync } from '../../session/utils/job_runners/jobs/UserSyncJob';
 import { RunJobResult } from '../../session/utils/job_runners/PersistedJob';
@@ -53,10 +53,6 @@ import {
 import { StateType } from '../reducer';
 import { openConversationWithMessages } from './conversations';
 import { resetLeftOverlayMode } from './section';
-
-type WithAddWithoutHistoryMembers = { withoutHistory: Array<PubkeyType> };
-type WithAddWithHistoryMembers = { withHistory: Array<PubkeyType> };
-type WithRemoveMembers = { removed: Array<PubkeyType> };
 
 type WithFromMemberLeftMessage = { fromMemberLeftMessage: boolean }; // there are some changes we want to skip when doing changes triggered from a memberLeft message.
 export type GroupState = {
@@ -254,6 +250,7 @@ const initNewGroupInWrapper = createAsyncThunk(
         await ConvoHub.use().deleteClosedGroup(groupPk, {
           fromSyncMessage: false,
           sendLeaveMessage: false,
+          emptyGroupButKeepAsKicked: false,
         });
       }
       throw e;
@@ -302,13 +299,21 @@ const handleUserGroupUpdate = createAsyncThunk(
 
     const convo = await ConvoHub.use().getOrCreateAndWait(groupPk, ConversationTypeEnum.GROUPV2);
 
-    await convo.setIsApproved(true, false);
+    // a group is approved when its invitePending is false, and false otherwise
+    await convo.setIsApproved(!userGroup.invitePending, false);
 
     await convo.setPriorityFromWrapper(userGroup.priority, false);
+
+    if (!convo.isActive()) {
+      convo.set({
+        active_at: Date.now(),
+      });
+    }
+
     convo.set({
-      active_at: Date.now(),
       displayNameInProfile: userGroup.name || undefined,
     });
+
     await convo.commit();
 
     return {
@@ -437,10 +442,37 @@ const destroyGroupDetails = createAsyncThunk(
 
     // this deletes the secretKey if we had it. If we need it for something, it has to be done before this call.
     await UserGroupsWrapperActions.eraseGroup(groupPk);
+
     await SessionUtilConvoInfoVolatile.removeGroupFromWrapper(groupPk);
     await ConfigDumpData.deleteDumpFor(groupPk);
 
     getSwarmPollingInstance().removePubkey(groupPk, 'destroyGroupDetails');
+
+    return { groupPk };
+  }
+);
+
+const emptyGroupButKeepAsKicked = createAsyncThunk(
+  'group/emptyGroupButKeepAsKicked',
+  async ({ groupPk }: { groupPk: GroupPubkeyType }) => {
+    window.log.info(`emptyGroupButKeepAsKicked for ${ed25519Str(groupPk)}`);
+    getSwarmPollingInstance().removePubkey(groupPk, 'emptyGroupButKeepAsKicked');
+
+    // this deletes the secretKey if we had it. If we need it for something, it has to be done before this call.
+    const group = await UserGroupsWrapperActions.getGroup(groupPk);
+    if (group) {
+      group.authData = null;
+      group.secretKey = null;
+      group.disappearingTimerSeconds = undefined;
+      group.kicked = true;
+
+      await UserGroupsWrapperActions.setGroup(group);
+    }
+    await SessionUtilConvoInfoVolatile.removeGroupFromWrapper(groupPk);
+    // release the memory (and the current meta-dumps in memory for that group)
+    await MetaGroupWrapperActions.free(groupPk);
+    // this deletes the dumps from the metagroup state only, not the details in the UserGroups wrapper itself.
+    await ConfigDumpData.deleteDumpFor(groupPk);
 
     return { groupPk };
   }
@@ -552,93 +584,6 @@ async function handleWithoutHistoryMembers({
   if (!isEmpty(withoutHistory)) {
     await MetaGroupWrapperActions.keyRekey(groupPk);
   }
-}
-
-/**
- * Send the GroupUpdateDeleteMessage encrypted with an encryption keypair that the removed members should have.
- * Then, send that message to the namespace ClosedGroupRevokedRetrievableMessages.
- * If that worked, remove the member from the metagroup wrapper, and rekey it.
- * Any new messages encrypted with that wrapper won't be readable by the removed members, so we **have** to send it before we rekey().
- *
- */
-async function handleRemoveMembersAndRekey({
-  groupPk,
-  removed,
-  secretKey,
-  fromMemberLeftMessage,
-}: WithGroupPubkey & WithRemoveMembers & WithFromMemberLeftMessage & { secretKey: Uint8Array }) {
-  if (!removed.length) {
-    return;
-  }
-  const createAtNetworkTimestamp = GetNetworkTime.now();
-  const sortedRemoved = removed.sort();
-
-  // TODO implement the GroupUpdateDeleteMessage multi_encrypt_simple on chunk3 debugger
-  if (!fromMemberLeftMessage && false) {
-    // We need to sign that message with the current admin key
-    const adminSignature = await SnodeGroupSignature.signDataWithAdminSecret(
-      `DELETE${createAtNetworkTimestamp}${sortedRemoved.join('')}`,
-      { secretKey }
-    );
-
-    // We need to encrypt this message with the the current encryptionKey, before we call rekey()
-    const removedMemberMessage = new GroupUpdateDeleteMessage({
-      groupPk,
-      createAtNetworkTimestamp,
-      adminSignature: from_base64(adminSignature.signature, base64_variants.ORIGINAL),
-      expirationType: null, // that message is not stored in DB and so don't have to disappear at all.
-      expireTimer: null,
-      memberSessionIds: sortedRemoved,
-    });
-
-    const result = await getMessageQueue().sendToGroupV2NonDurably({
-      message: removedMemberMessage,
-    });
-    if (!result) {
-      throw new Error(
-        'Failed to send GroupUpdateDeleteMessage to ClosedGroupRevokedRetrievableMessages namespace'
-      );
-    }
-  }
-  // Note: we need to rekey only once the GroupUpdateDeleteMessage is sent because
-  // otherwise removed members won't be able to decrypt it (as rekey is called after erase)
-  await MetaGroupWrapperActions.memberEraseAndRekey(groupPk, sortedRemoved);
-}
-
-async function getPendingRevokeParams({
-  withoutHistory,
-  withHistory,
-  removed,
-  groupPk,
-  secretKey,
-}: WithGroupPubkey &
-  WithSecretKey &
-  WithAddWithoutHistoryMembers &
-  WithAddWithHistoryMembers &
-  WithRemoveMembers) {
-  const revokeChanges: RevokeChanges = [];
-  const unrevokeChanges: RevokeChanges = [];
-
-  for (let index = 0; index < withoutHistory.length; index++) {
-    const m = withoutHistory[index];
-    const token = await MetaGroupWrapperActions.swarmSubAccountToken(groupPk, m);
-    unrevokeChanges.push({ action: 'unrevoke_subaccount', tokenToRevokeHex: token });
-  }
-  for (let index = 0; index < withHistory.length; index++) {
-    const m = withHistory[index];
-    const token = await MetaGroupWrapperActions.swarmSubAccountToken(groupPk, m);
-    unrevokeChanges.push({ action: 'unrevoke_subaccount', tokenToRevokeHex: token });
-  }
-  for (let index = 0; index < removed.length; index++) {
-    const m = removed[index];
-    const token = await MetaGroupWrapperActions.swarmSubAccountToken(groupPk, m);
-    revokeChanges.push({ action: 'revoke_subaccount', tokenToRevokeHex: token });
-  }
-
-  return SnodeAPIRevoke.getRevokeSubaccountParams(groupPk, secretKey, {
-    revokeChanges,
-    unrevokeChanges,
-  });
 }
 
 function getConvoExpireDetailsForMsg(convo: ConversationModel) {
@@ -778,7 +723,7 @@ async function handleMemberAddedFromUI({
     groupPk,
   });
   // first, get the unrevoke requests for people who are added
-  const revokeUnrevokeParams = await getPendingRevokeParams({
+  const revokeUnrevokeParams = await GroupPendingRemovals.getPendingRevokeParams({
     groupPk,
     withHistory,
     withoutHistory,
@@ -883,9 +828,11 @@ async function handleMemberRemovedFromUI({
   groupPk,
   removeMembers,
   fromMemberLeftMessage,
+  alsoRemoveMessages,
 }: WithFromMemberLeftMessage &
   WithGroupPubkey & {
     removeMembers: Array<PubkeyType>;
+    alsoRemoveMessages: boolean;
   }) {
   const group = await UserGroupsWrapperActions.getGroup(groupPk);
   if (!group || !group.secretKey || isEmpty(group.secretKey)) {
@@ -902,33 +849,25 @@ async function handleMemberRemovedFromUI({
     groupPk,
     removed: removeMembers,
   });
-  // first, get revoke requests that need to be pushed for leaving member
-  const revokeUnrevokeParams = await getPendingRevokeParams({
-    groupPk,
-    withHistory: [],
-    withoutHistory: [],
-    removed,
-    secretKey: group.secretKey,
-  });
+
+  // Note: We don't revoke members from here, instead we schedule a GroupPendingRemovals which will deal with the revokes of all of them together
 
   // Send the groupUpdateDeleteMessage that can still be decrypted by those removed members to namespace ClosedGroupRevokedRetrievableMessages. (not when handling a MEMBER_LEFT message)
   // Then, rekey the wrapper, but don't push the changes yet, we want to batch all of the requests to be made together in the `pushChangesToGroupSwarmIfNeeded` below.
-  await handleRemoveMembersAndRekey({
-    groupPk,
-    removed,
-    secretKey: group.secretKey,
-    fromMemberLeftMessage,
-  });
+  if (removed.length && !fromMemberLeftMessage) {
+    await MetaGroupWrapperActions.membersMarkPendingRemoval(groupPk, removed, alsoRemoveMessages);
+  }
+  await GroupPendingRemovals.addJob({ groupPk });
 
   const createAtNetworkTimestamp = GetNetworkTime.now();
-
   await LibSessionUtil.saveDumpsToDb(groupPk);
 
   // revoked pubkeys, update messages, and libsession groups config in a single batchcall
   const sequenceResult = await GroupSync.pushChangesToGroupSwarmIfNeeded({
     groupPk,
     supplementKeys: [],
-    ...revokeUnrevokeParams,
+    revokeSubRequest: null,
+    unrevokeSubRequest: null,
   });
   if (sequenceResult !== RunJobResult.Success) {
     throw new Error(
@@ -1073,6 +1012,7 @@ const currentDeviceGroupMembersChange = createAsyncThunk(
       addMembersWithHistory: Array<PubkeyType>;
       addMembersWithoutHistory: Array<PubkeyType>;
       removeMembers: Array<PubkeyType>;
+      alsoRemoveMessages: boolean;
     },
     payloadCreator
   ): Promise<GroupDetailsUpdate> => {
@@ -1087,6 +1027,7 @@ const currentDeviceGroupMembersChange = createAsyncThunk(
       groupPk,
       removeMembers: args.removeMembers,
       fromMemberLeftMessage: false,
+      alsoRemoveMessages: args.alsoRemoveMessages,
     });
 
     await handleMemberAddedFromUI({
@@ -1132,6 +1073,7 @@ const handleMemberLeftMessage = createAsyncThunk(
         groupPk,
         removeMembers: [memberLeft],
         fromMemberLeftMessage: true,
+        alsoRemoveMessages: false,
       });
     }
 
@@ -1382,6 +1324,14 @@ const metaGroupSlice = createSlice({
     builder.addCase(destroyGroupDetails.rejected, (_state, action) => {
       window.log.error('a destroyGroupDetails was rejected', action.error);
     });
+    builder.addCase(emptyGroupButKeepAsKicked.fulfilled, (state, action) => {
+      const { groupPk } = action.payload;
+      window.log.info(`markedAsKicked 03 from metagroup wrapper ${ed25519Str(groupPk)}`);
+      deleteGroupPkEntriesFromState(state, groupPk);
+    });
+    builder.addCase(emptyGroupButKeepAsKicked.rejected, (_state, action) => {
+      window.log.error('a emptyGroupButKeepAsKicked was rejected', action.error);
+    });
     builder.addCase(handleUserGroupUpdate.fulfilled, (state, action) => {
       const { infos, members, groupPk } = action.payload;
       if (infos && members) {
@@ -1488,6 +1438,7 @@ export const groupInfoActions = {
   initNewGroupInWrapper,
   loadMetaDumpsFromDB,
   destroyGroupDetails,
+  emptyGroupButKeepAsKicked,
   refreshGroupDetailsFromWrapper,
   handleUserGroupUpdate,
   currentDeviceGroupMembersChange,

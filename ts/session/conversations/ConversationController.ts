@@ -206,32 +206,52 @@ class ConvoController {
   }
 
   public async deleteClosedGroup(
-    groupId: string,
-    { sendLeaveMessage, fromSyncMessage }: DeleteOptions & { sendLeaveMessage: boolean }
+    groupPk: string,
+    {
+      sendLeaveMessage,
+      fromSyncMessage,
+      emptyGroupButKeepAsKicked,
+    }: DeleteOptions & { sendLeaveMessage: boolean; emptyGroupButKeepAsKicked: boolean }
   ) {
-    if (!PubKey.is03Pubkey(groupId) && !PubKey.is05Pubkey(groupId)) {
+    if (!PubKey.is03Pubkey(groupPk) && !PubKey.is05Pubkey(groupPk)) {
       return;
     }
-    const typeOfDelete: ConvoVolatileType = PubKey.is03Pubkey(groupId) ? 'Group' : 'LegacyGroup';
-    const conversation = await this.deleteConvoInitialChecks(groupId, typeOfDelete, false);
+
+    const typeOfDelete: ConvoVolatileType = PubKey.is03Pubkey(groupPk) ? 'Group' : 'LegacyGroup';
+    window.log.info(
+      `deleteClosedGroup: ${ed25519Str(groupPk)}, sendLeaveMessage:${sendLeaveMessage}, fromSyncMessage:${fromSyncMessage}, emptyGroupButKeepAsKicked:${emptyGroupButKeepAsKicked}`
+    );
+
+    // this deletes all messages in the conversation
+    const conversation = await this.deleteConvoInitialChecks(groupPk, typeOfDelete, false);
     if (!conversation || !conversation.isClosedGroup()) {
       return;
     }
-    getSwarmPollingInstance().removePubkey(groupId, 'deleteClosedGroup'); // we don't need to keep polling anymore.
-    // send the leave message before we delete everything for this group (including the key!)
+    // we don't need to keep polling anymore.
+    getSwarmPollingInstance().removePubkey(groupPk, 'deleteClosedGroup');
 
+    // send the leave message before we delete everything for this group (including the key!)
     if (sendLeaveMessage) {
-      await leaveClosedGroup(groupId, fromSyncMessage);
-      window.log.info(`deleteClosedGroup: ${groupId}, sendLeaveMessage?:${sendLeaveMessage}`);
+      await leaveClosedGroup(groupPk, fromSyncMessage);
     }
-    if (PubKey.is03Pubkey(groupId)) {
-      await remove03GroupFromWrappers(groupId);
+    if (PubKey.is03Pubkey(groupPk)) {
+      // a group 03 can be removed fully or kept empty as kicked.
+      // when it was pendingInvite, we delete it fully,
+      // when it was not, we empty the group but keep it with the "you have been kicked" message
+      // Note: the pendingInvite=true case cannot really happen as we wouldn't be polling from that group (and so, not get the message kicking us )
+      if (emptyGroupButKeepAsKicked) {
+        window?.inboxStore?.dispatch(groupInfoActions.emptyGroupButKeepAsKicked({ groupPk }));
+      } else {
+        window?.inboxStore?.dispatch(groupInfoActions.destroyGroupDetails({ groupPk }));
+      }
     } else {
-      await removeLegacyGroupFromWrappers(groupId);
+      await removeLegacyGroupFromWrappers(groupPk);
     }
     // if we were kicked or sent our left message, we have nothing to do more with that group.
     // Just delete everything related to it, not trying to add update message or send a left message.
-    await this.removeGroupOrCommunityFromDBAndRedux(groupId);
+    if (!emptyGroupButKeepAsKicked) {
+      await this.removeGroupOrCommunityFromDBAndRedux(groupPk);
+    }
 
     if (!fromSyncMessage) {
       await UserSync.queueNewJobIfNeeded();
@@ -573,10 +593,6 @@ async function removeLegacyGroupFromWrappers(groupId: string) {
   await UserGroupsWrapperActions.eraseLegacyGroup(groupId);
   await SessionUtilConvoInfoVolatile.removeLegacyGroupFromWrapper(groupId);
   await removeAllClosedGroupEncryptionKeyPairs(groupId);
-}
-
-async function remove03GroupFromWrappers(groupPk: GroupPubkeyType) {
-  window?.inboxStore?.dispatch(groupInfoActions.destroyGroupDetails({ groupPk }));
 }
 
 async function removeCommunityFromWrappers(conversationId: string) {

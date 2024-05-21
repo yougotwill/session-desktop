@@ -446,17 +446,19 @@ export class DeleteAllFromUserNodeSubRequest extends SnodeAPISubRequest {
 export class DeleteHashesFromUserNodeSubRequest extends SnodeAPISubRequest {
   public method = 'delete' as const;
   public readonly messageHashes: Array<string>;
+  public readonly pubkey: PubkeyType;
 
   constructor(args: WithMessagesHashes) {
     super();
     this.messageHashes = args.messagesHashes;
+    this.pubkey = UserUtils.getOurPubKeyStrFromCache();
   }
 
   public async buildAndSignParameters() {
     const signResult = await SnodeSignature.getSnodeSignatureByHashesParams({
       method: this.method,
       messagesHashes: this.messageHashes,
-      pubkey: UserUtils.getOurPubKeyStrFromCache(),
+      pubkey: this.pubkey,
     });
 
     if (!signResult) {
@@ -485,33 +487,32 @@ export class DeleteHashesFromUserNodeSubRequest extends SnodeAPISubRequest {
 export class DeleteHashesFromGroupNodeSubRequest extends SnodeAPISubRequest {
   public method = 'delete' as const;
   public readonly messageHashes: Array<string>;
-  public readonly groupPk: GroupPubkeyType;
+  public readonly pubkey: GroupPubkeyType;
 
   constructor(args: WithMessagesHashes & WithGroupPubkey) {
     super();
     this.messageHashes = args.messagesHashes;
-    this.groupPk = args.groupPk;
+    this.pubkey = args.groupPk;
   }
 
   public async buildAndSignParameters() {
+    const group = await UserGroupsWrapperActions.getGroup(this.pubkey);
+    if (!group) {
+      throw new Error('DeleteHashesFromGroupNodeSubRequest no such group found');
+    }
+    // This will try to use the adminSecretKey if we have it, or the authData if we have it.
+    // Otherwise, it will throw
     const signResult = await SnodeGroupSignature.getGroupSignatureByHashesParams({
       method: this.method,
       messagesHashes: this.messageHashes,
-      groupPk: this.groupPk,
+      groupPk: this.pubkey,
+      group,
     });
-
-    if (!signResult) {
-      throw new Error(
-        `[DeleteAllFromUserNodeSubRequest] SnodeSignature.getSnodeSignatureParamsUs returned an empty result`
-      );
-    }
 
     return {
       method: this.method,
       params: {
-        pubkey: signResult.pubkey,
-        signature: signResult.signature,
-        messages: signResult.messages,
+        ...signResult,
         // pubkey_ed25519 is forbidden when doing the request for a group
         // timestamp is not needed for this one as the hashes can be deleted only once
       },
@@ -519,7 +520,7 @@ export class DeleteHashesFromGroupNodeSubRequest extends SnodeAPISubRequest {
   }
 
   public loggingId(): string {
-    return `${this.method}-${ed25519Str(this.groupPk)}`;
+    return `${this.method}-${ed25519Str(this.pubkey)}`;
   }
 }
 
@@ -635,7 +636,10 @@ export class UpdateExpiryOnNodeGroupSubRequest extends SnodeAPISubRequest {
 
 export class StoreGroupConfigOrMessageSubRequest extends SnodeAPISubRequest {
   public method = 'store' as const;
-  public readonly namespace: SnodeNamespacesGroupConfig | SnodeNamespaces.ClosedGroupMessages;
+  public readonly namespace:
+    | SnodeNamespacesGroupConfig
+    | SnodeNamespaces.ClosedGroupMessages
+    | SnodeNamespaces.ClosedGroupRevokedRetrievableMessages;
   public readonly destination: GroupPubkeyType;
   public readonly ttlMs: number;
   public readonly encryptedData: Uint8Array;
@@ -644,7 +648,10 @@ export class StoreGroupConfigOrMessageSubRequest extends SnodeAPISubRequest {
 
   constructor(
     args: WithGroupPubkey & {
-      namespace: SnodeNamespacesGroupConfig | SnodeNamespaces.ClosedGroupMessages;
+      namespace:
+        | SnodeNamespacesGroupConfig
+        | SnodeNamespaces.ClosedGroupMessages
+        | SnodeNamespaces.ClosedGroupRevokedRetrievableMessages;
       ttlMs: number;
       encryptedData: Uint8Array;
       dbMessageIdentifier: string | null;

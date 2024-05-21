@@ -134,6 +134,7 @@ describe('OnionPathsErrors', () => {
           symmetricKey: new Uint8Array(),
           guardNode: guardSnode1,
           abortSignal: abortController.signal,
+          allow401s: false,
         });
         throw new Error('Error expected');
       } catch (e) {
@@ -149,6 +150,7 @@ describe('OnionPathsErrors', () => {
           response: getFakeResponseOnDestination(200),
           symmetricKey: new Uint8Array(),
           guardNode: guardSnode1,
+          allow401s: false,
         });
         throw new Error('Did not throw');
       } catch (e) {
@@ -167,6 +169,7 @@ describe('OnionPathsErrors', () => {
           response: getFakeResponseOnDestination(),
           symmetricKey: new Uint8Array(),
           guardNode: guardSnode1,
+          allow401s: false,
         });
         throw new Error('Did not throw');
       } catch (e) {
@@ -186,6 +189,7 @@ describe('OnionPathsErrors', () => {
             response: getFakeResponseOnPath(406),
             symmetricKey: new Uint8Array(),
             guardNode: guardSnode1,
+            allow401s: false,
           });
           throw new Error('Error expected');
         } catch (e) {
@@ -207,6 +211,7 @@ describe('OnionPathsErrors', () => {
             response: getFakeResponseOnDestination(406),
             symmetricKey: new Uint8Array(),
             guardNode: guardSnode1,
+            allow401s: false,
           });
           throw new Error('Error expected');
         } catch (e) {
@@ -231,6 +236,7 @@ describe('OnionPathsErrors', () => {
             response: getFakeResponseOnPath(425),
             symmetricKey: new Uint8Array(),
             guardNode: guardSnode1,
+            allow401s: false,
           });
           throw new Error('Error expected');
         } catch (e) {
@@ -252,6 +258,7 @@ describe('OnionPathsErrors', () => {
             response: getFakeResponseOnDestination(425),
             symmetricKey: new Uint8Array(),
             guardNode: guardSnode1,
+            allow401s: false,
           });
           throw new Error('Error expected');
         } catch (e) {
@@ -282,6 +289,7 @@ describe('OnionPathsErrors', () => {
               destinationSnodeEd25519: targetNode,
 
               associatedWith,
+              allow401s: false,
             });
             throw new Error('Error expected');
           } catch (e) {
@@ -330,6 +338,7 @@ describe('OnionPathsErrors', () => {
               guardNode: guardSnode1,
               destinationSnodeEd25519: targetNode,
               associatedWith,
+              allow401s: false,
             });
             throw new Error('Error expected');
           } catch (e) {
@@ -365,6 +374,7 @@ describe('OnionPathsErrors', () => {
               destinationSnodeEd25519: targetNode,
 
               associatedWith,
+              allow401s: false,
             });
             throw new Error('Error expected');
           } catch (e) {
@@ -402,6 +412,7 @@ describe('OnionPathsErrors', () => {
               guardNode: guardSnode1,
               destinationSnodeEd25519: targetNode,
               associatedWith,
+              allow401s: false,
             });
             throw new Error('Error expected');
           } catch (e) {
@@ -449,6 +460,7 @@ describe('OnionPathsErrors', () => {
           destinationSnodeEd25519: targetNode,
 
           associatedWith,
+          allow401s: false,
         });
         throw new Error('Error expected');
       } catch (e) {
@@ -485,6 +497,7 @@ describe('OnionPathsErrors', () => {
           guardNode: guardSnode1,
           destinationSnodeEd25519: targetNode,
           associatedWith,
+          allow401s: false,
         });
         throw new Error('Error expected');
       } catch (e) {
@@ -526,6 +539,7 @@ describe('OnionPathsErrors', () => {
           guardNode: guardSnode1,
           destinationSnodeEd25519: targetNode,
           associatedWith,
+          allow401s: false,
         });
         throw new Error('Error expected');
       } catch (e) {
@@ -566,6 +580,7 @@ describe('OnionPathsErrors', () => {
             guardNode: guardSnode1,
             destinationSnodeEd25519: targetNode,
             associatedWith,
+            allow401s: false,
           });
           throw new Error('Error expected');
         } catch (e) {
@@ -608,6 +623,7 @@ describe('OnionPathsErrors', () => {
           guardNode,
           destinationSnodeEd25519: targetNode,
           associatedWith,
+          allow401s: false,
         });
         throw new Error('Error expected');
       } catch (e) {

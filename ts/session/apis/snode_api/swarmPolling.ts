@@ -10,6 +10,7 @@ import {
   difference,
   flatten,
   isArray,
+  isEmpty,
   last,
   omit,
   sample,
@@ -25,6 +26,7 @@ import { ERROR_CODE_NO_CONNECT } from './SNodeAPI';
 
 import { ConversationModel } from '../../../models/conversation';
 import { ConversationTypeEnum } from '../../../models/conversationAttributes';
+import { LibsessionMessageHandler } from '../../../receiver/libsession/handleLibSessionMessage';
 import { EnvelopePlus } from '../../../receiver/types';
 import { updateIsOnline } from '../../../state/ducks/onion';
 import { assertUnreachable } from '../../../types/sqlSharedTypes';
@@ -35,11 +37,14 @@ import {
 } from '../../../webworker/workers/browser/libsession_worker_interface';
 import { DURATION, SWARM_POLLING_TIMEOUT } from '../../constants';
 import { ConvoHub } from '../../conversations';
+import { getSodiumRenderer } from '../../crypto';
 import { ed25519Str } from '../../onions/onionPath';
 import { StringUtils, UserUtils } from '../../utils';
 import { sleepFor } from '../../utils/Promise';
+import { fromBase64ToArray, fromHexToArray } from '../../utils/String';
 import { PreConditionFailed } from '../../utils/errors';
 import { LibSessionUtil } from '../../utils/libsession/libsession_utils';
+import { MultiEncryptUtils } from '../../utils/libsession/libsession_utils_multi_encrypt';
 import { SnodeNamespace, SnodeNamespaces, SnodeNamespacesUserConfig } from './namespaces';
 import { PollForGroup, PollForLegacy, PollForUs } from './pollingTypes';
 import { SnodeAPIRetrieve } from './retrieveRequest';
@@ -339,6 +344,48 @@ export class SwarmPolling {
     }
   }
 
+  public async handleRevokedMessages({
+    revokedMessages,
+    groupPk,
+    type,
+  }: {
+    type: ConversationTypeEnum;
+    groupPk: string;
+    revokedMessages: Array<RetrieveMessageItemWithNamespace> | null;
+  }) {
+    if (!revokedMessages || isEmpty(revokedMessages)) {
+      return;
+    }
+    const sodium = await getSodiumRenderer();
+    const userEd25519SecretKey = (await UserUtils.getUserED25519KeyPairBytes()).privKeyBytes;
+    const ourPk = UserUtils.getOurPubKeyStrFromCache();
+    const senderEd25519Pubkey = fromHexToArray(groupPk.slice(2));
+
+    if (type === ConversationTypeEnum.GROUPV2 && PubKey.is03Pubkey(groupPk)) {
+      for (let index = 0; index < revokedMessages.length; index++) {
+        const revokedMessage = revokedMessages[index];
+        const successWith = await MultiEncryptUtils.multiDecryptAnyEncryptionDomain({
+          encoded: fromBase64ToArray(revokedMessage.data),
+          userEd25519SecretKey,
+          senderEd25519Pubkey,
+        });
+        if (successWith && successWith.decrypted && !isEmpty(successWith.decrypted)) {
+          try {
+            await LibsessionMessageHandler.handleLibSessionMessage({
+              decrypted: successWith.decrypted,
+              domain: successWith.domain,
+              groupPk,
+              ourPk,
+              sodium,
+            });
+          } catch (e) {
+            window.log.warn('handleLibSessionMessage failed with:', e.message);
+          }
+        }
+      }
+    }
+  }
+
   /**
    * Only exposed as public for testing
    */
@@ -376,12 +423,13 @@ export class SwarmPolling {
       });
       return;
     }
-    const { confMessages, otherMessages } = filterMessagesPerTypeOfConvo(
+    const { confMessages, otherMessages, revokedMessages } = filterMessagesPerTypeOfConvo(
       type,
       resultsFromAllNamespaces
     );
     // We always handle the config messages first (for groups 03 or our own messages)
     await this.handleUserOrGroupConfMessages({ confMessages, pubkey, type });
+    await this.handleRevokedMessages({ revokedMessages, groupPk: pubkey, type });
 
     // Merge results into one list of unique messages
     const uniqOtherMsgs = uniqBy(otherMessages, x => x.hash);
@@ -524,12 +572,14 @@ export class SwarmPolling {
         })
       );
 
+      const allow401s = type === ConversationTypeEnum.GROUPV2;
       let results = await SnodeAPIRetrieve.retrieveNextMessagesNoRetries(
         node,
         pubkey,
         namespacesAndLastHashes,
         UserUtils.getOurPubKeyStrFromCache(),
-        configHashesToBump
+        configHashesToBump,
+        allow401s
       );
 
       if (!results.length) {
@@ -596,6 +646,7 @@ export class SwarmPolling {
     await ConvoHub.use().deleteClosedGroup(pubkey, {
       fromSyncMessage: true,
       sendLeaveMessage: false,
+      emptyGroupButKeepAsKicked: false,
     });
   }
 
@@ -755,6 +806,7 @@ function filterMessagesPerTypeOfConvo<T extends ConversationTypeEnum>(
   retrieveResults: RetrieveMessagesResultsBatched
 ): {
   confMessages: Array<RetrieveMessageItemWithNamespace> | null;
+  revokedMessages: Array<RetrieveMessageItemWithNamespace> | null;
   otherMessages: Array<RetrieveMessageItemWithNamespace>;
 } {
   switch (type) {
@@ -769,34 +821,45 @@ function filterMessagesPerTypeOfConvo<T extends ConversationTypeEnum>(
       const confMessages = retrieveItemWithNamespace(userConfs);
       const otherMessages = retrieveItemWithNamespace(userOthers);
 
-      return { confMessages, otherMessages: uniqBy(otherMessages, x => x.hash) };
+      return {
+        confMessages,
+        revokedMessages: null,
+        otherMessages: uniqBy(otherMessages, x => x.hash),
+      };
     }
 
     case ConversationTypeEnum.GROUP:
       return {
         confMessages: null,
         otherMessages: retrieveItemWithNamespace(retrieveResults),
+        revokedMessages: null,
       };
 
     case ConversationTypeEnum.GROUPV2: {
       const groupConfs = retrieveResults.filter(m =>
         SnodeNamespace.isGroupConfigNamespace(m.namespace)
       );
+      const groupRevoked = retrieveResults.filter(
+        m => m.namespace === SnodeNamespaces.ClosedGroupRevokedRetrievableMessages
+      );
       const groupOthers = retrieveResults.filter(
-        m => !SnodeNamespace.isGroupConfigNamespace(m.namespace)
+        m =>
+          !SnodeNamespace.isGroupConfigNamespace(m.namespace) &&
+          m.namespace !== SnodeNamespaces.ClosedGroupRevokedRetrievableMessages
       );
 
       const groupConfMessages = retrieveItemWithNamespace(groupConfs);
       const groupOtherMessages = retrieveItemWithNamespace(groupOthers);
-
+      const revokedMessages = retrieveItemWithNamespace(groupRevoked);
       return {
         confMessages: groupConfMessages,
         otherMessages: uniqBy(groupOtherMessages, x => x.hash),
+        revokedMessages,
       };
     }
 
     default:
-      return { confMessages: null, otherMessages: [] };
+      return { confMessages: null, otherMessages: [], revokedMessages: null };
   }
 }
 

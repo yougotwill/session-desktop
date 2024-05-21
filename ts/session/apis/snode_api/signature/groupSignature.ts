@@ -7,11 +7,7 @@ import {
   WithGroupPubkey,
 } from 'libsession_util_nodejs';
 import { isEmpty, isString } from 'lodash';
-import {
-  MetaGroupWrapperActions,
-  UserGroupsWrapperActions,
-} from '../../../../webworker/workers/browser/libsession_worker_interface';
-import { getSodiumRenderer } from '../../../crypto/MessageEncrypter';
+import { MetaGroupWrapperActions } from '../../../../webworker/workers/browser/libsession_worker_interface';
 import { GroupUpdateInviteMessage } from '../../../messages/outgoing/controlMessage/group_v2/to_user/GroupUpdateInviteMessage';
 import { GroupUpdatePromoteMessage } from '../../../messages/outgoing/controlMessage/group_v2/to_user/GroupUpdatePromoteMessage';
 import { StringUtils, UserUtils } from '../../../utils';
@@ -22,6 +18,7 @@ import { SnodeNamespacesGroup } from '../namespaces';
 import { SignedGroupHashesParams, WithMessagesHashes, WithShortenOrExtend } from '../types';
 import { SignatureShared } from './signatureShared';
 import { SnodeSignatureResult } from './snodeSignatures';
+import { getSodiumRenderer } from '../../../crypto';
 
 async function getGroupInviteMessage({
   groupName,
@@ -141,15 +138,15 @@ export type GroupDetailsNeededForSignature = Pick<
   'pubkeyHex' | 'authData' | 'secretKey'
 >;
 
+type StoreOrRetrieve = { method: 'store' | 'retrieve'; namespace: SnodeNamespacesGroup };
+type DeleteHashes = { method: 'delete'; hashes: Array<string> };
+
 async function getSnodeGroupSignature({
   group,
-  method,
-  namespace,
+  ...args
 }: {
   group: GroupDetailsNeededForSignature | null;
-  method: 'store' | 'retrieve';
-  namespace: SnodeNamespacesGroup;
-}): Promise<SigResultSubAccount | SigResultAdmin> {
+} & (StoreOrRetrieve | DeleteHashes)): Promise<SigResultSubAccount | SigResultAdmin> {
   if (!group) {
     throw new Error(`getSnodeGroupSignature: did not find group in wrapper`);
   }
@@ -159,21 +156,36 @@ async function getSnodeGroupSignature({
   const groupAuthData = authData && !isEmpty(authData) ? authData : null;
 
   if (groupSecretKey) {
+    if (args.method === 'delete') {
+      return getGroupSignatureByHashesParams({
+        groupPk,
+        method: args.method,
+        messagesHashes: args.hashes,
+        group,
+      });
+    }
     return getSnodeGroupAdminSignatureParams({
-      method,
-      namespace,
+      method: args.method,
+      namespace: args.namespace,
       groupPk,
       groupIdentityPrivKey: groupSecretKey,
     });
   }
   if (groupAuthData) {
-    const subAccountSign = await getSnodeGroupSubAccountSignatureParams({
+    if (args.method === 'delete') {
+      return getGroupSignatureByHashesParams({
+        groupPk,
+        method: args.method,
+        messagesHashes: args.hashes,
+        group,
+      });
+    }
+    return getSnodeGroupSubAccountSignatureParams({
       groupPk,
-      method,
-      namespace,
+      method: args.method,
+      namespace: args.namespace,
       authData: groupAuthData,
     });
-    return subAccountSign;
   }
   throw new Error(`getSnodeGroupSignature: needs either groupSecretKey or authData`);
 }
@@ -263,28 +275,32 @@ async function generateUpdateExpiryGroupSignature({
 async function getGroupSignatureByHashesParams({
   messagesHashes,
   method,
-  groupPk,
+  group,
 }: WithMessagesHashes &
   WithGroupPubkey & {
     method: 'delete';
+    group: GroupDetailsNeededForSignature;
   }): Promise<SignedGroupHashesParams> {
-  const verificationData = StringUtils.encode(`${method}${messagesHashes.join('')}`, 'utf8');
-  const message = new Uint8Array(verificationData);
+  const verificationString = `${method}${messagesHashes.join('')}`;
+  const message = new Uint8Array(StringUtils.encode(verificationString, 'utf8'));
+  const signatureTimestamp = GetNetworkTime.now();
 
   const sodium = await getSodiumRenderer();
+  // N
   try {
-    const group = await UserGroupsWrapperActions.getGroup(groupPk);
-    if (!group || !group.secretKey || isEmpty(group.secretKey)) {
-      throw new Error('getSnodeGroupSignatureByHashesParams needs admin secretKey');
-    }
-    const signature = sodium.crypto_sign_detached(message, group.secretKey);
-    const signatureBase64 = fromUInt8ArrayToBase64(signature);
+    if (group.secretKey && !isEmpty(group.secretKey)) {
+      const signature = sodium.crypto_sign_detached(message, group.secretKey);
+      const signatureBase64 = fromUInt8ArrayToBase64(signature);
 
-    return {
-      signature: signatureBase64,
-      pubkey: groupPk,
-      messages: messagesHashes,
-    };
+      return {
+        signature: signatureBase64,
+        pubkey: group.pubkeyHex,
+        messages: messagesHashes,
+        timestamp: signatureTimestamp, // TODO audric is this causing backend signature issues?
+      };
+    }
+
+    throw new Error('getSnodeGroupSignatureByHashesParams needs admin secretKey  set');
   } catch (e) {
     window.log.warn('getSnodeGroupSignatureByHashesParams failed with: ', e.message);
     throw e;

@@ -198,7 +198,8 @@ async function retrieveNextMessagesNoRetries(
   associatedWith: string,
   namespacesAndLastHashes: Array<NamespaceAndLastHash>,
   ourPubkey: string,
-  configHashesToBump: Array<string> | null
+  configHashesToBump: Array<string> | null,
+  allow401s: boolean
 ): Promise<RetrieveMessagesResultsBatched> {
   const rawRequests = await buildRetrieveRequest(
     namespacesAndLastHashes,
@@ -212,8 +213,9 @@ async function retrieveNextMessagesNoRetries(
   const results = await BatchRequests.doUnsignedSnodeBatchRequestNoRetries(
     rawRequests,
     targetNode,
-    4000,
-    associatedWith
+    10000,
+    associatedWith,
+    allow401s
   );
   if (!results || !results.length) {
     window?.log?.warn(

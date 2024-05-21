@@ -87,6 +87,9 @@ async function handleGroupInviteMessage({
   }
 
   const authorIsApproved = ConvoHub.use().get(author)?.isApproved() || false;
+  window.log.info(
+    `handleGroupInviteMessage for ${ed25519Str(groupPk)}, authorIsApproved:${authorIsApproved}`
+  );
 
   const sigValid = await verifySig({
     pubKey: HexString.fromHexStringNoPrefix(groupPk),
@@ -190,6 +193,8 @@ async function handleGroupInfoChangeMessage({
     signature: change.adminSignature,
     data: stringToUint8Array(`INFO_CHANGE${change.type}${signatureTimestamp}`),
   });
+  window.log.info(`handleGroupInfoChangeMessage for ${ed25519Str(groupPk)}`);
+
   if (!sigValid) {
     window.log.warn('received group info change with invalid signature. dropping');
     return;
@@ -257,6 +262,7 @@ async function handleGroupMemberChangeMessage({
   if (!convo) {
     return;
   }
+  window.log.info(`handleGroupMemberChangeMessage for ${ed25519Str(groupPk)}`);
 
   const sigValid = await verifySig({
     pubKey: HexString.fromHexStringNoPrefix(groupPk),
@@ -324,6 +330,7 @@ async function handleGroupMemberLeftMessage({
   if (!convo || !PubKey.is05Pubkey(author)) {
     return;
   }
+  window.log.info(`handleGroupMemberLeftMessage for ${ed25519Str(groupPk)}`);
 
   // this does nothing if we are not an admin
   window.inboxStore.dispatch(
@@ -358,6 +365,7 @@ async function handleGroupDeleteMemberContentMessage({
   if (!convo) {
     return;
   }
+  window.log.info(`handleGroupDeleteMemberContentMessage for ${ed25519Str(groupPk)}`);
 
   /**
    * When handling a GroupUpdateDeleteMemberContentMessage we need to do a few things.
@@ -422,33 +430,6 @@ async function handleGroupDeleteMemberContentMessage({
   // TODO we should process this message type even if the sender is blocked
 }
 
-async function handleGroupUpdateDeleteMessage({
-  groupPk,
-  signatureTimestamp,
-  change,
-}: GroupUpdateGeneric<SignalService.GroupUpdateDeleteMessage>) {
-  // TODO verify sig?
-  const convo = ConvoHub.use().get(groupPk);
-  if (!convo) {
-    return;
-  }
-  const sigValid = await verifySig({
-    pubKey: HexString.fromHexStringNoPrefix(groupPk),
-    signature: change.adminSignature,
-    data: stringToUint8Array(`DELETE${signatureTimestamp}${change.memberSessionIds.join('')}`),
-  });
-
-  if (!sigValid) {
-    window.log.warn('received group delete message with invalid signature. dropping');
-    return;
-  }
-  convo.set({
-    active_at: signatureTimestamp,
-  });
-  throw new Error('Not implemented');
-  // TODO We should process this message type even if the sender is blocked
-}
-
 async function handleGroupUpdateInviteResponseMessage({
   groupPk,
   change,
@@ -459,6 +440,8 @@ async function handleGroupUpdateInviteResponseMessage({
   if (!convo) {
     return;
   }
+  window.log.info(`handleGroupUpdateInviteResponseMessage for ${ed25519Str(groupPk)}`);
+
   if (!change.isApproved) {
     window.log.info('got inviteResponse but isApproved is false. Dropping');
     return;
@@ -482,6 +465,8 @@ async function handleGroupUpdatePromoteMessage({
   if (!convo) {
     return;
   }
+  window.log.info(`handleGroupUpdatePromoteMessage for ${ed25519Str(groupPk)}`);
+
   // no group update message here, another message is sent to the group's swarm for the update message.
   // this message is just about the keys that we need to save, and accepting the promotion.
 
@@ -589,13 +574,7 @@ async function handleGroupUpdateMessage(
     });
     return;
   }
-  if (details.updateMessage.deleteMessage) {
-    await handleGroupUpdateDeleteMessage({
-      change: details.updateMessage.deleteMessage as SignalService.GroupUpdateDeleteMessage,
-      ...detailsWithContext,
-    });
-    return;
-  }
+
   if (details.updateMessage.inviteResponse) {
     await handleGroupUpdateInviteResponseMessage({
       change: details.updateMessage

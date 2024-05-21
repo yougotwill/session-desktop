@@ -306,11 +306,13 @@ export async function processOnionRequestErrorAtDestination({
   body,
   destinationSnodeEd25519,
   associatedWith,
+  allow401s,
 }: {
   statusCode: number;
   body: string;
   destinationSnodeEd25519?: string;
   associatedWith?: string;
+  allow401s: boolean;
 }) {
   if (statusCode === 200) {
     return;
@@ -319,7 +321,9 @@ export async function processOnionRequestErrorAtDestination({
     `processOnionRequestErrorAtDestination. statusCode nok: ${statusCode}: associatedWith:${associatedWith}  destinationSnodeEd25519:${destinationSnodeEd25519}`
   );
   process406Or425Error(statusCode);
-  process401Error(statusCode);
+  if (!allow401s) {
+    process401Error(statusCode);
+  }
   processOxenServerError(statusCode, body);
   await process421Error(statusCode, body, associatedWith, destinationSnodeEd25519);
   if (destinationSnodeEd25519) {
@@ -518,6 +522,7 @@ async function processOnionResponse({
   abortSignal,
   associatedWith,
   destinationSnodeEd25519,
+  allow401s,
 }: {
   response?: { text: () => Promise<string>; status: number };
   symmetricKey?: ArrayBuffer;
@@ -525,6 +530,7 @@ async function processOnionResponse({
   destinationSnodeEd25519?: string;
   abortSignal?: AbortSignal;
   associatedWith?: string;
+  allow401s: boolean;
 }): Promise<SnodeResponse> {
   let ciphertext = '';
 
@@ -598,6 +604,7 @@ async function processOnionResponse({
       body: jsonRes?.body, // this is really important. the `.body`. the .body should be a string. for instance for nodeNotFound but is most likely a dict (Record<string,any>))
       destinationSnodeEd25519,
       associatedWith,
+      allow401s,
     });
 
     return jsonRes as SnodeResponse;
@@ -817,6 +824,7 @@ async function sendOnionRequestHandlingSnodeEjectNoRetries({
   finalRelayOptions,
   useV4,
   throwErrors,
+  allow401s,
 }: {
   nodePath: Array<Snode>;
   destSnodeX25519: string;
@@ -826,6 +834,7 @@ async function sendOnionRequestHandlingSnodeEjectNoRetries({
   associatedWith?: string;
   useV4: boolean;
   throwErrors: boolean;
+  allow401s: boolean;
 }): Promise<SnodeResponse | SnodeResponseV4 | undefined> {
   // this sendOnionRequestNoRetries() call has to be the only one like this.
   // If you need to call it, call it through sendOnionRequestHandlingSnodeEjectNoRetries because this is the one handling path rebuilding and known errors
@@ -894,6 +903,7 @@ async function sendOnionRequestHandlingSnodeEjectNoRetries({
     destinationSnodeEd25519,
     abortSignal,
     associatedWith,
+    allow401s,
   });
 }
 
@@ -1103,6 +1113,7 @@ async function sendOnionRequestSnodeDestNoRetries(
   targetNode: Snode,
   headers: Record<string, any>,
   plaintext: string | null,
+  allow401s: boolean,
   associatedWith?: string
 ) {
   return Onions.sendOnionRequestHandlingSnodeEjectNoRetries({
@@ -1116,6 +1127,7 @@ async function sendOnionRequestSnodeDestNoRetries(
     associatedWith,
     useV4: false, // sadly, request to snode do not support v4 yet
     throwErrors: false,
+    allow401s,
   });
 }
 
@@ -1131,11 +1143,13 @@ async function lokiOnionFetchWithRetries({
   associatedWith,
   body,
   headers,
+  allow401s,
 }: {
   targetNode: Snode;
   headers: Record<string, any>;
   body: string | null;
   associatedWith?: string;
+  allow401s: boolean;
 }): Promise<SnodeResponse | undefined> {
   try {
     const retriedResult = await pRetry(
@@ -1147,6 +1161,7 @@ async function lokiOnionFetchWithRetries({
           targetNode,
           headers,
           body,
+          allow401s,
           associatedWith
         );
         return result;

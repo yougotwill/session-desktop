@@ -1,54 +1,48 @@
 /* eslint-disable no-prototype-builtins */
 /* eslint-disable no-restricted-syntax */
-import { compact } from 'lodash';
+import { GroupPubkeyType, PubkeyType } from 'libsession_util_nodejs';
+import { compact, isEmpty } from 'lodash';
 import pRetry from 'p-retry';
 import { getSodiumRenderer } from '../../crypto';
 import { ed25519Str } from '../../onions/onionPath';
+import { PubKey } from '../../types';
 import { StringUtils, UserUtils } from '../../utils';
 import { fromBase64ToArray, fromHexToArray } from '../../utils/String';
+import {
+  DeleteAllFromUserNodeSubRequest,
+  DeleteHashesFromGroupNodeSubRequest,
+  DeleteHashesFromUserNodeSubRequest,
+} from './SnodeRequestTypes';
 import { BatchRequests } from './batchRequest';
-import { SnodeSignature } from './signature/snodeSignatures';
 import { SnodePool } from './snodePool';
 
 export const ERROR_CODE_NO_CONNECT = 'ENETUNREACH: No network connection.';
 
 // TODOLATER we should merge those two functions together as they are almost exactly the same
-// TODO make this function use doUnsignedBatchRequest but we need to merge the verify logic into it
 const forceNetworkDeletion = async (): Promise<Array<string> | null> => {
   const sodium = await getSodiumRenderer();
   const usPk = UserUtils.getOurPubKeyStrFromCache();
 
-  const usED25519KeyPair = await UserUtils.getUserED25519KeyPairBytes();
-
-  if (!usED25519KeyPair) {
-    window?.log?.warn('Cannot forceNetworkDeletion, did not find user ed25519 key.');
-    return null;
-  }
-  const method = 'delete_all' as const;
-  const namespace = 'all' as const;
+  const request = new DeleteAllFromUserNodeSubRequest();
 
   try {
     const maliciousSnodes = await pRetry(
       async () => {
         const snodeToMakeRequestTo = await SnodePool.getNodeFromSwarmOrThrow(usPk);
-
+        const builtRequest = await request.buildAndSignParameters(); // we need the timestamp to verify the signature below
         return pRetry(
           async () => {
-            const signOpts = await SnodeSignature.getSnodeSignatureParamsUs({
-              method,
-              namespace,
-            });
-
             const ret = await BatchRequests.doSnodeBatchRequestNoRetries(
-              [{ method, params: { ...signOpts, namespace, pubkey: usPk } }],
+              [builtRequest],
               snodeToMakeRequestTo,
               10000,
-              usPk
+              usPk,
+              false
             );
 
             if (!ret || !ret?.[0].body || ret[0].code !== 200) {
               throw new Error(
-                `Empty response got for ${method} on snode ${ed25519Str(
+                `Empty response got for ${request.method} on snode ${ed25519Str(
                   snodeToMakeRequestTo.pubkey_ed25519
                 )}`
               );
@@ -60,7 +54,7 @@ const forceNetworkDeletion = async (): Promise<Array<string> | null> => {
 
               if (!swarm) {
                 throw new Error(
-                  `Invalid JSON swarm response got for ${method} on snode ${ed25519Str(
+                  `Invalid JSON swarm response got for ${request.method} on snode ${ed25519Str(
                     snodeToMakeRequestTo.pubkey_ed25519
                   )}, ${firstResultParsedBody}`
                 );
@@ -68,7 +62,7 @@ const forceNetworkDeletion = async (): Promise<Array<string> | null> => {
               const swarmAsArray = Object.entries(swarm) as Array<Array<any>>;
               if (!swarmAsArray.length) {
                 throw new Error(
-                  `Invalid JSON swarmAsArray response got for ${method} on snode ${ed25519Str(
+                  `Invalid JSON swarmAsArray response got for ${request.method} on snode ${ed25519Str(
                     snodeToMakeRequestTo.pubkey_ed25519
                   )}, ${firstResultParsedBody}`
                 );
@@ -86,19 +80,19 @@ const forceNetworkDeletion = async (): Promise<Array<string> | null> => {
                     const statusCode = snodeJson.code;
                     if (reason && statusCode) {
                       window?.log?.warn(
-                        `Could not ${method} from ${ed25519Str(
+                        `Could not ${request.method} from ${ed25519Str(
                           snodeToMakeRequestTo.pubkey_ed25519
                         )} due to error: ${reason}: ${statusCode}`
                       );
                       // if we tried to make the delete on a snode not in our swarm, just trigger a pRetry error so the outer block here finds new snodes to make the request to.
                       if (statusCode === 421) {
                         throw new pRetry.AbortError(
-                          `421 error on network ${method}. Retrying with a new snode`
+                          `421 error on network ${request.method}. Retrying with a new snode`
                         );
                       }
                     } else {
                       window?.log?.warn(
-                        `Could not ${method} from ${ed25519Str(
+                        `Could not ${request.method} from ${ed25519Str(
                           snodeToMakeRequestTo.pubkey_ed25519
                         )}`
                       );
@@ -117,7 +111,7 @@ const forceNetworkDeletion = async (): Promise<Array<string> | null> => {
                   const sortedHashes = hashes.sort();
                   const signatureSnode = snodeJson.signature as string;
                   // The signature format is (with sortedHashes accross all namespaces) ( PUBKEY_HEX || TIMESTAMP || DELETEDHASH[0] || ... || DELETEDHASH[N] )
-                  const dataToVerify = `${usPk}${signOpts.timestamp}${sortedHashes.join('')}`;
+                  const dataToVerify = `${usPk}${builtRequest.params.timestamp}${sortedHashes.join('')}`;
 
                   const dataToVerifyUtf8 = StringUtils.encode(dataToVerify, 'utf8');
                   const isValid = sodium.crypto_sign_verify_detached(
@@ -135,7 +129,7 @@ const forceNetworkDeletion = async (): Promise<Array<string> | null> => {
               return results;
             } catch (e) {
               throw new Error(
-                `Invalid JSON response got for ${method} on snode ${ed25519Str(
+                `Invalid JSON response got for ${request.method} on snode ${ed25519Str(
                   snodeToMakeRequestTo.pubkey_ed25519
                 )}, ${ret}`
               );
@@ -146,7 +140,7 @@ const forceNetworkDeletion = async (): Promise<Array<string> | null> => {
             minTimeout: SnodeAPI.TEST_getMinTimeout(),
             onFailedAttempt: e => {
               window?.log?.warn(
-                `${method} INNER request attempt #${e.attemptNumber} failed. ${e.retriesLeft} retries left...`
+                `${request.method} INNER request attempt #${e.attemptNumber} failed. ${e.retriesLeft} retries left...`
               );
             },
           }
@@ -157,7 +151,7 @@ const forceNetworkDeletion = async (): Promise<Array<string> | null> => {
         minTimeout: SnodeAPI.TEST_getMinTimeout(),
         onFailedAttempt: e => {
           window?.log?.warn(
-            `${method} OUTER request attempt #${e.attemptNumber} failed. ${e.retriesLeft} retries left... ${e.message}`
+            `${request.method} OUTER request attempt #${e.attemptNumber} failed. ${e.retriesLeft} retries left... ${e.message}`
           );
         },
       }
@@ -165,7 +159,7 @@ const forceNetworkDeletion = async (): Promise<Array<string> | null> => {
 
     return maliciousSnodes;
   } catch (e) {
-    window?.log?.warn(`failed to ${method} everything on network:`, e);
+    window?.log?.warn(`failed to ${request.method} everything on network:`, e);
     return null;
   }
 };
@@ -175,43 +169,39 @@ const TEST_getMinTimeout = () => 500;
 /**
  * Locally deletes message and deletes message on the network (all nodes that contain the message)
  */
-const networkDeleteMessages = async (hashes: Array<string>): Promise<Array<string> | null> => {
+const networkDeleteMessages = async (
+  messagesHashes: Array<string>,
+  pubkey: PubkeyType | GroupPubkeyType
+): Promise<boolean> => {
   const sodium = await getSodiumRenderer();
-  const userX25519PublicKey = UserUtils.getOurPubKeyStrFromCache();
-
-  const userED25519KeyPair = await UserUtils.getUserED25519KeyPair();
-
-  if (!userED25519KeyPair) {
-    window?.log?.warn('Cannot networkDeleteMessages, did not find user ed25519 key.');
-    return null;
+  if (PubKey.is05Pubkey(pubkey) && pubkey !== UserUtils.getOurPubKeyStrFromCache()) {
+    throw new Error('networkDeleteMessages with 05 pk can only delete for ourself');
   }
-  const method = 'delete' as const;
+  const request = PubKey.is03Pubkey(pubkey)
+    ? new DeleteHashesFromGroupNodeSubRequest({ messagesHashes, groupPk: pubkey })
+    : new DeleteHashesFromUserNodeSubRequest({ messagesHashes });
 
   try {
-    const maliciousSnodes = await pRetry(
+    const success = await pRetry(
       async () => {
-        const snodeToMakeRequestTo = await SnodePool.getNodeFromSwarmOrThrow(userX25519PublicKey);
+        const snodeToMakeRequestTo = await SnodePool.getNodeFromSwarmOrThrow(request.pubkey);
 
         return pRetry(
           async () => {
-            const signOpts = await SnodeSignature.getSnodeSignatureByHashesParams({
-              messagesHashes: hashes,
-              method,
-              pubkey: userX25519PublicKey,
-            });
-
-            const ret = await BatchRequests.doSnodeBatchRequestNoRetries(
-              [{ method, params: signOpts }],
+            const ret = await BatchRequests.doUnsignedSnodeBatchRequestNoRetries(
+              [request],
               snodeToMakeRequestTo,
               10000,
-              userX25519PublicKey
+              request.pubkey,
+              false
             );
+            debugger;
 
             if (!ret || !ret?.[0].body || ret[0].code !== 200) {
               throw new Error(
-                `Empty response got for ${method} on snode ${ed25519Str(
+                `Empty response got for ${request.method} on snode ${ed25519Str(
                   snodeToMakeRequestTo.pubkey_ed25519
-                )}`
+                )} about pk: ${ed25519Str(request.pubkey)}`
               );
             }
 
@@ -221,7 +211,7 @@ const networkDeleteMessages = async (hashes: Array<string>): Promise<Array<strin
 
               if (!swarm) {
                 throw new Error(
-                  `Invalid JSON swarm response got for ${method} on snode ${ed25519Str(
+                  `Invalid JSON swarm response got for ${request.method} on snode ${ed25519Str(
                     snodeToMakeRequestTo.pubkey_ed25519
                   )}, ${firstResultParsedBody}`
                 );
@@ -229,7 +219,7 @@ const networkDeleteMessages = async (hashes: Array<string>): Promise<Array<strin
               const swarmAsArray = Object.entries(swarm) as Array<Array<any>>;
               if (!swarmAsArray.length) {
                 throw new Error(
-                  `Invalid JSON swarmAsArray response got for ${method} on snode ${ed25519Str(
+                  `Invalid JSON swarmAsArray response got for ${request.method} on snode ${ed25519Str(
                     snodeToMakeRequestTo.pubkey_ed25519
                   )}, ${firstResultParsedBody}`
                 );
@@ -247,19 +237,19 @@ const networkDeleteMessages = async (hashes: Array<string>): Promise<Array<strin
                     const statusCode = snodeJson.code;
                     if (reason && statusCode) {
                       window?.log?.warn(
-                        `Could not ${method} from ${ed25519Str(
+                        `Could not ${request.method} from ${ed25519Str(
                           snodeToMakeRequestTo.pubkey_ed25519
                         )} due to error: ${reason}: ${statusCode}`
                       );
                       // if we tried to make the delete on a snode not in our swarm, just trigger a pRetry error so the outer block here finds new snodes to make the request to.
                       if (statusCode === 421) {
                         throw new pRetry.AbortError(
-                          `421 error on network ${method}. Retrying with a new snode`
+                          `421 error on network ${request.method}. Retrying with a new snode`
                         );
                       }
                     } else {
                       window?.log?.warn(
-                        `Could not ${method} from ${ed25519Str(
+                        `Could not ${request.method} from ${ed25519Str(
                           snodeToMakeRequestTo.pubkey_ed25519
                         )}`
                       );
@@ -270,7 +260,7 @@ const networkDeleteMessages = async (hashes: Array<string>): Promise<Array<strin
                   const responseHashes = snodeJson.deleted as Array<string>;
                   const signatureSnode = snodeJson.signature as string;
                   // The signature looks like ( PUBKEY_HEX || RMSG[0] || ... || RMSG[N] || DMSG[0] || ... || DMSG[M] )
-                  const dataToVerify = `${userX25519PublicKey}${hashes.join(
+                  const dataToVerify = `${request.pubkey}${messagesHashes.join(
                     ''
                   )}${responseHashes.join('')}`;
                   const dataToVerifyUtf8 = StringUtils.encode(dataToVerify, 'utf8');
@@ -286,10 +276,10 @@ const networkDeleteMessages = async (hashes: Array<string>): Promise<Array<strin
                 })
               );
 
-              return results;
+              return isEmpty(results);
             } catch (e) {
               throw new Error(
-                `Invalid JSON response got for ${method} on snode ${ed25519Str(
+                `Invalid JSON response got for ${request.method} on snode ${ed25519Str(
                   snodeToMakeRequestTo.pubkey_ed25519
                 )}, ${ret}`
               );
@@ -300,7 +290,7 @@ const networkDeleteMessages = async (hashes: Array<string>): Promise<Array<strin
             minTimeout: SnodeAPI.TEST_getMinTimeout(),
             onFailedAttempt: e => {
               window?.log?.warn(
-                `${method} INNER request attempt #${e.attemptNumber} failed. ${e.retriesLeft} retries left...`
+                `${request.method} INNER request attempt #${e.attemptNumber} failed. ${e.retriesLeft} retries left...`
               );
             },
           }
@@ -311,16 +301,16 @@ const networkDeleteMessages = async (hashes: Array<string>): Promise<Array<strin
         minTimeout: SnodeAPI.TEST_getMinTimeout(),
         onFailedAttempt: e => {
           window?.log?.warn(
-            `${method} OUTER request attempt #${e.attemptNumber} failed. ${e.retriesLeft} retries left... ${e.message}`
+            `${request.method} OUTER request attempt #${e.attemptNumber} failed. ${e.retriesLeft} retries left... ${e.message}`
           );
         },
       }
     );
 
-    return maliciousSnodes;
+    return success;
   } catch (e) {
-    window?.log?.warn(`failed to ${method} message on network:`, e);
-    return null;
+    window?.log?.warn(`failed to ${request.method} message on network:`, e);
+    return false;
   }
 };
 

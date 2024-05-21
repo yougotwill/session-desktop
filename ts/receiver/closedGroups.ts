@@ -772,6 +772,7 @@ async function handleClosedGroupMembersRemoved(
     await ConvoHub.use().deleteClosedGroup(groupPubKey, {
       fromSyncMessage: false,
       sendLeaveMessage: false,
+      emptyGroupButKeepAsKicked: false, // legacy group case only here
     });
   } else {
     // Note: we don't want to send a new encryption keypair when we get a member removed.
@@ -857,6 +858,7 @@ async function handleClosedGroupAdminMemberLeft(groupPublicKey: string, envelope
   await ConvoHub.use().deleteClosedGroup(groupPublicKey, {
     fromSyncMessage: false,
     sendLeaveMessage: false,
+    emptyGroupButKeepAsKicked: false,
   });
   await IncomingMessageCache.removeFromCache(envelope);
 }
@@ -866,6 +868,7 @@ async function handleClosedGroupLeftOurself(groupId: string, envelope: EnvelopeP
   await ConvoHub.use().deleteClosedGroup(groupId, {
     fromSyncMessage: false,
     sendLeaveMessage: false,
+    emptyGroupButKeepAsKicked: false,
   });
   await IncomingMessageCache.removeFromCache(envelope);
 }

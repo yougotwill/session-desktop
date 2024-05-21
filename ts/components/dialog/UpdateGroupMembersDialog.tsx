@@ -217,6 +217,7 @@ export const UpdateGroupMembersDialog = (props: Props) => {
         addMembersWithHistory: [],
         addMembersWithoutHistory: [],
         removeMembers: difference(existingMembers, membersToKeepWithUpdate) as Array<PubkeyType>,
+        alsoRemoveMessages: false, // FIXME audric debugger we need this to be a toggle for QA
       });
       dispatch(groupv2Action as any);
 

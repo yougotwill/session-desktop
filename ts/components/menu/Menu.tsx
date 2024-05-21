@@ -53,7 +53,10 @@ import {
   updateUserDetailsModal,
 } from '../../state/ducks/modalDialog';
 import { useConversationIdOrigin } from '../../state/selectors/conversations';
-import { getIsMessageSection } from '../../state/selectors/section';
+import {
+  getIsMessageRequestOverlayShown,
+  getIsMessageSection,
+} from '../../state/selectors/section';
 import { useSelectedConversationKey } from '../../state/selectors/selectedConversation';
 import { LocalizerKeys } from '../../types/LocalizerKeys';
 import { SessionButtonColor } from '../basic/SessionButton';
@@ -84,8 +87,13 @@ export const MarkConversationUnreadMenuItem = (): JSX.Element | null => {
   const isMessagesSection = useSelector(getIsMessageSection);
   const isPrivate = useIsPrivate(conversationId);
   const isPrivateAndFriend = useIsPrivateAndFriend(conversationId);
+  const isMessageRequestShown = useSelector(getIsMessageRequestOverlayShown);
 
-  if (isMessagesSection && (!isPrivate || (isPrivate && isPrivateAndFriend))) {
+  if (
+    isMessagesSection &&
+    !isMessageRequestShown &&
+    (!isPrivate || (isPrivate && isPrivateAndFriend))
+  ) {
     const conversation = ConvoHub.use().get(conversationId);
 
     const markUnread = () => {
@@ -141,12 +149,12 @@ export const DeletePrivateContactMenuItem = () => {
 export const LeaveGroupOrCommunityMenuItem = () => {
   const convoId = useConvoIdFromContext();
   const username = useConversationUsername(convoId) || convoId;
-  const isKickedFromGroup = useIsKickedFromGroup(convoId);
   const isPrivate = useIsPrivate(convoId);
   const isPublic = useIsPublic(convoId);
   const lastMessage = useLastMessage(convoId);
+  const isMessageRequestShown = useSelector(getIsMessageRequestOverlayShown);
 
-  if (!isKickedFromGroup && !isPrivate) {
+  if (!isPrivate && !isMessageRequestShown) {
     return (
       <Item
         onClick={() => {
@@ -396,8 +404,9 @@ export const ChangeNicknameMenuItem = () => {
  */
 export const DeleteMessagesMenuItem = () => {
   const convoId = useConvoIdFromContext();
+  const isMessageRequestShown = useSelector(getIsMessageRequestOverlayShown);
 
-  if (!convoId) {
+  if (!convoId || isMessageRequestShown) {
     return null;
   }
   return (
@@ -526,8 +535,16 @@ export const NotificationForConvoMenuItem = (): JSX.Element | null => {
   const isKickedFromGroup = useIsKickedFromGroup(convoId);
   const isFriend = useIsPrivateAndFriend(convoId);
   const isPrivate = useIsPrivate(convoId);
+  const isMessageRequestShown = useSelector(getIsMessageRequestOverlayShown);
 
-  if (!convoId || isKickedFromGroup || isBlocked || !isActive || (isPrivate && !isFriend)) {
+  if (
+    !convoId ||
+    isMessageRequestShown ||
+    isKickedFromGroup ||
+    isBlocked ||
+    !isActive ||
+    (isPrivate && !isFriend)
+  ) {
     return null;
   }
 

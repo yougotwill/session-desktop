@@ -547,9 +547,9 @@ describe('DisappearingMessage', () => {
       it('if the conversation is public it should throw', async () => {
         const conversation = new ConversationModel({
           ...conversationArgs,
+          id: 'https://example.org',
+          type: ConversationTypeEnum.GROUP,
         });
-
-        Sinon.stub(conversation, 'isPublic').returns(true);
 
         const promise = conversation.updateExpireTimer({
           providedDisappearingMode: 'deleteAfterSend',
@@ -561,7 +561,7 @@ describe('DisappearingMessage', () => {
           fromConfigMessage: false,
         });
         await expect(promise).is.rejectedWith(
-          "updateExpireTimer() Disappearing messages aren't supported in communities"
+          'updateExpireTimer() Disappearing messages are only supported int groups and private chats'
         );
       });
 

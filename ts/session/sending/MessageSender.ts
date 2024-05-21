@@ -52,7 +52,7 @@ import { SnodePool } from '../apis/snode_api/snodePool';
 import { WithMessagesHashes, WithRevokeSubRequest } from '../apis/snode_api/types';
 import { TTL_DEFAULT } from '../constants';
 import { ConvoHub } from '../conversations';
-import { MessageEncrypter } from '../crypto';
+import { MessageEncrypter } from '../crypto/MessageEncrypter';
 import { addMessagePadding } from '../crypto/BufferPadding';
 import { ContentMessage } from '../messages/outgoing';
 import { UnsendMessage } from '../messages/outgoing/controlMessage/UnsendMessage';
@@ -232,7 +232,8 @@ async function sendSingleMessage({
         subRequests,
         targetNode,
         6000,
-        destination
+        destination,
+        false
       );
 
       await handleBatchResultWithSubRequests({ batchResult, subRequests, destination });
@@ -384,6 +385,7 @@ async function sendMessagesDataToSnode(
       targetNode,
       6000,
       asssociatedWith,
+      false,
       method
     );
 

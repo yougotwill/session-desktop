@@ -15,8 +15,9 @@ const getNetworkTime = async (snode: Snode): Promise<string | number> => {
   const result = await BatchRequests.doUnsignedSnodeBatchRequestNoRetries(
     [subrequest],
     snode,
-    4000,
-    null
+    10000,
+    null,
+    false
   );
   if (!result || !result.length) {
     window?.log?.warn(`getNetworkTime on ${snode.ip}:${snode.port} returned falsish value`, result);

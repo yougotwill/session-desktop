@@ -22,8 +22,9 @@ async function requestSnodesForPubkeyWithTargetNodeRetryable(
   const result = await BatchRequests.doUnsignedSnodeBatchRequestNoRetries(
     [subrequest],
     targetNode,
-    4000,
-    pubkey
+    10000,
+    pubkey,
+    false
   );
 
   if (!result || !result.length) {
@@ -100,7 +101,7 @@ async function requestSnodesForPubkeyRetryable(pubKey: string): Promise<Array<Sn
       retries: 3,
       factor: 2,
       minTimeout: 100,
-      maxTimeout: 4000,
+      maxTimeout: 10000,
       onFailedAttempt: e => {
         window?.log?.warn(
           `requestSnodesForPubkeyRetryable attempt #${e.attemptNumber} failed. ${e.retriesLeft} retries left...`

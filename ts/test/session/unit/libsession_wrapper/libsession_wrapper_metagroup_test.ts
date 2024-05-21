@@ -29,6 +29,7 @@ function emptyMember(pubkeyHex: PubkeyType): GroupMemberGet {
     promotionFailed: false,
     promotionPending: false,
     admin: false,
+    removedStatus: 0,
     pubkeyHex,
   };
 }
@@ -159,7 +160,7 @@ describe('libsession_metagroup', () => {
       const memberCreated = metaGroupWrapper.memberGetOrConstruct(member);
       console.info('Object.keys(memberCreated) ', JSON.stringify(Object.keys(memberCreated)));
       expect(Object.keys(memberCreated).length).to.be.eq(
-        9, // if you change this value, also make sure you add a test, testing that new field, below
+        10, // if you change this value, also make sure you add a test, testing that new field, below
         'this test is designed to fail if you need to add tests to test a new field of libsession'
       );
     });
@@ -272,6 +273,28 @@ describe('libsession_metagroup', () => {
         promotionPending: false,
       };
 
+      expect(metaGroupWrapper.memberGetAll()[0]).to.be.deep.eq(expected);
+    });
+
+    it('can mark as removed with messages', () => {
+      metaGroupWrapper.membersMarkPendingRemoval([member], true);
+      expect(metaGroupWrapper.memberGetAll().length).to.be.deep.eq(1);
+      const expected: GroupMemberGet = {
+        ...emptyMember(member),
+        removedStatus: 2,
+      };
+      expect(metaGroupWrapper.memberGetAll().length).to.be.deep.eq(1);
+      expect(metaGroupWrapper.memberGetAll()[0]).to.be.deep.eq(expected);
+    });
+
+    it('can mark as removed without messages', () => {
+      metaGroupWrapper.membersMarkPendingRemoval([member], false);
+      expect(metaGroupWrapper.memberGetAll().length).to.be.deep.eq(1);
+      const expected: GroupMemberGet = {
+        ...emptyMember(member),
+        removedStatus: 1,
+      };
+      expect(metaGroupWrapper.memberGetAll().length).to.be.deep.eq(1);
       expect(metaGroupWrapper.memberGetAll()[0]).to.be.deep.eq(expected);
     });
   });

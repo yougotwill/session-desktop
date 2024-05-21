@@ -47,10 +47,11 @@ export type SignedHashesParams = WithSignature & {
   messages: Array<string>;
 };
 
-export type SignedGroupHashesParams = WithSignature & {
-  pubkey: GroupPubkeyType;
-  messages: Array<string>;
-};
+export type SignedGroupHashesParams = WithTimestamp &
+  WithSignature & {
+    pubkey: GroupPubkeyType;
+    messages: Array<string>;
+  };
 
 /** inherits from  https://api.oxen.io/storage-rpc/#/recursive?id=recursive but we only care about these values */
 export type ExpireMessageResultItem = WithSignature & {

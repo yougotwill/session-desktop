@@ -156,6 +156,7 @@ const InviteContactsDialogInner = (props: Props) => {
             addMembersWithHistory: shareHistory ? forcedAsPubkeys : [],
             removeMembers: [],
             groupPk: conversationId,
+            alsoRemoveMessages: false,
           });
           dispatch(action as any);
           return;

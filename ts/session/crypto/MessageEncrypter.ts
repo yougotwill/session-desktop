@@ -1,6 +1,6 @@
 import { GroupPubkeyType } from 'libsession_util_nodejs';
 import { isEmpty } from 'lodash';
-import { MessageEncrypter, concatUInt8Array, getSodiumRenderer } from '.';
+import { concatUInt8Array, getSodiumRenderer } from '.';
 import { Data } from '../../data/data';
 import { SignalService } from '../../protobuf';
 import { assertUnreachable } from '../../types/sqlSharedTypes';
@@ -10,8 +10,6 @@ import { UserUtils } from '../utils';
 import { fromHexToArray } from '../utils/String';
 import { SigningFailed } from '../utils/errors';
 import { addMessagePadding } from './BufferPadding';
-
-export { concatUInt8Array, getSodiumRenderer };
 
 type EncryptResult = {
   envelopeType: SignalService.Envelope.Type;
@@ -56,7 +54,7 @@ async function encryptForLegacyGroup(destination: PubKey, plainText: Uint8Array)
  * @returns The envelope type and the base64 encoded cipher text
  */
 // eslint-disable-next-line consistent-return
-export async function encrypt(
+async function encrypt(
   destination: PubKey,
   plainTextBuffer: Uint8Array,
   encryptionType: SignalService.Envelope.Type
@@ -89,7 +87,7 @@ export async function encrypt(
   }
 }
 
-export async function encryptUsingSessionProtocol(
+async function encryptUsingSessionProtocol(
   destinationX25519Pk: PubKey,
   plaintext: Uint8Array
 ): Promise<Uint8Array> {
@@ -129,3 +127,8 @@ export async function encryptUsingSessionProtocol(
   }
   return ciphertext;
 }
+
+export const MessageEncrypter = {
+  encryptUsingSessionProtocol,
+  encrypt,
+};

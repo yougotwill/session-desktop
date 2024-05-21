@@ -283,7 +283,6 @@ async function removeGroupFromWrapper(groupPk: GroupPubkeyType) {
   } catch (e) {
     window.log.warn('removeGroupFromWrapper failed with ', e.message);
   }
-  window.log.warn('removeGroupFromWrapper TODO');
   mappedGroupWrapperValues.delete(groupPk);
 }
 

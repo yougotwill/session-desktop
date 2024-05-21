@@ -149,8 +149,9 @@ async function updateExpiryOnNodesNoRetries(
     const result = await BatchRequests.doUnsignedSnodeBatchRequestNoRetries(
       expireRequests,
       targetNode,
-      4000,
+      10000,
       ourPubKey,
+      false,
       'batch'
     );
 

@@ -18,7 +18,7 @@ import { getSwarmPollingInstance } from '../session/apis/snode_api';
 import { GetNetworkTime } from '../session/apis/snode_api/getNetworkTime';
 import { ConvoHub } from '../session/conversations';
 import { getSodiumRenderer } from '../session/crypto';
-import { getDecryptedMediaUrl } from '../session/crypto/DecryptedAttachmentsManager';
+import { DecryptedAttachmentsManager } from '../session/crypto/DecryptedAttachmentsManager';
 import { DisappearingMessageConversationModeType } from '../session/disappearing_messages/types';
 import { GroupUpdateInfoChangeMessage } from '../session/messages/outgoing/controlMessage/group_v2/to_group/GroupUpdateInfoChangeMessage';
 import { ed25519Str } from '../session/onions/onionPath';
@@ -458,14 +458,11 @@ async function leaveGroupOrCommunityByConvoId({
       type: ConversationInteractionType.Leave,
       status: ConversationInteractionStatus.Start,
     });
-    console.warn('leaveGroupOrCommunityByConvoId: ', {
-      conversationId,
-      sendLeaveMessage,
-      isPublic,
-    });
+
     await ConvoHub.use().deleteClosedGroup(conversationId, {
       fromSyncMessage: false,
       sendLeaveMessage,
+      emptyGroupButKeepAsKicked: false,
     });
     await clearConversationInteractionState({ conversationId });
   } catch (err) {
@@ -728,7 +725,11 @@ export async function uploadOurAvatar(newAvatarDecrypted?: ArrayBuffer) {
       return null;
     }
 
-    const decryptedAvatarUrl = await getDecryptedMediaUrl(currentAttachmentPath, IMAGE_JPEG, true);
+    const decryptedAvatarUrl = await DecryptedAttachmentsManager.getDecryptedMediaUrl(
+      currentAttachmentPath,
+      IMAGE_JPEG,
+      true
+    );
 
     if (!decryptedAvatarUrl) {
       window.log.warn('Could not decrypt avatar stored locally..');

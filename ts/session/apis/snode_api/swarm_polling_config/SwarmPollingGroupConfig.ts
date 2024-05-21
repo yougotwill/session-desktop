@@ -6,6 +6,7 @@ import { groupInfoActions } from '../../../../state/ducks/metaGroups';
 import { MetaGroupWrapperActions } from '../../../../webworker/workers/browser/libsession_worker_interface';
 import { ed25519Str } from '../../../onions/onionPath';
 import { fromBase64ToArray } from '../../../utils/String';
+import { GroupPendingRemovals } from '../../../utils/job_runners/jobs/GroupPendingRemovalsJob';
 import { LibSessionUtil } from '../../../utils/libsession/libsession_utils';
 import { SnodeNamespaces } from '../namespaces';
 import { RetrieveMessageItemWithNamespace } from '../types';
@@ -72,6 +73,11 @@ async function handleMetaMergeResults(groupPk: GroupPubkeyType) {
       await msg?.cleanup();
     }
     lastAppliedRemoveAttachmentSentBeforeSeconds.set(groupPk, infos.deleteAttachBeforeSeconds);
+  }
+  const membersWithPendingRemovals =
+    await MetaGroupWrapperActions.memberGetAllPendingRemovals(groupPk);
+  if (membersWithPendingRemovals.length) {
+    await GroupPendingRemovals.addJob({ groupPk });
   }
 }
 

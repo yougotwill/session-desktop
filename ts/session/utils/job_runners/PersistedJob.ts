@@ -7,6 +7,7 @@ export type PersistedJobType =
   | 'AvatarDownloadJobType'
   | 'GroupInviteJobType'
   | 'GroupPromoteJobType'
+  | 'GroupPendingRemovalJobType'
   | 'FetchMsgExpirySwarmJobType'
   | 'UpdateMsgExpirySwarmJobType'
   | 'FakeSleepForJobType'
@@ -49,6 +50,11 @@ export interface GroupPromotePersistedData extends PersistedJobData {
   member: PubkeyType;
 }
 
+export interface GroupPendingRemovalsPersistedData extends PersistedJobData {
+  jobType: 'GroupPendingRemovalJobType';
+  groupPk: GroupPubkeyType;
+}
+
 export interface UserSyncPersistedData extends PersistedJobData {
   jobType: 'UserSyncJobType';
 }
@@ -76,7 +82,8 @@ export type TypeOfPersistedData =
   | FakeSleepForMultiJobData
   | GroupSyncPersistedData
   | GroupInvitePersistedData
-  | GroupPromotePersistedData;
+  | GroupPromotePersistedData
+  | GroupPendingRemovalsPersistedData;
 
 export type AddJobCheckReturn = 'skipAddSameJobPresent' | null;
 

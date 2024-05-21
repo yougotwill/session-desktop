@@ -72,7 +72,7 @@ import { GetNetworkTime } from '../session/apis/snode_api/getNetworkTime';
 import { SnodeNamespaces } from '../session/apis/snode_api/namespaces';
 import { getSodiumRenderer } from '../session/crypto';
 import { addMessagePadding } from '../session/crypto/BufferPadding';
-import { getDecryptedMediaUrl } from '../session/crypto/DecryptedAttachmentsManager';
+import { DecryptedAttachmentsManager } from '../session/crypto/DecryptedAttachmentsManager';
 import {
   MessageRequestResponse,
   MessageRequestResponseParams,
@@ -896,7 +896,6 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     const isRemoteChange = Boolean((sentAt || fromSync || fromConfigMessage) && !fromCurrentDevice);
 
     // we don't add an update message when this comes from a config message, as we already have the SyncedMessage itself with the right timestamp to display
-
     if (!this.isClosedGroup() && !this.isPrivate()) {
       throw new Error(
         'updateExpireTimer() Disappearing messages are only supported int groups and private chats'
@@ -1824,7 +1823,11 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     if (!avatarUrl) {
       return noIconUrl;
     }
-    const decryptedAvatarUrl = await getDecryptedMediaUrl(avatarUrl, IMAGE_JPEG, true);
+    const decryptedAvatarUrl = await DecryptedAttachmentsManager.getDecryptedMediaUrl(
+      avatarUrl,
+      IMAGE_JPEG,
+      true
+    );
 
     if (!decryptedAvatarUrl) {
       window.log.warn('Could not decrypt avatar stored locally for getNotificationIcon..');
