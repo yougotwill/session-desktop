@@ -120,7 +120,9 @@ const SomeDeviceOutdatedSyncingNotice = () => {
   return (
     <NoticeBanner
       text={window.i18n('someOfYourDeviceUseOutdatedVersion')}
-      dismissCallback={dismiss}
+      onButtonClick={dismiss}
+      icon="exit"
+      dataTestId='some-of-your-devices-outdated-inbox'
     />
   );
 };

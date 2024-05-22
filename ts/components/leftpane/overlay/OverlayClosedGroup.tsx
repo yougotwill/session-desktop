@@ -23,6 +23,7 @@ import { getSearchResultsContactOnly, isSearching } from '../../../state/selecto
 import { useOurPkStr } from '../../../state/selectors/user';
 import { SessionSearchInput } from '../../SessionSearchInput';
 import { SpacerLG } from '../../basic/Text';
+import { GroupInviteRequiredVersionBanner } from '../../NoticeBanner';
 
 const StyledMemberListNoContacts = styled.div`
   font-family: var(--font-mono), var(--font-default);
@@ -178,6 +179,10 @@ export const OverlayClosedGroupV2 = () => {
       <SessionSpinner loading={isCreatingGroup} />
       <SpacerLG />
       <SessionSearchInput />
+      {!noContactsForClosedGroup && window.sessionFeatureFlags.useClosedGroupV2 && (
+        <GroupInviteRequiredVersionBanner />
+      )}
+
       <StyledGroupMemberListContainer>
         {noContactsForClosedGroup ? (
           <NoContacts />

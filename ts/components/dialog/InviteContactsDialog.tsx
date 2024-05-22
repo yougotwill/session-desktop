@@ -31,6 +31,7 @@ import { SessionWrapperModal } from '../SessionWrapperModal';
 import { SessionButton, SessionButtonColor, SessionButtonType } from '../basic/SessionButton';
 import { SessionSpinner } from '../basic/SessionSpinner';
 import { SessionToggle } from '../basic/SessionToggle';
+import { GroupInviteRequiredVersionBanner } from '../NoticeBanner';
 
 type Props = {
   conversationId: string;
@@ -186,12 +187,16 @@ const InviteContactsDialogInner = (props: Props) => {
 
   return (
     <SessionWrapperModal title={titleText} onClose={closeDialog}>
+      {hasContacts && isGroupV2 && <GroupInviteRequiredVersionBanner />}
+
       <SpacerLG />
       {isGroupV2 && (
-        <span style={{ display: 'flex', alignItems: 'center' }}>
-          Share History?{'  '}
-          <SessionToggle active={shareHistory} onClick={() => setShareHistory(!shareHistory)} />
-        </span>
+        <>
+          <span style={{ display: 'flex', alignItems: 'center' }}>
+            Share History?{'  '}
+            <SessionToggle active={shareHistory} onClick={() => setShareHistory(!shareHistory)} />
+          </span>
+        </>
       )}
       <div className="contact-selection-list">
         {hasContacts ? (

@@ -590,6 +590,8 @@
   "noMessagesInEverythingElse": "You have no messages from <b>$name$</b>. Send a message to start the conversation!",
   "hideBanner": "Hide",
   "someOfYourDeviceUseOutdatedVersion": "Some of your devices are using outdated versions. Syncing may be unreliable until they are updated.",
+  "versionRequiredForNewGroupDescription": "Users must have version {VERSION} or higher to receive invitations",
+  "upgradeYourGroupBefore": "Groups have been upgraded. Upgrade your group chats by creating a new Group. Support for old Groups will be discontinued on [Date].",
   "openMessageRequestInboxDescription": "View your Message Request inbox",
   "clearAllReactions": "Are you sure you want to clear all $emoji$ ?",
   "expandedReactionsText": "Show Less",

@@ -51,6 +51,10 @@ declare module 'react' {
     | 'microphone-button'
     | 'call-button'
     | 'attachments-button'
+    | 'invite-warning'
+    | 'some-of-your-devices-outdated-conversation'
+    | 'some-of-your-devices-outdated-inbox'
+    | 'legacy-group-banner'
 
     // generic button types
     | 'emoji-button'

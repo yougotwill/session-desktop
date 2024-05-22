@@ -251,26 +251,15 @@ export class SessionConversation extends React.Component<Props, State> {
     // TODOLATER break selectionMode into it's own container component so we can use hooks to fetch relevant state from the store
     const selectionMode = selectedMessages.length > 0;
 
-    const bannerText =
-      selectedConversation.hasOutdatedClient &&
-      selectedConversation.hasOutdatedClient !== ourDisplayNameInProfile
-        ? window.i18n('disappearingMessagesModeOutdated', [selectedConversation.hasOutdatedClient])
-        : window.i18n('someOfYourDeviceUseOutdatedVersion');
-
     return (
       <SessionTheme>
         <div className="conversation-header">
           <ConversationHeaderWithDetails />
-          {selectedConversation?.hasOutdatedClient?.length ? (
-            <NoticeBanner
-              text={bannerText}
-              dismissCallback={() => {
-                const conversation = ConvoHub.use().get(selectedConversation.id);
-                conversation.set({ hasOutdatedClient: undefined });
-                void conversation.commit();
-              }}
-            />
-          ) : null}
+          <OutdatedClientBanner
+            ourDisplayNameInProfile={ourDisplayNameInProfile}
+            selectedConversation={selectedConversation}
+          />
+          <OutdatedLegacyGroupBanner selectedConversation={selectedConversation} />
         </div>
         {isSelectedConvoInitialLoadingInProgress ? (
           <ConvoLoadingSpinner />
@@ -652,3 +641,50 @@ const renderImagePreview = async (contentType: string, file: File, fileName: str
     thumbnail: null,
   };
 };
+
+function OutdatedClientBanner(props: {
+  selectedConversation: Pick<ReduxConversationType, 'id' | 'hasOutdatedClient'>;
+  ourDisplayNameInProfile: string;
+}) {
+  const { selectedConversation, ourDisplayNameInProfile } = props;
+  const bannerText =
+    selectedConversation.hasOutdatedClient &&
+    selectedConversation.hasOutdatedClient !== ourDisplayNameInProfile
+      ? window.i18n('disappearingMessagesModeOutdated', [selectedConversation.hasOutdatedClient])
+      : window.i18n('someOfYourDeviceUseOutdatedVersion');
+
+  return selectedConversation.hasOutdatedClient?.length ? (
+    <NoticeBanner
+      text={bannerText}
+      onButtonClick={() => {
+        const conversation = ConvoHub.use().get(selectedConversation.id);
+        conversation.set({ hasOutdatedClient: undefined });
+        void conversation.commit();
+      }}
+      icon="exit"
+      dataTestId="some-of-your-devices-outdated-conversation"
+    />
+  ) : null;
+}
+
+function OutdatedLegacyGroupBanner(props: {
+  selectedConversation: Pick<ReduxConversationType, 'id' | 'isPrivate' | 'isPublic'>;
+}) {
+  const { selectedConversation } = props;
+
+  const isLegacyGroup =
+    !selectedConversation.isPrivate &&
+    !selectedConversation.isPublic &&
+    selectedConversation.id.startsWith('05');
+
+  return isLegacyGroup ? (
+    <NoticeBanner
+      text={window.i18n('upgradeYourGroupBefore')}
+      onButtonClick={() => {
+        throw new Error('TODO'); // fixme audric
+      }}
+      icon="externalLink"
+      dataTestId="legacy-group-banner"
+    />
+  ) : null;
+}
