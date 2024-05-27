@@ -5,7 +5,6 @@ import { isEmpty } from 'lodash';
 import { AwaitedReturn, assertUnreachable } from '../../../types/sqlSharedTypes';
 import { UserGroupsWrapperActions } from '../../../webworker/workers/browser/libsession_worker_interface';
 import { concatUInt8Array } from '../../crypto';
-import { ed25519Str } from '../../onions/onionPath';
 import { PubKey } from '../../types';
 import { StringUtils, UserUtils } from '../../utils';
 import { GetNetworkTime } from './getNetworkTime';
@@ -26,6 +25,7 @@ import {
   WithSignature,
   WithTimestamp,
 } from './types';
+import { ed25519Str } from '../../utils/String';
 
 type WithMaxSize = { max_size?: number };
 export type WithShortenOrExtend = { shortenOrExtend: 'shorten' | 'extend' | '' };
@@ -73,6 +73,32 @@ export class RetrieveLegacyClosedGroupSubRequest extends SnodeAPISubRequest {
     return `${this.method}-${SnodeNamespace.toRole(this.namespace)}`;
   }
 }
+
+/**
+ * If you are thinking of adding the `limit` field here: don't.
+ * We fetch the full list because we will remove from every cached swarms the snodes not found in that fresh list.
+ * If a `limit` was set, we would remove a lot of valid snodes from those cached swarms.
+ */
+type FetchSnodeListParams = {
+  active_only: true;
+  fields: {
+    public_ip: true;
+    storage_port: true;
+    pubkey_x25519: true;
+    pubkey_ed25519: true;
+  };
+};
+
+export type GetServicesNodesFromSeedRequest = {
+  method: 'get_n_service_nodes';
+  jsonrpc: '2.0';
+  /**
+   * If you are thinking of adding the `limit` field here: don't.
+   * We fetch the full list because we will remove from every cached swarms the snodes not found in that fresh list.
+   * If the limit was set, we would remove a lot of valid snodes from the swarms we've already fetched.
+   */
+  params: FetchSnodeListParams;
+};
 
 export class RetrieveUserSubRequest extends SnodeAPISubRequest {
   public method = 'retrieve' as const;
@@ -209,6 +235,11 @@ export class GetServiceNodesSubRequest extends SnodeAPISubRequest {
     return {
       method: this.method,
       params: {
+        /**
+         * If you are thinking of adding the `limit` field here: don't.
+         * We fetch the full list because we will remove from every cached swarms the snodes not found in that fresh list.
+         * If the limit was set, we would remove a lot of valid snodes from the swarms we've already fetched.
+         */
         endpoint: 'get_service_nodes' as const,
         params: {
           active_only: true,

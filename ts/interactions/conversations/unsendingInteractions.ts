@@ -13,12 +13,13 @@ import { ConvoHub } from '../../session/conversations';
 import { getSodiumRenderer } from '../../session/crypto';
 import { UnsendMessage } from '../../session/messages/outgoing/controlMessage/UnsendMessage';
 import { GroupUpdateDeleteMemberContentMessage } from '../../session/messages/outgoing/controlMessage/group_v2/to_group/GroupUpdateDeleteMemberContentMessage';
-import { ed25519Str } from '../../session/onions/onionPath';
 import { PubKey } from '../../session/types';
 import { ToastUtils, UserUtils } from '../../session/utils';
 import { closeRightPanel, resetSelectedMessageIds } from '../../state/ducks/conversations';
 import { updateConfirmModal } from '../../state/ducks/modalDialog';
 import { resetRightOverlayMode } from '../../state/ducks/section';
+import { ed25519Str } from '../../session/utils/String';
+
 import { UserGroupsWrapperActions } from '../../webworker/workers/browser/libsession_worker_interface';
 
 async function unsendMessagesForEveryone1o1AndLegacy(
@@ -478,6 +479,24 @@ const doDeleteSelectedMessages = async ({
   // otherwise, delete that message locally, from our swarm and from our other devices
   await unsendMessageJustForThisUser(conversation, selectedMessages);
 };
+
+/**
+ * Either delete for everyone or not, based on the props
+ */
+export async function deleteMessagesForX(
+  messageIds: Array<string>,
+  conversationId: string,
+  /** should only be enforced for messages successfully sent on communities */
+  enforceDeleteServerSide: boolean
+) {
+  if (conversationId) {
+    if (enforceDeleteServerSide) {
+      await deleteMessagesByIdForEveryone(messageIds, conversationId);
+    } else {
+      await deleteMessagesById(messageIds, conversationId);
+    }
+  }
+}
 
 export async function deleteMessagesByIdForEveryone(
   messageIds: Array<string>,

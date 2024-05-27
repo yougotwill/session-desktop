@@ -10,6 +10,7 @@ import {
   dialog,
   protocol as electronProtocol,
   ipcMain as ipc,
+  IpcMainEvent,
   Menu,
   nativeTheme,
   screen,
@@ -153,7 +154,7 @@ if (windowFromUserConfig) {
   ephemeralConfig.set('window', windowConfig);
 }
 
-// import {load as loadLocale} from '../..'
+import { readFile } from 'fs-extra';
 import { getAppRootPath } from '../node/getRootPath';
 import { setLastestRelease } from '../node/latest_desktop_release';
 import { load as loadLocale, LocaleMessagesWithNameType } from '../node/locale';
@@ -426,7 +427,7 @@ async function createWindow() {
     }, 5000);
   }
 
-  if (isDevProd()) {
+  if (isDevProd() && !isTestIntegration()) {
     // Open the DevTools.
     mainWindow.webContents.openDevTools({
       mode: 'bottom',
@@ -787,8 +788,20 @@ async function removeDB() {
   try {
     console.error('Remove DB: removing.', userDir);
 
-    userConfig.remove();
-    ephemeralConfig.remove();
+    try {
+      userConfig.remove();
+    } catch (e) {
+      if (e.code !== 'ENOENT') {
+        throw e;
+      }
+    }
+    try {
+      ephemeralConfig.remove();
+    } catch (e) {
+      if (e.code !== 'ENOENT') {
+        throw e;
+      }
+    }
   } catch (e) {
     console.error('Remove DB: Failed to remove configs.', e);
   }
@@ -1072,6 +1085,18 @@ ipc.on('close-debug-log', () => {
   }
 });
 ipc.on('save-debug-log', saveDebugLog);
+ipc.on('load-maxmind-data', async (event: IpcMainEvent) => {
+  try {
+    const appRoot =
+      app.isPackaged && process.resourcesPath ? process.resourcesPath : app.getAppPath();
+    const fileToRead = path.join(appRoot, 'mmdb', 'GeoLite2-Country.mmdb');
+    console.info(`loading maxmind data from file:"${fileToRead}"`);
+    const buffer = await readFile(fileToRead);
+    event.reply('load-maxmind-data-complete', new Uint8Array(buffer.buffer));
+  } catch (e) {
+    event.reply('load-maxmind-data-complete', null);
+  }
+});
 
 // This should be called with an ipc sendSync
 ipc.on('get-media-permissions', event => {

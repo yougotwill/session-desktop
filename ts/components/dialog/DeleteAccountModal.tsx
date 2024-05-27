@@ -1,7 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { SnodeAPI } from '../../session/apis/snode_api/SNodeAPI';
-import { ed25519Str } from '../../session/onions/onionPath';
+
 import { forceSyncConfigurationNowIfNeeded } from '../../session/utils/sync/syncUtils';
 import { updateConfirmModal, updateDeleteAccountModal } from '../../state/ducks/modalDialog';
 import { SessionWrapperModal } from '../SessionWrapperModal';
@@ -14,15 +14,27 @@ import { deleteAllLogs } from '../../node/logs';
 import { clearInbox } from '../../session/apis/open_group_api/sogsv3/sogsV3ClearInbox';
 import { getAllValidOpenGroupV2ConversationRoomInfos } from '../../session/apis/open_group_api/utils/OpenGroupUtils';
 import { SessionRadioGroup } from '../basic/SessionRadioGroup';
+import { ed25519Str } from '../../session/utils/String';
 
 const deleteDbLocally = async () => {
   window?.log?.info('last message sent successfully. Deleting everything');
   window.persistStore?.purge();
+  window?.log?.info('store purged');
+
   await deleteAllLogs();
+  window?.log?.info('deleteAllLogs: done');
+
   await Data.removeAll();
+  window?.log?.info('Data.removeAll: done');
+
   await Data.close();
+  window?.log?.info('Data.close: done');
   await Data.removeDB();
+  window?.log?.info('Data.removeDB: done');
+
   await Data.removeOtherData();
+  window?.log?.info('Data.removeOtherData: done');
+
   window.localStorage.setItem('restart-reason', 'delete-account');
 };
 

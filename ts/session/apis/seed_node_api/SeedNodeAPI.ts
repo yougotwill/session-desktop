@@ -13,6 +13,7 @@ import { Snode } from '../../../data/data';
 import { APPLICATION_JSON } from '../../../types/MIME';
 import { sha256 } from '../../crypto';
 import { allowOnlyOneAtATime } from '../../utils/Promise';
+import { GetServicesNodesFromSeedRequest } from '../snode_api/SnodeRequestTypes';
 
 /**
  * Fetch all snodes from seed nodes.
@@ -229,22 +230,20 @@ async function getSnodesFromSeedUrl(urlObj: URL): Promise<Array<any>> {
   // we get all active nodes
   window?.log?.info(`getSnodesFromSeedUrl starting with ${urlObj.href}`);
 
-  const params = {
-    active_only: true,
-    fields: {
-      public_ip: true,
-      storage_port: true,
-      pubkey_x25519: true,
-      pubkey_ed25519: true,
-    },
-  };
-
   const endpoint = 'json_rpc';
   const url = `${urlObj.href}${endpoint}`;
-  const body = {
+  const body: GetServicesNodesFromSeedRequest = {
     jsonrpc: '2.0',
     method: 'get_n_service_nodes',
-    params,
+    params: {
+      active_only: true,
+      fields: {
+        public_ip: true,
+        storage_port: true,
+        pubkey_x25519: true,
+        pubkey_ed25519: true,
+      },
+    },
   };
 
   const sslAgent = await getSslAgentForSeedNode(

@@ -377,6 +377,7 @@ export async function expireMessagesOnSnode(
   if (!ourPubKey) {
     throw new Error('[expireMessagesOnSnode] No pubkey found');
   }
+  let targetNode: Snode | undefined;
 
   try {
     // key is a string even if it is really a number because Object.keys only knows strings...
@@ -399,14 +400,13 @@ export async function expireMessagesOnSnode(
     if (!expireRequestsParams || isEmpty(expireRequestsParams)) {
       throw new Error(`Failed to build expire request`);
     }
-
     // we most likely will only have a single chunk, so this is a bit of over engineered.
     // if any of those requests fails, make sure to not consider
     const allSettled = await Promise.allSettled(
       expireRequestsParams.map(chunkRequest =>
         pRetry(
           async () => {
-            const targetNode = await SnodePool.getNodeFromSwarmOrThrow(ourPubKey);
+            targetNode = await SnodePool.getNodeFromSwarmOrThrow(ourPubKey);
 
             return updateExpiryOnNodesNoRetries(targetNode, ourPubKey, chunkRequest);
           },
@@ -426,7 +426,12 @@ export async function expireMessagesOnSnode(
 
     return flatten(compact(allSettled.map(m => (m.status === 'fulfilled' ? m.value : null))));
   } catch (e) {
-    window?.log?.warn(`[expireMessagesOnSnode] ${e.code || ''}${e.message || e} by ${ourPubKey}`);
+    const snodeStr = targetNode ? `${targetNode.ip}:${targetNode.port}` : 'null';
+    window?.log?.warn(
+      `[expireMessageOnSnode] ${e.code || ''}${
+        e.message || e
+      } by ${ourPubKey} via snode:${snodeStr}`
+    );
     throw e;
   }
 }

@@ -28,13 +28,13 @@ import { GetNetworkTime } from '../apis/snode_api/getNetworkTime';
 import { SnodeNamespaces } from '../apis/snode_api/namespaces';
 import { ClosedGroupMemberLeftMessage } from '../messages/outgoing/controlMessage/group/ClosedGroupMemberLeftMessage';
 import { GroupUpdateMemberLeftMessage } from '../messages/outgoing/controlMessage/group_v2/to_group/GroupUpdateMemberLeftMessage';
-import { ed25519Str } from '../onions/onionPath';
 import { UserUtils } from '../utils';
 import { UserSync } from '../utils/job_runners/jobs/UserSyncJob';
 import { LibSessionUtil } from '../utils/libsession/libsession_utils';
 import { SessionUtilContact } from '../utils/libsession/libsession_utils_contacts';
 import { SessionUtilConvoInfoVolatile } from '../utils/libsession/libsession_utils_convo_info_volatile';
 import { SessionUtilUserGroups } from '../utils/libsession/libsession_utils_user_groups';
+import { ed25519Str } from '../utils/String';
 
 let instance: ConvoController | null;
 

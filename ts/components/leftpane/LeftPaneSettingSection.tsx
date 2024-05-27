@@ -12,8 +12,8 @@ import {
 } from '../../state/ducks/section';
 import { getFocusedSettingsSection } from '../../state/selectors/section';
 import { SessionIcon } from '../icon';
-import { SessionSettingCategory } from '../settings/SessionSettings';
 import { LeftPaneSectionHeader } from './LeftPaneSectionHeader';
+import type { SessionSettingCategory } from '../../types/ReduxTypes';
 
 const StyledSettingsSectionTitle = styled.strong`
   font-family: var(--font-accent), var(--font-default);
@@ -42,7 +42,11 @@ const StyledSettingsListItem = styled.div<{ active: boolean }>`
   }
 `;
 
-const getCategories = () => {
+const getCategories = (): Array<{
+  id: SessionSettingCategory;
+  title: string;
+  dataTestId: SessionDataTestId;
+}> => {
   return [
     {
       id: 'privacy' as const,
@@ -77,7 +81,7 @@ const getCategories = () => {
       title: window.i18n('recoveryPhrase'),
     },
     {
-      id: 'ClearData' as const,
+      id: 'clearData' as const,
       title: window.i18n('clearDataSettingsTitle'),
     },
   ].map(m => ({ ...m, dataTestId: `${m.id}-settings-menu-item` as const }));
@@ -95,7 +99,7 @@ const LeftPaneSettingsCategoryRow = (props: {
   const dispatch = useDispatch();
   const focusedSettingsSection = useSelector(getFocusedSettingsSection);
 
-  const isClearData = id === 'ClearData';
+  const isClearData = id === 'clearData';
 
   return (
     <StyledSettingsListItem
@@ -113,7 +117,7 @@ const LeftPaneSettingsCategoryRow = (props: {
           case 'recoveryPhrase':
             dispatch(recoveryPhraseModal({}));
             break;
-          case 'ClearData':
+          case 'clearData':
             dispatch(updateDeleteAccountModal({}));
             break;
           default:

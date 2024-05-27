@@ -17,7 +17,6 @@ import { TTL_DEFAULT } from '../../../constants';
 import { ConvoHub } from '../../../conversations';
 import { GroupUpdateInfoChangeMessage } from '../../../messages/outgoing/controlMessage/group_v2/to_group/GroupUpdateInfoChangeMessage';
 import { GroupUpdateMemberChangeMessage } from '../../../messages/outgoing/controlMessage/group_v2/to_group/GroupUpdateMemberChangeMessage';
-import { ed25519Str } from '../../../onions/onionPath';
 import { MessageSender } from '../../../sending/MessageSender';
 import { PubKey } from '../../../types';
 import { allowOnlyOneAtATime } from '../../Promise';
@@ -29,6 +28,7 @@ import {
   PersistedJob,
   RunJobResult,
 } from '../PersistedJob';
+import { ed25519Str } from '../../String';
 
 const defaultMsBetweenRetries = 15000; // a long time between retries, to avoid running multiple jobs at the same time, when one was postponed at the same time as one already planned (5s)
 const defaultMaxAttempts = 2;

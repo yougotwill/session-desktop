@@ -28,7 +28,7 @@ const StyledProgressBarContainer = styled.div`
 const StyledProgressBarInner = styled.div`
   background: var(--primary-color);
   width: 90%;
-  transition: width 0.5s ease-in;
+  transition: width var(--default-duration) ease-in;
   height: 100%;
 `;
 
@@ -61,6 +61,7 @@ const StyledBannerInner = styled.div`
 
   .session-button {
     margin-top: var(--margins-md);
+    flex-grow: 1;
   }
 `;
 
@@ -75,11 +76,13 @@ const BannerInner = () => {
   return (
     <StyledBannerInner>
       <p>{window.i18n('recoveryPhraseRevealMessage')}</p>
-      <SessionButton
-        text={window.i18n('recoveryPhraseRevealButtonText')}
-        onClick={showRecoveryPhraseModal}
-        dataTestId="reveal-recovery-phrase"
-      />
+      <Flex container={true} alignItems="center" justifyContent="center">
+        <SessionButton
+          text={window.i18n('recoveryPhraseRevealButtonText')}
+          onClick={showRecoveryPhraseModal}
+          dataTestId="reveal-recovery-phrase"
+        />
+      </Flex>
     </StyledBannerInner>
   );
 };

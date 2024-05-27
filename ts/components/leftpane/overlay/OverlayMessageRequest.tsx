@@ -4,7 +4,6 @@ import { useDispatch, useSelector } from 'react-redux';
 import useKey from 'react-use/lib/useKey';
 import styled from 'styled-components';
 import { declineConversationWithoutConfirm } from '../../../interactions/conversationInteractions';
-import { ed25519Str } from '../../../session/onions/onionPath';
 import { forceSyncConfigurationNowIfNeeded } from '../../../session/utils/sync/syncUtils';
 import { updateConfirmModal } from '../../../state/ducks/modalDialog';
 import { resetLeftOverlayMode } from '../../../state/ducks/section';
@@ -13,6 +12,7 @@ import { useSelectedConversationKey } from '../../../state/selectors/selectedCon
 import { SessionButton, SessionButtonColor } from '../../basic/SessionButton';
 import { SpacerLG } from '../../basic/Text';
 import { ConversationListItem } from '../conversation-list-item/ConversationListItem';
+import { ed25519Str } from '../../../session/utils/String';
 
 const MessageRequestListPlaceholder = styled.div`
   color: var(--conversation-tab-text-color);

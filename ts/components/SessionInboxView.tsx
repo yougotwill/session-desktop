@@ -100,8 +100,20 @@ async function createSessionInboxStore() {
 
 async function setupLeftPane(forceUpdateInboxComponent: () => void) {
   window.openConversationWithMessages = openConversationWithMessages;
+
   window.inboxStore = await createSessionInboxStore();
-  window.inboxStore.dispatch(updateAllOnStorageReady());
+
+  window.inboxStore.dispatch(
+    updateAllOnStorageReady({
+      hasBlindedMsgRequestsEnabled: Storage.getBoolOrFalse(
+        SettingsKey.hasBlindedMsgRequestsEnabled
+      ),
+      someDeviceOutdatedSyncing: Storage.getBoolOrFalse(SettingsKey.someDeviceOutdatedSyncing),
+      settingsLinkPreview: Storage.getBoolOrFalse(SettingsKey.settingsLinkPreview),
+      hasFollowSystemThemeEnabled: Storage.getBoolOrFalse(SettingsKey.hasFollowSystemThemeEnabled),
+      hasShiftSendEnabled: Storage.getBoolOrFalse(SettingsKey.hasShiftSendEnabled),
+    })
+  );
   window.inboxStore.dispatch(groupInfoActions.loadMetaDumpsFromDB()); // this loads the dumps from DB and fills the 03-groups slice with the corresponding details
   forceUpdateInboxComponent();
   window.getState = window.inboxStore.getState;
@@ -122,7 +134,7 @@ const SomeDeviceOutdatedSyncingNotice = () => {
       text={window.i18n('someOfYourDeviceUseOutdatedVersion')}
       onButtonClick={dismiss}
       icon="exit"
-      dataTestId='some-of-your-devices-outdated-inbox'
+      dataTestId="some-of-your-devices-outdated-inbox"
     />
   );
 };

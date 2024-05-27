@@ -24,7 +24,6 @@ import { DisappearingMessages } from '../../session/disappearing_messages';
 import { ClosedGroup } from '../../session/group/closed-group';
 import { GroupUpdateInfoChangeMessage } from '../../session/messages/outgoing/controlMessage/group_v2/to_group/GroupUpdateInfoChangeMessage';
 import { GroupUpdateMemberChangeMessage } from '../../session/messages/outgoing/controlMessage/group_v2/to_group/GroupUpdateMemberChangeMessage';
-import { ed25519Str } from '../../session/onions/onionPath';
 import { PubKey } from '../../session/types';
 import { UserUtils } from '../../session/utils';
 import { PreConditionFailed } from '../../session/utils/errors';
@@ -53,6 +52,7 @@ import {
 import { StateType } from '../reducer';
 import { openConversationWithMessages } from './conversations';
 import { resetLeftOverlayMode } from './section';
+import { ed25519Str } from '../../session/utils/String';
 
 type WithFromMemberLeftMessage = { fromMemberLeftMessage: boolean }; // there are some changes we want to skip when doing changes triggered from a memberLeft message.
 export type GroupState = {

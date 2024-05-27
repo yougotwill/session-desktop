@@ -1,13 +1,14 @@
 import { GroupPubkeyType } from 'libsession_util_nodejs';
+import { isArray } from 'lodash';
 import { Snode } from '../../../data/data';
 import { updateIsOnline } from '../../../state/ducks/onion';
 import { GetNetworkTime } from './getNetworkTime';
 import { SnodeNamespace, SnodeNamespaces, SnodeNamespacesGroup } from './namespaces';
 
 import { UserGroupsWrapperActions } from '../../../webworker/workers/browser/libsession_worker_interface';
-import { TTL_DEFAULT } from '../../constants';
-import { ed25519Str } from '../../onions/onionPath';
 import { PubKey } from '../../types';
+import { DURATION, TTL_DEFAULT } from '../../constants';
+import { sleepFor } from '../../utils/Promise';
 import {
   RetrieveGroupSubRequest,
   RetrieveLegacyClosedGroupSubRequest,
@@ -17,6 +18,7 @@ import {
 } from './SnodeRequestTypes';
 import { BatchRequests } from './batchRequest';
 import { RetrieveMessagesResultsBatched, RetrieveMessagesResultsContent } from './types';
+import { ed25519Str } from '../../utils/String';
 
 type RetrieveParams = {
   pubkey: string;
@@ -210,14 +212,20 @@ async function retrieveNextMessagesNoRetries(
 
   // let exceptions bubble up
   // no retry for this one as this a call we do every few seconds while polling for messages
-  const results = await BatchRequests.doUnsignedSnodeBatchRequestNoRetries(
-    rawRequests,
-    targetNode,
-    10000,
-    associatedWith,
-    allow401s
-  );
-  if (!results || !results.length) {
+  const timeOutMs = 10 * DURATION.SECONDS; // yes this is a long timeout for just messages, but 4s timeouts way to often...
+  const timeoutPromise = async () => sleepFor(timeOutMs);
+  const fetchPromise = async () =>
+    BatchRequests.doUnsignedSnodeBatchRequestNoRetries(
+      rawRequests,
+      targetNode,
+      timeOutMs,
+      associatedWith,
+      allow401s
+    );
+
+  // just to make sure that we don't hang for more than timeOutMs
+  const results = await Promise.race([timeoutPromise(), fetchPromise()]);
+  if (!results || !isArray(results) || !results.length) {
     window?.log?.warn(
       `_retrieveNextMessages - sessionRpc could not talk to ${targetNode.ip}:${targetNode.port}`
     );
@@ -255,6 +263,8 @@ async function retrieveNextMessagesNoRetries(
     GetNetworkTime.handleTimestampOffsetFromNetwork('retrieve', bodyFirstResult.t);
 
     // merge results with their corresponding namespaces
+    // NOTE: We don't want to sort messages here because the ordering depends on the snode and when it received each message.
+    // The last_hash for that snode has to be the last one we've received from that same snode, othwerwise we end up fetching the same messages over and over again.
     return namespacesAndLastHashes.map((n, index) => ({
       code: results[index].code,
       messages: results[index].body as RetrieveMessagesResultsContent,

@@ -1,7 +1,8 @@
-import React, { SessionDataTestId } from 'react';
-import styled, { css, keyframes } from 'styled-components';
+import React, { memo, SessionDataTestId } from 'react';
+import styled, { css, CSSProperties, keyframes } from 'styled-components';
 
 import { icons, SessionIconSize, SessionIconType } from '.';
+import { ClipRule, FillRule } from './Icons';
 
 export type SessionIconProps = {
   iconType: SessionIconType;
@@ -16,6 +17,8 @@ export type SessionIconProps = {
   noScale?: boolean;
   backgroundColor?: string;
   dataTestId?: SessionDataTestId;
+  style?: CSSProperties;
+  unreadCount?: number;
 };
 
 const getIconDimensionFromIconSize = (iconSize: SessionIconSize | number) => {
@@ -54,6 +57,9 @@ type StyledSvgProps = {
   noScale?: boolean;
   iconColor?: string;
   backgroundColor?: string;
+  fill?: string;
+  clipRule?: ClipRule;
+  filleRule?: FillRule;
 };
 
 const rotate = keyframes`
@@ -118,37 +124,28 @@ const animation = (props: {
   return undefined;
 };
 
-const Svg = React.memo(styled.svg<StyledSvgProps>`
+const Svg = memo(styled.svg<StyledSvgProps>`
   width: ${props => props.width};
   transform: ${props => `rotate(${props.iconRotation}deg)`};
   ${props => animation(props)};
   border-radius: ${props => props.borderRadius};
   background-color: ${props =>
-    props.backgroundColor ? props.backgroundColor : '--button-icon-background-color'};
-  border-radius: ${props => (props.borderRadius ? props.borderRadius : '')};
+    props.backgroundColor ? props.backgroundColor : 'var(--button-icon-background-color)'};
   filter: ${props => (props.noScale ? `drop-shadow(0px 0px 4px ${props.iconColor})` : '')};
-  fill: ${props => (props.iconColor ? props.iconColor : '--button-icon-stroke-color')};
+  fill: ${props => (props.iconColor ? props.iconColor : 'var(--button-icon-stroke-color)')};
   padding: ${props => (props.iconPadding ? props.iconPadding : '')};
   transition: inherit;
 `);
 
-const SessionSvg = (props: {
-  viewBox: string;
-  path: string | Array<string>;
-  width: string | number;
-  height: string | number;
-  iconRotation: number;
-  iconColor?: string;
-  rotateDuration?: number;
-  glowDuration?: number;
-  glowStartDelay?: number;
-  noScale?: boolean;
-  borderRadius?: string;
-  backgroundColor?: string;
-  iconPadding?: string;
-  dataTestId?: SessionDataTestId;
-}) => {
-  const colorSvg = props.iconColor ? props.iconColor : '--button-icon-stroke-color';
+const SessionSvg = (
+  props: StyledSvgProps & {
+    viewBox: string;
+    path: string | Array<string>;
+    style?: CSSProperties;
+    dataTestId?: SessionDataTestId;
+  }
+) => {
+  const colorSvg = props.iconColor ? props.iconColor : 'var(--button-icon-stroke-color)';
   const pathArray = props.path instanceof Array ? props.path : [props.path];
   const propsToPick = {
     width: props.width,
@@ -163,6 +160,10 @@ const SessionSvg = (props: {
     backgroundColor: props.backgroundColor,
     borderRadius: props.borderRadius,
     iconPadding: props.iconPadding,
+    fill: props.fill,
+    clipRule: props.clipRule,
+    fillRule: props.filleRule,
+    style: props.style,
     dataTestId: props.dataTestId,
   };
 
@@ -186,6 +187,7 @@ export const SessionIcon = (props: SessionIconProps) => {
     noScale,
     backgroundColor,
     iconPadding,
+    style,
     dataTestId,
   } = props;
   let { iconSize, iconRotation } = props;
@@ -195,6 +197,9 @@ export const SessionIcon = (props: SessionIconProps) => {
   const iconDimensions = getIconDimensionFromIconSize(iconSize);
   const iconDef = icons[iconType];
   const ratio = iconDef?.ratio || 1;
+  const fill = iconDef?.fill || undefined;
+  const clipRule = iconDef?.clipRule || 'nonzero';
+  const fillRule = iconDef?.fillRule || 'nonzero';
 
   return (
     <SessionSvg
@@ -211,6 +216,10 @@ export const SessionIcon = (props: SessionIconProps) => {
       iconColor={iconColor}
       backgroundColor={backgroundColor}
       iconPadding={iconPadding}
+      fill={fill}
+      clipRule={clipRule}
+      filleRule={fillRule}
+      style={style}
       dataTestId={dataTestId}
     />
   );

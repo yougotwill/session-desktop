@@ -75,7 +75,7 @@ declare module 'react' {
     | 'appearance-settings-menu-item' // needs to be tweaked
     | 'help-settings-menu-item' // needs to be tweaked
     | 'permissions-settings-menu-item' // needs to be tweaked
-    | 'ClearData-settings-menu-item' // TODO AUDRIC needs to be tweaked
+    | 'clearData-settings-menu-item' // TODO AUDRIC needs to be tweaked
 
     // timer options
     | 'time-option-0'

@@ -18,6 +18,7 @@ import { Avatar, AvatarSize } from '../avatar/Avatar';
 import { SessionButton, SessionButtonColor, SessionButtonType } from '../basic/SessionButton';
 import { SessionSpinner } from '../basic/SessionSpinner';
 import { SpacerMD } from '../basic/Text';
+import { Constants } from '../../session';
 
 function GroupAvatar({
   isPublic,
@@ -103,6 +104,11 @@ export function UpdateGroupNameDialog(props: { conversationId: string }) {
 
       return;
     }
+    if (trimmedGroupName.length > Constants.VALIDATION.MAX_GROUP_NAME_LENGTH) {
+      onShowError(window.i18n('invalidGroupNameTooLong'));
+
+      return;
+    }
     onShowError('');
 
     if (trimmedGroupName !== originalGroupName || newAvatarObjecturl !== oldAvatarPath) {
@@ -179,6 +185,7 @@ export function UpdateGroupNameDialog(props: { conversationId: string }) {
           required={true}
           aria-required={true}
           autoFocus={true}
+          maxLength={Constants.VALIDATION.MAX_GROUP_NAME_LENGTH}
           data-testid="group-name-input"
         />
       ) : null}

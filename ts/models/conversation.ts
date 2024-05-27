@@ -45,7 +45,7 @@ import {
   VisibleMessageParams,
 } from '../session/messages/outgoing/visibleMessage/VisibleMessage';
 import { perfEnd, perfStart } from '../session/utils/Performance';
-import { toHex } from '../session/utils/String';
+import { ed25519Str, toHex } from '../session/utils/String';
 import { createTaskWithTimeout } from '../session/utils/TaskWithTimeout';
 import {
   actions as conversationActions,
@@ -77,7 +77,6 @@ import {
   MessageRequestResponse,
   MessageRequestResponseParams,
 } from '../session/messages/outgoing/controlMessage/MessageRequestResponse';
-import { ed25519Str } from '../session/onions/onionPath';
 import { UserSync } from '../session/utils/job_runners/jobs/UserSyncJob';
 import { SessionUtilContact } from '../session/utils/libsession/libsession_utils_contacts';
 import { SessionUtilConvoInfoVolatile } from '../session/utils/libsession/libsession_utils_convo_info_volatile';
@@ -1841,9 +1840,11 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       return;
     }
     const conversationId = this.id;
+    const isLegacyGroup = this.isClosedGroup() && this.id.startsWith('05');
 
     let friendRequestText;
-    if (!this.isApproved()) {
+    // NOTE: legacy groups are never approved, so we should not cancel notifications
+    if (!this.isApproved() && !isLegacyGroup) {
       window?.log?.info('notification cancelled for unapproved convo', this.idForLogging());
       const hadNoRequestsPrior =
         ConvoHub.use()

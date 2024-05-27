@@ -4,10 +4,7 @@ import { GroupPubkeyType, PubkeyType } from 'libsession_util_nodejs';
 import { compact, isEmpty } from 'lodash';
 import pRetry from 'p-retry';
 import { getSodiumRenderer } from '../../crypto';
-import { ed25519Str } from '../../onions/onionPath';
 import { PubKey } from '../../types';
-import { StringUtils, UserUtils } from '../../utils';
-import { fromBase64ToArray, fromHexToArray } from '../../utils/String';
 import {
   DeleteAllFromUserNodeSubRequest,
   DeleteHashesFromGroupNodeSubRequest,
@@ -15,6 +12,9 @@ import {
 } from './SnodeRequestTypes';
 import { BatchRequests } from './batchRequest';
 import { SnodePool } from './snodePool';
+import { StringUtils, UserUtils } from '../../utils';
+import { ed25519Str, fromBase64ToArray, fromHexToArray } from '../../utils/String';
+
 
 export const ERROR_CODE_NO_CONNECT = 'ENETUNREACH: No network connection.';
 

@@ -1,6 +1,5 @@
 import classNames from 'classnames';
 import React from 'react';
-import { CSSProperties } from 'styled-components';
 
 import {
   useIsPrivate,
@@ -28,12 +27,20 @@ export const ContactName = (props: Props) => {
   const convoName = useNicknameOrProfileNameOrShortenedPubkey(pubkey);
   const isPrivate = useIsPrivate(pubkey);
   const shouldShowProfile = Boolean(convoName || profileName || name);
+
+  const commonStyles = {
+    'min-width': 0,
+    'text-overflow': 'ellipsis',
+    overflow: 'hidden',
+  } as React.CSSProperties;
+
   const styles = (
     boldProfileName
       ? {
           fontWeight: 'bold',
+          ...commonStyles,
         }
-      : {}
+      : commonStyles
   ) as React.CSSProperties;
   const textProfile = profileName || name || convoName || window.i18n('anonymous');
 
@@ -42,15 +49,19 @@ export const ContactName = (props: Props) => {
       className={classNames(prefix, compact && 'compact')}
       dir="auto"
       data-testid={`${prefix}__profile-name` as const}
-      style={{ textOverflow: 'inherit' }}
+      style={{
+        textOverflow: 'inherit',
+        display: 'flex',
+        flexDirection: 'row',
+        gap: 'var(--margins-xs)',
+      }}
     >
       {shouldShowProfile ? (
-        <span style={styles as CSSProperties} className={`${prefix}__profile-name`}>
+        <div style={styles} className={`${prefix}__profile-name`}>
           <Emojify text={textProfile} sizeClass="small" isGroup={!isPrivate} />
-        </span>
+        </div>
       ) : null}
-      {shouldShowProfile ? ' ' : null}
-      {shouldShowPubkey ? <span className={`${prefix}__profile-number`}>{pubkey}</span> : null}
+      {shouldShowPubkey ? <div className={`${prefix}__profile-number`}>{pubkey}</div> : null}
     </span>
   );
 };

@@ -21,9 +21,9 @@ import {
   NotEmptyArrayOfBatchResults,
 } from '../../apis/snode_api/SnodeRequestTypes';
 import { SnodeNamespaces, SnodeNamespacesUserConfig } from '../../apis/snode_api/namespaces';
-import { ed25519Str } from '../../onions/onionPath';
 import { PubKey } from '../../types';
 import { UserSync } from '../job_runners/jobs/UserSyncJob';
+import { ed25519Str } from '../String';
 
 const requiredUserVariants: Array<ConfigWrapperUser> = [
   'UserConfig',

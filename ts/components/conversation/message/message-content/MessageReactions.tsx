@@ -1,6 +1,7 @@
 import { isEmpty, isEqual } from 'lodash';
 import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
+import { useIsDetailMessageView } from '../../../../contexts/isDetailViewContext';
 import { useMessageReactsPropsById } from '../../../../hooks/useParamSelector';
 import { MessageRenderingProps } from '../../../../models/messageType';
 import { REACT_LIMIT } from '../../../../session/constants';
@@ -27,7 +28,7 @@ export const StyledMessageReactionsContainer = styled(Flex)<{
   }
 
   // MessageAvatar width + margin-inline-end
-  ${props => !props.noAvatar && 'margin-inline-start: calc(36px + 20px);'}
+  ${props => !props.noAvatar && 'margin-inline-start: var(--width-avatar-group-msg-list);'}
 `;
 
 export const StyledMessageReactions = styled(Flex)<{ fullWidth: boolean }>`
@@ -147,10 +148,11 @@ type Props = {
   inModal?: boolean;
   onSelected?: (emoji: string) => boolean;
   noAvatar: boolean;
-  isDetailView?: boolean;
 };
 
 export const MessageReactions = (props: Props) => {
+  const isDetailView = useIsDetailMessageView();
+
   const {
     messageId,
     hasReactLimit = true,
@@ -161,7 +163,6 @@ export const MessageReactions = (props: Props) => {
     inModal = false,
     onSelected,
     noAvatar,
-    isDetailView,
   } = props;
   const [reactions, setReactions] = useState<SortedReactionList>([]);
 

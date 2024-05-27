@@ -1,7 +1,6 @@
 import React from 'react';
 import { toast } from 'react-toastify';
 import { SessionToast, SessionToastType } from '../../components/basic/SessionToast';
-import { SessionIconType } from '../../components/icon';
 import { SectionType, showLeftPaneSection, showSettingsSection } from '../../state/ducks/section';
 
 // if you push a toast manually with toast...() be sure to set the type attribute of the SessionToast component
@@ -35,11 +34,11 @@ export function pushToastInfo(
   );
 }
 
-export function pushToastSuccess(id: string, description: string, icon?: SessionIconType) {
-  toast.success(
-    <SessionToast description={description} type={SessionToastType.Success} icon={icon} />,
-    { toastId: id, updateId: id }
-  );
+export function pushToastSuccess(id: string, description: string) {
+  toast.success(<SessionToast description={description} type={SessionToastType.Success} />, {
+    toastId: id,
+    updateId: id,
+  });
 }
 
 export function pushLoadAttachmentFailure(message?: string) {
@@ -186,7 +185,7 @@ export function someDeletionsFailed() {
 }
 
 export function pushDeleted(messageCount: number) {
-  pushToastSuccess('deleted', window.i18n('deleted', [messageCount.toString()]), 'check');
+  pushToastSuccess('deleted', window.i18n('deleted', [messageCount.toString()]));
 }
 
 export function pushCannotRemoveCreatorFromGroup() {

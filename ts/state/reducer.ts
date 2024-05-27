@@ -41,7 +41,7 @@ export type StateType = {
   userGroups: UserGroupState;
 };
 
-export const reducers = {
+const reducers = {
   search,
   conversations,
   user,

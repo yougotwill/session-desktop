@@ -1,7 +1,6 @@
 import React, { useContext, useEffect, useState } from 'react';
 import useTimeoutFn from 'react-use/lib/useTimeoutFn';
 import { isAutoLogin } from '../../shared/env_vars';
-import { Noop } from '../../types/Util';
 import { Flex } from '../basic/Flex';
 import { SessionButton } from '../basic/SessionButton';
 import { SessionIdEditable } from '../basic/SessionIdEditable';
@@ -34,7 +33,7 @@ const ContinueSignUpButton = (props: { continueSignUp: () => void }) => {
   return <SessionButton onClick={props.continueSignUp} text={window.i18n('continue')} />;
 };
 
-const SignUpDefault = (props: { createSessionID: Noop }) => {
+const SignUpDefault = (props: { createSessionID: () => void }) => {
   return (
     <div className="session-registration__content">
       <CreateSessionIdButton createSessionID={props.createSessionID} />
@@ -58,7 +57,7 @@ export const GoBackMainMenuButton = () => {
   );
 };
 
-const SignUpSessionIDShown = (props: { continueSignUp: Noop }) => {
+const SignUpSessionIDShown = (props: { continueSignUp: () => void }) => {
   return (
     <div className="session-registration__content">
       <Flex flexDirection="row" container={true} alignItems="center">

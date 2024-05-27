@@ -2,6 +2,7 @@
 import { PubkeyType } from 'libsession_util_nodejs';
 import { isArray, isEmpty, isNumber, isString } from 'lodash';
 import { v4 } from 'uuid';
+import { to_hex } from 'libsodium-wrappers-sumo';
 import { UserUtils } from '../..';
 import { ConfigDumpData } from '../../../../data/configDump/configDump';
 import { UserSyncJobDone } from '../../../../shims/events';
@@ -93,6 +94,17 @@ async function pushChangesToUserSwarmIfNeeded() {
       ttlMs: TTL_DEFAULT.CONFIG_MESSAGE,
     });
   });
+
+  if (window.sessionFeatureFlags.debug.debugLibsessionDumps) {
+    for (let index = 0; index < LibSessionUtil.requiredUserVariants.length; index++) {
+      const variant = LibSessionUtil.requiredUserVariants[index];
+
+      window.log.info(
+        `pushChangesToUserSwarmIfNeeded: current dumps: ${variant}:`,
+        to_hex(await GenericWrapperActions.dump(variant))
+      );
+    }
+  }
 
   const result = await MessageSender.sendEncryptedDataToSnode({
     storeRequests,

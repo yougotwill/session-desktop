@@ -61,7 +61,6 @@ import { ConversationMessageRequestButtons } from './MessageRequestButtons';
 import { RightPanel, StyledRightPanelContainer } from './right-panel/RightPanel';
 
 const DEFAULT_JPEG_QUALITY = 0.85;
-
 interface State {
   isDraggingFile: boolean;
 }
@@ -344,6 +343,7 @@ export class SessionConversation extends React.Component<Props, State> {
           }
           break;
         default:
+          break;
       }
     }
   }

@@ -116,6 +116,10 @@ async function updateSwarmNodesForPubkey(
   await channels.updateSwarmNodesForPubkey(pubkey, snodeEdKeys);
 }
 
+async function clearOutAllSnodesNotInPool(edKeysOfSnodePool: Array<string>): Promise<void> {
+  await channels.clearOutAllSnodesNotInPool(edKeysOfSnodePool);
+}
+
 // Closed group
 
 /**
@@ -843,6 +847,7 @@ export const Data = {
   generateAttachmentKeyIfEmpty,
   getSwarmNodesForPubkey,
   updateSwarmNodesForPubkey,
+  clearOutAllSnodesNotInPool,
   getAllEncryptionKeyPairsForGroup,
   getLatestClosedGroupEncryptionKeyPair,
   addClosedGroupEncryptionKeyPair,

@@ -63,6 +63,7 @@ const Password = (props: PasswordProps) => {
         <input
           type="password"
           id="seed-input-password"
+          data-testid="password-input"
           placeholder={i18n('enterPassword')}
           onKeyUp={onEnter}
         />
@@ -78,12 +79,14 @@ const Password = (props: PasswordProps) => {
           text={i18n('done')}
           buttonType={SessionButtonType.Simple}
           onClick={confirmPassword}
+          dataTestId="session-confirm-ok-button"
         />
         <SessionButton
           text={i18n('cancel')}
           buttonType={SessionButtonType.Simple}
           buttonColor={SessionButtonColor.Danger}
           onClick={onClose}
+          dataTestId="session-confirm-cancel-button"
         />
       </div>
     </>
@@ -195,7 +198,6 @@ interface ModalInnerProps {
 
 export const SessionSeedModal = (props: ModalInnerProps) => {
   const { onClickOk } = props;
-  const [loadingPassword, setLoadingPassword] = useState(true);
   const [loadingSeed, setLoadingSeed] = useState(true);
   const [recoveryPhrase, setRecoveryPhrase] = useState('');
   const [hasPassword, setHasPassword] = useState<null | boolean>(null);
@@ -204,30 +206,22 @@ export const SessionSeedModal = (props: ModalInnerProps) => {
   const dispatch = useDispatch();
 
   useMount(() => {
-    async function checkHasPassword() {
-      if (!loadingPassword) {
+    async function validateAccess() {
+      if (passwordHash || recoveryPhrase) {
         return;
       }
 
       const hash = await Data.getPasswordHash();
       setHasPassword(!!hash);
       setPasswordHash(hash || '');
-      setLoadingPassword(false);
-    }
-    async function getRecoveryPhrase() {
-      if (recoveryPhrase) {
-        return false;
-      }
+
       const newRecoveryPhrase = getCurrentRecoveryPhrase();
       setRecoveryPhrase(newRecoveryPhrase);
       setLoadingSeed(false);
-
-      return true;
     }
 
     setTimeout(() => (document.getElementById('seed-input-password') as any)?.focus(), 100);
-    void checkHasPassword();
-    void getRecoveryPhrase();
+    void validateAccess();
   });
 
   const onClose = () => dispatch(recoveryPhraseModal(null));

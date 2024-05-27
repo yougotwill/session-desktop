@@ -14,7 +14,11 @@ import { DisappearingMessages } from '../session/disappearing_messages';
 import { ProfileManager } from '../session/profile_manager/ProfileManager';
 import { PubKey } from '../session/types';
 import { UserUtils } from '../session/utils';
-import { PropsForMessageWithoutConvoProps, lookupQuote } from '../state/ducks/conversations';
+import {
+  MessageModelPropsWithoutConvoProps,
+  lookupQuote,
+  pushQuotedMessageDetails,
+} from '../state/ducks/conversations';
 import { showMessageRequestBannerOutsideRedux } from '../state/ducks/userConfig';
 import { getMemberInviteSentOutsideRedux } from '../state/selectors/groups';
 import { getHideMessageRequestBannerOutsideRedux } from '../state/selectors/userConfig';
@@ -25,6 +29,12 @@ import { GroupV2Receiver } from './groupv2/handleGroupV2Message';
 function contentTypeSupported(type: string): boolean {
   const Chrome = GoogleChrome;
   return Chrome.isImageTypeSupported(type) || Chrome.isVideoTypeSupported(type);
+}
+
+function isMessageModel(
+  msg: MessageModel | MessageModelPropsWithoutConvoProps
+): msg is MessageModel {
+  return (msg as MessageModel).get !== undefined;
 }
 
 /**
@@ -55,12 +65,12 @@ async function copyFromQuotedMessage(
   // First we try to look for the quote in memory
   const stateConversations = window.inboxStore?.getState().conversations;
   const { messages, quotes } = stateConversations;
-  let quotedMessage: PropsForMessageWithoutConvoProps | MessageModel | undefined = lookupQuote(
+  let quotedMessage: MessageModelPropsWithoutConvoProps | MessageModel | undefined = lookupQuote(
     quotes,
     messages,
     id,
     quote.author
-  )?.propsForMessage;
+  );
 
   // If the quote is not found in memory, we try to find it in the DB
   if (!quotedMessage) {
@@ -85,15 +95,19 @@ async function copyFromQuotedMessage(
     return;
   }
 
-  const isMessageModelType = Boolean((quotedMessage as MessageModel).get !== undefined);
-
   window?.log?.info(`Found quoted message id: ${id}`);
   quoteLocal.referencedMessageNotFound = false;
   // NOTE we send the entire body to be consistent with the other platforms
   quoteLocal.text =
-    (isMessageModelType
-      ? (quotedMessage as MessageModel).get('body')
-      : (quotedMessage as PropsForMessageWithoutConvoProps).text) || '';
+    (isMessageModel(quotedMessage)
+      ? quotedMessage.get('body')
+      : quotedMessage.propsForMessage.text) || '';
+
+  if (isMessageModel(quotedMessage)) {
+    window.inboxStore.dispatch(pushQuotedMessageDetails(quotedMessage.getMessageModelProps()));
+  } else {
+    window.inboxStore.dispatch(pushQuotedMessageDetails(quotedMessage));
+  }
 
   // no attachments, just save the quote with the body
   if (
@@ -108,9 +122,9 @@ async function copyFromQuotedMessage(
   firstAttachment.thumbnail = null;
 
   const queryAttachments =
-    (isMessageModelType
-      ? (quotedMessage as MessageModel).get('attachments')
-      : (quotedMessage as PropsForMessageWithoutConvoProps).attachments) || [];
+    (isMessageModel(quotedMessage)
+      ? quotedMessage.get('attachments')
+      : quotedMessage.propsForMessage.attachments) || [];
 
   if (queryAttachments.length > 0) {
     const queryFirst = queryAttachments[0];
@@ -125,9 +139,9 @@ async function copyFromQuotedMessage(
   }
 
   const queryPreview =
-    (isMessageModelType
-      ? (quotedMessage as MessageModel).get('preview')
-      : (quotedMessage as PropsForMessageWithoutConvoProps).previews) || [];
+    (isMessageModel(quotedMessage)
+      ? quotedMessage.get('preview')
+      : quotedMessage.propsForMessage.previews) || [];
   if (queryPreview.length > 0) {
     const queryFirst = queryPreview[0];
     const { image } = queryFirst;

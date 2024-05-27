@@ -4,10 +4,10 @@ import { createPortal } from 'react-dom';
 import { useSelector } from 'react-redux';
 import styled from 'styled-components';
 import { getUnreadConversationRequests } from '../../state/selectors/conversations';
+import { isSearching } from '../../state/selectors/search';
 import { getHideMessageRequestBanner } from '../../state/selectors/userConfig';
 import { SessionIcon, SessionIconSize, SessionIconType } from '../icon';
 import { MessageRequestBannerContextMenu } from '../menu/MessageRequestBannerContextMenu';
-import { isSearching } from '../../state/selectors/search';
 
 const StyledMessageRequestBanner = styled.div`
   height: 64px;
@@ -45,7 +45,8 @@ const StyledCircleIcon = styled.div`
 const StyledUnreadCounter = styled.div`
   font-weight: bold;
   border-radius: var(--margins-sm);
-  background-color: var(--conversation-tab-bubble-background-color);
+  color: var(--unread-messages-alert-text-color);
+  background-color: var(--unread-messages-alert-background-color);
   margin-left: var(--margins-sm);
   min-width: 20px;
   height: 20px;
@@ -136,6 +137,6 @@ export const MessageRequestsBanner = (props: { handleOnClick: () => any }) => {
   );
 };
 
-const Portal = ({ children }: { children: any }) => {
+const Portal = ({ children }: { children: React.ReactNode }) => {
   return createPortal(children, document.querySelector('.inbox.index') as Element);
 };

@@ -7,7 +7,6 @@ import { z } from 'zod';
 import {
   compact,
   concat,
-  difference,
   flatten,
   isArray,
   isEmpty,
@@ -38,10 +37,9 @@ import {
 import { DURATION, SWARM_POLLING_TIMEOUT } from '../../constants';
 import { ConvoHub } from '../../conversations';
 import { getSodiumRenderer } from '../../crypto';
-import { ed25519Str } from '../../onions/onionPath';
 import { StringUtils, UserUtils } from '../../utils';
 import { sleepFor } from '../../utils/Promise';
-import { fromBase64ToArray, fromHexToArray } from '../../utils/String';
+import { ed25519Str, fromBase64ToArray, fromHexToArray } from '../../utils/String';
 import { PreConditionFailed } from '../../utils/errors';
 import { LibSessionUtil } from '../../utils/libsession/libsession_utils';
 import { MultiEncryptUtils } from '../../utils/libsession/libsession_utils_multi_encrypt';
@@ -79,6 +77,8 @@ export function extractWebSocketContent(message: string): null | Uint8Array {
 }
 
 let instance: SwarmPolling | undefined;
+const timeouts: Array<NodeJS.Timeout> = [];
+
 export const getSwarmPollingInstance = () => {
   if (!instance) {
     instance = new SwarmPolling();
@@ -120,10 +120,23 @@ export class SwarmPolling {
     if (waitForFirstPoll) {
       await this.pollForAllKeys();
     } else {
-      setTimeout(() => {
-        void this.pollForAllKeys();
-      }, 4000);
+      timeouts.push(
+        setTimeout(() => {
+          void this.pollForAllKeys();
+        }, 4000)
+      );
     }
+  }
+
+  // TODO[epic=ses-50] this is a temporary solution until onboarding is merged
+  public stop(e: Error) {
+    window.log.error(`[swarmPolling] stopped polling due to error: ${e.message || e}`);
+
+    for (let i = 0; i < timeouts.length; i++) {
+      clearTimeout(timeouts[i]);
+      window.log.debug(`[swarmPolling] cleared timeout ${timeouts[i]} `);
+    }
+    this.resetSwarmPolling();
   }
 
   /**
@@ -269,7 +282,7 @@ export class SwarmPolling {
     if (!window.getGlobalOnlineStatus()) {
       window?.log?.error('pollForAllKeys: offline');
       // Very important to set up a new polling call so we do retry at some point
-      setTimeout(this.pollForAllKeys.bind(this), SWARM_POLLING_TIMEOUT.ACTIVE);
+      timeouts.push(setTimeout(this.pollForAllKeys.bind(this), SWARM_POLLING_TIMEOUT.ACTIVE));
       return;
     }
 
@@ -289,7 +302,7 @@ export class SwarmPolling {
       window?.log?.warn('pollForAllKeys exception: ', e);
       throw e;
     } finally {
-      setTimeout(this.pollForAllKeys.bind(this), SWARM_POLLING_TIMEOUT.ACTIVE);
+      timeouts.push(setTimeout(this.pollForAllKeys.bind(this), SWARM_POLLING_TIMEOUT.ACTIVE));
     }
   }
 
@@ -392,20 +405,26 @@ export class SwarmPolling {
   public async pollOnceForKey([pubkey, type]: PollForUs | PollForLegacy | PollForGroup) {
     const namespaces = this.getNamespacesToPollFrom(type);
     const swarmSnodes = await SnodePool.getSwarmFor(pubkey);
-
-    // Select nodes for which we already have lastHashes
-    const alreadyPolled = swarmSnodes.filter((n: Snode) => this.lastHashes[n.pubkey_ed25519]);
-    let toPollFrom = alreadyPolled.length ? alreadyPolled[0] : null;
-
-    // If we need more nodes, select randomly from the remaining nodes:
-    if (!toPollFrom) {
-      const notPolled = difference(swarmSnodes, alreadyPolled);
-      toPollFrom = sample(notPolled) as Snode;
-    }
-
     let resultsFromAllNamespaces: RetrieveMessagesResultsBatched | null;
+
+    let toPollFrom: Snode | undefined;
+
     try {
+      toPollFrom = sample(swarmSnodes);
+
+      if (!toPollFrom) {
+        throw new Error(`pollOnceForKey: no snode in swarm for ${ed25519Str(pubkey)}`);
+      }
+      // Note: always print something so we know if the polling is hanging
+      window.log.info(
+        `about to pollNodeForKey of ${ed25519Str(pubkey)} from snode: ${ed25519Str(toPollFrom.pubkey_ed25519)} namespaces: ${namespaces} `
+      );
       resultsFromAllNamespaces = await this.pollNodeForKey(toPollFrom, pubkey, namespaces, type);
+
+      // Note: always print something so we know if the polling is hanging
+      window.log.info(
+        `pollNodeForKey of ${ed25519Str(pubkey)} from snode: ${ed25519Str(toPollFrom.pubkey_ed25519)} namespaces: ${namespaces} returned: ${resultsFromAllNamespaces?.length}`
+      );
     } catch (e) {
       window.log.warn(
         `pollNodeForKey of ${pubkey} namespaces: ${namespaces} failed with: ${e.message}`
@@ -453,6 +472,9 @@ export class SwarmPolling {
     }
 
     const newMessages = await this.handleSeenMessages(uniqOtherMsgs);
+    window.log.info(
+      `handleSeenMessages: ${newMessages.length} out of ${uniqOtherMsgs.length} are not seen yet. snode: ${toPollFrom ? ed25519Str(toPollFrom.pubkey_ed25519) : 'undefined'}`
+    );
     if (type === ConversationTypeEnum.GROUPV2) {
       // groupv2 messages are not stored in the cache, so for each that we process, we also add it as seen message.
       // this is to take care of a crash half way through processing messages. We'd get the same 100 messages back, and we'd skip up to the first not seen message
@@ -606,7 +628,9 @@ export class SwarmPolling {
       const lastMessages = results.map(r => {
         return last(r.messages.messages);
       });
-
+      window.log.info(
+        `updating last hashes for ${ed25519Str(pubkey)}: ${ed25519Str(snodeEdkey)}  ${lastMessages.map(m => m?.hash || '')}`
+      );
       await Promise.all(
         lastMessages.map(async (lastMessage, index) => {
           if (!lastMessage) {

@@ -14,6 +14,7 @@ import { Onions, snodeHttpsAgent } from '../apis/snode_api/onions';
 import { SnodePool } from '../apis/snode_api/snodePool';
 import { UserUtils } from '../utils';
 import { allowOnlyOneAtATime } from '../utils/Promise';
+import { ed25519Str } from '../utils/String';
 
 const desiredGuardCount = 3;
 const minimumGuardCount = 2;
@@ -62,9 +63,6 @@ const pathFailureThreshold = 3;
 // so using GuardNode would not be correct (there is
 // some naming issue here it seems)
 export let guardNodes: Array<Snode> = [];
-
-export const ed25519Str = (ed25519Key: string) =>
-  `(${ed25519Key.substr(0, 2)}...${ed25519Key.substr(60)})`;
 
 export async function buildNewOnionPathsOneAtATime() {
   // this function may be called concurrently make sure we only have one inflight

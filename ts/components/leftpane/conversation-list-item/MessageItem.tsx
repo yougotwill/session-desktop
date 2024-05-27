@@ -2,6 +2,7 @@ import classNames from 'classnames';
 import { isEmpty } from 'lodash';
 import React from 'react';
 import { useSelector } from 'react-redux';
+import { useConvoIdFromContext } from '../../../contexts/ConvoIdContext';
 import {
   useHasUnread,
   useIsPrivate,
@@ -15,7 +16,6 @@ import { assertUnreachable } from '../../../types/sqlSharedTypes';
 import { TypingAnimation } from '../../conversation/TypingAnimation';
 import { MessageBody } from '../../conversation/message/message-content/MessageBody';
 import { SessionIcon } from '../../icon';
-import { useConvoIdFromContext } from './ConvoIdContext';
 import { InteractionItem } from './InteractionItem';
 
 export const MessageItem = () => {
@@ -74,13 +74,21 @@ function IconMessageStatus({ status }: { status: LastMessageStatusType }) {
   const nonErrorIconColor = 'var(--text-secondary-color';
   switch (status) {
     case 'error':
-      return <SessionIcon iconColor={'var(--danger-color'} iconType="error" iconSize="tiny" />;
+      return (
+        <SessionIcon
+          iconColor={'var(--danger-color'}
+          iconType="error"
+          iconSize="tiny"
+          style={{ flexShrink: 0 }}
+        />
+      );
     case 'read':
       return (
         <SessionIcon
           iconColor={nonErrorIconColor}
           iconType="doubleCheckCircleFilled"
           iconSize="tiny"
+          style={{ flexShrink: 0 }}
         />
       );
     case 'sending':
@@ -90,10 +98,18 @@ function IconMessageStatus({ status }: { status: LastMessageStatusType }) {
           iconColor={nonErrorIconColor}
           iconType="sending"
           iconSize="tiny"
+          style={{ flexShrink: 0 }}
         />
       );
     case 'sent':
-      return <SessionIcon iconColor={nonErrorIconColor} iconType="circleCheck" iconSize="tiny" />;
+      return (
+        <SessionIcon
+          iconColor={nonErrorIconColor}
+          iconType="circleCheck"
+          iconSize="tiny"
+          style={{ flexShrink: 0 }}
+        />
+      );
     case undefined:
       return null;
     default:

@@ -337,7 +337,6 @@ const _getGlobalUnreadCount = (sortedConversations: Array<ReduxConversationType>
     }
 
     if (
-      globalUnreadCount < 100 &&
       isNumber(conversation.unreadCount) &&
       isFinite(conversation.unreadCount) &&
       conversation.unreadCount > 0 &&
@@ -346,7 +345,6 @@ const _getGlobalUnreadCount = (sortedConversations: Array<ReduxConversationType>
       globalUnreadCount += conversation.unreadCount;
     }
   }
-
   return globalUnreadCount;
 };
 
@@ -614,6 +612,13 @@ function sortMessages(
 export const getMostRecentMessageId = (state: StateType): string | null => {
   return state.conversations.mostRecentMessageId;
 };
+
+export const getMostRecentOutgoingMessageId = createSelector(
+  getSortedMessagesOfSelectedConversation,
+  (messages: Array<MessageModelPropsWithoutConvoProps>): string | undefined => {
+    return messages.find(m => m.propsForMessage.direction === 'outgoing')?.propsForMessage.id;
+  }
+);
 
 export const getOldestMessageId = createSelector(
   getSortedMessagesOfSelectedConversation,
