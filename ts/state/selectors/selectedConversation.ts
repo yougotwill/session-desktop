@@ -402,7 +402,7 @@ export function useSelectedNicknameOrProfileNameOrShortenedPubkey() {
     return window.i18n('noteToSelf');
   }
   if (selectedId && PubKey.is03Pubkey(selectedId)) {
-    return libGroupName;
+    return libGroupName || profileName || shortenedPubkey;
   }
   return nickname || profileName || shortenedPubkey;
 }

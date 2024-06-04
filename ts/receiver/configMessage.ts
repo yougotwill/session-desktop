@@ -583,10 +583,9 @@ async function handleLegacyGroupUpdate(latestEnvelopeTimestamp: number) {
     );
     const toLeaveFromDb = ConvoHub.use().get(toLeave.id);
     // the wrapper told us that this group is not tracked, so even if we left/got kicked from it, remove it from the DB completely
-    await ConvoHub.use().deleteClosedGroup(toLeaveFromDb.id, {
+    await ConvoHub.use().deleteLegacyGroup(toLeaveFromDb.id, {
       fromSyncMessage: true,
       sendLeaveMessage: false, // this comes from the wrapper, so we must have left/got kicked from that group already and our device already handled it.
-      emptyGroupButKeepAsKicked: false,
     });
   }
 
@@ -738,10 +737,12 @@ async function handleSingleGroupUpdateToLeave(toLeave: GroupPubkeyType) {
       `About to deleteGroup ${toLeave} via handleSingleGroupUpdateToLeave as in DB but not in wrapper`
     );
 
-    await ConvoHub.use().deleteClosedGroup(toLeave, {
+    await ConvoHub.use().deleteGroup(toLeave, {
       fromSyncMessage: true,
       sendLeaveMessage: false,
       emptyGroupButKeepAsKicked: false,
+      deleteAllMessagesOnSwarm: false,
+      forceDestroyForAllMembers: false,
     });
   } catch (e) {
     window.log.info('Failed to deleteClosedGroup with: ', e.message);

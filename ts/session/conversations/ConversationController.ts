@@ -15,26 +15,34 @@ import { getOpenGroupManager } from '../apis/open_group_api/opengroupV2/OpenGrou
 import { PubKey } from '../types';
 
 import { getMessageQueue } from '..';
+import { ConfigDumpData } from '../../data/configDump/configDump';
 import { deleteAllMessagesByConvoIdNoConfirmation } from '../../interactions/conversationInteractions';
 import { CONVERSATION_PRIORITIES, ConversationTypeEnum } from '../../models/conversationAttributes';
 import { removeAllClosedGroupEncryptionKeyPairs } from '../../receiver/closedGroups';
-import { groupInfoActions } from '../../state/ducks/metaGroups';
 import { getCurrentlySelectedConversationOutsideRedux } from '../../state/selectors/conversations';
 import { assertUnreachable } from '../../types/sqlSharedTypes';
-import { UserGroupsWrapperActions } from '../../webworker/workers/browser/libsession_worker_interface';
+import {
+  MetaGroupWrapperActions,
+  UserGroupsWrapperActions,
+} from '../../webworker/workers/browser/libsession_worker_interface';
 import { OpenGroupUtils } from '../apis/open_group_api/utils';
 import { getSwarmPollingInstance } from '../apis/snode_api';
+import { DeleteAllFromGroupMsgNodeSubRequest } from '../apis/snode_api/SnodeRequestTypes';
 import { GetNetworkTime } from '../apis/snode_api/getNetworkTime';
 import { SnodeNamespaces } from '../apis/snode_api/namespaces';
 import { ClosedGroupMemberLeftMessage } from '../messages/outgoing/controlMessage/group/ClosedGroupMemberLeftMessage';
 import { GroupUpdateMemberLeftMessage } from '../messages/outgoing/controlMessage/group_v2/to_group/GroupUpdateMemberLeftMessage';
 import { UserUtils } from '../utils';
+import { ed25519Str } from '../utils/String';
+import { PreConditionFailed } from '../utils/errors';
+import { RunJobResult } from '../utils/job_runners/PersistedJob';
+import { GroupSync } from '../utils/job_runners/jobs/GroupSyncJob';
 import { UserSync } from '../utils/job_runners/jobs/UserSyncJob';
 import { LibSessionUtil } from '../utils/libsession/libsession_utils';
 import { SessionUtilContact } from '../utils/libsession/libsession_utils_contacts';
 import { SessionUtilConvoInfoVolatile } from '../utils/libsession/libsession_utils_convo_info_volatile';
 import { SessionUtilUserGroups } from '../utils/libsession/libsession_utils_user_groups';
-import { ed25519Str } from '../utils/String';
+import { groupInfoActions } from '../../state/ducks/metaGroups';
 
 let instance: ConvoController | null;
 
@@ -205,57 +213,143 @@ class ConvoController {
     await conversation.commit();
   }
 
-  public async deleteClosedGroup(
-    groupPk: string,
-    {
-      sendLeaveMessage,
-      fromSyncMessage,
-      emptyGroupButKeepAsKicked,
-    }: DeleteOptions & { sendLeaveMessage: boolean; emptyGroupButKeepAsKicked: boolean }
+  public async deleteLegacyGroup(
+    groupPk: PubkeyType,
+    { sendLeaveMessage, fromSyncMessage }: DeleteOptions & { sendLeaveMessage: boolean }
   ) {
-    if (!PubKey.is03Pubkey(groupPk) && !PubKey.is05Pubkey(groupPk)) {
-      return;
+    if (!PubKey.is05Pubkey(groupPk)) {
+      throw new PreConditionFailed('deleteLegacyGroup excepts a 05 group');
     }
 
-    const typeOfDelete: ConvoVolatileType = PubKey.is03Pubkey(groupPk) ? 'Group' : 'LegacyGroup';
     window.log.info(
-      `deleteClosedGroup: ${ed25519Str(groupPk)}, sendLeaveMessage:${sendLeaveMessage}, fromSyncMessage:${fromSyncMessage}, emptyGroupButKeepAsKicked:${emptyGroupButKeepAsKicked}`
+      `deleteLegacyGroup: ${ed25519Str(groupPk)}, sendLeaveMessage:${sendLeaveMessage}, fromSyncMessage:${fromSyncMessage}`
     );
 
     // this deletes all messages in the conversation
-    const conversation = await this.deleteConvoInitialChecks(groupPk, typeOfDelete, false);
+    const conversation = await this.deleteConvoInitialChecks(groupPk, 'LegacyGroup', false);
     if (!conversation || !conversation.isClosedGroup()) {
       return;
     }
     // we don't need to keep polling anymore.
-    getSwarmPollingInstance().removePubkey(groupPk, 'deleteClosedGroup');
+    getSwarmPollingInstance().removePubkey(groupPk, 'deleteLegacyGroup');
 
     // send the leave message before we delete everything for this group (including the key!)
     if (sendLeaveMessage) {
       await leaveClosedGroup(groupPk, fromSyncMessage);
     }
-    if (PubKey.is03Pubkey(groupPk)) {
-      // a group 03 can be removed fully or kept empty as kicked.
-      // when it was pendingInvite, we delete it fully,
-      // when it was not, we empty the group but keep it with the "you have been kicked" message
-      // Note: the pendingInvite=true case cannot really happen as we wouldn't be polling from that group (and so, not get the message kicking us )
-      if (emptyGroupButKeepAsKicked) {
-        window?.inboxStore?.dispatch(groupInfoActions.emptyGroupButKeepAsKicked({ groupPk }));
-      } else {
-        window?.inboxStore?.dispatch(groupInfoActions.destroyGroupDetails({ groupPk }));
+
+    await removeLegacyGroupFromWrappers(groupPk);
+
+    // we never keep a left legacy group. Only fully remove it.
+    await this.removeGroupOrCommunityFromDBAndRedux(groupPk);
+    await UserSync.queueNewJobIfNeeded();
+  }
+
+  public async deleteGroup(
+    groupPk: GroupPubkeyType,
+    {
+      sendLeaveMessage,
+      fromSyncMessage,
+      emptyGroupButKeepAsKicked,
+      deleteAllMessagesOnSwarm,
+      forceDestroyForAllMembers,
+    }: DeleteOptions & {
+      sendLeaveMessage: boolean;
+      emptyGroupButKeepAsKicked: boolean;
+      deleteAllMessagesOnSwarm: boolean;
+      forceDestroyForAllMembers: boolean;
+    }
+  ) {
+    if (!PubKey.is03Pubkey(groupPk)) {
+      throw new PreConditionFailed('deleteGroup excepts a 03-group');
+    }
+
+    window.log.info(
+      `deleteGroup: ${ed25519Str(groupPk)}, sendLeaveMessage:${sendLeaveMessage}, fromSyncMessage:${fromSyncMessage}, emptyGroupButKeepAsKicked:${emptyGroupButKeepAsKicked}, deleteAllMessagesOnSwarm:${deleteAllMessagesOnSwarm}, forceDestroyForAllMembers:${forceDestroyForAllMembers}`
+    );
+
+    // this deletes all messages in the conversation
+    const conversation = await this.deleteConvoInitialChecks(groupPk, 'Group', false);
+    if (!conversation || !conversation.isClosedGroup()) {
+      return;
+    }
+    // we don't need to keep polling anymore.
+    getSwarmPollingInstance().removePubkey(groupPk, 'deleteGroup');
+
+    const group = await UserGroupsWrapperActions.getGroup(groupPk);
+
+    // send the leave message before we delete everything for this group (including the key!)
+    // Note: if we were kicked, we already lost the authdata/secretKey for it, so no need to try to send our message.
+    if (sendLeaveMessage && !group?.kicked) {
+      await leaveClosedGroup(groupPk, fromSyncMessage);
+    }
+    // a group 03 can be removed fully or kept empty as kicked.
+    // when it was pendingInvite, we delete it fully,
+    // when it was not, we empty the group but keep it with the "you have been kicked" message
+    // Note: the pendingInvite=true case cannot really happen as we wouldn't be polling from that group (and so, not get the message kicking us)
+    if (emptyGroupButKeepAsKicked) {
+      // delete the secretKey/authData if we had it. If we need it for something, it has to be done before this call.
+      if (group) {
+        group.authData = null;
+        group.secretKey = null;
+        group.disappearingTimerSeconds = undefined;
+        group.kicked = true;
+        await UserGroupsWrapperActions.setGroup(group);
       }
     } else {
-      await removeLegacyGroupFromWrappers(groupPk);
-    }
-    // if we were kicked or sent our left message, we have nothing to do more with that group.
-    // Just delete everything related to it, not trying to add update message or send a left message.
-    if (!emptyGroupButKeepAsKicked) {
+      const us = UserUtils.getOurPubKeyStrFromCache();
+      const allMembers = await MetaGroupWrapperActions.memberGetAll(groupPk);
+      const otherAdminsCount = allMembers
+        .filter(m => m.admin || m.promoted)
+        .filter(m => m.pubkeyHex !== us).length;
+      const weAreLastAdmin = otherAdminsCount === 0;
+      const infos = await MetaGroupWrapperActions.infoGet(groupPk);
+      const fromUserGroup = await UserGroupsWrapperActions.getGroup(groupPk);
+      if (!infos || !fromUserGroup || isEmpty(infos) || isEmpty(fromUserGroup)) {
+        throw new Error('deleteGroup: some required data not present');
+      }
+      const { secretKey } = fromUserGroup;
+
+      // check if we are the last admin
+      if (secretKey && !isEmpty(secretKey) && (weAreLastAdmin || forceDestroyForAllMembers)) {
+        const deleteAllMessagesSubRequest = deleteAllMessagesOnSwarm
+          ? new DeleteAllFromGroupMsgNodeSubRequest({
+              groupPk,
+              secretKey,
+            })
+          : null;
+
+        // this marks the group info as deleted. We need to push those details
+        await MetaGroupWrapperActions.infoDestroy(groupPk);
+        const lastPushResult = await GroupSync.pushChangesToGroupSwarmIfNeeded({
+          groupPk,
+          revokeSubRequest: null,
+          unrevokeSubRequest: null,
+          supplementKeys: [],
+          deleteAllMessagesSubRequest,
+        });
+        if (lastPushResult !== RunJobResult.Success) {
+          throw new Error(`Failed to destroyGroupDetails for pk ${ed25519Str(groupPk)}`);
+        }
+      }
+
+      // this deletes the secretKey if we had it. If we need it for something, it has to be done before this call.
+      await UserGroupsWrapperActions.eraseGroup(groupPk);
+
+      // we are on the emptyGroupButKeepAsKicked=false case, so we remove it all
       await this.removeGroupOrCommunityFromDBAndRedux(groupPk);
     }
 
-    if (!fromSyncMessage) {
-      await UserSync.queueNewJobIfNeeded();
-    }
+    await SessionUtilConvoInfoVolatile.removeGroupFromWrapper(groupPk);
+    // release the memory (and the current meta-dumps in memory for that group)
+    window.log.info(`freeing metagroup wrapper: ${ed25519Str(groupPk)}`);
+    await MetaGroupWrapperActions.free(groupPk);
+    // delete the dumps from the metagroup state only, not the details in the UserGroups wrapper itself.
+    await ConfigDumpData.deleteDumpFor(groupPk);
+    getSwarmPollingInstance().removePubkey(groupPk, 'deleteGroup');
+
+    window.inboxStore.dispatch(groupInfoActions.removeGroupDetailsFromSlice({ groupPk }));
+    await UserSync.queueNewJobIfNeeded();
   }
 
   public async deleteCommunity(convoId: string, options: DeleteOptions) {

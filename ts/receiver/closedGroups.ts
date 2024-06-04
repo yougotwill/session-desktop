@@ -768,11 +768,13 @@ async function handleClosedGroupMembersRemoved(
   const ourPubKey = UserUtils.getOurPubKeyFromCache();
   const wasCurrentUserKicked = !membersAfterUpdate.includes(ourPubKey.key);
   if (wasCurrentUserKicked) {
+    if (!PubKey.is05Pubkey(groupPubKey)) {
+      throw new Error('handleClosedGroupMembersRemoved expected a 05 groupPk');
+    }
     // we now want to remove everything related to a group when we get kicked from it.
-    await ConvoHub.use().deleteClosedGroup(groupPubKey, {
+    await ConvoHub.use().deleteLegacyGroup(groupPubKey, {
       fromSyncMessage: false,
       sendLeaveMessage: false,
-      emptyGroupButKeepAsKicked: false, // legacy group case only here
     });
   } else {
     // Note: we don't want to send a new encryption keypair when we get a member removed.
@@ -854,21 +856,25 @@ function removeMemberFromZombies(
 }
 
 async function handleClosedGroupAdminMemberLeft(groupPublicKey: string, envelope: EnvelopePlus) {
+  if (!PubKey.is05Pubkey(groupPublicKey)) {
+    throw new Error('handleClosedGroupAdminMemberLeft excepted a 05 groupPk');
+  }
   // if the admin was remove and we are the admin, it can only be voluntary
-  await ConvoHub.use().deleteClosedGroup(groupPublicKey, {
+  await ConvoHub.use().deleteLegacyGroup(groupPublicKey, {
     fromSyncMessage: false,
     sendLeaveMessage: false,
-    emptyGroupButKeepAsKicked: false,
   });
   await IncomingMessageCache.removeFromCache(envelope);
 }
 
 async function handleClosedGroupLeftOurself(groupId: string, envelope: EnvelopePlus) {
+  if (!PubKey.is05Pubkey(groupId)) {
+    throw new Error('handleClosedGroupLeftOurself excepted a 05 groupPk');
+  }
   // if we ourself left. It can only mean that another of our device left the group and we just synced that message through the swarm
-  await ConvoHub.use().deleteClosedGroup(groupId, {
+  await ConvoHub.use().deleteLegacyGroup(groupId, {
     fromSyncMessage: false,
     sendLeaveMessage: false,
-    emptyGroupButKeepAsKicked: false,
   });
   await IncomingMessageCache.removeFromCache(envelope);
 }

@@ -50,10 +50,12 @@ async function handleLibSessionKickedMessage({
   }
   const inviteWasPending =
     (await UserGroupsWrapperActions.getGroup(groupPk))?.invitePending || false;
-  await ConvoHub.use().deleteClosedGroup(groupPk, {
+  await ConvoHub.use().deleteGroup(groupPk, {
     sendLeaveMessage: false,
     fromSyncMessage: false,
     emptyGroupButKeepAsKicked: !inviteWasPending,
+    deleteAllMessagesOnSwarm: false,
+    forceDestroyForAllMembers: false,
   });
 }
 

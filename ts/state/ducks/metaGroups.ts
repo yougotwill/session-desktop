@@ -38,7 +38,6 @@ import { GroupSync } from '../../session/utils/job_runners/jobs/GroupSyncJob';
 import { UserSync } from '../../session/utils/job_runners/jobs/UserSyncJob';
 import { RunJobResult } from '../../session/utils/job_runners/PersistedJob';
 import { LibSessionUtil } from '../../session/utils/libsession/libsession_utils';
-import { SessionUtilConvoInfoVolatile } from '../../session/utils/libsession/libsession_utils_convo_info_volatile';
 import { getUserED25519KeyPairBytes } from '../../session/utils/User';
 import { stringify, toFixedUint8ArrayOfLength } from '../../types/sqlSharedTypes';
 import {
@@ -52,7 +51,6 @@ import {
 import { StateType } from '../reducer';
 import { openConversationWithMessages } from './conversations';
 import { resetLeftOverlayMode } from './section';
-import { ed25519Str } from '../../session/utils/String';
 
 type WithFromMemberLeftMessage = { fromMemberLeftMessage: boolean }; // there are some changes we want to skip when doing changes triggered from a memberLeft message.
 export type GroupState = {
@@ -185,6 +183,7 @@ const initNewGroupInWrapper = createAsyncThunk(
         revokeSubRequest: null,
         unrevokeSubRequest: null,
         supplementKeys: [],
+        deleteAllMessagesSubRequest: null,
       });
       if (result !== RunJobResult.Success) {
         window.log.warn('GroupSync.pushChangesToGroupSwarmIfNeeded during create failed');
@@ -247,10 +246,12 @@ const initNewGroupInWrapper = createAsyncThunk(
       await MetaGroupWrapperActions.infoDestroy(groupPk);
       const foundConvo = ConvoHub.use().get(groupPk);
       if (foundConvo) {
-        await ConvoHub.use().deleteClosedGroup(groupPk, {
+        await ConvoHub.use().deleteGroup(groupPk, {
           fromSyncMessage: false,
           sendLeaveMessage: false,
           emptyGroupButKeepAsKicked: false,
+          deleteAllMessagesOnSwarm: false,
+          forceDestroyForAllMembers: false,
         });
       }
       throw e;
@@ -392,7 +393,6 @@ const loadMetaDumpsFromDB = createAsyncThunk(
 /**
  * This action is to be called when we get a merge event from the network.
  * It refreshes the state of that particular group (info & members) with the state from the wrapper after the merge is done.
- *
  */
 const refreshGroupDetailsFromWrapper = createAsyncThunk(
   'group/refreshGroupDetailsFromWrapper',
@@ -412,69 +412,6 @@ const refreshGroupDetailsFromWrapper = createAsyncThunk(
       window.log.warn('refreshGroupDetailsFromWrapper failed with ', e.message);
       return { groupPk };
     }
-  }
-);
-
-const destroyGroupDetails = createAsyncThunk(
-  'group/destroyGroupDetails',
-  async ({ groupPk }: { groupPk: GroupPubkeyType }) => {
-    const us = UserUtils.getOurPubKeyStrFromCache();
-    const weAreAdmin = await checkWeAreAdmin(groupPk);
-    const allMembers = await MetaGroupWrapperActions.memberGetAll(groupPk);
-    const otherAdminsCount = allMembers
-      .filter(m => m.admin || m.promoted)
-      .filter(m => m.pubkeyHex !== us).length;
-
-    // we are the last admin promoted
-    if (weAreAdmin && otherAdminsCount === 0) {
-      // this marks the group info as deleted. We need to push those details
-      await MetaGroupWrapperActions.infoDestroy(groupPk);
-      const lastPushResult = await GroupSync.pushChangesToGroupSwarmIfNeeded({
-        groupPk,
-        revokeSubRequest: null,
-        unrevokeSubRequest: null,
-        supplementKeys: [],
-      });
-      if (lastPushResult !== RunJobResult.Success) {
-        throw new Error(`Failed to destroyGroupDetails for pk ${ed25519Str(groupPk)}`);
-      }
-    }
-
-    // this deletes the secretKey if we had it. If we need it for something, it has to be done before this call.
-    await UserGroupsWrapperActions.eraseGroup(groupPk);
-
-    await SessionUtilConvoInfoVolatile.removeGroupFromWrapper(groupPk);
-    await ConfigDumpData.deleteDumpFor(groupPk);
-
-    getSwarmPollingInstance().removePubkey(groupPk, 'destroyGroupDetails');
-
-    return { groupPk };
-  }
-);
-
-const emptyGroupButKeepAsKicked = createAsyncThunk(
-  'group/emptyGroupButKeepAsKicked',
-  async ({ groupPk }: { groupPk: GroupPubkeyType }) => {
-    window.log.info(`emptyGroupButKeepAsKicked for ${ed25519Str(groupPk)}`);
-    getSwarmPollingInstance().removePubkey(groupPk, 'emptyGroupButKeepAsKicked');
-
-    // this deletes the secretKey if we had it. If we need it for something, it has to be done before this call.
-    const group = await UserGroupsWrapperActions.getGroup(groupPk);
-    if (group) {
-      group.authData = null;
-      group.secretKey = null;
-      group.disappearingTimerSeconds = undefined;
-      group.kicked = true;
-
-      await UserGroupsWrapperActions.setGroup(group);
-    }
-    await SessionUtilConvoInfoVolatile.removeGroupFromWrapper(groupPk);
-    // release the memory (and the current meta-dumps in memory for that group)
-    await MetaGroupWrapperActions.free(groupPk);
-    // this deletes the dumps from the metagroup state only, not the details in the UserGroups wrapper itself.
-    await ConfigDumpData.deleteDumpFor(groupPk);
-
-    return { groupPk };
   }
 );
 
@@ -747,6 +684,7 @@ async function handleMemberAddedFromUI({
     groupPk,
     supplementKeys,
     ...revokeUnrevokeParams,
+    deleteAllMessagesSubRequest: null,
   });
   if (sequenceResult !== RunJobResult.Success) {
     throw new Error(
@@ -868,6 +806,7 @@ async function handleMemberRemovedFromUI({
     supplementKeys: [],
     revokeSubRequest: null,
     unrevokeSubRequest: null,
+    deleteAllMessagesSubRequest: null,
   });
   if (sequenceResult !== RunJobResult.Success) {
     throw new Error(
@@ -979,6 +918,7 @@ async function handleNameChangeFromUI({
     supplementKeys: [],
     revokeSubRequest: null,
     unrevokeSubRequest: null,
+    deleteAllMessagesSubRequest: null,
   });
 
   if (batchResult !== RunJobResult.Success) {
@@ -1260,6 +1200,15 @@ const metaGroupSlice = createSlice({
     ) {
       return applySendingStateChange({ changeType: 'promote', ...payload, state });
     },
+    removeGroupDetailsFromSlice(
+      state: GroupState,
+      { payload }: PayloadAction<{ groupPk: GroupPubkeyType }>
+    ) {
+      delete state.infos[payload.groupPk];
+      delete state.members[payload.groupPk];
+      delete state.membersInviteSending[payload.groupPk];
+      delete state.membersPromoteSending[payload.groupPk];
+    },
   },
   extraReducers: builder => {
     builder.addCase(initNewGroupInWrapper.fulfilled, (state, action) => {
@@ -1316,22 +1265,7 @@ const metaGroupSlice = createSlice({
     builder.addCase(refreshGroupDetailsFromWrapper.rejected, (_state, action) => {
       window.log.error('a refreshGroupDetailsFromWrapper was rejected', action.error);
     });
-    builder.addCase(destroyGroupDetails.fulfilled, (state, action) => {
-      const { groupPk } = action.payload;
-      window.log.info(`removed 03 from metagroup wrapper ${ed25519Str(groupPk)}`);
-      deleteGroupPkEntriesFromState(state, groupPk);
-    });
-    builder.addCase(destroyGroupDetails.rejected, (_state, action) => {
-      window.log.error('a destroyGroupDetails was rejected', action.error);
-    });
-    builder.addCase(emptyGroupButKeepAsKicked.fulfilled, (state, action) => {
-      const { groupPk } = action.payload;
-      window.log.info(`markedAsKicked 03 from metagroup wrapper ${ed25519Str(groupPk)}`);
-      deleteGroupPkEntriesFromState(state, groupPk);
-    });
-    builder.addCase(emptyGroupButKeepAsKicked.rejected, (_state, action) => {
-      window.log.error('a emptyGroupButKeepAsKicked was rejected', action.error);
-    });
+
     builder.addCase(handleUserGroupUpdate.fulfilled, (state, action) => {
       const { infos, members, groupPk } = action.payload;
       if (infos && members) {
@@ -1437,8 +1371,6 @@ const metaGroupSlice = createSlice({
 export const groupInfoActions = {
   initNewGroupInWrapper,
   loadMetaDumpsFromDB,
-  destroyGroupDetails,
-  emptyGroupButKeepAsKicked,
   refreshGroupDetailsFromWrapper,
   handleUserGroupUpdate,
   currentDeviceGroupMembersChange,

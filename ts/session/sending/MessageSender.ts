@@ -16,6 +16,7 @@ import {
 } from '../apis/open_group_api/sogsv3/sogsV3SendMessage';
 import {
   BuiltSnodeSubRequests,
+  DeleteAllFromGroupMsgNodeSubRequest,
   DeleteAllFromUserNodeSubRequest,
   DeleteHashesFromGroupNodeSubRequest,
   DeleteHashesFromUserNodeSubRequest,
@@ -308,7 +309,8 @@ async function signSubRequests(
         p instanceof RetrieveGroupSubRequest ||
         p instanceof UpdateExpiryOnNodeUserSubRequest ||
         p instanceof UpdateExpiryOnNodeGroupSubRequest ||
-        p instanceof GetExpiriesFromNodeSubRequest
+        p instanceof GetExpiriesFromNodeSubRequest ||
+        p instanceof DeleteAllFromGroupMsgNodeSubRequest
       ) {
         return p.buildAndSignParameters();
       }
@@ -348,7 +350,11 @@ async function sendMessagesDataToSnode(
     messagesHashes: messagesToDelete,
     revokeSubRequest,
     unrevokeSubRequest,
-  }: WithMessagesHashes & WithRevokeSubRequest,
+    deleteAllMessagesSubRequest,
+  }: WithMessagesHashes &
+    WithRevokeSubRequest & {
+      deleteAllMessagesSubRequest?: DeleteAllFromGroupMsgNodeSubRequest | null;
+    },
   method: MethodBatchType
 ): Promise<NotEmptyArrayOfBatchResults> {
   if (!asssociatedWith) {
@@ -375,6 +381,7 @@ async function sendMessagesDataToSnode(
     deleteHashesSubRequest,
     revokeSubRequest,
     unrevokeSubRequest,
+    deleteAllMessagesSubRequest,
   ]);
   const targetNode = await SnodePool.getNodeFromSwarmOrThrow(asssociatedWith);
 
@@ -564,10 +571,12 @@ async function sendEncryptedDataToSnode({
   messagesHashesToDelete,
   revokeSubRequest,
   unrevokeSubRequest,
+  deleteAllMessagesSubRequest,
 }: WithRevokeSubRequest & {
   storeRequests: Array<StoreGroupConfigOrMessageSubRequest | StoreUserConfigSubRequest>;
   destination: GroupPubkeyType | PubkeyType;
   messagesHashesToDelete: Set<string> | null;
+  deleteAllMessagesSubRequest?: DeleteAllFromGroupMsgNodeSubRequest | null;
 }): Promise<NotEmptyArrayOfBatchResults | null> {
   try {
     const batchResults = await pRetry(
@@ -579,6 +588,7 @@ async function sendEncryptedDataToSnode({
             messagesHashes: [...(messagesHashesToDelete || [])],
             revokeSubRequest,
             unrevokeSubRequest,
+            deleteAllMessagesSubRequest,
           },
           'sequence'
         );

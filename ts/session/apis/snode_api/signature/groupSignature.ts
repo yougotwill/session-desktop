@@ -85,7 +85,7 @@ async function getGroupPromoteMessage({
 type ParamsShared = {
   groupPk: GroupPubkeyType;
   namespace: SnodeNamespacesGroup;
-  method: 'retrieve' | 'store';
+  method: 'retrieve' | 'store' | 'delete_all';
 };
 
 type SigParamsAdmin = ParamsShared & {
@@ -140,13 +140,16 @@ export type GroupDetailsNeededForSignature = Pick<
 
 type StoreOrRetrieve = { method: 'store' | 'retrieve'; namespace: SnodeNamespacesGroup };
 type DeleteHashes = { method: 'delete'; hashes: Array<string> };
+type DeleteAllNonConfigs = { method: 'delete_all'; namespace: SnodeNamespacesGroup };
 
 async function getSnodeGroupSignature({
   group,
   ...args
 }: {
   group: GroupDetailsNeededForSignature | null;
-} & (StoreOrRetrieve | DeleteHashes)): Promise<SigResultSubAccount | SigResultAdmin> {
+} & (StoreOrRetrieve | DeleteHashes | DeleteAllNonConfigs)): Promise<
+  SigResultSubAccount | SigResultAdmin
+> {
   if (!group) {
     throw new Error(`getSnodeGroupSignature: did not find group in wrapper`);
   }
@@ -154,6 +157,10 @@ async function getSnodeGroupSignature({
 
   const groupSecretKey = secretKey && !isEmpty(secretKey) ? secretKey : null;
   const groupAuthData = authData && !isEmpty(authData) ? authData : null;
+
+  if (args.method === 'delete_all' && isEmpty(secretKey)) {
+    throw new Error('getSnodeGroupSignature: delete_all needs an adminSecretKey');
+  }
 
   if (groupSecretKey) {
     if (args.method === 'delete') {

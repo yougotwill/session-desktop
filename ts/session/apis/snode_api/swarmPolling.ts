@@ -667,11 +667,20 @@ export class SwarmPolling {
     window.log.debug(
       `notPollingForGroupAsNotInWrapper ${ed25519Str(pubkey)} with reason:"${reason}"`
     );
-    await ConvoHub.use().deleteClosedGroup(pubkey, {
-      fromSyncMessage: true,
-      sendLeaveMessage: false,
-      emptyGroupButKeepAsKicked: false,
-    });
+    if (PubKey.is05Pubkey(pubkey)) {
+      await ConvoHub.use().deleteLegacyGroup(pubkey, {
+        fromSyncMessage: true,
+        sendLeaveMessage: false,
+      });
+    } else if (PubKey.is03Pubkey(pubkey)) {
+      await ConvoHub.use().deleteGroup(pubkey, {
+        fromSyncMessage: true,
+        sendLeaveMessage: false,
+        emptyGroupButKeepAsKicked: false,
+        deleteAllMessagesOnSwarm: false,
+        forceDestroyForAllMembers: false,
+      });
+    }
   }
 
   private loadGroupIds() {

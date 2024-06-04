@@ -24,8 +24,11 @@ import {
   triggerFakeAvatarUpdate,
 } from '../../../../interactions/conversationInteractions';
 import { Constants } from '../../../../session';
-import { isDevProd } from '../../../../shared/env_vars';
+import { ConvoHub } from '../../../../session/conversations';
+import { PubKey } from '../../../../session/types';
+import { isDevProd, isTestIntegration } from '../../../../shared/env_vars';
 import { closeRightPanel } from '../../../../state/ducks/conversations';
+import { updateConfirmModal } from '../../../../state/ducks/modalDialog';
 import { resetRightOverlayMode, setRightOverlayMode } from '../../../../state/ducks/section';
 import {
   useSelectedConversationKey,
@@ -44,6 +47,7 @@ import { AttachmentTypeWithPath } from '../../../../types/Attachment';
 import { getAbsoluteAttachmentPath } from '../../../../types/MessageAttachment';
 import { Avatar, AvatarSize } from '../../../avatar/Avatar';
 import { Flex } from '../../../basic/Flex';
+import { SessionButtonColor } from '../../../basic/SessionButton';
 import { SpacerLG, SpacerMD, SpacerXL } from '../../../basic/Text';
 import { PanelButtonGroup, PanelIconButton } from '../../../buttons';
 import { MediaItemType } from '../../../lightbox/LightboxGallery';
@@ -191,6 +195,43 @@ const StyledName = styled.h4`
   padding-inline: var(--margins-md);
   font-size: var(--font-size-md);
 `;
+
+const DestroyGroupForAllMembersButton = () => {
+  const dispatch = useDispatch();
+  const groupPk = useSelectedConversationKey();
+  if (groupPk && PubKey.is03Pubkey(groupPk) && (isDevProd() || isTestIntegration())) {
+    return (
+      <PanelIconButton
+        dataTestId="delete-group-button"
+        iconType="delete"
+        color={'var(--danger-color)'}
+        text={window.i18n('editMenuDeleteGroup')}
+        onClick={() => {
+          dispatch(
+            // TODO build the right UI for this (just adding buttons for QA for now)
+            updateConfirmModal({
+              okText: window.i18n('delete'),
+              okTheme: SessionButtonColor.Danger,
+              title: window.i18n('editMenuDeleteGroup'),
+              conversationId: groupPk,
+              onClickOk: () => {
+                void ConvoHub.use().deleteGroup(groupPk, {
+                  deleteAllMessagesOnSwarm: true,
+                  emptyGroupButKeepAsKicked: false,
+                  fromSyncMessage: false,
+                  sendLeaveMessage: false,
+                  forceDestroyForAllMembers: true,
+                });
+              },
+            })
+          );
+        }}
+      />
+    );
+  }
+
+  return null;
+};
 
 export const OverlayRightPanelSettings = () => {
   const [documents, setDocuments] = useState<Array<MediaItemType>>([]);
@@ -354,14 +395,17 @@ export const OverlayRightPanelSettings = () => {
 
           <MediaGallery documents={documents} media={media} />
           {isGroup && (
-            <PanelIconButton
-              text={leaveGroupString}
-              dataTestId="leave-group-button"
-              disabled={isKickedFromGroup}
-              onClick={() => void deleteConvoAction()}
-              color={'var(--danger-color)'}
-              iconType={'delete'}
-            />
+            <>
+              <PanelIconButton
+                text={leaveGroupString}
+                dataTestId="leave-group-button"
+                disabled={isKickedFromGroup}
+                onClick={() => void deleteConvoAction()}
+                color={'var(--danger-color)'}
+                iconType={'delete'}
+              />
+              <DestroyGroupForAllMembersButton />
+            </>
           )}
         </PanelButtonGroup>
         <SpacerLG />

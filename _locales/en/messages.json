@@ -38,6 +38,7 @@
   "done": "Done",
   "youLeftTheGroup": "You have left the group.",
   "youGotKickedFromGroup": "You were removed from the group.",
+  "youWereRemovedFrom": "You were removed from <b>$name$</b>.",
   "unreadMessages": "Unread Messages",
   "debugLogExplanation": "This log will be saved to your desktop.",
   "reportIssue": "Report a Bug",

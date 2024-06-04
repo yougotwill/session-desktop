@@ -1,7 +1,7 @@
 import ByteBuffer from 'bytebuffer';
 import { GroupPubkeyType, PubkeyType, WithGroupPubkey } from 'libsession_util_nodejs';
 import { from_hex } from 'libsodium-wrappers-sumo';
-import { isEmpty } from 'lodash';
+import { isEmpty, isString } from 'lodash';
 import { AwaitedReturn, assertUnreachable } from '../../../types/sqlSharedTypes';
 import { UserGroupsWrapperActions } from '../../../webworker/workers/browser/libsession_worker_interface';
 import { concatUInt8Array } from '../../crypto';
@@ -310,7 +310,6 @@ abstract class AbstractRevokeSubRequest extends SnodeAPISubRequest {
   public readonly groupPk: GroupPubkeyType;
   public readonly timestamp: number;
   public readonly revokeTokenHex: Array<string>;
-
   protected readonly adminSecretKey: Uint8Array;
 
   constructor({
@@ -471,8 +470,49 @@ export class DeleteAllFromUserNodeSubRequest extends SnodeAPISubRequest {
   }
 }
 
-// We don't need that one yet
-// export class DeleteAllFromGroupNodeSubRequest extends DeleteAllFromUserNodeSubRequest {}
+/**
+ * Delete all the messages and not the config messages for that group 03.
+ */
+export class DeleteAllFromGroupMsgNodeSubRequest extends SnodeAPISubRequest {
+  public method = 'delete_all' as const;
+  public readonly namespace = SnodeNamespaces.ClosedGroupMessages;
+  public readonly adminSecretKey: Uint8Array;
+  public readonly groupPk: GroupPubkeyType;
+
+  constructor(args: WithGroupPubkey & WithSecretKey) {
+    super();
+    this.groupPk = args.groupPk;
+    this.adminSecretKey = args.secretKey;
+    if (isEmpty(this.adminSecretKey)) {
+      throw new Error('DeleteAllFromGroupMsgNodeSubRequest needs an adminSecretKey');
+    }
+  }
+
+  public async buildAndSignParameters() {
+    const signDetails = await SnodeGroupSignature.getSnodeGroupSignature({
+      method: this.method,
+      namespace: this.namespace,
+      group: { authData: null, pubkeyHex: this.groupPk, secretKey: this.adminSecretKey },
+    });
+
+    if (!signDetails) {
+      throw new Error(
+        `[DeleteAllFromGroupMsgNodeSubRequest] SnodeSignature.getSnodeSignatureParamsUs returned an empty result`
+      );
+    }
+    return {
+      method: this.method,
+      params: {
+        ...signDetails,
+        namespace: this.namespace,
+      },
+    };
+  }
+
+  public loggingId(): string {
+    return `${this.method}-${ed25519Str(this.groupPk)}-${this.namespace}`;
+  }
+}
 
 export class DeleteHashesFromUserNodeSubRequest extends SnodeAPISubRequest {
   public method = 'delete' as const;
@@ -981,7 +1021,8 @@ export type RawSnodeSubRequests =
   | UpdateExpiryOnNodeGroupSubRequest
   | SubaccountRevokeSubRequest
   | SubaccountUnrevokeSubRequest
-  | GetExpiriesFromNodeSubRequest;
+  | GetExpiriesFromNodeSubRequest
+  | DeleteAllFromGroupMsgNodeSubRequest;
 
 export type BuiltSnodeSubRequests =
   | ReturnType<RetrieveLegacyClosedGroupSubRequest['build']>
@@ -1000,7 +1041,8 @@ export type BuiltSnodeSubRequests =
   | AwaitedReturn<UpdateExpiryOnNodeGroupSubRequest['buildAndSignParameters']>
   | AwaitedReturn<SubaccountRevokeSubRequest['buildAndSignParameters']>
   | AwaitedReturn<SubaccountUnrevokeSubRequest['buildAndSignParameters']>
-  | AwaitedReturn<GetExpiriesFromNodeSubRequest['buildAndSignParameters']>;
+  | AwaitedReturn<GetExpiriesFromNodeSubRequest['buildAndSignParameters']>
+  | AwaitedReturn<DeleteAllFromGroupMsgNodeSubRequest['buildAndSignParameters']>;
 
 export function builtRequestToLoggingId(request: BuiltSnodeSubRequests): string {
   const { method, params } = request;
@@ -1010,7 +1052,6 @@ export function builtRequestToLoggingId(request: BuiltSnodeSubRequests): string 
       return `${method}`;
 
     case 'delete':
-    case 'delete_all':
     case 'expire':
     case 'get_expiries':
     case 'get_swarm':
@@ -1018,6 +1059,12 @@ export function builtRequestToLoggingId(request: BuiltSnodeSubRequests): string 
     case 'unrevoke_subaccount': {
       const isUs = UserUtils.isUsFromCache(params.pubkey);
       return `${method}-${isUs ? 'us' : ed25519Str(params.pubkey)}`;
+    }
+    case 'delete_all': {
+      const isUs = UserUtils.isUsFromCache(params.pubkey);
+      return `${method}-${isUs ? 'us' : ed25519Str(params.pubkey)}-${
+        isString(params.namespace) ? params.namespace : SnodeNamespace.toRole(params.namespace)
+      }}`;
     }
 
     case 'retrieve':

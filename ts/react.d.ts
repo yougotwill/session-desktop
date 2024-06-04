@@ -107,6 +107,7 @@ declare module 'react' {
     | 'conversation-request-explanation'
     | 'group-invite-control-message'
     | 'empty-conversation-notification'
+    | 'group-control-message'
 
     // call notification types
     | 'call-notification-missed-call'
@@ -138,6 +139,7 @@ declare module 'react' {
     | 'remove-moderators'
     | 'add-moderators'
     | 'edit-group-name'
+    | 'delete-group-button'
 
     // SessionRadioGroup & SessionRadio
     | 'password-input-confirm'

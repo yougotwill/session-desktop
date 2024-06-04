@@ -458,11 +458,20 @@ async function leaveGroupOrCommunityByConvoId({
       status: ConversationInteractionStatus.Start,
     });
 
-    await ConvoHub.use().deleteClosedGroup(conversationId, {
-      fromSyncMessage: false,
-      sendLeaveMessage,
-      emptyGroupButKeepAsKicked: false,
-    });
+    if (PubKey.is05Pubkey(conversationId)) {
+      await ConvoHub.use().deleteLegacyGroup(conversationId, {
+        fromSyncMessage: false,
+        sendLeaveMessage,
+      });
+    } else if (PubKey.is03Pubkey(conversationId)) {
+      await ConvoHub.use().deleteGroup(conversationId, {
+        fromSyncMessage: false,
+        sendLeaveMessage,
+        deleteAllMessagesOnSwarm: false,
+        emptyGroupButKeepAsKicked: false,
+        forceDestroyForAllMembers: false,
+      });
+    }
     await clearConversationInteractionState({ conversationId });
   } catch (err) {
     window.log.warn(`showLeaveGroupByConvoId error: ${err}`);

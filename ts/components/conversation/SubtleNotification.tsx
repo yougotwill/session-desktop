@@ -24,6 +24,7 @@ import {
 import {
   useLibGroupInviteGroupName,
   useLibGroupInvitePending,
+  useLibGroupKicked,
 } from '../../state/selectors/userGroups';
 import { LocalizerKeys } from '../../types/LocalizerKeys';
 import { SessionHtmlRenderer } from '../basic/SessionHTMLRenderer';
@@ -140,6 +141,7 @@ export const NoMessageInConversation = () => {
   const nameToRender = useSelectedNicknameOrProfileNameOrShortenedPubkey() || '';
   const isPrivate = useSelectedIsPrivate();
   const isIncomingRequest = useIsIncomingRequest(selectedConversation);
+  const isKickedFromGroup = useLibGroupKicked(selectedConversation);
 
   // groupV2 use its own invite logic as part of <GroupRequestExplanation />
   if (
@@ -160,11 +162,13 @@ export const NoMessageInConversation = () => {
   } else if (isMe) {
     localizedKey = 'noMessagesInNoteToSelf';
   }
+  let dataTestId: SessionDataTestId = 'empty-conversation-notification';
+  if (isGroupV2 && isKickedFromGroup) {
+    localizedKey = 'youWereRemovedFrom';
+    dataTestId = 'group-control-message';
+  }
 
   return (
-    <TextNotification
-      dataTestId="empty-conversation-notification"
-      html={window.i18n(localizedKey, [nameToRender])}
-    />
+    <TextNotification dataTestId={dataTestId} html={window.i18n(localizedKey, [nameToRender])} />
   );
 };

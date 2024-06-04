@@ -7,6 +7,7 @@ import { assertUnreachable } from '../../../../types/sqlSharedTypes';
 import { isSignInByLinking } from '../../../../util/storage';
 import { MetaGroupWrapperActions } from '../../../../webworker/workers/browser/libsession_worker_interface';
 import {
+  DeleteAllFromGroupMsgNodeSubRequest,
   StoreGroupConfigOrMessageSubRequest,
   StoreGroupExtraData,
 } from '../../../apis/snode_api/SnodeRequestTypes';
@@ -130,6 +131,7 @@ async function storeGroupUpdateMessages({
     messagesHashesToDelete: null,
     revokeSubRequest: null,
     unrevokeSubRequest: null,
+    deleteAllMessagesSubRequest: null,
   });
 
   const expectedReplyLength = updateMessagesRequests.length; // each of those messages are sent as a subrequest
@@ -151,9 +153,11 @@ async function pushChangesToGroupSwarmIfNeeded({
   unrevokeSubRequest,
   groupPk,
   supplementKeys,
+  deleteAllMessagesSubRequest,
 }: WithGroupPubkey &
   WithRevokeSubRequest & {
     supplementKeys: Array<Uint8Array>;
+    deleteAllMessagesSubRequest?: DeleteAllFromGroupMsgNodeSubRequest | null;
   }): Promise<RunJobResult> {
   // save the dumps to DB even before trying to push them, so at least we have an up to date dumps in the DB in case of crash, no network etc
   await LibSessionUtil.saveDumpsToDb(groupPk);
@@ -161,7 +165,13 @@ async function pushChangesToGroupSwarmIfNeeded({
     await LibSessionUtil.pendingChangesForGroup(groupPk);
   // If there are no pending changes then the job can just complete (next time something
   // is updated we want to try and run immediately so don't schedule another run in this case)
-  if (isEmpty(pendingConfigData) && !supplementKeys.length) {
+  if (
+    isEmpty(pendingConfigData) &&
+    !supplementKeys.length &&
+    !revokeSubRequest &&
+    !unrevokeSubRequest &&
+    !deleteAllMessagesSubRequest
+  ) {
     return RunJobResult.Success;
   }
 
@@ -233,14 +243,16 @@ async function pushChangesToGroupSwarmIfNeeded({
     messagesHashesToDelete: allOldHashes,
     revokeSubRequest,
     unrevokeSubRequest,
+    deleteAllMessagesSubRequest,
   });
 
   const expectedReplyLength =
     pendingConfigRequests.length + // each of those messages are sent as a subrequest
     keysEncryptedRequests.length + // each of those messages are sent as a subrequest
-    (allOldHashes.size ? 1 : 0) + // we are sending all hashes changes as a single request
-    (revokeSubRequest ? 1 : 0) + // we are sending all revoke updates as a single request
-    (unrevokeSubRequest ? 1 : 0); // we are sending all revoke updates as a single request
+    (allOldHashes.size ? 1 : 0) + // we are sending all hashes changes as a single subrequest
+    (revokeSubRequest ? 1 : 0) + // we are sending all revoke updates as a single subrequest
+    (unrevokeSubRequest ? 1 : 0) + // we are sending all revoke updates as a single subrequest
+    (deleteAllMessagesSubRequest ? 1 : 0); // a delete_all sub request is a single subrequest
 
   // we do a sequence call here. If we do not have the right expected number of results, consider it a failure
   if (!isArray(result) || result.length !== expectedReplyLength) {

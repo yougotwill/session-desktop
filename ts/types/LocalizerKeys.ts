@@ -608,6 +608,7 @@ export type LocalizerKeys =
   | 'youLeftTheGroup'
   | 'youSetYourDisappearingMessages'
   | 'youWereInvitedToGroup'
+  | 'youWereRemovedFrom'
   | 'yourSessionID'
   | 'yourUniqueSessionID'
   | 'zoomFactorSettingTitle';
