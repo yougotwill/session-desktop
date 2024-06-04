@@ -139,7 +139,6 @@ class GroupPendingRemovalsJob extends PersistedJob<GroupPendingRemovalsPersisted
         return concatUInt8Array(s, StringUtils.stringToUint8Array(`${currentGen}`));
       });
 
-      debugger;
       const multiEncryptedMessage = await MultiEncryptWrapperActions.multiEncrypt({
         messages: dataToEncrypt,
         recipients: sessionIds,
@@ -161,15 +160,17 @@ class GroupPendingRemovalsJob extends PersistedJob<GroupPendingRemovalsPersisted
         dbMessageIdentifier: null,
         namespace: SnodeNamespaces.ClosedGroupRevokedRetrievableMessages,
         ttlMs: TTL_DEFAULT.CONTENT_MESSAGE,
+        secretKey: group.secretKey,
+        authData: null,
       });
 
       const result = await MessageSender.sendEncryptedDataToSnode({
         storeRequests: [multiEncryptRequest],
         destination: groupPk,
-        messagesHashesToDelete: null,
+        deleteHashesSubRequest: null,
         ...revokeUnrevokeParams,
       });
-      console.warn('result', result);
+
       if (result?.length === 2 && result[0].code === 200 && result[1].code === 200) {
         // both requests success, remove the members from the group member entirely and sync
         await MetaGroupWrapperActions.memberEraseAndRekey(groupPk, sessionIdsHex);

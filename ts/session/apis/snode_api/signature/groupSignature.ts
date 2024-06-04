@@ -293,7 +293,6 @@ async function getGroupSignatureByHashesParams({
   const signatureTimestamp = GetNetworkTime.now();
 
   const sodium = await getSodiumRenderer();
-  // N
   try {
     if (group.secretKey && !isEmpty(group.secretKey)) {
       const signature = sodium.crypto_sign_detached(message, group.secretKey);
@@ -303,7 +302,7 @@ async function getGroupSignatureByHashesParams({
         signature: signatureBase64,
         pubkey: group.pubkeyHex,
         messages: messagesHashes,
-        timestamp: signatureTimestamp, // TODO audric is this causing backend signature issues?
+        timestamp: signatureTimestamp,
       };
     }
 

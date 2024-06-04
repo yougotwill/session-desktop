@@ -3,10 +3,10 @@ import { GroupPubkeyType, PubkeyType, WithGroupPubkey } from 'libsession_util_no
 import { from_hex } from 'libsodium-wrappers-sumo';
 import { isEmpty, isString } from 'lodash';
 import { AwaitedReturn, assertUnreachable } from '../../../types/sqlSharedTypes';
-import { UserGroupsWrapperActions } from '../../../webworker/workers/browser/libsession_worker_interface';
 import { concatUInt8Array } from '../../crypto';
 import { PubKey } from '../../types';
 import { StringUtils, UserUtils } from '../../utils';
+import { ed25519Str } from '../../utils/String';
 import { GetNetworkTime } from './getNetworkTime';
 import {
   SnodeNamespace,
@@ -25,7 +25,6 @@ import {
   WithSignature,
   WithTimestamp,
 } from './types';
-import { ed25519Str } from '../../utils/String';
 
 type WithMaxSize = { max_size?: number };
 export type WithShortenOrExtend = { shortenOrExtend: 'shorten' | 'extend' | '' };
@@ -559,25 +558,25 @@ export class DeleteHashesFromGroupNodeSubRequest extends SnodeAPISubRequest {
   public method = 'delete' as const;
   public readonly messageHashes: Array<string>;
   public readonly pubkey: GroupPubkeyType;
+  public readonly secretKey: Uint8Array;
 
-  constructor(args: WithMessagesHashes & WithGroupPubkey) {
+  constructor(args: WithMessagesHashes & WithGroupPubkey & WithSecretKey) {
     super();
     this.messageHashes = args.messagesHashes;
     this.pubkey = args.groupPk;
+    this.secretKey = args.secretKey;
+    if (!this.secretKey || isEmpty(this.secretKey)) {
+      throw new Error('DeleteHashesFromGroupNodeSubRequest needs a secretKey');
+    }
   }
 
   public async buildAndSignParameters() {
-    const group = await UserGroupsWrapperActions.getGroup(this.pubkey);
-    if (!group) {
-      throw new Error('DeleteHashesFromGroupNodeSubRequest no such group found');
-    }
-    // This will try to use the adminSecretKey if we have it, or the authData if we have it.
-    // Otherwise, it will throw
+    // Note: this request can only be made by an admin and will be denied otherwise, so we make the secretKey mandatory in the constructor.
     const signResult = await SnodeGroupSignature.getGroupSignatureByHashesParams({
       method: this.method,
       messagesHashes: this.messageHashes,
       groupPk: this.pubkey,
-      group,
+      group: { authData: null, pubkeyHex: this.pubkey, secretKey: this.secretKey },
     });
 
     return {
@@ -714,8 +713,9 @@ export class StoreGroupConfigOrMessageSubRequest extends SnodeAPISubRequest {
   public readonly destination: GroupPubkeyType;
   public readonly ttlMs: number;
   public readonly encryptedData: Uint8Array;
-
   public readonly dbMessageIdentifier: string | null;
+  public readonly secretKey: Uint8Array | null;
+  public readonly authData: Uint8Array | null;
 
   constructor(
     args: WithGroupPubkey & {
@@ -726,6 +726,8 @@ export class StoreGroupConfigOrMessageSubRequest extends SnodeAPISubRequest {
       ttlMs: number;
       encryptedData: Uint8Array;
       dbMessageIdentifier: string | null;
+      authData: Uint8Array | null;
+      secretKey: Uint8Array | null;
     }
   ) {
     super();
@@ -734,6 +736,8 @@ export class StoreGroupConfigOrMessageSubRequest extends SnodeAPISubRequest {
     this.ttlMs = args.ttlMs;
     this.encryptedData = args.encryptedData;
     this.dbMessageIdentifier = args.dbMessageIdentifier;
+    this.authData = args.authData;
+    this.secretKey = args.secretKey;
 
     if (isEmpty(this.encryptedData)) {
       throw new Error('this.encryptedData cannot be empty');
@@ -741,6 +745,16 @@ export class StoreGroupConfigOrMessageSubRequest extends SnodeAPISubRequest {
     if (!PubKey.is03Pubkey(this.destination)) {
       throw new Error(
         'StoreGroupConfigOrMessageSubRequest: groupconfig namespace required a 03 pubkey'
+      );
+    }
+    if (isEmpty(this.secretKey) && isEmpty(this.authData)) {
+      throw new Error(
+        'StoreGroupConfigOrMessageSubRequest needs either authData or secretKey to be set'
+      );
+    }
+    if (SnodeNamespace.isGroupConfigNamespace(this.namespace) && isEmpty(this.secretKey)) {
+      throw new Error(
+        `StoreGroupConfigOrMessageSubRequest: groupconfig namespace [${this.namespace}] requires an adminSecretKey`
       );
     }
   }
@@ -751,17 +765,11 @@ export class StoreGroupConfigOrMessageSubRequest extends SnodeAPISubRequest {
   }> {
     const encryptedDataBase64 = ByteBuffer.wrap(this.encryptedData).toString('base64');
 
-    const found = await UserGroupsWrapperActions.getGroup(this.destination);
-    if (SnodeNamespace.isGroupConfigNamespace(this.namespace) && isEmpty(found?.secretKey)) {
-      throw new Error(
-        `groupconfig namespace [${this.namespace}] require an adminSecretKey for signature but we found none`
-      );
-    }
     // this will either sign with our admin key or with the subaccount key if the admin one isn't there
     const signDetails = await SnodeGroupSignature.getSnodeGroupSignature({
       method: this.method,
       namespace: this.namespace,
-      group: found,
+      group: { authData: this.authData, pubkeyHex: this.destination, secretKey: this.secretKey },
     });
 
     if (!signDetails) {

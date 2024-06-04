@@ -50,7 +50,7 @@ import {
 } from '../apis/snode_api/signature/groupSignature';
 import { SnodeSignature, SnodeSignatureResult } from '../apis/snode_api/signature/snodeSignatures';
 import { SnodePool } from '../apis/snode_api/snodePool';
-import { WithMessagesHashes, WithRevokeSubRequest } from '../apis/snode_api/types';
+import { WithRevokeSubRequest } from '../apis/snode_api/types';
 import { TTL_DEFAULT } from '../constants';
 import { ConvoHub } from '../conversations';
 import { MessageEncrypter } from '../crypto/MessageEncrypter';
@@ -184,6 +184,13 @@ async function sendSingleMessage({
           );
         }
       } else if (PubKey.is03Pubkey(destination)) {
+        const group = await UserGroupsWrapperActions.getGroup(destination);
+        if (!group) {
+          window.log.warn(
+            `sendSingleMessage: no such group found in wrapper: ${ed25519Str(destination)}`
+          );
+          throw new Error('sendSingleMessage: no such group found in wrapper');
+        }
         if (SnodeNamespace.isGroupConfigNamespace(encryptedAndWrapped.namespace)) {
           subRequests.push(
             new StoreGroupConfigOrMessageSubRequest({
@@ -192,6 +199,7 @@ async function sendSingleMessage({
               ttlMs: overridenTtl,
               groupPk: destination,
               dbMessageIdentifier: encryptedAndWrapped.identifier || null,
+              ...group,
             })
           );
         } else if (encryptedAndWrapped.namespace === SnodeNamespaces.ClosedGroupMessages) {
@@ -202,6 +210,7 @@ async function sendSingleMessage({
               ttlMs: overridenTtl,
               groupPk: destination,
               dbMessageIdentifier: encryptedAndWrapped.identifier || null,
+              ...group,
             })
           );
         } else {
@@ -338,37 +347,32 @@ async function signSubRequests(
   return signedRequests;
 }
 
-async function sendMessagesDataToSnode(
+async function sendMessagesDataToSnode<T extends PubkeyType | GroupPubkeyType>(
   storeRequests: Array<
     | StoreGroupConfigOrMessageSubRequest
     | StoreUserConfigSubRequest
     | StoreUserMessageSubRequest
     | StoreLegacyGroupMessageSubRequest
   >,
-  asssociatedWith: PubkeyType | GroupPubkeyType,
+  asssociatedWith: T,
   {
-    messagesHashes: messagesToDelete,
     revokeSubRequest,
     unrevokeSubRequest,
+    deleteHashesSubRequest,
     deleteAllMessagesSubRequest,
-  }: WithMessagesHashes &
-    WithRevokeSubRequest & {
-      deleteAllMessagesSubRequest?: DeleteAllFromGroupMsgNodeSubRequest | null;
-    },
+  }: WithRevokeSubRequest & {
+    deleteAllMessagesSubRequest?: DeleteAllFromGroupMsgNodeSubRequest | null;
+    deleteHashesSubRequest:
+      | (T extends PubkeyType
+          ? DeleteHashesFromUserNodeSubRequest
+          : DeleteHashesFromGroupNodeSubRequest)
+      | null;
+  },
   method: MethodBatchType
 ): Promise<NotEmptyArrayOfBatchResults> {
   if (!asssociatedWith) {
     throw new Error('sendMessagesDataToSnode first subrequest pubkey needs to be set');
   }
-
-  const deleteHashesSubRequest = !messagesToDelete.length
-    ? null
-    : PubKey.is05Pubkey(asssociatedWith)
-      ? new DeleteHashesFromUserNodeSubRequest({ messagesHashes: messagesToDelete })
-      : new DeleteHashesFromGroupNodeSubRequest({
-          messagesHashes: messagesToDelete,
-          groupPk: asssociatedWith,
-        });
 
   if (storeRequests.some(m => m.destination !== asssociatedWith)) {
     throw new Error(
@@ -565,17 +569,21 @@ async function encryptMessagesAndWrap(
  * @param destination the pubkey we should deposit those message to
  * @returns the hashes of successful deposit
  */
-async function sendEncryptedDataToSnode({
+async function sendEncryptedDataToSnode<T extends GroupPubkeyType | PubkeyType>({
   destination,
   storeRequests,
-  messagesHashesToDelete,
+  deleteHashesSubRequest,
   revokeSubRequest,
   unrevokeSubRequest,
   deleteAllMessagesSubRequest,
 }: WithRevokeSubRequest & {
   storeRequests: Array<StoreGroupConfigOrMessageSubRequest | StoreUserConfigSubRequest>;
-  destination: GroupPubkeyType | PubkeyType;
-  messagesHashesToDelete: Set<string> | null;
+  destination: T;
+  deleteHashesSubRequest:
+    | (T extends PubkeyType
+        ? DeleteHashesFromUserNodeSubRequest
+        : DeleteHashesFromGroupNodeSubRequest)
+    | null;
   deleteAllMessagesSubRequest?: DeleteAllFromGroupMsgNodeSubRequest | null;
 }): Promise<NotEmptyArrayOfBatchResults | null> {
   try {
@@ -585,7 +593,7 @@ async function sendEncryptedDataToSnode({
           storeRequests,
           destination,
           {
-            messagesHashes: [...(messagesHashesToDelete || [])],
+            deleteHashesSubRequest,
             revokeSubRequest,
             unrevokeSubRequest,
             deleteAllMessagesSubRequest,

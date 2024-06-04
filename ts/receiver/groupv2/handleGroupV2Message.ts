@@ -1,6 +1,7 @@
 import { GroupPubkeyType, PubkeyType, WithGroupPubkey } from 'libsession_util_nodejs';
 import { isEmpty, isFinite, isNumber } from 'lodash';
 import { Data } from '../../data/data';
+import { deleteMessagesFromSwarmOnly } from '../../interactions/conversations/unsendingInteractions';
 import { ConversationTypeEnum } from '../../models/conversationAttributes';
 import { HexString } from '../../node/hexStrings';
 import { SignalService } from '../../protobuf';
@@ -377,16 +378,27 @@ async function handleGroupDeleteMemberContentMessage({
 
   if (isEmpty(change.adminSignature)) {
     // this is step 1.
-    const msgsDeleted = await Data.deleteAllMessageHashesInConversationMatchingAuthor({
-      author,
-      groupPk,
-      messageHashes: change.messageHashes,
-      signatureTimestamp,
-    });
+    const { msgIdsDeleted, msgHashesDeleted } =
+      await Data.deleteAllMessageHashesInConversationMatchingAuthor({
+        author,
+        groupPk,
+        messageHashes: change.messageHashes,
+        signatureTimestamp,
+      });
 
     window.inboxStore.dispatch(
-      messagesExpired(msgsDeleted.map(m => ({ conversationKey: groupPk, messageId: m })))
+      messagesExpired(msgIdsDeleted.map(m => ({ conversationKey: groupPk, messageId: m })))
     );
+
+    if (msgIdsDeleted.length) {
+      // Note: we `void` it because we don't want to hang while
+      // processing the handleGroupDeleteMemberContentMessage itself
+      // (we are running on the receiving pipeline here)
+      void deleteMessagesFromSwarmOnly(msgHashesDeleted, groupPk).catch(e => {
+        // we retry a bunch of times already, so if it still fails, there is not much we can do.
+        window.log.warn('deleteMessagesFromSwarmOnly failed with', e.message);
+      });
+    }
     convo.updateLastMessage();
     return;
   }

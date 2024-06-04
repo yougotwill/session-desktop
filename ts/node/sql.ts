@@ -1134,14 +1134,18 @@ function deleteAllMessageHashesInConversationMatchingAuthor(
   instance?: BetterSqlite3.Database
 ): AwaitedReturn<DeleteAllMessageHashesInConversationMatchingAuthorType> {
   if (!groupPk || !author || !messageHashes.length) {
-    return [];
+    return { msgHashesDeleted: [], msgIdsDeleted: [] };
   }
-  return assertGlobalInstanceOrInstance(instance)
+  const results = assertGlobalInstanceOrInstance(instance)
     .prepare(
-      `DELETE FROM ${MESSAGES_TABLE} WHERE conversationId = ? AND source = ? AND sent_at <= ? AND messageHash IN ( ${messageHashes.map(() => '?').join(', ')} ) RETURNING id`
+      `DELETE FROM ${MESSAGES_TABLE} WHERE conversationId = ? AND source = ? AND sent_at <= ? AND messageHash IN ( ${messageHashes.map(() => '?').join(', ')} ) RETURNING id, messageHash;`
     )
-    .all(groupPk, author, signatureTimestamp, ...messageHashes)
-    .map(m => m.id);
+    .all(groupPk, author, signatureTimestamp, ...messageHashes);
+
+  return {
+    msgHashesDeleted: results.map(m => m.messageHash),
+    msgIdsDeleted: results.map(m => m.id),
+  };
 }
 
 function cleanUpExpirationTimerUpdateHistory(

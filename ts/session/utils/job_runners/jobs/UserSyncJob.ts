@@ -8,7 +8,10 @@ import { ConfigDumpData } from '../../../../data/configDump/configDump';
 import { UserSyncJobDone } from '../../../../shims/events';
 import { isSignInByLinking } from '../../../../util/storage';
 import { GenericWrapperActions } from '../../../../webworker/workers/browser/libsession_worker_interface';
-import { StoreUserConfigSubRequest } from '../../../apis/snode_api/SnodeRequestTypes';
+import {
+  DeleteHashesFromUserNodeSubRequest,
+  StoreUserConfigSubRequest,
+} from '../../../apis/snode_api/SnodeRequestTypes';
 import { TTL_DEFAULT } from '../../../constants';
 import { ConvoHub } from '../../../conversations';
 import { MessageSender } from '../../../sending/MessageSender';
@@ -109,7 +112,9 @@ async function pushChangesToUserSwarmIfNeeded() {
   const result = await MessageSender.sendEncryptedDataToSnode({
     storeRequests,
     destination: us,
-    messagesHashesToDelete: changesToPush.allOldHashes,
+    deleteHashesSubRequest: new DeleteHashesFromUserNodeSubRequest({
+      messagesHashes: [...changesToPush.allOldHashes],
+    }),
     revokeSubRequest: null,
     unrevokeSubRequest: null,
   });

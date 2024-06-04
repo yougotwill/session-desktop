@@ -126,7 +126,7 @@ async function unsendMessagesForEveryone(
     await unsendMessagesForEveryone1o1AndLegacy(conversation, conversation.id, msgsToDelete);
   } else if (conversation.isClosedGroupV2()) {
     if (!PubKey.is03Pubkey(destinationId)) {
-      throw new Error('invalid conversation id (03)  for unsendMessageForEveryone');
+      throw new Error('invalid conversation id (03) for unsendMessageForEveryone');
     }
     await unsendMessagesForEveryoneGroupV2({
       groupPk: destinationId,
@@ -199,11 +199,10 @@ export async function deleteMessagesFromSwarmOnly(
       );
       return false;
     }
-    const errorOnAtLeastOneSnode = await SnodeAPI.networkDeleteMessages(
-      deletionMessageHashes,
-      pubkey
-    );
-    return errorOnAtLeastOneSnode;
+    if (PubKey.is03Pubkey(pubkey)) {
+      return await SnodeAPI.networkDeleteMessagesForGroup(deletionMessageHashes, pubkey);
+    }
+    return await SnodeAPI.networkDeleteMessageOurSwarm(deletionMessageHashes, pubkey);
   } catch (e) {
     window.log?.error(
       `deleteMessagesFromSwarmOnly: Error deleting message from swarm of ${ed25519Str(pubkey)}, hashes: ${deletionMessageHashes}`,

@@ -24,4 +24,4 @@ export type DeleteAllMessageHashesInConversationMatchingAuthorType = (
     author: PubkeyType;
     signatureTimestamp: number;
   }
-) => PrArrayMsgIds;
+) => Promise<{ msgIdsDeleted: Array<string>; msgHashesDeleted: Array<string> }>;

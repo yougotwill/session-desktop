@@ -5,9 +5,13 @@ import { UserUtils } from '../..';
 import { SignalService } from '../../../../protobuf';
 import { assertUnreachable } from '../../../../types/sqlSharedTypes';
 import { isSignInByLinking } from '../../../../util/storage';
-import { MetaGroupWrapperActions } from '../../../../webworker/workers/browser/libsession_worker_interface';
+import {
+  MetaGroupWrapperActions,
+  UserGroupsWrapperActions,
+} from '../../../../webworker/workers/browser/libsession_worker_interface';
 import {
   DeleteAllFromGroupMsgNodeSubRequest,
+  DeleteHashesFromGroupNodeSubRequest,
   StoreGroupConfigOrMessageSubRequest,
   StoreGroupExtraData,
 } from '../../../apis/snode_api/SnodeRequestTypes';
@@ -85,6 +89,14 @@ async function storeGroupUpdateMessages({
     return true;
   }
 
+  const group = await UserGroupsWrapperActions.getGroup(groupPk);
+  if (!group) {
+    window.log.warn(
+      `storeGroupUpdateMessages for ${ed25519Str(groupPk)}: no group found in wrapper`
+    );
+    return false;
+  }
+
   const updateMessagesToEncrypt: Array<StoreGroupExtraData> = updateMessages.map(updateMessage => {
     const wrapped = MessageSender.wrapContentIntoEnvelope(
       SignalService.Envelope.Type.SESSION_MESSAGE,
@@ -122,13 +134,14 @@ async function storeGroupUpdateMessages({
       namespace: m.namespace,
       ttlMs: m.ttl,
       dbMessageIdentifier: m.dbMessageIdentifier,
+      ...group,
     });
   });
 
   const result = await MessageSender.sendEncryptedDataToSnode({
     storeRequests: [...updateMessagesRequests],
     destination: groupPk,
-    messagesHashesToDelete: null,
+    deleteHashesSubRequest: null,
     revokeSubRequest: null,
     unrevokeSubRequest: null,
     deleteAllMessagesSubRequest: null,
@@ -172,6 +185,13 @@ async function pushChangesToGroupSwarmIfNeeded({
     !unrevokeSubRequest &&
     !deleteAllMessagesSubRequest
   ) {
+    window.log.debug(`pushChangesToGroupSwarmIfNeeded: ${ed25519Str(groupPk)}: nothing to push`);
+    return RunJobResult.Success;
+  }
+
+  const group = await UserGroupsWrapperActions.getGroup(groupPk);
+  if (!group) {
+    window.log.debug(`pushChangesToGroupSwarmIfNeeded: ${ed25519Str(groupPk)}: group not found`);
     return RunJobResult.Success;
   }
 
@@ -208,25 +228,75 @@ async function pushChangesToGroupSwarmIfNeeded({
     data: keysEncrypted[index],
   }));
 
-  const pendingConfigRequests = pendingConfigMsgs.map(m => {
-    return new StoreGroupConfigOrMessageSubRequest({
-      encryptedData: m.data,
-      groupPk,
-      namespace: m.namespace,
-      ttlMs: m.ttl,
-      dbMessageIdentifier: null, // those are config messages only, they have no dbMessageIdentifier
-    });
-  });
+  let pendingConfigRequests: Array<StoreGroupConfigOrMessageSubRequest> = [];
+  let keysEncryptedRequests: Array<StoreGroupConfigOrMessageSubRequest> = [];
 
-  const keysEncryptedRequests = keysEncryptedmessage.map(m => {
-    return new StoreGroupConfigOrMessageSubRequest({
-      encryptedData: m.data,
-      groupPk,
-      namespace: m.namespace,
-      ttlMs: m.ttl,
-      dbMessageIdentifier: null, // those are supplemental keys messages only, they have no dbMessageIdentifier
+  if (pendingConfigMsgs.length) {
+    if (!group.secretKey || isEmpty(group.secretKey)) {
+      window.log.debug(
+        `pushChangesToGroupSwarmIfNeeded: ${ed25519Str(groupPk)}: pendingConfigMsgs not empty but we do not have the secretKey`
+      );
+
+      throw new Error(
+        'pushChangesToGroupSwarmIfNeeded: pendingConfigMsgs not empty but we do not have the secretKey'
+      );
+    }
+
+    pendingConfigRequests = pendingConfigMsgs.map(m => {
+      return new StoreGroupConfigOrMessageSubRequest({
+        encryptedData: m.data,
+        groupPk,
+        namespace: m.namespace,
+        ttlMs: m.ttl,
+        dbMessageIdentifier: null, // those are config messages only, they have no dbMessageIdentifier
+        secretKey: group.secretKey,
+        authData: null,
+      });
     });
-  });
+  }
+
+  if (keysEncryptedmessage.length) {
+    if (!group.secretKey || isEmpty(group.secretKey)) {
+      window.log.debug(
+        `pushChangesToGroupSwarmIfNeeded: ${ed25519Str(groupPk)}: keysEncryptedmessage not empty but we do not have the secretKey`
+      );
+
+      throw new Error(
+        'pushChangesToGroupSwarmIfNeeded: keysEncryptedmessage not empty but we do not have the secretKey'
+      );
+    }
+    keysEncryptedRequests = keysEncryptedmessage.map(m => {
+      return new StoreGroupConfigOrMessageSubRequest({
+        encryptedData: m.data,
+        groupPk,
+        namespace: m.namespace,
+        ttlMs: m.ttl,
+        dbMessageIdentifier: null, // those are supplemental keys messages only, they have no dbMessageIdentifier
+        secretKey: group.secretKey,
+        authData: null,
+      });
+    });
+  }
+
+  let deleteHashesSubRequest: DeleteHashesFromGroupNodeSubRequest | null = null;
+  const allOldHashesArray = [...allOldHashes];
+  if (allOldHashesArray.length) {
+    if (!group.secretKey || isEmpty(group.secretKey)) {
+      window.log.debug(
+        `pushChangesToGroupSwarmIfNeeded: ${ed25519Str(groupPk)}: allOldHashesArray not empty but we do not have the secretKey`
+      );
+
+      throw new Error(
+        'pushChangesToGroupSwarmIfNeeded: allOldHashesArray not empty but we do not have the secretKey'
+      );
+    }
+
+    deleteHashesSubRequest = new DeleteHashesFromGroupNodeSubRequest({
+      messagesHashes: [...allOldHashes],
+      groupPk,
+      secretKey: group.secretKey,
+    });
+  }
 
   if (
     revokeSubRequest?.revokeTokenHex.length === 0 ||
@@ -240,7 +310,7 @@ async function pushChangesToGroupSwarmIfNeeded({
   const result = await MessageSender.sendEncryptedDataToSnode({
     storeRequests: [...pendingConfigRequests, ...keysEncryptedRequests],
     destination: groupPk,
-    messagesHashesToDelete: allOldHashes,
+    deleteHashesSubRequest,
     revokeSubRequest,
     unrevokeSubRequest,
     deleteAllMessagesSubRequest,
