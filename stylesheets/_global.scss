@@ -6,7 +6,9 @@ html {
   height: 100%;
   // Default theme is Classic Dark
   background-color: #1b1b1b;
-  font-size: 14px;
+  font-family: var(--font-default);
+  font-size: var(--font-size-md);
+  line-height: var(--font-line-height);
 }
 
 body {
@@ -14,8 +16,6 @@ body {
   height: 100%;
   width: 100%;
   margin: 0;
-  font-family: var(--font-default);
-  letter-spacing: 0.3px;
 }
 
 // scrollbars

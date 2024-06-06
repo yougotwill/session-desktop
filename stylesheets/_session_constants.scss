@@ -92,20 +92,11 @@
   line-height: 1.4rem;
 }
 
-// //////////////////////////////////////////////
-// /////////////////// Text /////////////////////
-// //////////////////////////////////////////////
-
-// Sizing
-$session-font-xs: 11px;
-$session-font-sm: 13px;
-$session-font-md: 15px;
-
 // Mixins
 
 @mixin text-highlight($color) {
   background-color: $color;
-  padding: $session-margin-xs $session-margin-sm;
+  padding: var(--margins-xs) var(--margins-sm);
   border-radius: 3px;
   display: inline-block;
 }
@@ -145,12 +136,6 @@ $session-subtle-factor: 0.6;
 $session-modal-size-sm: 220px;
 $session-modal-size-md: 400px;
 $session-modal-size-lg: 650px;
-
-// Spacing
-$session-margin-xs: 5px;
-$session-margin-sm: 10px;
-$session-margin-md: 15px;
-$session-margin-lg: 20px;
 
 // Animations
 

@@ -8,28 +8,51 @@ function setDuration(duration: number | string) {
 
 // These variables are independent of the current theme
 export type ThemeGlobals = {
-  /* Fonts */
+  /* Typography */
+  /* Font Families */
   '--font-default': string;
   '--font-accent': string;
   '--font-mono': string;
-  '--font-size-xs': string;
-  '--font-size-sm': string;
-  '--font-size-md': string;
-  '--font-size-lg': string;
+
+  /* Headings */
   '--font-size-h1': string;
   '--font-size-h2': string;
   '--font-size-h3': string;
   '--font-size-h4': string;
+  '--font-size-h5': string;
+  '--font-size-h6': string;
+  '--font-size-h7': string;
+  '--font-size-h8': string;
+  '--font-size-h9': string;
+
+  /* Body (default) */
+  '--font-size-xl': string;
+  '--font-size-lg': string;
+  '--font-size-md': string; // base font size
+  '--font-size-sm': string;
+  '--font-size-xs': string;
+  '--font-size-xxs': string; // fine print
+
+  /* Display (monospace) */
+  '--font-display-size-xl': string;
+  '--font-display-size-lg': string;
+  '--font-display-size-md': string; // base font size
+  '--font-display-size-sm': string;
+  '--font-display-size-xs': string;
+  '--font-display-size-xxs': string; // fine print
+
+  /* Line Heights */
+  '--font-line-height': string;
 
   /* Margins */
-  '--margins-xxs': string;
-  '--margins-xs': string;
-  '--margins-sm': string;
-  '--margins-md': string;
-  '--margins-lg': string;
-  '--margins-xl': string;
-  '--margins-2xl': string;
   '--margins-3xl': string;
+  '--margins-2xl': string;
+  '--margins-xl': string;
+  '--margins-lg': string;
+  '--margins-md': string;
+  '--margins-sm': string;
+  '--margins-xs': string;
+  '--margins-xxs': string;
 
   /* Padding */
   '--padding-message-content': string;
@@ -106,23 +129,41 @@ export const THEME_GLOBALS: ThemeGlobals = {
   '--font-default': 'Roboto',
   '--font-accent': 'Loor',
   '--font-mono': 'SpaceMono',
-  '--font-size-xs': '11px',
-  '--font-size-sm': '13px',
-  '--font-size-md': '15px',
-  '--font-size-lg': '17px',
-  '--font-size-h1': '30px',
-  '--font-size-h2': '24px',
-  '--font-size-h3': '20px',
-  '--font-size-h4': '16px',
 
-  '--margins-xxs': '2.5px',
-  '--margins-xs': '5px',
-  '--margins-sm': '10px',
-  '--margins-md': '15px',
-  '--margins-lg': '20px',
-  '--margins-xl': '25px',
-  '--margins-2xl': '30px',
+  '--font-size-h1': '36px', // was 30px
+  '--font-size-h2': '32px', // was 14px
+  '--font-size-h3': '29px', // was 20px
+  '--font-size-h4': '26px', // was 16px
+  '--font-size-h5': '23px',
+  '--font-size-h6': '20px',
+  '--font-size-h7': '18px',
+  '--font-size-h8': '16px',
+  '--font-size-h9': '14px',
+
+  '--font-size-xl': '18px',
+  '--font-size-lg': '16px',
+  '--font-size-md': '14px',
+  '--font-size-sm': '12px',
+  '--font-size-xs': '11px',
+  '--font-size-xxs': '9px',
+
+  '--font-display-size-xl': '18px',
+  '--font-display-size-lg': '16px',
+  '--font-display-size-md': '14px',
+  '--font-display-size-sm': '12px',
+  '--font-display-size-xs': '11px',
+  '--font-display-size-xxs': '9px',
+
+  '--font-line-height': '1.2', // 120% but we want a unitless value so that line heights are calculated correctly for nested elements
+
   '--margins-3xl': '35px',
+  '--margins-2xl': '30px',
+  '--margins-xl': '25px',
+  '--margins-lg': '20px',
+  '--margins-md': '15px',
+  '--margins-sm': '10px',
+  '--margins-xs': '5px',
+  '--margins-xxs': '2.5px',
 
   '--padding-message-content': '7px 13px',
   '--padding-link-preview': '-7px -13px 7px -13px', // bottom has positive value because a link preview has always a body below
