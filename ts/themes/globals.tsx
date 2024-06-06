@@ -13,6 +13,7 @@ export type ThemeGlobals = {
   '--font-default': string;
   '--font-accent': string;
   '--font-mono': string;
+  '--font-debug': string;
 
   /* Headings */
   '--font-size-h1': string;
@@ -126,12 +127,13 @@ export type ThemeGlobals = {
 
 // These are only set once in the global style (at root).
 export const THEME_GLOBALS: ThemeGlobals = {
-  '--font-default': 'Roboto',
+  '--font-default': 'Roboto Flex',
   '--font-accent': 'Loor',
   '--font-mono': 'SpaceMono',
+  '--font-debug': "Monaco, Consolas, 'Courier New', Courier, monospace",
 
   '--font-size-h1': '36px', // was 30px
-  '--font-size-h2': '32px', // was 14px
+  '--font-size-h2': '32px', // was 24px
   '--font-size-h3': '29px', // was 20px
   '--font-size-h4': '26px', // was 16px
   '--font-size-h5': '23px',

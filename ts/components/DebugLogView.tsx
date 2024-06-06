@@ -3,6 +3,7 @@ import styled from 'styled-components';
 import { SessionTheme } from '../themes/SessionTheme';
 import { switchThemeTo } from '../themes/switchTheme';
 import { fetch } from '../util/logging';
+import { H4 } from './basic/Heading';
 import { SessionButton, SessionButtonType } from './basic/SessionButton';
 import { SessionIconButton } from './icon';
 
@@ -26,10 +27,6 @@ const StyledContent = styled.div`
     float: right;
   }
 
-  h1 {
-    color: var(--modal-text-color);
-  }
-
   textarea {
     flex-grow: 1;
     width: 100%;
@@ -42,8 +39,9 @@ const StyledContent = styled.div`
     resize: none;
     min-height: 100px;
 
-    font-family: Monaco, Consolas, 'Courier New', Courier, monospace;
-    font-size: 12px;
+    font-family: var(--font-debug);
+    font-size: var(--font-display-size-sm);
+    line-height: 18px;
   }
 `;
 
@@ -116,8 +114,8 @@ export const DebugLogView = () => {
               window.closeDebugLog();
             }}
           />
-          <h1> {window.i18n('debugLog')} </h1>
-          <p> {window.i18n('debugLogExplanation')}</p>
+          <H4 color={'var(--modal-text-color)'}>{window.i18n('debugLog')} </H4>
+          <p>{window.i18n('debugLogExplanation')}</p>
         </div>
         <DebugLogViewAndSave />
       </StyledContent>

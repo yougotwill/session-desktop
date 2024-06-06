@@ -9,10 +9,29 @@ import { switchThemeTo } from './switchTheme';
 
 // Defaults to Classic Dark theme
 const SessionGlobalStyles = createGlobalStyle`
-  html {
-    ${declareCSSVariables(THEME_GLOBALS)}
-    ${declareCSSVariables(classicDark)}
-  };
+html {
+  ${declareCSSVariables(THEME_GLOBALS)}
+  ${declareCSSVariables(classicDark)}
+
+  height: 100%;
+  -webkit-font-smoothing: antialiased;
+  line-height: var(--font-line-height);
+  font-size: var(--font-size-md);
+  font-family: var(--font-default);
+  /* TODO Check on other platforms */
+  /* this compensates for antialiasing to match the original design */
+  font-weight: 600;
+  /* NOTE if we add other variable fonts this might be a problem. We will need to make font-family specific classes and apply them */
+  font-stretch: 85%;
+  font-optical-sizing: none;
+}
+
+body {
+  position: relative;
+  height: 100%;
+  width: 100%;
+  margin: 0;
+}
 `;
 
 export const SessionTheme = ({ children }: { children: ReactNode }) => (

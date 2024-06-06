@@ -1,27 +1,18 @@
 import { ReactNode } from 'react';
 import { useDispatch } from 'react-redux';
-import styled from 'styled-components';
 import { closeRightPanel } from '../../../../../state/ducks/conversations';
 import { resetRightOverlayMode } from '../../../../../state/ducks/section';
 import { Flex } from '../../../../basic/Flex';
+import { H4, H5, HeadingProps } from '../../../../basic/Heading';
 import { SessionIconButton } from '../../../../icon';
 
-export const HeaderTitle = styled.h2`
-  font-family: var(--font-default);
-  font-size: var(--font-size-h2);
-  text-align: center;
-  margin-top: 0px;
-  margin-bottom: 0px;
-`;
+export const HeaderTitle = (props: HeadingProps) => (
+  <H4 {...props} alignText="center" style={{ wordBreak: 'break-word' }} />
+);
 
-export const HeaderSubtitle = styled.h3`
-  font-family: var(--font-default);
-  font-size: 11px;
-  font-weight: 400;
-  text-align: center;
-  padding-top: 0px;
-  margin-top: 0;
-`;
+export const HeaderSubtitle = (props: HeadingProps) => (
+  <H5 {...props} alignText="center" style={{ fontSize: 'var(--font-size-xs)' }} />
+);
 
 type HeaderProps = {
   hideBackButton?: boolean;
@@ -44,7 +35,7 @@ export const Header = (props: HeaderProps) => {
   const dispatch = useDispatch();
 
   return (
-    <Flex container={true} width={'100%'} padding={'32px var(--margins-lg) var(--margins-md)'}>
+    <Flex container={true} width={'100%'} padding={'32px var(--margins-lg)'}>
       {!hideBackButton && (
         <SessionIconButton
           iconSize={'medium'}

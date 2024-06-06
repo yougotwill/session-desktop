@@ -2,6 +2,7 @@ import { useDispatch } from 'react-redux';
 import styled from 'styled-components';
 import { setLeftOverlayMode } from '../../../state/ducks/section';
 import { Flex } from '../../basic/Flex';
+import { H4, H7, HeadingProps } from '../../basic/Heading';
 import { SpacerSM } from '../../basic/Text';
 import { SessionIconButton } from '../../icon';
 
@@ -29,17 +30,17 @@ const StyledBackgroundBorder = styled.hr`
   margin-bottom: 40px;
 `;
 
-const StyledTitle = styled.h2`
-  text-align: center;
-  margin-top: 0px;
-`;
-
-const StyledSubTitle = styled.h3`
-  text-align: center;
-  padding-top: 22px;
-  position: relative;
-  margin-bottom: 6px;
-`;
+const StyledSubTitle = (props: HeadingProps) => (
+  <H7
+    {...props}
+    alignText="center"
+    style={{
+      position: 'relative',
+      paddingTop: '22px',
+      marginBottom: '6px',
+    }}
+  />
+);
 
 export const OverlayHeader = ({ subtitle, title }: { title: string; subtitle: string }) => {
   const dispatch = useDispatch();
@@ -60,7 +61,9 @@ export const OverlayHeader = ({ subtitle, title }: { title: string; subtitle: st
 
       <SpacerSM />
 
-      <StyledTitle>{title}</StyledTitle>
+      <H4 alignText="center" style={{ wordBreak: 'break-word' }}>
+        {title}
+      </H4>
 
       <StyledSubTitle>
         {subtitle}

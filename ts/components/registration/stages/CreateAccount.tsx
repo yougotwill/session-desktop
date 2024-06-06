@@ -26,11 +26,12 @@ import {
 } from '../../../util/accountManager';
 import { Storage, setSignWithRecoveryPhrase } from '../../../util/storage';
 import { Flex } from '../../basic/Flex';
+import { H4 } from '../../basic/Heading';
 import { SessionButton, SessionButtonColor } from '../../basic/SessionButton';
 import { SpacerLG, SpacerSM } from '../../basic/Text';
 import { SessionInput } from '../../inputs';
 import { resetRegistration } from '../RegistrationStages';
-import { OnboardDescription, OnboardHeading } from '../components';
+import { OnboardDescription } from '../components';
 import { BackButtonWithinContainer } from '../components/BackButton';
 import { displayNameIsValid, sanitizeDisplayNameOrToast } from '../utils';
 
@@ -123,7 +124,7 @@ export const CreateAccount = () => {
         alignItems="flex-start"
         margin={'0 0 0 8px'}
       >
-        <OnboardHeading>{window.i18n('displayNamePick')}</OnboardHeading>
+        <H4>{window.i18n('displayNamePick')}</H4>
         <SpacerSM />
         <OnboardDescription>{window.i18n('displayNameDescription')}</OnboardDescription>
         <SpacerLG />

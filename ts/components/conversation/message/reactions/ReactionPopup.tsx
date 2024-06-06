@@ -22,7 +22,7 @@ export const StyledPopupContainer = styled.div<{ tooltipPosition: TipPosition }>
   background-color: var(--message-bubbles-received-background-color);
   color: var(--message-bubbles-received-text-color);
   box-shadow: 0px 0px 13px rgba(0, 0, 0, 0.51);
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   overflow-wrap: break-word;
   padding: 16px;

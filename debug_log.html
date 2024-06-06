@@ -15,6 +15,26 @@
             style-src 'self' 'unsafe-inline';"
     />
     <link href="stylesheets/dist/manifest.css" rel="stylesheet" type="text/css" />
+    <!-- Load fonts faces here to prevent font swap on first load -->
+    <style>
+      @font-face {
+        font-family: 'Roboto Flex';
+        src: url('./fonts/RobotoFlex-VariableFont.ttf') format('truetype');
+        font-weight: 100 900;
+        font-style: normal italic;
+      }
+
+      @font-face {
+        font-family: SpaceMono;
+        src: url('./fonts/SpaceMono-Regular.ttf') format('truetype');
+      }
+
+      @font-face {
+        font-family: Loor;
+        src: url('./fonts/Loor.ttf') format('truetype');
+        line-height: 1.4rem;
+      }
+    </style>
   </head>
 
   <body>
