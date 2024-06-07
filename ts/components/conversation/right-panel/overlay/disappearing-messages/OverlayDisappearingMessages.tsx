@@ -18,7 +18,7 @@ import {
 import { ReleasedFeatures } from '../../../../../util/releaseFeature';
 import { Flex } from '../../../../basic/Flex';
 import { SessionButton } from '../../../../basic/SessionButton';
-import { SpacerLG } from '../../../../basic/Text';
+import { SpacerLG, SpacerXS } from '../../../../basic/Text';
 import { Header, HeaderSubtitle, HeaderTitle, StyledScrollContainer } from '../components';
 import { DisappearingModes } from './DisappearingModes';
 import { TimeOptions } from './TimeOptions';
@@ -172,6 +172,7 @@ export const OverlayDisappearingMessages = () => {
       <Flex container={true} flexDirection={'column'} alignItems={'center'}>
         <Header>
           <HeaderTitle>{window.i18n('disappearingMessages')}</HeaderTitle>
+          <SpacerXS />
           <HeaderSubtitle>
             {singleMode === 'deleteAfterRead'
               ? window.i18n('disappearingMessagesModeAfterReadSubtitle')

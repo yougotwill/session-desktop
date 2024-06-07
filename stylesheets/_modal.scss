@@ -123,11 +123,6 @@
       outline: none;
     }
   }
-
-  h4 {
-    margin-top: 8px;
-    margin-bottom: 16px;
-  }
 }
 
 .loki-dialog {
@@ -203,7 +198,7 @@
       height: 38px;
       border-radius: 5px;
       text-align: center;
-      font-size: $session-font-md;
+      font-size: var(--font-size-md);
     }
 
     &-uneditable {
@@ -212,7 +207,7 @@
       justify-content: center;
 
       p {
-        font-size: $session-font-md;
+        font-size: var(--font-size-md);
         padding: 0px var(--margins-sm);
       }
 

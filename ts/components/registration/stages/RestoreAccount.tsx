@@ -32,13 +32,14 @@ import {
 } from '../../../util/accountManager';
 import { setSignInByLinking, setSignWithRecoveryPhrase } from '../../../util/storage';
 import { Flex } from '../../basic/Flex';
+import { H4 } from '../../basic/Heading';
 import { SessionButton, SessionButtonColor } from '../../basic/SessionButton';
 import { SpacerLG, SpacerSM } from '../../basic/Text';
 import { SessionIcon } from '../../icon';
 import { SessionInput } from '../../inputs';
 import { SessionProgressBar } from '../../loading';
 import { resetRegistration } from '../RegistrationStages';
-import { OnboardDescription, OnboardHeading } from '../components';
+import { OnboardDescription } from '../components';
 import { BackButtonWithinContainer } from '../components/BackButton';
 import { useRecoveryProgressEffect } from '../hooks';
 import { displayNameIsValid, sanitizeDisplayNameOrToast } from '../utils';
@@ -214,7 +215,7 @@ export const RestoreAccount = () => {
             {step === AccountRestoration.RecoveryPassword ? (
               <>
                 <Flex container={true} width={'100%'} alignItems="center">
-                  <OnboardHeading>{window.i18n('sessionRecoveryPassword')}</OnboardHeading>
+                  <H4>{window.i18n('sessionRecoveryPassword')}</H4>
                   <SessionIcon
                     iconType="recoveryPasswordOutline"
                     iconSize="huge"
@@ -255,7 +256,7 @@ export const RestoreAccount = () => {
               </>
             ) : (
               <Flex container={true} width="100%" flexDirection="column" alignItems="flex-start">
-                <OnboardHeading>{window.i18n('displayNameNew')}</OnboardHeading>
+                <H4>{window.i18n('displayNameNew')}</H4>
                 <SpacerSM />
                 <OnboardDescription>{window.i18n('displayNameErrorNew')}</OnboardDescription>
                 <SpacerLG />

@@ -42,6 +42,7 @@ import { AttachmentTypeWithPath } from '../../../../types/Attachment';
 import { getAbsoluteAttachmentPath } from '../../../../types/MessageAttachment';
 import { Avatar, AvatarSize } from '../../../avatar/Avatar';
 import { Flex } from '../../../basic/Flex';
+import { H8 } from '../../../basic/Heading';
 import { SpacerLG, SpacerMD, SpacerXL } from '../../../basic/Text';
 import { PanelButtonGroup, PanelIconButton } from '../../../buttons';
 import { MediaItemType } from '../../../lightbox/LightboxGallery';
@@ -167,7 +168,9 @@ const HeaderItem = () => {
           />
         )}
       </Flex>
+      <SpacerLG />
       <StyledName data-testid="right-panel-group-name">{displayNameInProfile}</StyledName>
+      <SpacerLG />
       {showMemberCount && (
         <Flex container={true} flexDirection={'column'}>
           <div role="button" className="subtle">
@@ -180,9 +183,8 @@ const HeaderItem = () => {
   );
 };
 
-const StyledName = styled.h4`
+const StyledName = styled(H8)`
   padding-inline: var(--margins-md);
-  font-size: var(--font-size-md);
 `;
 
 export const OverlayRightPanelSettings = () => {

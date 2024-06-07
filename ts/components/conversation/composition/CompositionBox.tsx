@@ -252,18 +252,20 @@ const StyledSendMessageInput = styled.div<{ dir?: HTMLDirection }>`
     flex-grow: 1;
     outline: none;
     border: none;
-    font-size: 14px;
-    line-height: var(--font-size-h2);
+    font-size: var(--font-size-md);
+    font-weight: 600;
+    line-height: 24px;
     letter-spacing: 0.5px;
   }
 
   &__emoji-overlay {
     // Should have identical properties to the textarea above to line up perfectly.
     position: absolute;
-    font-size: 14px;
     font-family: var(--font-default);
+    font-size: var(--font-size-md);
+    font-weight: 600;
     margin-left: 2px;
-    line-height: var(--font-size-h2);
+    line-height: 24px;
     letter-spacing: 0.5px;
     color: var(--transparent-color);
   }

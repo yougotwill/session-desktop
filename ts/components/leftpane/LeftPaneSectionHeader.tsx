@@ -8,16 +8,16 @@ import { getTheme } from '../../state/selectors/theme';
 import { getShowRecoveryPhrasePrompt } from '../../state/selectors/userConfig';
 import { isSignWithRecoveryPhrase } from '../../util/storage';
 import { Flex } from '../basic/Flex';
+import { H4 } from '../basic/Heading';
 import { SessionButton } from '../basic/SessionButton';
 import { SpacerMD } from '../basic/Text';
 import { MenuButton } from '../buttons';
 import { SessionIcon } from '../icon';
 
-const SectionTitle = styled.h1`
+const SectionTitle = styled(H4)`
   padding-top: var(--margins-xs);
   padding-left: var(--margins-sm);
   flex-grow: 1;
-  color: var(--text-primary-color);
 `;
 
 const StyledProgressBarContainer = styled.div`
@@ -38,11 +38,10 @@ const StyledBanner = styled(Flex)`
   p {
     padding: 0;
     margin: 0;
-    line-height: 1.2;
   }
 
   p:nth-child(2) {
-    font-size: 12px;
+    font-size: var(--font-size-sm);
   }
 
   .session-button {
@@ -58,7 +57,6 @@ const StyledBanner = styled(Flex)`
 const StyledBannerTitle = styled.p`
   font-size: var(--font-size-lg);
   font-weight: 700;
-  line-height: 1;
 `;
 
 const StyledLeftPaneBanner = styled.div`
@@ -140,7 +138,7 @@ export const LeftPaneSectionHeader = () => {
   return (
     <Flex flexDirection="column">
       <div className="module-left-pane__header">
-        <SectionTitle>{label}</SectionTitle>
+        <SectionTitle color={'--text-primary-color'}>{label}</SectionTitle>
         {isMessageSection && <MenuButton />}
       </div>
       {showRecoveryPhrasePrompt && <LeftPaneBanner />}

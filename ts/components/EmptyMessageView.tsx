@@ -4,7 +4,8 @@ import { getLeftPaneConversationIdsCount } from '../state/selectors/conversation
 import { getTheme } from '../state/selectors/theme';
 import { isSignWithRecoveryPhrase } from '../util/storage';
 import { Flex } from './basic/Flex';
-import { Spacer2XL, SpacerXS } from './basic/Text';
+import { H1, H2, H4, H8 } from './basic/Heading';
+import { Spacer2XL, SpacerMD, SpacerXS } from './basic/Text';
 
 const StyledPlaceholder = styled(Flex)`
   background-color: var(--background-secondary-color);
@@ -34,36 +35,12 @@ const StyledPartyPopper = styled.img`
   -webkit-user-drag: none;
 `;
 
-const StyledP = styled.p`
-  margin: 0;
-  padding: 0;
-  text-align: center;
-`;
-
-const StyledHeading = styled(StyledP)`
-  margin: 0 0 var(--margins-md);
-  line-height: 1;
-  font-size: 48px;
-  font-weight: 700;
-`;
-
-const StyledSessionWelcome = styled(StyledP)<{ color: string }>`
-  line-height: 1;
-  color: ${props => props.color};
-  font-size: 32px;
-`;
-
 const StyledHR = styled.hr`
   color: var(--text-secondary-color);
   opacity: 0.5;
   width: 300px;
   border-width: 1px;
   margin: 40px 0 var(--margins-lg);
-`;
-
-const StyledNoConversations = styled(StyledP)`
-  font-size: 24px;
-  font-weight: 700;
 `;
 
 export const EmptyMessageView = () => {
@@ -87,12 +64,14 @@ export const EmptyMessageView = () => {
         <>
           <StyledPartyPopper src="images/party-popper.svg" alt="party popper emoji" />
           <Spacer2XL />
-          <StyledHeading>{window.i18n('onboardingAccountCreated')}</StyledHeading>
-          <StyledSessionWelcome
+          <H1 style={{ fontSize: '48px' }}>{window.i18n('onboardingAccountCreated')}</H1>
+          <SpacerMD />
+          <H2
             color={theme.includes('dark') ? 'var(--primary-color)' : 'var(--text-primary-color)'}
+            fontWeight={400}
           >
             {window.i18n('onboardingBubbleWelcomeToSession')}
-          </StyledSessionWelcome>
+          </H2>
         </>
       ) : (
         <StyledSessionFullLogo
@@ -110,9 +89,11 @@ export const EmptyMessageView = () => {
       {!conversationCount ? (
         <>
           <StyledHR />
-          <StyledNoConversations>{window.i18n('conversationsNone')}</StyledNoConversations>
+          <H4>{window.i18n('conversationsNone')}</H4>
           <SpacerXS />
-          <StyledP style={{ width: '360px' }}>{window.i18n('onboardingHitThePlusButton')}</StyledP>
+          <H8 alignText="center" fontWeight={400} style={{ width: '360px' }}>
+            {window.i18n('onboardingHitThePlusButton')}
+          </H8>
         </>
       ) : null}
     </StyledPlaceholder>
