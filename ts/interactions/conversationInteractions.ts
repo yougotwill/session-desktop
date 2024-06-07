@@ -1,4 +1,4 @@
-import { isEmpty, isNil } from 'lodash';
+import { isNil } from 'lodash';
 import {
   ConversationNotificationSettingType,
   ConversationTypeEnum,
@@ -10,7 +10,6 @@ import { SessionButtonColor } from '../components/basic/SessionButton';
 import { getCallMediaPermissionsSettings } from '../components/settings/SessionSettings';
 import { Data } from '../data/data';
 import { SettingsKey } from '../data/settings-key';
-import { SignalService } from '../protobuf';
 import { GroupV2Receiver } from '../receiver/groupv2/handleGroupV2Message';
 import { uploadFileToFsWithOnionV4 } from '../session/apis/file_server_api/FileServerApi';
 import { OpenGroupUtils } from '../session/apis/open_group_api/utils';
@@ -20,12 +19,10 @@ import { ConvoHub } from '../session/conversations';
 import { getSodiumRenderer } from '../session/crypto';
 import { DecryptedAttachmentsManager } from '../session/crypto/DecryptedAttachmentsManager';
 import { DisappearingMessageConversationModeType } from '../session/disappearing_messages/types';
-import { GroupUpdateInfoChangeMessage } from '../session/messages/outgoing/controlMessage/group_v2/to_group/GroupUpdateInfoChangeMessage';
 import { PubKey } from '../session/types';
 import { perfEnd, perfStart } from '../session/utils/Performance';
 import { sleepFor } from '../session/utils/Promise';
 import { ed25519Str, fromHexToArray, toHex } from '../session/utils/String';
-import { GroupSync } from '../session/utils/job_runners/jobs/GroupSyncJob';
 import { UserSync } from '../session/utils/job_runners/jobs/UserSyncJob';
 import { SessionUtilContact } from '../session/utils/libsession/libsession_utils_contacts';
 import { forceSyncConfigurationNowIfNeeded } from '../session/utils/sync/syncUtils';
@@ -322,42 +319,6 @@ export async function showUpdateGroupNameByConvoId(conversationId: string) {
     );
   }
   window.inboxStore?.dispatch(updateGroupNameModal({ conversationId }));
-}
-
-export async function triggerFakeAvatarUpdate(conversationId: string) {
-  if (!PubKey.is03Pubkey(conversationId)) {
-    throw new Error('triggerAvatarUpdate only works for groupv2');
-  }
-  const convo = ConvoHub.use().get(conversationId);
-  const group = await UserGroupsWrapperActions.getGroup(conversationId);
-  if (!convo || !group || !group.secretKey || isEmpty(group.secretKey)) {
-    throw new Error(
-      'triggerFakeAvatarUpdate: tried to make change to group but we do not have the admin secret key'
-    );
-  }
-
-  const createdAt = GetNetworkTime.now();
-
-  const msgModel = await convo.addSingleOutgoingMessage({
-    group_update: { avatarChange: true },
-    sent_at: createdAt,
-    // the store below will mark the message as sent based on msgModel.id
-  });
-  await msgModel.commit();
-  const updateMsg = new GroupUpdateInfoChangeMessage({
-    createAtNetworkTimestamp: createdAt,
-    typeOfChange: SignalService.GroupUpdateInfoChangeMessage.Type.AVATAR,
-    expirationType: 'unknown',
-    expireTimer: 0,
-    groupPk: conversationId,
-    identifier: msgModel.id,
-    secretKey: group.secretKey,
-    sodium: await getSodiumRenderer(),
-  });
-  await GroupSync.storeGroupUpdateMessages({
-    groupPk: conversationId,
-    updateMessages: [updateMsg],
-  });
 }
 
 export async function showUpdateGroupMembersByConvoId(conversationId: string) {

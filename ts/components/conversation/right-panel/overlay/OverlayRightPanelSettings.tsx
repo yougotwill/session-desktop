@@ -21,7 +21,6 @@ import {
   showRemoveModeratorsByConvoId,
   showUpdateGroupMembersByConvoId,
   showUpdateGroupNameByConvoId,
-  triggerFakeAvatarUpdate,
 } from '../../../../interactions/conversationInteractions';
 import { Constants } from '../../../../session';
 import { ConvoHub } from '../../../../session/conversations';
@@ -53,6 +52,7 @@ import { PanelButtonGroup, PanelIconButton } from '../../../buttons';
 import { MediaItemType } from '../../../lightbox/LightboxGallery';
 import { MediaGallery } from '../../media-gallery/MediaGallery';
 import { Header, StyledScrollContainer } from './components';
+import { groupInfoActions } from '../../../../state/ducks/metaGroups';
 
 async function getMediaGalleryProps(conversationId: string): Promise<{
   documents: Array<MediaItemType>;
@@ -342,7 +342,12 @@ export const OverlayRightPanelSettings = () => {
               iconType={'group'}
               text={'trigger avatar message'} // debugger FIXME Audric
               onClick={() => {
-                void triggerFakeAvatarUpdate(selectedConvoKey);
+                if (!PubKey.is03Pubkey(selectedConvoKey)) {
+                  throw new Error('triggerFakeAvatarUpdate needs a 03 pubkey');
+                }
+                window.inboxStore.dispatch(
+                  groupInfoActions.triggerFakeAvatarUpdate({ groupPk: selectedConvoKey })
+                );
               }}
               dataTestId="edit-group-name"
             />

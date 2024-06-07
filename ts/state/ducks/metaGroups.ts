@@ -182,7 +182,7 @@ const initNewGroupInWrapper = createAsyncThunk(
         groupPk,
         revokeSubRequest: null,
         unrevokeSubRequest: null,
-        supplementKeys: [],
+        encryptedSupplementKeys: [],
         deleteAllMessagesSubRequest: null,
       });
       if (result !== RunJobResult.Success) {
@@ -498,10 +498,10 @@ async function handleWithHistoryMembers({
     const created = await MetaGroupWrapperActions.memberGetOrConstruct(groupPk, member);
     await MetaGroupWrapperActions.memberSetInvited(groupPk, created.pubkeyHex, false);
   }
-  const supplementKeys = withHistory.length
+  const encryptedSupplementKeys = withHistory.length
     ? await MetaGroupWrapperActions.generateSupplementKeys(groupPk, withHistory)
     : [];
-  return supplementKeys;
+  return encryptedSupplementKeys;
 }
 
 /**
@@ -521,19 +521,6 @@ async function handleWithoutHistoryMembers({
   if (!isEmpty(withoutHistory)) {
     await MetaGroupWrapperActions.keyRekey(groupPk);
   }
-}
-
-function getConvoExpireDetailsForMsg(convo: ConversationModel) {
-  const expireTimer = convo.getExpireTimer();
-  const expireDetails = {
-    expirationType: DisappearingMessages.changeToDisappearingMessageType(
-      convo,
-      expireTimer,
-      convo.getExpirationMode()
-    ),
-    expireTimer,
-  };
-  return expireDetails;
 }
 
 /**
@@ -571,7 +558,7 @@ async function getRemovedControlMessage({
     createAtNetworkTimestamp,
     secretKey: adminSecretKey,
     sodium,
-    ...getConvoExpireDetailsForMsg(convo),
+    ...DisappearingMessages.getExpireDetailsForOutgoingMesssage(convo, createAtNetworkTimestamp),
   });
 }
 
@@ -603,7 +590,7 @@ async function getWithoutHistoryControlMessage({
     createAtNetworkTimestamp,
     secretKey: adminSecretKey,
     sodium,
-    ...getConvoExpireDetailsForMsg(convo),
+    ...DisappearingMessages.getExpireDetailsForOutgoingMesssage(convo, createAtNetworkTimestamp),
   });
 }
 
@@ -635,7 +622,7 @@ async function getWithHistoryControlMessage({
     createAtNetworkTimestamp,
     secretKey: adminSecretKey,
     sodium,
-    ...getConvoExpireDetailsForMsg(convo),
+    ...DisappearingMessages.getExpireDetailsForOutgoingMesssage(convo, createAtNetworkTimestamp),
   });
 }
 
@@ -670,7 +657,7 @@ async function handleMemberAddedFromUI({
 
   // then, handle the addition with history of messages by generating supplement keys.
   // this adds them to the members wrapper etc
-  const supplementKeys = await handleWithHistoryMembers({ groupPk, withHistory });
+  const encryptedSupplementKeys = await handleWithHistoryMembers({ groupPk, withHistory });
 
   // then handle the addition without history of messages (full rotation of keys).
   // this adds them to the members wrapper etc
@@ -682,7 +669,7 @@ async function handleMemberAddedFromUI({
   // push new members & key supplement in a single batch call
   const sequenceResult = await GroupSync.pushChangesToGroupSwarmIfNeeded({
     groupPk,
-    supplementKeys,
+    encryptedSupplementKeys,
     ...revokeUnrevokeParams,
     deleteAllMessagesSubRequest: null,
   });
@@ -700,20 +687,15 @@ async function handleMemberAddedFromUI({
     active_at: createAtNetworkTimestamp,
   });
 
-  const expiringDetails = getConvoExpireDetailsForMsg(convo);
-
+  const expireDetails = DisappearingMessages.getExpireDetailsForOutgoingMesssage(
+    convo,
+    createAtNetworkTimestamp
+  );
   const shared = {
     convo,
     sender: us,
     sentAt: createAtNetworkTimestamp,
-    expireUpdate: {
-      expirationTimer: expiringDetails.expireTimer,
-      expirationType: expiringDetails.expirationType,
-      messageExpirationFromRetrieve:
-        expiringDetails.expireTimer > 0
-          ? createAtNetworkTimestamp + expiringDetails.expireTimer
-          : null,
-    },
+    expireUpdate: expireDetails,
     markAlreadySent: false, // the store below will mark the message as sent with dbMsgIdentifier
   };
 
@@ -792,7 +774,7 @@ async function handleMemberRemovedFromUI({
 
   // Send the groupUpdateDeleteMessage that can still be decrypted by those removed members to namespace ClosedGroupRevokedRetrievableMessages. (not when handling a MEMBER_LEFT message)
   // Then, rekey the wrapper, but don't push the changes yet, we want to batch all of the requests to be made together in the `pushChangesToGroupSwarmIfNeeded` below.
-  if (removed.length && !fromMemberLeftMessage) {
+  if (removed.length) {
     await MetaGroupWrapperActions.membersMarkPendingRemoval(groupPk, removed, alsoRemoveMessages);
   }
   await GroupPendingRemovals.addJob({ groupPk });
@@ -800,10 +782,10 @@ async function handleMemberRemovedFromUI({
   const createAtNetworkTimestamp = GetNetworkTime.now();
   await LibSessionUtil.saveDumpsToDb(groupPk);
 
-  // revoked pubkeys, update messages, and libsession groups config in a single batchcall
+  // revoked pubkeys, update messages, and libsession groups config in a single batch call
   const sequenceResult = await GroupSync.pushChangesToGroupSwarmIfNeeded({
     groupPk,
-    supplementKeys: [],
+    encryptedSupplementKeys: [],
     revokeSubRequest: null,
     unrevokeSubRequest: null,
     deleteAllMessagesSubRequest: null,
@@ -820,7 +802,10 @@ async function handleMemberRemovedFromUI({
     active_at: createAtNetworkTimestamp,
   });
 
-  const expiringDetails = getConvoExpireDetailsForMsg(convo);
+  const expiringDetails = DisappearingMessages.getExpireDetailsForOutgoingMesssage(
+    convo,
+    createAtNetworkTimestamp
+  );
 
   const shared = {
     convo,
@@ -837,7 +822,7 @@ async function handleMemberRemovedFromUI({
   };
   await convo.commit();
 
-  if (removed.length) {
+  if (removed.length && !fromMemberLeftMessage) {
     const msgModel = await ClosedGroup.addUpdateMessage({
       diff: { type: 'kicked', kicked: removed },
       ...shared,
@@ -897,7 +882,10 @@ async function handleNameChangeFromUI({
     diff: { type: 'name', newName },
     sender: us,
     sentAt: createAtNetworkTimestamp,
-    expireUpdate: null,
+    expireUpdate: DisappearingMessages.getExpireDetailsForOutgoingMesssage(
+      convo,
+      createAtNetworkTimestamp
+    ),
     markAlreadySent: false, // the store below will mark the message as sent with dbMsgIdentifier
   });
 
@@ -910,12 +898,12 @@ async function handleNameChangeFromUI({
     createAtNetworkTimestamp,
     secretKey: group.secretKey,
     sodium: await getSodiumRenderer(),
-    ...getConvoExpireDetailsForMsg(convo),
+    ...DisappearingMessages.getExpireDetailsForOutgoingMesssage(convo, createAtNetworkTimestamp),
   });
 
   const batchResult = await GroupSync.pushChangesToGroupSwarmIfNeeded({
     groupPk,
-    supplementKeys: [],
+    encryptedSupplementKeys: [],
     revokeSubRequest: null,
     unrevokeSubRequest: null,
     deleteAllMessagesSubRequest: null,
@@ -981,6 +969,59 @@ const currentDeviceGroupMembersChange = createAsyncThunk(
       infos: await MetaGroupWrapperActions.infoGet(groupPk),
       members: await MetaGroupWrapperActions.memberGetAll(groupPk),
     };
+  }
+);
+
+const triggerFakeAvatarUpdate = createAsyncThunk(
+  'group/triggerFakeAvatarUpdate',
+  async (
+    {
+      groupPk,
+    }: {
+      groupPk: GroupPubkeyType;
+    },
+    payloadCreator
+  ): Promise<void> => {
+    const state = payloadCreator.getState() as StateType;
+    if (!state.groups.infos[groupPk]) {
+      throw new PreConditionFailed('triggerFakeAvatarUpdate group not present in redux slice');
+    }
+    const convo = ConvoHub.use().get(groupPk);
+    const group = await UserGroupsWrapperActions.getGroup(groupPk);
+    if (!convo || !group || !group.secretKey || isEmpty(group.secretKey)) {
+      throw new Error(
+        'triggerFakeAvatarUpdate: tried to make change to group but we do not have the admin secret key'
+      );
+    }
+
+    const createAtNetworkTimestamp = GetNetworkTime.now();
+    const expireUpdate = DisappearingMessages.getExpireDetailsForOutgoingMesssage(
+      convo,
+      createAtNetworkTimestamp
+    );
+    const msgModel = await ClosedGroup.addUpdateMessage({
+      diff: { type: 'avatarChange' },
+      expireUpdate,
+      sender: UserUtils.getOurPubKeyStrFromCache(),
+      sentAt: createAtNetworkTimestamp,
+      convo,
+      markAlreadySent: false, // the store below will mark the message as sent with dbMsgIdentifier
+    });
+
+    await msgModel.commit();
+    const updateMsg = new GroupUpdateInfoChangeMessage({
+      createAtNetworkTimestamp,
+      typeOfChange: SignalService.GroupUpdateInfoChangeMessage.Type.AVATAR,
+      ...expireUpdate,
+      groupPk,
+      identifier: msgModel.id,
+      secretKey: group.secretKey,
+      sodium: await getSodiumRenderer(),
+    });
+    await GroupSync.storeGroupUpdateMessages({
+      groupPk,
+      updateMessages: [updateMsg],
+    });
   }
 );
 
@@ -1365,6 +1406,14 @@ const metaGroupSlice = createSlice({
     builder.addCase(inviteResponseReceived.rejected, (_state, action) => {
       window.log.error('a inviteResponseReceived was rejected', action.error);
     });
+
+    // triggerFakeAvatarUpdate
+    builder.addCase(triggerFakeAvatarUpdate.fulfilled, () => {
+      window.log.error('a triggerFakeAvatarUpdate was fulfilled');
+    });
+    builder.addCase(triggerFakeAvatarUpdate.rejected, (_state, action) => {
+      window.log.error('a triggerFakeAvatarUpdate was rejected', action.error);
+    });
   },
 });
 
@@ -1378,6 +1427,7 @@ export const groupInfoActions = {
   inviteResponseReceived,
   handleMemberLeftMessage,
   currentDeviceGroupNameChange,
+  triggerFakeAvatarUpdate,
 
   ...metaGroupSlice.actions,
 };

@@ -51,7 +51,7 @@ async function getGroupInviteMessage({
     createAtNetworkTimestamp,
     adminSignature,
     memberAuthData,
-    expirationType: 'unknown', // TODO audric do we want those not expiring?
+    expirationType: 'unknown', // an invite is not expiring
     expireTimer: 0,
   });
   return invite;
@@ -76,7 +76,7 @@ async function getGroupPromoteMessage({
     groupPk,
     createAtNetworkTimestamp,
     groupIdentitySeed: secretKey.slice(0, 32), // the seed is the first 32 bytes of the secretkey
-    expirationType: 'unknown', // TODO audric do we want those not expiring?
+    expirationType: 'unknown', // a promote message is not expiring
     expireTimer: 0,
   });
   return msg;

@@ -595,7 +595,7 @@ export class SwarmPolling {
       );
 
       const allow401s = type === ConversationTypeEnum.GROUPV2;
-      let results = await SnodeAPIRetrieve.retrieveNextMessagesNoRetries(
+      const results = await SnodeAPIRetrieve.retrieveNextMessagesNoRetries(
         node,
         pubkey,
         namespacesAndLastHashes,
@@ -607,36 +607,24 @@ export class SwarmPolling {
       if (!results.length) {
         return [];
       }
-      // NOTE when we asked to extend the expiry of the config messages, exclude it from the list of results as we do not want to mess up the last hash tracking logic
-      if (configHashesToBump.length) {
-        try {
-          const lastResult = results[results.length - 1];
-          if (lastResult?.code !== 200) {
-            // the update expiry of our config messages didn't work.
-            window.log.warn(
-              `the update expiry of our tracked config hashes didn't work: ${JSON.stringify(
-                lastResult
-              )}`
-            );
-          }
-        } catch (e) {
-          // nothing to do I suppose here.
-        }
-        results = results.slice(0, results.length - 1);
-      }
-      // console.warn('results what when we get kicked out?: ', results); // debugger
       const lastMessages = results.map(r => {
         return last(r.messages.messages);
       });
+      const namespacesWithNewLastHashes = namespacesAndLastHashes.map((n, i) => {
+        const newHash = lastMessages[i]?.hash || '<none>';
+        const role = SnodeNamespace.toRole(n.namespace);
+        return `${role}:${newHash}`;
+      });
+
       window.log.info(
-        `updating last hashes for ${ed25519Str(pubkey)}: ${ed25519Str(snodeEdkey)}  ${lastMessages.map(m => m?.hash || '')}`
+        `updating last hashes for ${ed25519Str(pubkey)}: ${ed25519Str(snodeEdkey)}  ${namespacesWithNewLastHashes.join(', ')}`
       );
       await Promise.all(
         lastMessages.map(async (lastMessage, index) => {
           if (!lastMessage) {
-            return undefined;
+            return;
           }
-          return this.updateLastHash({
+          await this.updateLastHash({
             edkey: snodeEdkey,
             pubkey,
             namespace: namespaces[index],
@@ -884,6 +872,7 @@ function filterMessagesPerTypeOfConvo<T extends ConversationTypeEnum>(
       const groupConfMessages = retrieveItemWithNamespace(groupConfs);
       const groupOtherMessages = retrieveItemWithNamespace(groupOthers);
       const revokedMessages = retrieveItemWithNamespace(groupRevoked);
+
       return {
         confMessages: groupConfMessages,
         otherMessages: uniqBy(groupOtherMessages, x => x.hash),

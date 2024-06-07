@@ -132,14 +132,20 @@ message GroupUpdateDeleteMemberContentMessage {
   optional bytes  adminSignature      = 3;
 }
 
+message GroupUpdateMemberLeftNotificationMessage {
+  // the pubkey of the member left is included as part of the closed group encryption logic (senderIdentity on desktop)
+}
+
 message GroupUpdateMessage {
-  optional GroupUpdateInviteMessage               inviteMessage          = 1;
-  optional GroupUpdateInfoChangeMessage           infoChangeMessage      = 2;
-  optional GroupUpdateMemberChangeMessage         memberChangeMessage    = 3;
-  optional GroupUpdatePromoteMessage              promoteMessage         = 4;
-  optional GroupUpdateMemberLeftMessage           memberLeftMessage      = 5;
-	optional GroupUpdateInviteResponseMessage       inviteResponse         = 6;
-	optional GroupUpdateDeleteMemberContentMessage  deleteMemberContent    = 7;
+  optional GroupUpdateInviteMessage                  inviteMessage                 = 1;
+  optional GroupUpdateInfoChangeMessage              infoChangeMessage             = 2;
+  optional GroupUpdateMemberChangeMessage            memberChangeMessage           = 3;
+  optional GroupUpdatePromoteMessage                 promoteMessage                = 4;
+  optional GroupUpdateMemberLeftMessage              memberLeftMessage             = 5;
+  optional GroupUpdateInviteResponseMessage          inviteResponse                = 6;
+  optional GroupUpdateDeleteMemberContentMessage     deleteMemberContent           = 7;
+  optional GroupUpdateMemberLeftNotificationMessage  memberLeftNotificationMessage = 8;
+
 }
 
 

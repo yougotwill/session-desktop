@@ -719,11 +719,17 @@ async function handleSingleGroupUpdate({
   if (!ConvoHub.use().get(groupPk)) {
     const created = await ConvoHub.use().getOrCreateAndWait(groupPk, ConversationTypeEnum.GROUPV2);
     const joinedAt = groupInWrapper.joinedAtSeconds * 1000 || Date.now();
+    const expireTimer =
+      groupInWrapper.disappearingTimerSeconds && groupInWrapper.disappearingTimerSeconds > 0
+        ? groupInWrapper.disappearingTimerSeconds
+        : undefined;
     created.set({
       active_at: joinedAt,
       displayNameInProfile: groupInWrapper.name || undefined,
       priority: groupInWrapper.priority,
       lastJoinedTimestamp: joinedAt,
+      expireTimer,
+      expirationMode: expireTimer ? 'deleteAfterSend' : 'off',
     });
     await created.commit();
     getSwarmPollingInstance().addGroupId(PubKey.cast(groupPk));

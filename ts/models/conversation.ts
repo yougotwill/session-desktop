@@ -134,7 +134,10 @@ import { GroupSync } from '../session/utils/job_runners/jobs/GroupSyncJob';
 import { UpdateMsgExpirySwarm } from '../session/utils/job_runners/jobs/UpdateMsgExpirySwarmJob';
 import { getLibGroupKickedOutsideRedux } from '../state/selectors/userGroups';
 import { ReleasedFeatures } from '../util/releaseFeature';
-import { UserGroupsWrapperActions } from '../webworker/workers/browser/libsession_worker_interface';
+import {
+  MetaGroupWrapperActions,
+  UserGroupsWrapperActions,
+} from '../webworker/workers/browser/libsession_worker_interface';
 import { markAttributesAsReadIfNeeded } from './messageFactory';
 
 type InMemoryConvoInfos = {
@@ -1008,10 +1011,11 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       }
     }
 
-    // Note: we agreed that a closed group ControlMessage message does not expire.
+    // Note: we agreed that a **legacy closed** group ControlMessage message does not expire.
+    // Group v2 on the other hand, have expiring disappearing control message
     message.set({
-      expirationType: this.isClosedGroup() ? 'unknown' : expirationType,
-      expireTimer: this.isClosedGroup() ? 0 : expireTimer,
+      expirationType: this.isClosedGroup() && !this.isClosedGroupV2() ? 'unknown' : expirationType,
+      expireTimer: this.isClosedGroup() && !this.isClosedGroupV2() ? 0 : expireTimer,
     });
 
     if (!message.get('id')) {
@@ -1038,7 +1042,8 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       if (!message.getExpirationStartTimestamp()) {
         // Note: we agreed that a closed group ControlMessage message does not expire.
 
-        const canBeDeleteAfterSend = this.isMe() || !(this.isGroup() && message.isControlMessage());
+        const canBeDeleteAfterSend =
+          this.isMe() || !(this.isGroup() && !this.isClosedGroupV2() && message.isControlMessage());
         if (
           (canBeDeleteAfterSend && expirationMode === 'legacy') ||
           expirationMode === 'deleteAfterSend'
@@ -1104,6 +1109,9 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
               'trying to change timer for a group we do not have the secretKey is not possible'
             );
           }
+          const info = await MetaGroupWrapperActions.infoGet(this.id);
+          info.expirySeconds = expireUpdate.expireTimer;
+          await MetaGroupWrapperActions.infoSet(this.id, info);
           const v2groupMessage = new GroupUpdateInfoChangeMessage({
             typeOfChange: SignalService.GroupUpdateInfoChangeMessage.Type.DISAPPEARING_MESSAGES,
             ...expireUpdate,
@@ -1114,10 +1122,22 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
             updatedExpirationSeconds: expireUpdate.expireTimer,
           });
 
+          // TODO audric debugger, make pushChangesToGroupSwarmIfNeeded take extraStoreRequests
+          // but we'd also need to add a way to make a store subrequest from a v2groupMessage.
+          // we should be able to simplify a fair bit the GroupSyncJob file.
+          // i.e. we need an easy way (separate file) to wrap a message into a subrequest
+          await GroupSync.pushChangesToGroupSwarmIfNeeded({
+            groupPk: this.id,
+            revokeSubRequest: null,
+            unrevokeSubRequest: null,
+            deleteAllMessagesSubRequest: null,
+            encryptedSupplementKeys: [],
+          });
           await GroupSync.storeGroupUpdateMessages({
             groupPk: this.id,
             updateMessages: [v2groupMessage],
           });
+          await GroupSync.queueNewJobIfNeeded(this.id);
           return true;
         }
 
@@ -2176,7 +2196,6 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     const groupVisibleMessage = new ClosedGroupV2VisibleMessage({
       chatMessage: visibleMessage,
       destination: this.id,
-      namespace: SnodeNamespaces.ClosedGroupMessages,
     });
 
     // we need the return await so that errors are caught in the catch {}

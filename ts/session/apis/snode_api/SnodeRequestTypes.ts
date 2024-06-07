@@ -396,6 +396,10 @@ export class GetExpiriesFromNodeSubRequest extends SnodeAPISubRequest {
   constructor(args: WithMessagesHashes) {
     super();
     this.messageHashes = args.messagesHashes;
+    if (this.messageHashes.length === 0) {
+      window.log.warn(`GetExpiriesFromNodeSubRequest given empty list of messageHashes`);
+      throw new Error('GetExpiriesFromNodeSubRequest given empty list of messageHashes');
+    }
   }
   /**
    * For Revoke/unrevoke, this needs an admin signature
@@ -522,6 +526,11 @@ export class DeleteHashesFromUserNodeSubRequest extends SnodeAPISubRequest {
     super();
     this.messageHashes = args.messagesHashes;
     this.pubkey = UserUtils.getOurPubKeyStrFromCache();
+
+    if (this.messageHashes.length === 0) {
+      window.log.warn(`DeleteHashesFromUserNodeSubRequest given empty list of messageHashes`);
+      throw new Error('DeleteHashesFromUserNodeSubRequest given empty list of messageHashes');
+    }
   }
 
   public async buildAndSignParameters() {
@@ -568,6 +577,14 @@ export class DeleteHashesFromGroupNodeSubRequest extends SnodeAPISubRequest {
     if (!this.secretKey || isEmpty(this.secretKey)) {
       throw new Error('DeleteHashesFromGroupNodeSubRequest needs a secretKey');
     }
+
+    if (this.messageHashes.length === 0) {
+      window.log.warn(
+        `DeleteHashesFromGroupNodeSubRequest given empty list of messageHashes for ${ed25519Str(this.pubkey)}`
+      );
+
+      throw new Error('DeleteHashesFromGroupNodeSubRequest given empty list of messageHashes');
+    }
   }
 
   public async buildAndSignParameters() {
@@ -605,6 +622,12 @@ export class UpdateExpiryOnNodeUserSubRequest extends SnodeAPISubRequest {
     this.messageHashes = args.messagesHashes;
     this.expiryMs = args.expiryMs;
     this.shortenOrExtend = args.shortenOrExtend;
+
+    if (this.messageHashes.length === 0) {
+      window.log.warn(`UpdateExpiryOnNodeUserSubRequest given empty list of messageHashes`);
+
+      throw new Error('UpdateExpiryOnNodeUserSubRequest given empty list of messageHashes');
+    }
   }
 
   public async buildAndSignParameters() {
@@ -664,6 +687,14 @@ export class UpdateExpiryOnNodeGroupSubRequest extends SnodeAPISubRequest {
     this.expiryMs = args.expiryMs;
     this.shortenOrExtend = args.shortenOrExtend;
     this.groupDetailsNeededForSignature = args.groupDetailsNeededForSignature;
+
+    if (this.messageHashes.length === 0) {
+      window.log.warn(
+        `UpdateExpiryOnNodeGroupSubRequest given empty list of messageHashes for ${ed25519Str(this.groupDetailsNeededForSignature.pubkeyHex)}`
+      );
+
+      throw new Error('UpdateExpiryOnNodeGroupSubRequest given empty list of messageHashes');
+    }
   }
 
   public async buildAndSignParameters() {
@@ -704,28 +735,105 @@ export class UpdateExpiryOnNodeGroupSubRequest extends SnodeAPISubRequest {
   }
 }
 
-export class StoreGroupConfigOrMessageSubRequest extends SnodeAPISubRequest {
+type WithCreatedAtNetworkTimestamp = { createdAtNetworkTimestamp: number };
+
+export class StoreGroupMessageSubRequest extends SnodeAPISubRequest {
   public method = 'store' as const;
-  public readonly namespace:
-    | SnodeNamespacesGroupConfig
-    | SnodeNamespaces.ClosedGroupMessages
-    | SnodeNamespaces.ClosedGroupRevokedRetrievableMessages;
+  public readonly namespace = SnodeNamespaces.ClosedGroupMessages;
   public readonly destination: GroupPubkeyType;
   public readonly ttlMs: number;
   public readonly encryptedData: Uint8Array;
   public readonly dbMessageIdentifier: string | null;
   public readonly secretKey: Uint8Array | null;
   public readonly authData: Uint8Array | null;
+  public readonly createdAtNetworkTimestamp: number;
+
+  constructor(
+    args: WithGroupPubkey &
+      WithCreatedAtNetworkTimestamp & {
+        ttlMs: number;
+        encryptedData: Uint8Array;
+        dbMessageIdentifier: string | null;
+        authData: Uint8Array | null;
+        secretKey: Uint8Array | null;
+      }
+  ) {
+    super();
+    this.destination = args.groupPk;
+    this.ttlMs = args.ttlMs;
+    this.encryptedData = args.encryptedData;
+    this.dbMessageIdentifier = args.dbMessageIdentifier;
+    this.authData = args.authData;
+    this.secretKey = args.secretKey;
+    this.createdAtNetworkTimestamp = args.createdAtNetworkTimestamp;
+
+    if (isEmpty(this.encryptedData)) {
+      throw new Error('this.encryptedData cannot be empty');
+    }
+    if (!PubKey.is03Pubkey(this.destination)) {
+      throw new Error('StoreGroupMessageSubRequest: groupconfig namespace required a 03 pubkey');
+    }
+    if (isEmpty(this.secretKey) && isEmpty(this.authData)) {
+      throw new Error('StoreGroupMessageSubRequest needs either authData or secretKey to be set');
+    }
+    if (SnodeNamespace.isGroupConfigNamespace(this.namespace) && isEmpty(this.secretKey)) {
+      throw new Error(
+        `StoreGroupMessageSubRequest: groupconfig namespace [${this.namespace}] requires an adminSecretKey`
+      );
+    }
+  }
+
+  public async buildAndSignParameters(): Promise<{
+    method: 'store';
+    params: StoreOnNodeNormalParams;
+  }> {
+    const encryptedDataBase64 = ByteBuffer.wrap(this.encryptedData).toString('base64');
+
+    // this will either sign with our admin key or with the subaccount key if the admin one isn't there
+    const signDetails = await SnodeGroupSignature.getSnodeGroupSignature({
+      method: this.method,
+      namespace: this.namespace,
+      group: { authData: this.authData, pubkeyHex: this.destination, secretKey: this.secretKey },
+    });
+
+    if (!signDetails) {
+      throw new Error(`[${this.loggingId()}] sign details is empty result`);
+    }
+
+    return {
+      method: this.method,
+      params: {
+        namespace: this.namespace,
+        ttl: this.ttlMs,
+        data: encryptedDataBase64,
+        ...signDetails,
+      },
+    };
+  }
+
+  public loggingId(): string {
+    return `${this.method}-${ed25519Str(this.destination)}-${SnodeNamespace.toRole(
+      this.namespace
+    )}`;
+  }
+}
+
+export class StoreGroupConfigSubRequest extends SnodeAPISubRequest {
+  public method = 'store' as const;
+  public readonly namespace:
+    | SnodeNamespacesGroupConfig
+    | SnodeNamespaces.ClosedGroupRevokedRetrievableMessages;
+  public readonly destination: GroupPubkeyType;
+  public readonly ttlMs: number;
+  public readonly encryptedData: Uint8Array;
+  public readonly secretKey: Uint8Array | null;
+  public readonly authData: Uint8Array | null;
 
   constructor(
     args: WithGroupPubkey & {
-      namespace:
-        | SnodeNamespacesGroupConfig
-        | SnodeNamespaces.ClosedGroupMessages
-        | SnodeNamespaces.ClosedGroupRevokedRetrievableMessages;
+      namespace: SnodeNamespacesGroupConfig | SnodeNamespaces.ClosedGroupRevokedRetrievableMessages;
       ttlMs: number;
       encryptedData: Uint8Array;
-      dbMessageIdentifier: string | null;
       authData: Uint8Array | null;
       secretKey: Uint8Array | null;
     }
@@ -735,7 +843,6 @@ export class StoreGroupConfigOrMessageSubRequest extends SnodeAPISubRequest {
     this.destination = args.groupPk;
     this.ttlMs = args.ttlMs;
     this.encryptedData = args.encryptedData;
-    this.dbMessageIdentifier = args.dbMessageIdentifier;
     this.authData = args.authData;
     this.secretKey = args.secretKey;
 
@@ -743,18 +850,14 @@ export class StoreGroupConfigOrMessageSubRequest extends SnodeAPISubRequest {
       throw new Error('this.encryptedData cannot be empty');
     }
     if (!PubKey.is03Pubkey(this.destination)) {
-      throw new Error(
-        'StoreGroupConfigOrMessageSubRequest: groupconfig namespace required a 03 pubkey'
-      );
+      throw new Error('StoreGroupConfigSubRequest: groupconfig namespace required a 03 pubkey');
     }
     if (isEmpty(this.secretKey) && isEmpty(this.authData)) {
-      throw new Error(
-        'StoreGroupConfigOrMessageSubRequest needs either authData or secretKey to be set'
-      );
+      throw new Error('StoreGroupConfigSubRequest needs either authData or secretKey to be set');
     }
     if (SnodeNamespace.isGroupConfigNamespace(this.namespace) && isEmpty(this.secretKey)) {
       throw new Error(
-        `StoreGroupConfigOrMessageSubRequest: groupconfig namespace [${this.namespace}] requires an adminSecretKey`
+        `StoreGroupConfigSubRequest: groupconfig namespace [${this.namespace}] requires an adminSecretKey`
       );
     }
   }
@@ -868,18 +971,22 @@ export class StoreUserMessageSubRequest extends SnodeAPISubRequest {
   public readonly namespace = SnodeNamespaces.Default;
   public readonly destination: PubkeyType;
   public readonly dbMessageIdentifier: string | null;
+  public readonly createdAtNetworkTimestamp: number;
 
-  constructor(args: {
-    ttlMs: number;
-    encryptedData: Uint8Array;
-    destination: PubkeyType;
-    dbMessageIdentifier: string | null;
-  }) {
+  constructor(
+    args: WithCreatedAtNetworkTimestamp & {
+      ttlMs: number;
+      encryptedData: Uint8Array;
+      destination: PubkeyType;
+      dbMessageIdentifier: string | null;
+    }
+  ) {
     super();
     this.ttlMs = args.ttlMs;
     this.destination = args.destination;
     this.encryptedData = args.encryptedData;
     this.dbMessageIdentifier = args.dbMessageIdentifier;
+    this.createdAtNetworkTimestamp = args.createdAtNetworkTimestamp;
 
     if (isEmpty(this.encryptedData)) {
       throw new Error('this.encryptedData cannot be empty');
@@ -923,18 +1030,22 @@ export class StoreLegacyGroupMessageSubRequest extends SnodeAPISubRequest {
   public readonly namespace = SnodeNamespaces.LegacyClosedGroup;
   public readonly destination: PubkeyType;
   public readonly dbMessageIdentifier: string | null;
+  public readonly createdAtNetworkTimestamp: number;
 
-  constructor(args: {
-    ttlMs: number;
-    encryptedData: Uint8Array;
-    destination: PubkeyType;
-    dbMessageIdentifier: string | null;
-  }) {
+  constructor(
+    args: WithCreatedAtNetworkTimestamp & {
+      ttlMs: number;
+      encryptedData: Uint8Array;
+      destination: PubkeyType;
+      dbMessageIdentifier: string | null;
+    }
+  ) {
     super();
     this.ttlMs = args.ttlMs;
     this.destination = args.destination;
     this.encryptedData = args.encryptedData;
     this.dbMessageIdentifier = args.dbMessageIdentifier;
+    this.createdAtNetworkTimestamp = args.createdAtNetworkTimestamp;
 
     if (isEmpty(this.encryptedData)) {
       throw new Error('this.encryptedData cannot be empty');
@@ -1014,7 +1125,8 @@ export type RawSnodeSubRequests =
   | RetrieveLegacyClosedGroupSubRequest
   | RetrieveUserSubRequest
   | RetrieveGroupSubRequest
-  | StoreGroupConfigOrMessageSubRequest
+  | StoreGroupConfigSubRequest
+  | StoreGroupMessageSubRequest
   | StoreUserConfigSubRequest
   | SwarmForSubRequest
   | OnsResolveSubRequest
@@ -1036,7 +1148,8 @@ export type BuiltSnodeSubRequests =
   | ReturnType<RetrieveLegacyClosedGroupSubRequest['build']>
   | AwaitedReturn<RetrieveUserSubRequest['buildAndSignParameters']>
   | AwaitedReturn<RetrieveGroupSubRequest['buildAndSignParameters']>
-  | AwaitedReturn<StoreGroupConfigOrMessageSubRequest['buildAndSignParameters']>
+  | AwaitedReturn<StoreGroupConfigSubRequest['buildAndSignParameters']>
+  | AwaitedReturn<StoreGroupMessageSubRequest['buildAndSignParameters']>
   | AwaitedReturn<StoreUserConfigSubRequest['buildAndSignParameters']>
   | ReturnType<SwarmForSubRequest['build']>
   | ReturnType<OnsResolveSubRequest['build']>

@@ -1,6 +1,7 @@
 /* eslint-disable no-await-in-loop */
 import { GroupPubkeyType, WithGroupPubkey } from 'libsession_util_nodejs';
 import { isArray, isEmpty, isNumber } from 'lodash';
+import { to_hex } from 'libsodium-wrappers-sumo';
 import { UserUtils } from '../..';
 import { SignalService } from '../../../../protobuf';
 import { assertUnreachable } from '../../../../types/sqlSharedTypes';
@@ -12,8 +13,9 @@ import {
 import {
   DeleteAllFromGroupMsgNodeSubRequest,
   DeleteHashesFromGroupNodeSubRequest,
-  StoreGroupConfigOrMessageSubRequest,
+  StoreGroupConfigSubRequest,
   StoreGroupExtraData,
+  StoreGroupMessageSubRequest,
 } from '../../../apis/snode_api/SnodeRequestTypes';
 import { GetNetworkTime } from '../../../apis/snode_api/getNetworkTime';
 import { SnodeNamespaces } from '../../../apis/snode_api/namespaces';
@@ -108,7 +110,7 @@ async function storeGroupUpdateMessages({
     return {
       namespace: SnodeNamespaces.ClosedGroupMessages,
       pubkey: groupPk,
-      ttl: TTL_DEFAULT.CONTENT_MESSAGE,
+      ttl: updateMessage.ttl(),
       networkTimestamp: updateMessage.createAtNetworkTimestamp,
       data: SignalService.Envelope.encode(wrapped).finish(),
       dbMessageIdentifier: updateMessage.identifier,
@@ -128,13 +130,13 @@ async function storeGroupUpdateMessages({
   }));
 
   const updateMessagesRequests = updateMessagesEncrypted.map(m => {
-    return new StoreGroupConfigOrMessageSubRequest({
+    return new StoreGroupMessageSubRequest({
       encryptedData: m.data,
       groupPk,
-      namespace: m.namespace,
       ttlMs: m.ttl,
       dbMessageIdentifier: m.dbMessageIdentifier,
       ...group,
+      createdAtNetworkTimestamp: m.networkTimestamp,
     });
   });
 
@@ -165,11 +167,11 @@ async function pushChangesToGroupSwarmIfNeeded({
   revokeSubRequest,
   unrevokeSubRequest,
   groupPk,
-  supplementKeys,
+  encryptedSupplementKeys,
   deleteAllMessagesSubRequest,
 }: WithGroupPubkey &
   WithRevokeSubRequest & {
-    supplementKeys: Array<Uint8Array>;
+    encryptedSupplementKeys: Array<Uint8Array>;
     deleteAllMessagesSubRequest?: DeleteAllFromGroupMsgNodeSubRequest | null;
   }): Promise<RunJobResult> {
   // save the dumps to DB even before trying to push them, so at least we have an up to date dumps in the DB in case of crash, no network etc
@@ -180,7 +182,7 @@ async function pushChangesToGroupSwarmIfNeeded({
   // is updated we want to try and run immediately so don't schedule another run in this case)
   if (
     isEmpty(pendingConfigData) &&
-    !supplementKeys.length &&
+    !encryptedSupplementKeys.length &&
     !revokeSubRequest &&
     !unrevokeSubRequest &&
     !deleteAllMessagesSubRequest
@@ -195,6 +197,14 @@ async function pushChangesToGroupSwarmIfNeeded({
     return RunJobResult.Success;
   }
 
+  if (window.sessionFeatureFlags.debug.debugLibsessionDumps) {
+    const dumps = await MetaGroupWrapperActions.metaMakeDump(groupPk);
+    window.log.info(
+      `pushChangesToGroupSwarmIfNeeded: current metadump: ${ed25519Str(groupPk)}:`,
+      to_hex(dumps)
+    );
+  }
+
   const networkTimestamp = GetNetworkTime.now();
 
   const pendingConfigMsgs = pendingConfigData.map(item => {
@@ -207,7 +217,8 @@ async function pushChangesToGroupSwarmIfNeeded({
     };
   });
 
-  const keysMessagesToEncrypt: Array<StoreGroupExtraData> = supplementKeys.map(key => ({
+  // supplementKeys are already encrypted by libsession
+  const keysEncryptedMessages: Array<StoreGroupExtraData> = encryptedSupplementKeys.map(key => ({
     namespace: SnodeNamespaces.ClosedGroupKeys,
     pubkey: groupPk,
     ttl: TTL_DEFAULT.CONFIG_MESSAGE,
@@ -216,20 +227,8 @@ async function pushChangesToGroupSwarmIfNeeded({
     dbMessageIdentifier: null,
   }));
 
-  const keysEncrypted = keysMessagesToEncrypt
-    ? await MetaGroupWrapperActions.encryptMessages(
-        groupPk,
-        keysMessagesToEncrypt.map(m => m.data)
-      )
-    : [];
-
-  const keysEncryptedmessage = keysMessagesToEncrypt.map((requestDetails, index) => ({
-    ...requestDetails,
-    data: keysEncrypted[index],
-  }));
-
-  let pendingConfigRequests: Array<StoreGroupConfigOrMessageSubRequest> = [];
-  let keysEncryptedRequests: Array<StoreGroupConfigOrMessageSubRequest> = [];
+  let pendingConfigRequests: Array<StoreGroupConfigSubRequest> = [];
+  let keysEncryptedRequests: Array<StoreGroupConfigSubRequest> = [];
 
   if (pendingConfigMsgs.length) {
     if (!group.secretKey || isEmpty(group.secretKey)) {
@@ -243,19 +242,20 @@ async function pushChangesToGroupSwarmIfNeeded({
     }
 
     pendingConfigRequests = pendingConfigMsgs.map(m => {
-      return new StoreGroupConfigOrMessageSubRequest({
+      return new StoreGroupConfigSubRequest({
         encryptedData: m.data,
         groupPk,
         namespace: m.namespace,
         ttlMs: m.ttl,
-        dbMessageIdentifier: null, // those are config messages only, they have no dbMessageIdentifier
         secretKey: group.secretKey,
         authData: null,
       });
     });
   }
 
-  if (keysEncryptedmessage.length) {
+  if (keysEncryptedMessages.length) {
+    // supplementalKeys are already encrypted, but we still need the secretKey to sign the request
+
     if (!group.secretKey || isEmpty(group.secretKey)) {
       window.log.debug(
         `pushChangesToGroupSwarmIfNeeded: ${ed25519Str(groupPk)}: keysEncryptedmessage not empty but we do not have the secretKey`
@@ -265,13 +265,12 @@ async function pushChangesToGroupSwarmIfNeeded({
         'pushChangesToGroupSwarmIfNeeded: keysEncryptedmessage not empty but we do not have the secretKey'
       );
     }
-    keysEncryptedRequests = keysEncryptedmessage.map(m => {
-      return new StoreGroupConfigOrMessageSubRequest({
+    keysEncryptedRequests = keysEncryptedMessages.map(m => {
+      return new StoreGroupConfigSubRequest({
         encryptedData: m.data,
         groupPk,
-        namespace: m.namespace,
+        namespace: SnodeNamespaces.ClosedGroupKeys,
         ttlMs: m.ttl,
-        dbMessageIdentifier: null, // those are supplemental keys messages only, they have no dbMessageIdentifier
         secretKey: group.secretKey,
         authData: null,
       });
@@ -394,7 +393,7 @@ class GroupSyncJob extends PersistedJob<GroupSyncPersistedData> {
         groupPk: thisJobDestination,
         revokeSubRequest: null,
         unrevokeSubRequest: null,
-        supplementKeys: [],
+        encryptedSupplementKeys: [],
       });
 
       // eslint-disable-next-line no-useless-catch

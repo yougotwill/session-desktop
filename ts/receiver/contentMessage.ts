@@ -549,7 +549,7 @@ export async function innerHandleSwarmContentMessage({
         rawDataMessage: content.dataMessage as SignalService.DataMessage,
         messageHash,
         senderConversationModel,
-        expireUpdate,
+        expireUpdate: expireUpdate || null,
       });
 
       return;

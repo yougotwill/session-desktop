@@ -68,18 +68,15 @@ export class ClosedGroupVisibleMessage extends ClosedGroupMessage {
 }
 
 type WithDestinationGroupPk = { destination: GroupPubkeyType };
-type WithGroupMessageNamespace = { namespace: SnodeNamespaces.ClosedGroupMessages };
 
 // TODO audric debugger This will need to extend ExpirableMessage after Disappearing Messages V2 is merged and checkd still working
 export class ClosedGroupV2VisibleMessage extends DataMessage {
   private readonly chatMessage: VisibleMessage;
   public readonly destination: GroupPubkeyType;
-  public readonly namespace: SnodeNamespaces.ClosedGroupMessages;
+  public readonly namespace = SnodeNamespaces.ClosedGroupMessages;
 
   constructor(
-    params: Pick<ClosedGroupVisibleMessageParams, 'chatMessage'> &
-      WithDestinationGroupPk &
-      WithGroupMessageNamespace
+    params: Pick<ClosedGroupVisibleMessageParams, 'chatMessage'> & WithDestinationGroupPk
   ) {
     super(params.chatMessage);
     this.chatMessage = params.chatMessage;
@@ -94,7 +91,6 @@ export class ClosedGroupV2VisibleMessage extends DataMessage {
       throw new Error('ClosedGroupV2VisibleMessage only work with 03-groups destination');
     }
     this.destination = params.destination;
-    this.namespace = params.namespace;
   }
 
   public dataProto(): SignalService.DataMessage {

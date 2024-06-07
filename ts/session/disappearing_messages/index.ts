@@ -24,6 +24,7 @@ import {
   DisappearingMessageUpdate,
   ReadyToDisappearMsgUpdate,
 } from './types';
+import { PubKey } from '../types';
 
 export async function destroyMessagesAndUpdateRedux(
   messages: Array<{
@@ -456,7 +457,7 @@ function checkForExpiringOutgoingMessage(message: MessageModel, location?: strin
     expirationType &&
     expireTimer > 0 &&
     !message.getExpirationStartTimestamp() &&
-    !(isGroupConvo && isControlMessage)
+    !(isGroupConvo && isControlMessage && !PubKey.is03Pubkey(convo.id))
   ) {
     const expirationMode = changeToDisappearingConversationMode(convo, expirationType, expireTimer);
 
@@ -700,12 +701,32 @@ async function updateMessageExpiriesOnSwarm(messages: Array<MessageModel>) {
   }
 }
 
+function getExpireDetailsForOutgoingMesssage(
+  convo: ConversationModel,
+  createAtNetworkTimestamp: number
+) {
+  const expireTimer = convo.getExpireTimer();
+  const expireDetails = {
+    expirationType: DisappearingMessages.changeToDisappearingMessageType(
+      convo,
+      expireTimer,
+      convo.getExpirationMode()
+    ),
+    expireTimer,
+    expirationTimer: expireTimer,
+    messageExpirationFromRetrieve: expireTimer > 0 ? createAtNetworkTimestamp + expireTimer : null,
+  };
+
+  return expireDetails;
+}
+
 export const DisappearingMessages = {
   destroyMessagesAndUpdateRedux,
   initExpiringMessageListener,
   updateExpiringMessagesCheck,
   setExpirationStartTimestamp,
   changeToDisappearingMessageType,
+  getExpireDetailsForOutgoingMesssage,
   changeToDisappearingConversationMode,
   forcedDeleteAfterReadMsgSetting,
   forcedDeleteAfterSendMsgSetting,

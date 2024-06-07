@@ -1,9 +1,13 @@
 import { GroupPubkeyType } from 'libsession_util_nodejs';
-import { isFinite, isNumber } from 'lodash';
+import { isEmpty, isFinite, isNumber } from 'lodash';
+import { to_hex } from 'libsodium-wrappers-sumo';
 import { Data } from '../../../../data/data';
 import { messagesExpired } from '../../../../state/ducks/conversations';
 import { groupInfoActions } from '../../../../state/ducks/metaGroups';
-import { MetaGroupWrapperActions } from '../../../../webworker/workers/browser/libsession_worker_interface';
+import {
+  MetaGroupWrapperActions,
+  UserGroupsWrapperActions,
+} from '../../../../webworker/workers/browser/libsession_worker_interface';
 import { ed25519Str, fromBase64ToArray } from '../../../utils/String';
 import { GroupPendingRemovals } from '../../../utils/job_runners/jobs/GroupPendingRemovalsJob';
 import { LibSessionUtil } from '../../../utils/libsession/libsession_utils';
@@ -24,6 +28,13 @@ const lastAppliedRemoveAttachmentSentBeforeSeconds = new Map<GroupPubkeyType, nu
 
 async function handleMetaMergeResults(groupPk: GroupPubkeyType) {
   const infos = await MetaGroupWrapperActions.infoGet(groupPk);
+  if (window.sessionFeatureFlags.debug.debugLibsessionDumps) {
+    const dumps = await MetaGroupWrapperActions.metaMakeDump(groupPk);
+    window.log.info(
+      `pushChangesToGroupSwarmIfNeeded: current metadump: ${ed25519Str(groupPk)}:`,
+      to_hex(dumps)
+    );
+  }
   if (infos) {
     if (infos.isDestroyed) {
       window.log.info(`${ed25519Str(groupPk)} is marked as destroyed after merge. Removing it.`);
@@ -86,7 +97,34 @@ async function handleMetaMergeResults(groupPk: GroupPubkeyType) {
     const membersWithPendingRemovals =
       await MetaGroupWrapperActions.memberGetAllPendingRemovals(groupPk);
     if (membersWithPendingRemovals.length) {
-      await GroupPendingRemovals.addJob({ groupPk });
+      const group = await UserGroupsWrapperActions.getGroup(groupPk);
+      if (group && group.secretKey && !isEmpty(group.secretKey)) {
+        await GroupPendingRemovals.addJob({ groupPk });
+      }
+    }
+  }
+  const convo = ConvoHub.use().get(groupPk);
+  const refreshedInfos = await MetaGroupWrapperActions.infoGet(groupPk);
+
+  if (convo) {
+    let changes = false;
+    if (refreshedInfos.name !== convo.get('displayNameInProfile')) {
+      convo.set({ displayNameInProfile: refreshedInfos.name || undefined });
+      changes = true;
+    }
+    const expectedMode = refreshedInfos.expirySeconds ? 'deleteAfterSend' : 'off';
+    if (
+      refreshedInfos.expirySeconds !== convo.get('expireTimer') ||
+      expectedMode !== convo.get('expirationMode')
+    ) {
+      convo.set({
+        expireTimer: refreshedInfos.expirySeconds || undefined,
+        expirationMode: expectedMode,
+      });
+      changes = true;
+    }
+    if (changes) {
+      await convo.commit();
     }
   }
 }
@@ -131,7 +169,7 @@ async function handleGroupSharedConfigMessages(
     };
 
     window.log.info(
-      `received keys: ${toMerge.groupKeys.length},infos: ${toMerge.groupInfo.length},members: ${
+      `received keys:${toMerge.groupKeys.length}, infos:${toMerge.groupInfo.length}, members:${
         toMerge.groupMember.length
       } for groupPk:${ed25519Str(groupPk)}`
     );

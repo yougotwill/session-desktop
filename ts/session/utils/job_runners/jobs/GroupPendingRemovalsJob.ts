@@ -13,7 +13,6 @@ import {
   MultiEncryptWrapperActions,
   UserGroupsWrapperActions,
 } from '../../../../webworker/workers/browser/libsession_worker_interface';
-import { StoreGroupConfigOrMessageSubRequest } from '../../../apis/snode_api/SnodeRequestTypes';
 import { GetNetworkTime } from '../../../apis/snode_api/getNetworkTime';
 import { SnodeNamespaces } from '../../../apis/snode_api/namespaces';
 import { RevokeChanges, SnodeAPIRevoke } from '../../../apis/snode_api/revokeSubaccount';
@@ -30,6 +29,7 @@ import {
   RunJobResult,
 } from '../PersistedJob';
 import { GroupSync } from './GroupSyncJob';
+import { StoreGroupConfigSubRequest } from '../../../apis/snode_api/SnodeRequestTypes';
 
 export type WithAddWithoutHistoryMembers = { withoutHistory: Array<PubkeyType> };
 export type WithAddWithHistoryMembers = { withHistory: Array<PubkeyType> };
@@ -154,10 +154,9 @@ class GroupPendingRemovalsJob extends PersistedJob<GroupPendingRemovalsPersisted
         secretKey: group.secretKey,
       });
 
-      const multiEncryptRequest = new StoreGroupConfigOrMessageSubRequest({
+      const multiEncryptRequest = new StoreGroupConfigSubRequest({
         encryptedData: multiEncryptedMessage,
         groupPk,
-        dbMessageIdentifier: null,
         namespace: SnodeNamespaces.ClosedGroupRevokedRetrievableMessages,
         ttlMs: TTL_DEFAULT.CONTENT_MESSAGE,
         secretKey: group.secretKey,
@@ -185,8 +184,7 @@ class GroupPendingRemovalsJob extends PersistedJob<GroupPendingRemovalsPersisted
               toRemove: sessionIdsHex,
               signatureTimestamp: GetNetworkTime.now(),
             });
-          console.warn('deleteMessagesOf', deleteMessagesOf);
-          console.warn('msgHashesToDeleteOnGroupSwarm', msgHashesToDeleteOnGroupSwarm);
+
           await unsendMessagesForEveryoneGroupV2({
             allMessagesFrom: deleteMessagesOf,
             groupPk,

@@ -21,7 +21,7 @@ import {
   createSwarmMessageSentFromUs,
 } from '../models/messageFactory';
 import { DisappearingMessages } from '../session/disappearing_messages';
-import { DisappearingMessageUpdate } from '../session/disappearing_messages/types';
+import { WithDisappearingMessageUpdate } from '../session/disappearing_messages/types';
 import { ProfileManager } from '../session/profile_manager/ProfileManager';
 import { isUsFromCache } from '../session/utils/User';
 import { Action, Reaction } from '../types/Reaction';
@@ -155,13 +155,12 @@ export async function handleSwarmDataMessage({
   senderConversationModel,
   sentAtTimestamp,
   expireUpdate,
-}: {
+}: WithDisappearingMessageUpdate & {
   envelope: EnvelopePlus;
   sentAtTimestamp: number;
   rawDataMessage: SignalService.DataMessage;
   messageHash: string;
   senderConversationModel: ConversationModel;
-  expireUpdate?: DisappearingMessageUpdate;
 }): Promise<void> {
   window.log.info('handleSwarmDataMessage');
 
@@ -173,6 +172,7 @@ export async function handleSwarmDataMessage({
       updateMessage: rawDataMessage.groupUpdateMessage as SignalService.GroupUpdateMessage,
       source: envelope.source,
       senderIdentity: envelope.senderIdentity,
+      expireUpdate,
     });
     // Groups update should always be able to be decrypted as we get the keys before trying to decrypt them.
     // If decryption failed once, it will keep failing, so no need to keep it in the cache.

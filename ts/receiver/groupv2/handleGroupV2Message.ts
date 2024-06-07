@@ -10,6 +10,7 @@ import { getSwarmPollingInstance } from '../../session/apis/snode_api';
 import { GetNetworkTime } from '../../session/apis/snode_api/getNetworkTime';
 import { ConvoHub } from '../../session/conversations';
 import { getSodiumRenderer } from '../../session/crypto';
+import { WithDisappearingMessageUpdate } from '../../session/disappearing_messages/types';
 import { ClosedGroup } from '../../session/group/closed-group';
 import { GroupUpdateInviteResponseMessage } from '../../session/messages/outgoing/controlMessage/group_v2/to_group/GroupUpdateInviteResponseMessage';
 import { PubKey } from '../../session/types';
@@ -40,9 +41,12 @@ type GroupInviteDetails = {
 } & WithSignatureTimestamp &
   WithAuthor;
 
-type GroupUpdateGeneric<T> = { change: Omit<T, 'toJSON'> } & WithSignatureTimestamp &
+type GroupUpdateGeneric<T> = {
+  change: Omit<T, 'toJSON'>;
+} & WithSignatureTimestamp &
   WithGroupPubkey &
-  WithAuthor;
+  WithAuthor &
+  WithDisappearingMessageUpdate;
 
 type GroupUpdateDetails = {
   updateMessage: SignalService.GroupUpdateMessage;
@@ -61,7 +65,7 @@ async function sendInviteResponseToGroup({ groupPk }: { groupPk: GroupPubkeyType
       groupPk,
       isApproved: true,
       createAtNetworkTimestamp: GetNetworkTime.now(),
-      expirationType: 'unknown', // TODO audric do we want those not expiring?
+      expirationType: 'unknown', // an invite should not expire
       expireTimer: 0,
     }),
   });
@@ -187,6 +191,7 @@ async function handleGroupInfoChangeMessage({
   groupPk,
   signatureTimestamp,
   author,
+  expireUpdate,
 }: GroupUpdateGeneric<SignalService.GroupUpdateInfoChangeMessage>) {
   const sigValid = await verifySig({
     pubKey: HexString.fromHexStringNoPrefix(groupPk),
@@ -211,7 +216,7 @@ async function handleGroupInfoChangeMessage({
         diff: { type: 'name', newName: change.updatedName },
         sender: author,
         sentAt: signatureTimestamp,
-        expireUpdate: null,
+        expireUpdate,
         markAlreadySent: true,
       });
 
@@ -223,7 +228,7 @@ async function handleGroupInfoChangeMessage({
         diff: { type: 'avatarChange' },
         sender: author,
         sentAt: signatureTimestamp,
-        expireUpdate: null,
+        expireUpdate,
         markAlreadySent: true,
       });
       break;
@@ -257,6 +262,7 @@ async function handleGroupMemberChangeMessage({
   groupPk,
   signatureTimestamp,
   author,
+  expireUpdate,
 }: GroupUpdateGeneric<SignalService.GroupUpdateMemberChangeMessage>) {
   const convo = ConvoHub.use().get(groupPk);
   if (!convo) {
@@ -284,7 +290,7 @@ async function handleGroupMemberChangeMessage({
     convo,
     sender: author,
     sentAt: signatureTimestamp,
-    expireUpdate: null,
+    expireUpdate,
     markAlreadySent: true,
   };
 
@@ -322,7 +328,6 @@ async function handleGroupMemberChangeMessage({
 
 async function handleGroupMemberLeftMessage({
   groupPk,
-  signatureTimestamp,
   author,
 }: GroupUpdateGeneric<SignalService.GroupUpdateMemberLeftMessage>) {
   // No need to verify sig, the author is already verified with the libsession.decrypt()
@@ -340,19 +345,34 @@ async function handleGroupMemberLeftMessage({
     })
   );
 
+  // TODO We should process this message type even if the sender is blocked
+}
+
+async function handleGroupUpdateMemberLeftNotificationMessage({
+  groupPk,
+  signatureTimestamp,
+  author,
+  expireUpdate,
+}: GroupUpdateGeneric<SignalService.GroupUpdateMemberLeftNotificationMessage>) {
+  // No need to verify sig, the author is already verified with the libsession.decrypt()
+  const convo = ConvoHub.use().get(groupPk);
+  if (!convo || !PubKey.is05Pubkey(author)) {
+    return;
+  }
+  window.log.info(`handleGroupUpdateMemberLeftNotificationMessage for ${ed25519Str(groupPk)}`);
+
   await ClosedGroup.addUpdateMessage({
     convo,
     diff: { type: 'left', left: [author] },
     sender: author,
     sentAt: signatureTimestamp,
-    expireUpdate: null,
+    expireUpdate,
     markAlreadySent: true,
   });
 
   convo.set({
     active_at: signatureTimestamp,
   });
-  // TODO We should process this message type even if the sender is blocked
 }
 
 async function handleGroupDeleteMemberContentMessage({
@@ -445,7 +465,10 @@ async function handleGroupUpdateInviteResponseMessage({
   groupPk,
   change,
   author,
-}: Omit<GroupUpdateGeneric<SignalService.GroupUpdateInviteResponseMessage>, 'signatureTimestamp'>) {
+}: Omit<
+  GroupUpdateGeneric<SignalService.GroupUpdateInviteResponseMessage>,
+  'signatureTimestamp' | 'expireUpdate'
+>) {
   // no sig verify for this type of message
   const convo = ConvoHub.use().get(groupPk);
   if (!convo) {
@@ -505,7 +528,10 @@ async function handleGroupUpdatePromoteMessage({
 }
 
 async function handle1o1GroupUpdateMessage(
-  details: GroupUpdateDetails & WithUncheckedSource & WithUncheckedSenderIdentity
+  details: GroupUpdateDetails &
+    WithUncheckedSource &
+    WithUncheckedSenderIdentity &
+    WithDisappearingMessageUpdate
 ) {
   // the message types below are received from our own swarm, so source is the sender, and senderIdentity is empty
 
@@ -537,7 +563,10 @@ async function handle1o1GroupUpdateMessage(
 }
 
 async function handleGroupUpdateMessage(
-  details: GroupUpdateDetails & WithUncheckedSource & WithUncheckedSenderIdentity
+  details: GroupUpdateDetails &
+    WithUncheckedSource &
+    WithUncheckedSenderIdentity &
+    WithDisappearingMessageUpdate
 ) {
   const was1o1Message = await handle1o1GroupUpdateMessage(details);
   if (was1o1Message) {
@@ -573,6 +602,15 @@ async function handleGroupUpdateMessage(
   if (details.updateMessage.memberLeftMessage) {
     await handleGroupMemberLeftMessage({
       change: details.updateMessage.memberLeftMessage as SignalService.GroupUpdateMemberLeftMessage,
+      ...detailsWithContext,
+    });
+    return;
+  }
+
+  if (details.updateMessage.memberLeftNotificationMessage) {
+    await handleGroupUpdateMemberLeftNotificationMessage({
+      change: details.updateMessage
+        .memberLeftNotificationMessage as SignalService.GroupUpdateMemberLeftNotificationMessage,
       ...detailsWithContext,
     });
     return;

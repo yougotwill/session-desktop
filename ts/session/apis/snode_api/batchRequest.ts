@@ -57,6 +57,7 @@ async function doSnodeBatchRequestNoRetries(
     allow401s,
     timeout,
   });
+
   if (!result) {
     window?.log?.warn(
       `doSnodeBatchRequestNoRetries - sessionRpc could not talk to ${targetNode.ip}:${targetNode.port}`

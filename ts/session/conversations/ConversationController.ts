@@ -19,6 +19,7 @@ import { ConfigDumpData } from '../../data/configDump/configDump';
 import { deleteAllMessagesByConvoIdNoConfirmation } from '../../interactions/conversationInteractions';
 import { CONVERSATION_PRIORITIES, ConversationTypeEnum } from '../../models/conversationAttributes';
 import { removeAllClosedGroupEncryptionKeyPairs } from '../../receiver/closedGroups';
+import { groupInfoActions } from '../../state/ducks/metaGroups';
 import { getCurrentlySelectedConversationOutsideRedux } from '../../state/selectors/conversations';
 import { assertUnreachable } from '../../types/sqlSharedTypes';
 import {
@@ -32,6 +33,8 @@ import { GetNetworkTime } from '../apis/snode_api/getNetworkTime';
 import { SnodeNamespaces } from '../apis/snode_api/namespaces';
 import { ClosedGroupMemberLeftMessage } from '../messages/outgoing/controlMessage/group/ClosedGroupMemberLeftMessage';
 import { GroupUpdateMemberLeftMessage } from '../messages/outgoing/controlMessage/group_v2/to_group/GroupUpdateMemberLeftMessage';
+import { GroupUpdateMemberLeftNotificationMessage } from '../messages/outgoing/controlMessage/group_v2/to_group/GroupUpdateMemberLeftNotificationMessage';
+import { MessageSender } from '../sending';
 import { UserUtils } from '../utils';
 import { ed25519Str } from '../utils/String';
 import { PreConditionFailed } from '../utils/errors';
@@ -42,7 +45,7 @@ import { LibSessionUtil } from '../utils/libsession/libsession_utils';
 import { SessionUtilContact } from '../utils/libsession/libsession_utils_contacts';
 import { SessionUtilConvoInfoVolatile } from '../utils/libsession/libsession_utils_convo_info_volatile';
 import { SessionUtilUserGroups } from '../utils/libsession/libsession_utils_user_groups';
-import { groupInfoActions } from '../../state/ducks/metaGroups';
+import { DisappearingMessages } from '../disappearing_messages';
 
 let instance: ConvoController | null;
 
@@ -297,40 +300,46 @@ class ConvoController {
         await UserGroupsWrapperActions.setGroup(group);
       }
     } else {
-      const us = UserUtils.getOurPubKeyStrFromCache();
-      const allMembers = await MetaGroupWrapperActions.memberGetAll(groupPk);
-      const otherAdminsCount = allMembers
-        .filter(m => m.admin || m.promoted)
-        .filter(m => m.pubkeyHex !== us).length;
-      const weAreLastAdmin = otherAdminsCount === 0;
-      const infos = await MetaGroupWrapperActions.infoGet(groupPk);
-      const fromUserGroup = await UserGroupsWrapperActions.getGroup(groupPk);
-      if (!infos || !fromUserGroup || isEmpty(infos) || isEmpty(fromUserGroup)) {
-        throw new Error('deleteGroup: some required data not present');
-      }
-      const { secretKey } = fromUserGroup;
-
-      // check if we are the last admin
-      if (secretKey && !isEmpty(secretKey) && (weAreLastAdmin || forceDestroyForAllMembers)) {
-        const deleteAllMessagesSubRequest = deleteAllMessagesOnSwarm
-          ? new DeleteAllFromGroupMsgNodeSubRequest({
-              groupPk,
-              secretKey,
-            })
-          : null;
-
-        // this marks the group info as deleted. We need to push those details
-        await MetaGroupWrapperActions.infoDestroy(groupPk);
-        const lastPushResult = await GroupSync.pushChangesToGroupSwarmIfNeeded({
-          groupPk,
-          revokeSubRequest: null,
-          unrevokeSubRequest: null,
-          supplementKeys: [],
-          deleteAllMessagesSubRequest,
-        });
-        if (lastPushResult !== RunJobResult.Success) {
-          throw new Error(`Failed to destroyGroupDetails for pk ${ed25519Str(groupPk)}`);
+      try {
+        const us = UserUtils.getOurPubKeyStrFromCache();
+        const allMembers = await MetaGroupWrapperActions.memberGetAll(groupPk);
+        const otherAdminsCount = allMembers
+          .filter(m => m.admin || m.promoted)
+          .filter(m => m.pubkeyHex !== us).length;
+        const weAreLastAdmin = otherAdminsCount === 0;
+        const infos = await MetaGroupWrapperActions.infoGet(groupPk);
+        const fromUserGroup = await UserGroupsWrapperActions.getGroup(groupPk);
+        if (!infos || !fromUserGroup || isEmpty(infos) || isEmpty(fromUserGroup)) {
+          throw new Error('deleteGroup: some required data not present');
         }
+        const { secretKey } = fromUserGroup;
+
+        // check if we are the last admin
+        if (secretKey && !isEmpty(secretKey) && (weAreLastAdmin || forceDestroyForAllMembers)) {
+          const deleteAllMessagesSubRequest = deleteAllMessagesOnSwarm
+            ? new DeleteAllFromGroupMsgNodeSubRequest({
+                groupPk,
+                secretKey,
+              })
+            : null;
+
+          // this marks the group info as deleted. We need to push those details
+          await MetaGroupWrapperActions.infoDestroy(groupPk);
+          const lastPushResult = await GroupSync.pushChangesToGroupSwarmIfNeeded({
+            groupPk,
+            revokeSubRequest: null,
+            unrevokeSubRequest: null,
+            encryptedSupplementKeys: [],
+            deleteAllMessagesSubRequest,
+          });
+          if (lastPushResult !== RunJobResult.Success) {
+            throw new Error(`Failed to destroyGroupDetails for pk ${ed25519Str(groupPk)}`);
+          }
+        }
+      } catch (e) {
+        // if that group was already freed this will happen.
+        // we still want to delete it entirely though
+        window.log.warn(`deleteGroup: MetaGroupWrapperActions failed with: ${e.message}`);
       }
 
       // this deletes the secretKey if we had it. If we need it for something, it has to be done before this call.
@@ -612,28 +621,46 @@ async function leaveClosedGroup(groupPk: PubkeyType | GroupPubkeyType, fromSyncM
   }
 
   if (PubKey.is03Pubkey(groupPk)) {
+    const group = await UserGroupsWrapperActions.getGroup(groupPk);
+    if (!group) {
+      throw new Error('leaveClosedGroup: group from UserGroupsWrapperActions is null ');
+    }
+    const createAtNetworkTimestamp = GetNetworkTime.now();
     // Send the update to the 03 group
     const ourLeavingMessage = new GroupUpdateMemberLeftMessage({
-      createAtNetworkTimestamp: GetNetworkTime.now(),
+      createAtNetworkTimestamp,
       groupPk,
       expirationType: null, // we keep that one **not** expiring
       expireTimer: null,
     });
 
-    window?.log?.info(
-      `We are leaving the group ${ed25519Str(groupPk)}. Sending our leaving message.`
-    );
+    const ourLeavingNotificationMessage = new GroupUpdateMemberLeftNotificationMessage({
+      createAtNetworkTimestamp,
+      groupPk,
+      ...DisappearingMessages.getExpireDetailsForOutgoingMesssage(convo, createAtNetworkTimestamp), // this one should be expiring with the convo expiring details
+    });
 
+    window?.log?.info(
+      `We are leaving the group ${ed25519Str(groupPk)}. Sending our leaving messages.`
+    );
     // We might not be able to send our leaving messages (no encryption keypair, we were already removed, no network, etc).
     // If that happens, we should just remove everything from our current user.
-    const wasSent = await getMessageQueue().sendToGroupV2NonDurably({
-      message: ourLeavingMessage,
-    });
-    if (!wasSent) {
-      throw new Error(
-        `Even with the retries, leaving message for group ${ed25519Str(
-          groupPk
-        )} failed to be sent...`
+    try {
+      const results = await MessageSender.sendUnencryptedDataToSnode({
+        destination: groupPk,
+        messages: [ourLeavingNotificationMessage, ourLeavingMessage],
+      });
+
+      if (results?.[0].code !== 200) {
+        throw new Error(
+          `Even with the retries, leaving message for group ${ed25519Str(
+            groupPk
+          )} failed to be sent...`
+        );
+      }
+    } catch (e) {
+      window?.log?.warn(
+        `failed to send our leaving messages for ${ed25519Str(groupPk)}:${e.message}`
       );
     }
 

@@ -343,16 +343,11 @@ export class MessageQueue {
     isSyncMessage: boolean;
   }) {
     try {
-      const { wrappedEnvelope, effectiveTimestamp } = await MessageSender.sendSingleMessage({
+      const { effectiveTimestamp } = await MessageSender.sendSingleMessage({
         message: rawMessage,
         isSyncMessage,
       });
 
-      await MessageSentHandler.handleSwarmMessageSentSuccess(
-        rawMessage,
-        effectiveTimestamp,
-        wrappedEnvelope
-      );
       const cb = this.pendingMessageCache.callbacks.get(rawMessage.identifier);
 
       if (cb) {

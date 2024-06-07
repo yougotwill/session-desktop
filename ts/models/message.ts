@@ -928,7 +928,6 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
         const groupV2VisibleMessage = new ClosedGroupV2VisibleMessage({
           destination: PubKey.cast(this.get('conversationId')).key as GroupPubkeyType,
           chatMessage,
-          namespace: SnodeNamespaces.ClosedGroupMessages,
         });
         // we need the return await so that errors are caught in the catch {}
         return await getMessageQueue().sendToGroupV2({
@@ -1001,13 +1000,17 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
    *
    * @param messageHash
    */
-  public async updateMessageHash(messageHash: string) {
+  public updateMessageHash(messageHash: string) {
     if (!messageHash) {
       window?.log?.error('Message hash not provided to update message hash');
     }
-    this.set({
-      messageHash,
-    });
+    if (this.get('messageHash') !== messageHash) {
+      window?.log?.info(`updated message ${this.id} with hash: ${messageHash}`);
+
+      this.set({
+        messageHash,
+      });
+    }
   }
 
   public async sendSyncMessageOnly(contentMessage: ContentMessage) {

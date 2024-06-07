@@ -30,7 +30,8 @@ import {
   RetrieveGroupSubRequest,
   RetrieveLegacyClosedGroupSubRequest,
   RetrieveUserSubRequest,
-  StoreGroupConfigOrMessageSubRequest,
+  StoreGroupConfigSubRequest,
+  StoreGroupMessageSubRequest,
   StoreLegacyGroupMessageSubRequest,
   StoreUserConfigSubRequest,
   StoreUserMessageSubRequest,
@@ -53,16 +54,19 @@ import { SnodePool } from '../apis/snode_api/snodePool';
 import { WithRevokeSubRequest } from '../apis/snode_api/types';
 import { TTL_DEFAULT } from '../constants';
 import { ConvoHub } from '../conversations';
-import { MessageEncrypter } from '../crypto/MessageEncrypter';
 import { addMessagePadding } from '../crypto/BufferPadding';
+import { MessageEncrypter } from '../crypto/MessageEncrypter';
 import { ContentMessage } from '../messages/outgoing';
 import { UnsendMessage } from '../messages/outgoing/controlMessage/UnsendMessage';
 import { ClosedGroupNewMessage } from '../messages/outgoing/controlMessage/group/ClosedGroupNewMessage';
+import { GroupUpdateMemberLeftMessage } from '../messages/outgoing/controlMessage/group_v2/to_group/GroupUpdateMemberLeftMessage';
+import { GroupUpdateMemberLeftNotificationMessage } from '../messages/outgoing/controlMessage/group_v2/to_group/GroupUpdateMemberLeftNotificationMessage';
 import { OpenGroupVisibleMessage } from '../messages/outgoing/visibleMessage/OpenGroupVisibleMessage';
 import { PubKey } from '../types';
 import { OutgoingRawMessage } from '../types/RawMessage';
 import { UserUtils } from '../utils';
 import { ed25519Str, fromUInt8ArrayToBase64 } from '../utils/String';
+import { MessageSentHandler } from './MessageSentHandler';
 
 // ================ SNODE STORE ================
 
@@ -79,6 +83,138 @@ function isContentSyncMessage(message: ContentMessage) {
     return true;
   }
   return false;
+}
+
+type StoreRequest05 =
+  | StoreUserConfigSubRequest
+  | StoreUserMessageSubRequest
+  | StoreLegacyGroupMessageSubRequest;
+type StoreRequest03 = StoreGroupConfigSubRequest | StoreGroupMessageSubRequest;
+
+type PubkeyToRequestType<T extends GroupPubkeyType | PubkeyType> = T extends PubkeyType
+  ? StoreRequest05
+  : StoreRequest03;
+
+type StoreRequestsPerPubkey<T extends PubkeyType | GroupPubkeyType> = Array<PubkeyToRequestType<T>>;
+
+async function messageToRequest05({
+  destination,
+  encryptedAndWrapped: { namespace, encryptedAndWrappedData, identifier, ttl, networkTimestamp },
+}: {
+  destination: PubkeyType;
+  encryptedAndWrapped: Pick<
+    EncryptAndWrapMessageResults,
+    'namespace' | 'encryptedAndWrappedData' | 'identifier' | 'ttl' | 'networkTimestamp'
+  >;
+}): Promise<StoreRequest05> {
+  const shared05Arguments = {
+    encryptedData: encryptedAndWrappedData,
+    dbMessageIdentifier: identifier || null,
+    ttlMs: ttl,
+    destination,
+    namespace,
+    createdAtNetworkTimestamp: networkTimestamp,
+  };
+  if (namespace === SnodeNamespaces.Default || namespace === SnodeNamespaces.LegacyClosedGroup) {
+    return new StoreUserMessageSubRequest(shared05Arguments);
+  }
+  if (SnodeNamespace.isUserConfigNamespace(namespace)) {
+    return new StoreUserConfigSubRequest(shared05Arguments);
+  }
+
+  window.log.error(
+    `unhandled messageToRequest05 case with details: ${ed25519Str(destination)},namespace: ${namespace}`
+  );
+  throw new Error(
+    `unhandled messageToRequest05 case for 05 ${ed25519Str(destination)} and namespace ${namespace}`
+  );
+}
+
+async function messageToRequest03({
+  destination,
+  encryptedAndWrapped: { namespace, encryptedAndWrappedData, identifier, ttl, networkTimestamp },
+}: {
+  destination: GroupPubkeyType;
+  encryptedAndWrapped: Pick<
+    EncryptAndWrapMessageResults,
+    'namespace' | 'encryptedAndWrappedData' | 'identifier' | 'ttl' | 'networkTimestamp'
+  >;
+}): Promise<StoreRequest03> {
+  const group = await UserGroupsWrapperActions.getGroup(destination);
+  if (!group) {
+    window.log.warn(
+      `messageToRequest03: no such group found in wrapper: ${ed25519Str(destination)}`
+    );
+    throw new Error('messageToRequest03: no such group found in wrapper');
+  }
+  const shared03Arguments = {
+    encryptedData: encryptedAndWrappedData,
+    namespace,
+    ttlMs: ttl,
+    groupPk: destination,
+    dbMessageIdentifier: identifier || null,
+    createdAtNetworkTimestamp: networkTimestamp,
+    ...group,
+  };
+  if (
+    SnodeNamespace.isGroupConfigNamespace(namespace) ||
+    namespace === SnodeNamespaces.ClosedGroupMessages
+  ) {
+    return new StoreGroupMessageSubRequest(shared03Arguments);
+  }
+  window.log.error(
+    `unhandled messageToRequest03 case with details: ${ed25519Str(destination)},namespace: ${namespace}`
+  );
+  throw new Error(
+    `unhandled messageToRequest03 case for 03 ${ed25519Str(destination)} and namespace ${namespace}`
+  );
+}
+
+async function messageToRequest<T extends GroupPubkeyType | PubkeyType>({
+  destination,
+  encryptedAndWrapped,
+}: {
+  destination: T;
+  encryptedAndWrapped: Pick<
+    EncryptAndWrapMessageResults,
+    'namespace' | 'encryptedAndWrappedData' | 'identifier' | 'ttl' | 'networkTimestamp'
+  >;
+}): Promise<PubkeyToRequestType<T>> {
+  if (PubKey.is03Pubkey(destination)) {
+    const req = await messageToRequest03({ destination, encryptedAndWrapped });
+    return req as PubkeyToRequestType<T>; // this is mandatory, sadly
+  }
+  if (PubKey.is05Pubkey(destination)) {
+    const req = await messageToRequest05({
+      destination,
+      encryptedAndWrapped,
+    });
+    return req as PubkeyToRequestType<T>; // this is mandatory, sadly
+  }
+
+  throw new Error('messageToRequest: unhandled case');
+}
+
+async function messagesToRequests<T extends GroupPubkeyType | PubkeyType>({
+  destination,
+  encryptedAndWrappedArr,
+}: {
+  destination: T;
+  encryptedAndWrappedArr: Array<
+    Pick<
+      EncryptAndWrapMessageResults,
+      'namespace' | 'encryptedAndWrappedData' | 'identifier' | 'ttl' | 'networkTimestamp'
+    >
+  >;
+}): Promise<Array<PubkeyToRequestType<T>>> {
+  const subRequests: Array<PubkeyToRequestType<T>> = [];
+  for (let index = 0; index < encryptedAndWrappedArr.length; index++) {
+    const encryptedAndWrapped = encryptedAndWrappedArr[index];
+    // eslint-disable-next-line no-await-in-loop
+    const req = await messageToRequest({ destination, encryptedAndWrapped });
+    subRequests.push(req);
+  }
+  return subRequests;
 }
 
 /**
@@ -143,98 +279,10 @@ async function sendSingleMessage({
         overridenTtl = asMs;
       }
 
-      const subRequests: Array<RawSnodeSubRequests> = [];
-      if (PubKey.is05Pubkey(destination)) {
-        if (encryptedAndWrapped.namespace === SnodeNamespaces.Default) {
-          subRequests.push(
-            new StoreUserMessageSubRequest({
-              encryptedData: encryptedAndWrapped.encryptedAndWrappedData,
-              dbMessageIdentifier: encryptedAndWrapped.identifier || null,
-              ttlMs: overridenTtl,
-              destination,
-            })
-          );
-        } else if (SnodeNamespace.isUserConfigNamespace(encryptedAndWrapped.namespace)) {
-          subRequests.push(
-            new StoreUserConfigSubRequest({
-              encryptedData: encryptedAndWrapped.encryptedAndWrappedData,
-              namespace: encryptedAndWrapped.namespace,
-              ttlMs: overridenTtl,
-            })
-          );
-        } else if (encryptedAndWrapped.namespace === SnodeNamespaces.LegacyClosedGroup) {
-          subRequests.push(
-            new StoreUserMessageSubRequest({
-              encryptedData: encryptedAndWrapped.encryptedAndWrappedData,
-              dbMessageIdentifier: encryptedAndWrapped.identifier || null,
-              ttlMs: overridenTtl,
-              destination,
-            })
-          );
-        } else {
-          window.log.error(
-            `unhandled sendSingleMessage case with details: ${ed25519Str(destination)},namespace: ${
-              encryptedAndWrapped.namespace
-            }`
-          );
-          throw new Error(
-            `unhandled sendSingleMessage case for 05 ${ed25519Str(destination)} and namespace ${
-              encryptedAndWrapped.namespace
-            }`
-          );
-        }
-      } else if (PubKey.is03Pubkey(destination)) {
-        const group = await UserGroupsWrapperActions.getGroup(destination);
-        if (!group) {
-          window.log.warn(
-            `sendSingleMessage: no such group found in wrapper: ${ed25519Str(destination)}`
-          );
-          throw new Error('sendSingleMessage: no such group found in wrapper');
-        }
-        if (SnodeNamespace.isGroupConfigNamespace(encryptedAndWrapped.namespace)) {
-          subRequests.push(
-            new StoreGroupConfigOrMessageSubRequest({
-              encryptedData: encryptedAndWrapped.encryptedAndWrappedData,
-              namespace: encryptedAndWrapped.namespace,
-              ttlMs: overridenTtl,
-              groupPk: destination,
-              dbMessageIdentifier: encryptedAndWrapped.identifier || null,
-              ...group,
-            })
-          );
-        } else if (encryptedAndWrapped.namespace === SnodeNamespaces.ClosedGroupMessages) {
-          subRequests.push(
-            new StoreGroupConfigOrMessageSubRequest({
-              encryptedData: encryptedAndWrapped.encryptedAndWrappedData,
-              namespace: encryptedAndWrapped.namespace,
-              ttlMs: overridenTtl,
-              groupPk: destination,
-              dbMessageIdentifier: encryptedAndWrapped.identifier || null,
-              ...group,
-            })
-          );
-        } else {
-          window.log.error(
-            `unhandled sendSingleMessage case with details: ${ed25519Str(destination)},namespace: ${
-              encryptedAndWrapped.namespace
-            }`
-          );
-          throw new Error(
-            `unhandled sendSingleMessage case for 03 ${ed25519Str(destination)} and namespace ${
-              encryptedAndWrapped.namespace
-            }`
-          );
-        }
-      } else {
-        window.log.error(
-          `unhandled sendSingleMessage case with details: ${ed25519Str(destination)},namespace: ${
-            encryptedAndWrapped.namespace
-          }`
-        );
-        throw new Error(
-          `unhandled sendSingleMessage case unsupported destination ${ed25519Str(destination)}`
-        );
-      }
+      const subRequests = await messagesToRequests({
+        encryptedAndWrappedArr: [{ ...encryptedAndWrapped, ttl: overridenTtl }],
+        destination,
+      });
 
       const targetNode = await SnodePool.getNodeFromSwarmOrThrow(destination);
       const batchResult = await BatchRequests.doUnsignedSnodeBatchRequestNoRetries(
@@ -310,7 +358,8 @@ async function signSubRequests(
         p instanceof DeleteHashesFromUserNodeSubRequest ||
         p instanceof DeleteHashesFromGroupNodeSubRequest ||
         p instanceof DeleteAllFromUserNodeSubRequest ||
-        p instanceof StoreGroupConfigOrMessageSubRequest ||
+        p instanceof StoreGroupConfigSubRequest ||
+        p instanceof StoreGroupMessageSubRequest ||
         p instanceof StoreLegacyGroupMessageSubRequest ||
         p instanceof StoreUserConfigSubRequest ||
         p instanceof StoreUserMessageSubRequest ||
@@ -347,13 +396,12 @@ async function signSubRequests(
   return signedRequests;
 }
 
+type DeleteHashesRequestPerPubkey<T extends PubkeyType | GroupPubkeyType> = T extends PubkeyType
+  ? DeleteHashesFromUserNodeSubRequest
+  : DeleteHashesFromGroupNodeSubRequest;
+
 async function sendMessagesDataToSnode<T extends PubkeyType | GroupPubkeyType>(
-  storeRequests: Array<
-    | StoreGroupConfigOrMessageSubRequest
-    | StoreUserConfigSubRequest
-    | StoreUserMessageSubRequest
-    | StoreLegacyGroupMessageSubRequest
-  >,
+  storeRequests: StoreRequestsPerPubkey<T>,
   asssociatedWith: T,
   {
     revokeSubRequest,
@@ -362,11 +410,7 @@ async function sendMessagesDataToSnode<T extends PubkeyType | GroupPubkeyType>(
     deleteAllMessagesSubRequest,
   }: WithRevokeSubRequest & {
     deleteAllMessagesSubRequest?: DeleteAllFromGroupMsgNodeSubRequest | null;
-    deleteHashesSubRequest:
-      | (T extends PubkeyType
-          ? DeleteHashesFromUserNodeSubRequest
-          : DeleteHashesFromGroupNodeSubRequest)
-      | null;
+    deleteHashesSubRequest: DeleteHashesRequestPerPubkey<T> | null;
   },
   method: MethodBatchType
 ): Promise<NotEmptyArrayOfBatchResults> {
@@ -428,13 +472,13 @@ async function sendMessagesDataToSnode<T extends PubkeyType | GroupPubkeyType>(
       window?.log?.info(
         `sendMessagesDataToSnode - Successfully stored messages to ${ed25519Str(
           asssociatedWith
-        )} via ${targetNode.ip}:${targetNode.port}`
+        )} via ${ed25519Str(targetNode.pubkey_ed25519)} to namespaces: ${storeRequests.map(m => SnodeNamespace.toRole(m.namespace)).join(', ')}`
       );
     }
 
     return storeResults;
   } catch (e) {
-    const snodeStr = targetNode ? `${targetNode.ip}:${targetNode.port}` : 'null';
+    const snodeStr = targetNode ? `${ed25519Str(targetNode.pubkey_ed25519)}` : 'null';
     window?.log?.warn(
       `sendMessagesDataToSnode - "${e.code}:${e.message}" to ${asssociatedWith} via snode:${snodeStr}`
     );
@@ -577,13 +621,9 @@ async function sendEncryptedDataToSnode<T extends GroupPubkeyType | PubkeyType>(
   unrevokeSubRequest,
   deleteAllMessagesSubRequest,
 }: WithRevokeSubRequest & {
-  storeRequests: Array<StoreGroupConfigOrMessageSubRequest | StoreUserConfigSubRequest>;
+  storeRequests: StoreRequestsPerPubkey<T>; // keeping those as an array because the order needs to be enforced for some (groupkeys for instance)
   destination: T;
-  deleteHashesSubRequest:
-    | (T extends PubkeyType
-        ? DeleteHashesFromUserNodeSubRequest
-        : DeleteHashesFromGroupNodeSubRequest)
-    | null;
+  deleteHashesSubRequest: DeleteHashesRequestPerPubkey<T> | null;
   deleteAllMessagesSubRequest?: DeleteAllFromGroupMsgNodeSubRequest | null;
 }): Promise<NotEmptyArrayOfBatchResults | null> {
   try {
@@ -618,6 +658,67 @@ async function sendEncryptedDataToSnode<T extends GroupPubkeyType | PubkeyType>(
     window.log.warn(`sendEncryptedDataToSnode failed with ${e.message}`);
     return null;
   }
+}
+
+/**
+ * Send an array of **not** preencrypted data to the corresponding swarm.
+ * WARNING:
+ *   This does not handle result of messages and marking messages as read, syncing them currently.
+ *   For this, use the `MessageQueue.sendSingleMessage()` for now.
+ *
+ * @param messages the data to deposit (after encryption)
+ * @param destination the pubkey we should deposit those message to
+ */
+async function sendUnencryptedDataToSnode<T extends GroupPubkeyType | PubkeyType>({
+  destination,
+  messages,
+}: {
+  // keeping those as an array because the order needs to be enforced for some (groupkeys for instance)
+  destination: T;
+  messages: Array<
+    T extends GroupPubkeyType
+      ? GroupUpdateMemberLeftMessage | GroupUpdateMemberLeftNotificationMessage
+      : never
+  >;
+}) {
+  const rawMessages: Array<EncryptAndWrapMessage> = messages.map(m => {
+    return {
+      networkTimestamp: m.createAtNetworkTimestamp,
+      plainTextBuffer: m.plainTextBuffer(),
+      ttl: m.ttl(),
+      destination: m.destination,
+      identifier: m.identifier,
+      namespace: m.namespace,
+      isSyncMessage: false,
+    };
+  });
+
+  const encryptedAndWrappedArr = await encryptMessagesAndWrap(
+    rawMessages.map(message => {
+      return {
+        destination,
+        plainTextBuffer: message.plainTextBuffer,
+        namespace: message.namespace,
+        ttl: message.ttl,
+        identifier: message.identifier,
+        networkTimestamp: message.networkTimestamp,
+        isSyncMessage: false,
+      };
+    })
+  );
+
+  const storeRequests = await messagesToRequests({
+    encryptedAndWrappedArr,
+    destination,
+  });
+
+  return sendEncryptedDataToSnode({
+    destination,
+    deleteHashesSubRequest: null,
+    revokeSubRequest: null,
+    unrevokeSubRequest: null,
+    storeRequests,
+  });
 }
 
 function wrapContentIntoEnvelope(
@@ -724,6 +825,8 @@ export const MessageSender = {
   wrapContentIntoEnvelope,
   getSignatureParamsFromNamespace,
   signSubRequests,
+  encryptMessagesAndWrap,
+  sendUnencryptedDataToSnode,
 };
 
 /**
@@ -752,14 +855,13 @@ async function handleBatchResultWithSubRequests({
 
     // there are some stuff we need to do when storing a message (for a group/legacy group or user, but no config messages)
     if (
-      subRequest instanceof StoreGroupConfigOrMessageSubRequest ||
+      subRequest instanceof StoreGroupMessageSubRequest ||
       subRequest instanceof StoreLegacyGroupMessageSubRequest ||
       subRequest instanceof StoreUserMessageSubRequest
     ) {
       const storedAt = batchResult?.[index]?.body?.t;
       const storedHash = batchResult?.[index]?.body?.hash;
       const subRequestStatusCode = batchResult?.[index]?.code;
-
       // TODO: the expiration is due to be returned by the storage server on "store" soon, we will then be able to use it instead of doing the storedAt + ttl logic below
       // if we have a hash and a storedAt, mark it as seen so we don't reprocess it on the next retrieve
 
@@ -781,29 +883,19 @@ async function handleBatchResultWithSubRequests({
           subRequest.dbMessageIdentifier &&
           (subRequest.destination === us || isDestinationClosedGroup)
         ) {
-          // get a fresh copy of the message from the DB
-          /* eslint-disable no-await-in-loop */
-          const foundMessage = await Data.getMessageById(subRequest.dbMessageIdentifier);
-          if (foundMessage) {
-            await foundMessage.updateMessageHash(storedHash);
-            // - a message pushed to a group is always synced
-            // - a message sent to ourself when it was a marked as sentSync is a synced message to ourself
-            if (
-              isDestinationClosedGroup ||
-              (subRequest.destination === us && foundMessage.get('sentSync'))
-            ) {
-              foundMessage.set({ synced: true });
-            }
-            foundMessage.set({
-              sent_to: [subRequest.destination],
-              sent: true,
-              sent_at: storedAt,
-            });
-            await foundMessage.commit();
-            await foundMessage.getConversation()?.updateLastMessage();
-            window?.log?.info(`updated message ${foundMessage.get('id')} with hash: ${storedHash}`);
-          }
-          /* eslint-enable no-await-in-loop */
+          // eslint-disable-next-line no-await-in-loop
+          await MessageSentHandler.handleSwarmMessageSentSuccess(
+            {
+              device: subRequest.destination,
+              encryption: isDestinationClosedGroup
+                ? SignalService.Envelope.Type.CLOSED_GROUP_MESSAGE
+                : SignalService.Envelope.Type.SESSION_MESSAGE,
+              identifier: subRequest.dbMessageIdentifier,
+              plainTextBuffer: null,
+            },
+            subRequest.createdAtNetworkTimestamp,
+            storedHash
+          );
         }
       }
     }

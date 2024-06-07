@@ -20,7 +20,10 @@ import { ConvoHub } from '../conversations';
 import { generateCurve25519KeyPairWithoutPrefix } from '../crypto';
 import { MessageEncrypter } from '../crypto/MessageEncrypter';
 import { DisappearingMessages } from '../disappearing_messages';
-import { DisappearAfterSendOnly, DisappearingMessageUpdate } from '../disappearing_messages/types';
+import {
+  DisappearAfterSendOnly,
+  WithDisappearingMessageUpdate,
+} from '../disappearing_messages/types';
 import { ClosedGroupAddedMembersMessage } from '../messages/outgoing/controlMessage/group/ClosedGroupAddedMembersMessage';
 import { ClosedGroupEncryptionPairMessage } from '../messages/outgoing/controlMessage/group/ClosedGroupEncryptionPairMessage';
 import { ClosedGroupNameChangeMessage } from '../messages/outgoing/controlMessage/group/ClosedGroupNameChangeMessage';
@@ -162,9 +165,8 @@ export async function addUpdateMessage({
   diff: GroupDiff;
   sender: string;
   sentAt: number;
-  expireUpdate: DisappearingMessageUpdate | null;
   markAlreadySent: boolean;
-}): Promise<MessageModel> {
+} & WithDisappearingMessageUpdate): Promise<MessageModel> {
   const groupUpdate: MessageGroupUpdate = {};
 
   if (diff.type === 'name' && diff.newName) {
@@ -263,12 +265,11 @@ export async function updateOrCreateClosedGroup(details: GroupInfo) {
   // const { id, expireTimer } = details;
 
   const { id } = details;
-  const isV3 = PubKey.is03Pubkey(id);
+  if (PubKey.is03Pubkey(id)) {
+    throw new Error('updateOrCreateClosedGroup is only for legacy groups, not 03 groups');
+  }
 
-  const conversation = await ConvoHub.use().getOrCreateAndWait(
-    id,
-    isV3 ? ConversationTypeEnum.GROUPV2 : ConversationTypeEnum.GROUP
-  );
+  const conversation = await ConvoHub.use().getOrCreateAndWait(id, ConversationTypeEnum.GROUP);
 
   const updates: Pick<
     ConversationAttributes,
@@ -276,7 +277,7 @@ export async function updateOrCreateClosedGroup(details: GroupInfo) {
   > = {
     displayNameInProfile: details.name,
     members: details.members,
-    type: isV3 ? ConversationTypeEnum.GROUPV2 : ConversationTypeEnum.GROUP,
+    type: ConversationTypeEnum.GROUP,
     active_at: details.activeAt ? details.activeAt : 0,
     left: !details.activeAt,
   };
@@ -289,18 +290,6 @@ export async function updateOrCreateClosedGroup(details: GroupInfo) {
   }
 
   await conversation.commit();
-
-  console.warn('groupv2 TODO or part of libsession entirely?');
-  // if (isNumber(expireTimer) && isFinite(expireTimer)) {
-  //   await conversation.updateExpireTimer({}
-  //     expireTimer,
-  //     UserUtils.getOurPubKeyStrFromCache(),
-  //     Date.now(),
-  //     {
-  //       fromSync: true,
-  //     }
-  //   );
-  // }
 }
 
 async function sendNewName(convo: ConversationModel, name: string, messageId: string) {

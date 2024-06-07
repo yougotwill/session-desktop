@@ -195,6 +195,18 @@ async function buildRetrieveRequest(
   return retrieveRequestsParams;
 }
 
+/**
+ *
+ * @param targetNode the node to make the request to
+ * @param associatedWith the pubkey for which this request is, used to handle 421 errors
+ * @param namespacesAndLastHashes the details of the retrieve request to make
+ * @param ourPubkey our current user pubkey
+ * @param configHashesToBump the config hashes to update the expiry of
+ * @param allow401s for groups we allow a 401 to not throw as we can be removed from it, but we still need to process part of the result.
+ * @returns an array of results with exactly namespacesAndLastHashes.length items in it.
+ *
+ * Note: Even if configHashesToBump is set, its result will be excluded from the return of this function, so what you get is always of namespacesAndLastHashes.length
+ */
 async function retrieveNextMessagesNoRetries(
   targetNode: Snode,
   associatedWith: string,
@@ -253,6 +265,16 @@ async function retrieveNextMessagesNoRetries(
       `_retrieveNextMessages - retrieve result is not 200 with ${targetNode.ip}:${targetNode.port} but ${firstResult.code}`
     );
   }
+  if (configHashesToBump?.length) {
+    const lastResult = results[results.length - 1];
+    if (lastResult?.code !== 200) {
+      // the update expiry of our config messages didn't work.
+      window.log.warn(
+        `the update expiry of our tracked config hashes didn't work: ${JSON.stringify(lastResult)}`
+      );
+    }
+  }
+
   if (!window.inboxStore?.getState().onionPaths.isOnline) {
     window.inboxStore?.dispatch(updateIsOnline(true));
   }
@@ -265,11 +287,12 @@ async function retrieveNextMessagesNoRetries(
     // merge results with their corresponding namespaces
     // NOTE: We don't want to sort messages here because the ordering depends on the snode and when it received each message.
     // The last_hash for that snode has to be the last one we've received from that same snode, othwerwise we end up fetching the same messages over and over again.
-    return namespacesAndLastHashes.map((n, index) => ({
+    const toRet = namespacesAndLastHashes.map((n, index) => ({
       code: results[index].code,
       messages: results[index].body as RetrieveMessagesResultsContent,
       namespace: n.namespace,
     }));
+    return toRet;
   } catch (e) {
     window?.log?.warn('exception while parsing json of nextMessage:', e);
 

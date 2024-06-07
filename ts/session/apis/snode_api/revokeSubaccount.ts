@@ -21,8 +21,6 @@ async function getRevokeSubaccountParams(
     throw new Error('revokeSubaccountForGroup: not a 03 group');
   }
 
-  window.log.warn('getRevokeSubaccountParams to enable once multisig is done'); // TODO audric debugger
-
   const revokeSubRequest = revokeChanges.length
     ? new SubaccountRevokeSubRequest({
         groupPk,
