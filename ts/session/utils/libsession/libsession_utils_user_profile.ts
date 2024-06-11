@@ -22,7 +22,7 @@ async function insertUserProfileIntoWrapper(convoId: string) {
   const dbName = ourConvo.getRealSessionUsername() || '';
   const dbProfileUrl = ourConvo.getAvatarPointer() || '';
   const dbProfileKey = fromHexToArray(ourConvo.getProfileKey() || '');
-  const priority = ourConvo.getPriority() || CONVERSATION_PRIORITIES.default;
+  const priority = ourConvo.get('priority') || CONVERSATION_PRIORITIES.default; // this has to be a direct call to .get() and not getPriority()
 
   const areBlindedMsgRequestEnabled = !!Storage.get(SettingsKey.hasBlindedMsgRequestsEnabled);
 

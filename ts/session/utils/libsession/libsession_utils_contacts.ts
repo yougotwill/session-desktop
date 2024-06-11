@@ -4,6 +4,7 @@ import { getContactInfoFromDBValues } from '../../../types/sqlSharedTypes';
 import { ContactsWrapperActions } from '../../../webworker/workers/browser/libsession_worker_interface';
 import { ConvoHub } from '../../conversations';
 import { PubKey } from '../../types';
+import { CONVERSATION_PRIORITIES } from '../../../models/conversationAttributes';
 
 /**
  * This file is centralizing the management of data from the Contacts Wrapper of libsession.
@@ -53,17 +54,22 @@ async function insertContactFromDBIntoWrapperAndRefresh(
   if (!SessionUtilContact.isContactToStoreInWrapper(foundConvo)) {
     return null;
   }
-
+  // Note: We NEED those to come from the convo itself as .get() calls directly
+  // and not from the isApproved(), didApproveMe() functions.
+  //
+  // The reason is that when we make a change, we need to save it to the DB to update the libsession state (on commit()).
+  // But, if we use isApproved() instead of .get('isApproved'), we get the value from libsession which is not up to date with a change made in the convo yet!
   const dbName = foundConvo.getRealSessionUsername() || undefined;
-  const dbNickname = foundConvo.getNickname();
-  const dbProfileUrl = foundConvo.getAvatarPointer() || undefined;
-  const dbProfileKey = foundConvo.getProfileKey() || undefined;
-  const dbApproved = foundConvo.isApproved();
-  const dbApprovedMe = foundConvo.didApproveMe();
+  const dbNickname = foundConvo.get('nickname');
+  const dbProfileUrl = foundConvo.get('avatarPointer') || undefined;
+  const dbProfileKey = foundConvo.get('profileKey') || undefined;
+  const dbApproved = !!foundConvo.get('isApproved');
+  const dbApprovedMe = !!foundConvo.get('didApproveMe');
   const dbBlocked = foundConvo.isBlocked();
-  const priority = foundConvo.getPriority() || 0;
-  const expirationMode = foundConvo.getExpirationMode() || undefined;
-  const expireTimer = foundConvo.getExpireTimer() || 0;
+  const priority = foundConvo.get('priority') || CONVERSATION_PRIORITIES.default;
+  const expirationMode = foundConvo.get('expirationMode') || undefined;
+  const expireTimer = foundConvo.get('expireTimer') || 0;
+
 
   const wrapperContact = getContactInfoFromDBValues({
     id,

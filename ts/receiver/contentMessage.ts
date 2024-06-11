@@ -1,4 +1,4 @@
-import { compact, flatten, identity, isEmpty, isFinite, pickBy, toNumber } from 'lodash';
+import { compact, flatten, isEmpty, isFinite, toNumber } from 'lodash';
 
 import { handleSwarmDataMessage } from './dataMessage';
 import { EnvelopePlus } from './types';

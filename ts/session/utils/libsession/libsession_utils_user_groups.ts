@@ -12,6 +12,7 @@ import {
 import { UserGroupsWrapperActions } from '../../../webworker/workers/browser/libsession_worker_interface';
 import { ConvoHub } from '../../conversations';
 import { PubKey } from '../../types';
+import { CONVERSATION_PRIORITIES } from '../../../models/conversationAttributes';
 
 /**
  * Returns true if that conversation is an active group
@@ -38,7 +39,7 @@ function isLegacyGroupToStoreInWrapper(convo: ConversationModel): boolean {
 }
 
 function isGroupToStoreInWrapper(convo: ConversationModel): boolean {
-  return convo.isGroup() && PubKey.is03Pubkey(convo.id) && convo.isActive(); // debugger TODO should we filter by left/kicked or they are on the wrapper itself?
+  return convo.isGroup() && PubKey.is03Pubkey(convo.id) && convo.isActive();
 }
 
 /**
@@ -104,7 +105,7 @@ async function insertGroupsFromDBIntoWrapperAndRefresh(
       );
 
       const wrapperComm = getCommunityInfoFromDBValues({
-        priority: foundConvo.getPriority(),
+        priority: foundConvo.get('priority') || CONVERSATION_PRIORITIES.default, // this has to be a direct call to .get
         fullUrl,
       });
 
@@ -129,13 +130,15 @@ async function insertGroupsFromDBIntoWrapperAndRefresh(
 
     case 'LegacyGroup':
       const encryptionKeyPair = await Data.getLatestClosedGroupEncryptionKeyPair(convoId);
+      // Note: For any fields stored in both the DB and libsession,
+      // we have to make direct calls to.get() and NOT the wrapped getPriority(), etc...
       const wrapperLegacyGroup = getLegacyGroupInfoFromDBValues({
         id: foundConvo.id,
-        priority: foundConvo.getPriority(),
-        members: foundConvo.getGroupMembers() || [],
-        groupAdmins: foundConvo.getGroupAdmins(),
-        expirationMode: foundConvo.getExpirationMode() || 'off',
-        expireTimer: foundConvo.getExpireTimer() || 0,
+        priority: foundConvo.get('priority') || CONVERSATION_PRIORITIES.default,
+        members: foundConvo.get('members') || [],
+        groupAdmins: foundConvo.getGroupAdmins(), // cannot be changed for legacy groups, so we don't care
+        expirationMode: foundConvo.get('expirationMode') || 'off',
+        expireTimer: foundConvo.get('expireTimer') || 0,
         displayNameInProfile: foundConvo.getRealSessionUsername(),
         encPubkeyHex: encryptionKeyPair?.publicHex || '',
         encSeckeyHex: encryptionKeyPair?.privateHex || '',
@@ -171,7 +174,7 @@ async function insertGroupsFromDBIntoWrapperAndRefresh(
         name: null, // not updated except when we process an invite/create a group
         secretKey: null, // not updated except when we process an promote/create a group
         kicked: foundConvo.isKickedFromGroup() ?? null,
-        priority: foundConvo.getPriority() ?? null,
+        priority: foundConvo.getPriority() ?? null, // for 03 group, the priority is only tracked with libsession, so this is fine
       };
       try {
         window.log.debug(
