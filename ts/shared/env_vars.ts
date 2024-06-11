@@ -25,3 +25,7 @@ export function isTestNet() {
 export function isTestIntegration() {
   return envAppInstanceIncludes('test-integration') || isCI(); // when running on CI, we always want the 'test-integration' behavior
 }
+
+export function hasClosedGroupV2QAButtons() {
+  return !!window.sessionFeatureFlags.useClosedGroupV2QAButtons
+}

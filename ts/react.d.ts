@@ -67,15 +67,15 @@ declare module 'react' {
     | 'privacy-section'
 
     // settings menu item types
-    | 'messageRequests-settings-menu-item' // needs to be tweaked
-    | 'recoveryPhrase-settings-menu-item' // needs to be tweaked
-    | 'privacy-settings-menu-item' // needs to be tweaked
-    | 'notifications-settings-menu-item' // needs to be tweaked
-    | 'conversations-settings-menu-item' // needs to be tweaked
-    | 'appearance-settings-menu-item' // needs to be tweaked
-    | 'help-settings-menu-item' // needs to be tweaked
-    | 'permissions-settings-menu-item' // needs to be tweaked
-    | 'clearData-settings-menu-item' // TODO AUDRIC needs to be tweaked
+    | 'messageRequests-settings-menu-item'
+    | 'recoveryPhrase-settings-menu-item'
+    | 'privacy-settings-menu-item'
+    | 'notifications-settings-menu-item'
+    | 'conversations-settings-menu-item'
+    | 'appearance-settings-menu-item'
+    | 'help-settings-menu-item'
+    | 'permissions-settings-menu-item'
+    | 'clearData-settings-menu-item'
 
     // timer options
     | 'time-option-0'

@@ -1122,10 +1122,6 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
             updatedExpirationSeconds: expireUpdate.expireTimer,
           });
 
-          // TODO audric debugger, make pushChangesToGroupSwarmIfNeeded take extraStoreRequests
-          // but we'd also need to add a way to make a store subrequest from a v2groupMessage.
-          // we should be able to simplify a fair bit the GroupSyncJob file.
-          // i.e. we need an easy way (separate file) to wrap a message into a subrequest
           await GroupSync.pushChangesToGroupSwarmIfNeeded({
             groupPk: this.id,
             revokeSubRequest: null,
@@ -2704,7 +2700,6 @@ async function commitConversationAndRefreshWrapper(id: string) {
   // write to db
   const savedDetails = await Data.saveConversation(convo.attributes);
   await convo.refreshInMemoryDetails(savedDetails);
-
 
   // Performance impact on this is probably to be pretty bad. We might want to push for that DB refactor to be done sooner so we do not need to fetch info from the DB anymore
   for (let index = 0; index < LibSessionUtil.requiredUserVariants.length; index++) {

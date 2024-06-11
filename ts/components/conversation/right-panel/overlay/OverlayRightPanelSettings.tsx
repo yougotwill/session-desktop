@@ -25,8 +25,9 @@ import {
 import { Constants } from '../../../../session';
 import { ConvoHub } from '../../../../session/conversations';
 import { PubKey } from '../../../../session/types';
-import { isDevProd, isTestIntegration } from '../../../../shared/env_vars';
+import { hasClosedGroupV2QAButtons } from '../../../../shared/env_vars';
 import { closeRightPanel } from '../../../../state/ducks/conversations';
+import { groupInfoActions } from '../../../../state/ducks/metaGroups';
 import { updateConfirmModal } from '../../../../state/ducks/modalDialog';
 import { resetRightOverlayMode, setRightOverlayMode } from '../../../../state/ducks/section';
 import {
@@ -52,7 +53,6 @@ import { PanelButtonGroup, PanelIconButton } from '../../../buttons';
 import { MediaItemType } from '../../../lightbox/LightboxGallery';
 import { MediaGallery } from '../../media-gallery/MediaGallery';
 import { Header, StyledScrollContainer } from './components';
-import { groupInfoActions } from '../../../../state/ducks/metaGroups';
 
 async function getMediaGalleryProps(conversationId: string): Promise<{
   documents: Array<MediaItemType>;
@@ -199,7 +199,7 @@ const StyledName = styled.h4`
 const DestroyGroupForAllMembersButton = () => {
   const dispatch = useDispatch();
   const groupPk = useSelectedConversationKey();
-  if (groupPk && PubKey.is03Pubkey(groupPk) && (isDevProd() || isTestIntegration())) {
+  if (groupPk && PubKey.is03Pubkey(groupPk) && hasClosedGroupV2QAButtons()) {
     return (
       <PanelIconButton
         dataTestId="delete-group-button"
@@ -337,10 +337,10 @@ export const OverlayRightPanelSettings = () => {
             />
           )}
 
-          {isDevProd() && isGroupV2 ? (
+          {hasClosedGroupV2QAButtons() && isGroupV2 ? (
             <PanelIconButton
               iconType={'group'}
-              text={'trigger avatar message'} // debugger FIXME Audric
+              text={'trigger avatar message'}
               onClick={() => {
                 if (!PubKey.is03Pubkey(selectedConvoKey)) {
                   throw new Error('triggerFakeAvatarUpdate needs a 03 pubkey');

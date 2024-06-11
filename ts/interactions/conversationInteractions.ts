@@ -503,7 +503,7 @@ export async function showLeaveGroupByConvoId(conversationId: string, name: stri
         conversationId,
       })
     );
-    // TODO AUDRIC this is chunk3 stuff: Only to be used after the closed group rebuild chunk3
+    // TODO this is post release chunk3 stuff: Only to be used after the closed group rebuild chunk3
     // const onClickOkLastAdmin = () => {
     //   /* TODO */
     // };

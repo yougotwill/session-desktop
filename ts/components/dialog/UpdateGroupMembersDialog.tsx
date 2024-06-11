@@ -27,12 +27,12 @@ import { useSet } from '../../hooks/useSet';
 import { ConvoHub } from '../../session/conversations';
 import { ClosedGroup } from '../../session/group/closed-group';
 import { PubKey } from '../../session/types';
+import { hasClosedGroupV2QAButtons } from '../../shared/env_vars';
 import { groupInfoActions } from '../../state/ducks/metaGroups';
 import { useMemberGroupChangePending } from '../../state/selectors/groups';
 import { useSelectedIsGroupV2 } from '../../state/selectors/selectedConversation';
 import { SessionSpinner } from '../basic/SessionSpinner';
 import { SessionToggle } from '../basic/SessionToggle';
-import { isDevProd, isTestIntegration } from '../../shared/env_vars';
 
 type Props = {
   conversationId: string;
@@ -275,7 +275,7 @@ export const UpdateGroupMembersDialog = (props: Props) => {
 
   return (
     <SessionWrapperModal title={titleText} onClose={closeDialog}>
-      {isDevProd() || isTestIntegration() ? (
+      {hasClosedGroupV2QAButtons() ? (
         <>
           Also remove messages:
           <SessionToggle
