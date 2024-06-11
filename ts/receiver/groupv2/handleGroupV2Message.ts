@@ -159,6 +159,17 @@ async function handleGroupInviteMessage({
     groupEd25519Pubkey: toFixedUint8ArrayOfLength(HexString.fromHexStringNoPrefix(groupPk), 32)
       .buffer,
   });
+  try {
+    const verified = await MetaGroupWrapperActions.swarmVerifySubAccount(
+      groupPk,
+      inviteMessage.memberAuthData
+    );
+    if (!verified) {
+      throw new Error('subaccount failed to verify');
+    }
+  } catch (e) {
+    window.log.warn(`swarmVerifySubAccount failed with: ${e.message}`);
+  }
 
   await LibSessionUtil.saveDumpsToDb(UserUtils.getOurPubKeyStrFromCache());
   await UserSync.queueNewJobIfNeeded();
