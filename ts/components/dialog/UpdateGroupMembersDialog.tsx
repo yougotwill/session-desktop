@@ -1,5 +1,5 @@
 import _, { difference } from 'lodash';
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import useKey from 'react-use/lib/useKey';
 import styled from 'styled-components';
@@ -31,6 +31,8 @@ import { groupInfoActions } from '../../state/ducks/metaGroups';
 import { useMemberGroupChangePending } from '../../state/selectors/groups';
 import { useSelectedIsGroupV2 } from '../../state/selectors/selectedConversation';
 import { SessionSpinner } from '../basic/SessionSpinner';
+import { SessionToggle } from '../basic/SessionToggle';
+import { isDevProd, isTestIntegration } from '../../shared/env_vars';
 
 type Props = {
   conversationId: string;
@@ -193,6 +195,7 @@ export const UpdateGroupMembersDialog = (props: Props) => {
   const displayName = useConversationUsername(conversationId);
   const groupAdmins = useGroupAdmins(conversationId);
   const isProcessingUIChange = useMemberGroupChangePending();
+  const [alsoRemoveMessages, setAlsoRemoveMessages] = useState(false);
 
   const {
     addTo,
@@ -217,7 +220,7 @@ export const UpdateGroupMembersDialog = (props: Props) => {
         addMembersWithHistory: [],
         addMembersWithoutHistory: [],
         removeMembers: difference(existingMembers, membersToKeepWithUpdate) as Array<PubkeyType>,
-        alsoRemoveMessages: false, // FIXME audric debugger we need this to be a toggle for QA
+        alsoRemoveMessages,
       });
       dispatch(groupv2Action as any);
 
@@ -272,6 +275,17 @@ export const UpdateGroupMembersDialog = (props: Props) => {
 
   return (
     <SessionWrapperModal title={titleText} onClose={closeDialog}>
+      {isDevProd() || isTestIntegration() ? (
+        <>
+          Also remove messages:
+          <SessionToggle
+            active={alsoRemoveMessages}
+            onClick={() => {
+              setAlsoRemoveMessages(!alsoRemoveMessages);
+            }}
+          />
+        </>
+      ) : null}
       <StyledClassicMemberList className="group-member-list__selection">
         <ClassicMemberList
           convoId={conversationId}

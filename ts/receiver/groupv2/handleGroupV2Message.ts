@@ -356,7 +356,6 @@ async function handleGroupMemberLeftMessage({
     })
   );
 
-  // TODO We should process this message type even if the sender is blocked
 }
 
 async function handleGroupUpdateMemberLeftNotificationMessage({
@@ -469,7 +468,6 @@ async function handleGroupDeleteMemberContentMessage({
     )
   );
   convo.updateLastMessage();
-  // TODO we should process this message type even if the sender is blocked
 }
 
 async function handleGroupUpdateInviteResponseMessage({
@@ -494,7 +492,6 @@ async function handleGroupUpdateInviteResponseMessage({
 
   window.inboxStore.dispatch(groupInfoActions.inviteResponseReceived({ groupPk, member: author }));
 
-  // TODO We should process this message type even if the sender is blocked
 }
 
 async function handleGroupUpdatePromoteMessage({
@@ -535,7 +532,6 @@ async function handleGroupUpdatePromoteMessage({
     })
   );
 
-  // TODO we should process this even if the sender is blocked
 }
 
 async function handle1o1GroupUpdateMessage(

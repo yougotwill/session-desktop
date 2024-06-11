@@ -2705,6 +2705,7 @@ async function commitConversationAndRefreshWrapper(id: string) {
   const savedDetails = await Data.saveConversation(convo.attributes);
   await convo.refreshInMemoryDetails(savedDetails);
 
+
   // Performance impact on this is probably to be pretty bad. We might want to push for that DB refactor to be done sooner so we do not need to fetch info from the DB anymore
   for (let index = 0; index < LibSessionUtil.requiredUserVariants.length; index++) {
     const variant = LibSessionUtil.requiredUserVariants[index];

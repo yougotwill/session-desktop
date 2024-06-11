@@ -69,7 +69,6 @@ export class ClosedGroupVisibleMessage extends ClosedGroupMessage {
 
 type WithDestinationGroupPk = { destination: GroupPubkeyType };
 
-// TODO audric debugger This will need to extend ExpirableMessage after Disappearing Messages V2 is merged and checkd still working
 export class ClosedGroupV2VisibleMessage extends DataMessage {
   private readonly chatMessage: VisibleMessage;
   public readonly destination: GroupPubkeyType;

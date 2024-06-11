@@ -360,47 +360,53 @@ async function shouldDropIncomingPrivateMessage(
 
 function shouldDropBlockedUserMessage(
   content: SignalService.Content,
-  groupPubkey: string
+  fromSwarmOf: string
 ): boolean {
-  // Even if the user is blocked, we should allow the message if:
+  // Even if the user is blocked, we should allow a group control message message if:
   //   - it is a group message AND
   //   - the group exists already on the db (to not join a closed group created by a blocked user) AND
   //   - the group is not blocked AND
-  //   - the message is only control (no body/attachments/quote/groupInvitation/contact/preview)
+  //   - the message is a LegacyControlMessage or GroupUpdateMessage
+  // In addition to the above, we also want to allow a groupUpdatePromote message (sent as a 1o1 message)
 
-  if (!groupPubkey) {
+  if (!fromSwarmOf) {
     return true;
   }
 
-  const groupConvo = ConvoHub.use().get(groupPubkey);
-  if (!groupConvo || !groupConvo.isClosedGroup()) {
+  const convo = ConvoHub.use().get(fromSwarmOf);
+  if (!convo || !content.dataMessage || isEmpty(content.dataMessage)) {
+    // returning true means that we drop that message
     return true;
   }
 
-  if (groupConvo.isBlocked()) {
+  if (convo.isClosedGroup() && convo.isBlocked()) {
+    // when we especially blocked a group, we don't want to process anything from it
     return true;
   }
 
-  // first check that dataMessage is the only field set in the Content
-  let msgWithoutDataMessage = pickBy(
-    content,
-    (_value, key) => key !== 'dataMessage' && key !== 'toJSON'
-  );
-  msgWithoutDataMessage = pickBy(msgWithoutDataMessage, identity);
-
-  const isMessageDataMessageOnly = isEmpty(msgWithoutDataMessage);
-  if (!isMessageDataMessageOnly) {
-    return true;
-  }
   const data = content.dataMessage as SignalService.DataMessage; // forcing it as we do know this field is set based on last line
-  const isControlDataMessageOnly =
-    !data.body &&
-    !data.preview?.length &&
-    !data.attachments?.length &&
-    !data.openGroupInvitation &&
-    !data.quote;
 
-  return !isControlDataMessageOnly;
+  if (convo.isPrivate()) {
+    const isGroupV2PromoteMessage = !isEmpty(
+      content.dataMessage?.groupUpdateMessage?.promoteMessage
+    );
+    if (isGroupV2PromoteMessage) {
+      // we want to allow a group v2 promote message sent by a blocked user (because that user is an admin of a group)
+      return false;
+    }
+  }
+
+  if (!convo.isClosedGroup()) {
+    // 1o1 messages are handled above.
+    // if we get here and it's not part a closed group, we should drop that message.
+    // it might be a message sent to a community from a user we've blocked
+    return true;
+  }
+  const isLegacyGroupUpdateMessage = !isEmpty(data.closedGroupControlMessage);
+
+  const isGroupV2UpdateMessage = !isEmpty(data.groupUpdateMessage);
+
+  return !isLegacyGroupUpdateMessage && !isGroupV2UpdateMessage;
 }
 
 async function dropIncomingGroupMessage(envelope: EnvelopePlus, sentAtTimestamp: number) {
@@ -466,10 +472,14 @@ export async function innerHandleSwarmContentMessage({
       const envelopeSource = envelope.source;
       // We want to allow a blocked user message if that's a control message for a known group and the group is not blocked
       if (shouldDropBlockedUserMessage(content, envelopeSource)) {
-        window?.log?.info('Dropping blocked user message');
+        window?.log?.info(
+          `Dropping blocked user message ${ed25519Str(envelope.senderIdentity || envelope.source)}`
+        );
         return;
       }
-      window?.log?.info('Allowing group-control message only from blocked user');
+      window?.log?.info(
+        `Allowing control/update message only from blocked user ${ed25519Str(envelope.senderIdentity)} in group: ${ed25519Str(envelope.source)}`
+      );
     }
 
     if (await dropIncomingGroupMessage(envelope, sentAtTimestamp)) {
@@ -513,12 +523,11 @@ export async function innerHandleSwarmContentMessage({
      * For a private conversation message, this is just the conversation with that user
      */
     if (!isPrivateConversationMessage) {
-      console.info('conversationModelForUIUpdate might need to be checked for groupv2 case'); // debugger
-      // this is a closed group message, we have a second conversation to make sure exists
-      conversationModelForUIUpdate = await ConvoHub.use().getOrCreateAndWait(
-        envelope.source,
-        ConversationTypeEnum.GROUP
-      );
+      // this is a group message,
+      // we have a second conversation to make sure exists: the group conversation
+      conversationModelForUIUpdate = PubKey.is03Pubkey(envelope.source)
+        ? await ConvoHub.use().getOrCreateAndWait(envelope.source, ConversationTypeEnum.GROUPV2)
+        : await ConvoHub.use().getOrCreateAndWait(envelope.source, ConversationTypeEnum.GROUP);
     }
 
     const expireUpdate = await DisappearingMessages.checkForExpireUpdateInContentMessage(
