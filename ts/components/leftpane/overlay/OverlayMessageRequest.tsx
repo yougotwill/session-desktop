@@ -59,7 +59,7 @@ export const OverlayMessageRequest = () => {
    */
   function handleClearAllRequestsClick() {
     const { i18n } = window;
-    const title = i18n('clearAllConfirmationTitle');
+    const title = i18n('clearAll');
     const message = i18n('clearAllConfirmationBody');
     const onClose = dispatch(updateConfirmModal(null));
 
@@ -68,6 +68,9 @@ export const OverlayMessageRequest = () => {
         title,
         message,
         onClose,
+        okTheme: SessionButtonColor.Danger,
+        closeTheme: SessionButtonColor.Primary,
+        okText: window.i18n('clear'),
         onClickOk: async () => {
           window?.log?.info('Blocking all message requests');
           if (!hasRequests) {

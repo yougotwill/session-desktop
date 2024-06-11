@@ -71,7 +71,6 @@ export type LocalizerKeys =
   | 'clear'
   | 'clearAll'
   | 'clearAllConfirmationBody'
-  | 'clearAllConfirmationTitle'
   | 'clearAllData'
   | 'clearAllReactions'
   | 'clearDataSettingsTitle'

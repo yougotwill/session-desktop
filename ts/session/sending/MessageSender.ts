@@ -97,15 +97,29 @@ type PubkeyToRequestType<T extends GroupPubkeyType | PubkeyType> = T extends Pub
 
 type StoreRequestsPerPubkey<T extends PubkeyType | GroupPubkeyType> = Array<PubkeyToRequestType<T>>;
 
+type EncryptedMessageDetails = Pick<
+  EncryptAndWrapMessageResults,
+  | 'namespace'
+  | 'encryptedAndWrappedData'
+  | 'identifier'
+  | 'ttl'
+  | 'networkTimestamp'
+  | 'plainTextBuffer'
+>;
+
 async function messageToRequest05({
   destination,
-  encryptedAndWrapped: { namespace, encryptedAndWrappedData, identifier, ttl, networkTimestamp },
+  encryptedAndWrapped: {
+    namespace,
+    encryptedAndWrappedData,
+    identifier,
+    ttl,
+    networkTimestamp,
+    plainTextBuffer,
+  },
 }: {
   destination: PubkeyType;
-  encryptedAndWrapped: Pick<
-    EncryptAndWrapMessageResults,
-    'namespace' | 'encryptedAndWrappedData' | 'identifier' | 'ttl' | 'networkTimestamp'
-  >;
+  encryptedAndWrapped: EncryptedMessageDetails;
 }): Promise<StoreRequest05> {
   const shared05Arguments = {
     encryptedData: encryptedAndWrappedData,
@@ -114,6 +128,7 @@ async function messageToRequest05({
     destination,
     namespace,
     createdAtNetworkTimestamp: networkTimestamp,
+    plainTextBuffer,
   };
   if (namespace === SnodeNamespaces.Default || namespace === SnodeNamespaces.LegacyClosedGroup) {
     return new StoreUserMessageSubRequest(shared05Arguments);
@@ -175,10 +190,7 @@ async function messageToRequest<T extends GroupPubkeyType | PubkeyType>({
   encryptedAndWrapped,
 }: {
   destination: T;
-  encryptedAndWrapped: Pick<
-    EncryptAndWrapMessageResults,
-    'namespace' | 'encryptedAndWrappedData' | 'identifier' | 'ttl' | 'networkTimestamp'
-  >;
+  encryptedAndWrapped: EncryptedMessageDetails;
 }): Promise<PubkeyToRequestType<T>> {
   if (PubKey.is03Pubkey(destination)) {
     const req = await messageToRequest03({ destination, encryptedAndWrapped });
@@ -200,12 +212,7 @@ async function messagesToRequests<T extends GroupPubkeyType | PubkeyType>({
   encryptedAndWrappedArr,
 }: {
   destination: T;
-  encryptedAndWrappedArr: Array<
-    Pick<
-      EncryptAndWrapMessageResults,
-      'namespace' | 'encryptedAndWrappedData' | 'identifier' | 'ttl' | 'networkTimestamp'
-    >
-  >;
+  encryptedAndWrappedArr: Array<EncryptedMessageDetails>;
 }): Promise<Array<PubkeyToRequestType<T>>> {
   const subRequests: Array<PubkeyToRequestType<T>> = [];
   for (let index = 0; index < encryptedAndWrappedArr.length; index++) {
@@ -260,6 +267,7 @@ async function sendSingleMessage({
       // before we return from the await below.
       // and the isDuplicate messages relies on sent_at timestamp to be valid.
       const found = await Data.getMessageById(encryptedAndWrapped.identifier);
+
       // make sure to not update the sent timestamp if this a currently syncing message
       if (found && !found.get('sentSync')) {
         found.set({ sent_at: encryptedAndWrapped.networkTimestamp });
@@ -497,10 +505,10 @@ type SharedEncryptAndWrap = {
   ttl: number;
   identifier: string;
   isSyncMessage: boolean;
+  plainTextBuffer: Uint8Array;
 };
 
 type EncryptAndWrapMessage = {
-  plainTextBuffer: Uint8Array;
   destination: string;
   namespace: number;
   networkTimestamp: number;
@@ -549,6 +557,7 @@ async function encryptForGroupV2(
     ttl,
     identifier,
     isSyncMessage: syncMessage,
+    plainTextBuffer,
   };
 }
 
@@ -594,6 +603,7 @@ async function encryptMessageAndWrap(
     ttl,
     identifier,
     isSyncMessage: syncMessage,
+    plainTextBuffer,
   };
 }
 
@@ -847,7 +857,6 @@ async function handleBatchResultWithSubRequests({
     window.log.error('handleBatchResultWithSubRequests: invalid batch result ');
     return;
   }
-  const us = UserUtils.getOurPubKeyStrFromCache();
 
   const seenHashes: Array<SeenMessageHashes> = [];
   for (let index = 0; index < subRequests.length; index++) {
@@ -878,11 +887,7 @@ async function handleBatchResultWithSubRequests({
 
         // We need to store the hash of our synced message when for a 1o1. (as this is the one stored on our swarm)
         // For groups, we can just store that hash directly as the group's swarm is hosting all of the group messages
-
-        if (
-          subRequest.dbMessageIdentifier &&
-          (subRequest.destination === us || isDestinationClosedGroup)
-        ) {
+        if (subRequest.dbMessageIdentifier) {
           // eslint-disable-next-line no-await-in-loop
           await MessageSentHandler.handleSwarmMessageSentSuccess(
             {
@@ -891,7 +896,10 @@ async function handleBatchResultWithSubRequests({
                 ? SignalService.Envelope.Type.CLOSED_GROUP_MESSAGE
                 : SignalService.Envelope.Type.SESSION_MESSAGE,
               identifier: subRequest.dbMessageIdentifier,
-              plainTextBuffer: null,
+              plainTextBuffer:
+                subRequest instanceof StoreUserMessageSubRequest
+                  ? subRequest.plainTextBuffer
+                  : null,
             },
             subRequest.createdAtNetworkTimestamp,
             storedHash

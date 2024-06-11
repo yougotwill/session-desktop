@@ -99,7 +99,8 @@ async function handleSwarmMessageSentSuccess(
 
   // A message is synced if we triggered a sync message (sentSync)
   // and the current message was sent to our device (so a sync message)
-  const shouldMarkMessageAsSynced = isOurDevice && fetchedMessage.get('sentSync');
+  const shouldMarkMessageAsSynced =
+    isOurDevice && fetchedMessage.get('sentSync') && isClosedGroupMessage;
 
   // Handle the sync logic here
   if (shouldTriggerSyncMessage && sentMessage && sentMessage.plainTextBuffer) {

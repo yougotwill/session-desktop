@@ -197,6 +197,9 @@ export async function declineConversationWithoutConfirm({
     window?.log?.info('No conversation to decline.');
     return;
   }
+  window.log.debug(
+    `declineConversationWithoutConfirm of ${ed25519Str(conversationId)}, alsoBlock:${alsoBlock}, conversationIdOrigin:${conversationIdOrigin ? ed25519Str(conversationIdOrigin) : '<none>'}`
+  );
 
   // Note: do not set the active_at undefined as this would make that conversation not synced with the libsession wrapper
   await conversationToDecline.setIsApproved(false, false);
@@ -288,7 +291,10 @@ export const declineConversationWithConfirm = ({
     updateConfirmModal({
       okText: window.i18n(okKey),
       cancelText: window.i18n('cancel'),
+      title: window.i18n(okKey),
       message,
+      okTheme: SessionButtonColor.Danger,
+      closeTheme: SessionButtonColor.Primary,
       onClickOk: async () => {
         await declineConversationWithoutConfirm({
           conversationId,

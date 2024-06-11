@@ -973,23 +973,34 @@ export class StoreUserMessageSubRequest extends SnodeAPISubRequest {
   public readonly dbMessageIdentifier: string | null;
   public readonly createdAtNetworkTimestamp: number;
 
+  public readonly plainTextBuffer: Uint8Array | null;
+
   constructor(
     args: WithCreatedAtNetworkTimestamp & {
       ttlMs: number;
       encryptedData: Uint8Array;
       destination: PubkeyType;
       dbMessageIdentifier: string | null;
+      /**
+       * When we send a message to a 1o1 recipient, we then need to send the same message to our own swarm as a synced message.
+       * To forward that message, we need the original message data, which is the plainTextBuffer field here.
+       */
+      plainTextBuffer: Uint8Array | null;
     }
   ) {
     super();
     this.ttlMs = args.ttlMs;
     this.destination = args.destination;
     this.encryptedData = args.encryptedData;
+    this.plainTextBuffer = args.plainTextBuffer;
     this.dbMessageIdentifier = args.dbMessageIdentifier;
     this.createdAtNetworkTimestamp = args.createdAtNetworkTimestamp;
 
     if (isEmpty(this.encryptedData)) {
       throw new Error('this.encryptedData cannot be empty');
+    }
+    if (this.plainTextBuffer && !this.plainTextBuffer.length) {
+      throw new Error('this.plainTextBuffer can be either null or non-empty');
     }
   }
 
