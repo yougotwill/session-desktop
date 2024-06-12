@@ -28,7 +28,7 @@ async function getRevokeSubaccountParams(
         timestamp: GetNetworkTime.now(),
         secretKey,
       })
-    : null;
+    : undefined;
   const unrevokeSubRequest = unrevokeChanges.length
     ? new SubaccountUnrevokeSubRequest({
         groupPk,
@@ -36,7 +36,7 @@ async function getRevokeSubaccountParams(
         timestamp: GetNetworkTime.now(),
         secretKey,
       })
-    : null;
+    : undefined;
 
   return {
     revokeSubRequest,

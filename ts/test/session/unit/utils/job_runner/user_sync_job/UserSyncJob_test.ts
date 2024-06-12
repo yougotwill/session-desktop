@@ -315,8 +315,6 @@ describe('UserSyncJob pushChangesToUserSwarmIfNeeded', () => {
       storeRequests: [expectedProfile, expectedContact],
       destination: sessionId,
       messagesHashesToDelete: new Set('123'),
-      unrevokeSubRequest: null,
-      revokeSubRequest: null,
     };
     // callArgs.storeRequests = callArgs.storeRequests.map(_m => null) as any;
     expect(callArgs).to.be.deep.eq(expectedArgs);

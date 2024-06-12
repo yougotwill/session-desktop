@@ -119,8 +119,6 @@ async function pushChangesToUserSwarmIfNeeded() {
     storeRequests,
     destination: us,
     deleteHashesSubRequest,
-    revokeSubRequest: null,
-    unrevokeSubRequest: null,
   });
 
   const expectedReplyLength =

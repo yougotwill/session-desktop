@@ -327,8 +327,6 @@ class ConvoController {
           await MetaGroupWrapperActions.infoDestroy(groupPk);
           const lastPushResult = await GroupSync.pushChangesToGroupSwarmIfNeeded({
             groupPk,
-            revokeSubRequest: null,
-            unrevokeSubRequest: null,
             supplementalKeysSubRequest: [],
             deleteAllMessagesSubRequest,
             extraStoreRequests: [],

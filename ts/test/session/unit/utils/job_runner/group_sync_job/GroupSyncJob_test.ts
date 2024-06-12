@@ -275,8 +275,6 @@ describe('GroupSyncJob pushChangesToGroupSwarmIfNeeded', () => {
 
     const result = await GroupSync.pushChangesToGroupSwarmIfNeeded({
       groupPk,
-      revokeSubRequest: null,
-      unrevokeSubRequest: null,
       supplementalKeysSubRequest: [],
       extraStoreRequests: [],
     });
@@ -301,8 +299,6 @@ describe('GroupSyncJob pushChangesToGroupSwarmIfNeeded', () => {
     });
     const result = await GroupSync.pushChangesToGroupSwarmIfNeeded({
       groupPk,
-      revokeSubRequest: null,
-      unrevokeSubRequest: null,
       supplementalKeysSubRequest: [],
       extraStoreRequests: [],
     });
@@ -335,8 +331,6 @@ describe('GroupSyncJob pushChangesToGroupSwarmIfNeeded', () => {
       storeRequests: [expectedInfo, expectedMember],
       destination: groupPk,
       messagesHashesToDelete: new Set('123'),
-      unrevokeSubRequest: null,
-      revokeSubRequest: null,
     };
     expect(callArgs).to.be.deep.eq(expectedArgs);
   });
@@ -376,8 +370,6 @@ describe('GroupSyncJob pushChangesToGroupSwarmIfNeeded', () => {
     ]);
     const result = await GroupSync.pushChangesToGroupSwarmIfNeeded({
       groupPk,
-      revokeSubRequest: null,
-      unrevokeSubRequest: null,
       supplementalKeysSubRequest: [],
       extraStoreRequests: [],
     });

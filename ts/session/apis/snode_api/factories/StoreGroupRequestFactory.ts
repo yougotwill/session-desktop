@@ -4,7 +4,7 @@ import { SignalService } from '../../../../protobuf';
 import { MetaGroupWrapperActions } from '../../../../webworker/workers/browser/libsession_worker_interface';
 import { GroupUpdateInfoChangeMessage } from '../../../messages/outgoing/controlMessage/group_v2/to_group/GroupUpdateInfoChangeMessage';
 import { GroupUpdateMemberChangeMessage } from '../../../messages/outgoing/controlMessage/group_v2/to_group/GroupUpdateMemberChangeMessage';
-import { MessageSender } from '../../../sending';
+import { MessageWrapper } from '../../../sending/MessageWrapper';
 import { ed25519Str } from '../../../utils/String';
 import { PendingChangesForGroup } from '../../../utils/libsession/libsession_utils';
 import {
@@ -35,7 +35,7 @@ async function makeGroupMessageSubRequest(
   }
 
   const messagesToEncrypt: Array<StoreGroupExtraData> = compactedMessages.map(updateMessage => {
-    const wrapped = MessageSender.wrapContentIntoEnvelope(
+    const wrapped = MessageWrapper.wrapContentIntoEnvelope(
       SignalService.Envelope.Type.SESSION_MESSAGE,
       undefined,
       updateMessage.createAtNetworkTimestamp, // message is signed with this timestmap

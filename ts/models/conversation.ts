@@ -1130,8 +1130,6 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
 
           await GroupSync.pushChangesToGroupSwarmIfNeeded({
             groupPk: this.id,
-            revokeSubRequest: null,
-            unrevokeSubRequest: null,
             deleteAllMessagesSubRequest: null,
             supplementalKeysSubRequest: [],
             extraStoreRequests,

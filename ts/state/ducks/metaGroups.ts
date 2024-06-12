@@ -209,8 +209,6 @@ const initNewGroupInWrapper = createAsyncThunk(
 
       const result = await GroupSync.pushChangesToGroupSwarmIfNeeded({
         groupPk,
-        revokeSubRequest: null,
-        unrevokeSubRequest: null,
         supplementalKeysSubRequest: [],
         deleteAllMessagesSubRequest: null,
         extraStoreRequests,
@@ -836,8 +834,6 @@ async function handleMemberRemovedFromUI({
   const sequenceResult = await GroupSync.pushChangesToGroupSwarmIfNeeded({
     groupPk,
     supplementalKeysSubRequest: [],
-    revokeSubRequest: null,
-    unrevokeSubRequest: null,
     deleteAllMessagesSubRequest: null,
     extraStoreRequests,
   });
@@ -918,8 +914,6 @@ async function handleNameChangeFromUI({
   const batchResult = await GroupSync.pushChangesToGroupSwarmIfNeeded({
     groupPk,
     supplementalKeysSubRequest: [],
-    revokeSubRequest: null,
-    unrevokeSubRequest: null,
     deleteAllMessagesSubRequest: null,
     extraStoreRequests,
   });
@@ -1041,8 +1035,6 @@ const triggerFakeAvatarUpdate = createAsyncThunk(
     const batchResult = await GroupSync.pushChangesToGroupSwarmIfNeeded({
       groupPk,
       supplementalKeysSubRequest: [],
-      revokeSubRequest: null,
-      unrevokeSubRequest: null,
       deleteAllMessagesSubRequest: null,
       extraStoreRequests,
     });

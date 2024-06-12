@@ -37,8 +37,8 @@ export type ShortenOrExtend = 'extend' | 'shorten' | '';
 export type WithShortenOrExtend = { shortenOrExtend: ShortenOrExtend };
 
 export type WithRevokeSubRequest = {
-  revokeSubRequest: SubaccountRevokeSubRequest | null;
-  unrevokeSubRequest: SubaccountUnrevokeSubRequest | null;
+  revokeSubRequest?: SubaccountRevokeSubRequest;
+  unrevokeSubRequest?: SubaccountUnrevokeSubRequest;
 };
 
 export type SignedHashesParams = WithSignature & {

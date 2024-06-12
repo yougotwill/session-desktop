@@ -70,6 +70,7 @@ import { OutgoingRawMessage } from '../types/RawMessage';
 import { UserUtils } from '../utils';
 import { ed25519Str, fromUInt8ArrayToBase64 } from '../utils/String';
 import { MessageSentHandler } from './MessageSentHandler';
+import { MessageWrapper } from './MessageWrapper';
 
 // ================ SNODE STORE ================
 
@@ -546,7 +547,7 @@ async function encryptForGroupV2(
     networkTimestamp,
   } = params;
 
-  const envelope = wrapContentIntoEnvelope(
+  const envelope = MessageWrapper.wrapContentIntoEnvelope(
     SignalService.Envelope.Type.CLOSED_GROUP_MESSAGE,
     destination,
     networkTimestamp,
@@ -599,13 +600,13 @@ async function encryptMessageAndWrap(
     encryptionBasedOnConversation(recipient)
   );
 
-  const envelope = wrapContentIntoEnvelope(
+  const envelope = MessageWrapper.wrapContentIntoEnvelope(
     envelopeType,
     recipient.key,
     networkTimestamp,
     cipherText
   );
-  const data = wrapEnvelopeInWebSocketMessage(envelope);
+  const data = MessageWrapper.wrapEnvelopeInWebSocketMessage(envelope);
 
   return {
     encryptedAndWrappedData: data,
@@ -736,49 +737,8 @@ async function sendUnencryptedDataToSnode<T extends GroupPubkeyType | PubkeyType
   return sendEncryptedDataToSnode({
     destination,
     deleteHashesSubRequest: null,
-    revokeSubRequest: null,
-    unrevokeSubRequest: null,
     storeRequests,
   });
-}
-
-function wrapContentIntoEnvelope(
-  type: SignalService.Envelope.Type,
-  sskSource: string | undefined,
-  timestamp: number,
-  content: Uint8Array
-): SignalService.Envelope {
-  let source: string | undefined;
-
-  if (type === SignalService.Envelope.Type.CLOSED_GROUP_MESSAGE) {
-    source = sskSource;
-  }
-
-  return SignalService.Envelope.create({
-    type,
-    source,
-    timestamp,
-    content,
-  });
-}
-
-/**
- * This is an outdated practice and we should probably just send the envelope data directly.
- * Something to think about in the future.
- */
-function wrapEnvelopeInWebSocketMessage(envelope: SignalService.Envelope): Uint8Array {
-  const request = SignalService.WebSocketRequestMessage.create({
-    id: 0,
-    body: SignalService.Envelope.encode(envelope).finish(),
-    verb: 'PUT',
-    path: '/api/v1/message',
-  });
-
-  const websocket = SignalService.WebSocketMessage.create({
-    type: SignalService.WebSocketMessage.Type.REQUEST,
-    request,
-  });
-  return SignalService.WebSocketMessage.encode(websocket).finish();
 }
 
 // ================ Open Group ================
@@ -843,7 +803,6 @@ export const MessageSender = {
   sendToOpenGroupV2,
   sendSingleMessage,
   isContentSyncMessage,
-  wrapContentIntoEnvelope,
   getSignatureParamsFromNamespace,
   signSubRequests,
   encryptMessagesAndWrap,

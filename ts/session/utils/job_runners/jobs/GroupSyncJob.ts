@@ -219,8 +219,6 @@ class GroupSyncJob extends PersistedJob<GroupSyncPersistedData> {
       // return await so we catch exceptions in here
       return await GroupSync.pushChangesToGroupSwarmIfNeeded({
         groupPk: thisJobDestination,
-        revokeSubRequest: null,
-        unrevokeSubRequest: null,
         supplementalKeysSubRequest: [],
         extraStoreRequests: [],
       });
