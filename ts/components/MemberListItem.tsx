@@ -24,6 +24,7 @@ import {
   SessionButtonType,
 } from './basic/SessionButton';
 import { SessionRadio } from './basic/SessionRadio';
+import { hasClosedGroupV2QAButtons } from '../shared/env_vars';
 
 const AvatarContainer = styled.div`
   position: relative;
@@ -215,6 +216,9 @@ const ResendPromoteButton = ({
   pubkey: PubkeyType;
   groupPk: GroupPubkeyType;
 }) => {
+  if (!hasClosedGroupV2QAButtons()) {
+    return null;
+  }
   return (
     <SessionButton
       dataTestId={'resend-promote-button'}

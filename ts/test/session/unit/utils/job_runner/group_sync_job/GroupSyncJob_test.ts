@@ -277,7 +277,8 @@ describe('GroupSyncJob pushChangesToGroupSwarmIfNeeded', () => {
       groupPk,
       revokeSubRequest: null,
       unrevokeSubRequest: null,
-      encryptedSupplementKeys: [],
+      supplementalKeysSubRequest: [],
+      extraStoreRequests: [],
     });
     expect(result).to.be.eq(RunJobResult.Success);
     expect(sendStub.callCount).to.be.eq(0);
@@ -302,7 +303,8 @@ describe('GroupSyncJob pushChangesToGroupSwarmIfNeeded', () => {
       groupPk,
       revokeSubRequest: null,
       unrevokeSubRequest: null,
-      encryptedSupplementKeys: [],
+      supplementalKeysSubRequest: [],
+      extraStoreRequests: [],
     });
 
     sendStub.resolves(undefined);
@@ -376,7 +378,8 @@ describe('GroupSyncJob pushChangesToGroupSwarmIfNeeded', () => {
       groupPk,
       revokeSubRequest: null,
       unrevokeSubRequest: null,
-      encryptedSupplementKeys: [],
+      supplementalKeysSubRequest: [],
+      extraStoreRequests: [],
     });
 
     expect(sendStub.callCount).to.be.eq(1);

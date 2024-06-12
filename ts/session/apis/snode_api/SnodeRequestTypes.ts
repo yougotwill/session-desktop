@@ -25,6 +25,7 @@ import {
   WithSignature,
   WithTimestamp,
 } from './types';
+import { TTL_DEFAULT } from '../../constants';
 
 type WithMaxSize = { max_size?: number };
 export type WithShortenOrExtend = { shortenOrExtend: 'shorten' | 'extend' | '' };
@@ -818,32 +819,29 @@ export class StoreGroupMessageSubRequest extends SnodeAPISubRequest {
   }
 }
 
-export class StoreGroupConfigSubRequest extends SnodeAPISubRequest {
+abstract class StoreGroupConfigSubRequest<
+  T extends SnodeNamespacesGroupConfig | SnodeNamespaces.ClosedGroupRevokedRetrievableMessages,
+> extends SnodeAPISubRequest {
   public method = 'store' as const;
-  public readonly namespace:
-    | SnodeNamespacesGroupConfig
-    | SnodeNamespaces.ClosedGroupRevokedRetrievableMessages;
+  public readonly namespace: T;
   public readonly destination: GroupPubkeyType;
   public readonly ttlMs: number;
   public readonly encryptedData: Uint8Array;
+  // this is mandatory for a group config store, if it is null, we throw
   public readonly secretKey: Uint8Array | null;
-  public readonly authData: Uint8Array | null;
 
   constructor(
     args: WithGroupPubkey & {
-      namespace: SnodeNamespacesGroupConfig | SnodeNamespaces.ClosedGroupRevokedRetrievableMessages;
-      ttlMs: number;
+      namespace: T;
       encryptedData: Uint8Array;
-      authData: Uint8Array | null;
       secretKey: Uint8Array | null;
     }
   ) {
     super();
     this.namespace = args.namespace;
     this.destination = args.groupPk;
-    this.ttlMs = args.ttlMs;
+    this.ttlMs = TTL_DEFAULT.CONFIG_MESSAGE;
     this.encryptedData = args.encryptedData;
-    this.authData = args.authData;
     this.secretKey = args.secretKey;
 
     if (isEmpty(this.encryptedData)) {
@@ -852,13 +850,8 @@ export class StoreGroupConfigSubRequest extends SnodeAPISubRequest {
     if (!PubKey.is03Pubkey(this.destination)) {
       throw new Error('StoreGroupConfigSubRequest: groupconfig namespace required a 03 pubkey');
     }
-    if (isEmpty(this.secretKey) && isEmpty(this.authData)) {
-      throw new Error('StoreGroupConfigSubRequest needs either authData or secretKey to be set');
-    }
-    if (SnodeNamespace.isGroupConfigNamespace(this.namespace) && isEmpty(this.secretKey)) {
-      throw new Error(
-        `StoreGroupConfigSubRequest: groupconfig namespace [${this.namespace}] requires an adminSecretKey`
-      );
+    if (isEmpty(this.secretKey)) {
+      throw new Error('StoreGroupConfigSubRequest needs secretKey to be set');
     }
   }
 
@@ -872,7 +865,7 @@ export class StoreGroupConfigSubRequest extends SnodeAPISubRequest {
     const signDetails = await SnodeGroupSignature.getSnodeGroupSignature({
       method: this.method,
       namespace: this.namespace,
-      group: { authData: this.authData, pubkeyHex: this.destination, secretKey: this.secretKey },
+      group: { authData: null, pubkeyHex: this.destination, secretKey: this.secretKey },
     });
 
     if (!signDetails) {
@@ -894,6 +887,36 @@ export class StoreGroupConfigSubRequest extends SnodeAPISubRequest {
     return `${this.method}-${ed25519Str(this.destination)}-${SnodeNamespace.toRole(
       this.namespace
     )}`;
+  }
+}
+
+export class StoreGroupInfoSubRequest extends StoreGroupConfigSubRequest<SnodeNamespaces.ClosedGroupInfo> {
+  constructor(
+    args: Omit<ConstructorParameters<typeof StoreGroupConfigSubRequest>[0], 'namespace'>
+  ) {
+    super({ ...args, namespace: SnodeNamespaces.ClosedGroupInfo });
+  }
+}
+export class StoreGroupMembersSubRequest extends StoreGroupConfigSubRequest<SnodeNamespaces.ClosedGroupMembers> {
+  constructor(
+    args: Omit<ConstructorParameters<typeof StoreGroupConfigSubRequest>[0], 'namespace'>
+  ) {
+    super({ ...args, namespace: SnodeNamespaces.ClosedGroupMembers });
+  }
+}
+export class StoreGroupKeysSubRequest extends StoreGroupConfigSubRequest<SnodeNamespaces.ClosedGroupKeys> {
+  constructor(
+    args: Omit<ConstructorParameters<typeof StoreGroupConfigSubRequest>[0], 'namespace'>
+  ) {
+    super({ ...args, namespace: SnodeNamespaces.ClosedGroupKeys });
+  }
+}
+
+export class StoreGroupRevokedRetrievableSubRequest extends StoreGroupConfigSubRequest<SnodeNamespaces.ClosedGroupRevokedRetrievableMessages> {
+  constructor(
+    args: Omit<ConstructorParameters<typeof StoreGroupConfigSubRequest>[0], 'namespace'>
+  ) {
+    super({ ...args, namespace: SnodeNamespaces.ClosedGroupRevokedRetrievableMessages });
   }
 }
 
@@ -1136,8 +1159,11 @@ export type RawSnodeSubRequests =
   | RetrieveLegacyClosedGroupSubRequest
   | RetrieveUserSubRequest
   | RetrieveGroupSubRequest
-  | StoreGroupConfigSubRequest
+  | StoreGroupInfoSubRequest
+  | StoreGroupMembersSubRequest
+  | StoreGroupKeysSubRequest
   | StoreGroupMessageSubRequest
+  | StoreGroupRevokedRetrievableSubRequest
   | StoreUserConfigSubRequest
   | SwarmForSubRequest
   | OnsResolveSubRequest
@@ -1159,13 +1185,16 @@ export type BuiltSnodeSubRequests =
   | ReturnType<RetrieveLegacyClosedGroupSubRequest['build']>
   | AwaitedReturn<RetrieveUserSubRequest['buildAndSignParameters']>
   | AwaitedReturn<RetrieveGroupSubRequest['buildAndSignParameters']>
-  | AwaitedReturn<StoreGroupConfigSubRequest['buildAndSignParameters']>
+  | AwaitedReturn<StoreGroupInfoSubRequest['buildAndSignParameters']>
+  | AwaitedReturn<StoreGroupMembersSubRequest['buildAndSignParameters']>
+  | AwaitedReturn<StoreGroupKeysSubRequest['buildAndSignParameters']>
   | AwaitedReturn<StoreGroupMessageSubRequest['buildAndSignParameters']>
+  | AwaitedReturn<StoreGroupRevokedRetrievableSubRequest['buildAndSignParameters']>
   | AwaitedReturn<StoreUserConfigSubRequest['buildAndSignParameters']>
-  | ReturnType<SwarmForSubRequest['build']>
-  | ReturnType<OnsResolveSubRequest['build']>
-  | ReturnType<GetServiceNodesSubRequest['build']>
-  | ReturnType<NetworkTimeSubRequest['build']>
+  | AwaitedReturn<SwarmForSubRequest['build']>
+  | AwaitedReturn<OnsResolveSubRequest['build']>
+  | AwaitedReturn<GetServiceNodesSubRequest['build']>
+  | AwaitedReturn<NetworkTimeSubRequest['build']>
   | AwaitedReturn<DeleteHashesFromGroupNodeSubRequest['buildAndSignParameters']>
   | AwaitedReturn<DeleteHashesFromUserNodeSubRequest['buildAndSignParameters']>
   | AwaitedReturn<DeleteAllFromUserNodeSubRequest['buildAndSignParameters']>

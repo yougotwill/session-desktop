@@ -17,6 +17,7 @@ import { ConversationTypeEnum } from '../../models/conversationAttributes';
 import { HexString } from '../../node/hexStrings';
 import { SignalService } from '../../protobuf';
 import { getSwarmPollingInstance } from '../../session/apis/snode_api';
+import { StoreGroupRequestFactory } from '../../session/apis/snode_api/factories/StoreGroupRequestFactory';
 import { GetNetworkTime } from '../../session/apis/snode_api/getNetworkTime';
 import { ConvoHub } from '../../session/conversations';
 import { getSodiumRenderer } from '../../session/crypto';
@@ -51,6 +52,7 @@ import {
 import { StateType } from '../reducer';
 import { openConversationWithMessages } from './conversations';
 import { resetLeftOverlayMode } from './section';
+import { ed25519Str } from '../../session/utils/String';
 
 type WithFromMemberLeftMessage = { fromMemberLeftMessage: boolean }; // there are some changes we want to skip when doing changes triggered from a memberLeft message.
 export type GroupState = {
@@ -177,19 +179,7 @@ const initNewGroupInWrapper = createAsyncThunk(
       const convo = await ConvoHub.use().getOrCreateAndWait(groupPk, ConversationTypeEnum.GROUPV2);
       await convo.setIsApproved(true, false);
       await convo.commit(); // commit here too, as the poll needs it to be approved
-
-      const result = await GroupSync.pushChangesToGroupSwarmIfNeeded({
-        groupPk,
-        revokeSubRequest: null,
-        unrevokeSubRequest: null,
-        encryptedSupplementKeys: [],
-        deleteAllMessagesSubRequest: null,
-      });
-      if (result !== RunJobResult.Success) {
-        window.log.warn('GroupSync.pushChangesToGroupSwarmIfNeeded during create failed');
-        throw new Error('failed to pushChangesToGroupSwarmIfNeeded');
-      }
-
+      let groupMemberChange: GroupUpdateMemberChangeMessage | null = null;
       // push one group change message were initial members are added to the group
       if (membersFromWrapper.length) {
         const membersHex = uniq(membersFromWrapper.map(m => m.pubkeyHex));
@@ -202,7 +192,7 @@ const initNewGroupInWrapper = createAsyncThunk(
           convo,
           markAlreadySent: false, // the store below will mark the message as sent with dbMsgIdentifier
         });
-        const groupChange = await getWithoutHistoryControlMessage({
+        groupMemberChange = await getWithoutHistoryControlMessage({
           adminSecretKey: groupSecretKey,
           convo,
           groupPk,
@@ -210,12 +200,24 @@ const initNewGroupInWrapper = createAsyncThunk(
           createAtNetworkTimestamp: sentAt,
           dbMsgIdentifier: msgModel.id,
         });
-        if (groupChange) {
-          await GroupSync.storeGroupUpdateMessages({
-            groupPk,
-            updateMessages: [groupChange],
-          });
-        }
+      }
+
+      const extraStoreRequests = await StoreGroupRequestFactory.makeGroupMessageSubRequest(
+        [groupMemberChange],
+        { authData: null, secretKey: newGroup.secretKey }
+      );
+
+      const result = await GroupSync.pushChangesToGroupSwarmIfNeeded({
+        groupPk,
+        revokeSubRequest: null,
+        unrevokeSubRequest: null,
+        supplementalKeysSubRequest: [],
+        deleteAllMessagesSubRequest: null,
+        extraStoreRequests,
+      });
+      if (result !== RunJobResult.Success) {
+        window.log.warn('GroupSync.pushChangesToGroupSwarmIfNeeded during create failed');
+        throw new Error('failed to pushChangesToGroupSwarmIfNeeded');
       }
 
       await convo.commit();
@@ -647,17 +649,23 @@ async function handleMemberAddedFromUI({
     groupPk,
   });
   // first, get the unrevoke requests for people who are added
-  const revokeUnrevokeParams = await GroupPendingRemovals.getPendingRevokeParams({
-    groupPk,
-    withHistory,
-    withoutHistory,
-    removed: [],
-    secretKey: group.secretKey,
-  });
+  const { revokeSubRequest, unrevokeSubRequest } =
+    await GroupPendingRemovals.getPendingRevokeParams({
+      groupPk,
+      withHistory,
+      withoutHistory,
+      removed: [],
+      secretKey: group.secretKey,
+    });
 
   // then, handle the addition with history of messages by generating supplement keys.
   // this adds them to the members wrapper etc
   const encryptedSupplementKeys = await handleWithHistoryMembers({ groupPk, withHistory });
+
+  const supplementalKeysSubRequest = StoreGroupRequestFactory.makeStoreGroupKeysSubRequest({
+    group,
+    encryptedSupplementKeys,
+  });
 
   // then handle the addition without history of messages (full rotation of keys).
   // this adds them to the members wrapper etc
@@ -665,27 +673,6 @@ async function handleMemberAddedFromUI({
   const createAtNetworkTimestamp = GetNetworkTime.now();
 
   await LibSessionUtil.saveDumpsToDb(groupPk);
-
-  // push new members & key supplement in a single batch call
-  const sequenceResult = await GroupSync.pushChangesToGroupSwarmIfNeeded({
-    groupPk,
-    encryptedSupplementKeys,
-    ...revokeUnrevokeParams,
-    deleteAllMessagesSubRequest: null,
-  });
-  if (sequenceResult !== RunJobResult.Success) {
-    throw new Error(
-      'handleMemberAddedFromUIOrNot: pushChangesToGroupSwarmIfNeeded did not return success'
-    );
-  }
-
-  // schedule send invite details, auth signature, etc. to the new users
-  await scheduleGroupInviteJobs(groupPk, withHistory, withoutHistory);
-  await LibSessionUtil.saveDumpsToDb(groupPk);
-
-  convo.set({
-    active_at: createAtNetworkTimestamp,
-  });
 
   const expireDetails = DisappearingMessages.getExpireDetailsForOutgoingMesssage(
     convo,
@@ -698,7 +685,6 @@ async function handleMemberAddedFromUI({
     expireUpdate: expireDetails,
     markAlreadySent: false, // the store below will mark the message as sent with dbMsgIdentifier
   };
-
   const updateMessagesToPush: Array<GroupUpdateMemberChangeMessage> = [];
   if (withHistory.length) {
     const msgModel = await ClosedGroup.addUpdateMessage({
@@ -735,8 +721,35 @@ async function handleMemberAddedFromUI({
     }
   }
 
+  const extraStoreRequests = await StoreGroupRequestFactory.makeGroupMessageSubRequest(
+    updateMessagesToPush,
+    group
+  );
+
+  // push new members & key supplement in a single batch call
+  const sequenceResult = await GroupSync.pushChangesToGroupSwarmIfNeeded({
+    groupPk,
+    supplementalKeysSubRequest,
+    revokeSubRequest,
+    unrevokeSubRequest,
+    deleteAllMessagesSubRequest: null,
+    extraStoreRequests,
+  });
+  if (sequenceResult !== RunJobResult.Success) {
+    throw new Error(
+      'handleMemberAddedFromUIOrNot: pushChangesToGroupSwarmIfNeeded did not return success'
+    );
+  }
+
+  // schedule send invite details, auth signature, etc. to the new users
+  await scheduleGroupInviteJobs(groupPk, withHistory, withoutHistory);
+  await LibSessionUtil.saveDumpsToDb(groupPk);
+
+  convo.set({
+    active_at: createAtNetworkTimestamp,
+  });
+
   await convo.commit();
-  await GroupSync.storeGroupUpdateMessages({ groupPk, updateMessages: updateMessagesToPush });
 }
 
 /**
@@ -782,13 +795,51 @@ async function handleMemberRemovedFromUI({
   const createAtNetworkTimestamp = GetNetworkTime.now();
   await LibSessionUtil.saveDumpsToDb(groupPk);
 
+  const expiringDetails = DisappearingMessages.getExpireDetailsForOutgoingMesssage(
+    convo,
+    createAtNetworkTimestamp
+  );
+  let removedControlMessage: GroupUpdateMemberChangeMessage | null = null;
+  if (removed.length && !fromMemberLeftMessage) {
+    const msgModel = await ClosedGroup.addUpdateMessage({
+      diff: { type: 'kicked', kicked: removed },
+      convo,
+      sender: us,
+      sentAt: createAtNetworkTimestamp,
+      expireUpdate: {
+        expirationTimer: expiringDetails.expireTimer,
+        expirationType: expiringDetails.expirationType,
+        messageExpirationFromRetrieve:
+          expiringDetails.expireTimer > 0
+            ? createAtNetworkTimestamp + expiringDetails.expireTimer
+            : null,
+      },
+      markAlreadySent: false, // the store below will mark the message as sent with dbMsgIdentifier
+    });
+    removedControlMessage = await getRemovedControlMessage({
+      adminSecretKey: group.secretKey,
+      convo,
+      groupPk,
+      removed,
+      createAtNetworkTimestamp,
+      fromMemberLeftMessage,
+      dbMsgIdentifier: msgModel.id,
+    });
+  }
+
+  const extraStoreRequests = await StoreGroupRequestFactory.makeGroupMessageSubRequest(
+    [removedControlMessage],
+    group
+  );
+
   // revoked pubkeys, update messages, and libsession groups config in a single batch call
   const sequenceResult = await GroupSync.pushChangesToGroupSwarmIfNeeded({
     groupPk,
-    encryptedSupplementKeys: [],
+    supplementalKeysSubRequest: [],
     revokeSubRequest: null,
     unrevokeSubRequest: null,
     deleteAllMessagesSubRequest: null,
+    extraStoreRequests,
   });
   if (sequenceResult !== RunJobResult.Success) {
     throw new Error(
@@ -801,49 +852,7 @@ async function handleMemberRemovedFromUI({
   convo.set({
     active_at: createAtNetworkTimestamp,
   });
-
-  const expiringDetails = DisappearingMessages.getExpireDetailsForOutgoingMesssage(
-    convo,
-    createAtNetworkTimestamp
-  );
-
-  const shared = {
-    convo,
-    sender: us,
-    sentAt: createAtNetworkTimestamp,
-    expireUpdate: {
-      expirationTimer: expiringDetails.expireTimer,
-      expirationType: expiringDetails.expirationType,
-      messageExpirationFromRetrieve:
-        expiringDetails.expireTimer > 0
-          ? createAtNetworkTimestamp + expiringDetails.expireTimer
-          : null,
-    },
-  };
   await convo.commit();
-
-  if (removed.length && !fromMemberLeftMessage) {
-    const msgModel = await ClosedGroup.addUpdateMessage({
-      diff: { type: 'kicked', kicked: removed },
-      ...shared,
-      markAlreadySent: false, // the store below will mark the message as sent with dbMsgIdentifier
-    });
-    const removedControlMessage = await getRemovedControlMessage({
-      adminSecretKey: group.secretKey,
-      convo,
-      groupPk,
-      removed,
-      createAtNetworkTimestamp,
-      fromMemberLeftMessage,
-      dbMsgIdentifier: msgModel.id,
-    });
-    if (removedControlMessage) {
-      await GroupSync.storeGroupUpdateMessages({
-        groupPk,
-        updateMessages: [removedControlMessage],
-      });
-    }
-  }
 }
 
 async function handleNameChangeFromUI({
@@ -901,12 +910,18 @@ async function handleNameChangeFromUI({
     ...DisappearingMessages.getExpireDetailsForOutgoingMesssage(convo, createAtNetworkTimestamp),
   });
 
+  const extraStoreRequests = await StoreGroupRequestFactory.makeGroupMessageSubRequest(
+    [nameChangeMsg],
+    group
+  );
+
   const batchResult = await GroupSync.pushChangesToGroupSwarmIfNeeded({
     groupPk,
-    encryptedSupplementKeys: [],
+    supplementalKeysSubRequest: [],
     revokeSubRequest: null,
     unrevokeSubRequest: null,
     deleteAllMessagesSubRequest: null,
+    extraStoreRequests,
   });
 
   if (batchResult !== RunJobResult.Success) {
@@ -916,7 +931,6 @@ async function handleNameChangeFromUI({
   }
 
   await UserSync.queueNewJobIfNeeded();
-  await GroupSync.storeGroupUpdateMessages({ groupPk, updateMessages: [nameChangeMsg] });
 
   convo.set({
     active_at: createAtNetworkTimestamp,
@@ -1018,10 +1032,24 @@ const triggerFakeAvatarUpdate = createAsyncThunk(
       secretKey: group.secretKey,
       sodium: await getSodiumRenderer(),
     });
-    await GroupSync.storeGroupUpdateMessages({
+
+    const extraStoreRequests = await StoreGroupRequestFactory.makeGroupMessageSubRequest(
+      [updateMsg],
+      group
+    );
+
+    const batchResult = await GroupSync.pushChangesToGroupSwarmIfNeeded({
       groupPk,
-      updateMessages: [updateMsg],
+      supplementalKeysSubRequest: [],
+      revokeSubRequest: null,
+      unrevokeSubRequest: null,
+      deleteAllMessagesSubRequest: null,
+      extraStoreRequests,
     });
+    if (!batchResult) {
+      window.log.warn(`failed to send avatarChange message for group ${ed25519Str(groupPk)}`);
+      throw new Error('failed to send avatarChange message');
+    }
   }
 );
 

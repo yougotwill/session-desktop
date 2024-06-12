@@ -1,9 +1,8 @@
 /* eslint-disable no-await-in-loop */
 import { GroupPubkeyType, WithGroupPubkey } from 'libsession_util_nodejs';
-import { isArray, isEmpty, isNumber } from 'lodash';
 import { to_hex } from 'libsodium-wrappers-sumo';
+import { isArray, isEmpty, isNumber } from 'lodash';
 import { UserUtils } from '../..';
-import { SignalService } from '../../../../protobuf';
 import { assertUnreachable } from '../../../../types/sqlSharedTypes';
 import { isSignInByLinking } from '../../../../util/storage';
 import {
@@ -12,21 +11,18 @@ import {
 } from '../../../../webworker/workers/browser/libsession_worker_interface';
 import {
   DeleteAllFromGroupMsgNodeSubRequest,
-  DeleteHashesFromGroupNodeSubRequest,
-  StoreGroupConfigSubRequest,
-  StoreGroupExtraData,
+  StoreGroupKeysSubRequest,
   StoreGroupMessageSubRequest,
 } from '../../../apis/snode_api/SnodeRequestTypes';
-import { GetNetworkTime } from '../../../apis/snode_api/getNetworkTime';
+import { DeleteGroupHashesFactory } from '../../../apis/snode_api/factories/DeleteGroupHashesRequestFactory';
+import { StoreGroupRequestFactory } from '../../../apis/snode_api/factories/StoreGroupRequestFactory';
 import { SnodeNamespaces } from '../../../apis/snode_api/namespaces';
 import { WithRevokeSubRequest } from '../../../apis/snode_api/types';
-import { TTL_DEFAULT } from '../../../constants';
 import { ConvoHub } from '../../../conversations';
-import { GroupUpdateInfoChangeMessage } from '../../../messages/outgoing/controlMessage/group_v2/to_group/GroupUpdateInfoChangeMessage';
-import { GroupUpdateMemberChangeMessage } from '../../../messages/outgoing/controlMessage/group_v2/to_group/GroupUpdateMemberChangeMessage';
 import { MessageSender } from '../../../sending/MessageSender';
 import { PubKey } from '../../../types';
 import { allowOnlyOneAtATime } from '../../Promise';
+import { ed25519Str } from '../../String';
 import { GroupSuccessfulChange, LibSessionUtil } from '../../libsession/libsession_utils';
 import { runners } from '../JobRunner';
 import {
@@ -35,7 +31,6 @@ import {
   PersistedJob,
   RunJobResult,
 } from '../PersistedJob';
-import { ed25519Str } from '../../String';
 
 const defaultMsBetweenRetries = 15000; // a long time between retries, to avoid running multiple jobs at the same time, when one was postponed at the same time as one already planned (5s)
 const defaultMaxAttempts = 2;
@@ -81,98 +76,18 @@ async function confirmPushedAndDump(
   return LibSessionUtil.saveDumpsToDb(groupPk);
 }
 
-async function storeGroupUpdateMessages({
-  updateMessages,
-  groupPk,
-}: WithGroupPubkey & {
-  updateMessages: Array<GroupUpdateMemberChangeMessage | GroupUpdateInfoChangeMessage>;
-}) {
-  if (!updateMessages.length) {
-    return true;
-  }
-
-  const group = await UserGroupsWrapperActions.getGroup(groupPk);
-  if (!group) {
-    window.log.warn(
-      `storeGroupUpdateMessages for ${ed25519Str(groupPk)}: no group found in wrapper`
-    );
-    return false;
-  }
-
-  const updateMessagesToEncrypt: Array<StoreGroupExtraData> = updateMessages.map(updateMessage => {
-    const wrapped = MessageSender.wrapContentIntoEnvelope(
-      SignalService.Envelope.Type.SESSION_MESSAGE,
-      undefined,
-      updateMessage.createAtNetworkTimestamp, // message is signed with this timestmap
-      updateMessage.plainTextBuffer()
-    );
-
-    return {
-      namespace: SnodeNamespaces.ClosedGroupMessages,
-      pubkey: groupPk,
-      ttl: updateMessage.ttl(),
-      networkTimestamp: updateMessage.createAtNetworkTimestamp,
-      data: SignalService.Envelope.encode(wrapped).finish(),
-      dbMessageIdentifier: updateMessage.identifier,
-    };
-  });
-
-  const encryptedUpdate = updateMessagesToEncrypt
-    ? await MetaGroupWrapperActions.encryptMessages(
-        groupPk,
-        updateMessagesToEncrypt.map(m => m.data)
-      )
-    : [];
-
-  const updateMessagesEncrypted = updateMessagesToEncrypt.map((requestDetails, index) => ({
-    ...requestDetails,
-    data: encryptedUpdate[index],
-  }));
-
-  const updateMessagesRequests = updateMessagesEncrypted.map(m => {
-    return new StoreGroupMessageSubRequest({
-      encryptedData: m.data,
-      groupPk,
-      ttlMs: m.ttl,
-      dbMessageIdentifier: m.dbMessageIdentifier,
-      ...group,
-      createdAtNetworkTimestamp: m.networkTimestamp,
-    });
-  });
-
-  const result = await MessageSender.sendEncryptedDataToSnode({
-    storeRequests: [...updateMessagesRequests],
-    destination: groupPk,
-    deleteHashesSubRequest: null,
-    revokeSubRequest: null,
-    unrevokeSubRequest: null,
-    deleteAllMessagesSubRequest: null,
-  });
-
-  const expectedReplyLength = updateMessagesRequests.length; // each of those messages are sent as a subrequest
-
-  // we do a sequence call here. If we do not have the right expected number of results, consider it a failure
-  if (!isArray(result) || result.length !== expectedReplyLength) {
-    window.log.info(
-      `GroupSyncJob: unexpected result length: expected ${expectedReplyLength} but got ${result?.length}`
-    );
-
-    // this might be a 421 error (already handled) so let's retry this request a little bit later
-    return false;
-  }
-  return true;
-}
-
 async function pushChangesToGroupSwarmIfNeeded({
   revokeSubRequest,
   unrevokeSubRequest,
   groupPk,
-  encryptedSupplementKeys,
+  supplementalKeysSubRequest,
   deleteAllMessagesSubRequest,
+  extraStoreRequests,
 }: WithGroupPubkey &
   WithRevokeSubRequest & {
-    encryptedSupplementKeys: Array<Uint8Array>;
+    supplementalKeysSubRequest: Array<StoreGroupKeysSubRequest>;
     deleteAllMessagesSubRequest?: DeleteAllFromGroupMsgNodeSubRequest | null;
+    extraStoreRequests: Array<StoreGroupMessageSubRequest>;
   }): Promise<RunJobResult> {
   // save the dumps to DB even before trying to push them, so at least we have an up to date dumps in the DB in case of crash, no network etc
   await LibSessionUtil.saveDumpsToDb(groupPk);
@@ -182,10 +97,11 @@ async function pushChangesToGroupSwarmIfNeeded({
   // is updated we want to try and run immediately so don't schedule another run in this case)
   if (
     isEmpty(pendingConfigData) &&
-    !encryptedSupplementKeys.length &&
-    !revokeSubRequest &&
-    !unrevokeSubRequest &&
-    !deleteAllMessagesSubRequest
+    isEmpty(supplementalKeysSubRequest) &&
+    isEmpty(revokeSubRequest) &&
+    isEmpty(unrevokeSubRequest) &&
+    isEmpty(deleteAllMessagesSubRequest) &&
+    isEmpty(extraStoreRequests)
   ) {
     window.log.debug(`pushChangesToGroupSwarmIfNeeded: ${ed25519Str(groupPk)}: nothing to push`);
     return RunJobResult.Success;
@@ -205,109 +121,20 @@ async function pushChangesToGroupSwarmIfNeeded({
     );
   }
 
-  const networkTimestamp = GetNetworkTime.now();
-
-  const pendingConfigMsgs = pendingConfigData.map(item => {
-    return {
-      namespace: item.namespace,
-      pubkey: groupPk,
-      networkTimestamp,
-      ttl: TTL_DEFAULT.CONFIG_MESSAGE,
-      data: item.ciphertext,
-    };
+  const pendingConfigRequests = StoreGroupRequestFactory.makeStoreGroupConfigSubRequest({
+    group,
+    pendingConfigData,
   });
 
-  // supplementKeys are already encrypted by libsession
-  const keysEncryptedMessages: Array<StoreGroupExtraData> = encryptedSupplementKeys.map(key => ({
-    namespace: SnodeNamespaces.ClosedGroupKeys,
-    pubkey: groupPk,
-    ttl: TTL_DEFAULT.CONFIG_MESSAGE,
-    networkTimestamp,
-    data: key,
-    dbMessageIdentifier: null,
-  }));
-
-  let pendingConfigRequests: Array<StoreGroupConfigSubRequest> = [];
-  let keysEncryptedRequests: Array<StoreGroupConfigSubRequest> = [];
-
-  if (pendingConfigMsgs.length) {
-    if (!group.secretKey || isEmpty(group.secretKey)) {
-      window.log.debug(
-        `pushChangesToGroupSwarmIfNeeded: ${ed25519Str(groupPk)}: pendingConfigMsgs not empty but we do not have the secretKey`
-      );
-
-      throw new Error(
-        'pushChangesToGroupSwarmIfNeeded: pendingConfigMsgs not empty but we do not have the secretKey'
-      );
-    }
-
-    pendingConfigRequests = pendingConfigMsgs.map(m => {
-      return new StoreGroupConfigSubRequest({
-        encryptedData: m.data,
-        groupPk,
-        namespace: m.namespace,
-        ttlMs: m.ttl,
-        secretKey: group.secretKey,
-        authData: null,
-      });
-    });
-  }
-
-  if (keysEncryptedMessages.length) {
-    // supplementalKeys are already encrypted, but we still need the secretKey to sign the request
-
-    if (!group.secretKey || isEmpty(group.secretKey)) {
-      window.log.debug(
-        `pushChangesToGroupSwarmIfNeeded: ${ed25519Str(groupPk)}: keysEncryptedmessage not empty but we do not have the secretKey`
-      );
-
-      throw new Error(
-        'pushChangesToGroupSwarmIfNeeded: keysEncryptedmessage not empty but we do not have the secretKey'
-      );
-    }
-    keysEncryptedRequests = keysEncryptedMessages.map(m => {
-      return new StoreGroupConfigSubRequest({
-        encryptedData: m.data,
-        groupPk,
-        namespace: SnodeNamespaces.ClosedGroupKeys,
-        ttlMs: m.ttl,
-        secretKey: group.secretKey,
-        authData: null,
-      });
-    });
-  }
-
-  let deleteHashesSubRequest: DeleteHashesFromGroupNodeSubRequest | null = null;
-  const allOldHashesArray = [...allOldHashes];
-  if (allOldHashesArray.length) {
-    if (!group.secretKey || isEmpty(group.secretKey)) {
-      window.log.debug(
-        `pushChangesToGroupSwarmIfNeeded: ${ed25519Str(groupPk)}: allOldHashesArray not empty but we do not have the secretKey`
-      );
-
-      throw new Error(
-        'pushChangesToGroupSwarmIfNeeded: allOldHashesArray not empty but we do not have the secretKey'
-      );
-    }
-
-    deleteHashesSubRequest = new DeleteHashesFromGroupNodeSubRequest({
-      messagesHashes: [...allOldHashes],
-      groupPk,
-      secretKey: group.secretKey,
-    });
-  }
-
-  if (
-    revokeSubRequest?.revokeTokenHex.length === 0 ||
-    unrevokeSubRequest?.revokeTokenHex.length === 0
-  ) {
-    throw new Error(
-      'revokeSubRequest and unrevoke request must be null when not doing token change'
-    );
-  }
+  const deleteHashesSubRequest = DeleteGroupHashesFactory.makeGroupHashesToDeleteSubRequest({
+    group,
+    allOldHashes,
+  });
 
   const result = await MessageSender.sendEncryptedDataToSnode({
-    storeRequests: [...pendingConfigRequests, ...keysEncryptedRequests],
+    // Note: this is on purpose that supplementalKeysSubRequest is before pendingConfigRequests
+    // as this is to avoid a race condition where a device polls while we are posting the configs (already encrypted with the new keys)
+    storeRequests: [...supplementalKeysSubRequest, ...pendingConfigRequests, ...extraStoreRequests],
     destination: groupPk,
     deleteHashesSubRequest,
     revokeSubRequest,
@@ -316,12 +143,13 @@ async function pushChangesToGroupSwarmIfNeeded({
   });
 
   const expectedReplyLength =
-    pendingConfigRequests.length + // each of those messages are sent as a subrequest
-    keysEncryptedRequests.length + // each of those messages are sent as a subrequest
+    pendingConfigRequests.length + // each of those are sent as a subrequest
+    supplementalKeysSubRequest.length + // each of those are sent as a subrequest
     (allOldHashes.size ? 1 : 0) + // we are sending all hashes changes as a single subrequest
     (revokeSubRequest ? 1 : 0) + // we are sending all revoke updates as a single subrequest
     (unrevokeSubRequest ? 1 : 0) + // we are sending all revoke updates as a single subrequest
-    (deleteAllMessagesSubRequest ? 1 : 0); // a delete_all sub request is a single subrequest
+    (deleteAllMessagesSubRequest ? 1 : 0) + // a delete_all sub request is a single subrequest
+    (extraStoreRequests ? 1 : 0); // each of those are sent as a subrequest
 
   // we do a sequence call here. If we do not have the right expected number of results, consider it a failure
   if (!isArray(result) || result.length !== expectedReplyLength) {
@@ -341,9 +169,9 @@ async function pushChangesToGroupSwarmIfNeeded({
   if (isEmpty(changes)) {
     return RunJobResult.RetryJobIfPossible;
   }
+
   // Now that we have the successful changes, we need to mark them as pushed and
   // generate any config dumps which need to be stored
-
   await confirmPushedAndDump(changes, groupPk);
   return RunJobResult.Success;
 }
@@ -393,7 +221,8 @@ class GroupSyncJob extends PersistedJob<GroupSyncPersistedData> {
         groupPk: thisJobDestination,
         revokeSubRequest: null,
         unrevokeSubRequest: null,
-        encryptedSupplementKeys: [],
+        supplementalKeysSubRequest: [],
+        extraStoreRequests: [],
       });
 
       // eslint-disable-next-line no-useless-catch
@@ -473,7 +302,6 @@ async function queueNewJobIfNeeded(groupPk: GroupPubkeyType) {
 export const GroupSync = {
   GroupSyncJob,
   pushChangesToGroupSwarmIfNeeded,
-  storeGroupUpdateMessages,
   queueNewJobIfNeeded: (groupPk: GroupPubkeyType) =>
     allowOnlyOneAtATime(`GroupSyncJob-oneAtAtTime-${groupPk}`, () => queueNewJobIfNeeded(groupPk)),
 };

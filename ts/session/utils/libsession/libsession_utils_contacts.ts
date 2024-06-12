@@ -70,7 +70,6 @@ async function insertContactFromDBIntoWrapperAndRefresh(
   const expirationMode = foundConvo.get('expirationMode') || undefined;
   const expireTimer = foundConvo.get('expireTimer') || 0;
 
-
   const wrapperContact = getContactInfoFromDBValues({
     id,
     dbApproved,

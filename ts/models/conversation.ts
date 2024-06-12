@@ -139,6 +139,7 @@ import {
   UserGroupsWrapperActions,
 } from '../webworker/workers/browser/libsession_worker_interface';
 import { markAttributesAsReadIfNeeded } from './messageFactory';
+import { StoreGroupRequestFactory } from '../session/apis/snode_api/factories/StoreGroupRequestFactory';
 
 type InMemoryConvoInfos = {
   mentionedUs: boolean;
@@ -1122,17 +1123,20 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
             updatedExpirationSeconds: expireUpdate.expireTimer,
           });
 
+          const extraStoreRequests = await StoreGroupRequestFactory.makeGroupMessageSubRequest(
+            [v2groupMessage],
+            group
+          );
+
           await GroupSync.pushChangesToGroupSwarmIfNeeded({
             groupPk: this.id,
             revokeSubRequest: null,
             unrevokeSubRequest: null,
             deleteAllMessagesSubRequest: null,
-            encryptedSupplementKeys: [],
+            supplementalKeysSubRequest: [],
+            extraStoreRequests,
           });
-          await GroupSync.storeGroupUpdateMessages({
-            groupPk: this.id,
-            updateMessages: [v2groupMessage],
-          });
+
           await GroupSync.queueNewJobIfNeeded(this.id);
           return true;
         }

@@ -30,8 +30,11 @@ import {
   RetrieveGroupSubRequest,
   RetrieveLegacyClosedGroupSubRequest,
   RetrieveUserSubRequest,
-  StoreGroupConfigSubRequest,
+  StoreGroupInfoSubRequest,
+  StoreGroupKeysSubRequest,
+  StoreGroupMembersSubRequest,
   StoreGroupMessageSubRequest,
+  StoreGroupRevokedRetrievableSubRequest,
   StoreLegacyGroupMessageSubRequest,
   StoreUserConfigSubRequest,
   StoreUserMessageSubRequest,
@@ -89,7 +92,12 @@ type StoreRequest05 =
   | StoreUserConfigSubRequest
   | StoreUserMessageSubRequest
   | StoreLegacyGroupMessageSubRequest;
-type StoreRequest03 = StoreGroupConfigSubRequest | StoreGroupMessageSubRequest;
+type StoreRequest03 =
+  | StoreGroupInfoSubRequest
+  | StoreGroupMembersSubRequest
+  | StoreGroupKeysSubRequest
+  | StoreGroupRevokedRetrievableSubRequest
+  | StoreGroupMessageSubRequest;
 
 type PubkeyToRequestType<T extends GroupPubkeyType | PubkeyType> = T extends PubkeyType
   ? StoreRequest05
@@ -366,7 +374,10 @@ async function signSubRequests(
         p instanceof DeleteHashesFromUserNodeSubRequest ||
         p instanceof DeleteHashesFromGroupNodeSubRequest ||
         p instanceof DeleteAllFromUserNodeSubRequest ||
-        p instanceof StoreGroupConfigSubRequest ||
+        p instanceof StoreGroupInfoSubRequest ||
+        p instanceof StoreGroupMembersSubRequest ||
+        p instanceof StoreGroupKeysSubRequest ||
+        p instanceof StoreGroupRevokedRetrievableSubRequest ||
         p instanceof StoreGroupMessageSubRequest ||
         p instanceof StoreLegacyGroupMessageSubRequest ||
         p instanceof StoreUserConfigSubRequest ||

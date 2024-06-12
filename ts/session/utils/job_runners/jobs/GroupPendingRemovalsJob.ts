@@ -13,11 +13,10 @@ import {
   MultiEncryptWrapperActions,
   UserGroupsWrapperActions,
 } from '../../../../webworker/workers/browser/libsession_worker_interface';
+import { StoreGroupRevokedRetrievableSubRequest } from '../../../apis/snode_api/SnodeRequestTypes';
 import { GetNetworkTime } from '../../../apis/snode_api/getNetworkTime';
-import { SnodeNamespaces } from '../../../apis/snode_api/namespaces';
 import { RevokeChanges, SnodeAPIRevoke } from '../../../apis/snode_api/revokeSubaccount';
 import { WithSecretKey } from '../../../apis/snode_api/types';
-import { TTL_DEFAULT } from '../../../constants';
 import { concatUInt8Array } from '../../../crypto';
 import { MessageSender } from '../../../sending';
 import { fromHexToArray } from '../../String';
@@ -29,7 +28,6 @@ import {
   RunJobResult,
 } from '../PersistedJob';
 import { GroupSync } from './GroupSyncJob';
-import { StoreGroupConfigSubRequest } from '../../../apis/snode_api/SnodeRequestTypes';
 
 export type WithAddWithoutHistoryMembers = { withoutHistory: Array<PubkeyType> };
 export type WithAddWithHistoryMembers = { withHistory: Array<PubkeyType> };
@@ -154,13 +152,10 @@ class GroupPendingRemovalsJob extends PersistedJob<GroupPendingRemovalsPersisted
         secretKey: group.secretKey,
       });
 
-      const multiEncryptRequest = new StoreGroupConfigSubRequest({
+      const multiEncryptRequest = new StoreGroupRevokedRetrievableSubRequest({
         encryptedData: multiEncryptedMessage,
         groupPk,
-        namespace: SnodeNamespaces.ClosedGroupRevokedRetrievableMessages,
-        ttlMs: TTL_DEFAULT.CONTENT_MESSAGE,
         secretKey: group.secretKey,
-        authData: null,
       });
 
       const result = await MessageSender.sendEncryptedDataToSnode({

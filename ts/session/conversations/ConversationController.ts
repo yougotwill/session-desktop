@@ -329,8 +329,9 @@ class ConvoController {
             groupPk,
             revokeSubRequest: null,
             unrevokeSubRequest: null,
-            encryptedSupplementKeys: [],
+            supplementalKeysSubRequest: [],
             deleteAllMessagesSubRequest,
+            extraStoreRequests: [],
           });
           if (lastPushResult !== RunJobResult.Success) {
             throw new Error(`Failed to destroyGroupDetails for pk ${ed25519Str(groupPk)}`);

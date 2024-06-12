@@ -27,5 +27,5 @@ export function isTestIntegration() {
 }
 
 export function hasClosedGroupV2QAButtons() {
-  return !!window.sessionFeatureFlags.useClosedGroupV2QAButtons
+  return !!window.sessionFeatureFlags.useClosedGroupV2QAButtons;
 }

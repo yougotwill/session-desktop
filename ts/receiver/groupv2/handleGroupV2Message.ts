@@ -355,7 +355,6 @@ async function handleGroupMemberLeftMessage({
       memberLeft: author,
     })
   );
-
 }
 
 async function handleGroupUpdateMemberLeftNotificationMessage({
@@ -491,7 +490,6 @@ async function handleGroupUpdateInviteResponseMessage({
   }
 
   window.inboxStore.dispatch(groupInfoActions.inviteResponseReceived({ groupPk, member: author }));
-
 }
 
 async function handleGroupUpdatePromoteMessage({
@@ -531,7 +529,6 @@ async function handleGroupUpdatePromoteMessage({
       secret: groupKeypair.privateKey,
     })
   );
-
 }
 
 async function handle1o1GroupUpdateMessage(
