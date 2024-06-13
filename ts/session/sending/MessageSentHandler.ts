@@ -61,35 +61,39 @@ async function handlePublicMessageSentFailure(sentMessage: OpenGroupVisibleMessa
 }
 
 async function handleSwarmMessageSentSuccess(
-  sentMessage: Pick<OutgoingRawMessage, 'device' | 'encryption' | 'identifier'> & {
+  {
+    device: destination,
+    identifier,
+    isDestinationClosedGroup,
+    plainTextBuffer,
+  }: Pick<OutgoingRawMessage, 'device' | 'identifier'> & {
     /**
      * plainTextBuffer is only required when sending a message to a 1o1,
      * as we need it to encrypt it again for our linked devices (synced messages)
      */
     plainTextBuffer: Uint8Array | null;
+    /**
+     * We must not sync a message when it was sent to a closed group
+     */
+    isDestinationClosedGroup: boolean;
   },
   effectiveTimestamp: number,
   storedHash: string | null
 ) {
   // The wrappedEnvelope will be set only if the message is not one of OpenGroupV2Message type.
-  let fetchedMessage = await fetchHandleMessageSentData(sentMessage.identifier);
+  let fetchedMessage = await fetchHandleMessageSentData(identifier);
   if (!fetchedMessage) {
     return;
   }
 
   let sentTo = fetchedMessage.get('sent_to') || [];
 
-  const isOurDevice = UserUtils.isUsFromCache(sentMessage.device);
+  const isOurDevice = UserUtils.isUsFromCache(destination);
 
-  // FIXME this is not correct and will cause issues with syncing
-  // At this point the only way to check for medium
-  // group is by comparing the encryption type
-  const isClosedGroupMessage =
-    sentMessage.encryption === SignalService.Envelope.Type.CLOSED_GROUP_MESSAGE ||
-    PubKey.is03Pubkey(sentMessage.device);
+  const isClosedGroupMessage = isDestinationClosedGroup || PubKey.is03Pubkey(destination);
 
   // We trigger a sync message only when the message is not to one of our devices, AND
-  // the message is not for an open group (there is no sync for opengroups, each device pulls all messages), AND
+  // the message is not for a group (there is no sync for groups, each device pulls all messages), AND
   // if we did not sync or trigger a sync message for this specific message already
   const shouldTriggerSyncMessage =
     !isOurDevice &&
@@ -100,16 +104,16 @@ async function handleSwarmMessageSentSuccess(
   // A message is synced if we triggered a sync message (sentSync)
   // and the current message was sent to our device (so a sync message)
   const shouldMarkMessageAsSynced =
-    isOurDevice && fetchedMessage.get('sentSync') && isClosedGroupMessage;
+    (isOurDevice && fetchedMessage.get('sentSync')) || isClosedGroupMessage;
 
   // Handle the sync logic here
-  if (shouldTriggerSyncMessage && sentMessage && sentMessage.plainTextBuffer) {
+  if (shouldTriggerSyncMessage && plainTextBuffer) {
     try {
-      const contentDecoded = SignalService.Content.decode(sentMessage.plainTextBuffer);
+      const contentDecoded = SignalService.Content.decode(plainTextBuffer);
       if (contentDecoded && contentDecoded.dataMessage) {
         try {
           await fetchedMessage.sendSyncMessage(contentDecoded, effectiveTimestamp);
-          const tempFetchMessage = await fetchHandleMessageSentData(sentMessage.identifier);
+          const tempFetchMessage = await fetchHandleMessageSentData(identifier);
           if (!tempFetchMessage) {
             window?.log?.warn(
               'Got an error while trying to sendSyncMessage(): fetchedMessage is null'
@@ -130,7 +134,7 @@ async function handleSwarmMessageSentSuccess(
     fetchedMessage.set({ synced: true });
   }
 
-  sentTo = union(sentTo, [sentMessage.device]);
+  sentTo = union(sentTo, [destination]);
   if (storedHash) {
     fetchedMessage.updateMessageHash(storedHash);
   }

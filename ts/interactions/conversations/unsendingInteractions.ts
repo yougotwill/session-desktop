@@ -189,7 +189,7 @@ export async function deleteMessagesFromSwarmOnly(
 ) {
   const deletionMessageHashes = isStringArray(messages) ? messages : getMessageHashes(messages);
   try {
-    if (messages.length === 0) {
+    if (isEmpty(messages)) {
       return false;
     }
 
@@ -199,10 +199,11 @@ export async function deleteMessagesFromSwarmOnly(
       );
       return false;
     }
+    const hashesAsSet = new Set(deletionMessageHashes);
     if (PubKey.is03Pubkey(pubkey)) {
-      return await SnodeAPI.networkDeleteMessagesForGroup(deletionMessageHashes, pubkey);
+      return await SnodeAPI.networkDeleteMessagesForGroup(hashesAsSet, pubkey);
     }
-    return await SnodeAPI.networkDeleteMessageOurSwarm(deletionMessageHashes, pubkey);
+    return await SnodeAPI.networkDeleteMessageOurSwarm(hashesAsSet, pubkey);
   } catch (e) {
     window.log?.error(
       `deleteMessagesFromSwarmOnly: Error deleting message from swarm of ${ed25519Str(pubkey)}, hashes: ${deletionMessageHashes}`,

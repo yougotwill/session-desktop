@@ -210,7 +210,6 @@ const initNewGroupInWrapper = createAsyncThunk(
       const result = await GroupSync.pushChangesToGroupSwarmIfNeeded({
         groupPk,
         supplementalKeysSubRequest: [],
-        deleteAllMessagesSubRequest: null,
         extraStoreRequests,
       });
       if (result !== RunJobResult.Success) {
@@ -730,7 +729,6 @@ async function handleMemberAddedFromUI({
     supplementalKeysSubRequest,
     revokeSubRequest,
     unrevokeSubRequest,
-    deleteAllMessagesSubRequest: null,
     extraStoreRequests,
   });
   if (sequenceResult !== RunJobResult.Success) {
@@ -834,7 +832,6 @@ async function handleMemberRemovedFromUI({
   const sequenceResult = await GroupSync.pushChangesToGroupSwarmIfNeeded({
     groupPk,
     supplementalKeysSubRequest: [],
-    deleteAllMessagesSubRequest: null,
     extraStoreRequests,
   });
   if (sequenceResult !== RunJobResult.Success) {
@@ -914,7 +911,6 @@ async function handleNameChangeFromUI({
   const batchResult = await GroupSync.pushChangesToGroupSwarmIfNeeded({
     groupPk,
     supplementalKeysSubRequest: [],
-    deleteAllMessagesSubRequest: null,
     extraStoreRequests,
   });
 
@@ -1035,7 +1031,6 @@ const triggerFakeAvatarUpdate = createAsyncThunk(
     const batchResult = await GroupSync.pushChangesToGroupSwarmIfNeeded({
       groupPk,
       supplementalKeysSubRequest: [],
-      deleteAllMessagesSubRequest: null,
       extraStoreRequests,
     });
     if (!batchResult) {

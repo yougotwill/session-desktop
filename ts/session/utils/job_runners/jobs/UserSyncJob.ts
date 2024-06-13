@@ -113,7 +113,7 @@ async function pushChangesToUserSwarmIfNeeded() {
     ? new DeleteHashesFromUserNodeSubRequest({
         messagesHashes: [...changesToPush.allOldHashes],
       })
-    : null;
+    : undefined;
 
   const result = await MessageSender.sendEncryptedDataToSnode({
     storeRequests,

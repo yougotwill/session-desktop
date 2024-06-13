@@ -161,7 +161,6 @@ class GroupPendingRemovalsJob extends PersistedJob<GroupPendingRemovalsPersisted
       const result = await MessageSender.sendEncryptedDataToSnode({
         storeRequests: [multiEncryptRequest],
         destination: groupPk,
-        deleteHashesSubRequest: null,
         ...revokeUnrevokeParams,
       });
 

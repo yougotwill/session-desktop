@@ -3,18 +3,16 @@
 import { GroupPubkeyType, PubkeyType } from 'libsession_util_nodejs';
 import { compact, isEmpty } from 'lodash';
 import pRetry from 'p-retry';
+import { UserGroupsWrapperActions } from '../../../webworker/workers/browser/libsession_worker_interface';
 import { getSodiumRenderer } from '../../crypto';
 import { PubKey } from '../../types';
-import {
-  DeleteAllFromUserNodeSubRequest,
-  DeleteHashesFromGroupNodeSubRequest,
-  DeleteHashesFromUserNodeSubRequest,
-} from './SnodeRequestTypes';
-import { BatchRequests } from './batchRequest';
-import { SnodePool } from './snodePool';
 import { StringUtils, UserUtils } from '../../utils';
 import { ed25519Str, fromBase64ToArray, fromHexToArray } from '../../utils/String';
-import { UserGroupsWrapperActions } from '../../../webworker/workers/browser/libsession_worker_interface';
+import { DeleteAllFromUserNodeSubRequest } from './SnodeRequestTypes';
+import { BatchRequests } from './batchRequest';
+import { DeleteGroupHashesFactory } from './factories/DeleteGroupHashesRequestFactory';
+import { DeleteUserHashesFactory } from './factories/DeleteUserHashesRequestFactory';
+import { SnodePool } from './snodePool';
 
 export const ERROR_CODE_NO_CONNECT = 'ENETUNREACH: No network connection.';
 
@@ -158,14 +156,22 @@ const TEST_getMinTimeout = () => 500;
  * Note: legacy group did not support removing messages from the swarm.
  */
 const networkDeleteMessageOurSwarm = async (
-  messagesHashes: Array<string>,
+  messagesHashes: Set<string>,
   pubkey: PubkeyType
 ): Promise<boolean> => {
   const sodium = await getSodiumRenderer();
   if (!PubKey.is05Pubkey(pubkey) || pubkey !== UserUtils.getOurPubKeyStrFromCache()) {
     throw new Error('networkDeleteMessageOurSwarm with 05 pk can only for our own swarm');
   }
-  const request = new DeleteHashesFromUserNodeSubRequest({ messagesHashes });
+  if (isEmpty(messagesHashes)) {
+    window.log.info('networkDeleteMessageOurSwarm: messageHashes is empty');
+    return true;
+  }
+  const messageHashesArr = [...messagesHashes];
+  const request = DeleteUserHashesFactory.makeUserHashesToDeleteSubRequest({ messagesHashes });
+  if (!request) {
+    throw new Error('makeUserHashesToDeleteSubRequest returned invalid subrequest');
+  }
 
   try {
     const success = await pRetry(
@@ -237,7 +243,7 @@ const networkDeleteMessageOurSwarm = async (
               const responseHashes = snodeJson.deleted as Array<string>;
               const signatureSnode = snodeJson.signature as string;
               // The signature looks like ( PUBKEY_HEX || RMSG[0] || ... || RMSG[N] || DMSG[0] || ... || DMSG[M] )
-              const dataToVerify = `${request.pubkey}${messagesHashes.join(
+              const dataToVerify = `${request.pubkey}${messageHashesArr.join(
                 ''
               )}${responseHashes.join('')}`;
               const dataToVerifyUtf8 = StringUtils.encode(dataToVerify, 'utf8');
@@ -292,7 +298,7 @@ const networkDeleteMessageOurSwarm = async (
  *  - if the request failed too many times
  */
 const networkDeleteMessagesForGroup = async (
-  messagesHashes: Array<string>,
+  messagesHashes: Set<string>,
   groupPk: GroupPubkeyType
 ): Promise<boolean> => {
   if (!PubKey.is03Pubkey(groupPk)) {
@@ -301,17 +307,21 @@ const networkDeleteMessagesForGroup = async (
   const group = await UserGroupsWrapperActions.getGroup(groupPk);
   if (!group || !group.secretKey || isEmpty(group.secretKey)) {
     window.log.warn(
-      `networkDeleteMessagesForGroup: not deleting from swarm of 03-group ${messagesHashes.length} hashes as we do not the adminKey`
+      `networkDeleteMessagesForGroup: not deleting from swarm of 03-group ${messagesHashes.size} hashes as we do not the adminKey`
     );
     return false;
   }
 
   try {
-    const request = new DeleteHashesFromGroupNodeSubRequest({
+    const request = DeleteGroupHashesFactory.makeGroupHashesToDeleteSubRequest({
       messagesHashes,
-      groupPk,
-      secretKey: group.secretKey,
+      group,
     });
+    if (!request) {
+      throw new Error(
+        'DeleteGroupHashesFactory.makeGroupHashesToDeleteSubRequest failed to build a request '
+      );
+    }
 
     await pRetry(
       async () => {

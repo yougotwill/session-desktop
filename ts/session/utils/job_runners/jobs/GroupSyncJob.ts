@@ -86,15 +86,16 @@ async function pushChangesToGroupSwarmIfNeeded({
 }: WithGroupPubkey &
   WithRevokeSubRequest & {
     supplementalKeysSubRequest: Array<StoreGroupKeysSubRequest>;
-    deleteAllMessagesSubRequest?: DeleteAllFromGroupMsgNodeSubRequest | null;
+    deleteAllMessagesSubRequest?: DeleteAllFromGroupMsgNodeSubRequest;
     extraStoreRequests: Array<StoreGroupMessageSubRequest>;
   }): Promise<RunJobResult> {
   // save the dumps to DB even before trying to push them, so at least we have an up to date dumps in the DB in case of crash, no network etc
   await LibSessionUtil.saveDumpsToDb(groupPk);
   const { allOldHashes, messages: pendingConfigData } =
     await LibSessionUtil.pendingChangesForGroup(groupPk);
-  // If there are no pending changes then the job can just complete (next time something
-  // is updated we want to try and run immediately so don't schedule another run in this case)
+  // If there are no pending changes nor any requests to be made,
+  // then the job can just complete (next time something is updated we want
+  // to try and run immediately so don't schedule another run in this case)
   if (
     isEmpty(pendingConfigData) &&
     isEmpty(supplementalKeysSubRequest) &&
@@ -128,12 +129,13 @@ async function pushChangesToGroupSwarmIfNeeded({
 
   const deleteHashesSubRequest = DeleteGroupHashesFactory.makeGroupHashesToDeleteSubRequest({
     group,
-    allOldHashes,
+    messagesHashes: allOldHashes,
   });
 
   const result = await MessageSender.sendEncryptedDataToSnode({
     // Note: this is on purpose that supplementalKeysSubRequest is before pendingConfigRequests
-    // as this is to avoid a race condition where a device polls while we are posting the configs (already encrypted with the new keys)
+    // as this is to avoid a race condition where a device is polling right
+    // while we are posting the configs (already encrypted with the new keys)
     storeRequests: [...supplementalKeysSubRequest, ...pendingConfigRequests, ...extraStoreRequests],
     destination: groupPk,
     deleteHashesSubRequest,

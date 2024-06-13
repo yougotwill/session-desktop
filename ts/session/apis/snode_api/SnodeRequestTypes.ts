@@ -39,7 +39,7 @@ abstract class SnodeAPISubRequest {
  * Retrieve for legacy was not authenticated
  */
 export class RetrieveLegacyClosedGroupSubRequest extends SnodeAPISubRequest {
-  public method = 'retrieve' as const;
+  method = 'retrieve' as const;
   public readonly legacyGroupPk: PubkeyType;
   public readonly last_hash: string;
   public readonly max_size: number | undefined;

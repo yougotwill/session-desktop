@@ -429,8 +429,8 @@ async function sendMessagesDataToSnode<T extends PubkeyType | GroupPubkeyType>(
     deleteHashesSubRequest,
     deleteAllMessagesSubRequest,
   }: WithRevokeSubRequest & {
-    deleteAllMessagesSubRequest?: DeleteAllFromGroupMsgNodeSubRequest | null;
-    deleteHashesSubRequest: DeleteHashesRequestPerPubkey<T> | null;
+    deleteAllMessagesSubRequest?: DeleteAllFromGroupMsgNodeSubRequest;
+    deleteHashesSubRequest?: DeleteHashesRequestPerPubkey<T>;
   },
   method: MethodBatchType
 ): Promise<NotEmptyArrayOfBatchResults> {
@@ -645,8 +645,8 @@ async function sendEncryptedDataToSnode<T extends GroupPubkeyType | PubkeyType>(
 }: WithRevokeSubRequest & {
   storeRequests: StoreRequestsPerPubkey<T>; // keeping those as an array because the order needs to be enforced for some (groupkeys for instance)
   destination: T;
-  deleteHashesSubRequest: DeleteHashesRequestPerPubkey<T> | null;
-  deleteAllMessagesSubRequest?: DeleteAllFromGroupMsgNodeSubRequest | null;
+  deleteHashesSubRequest?: DeleteHashesRequestPerPubkey<T>;
+  deleteAllMessagesSubRequest?: DeleteAllFromGroupMsgNodeSubRequest;
 }): Promise<NotEmptyArrayOfBatchResults | null> {
   try {
     const batchResults = await pRetry(
@@ -736,7 +736,6 @@ async function sendUnencryptedDataToSnode<T extends GroupPubkeyType | PubkeyType
 
   return sendEncryptedDataToSnode({
     destination,
-    deleteHashesSubRequest: null,
     storeRequests,
   });
 }
@@ -832,7 +831,8 @@ async function handleBatchResultWithSubRequests({
   for (let index = 0; index < subRequests.length; index++) {
     const subRequest = subRequests[index];
 
-    // there are some stuff we need to do when storing a message (for a group/legacy group or user, but no config messages)
+    // there are some things we need to do when storing messages
+    // for groups/legacy groups or user (but not for config messages)
     if (
       subRequest instanceof StoreGroupMessageSubRequest ||
       subRequest instanceof StoreLegacyGroupMessageSubRequest ||
@@ -862,9 +862,7 @@ async function handleBatchResultWithSubRequests({
           await MessageSentHandler.handleSwarmMessageSentSuccess(
             {
               device: subRequest.destination,
-              encryption: isDestinationClosedGroup
-                ? SignalService.Envelope.Type.CLOSED_GROUP_MESSAGE
-                : SignalService.Envelope.Type.SESSION_MESSAGE,
+              isDestinationClosedGroup,
               identifier: subRequest.dbMessageIdentifier,
               plainTextBuffer:
                 subRequest instanceof StoreUserMessageSubRequest

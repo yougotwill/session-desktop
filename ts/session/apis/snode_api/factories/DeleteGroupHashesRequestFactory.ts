@@ -4,32 +4,32 @@ import { ed25519Str } from '../../../utils/String';
 import { DeleteHashesFromGroupNodeSubRequest } from '../SnodeRequestTypes';
 
 function makeGroupHashesToDeleteSubRequest({
-  allOldHashes,
+  messagesHashes,
   group,
 }: {
   group: Pick<UserGroupsGet, 'secretKey' | 'pubkeyHex'>;
-  allOldHashes: Set<string>;
+  messagesHashes: Set<string>;
 }) {
   const groupPk = group.pubkeyHex;
-  const allOldHashesArray = [...allOldHashes];
-  if (allOldHashesArray.length) {
+  const messagesHashesArr = [...messagesHashes];
+  if (messagesHashesArr.length) {
     if (!group.secretKey || isEmpty(group.secretKey)) {
       window.log.debug(
-        `makeGroupHashesToDeleteSubRequest: ${ed25519Str(groupPk)}: allOldHashesArray not empty but we do not have the secretKey`
+        `makeGroupHashesToDeleteSubRequest: ${ed25519Str(groupPk)}: messagesHashesArr not empty but we do not have the secretKey`
       );
 
       throw new Error(
-        'makeGroupHashesToDeleteSubRequest: allOldHashesArray not empty but we do not have the secretKey'
+        'makeGroupHashesToDeleteSubRequest: messagesHashesArr not empty but we do not have the secretKey'
       );
     }
 
     return new DeleteHashesFromGroupNodeSubRequest({
-      messagesHashes: [...allOldHashes],
+      messagesHashes: messagesHashesArr,
       groupPk,
       secretKey: group.secretKey,
     });
   }
-  return null;
+  return undefined;
 }
 
 export const DeleteGroupHashesFactory = { makeGroupHashesToDeleteSubRequest };

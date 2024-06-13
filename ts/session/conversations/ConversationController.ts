@@ -321,7 +321,7 @@ class ConvoController {
                 groupPk,
                 secretKey,
               })
-            : null;
+            : undefined;
 
           // this marks the group info as deleted. We need to push those details
           await MetaGroupWrapperActions.infoDestroy(groupPk);
