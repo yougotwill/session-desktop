@@ -120,7 +120,7 @@ export class RetrieveUserSubRequest extends SnodeAPISubRequest {
     this.namespace = namespace;
   }
 
-  public async buildAndSignParameters() {
+  public async build() {
     const { pubkey, pubkey_ed25519, signature, timestamp } =
       await SnodeSignature.getSnodeSignatureParamsUs({
         method: this.method,
@@ -173,7 +173,7 @@ export class RetrieveGroupSubRequest extends SnodeAPISubRequest {
     this.groupDetailsNeededForSignature = groupDetailsNeededForSignature;
   }
 
-  public async buildAndSignParameters() {
+  public async build() {
     /**
      * This will return the signature details we can use with the admin secretKey if we have it,
      * or with the subaccount details if we don't.
@@ -351,7 +351,7 @@ abstract class AbstractRevokeSubRequest extends SnodeAPISubRequest {
 export class SubaccountRevokeSubRequest extends AbstractRevokeSubRequest {
   public method = 'revoke_subaccount' as const;
 
-  public async buildAndSignParameters() {
+  public async build() {
     const signature = await this.signWithAdminSecretKey();
     return {
       method: this.method,
@@ -371,7 +371,7 @@ export class SubaccountUnrevokeSubRequest extends AbstractRevokeSubRequest {
   /**
    * For Revoke/unrevoke, this needs an admin signature
    */
-  public async buildAndSignParameters() {
+  public async build() {
     const signature = await this.signWithAdminSecretKey();
 
     return {
@@ -405,7 +405,7 @@ export class GetExpiriesFromNodeSubRequest extends SnodeAPISubRequest {
   /**
    * For Revoke/unrevoke, this needs an admin signature
    */
-  public async buildAndSignParameters() {
+  public async build() {
     const timestamp = GetNetworkTime.now();
 
     const ourPubKey = UserUtils.getOurPubKeyStrFromCache();
@@ -445,7 +445,7 @@ export class DeleteAllFromUserNodeSubRequest extends SnodeAPISubRequest {
   public method = 'delete_all' as const;
   public readonly namespace = 'all'; // we can only delete_all for all namespaces currently, but the backend allows more
 
-  public async buildAndSignParameters() {
+  public async build() {
     const signResult = await SnodeSignature.getSnodeSignatureParamsUs({
       method: this.method,
       namespace: this.namespace,
@@ -492,7 +492,7 @@ export class DeleteAllFromGroupMsgNodeSubRequest extends SnodeAPISubRequest {
     }
   }
 
-  public async buildAndSignParameters() {
+  public async build() {
     const signDetails = await SnodeGroupSignature.getSnodeGroupSignature({
       method: this.method,
       namespace: this.namespace,
@@ -534,7 +534,7 @@ export class DeleteHashesFromUserNodeSubRequest extends SnodeAPISubRequest {
     }
   }
 
-  public async buildAndSignParameters() {
+  public async build() {
     const signResult = await SnodeSignature.getSnodeSignatureByHashesParams({
       method: this.method,
       messagesHashes: this.messageHashes,
@@ -588,7 +588,7 @@ export class DeleteHashesFromGroupNodeSubRequest extends SnodeAPISubRequest {
     }
   }
 
-  public async buildAndSignParameters() {
+  public async build() {
     // Note: this request can only be made by an admin and will be denied otherwise, so we make the secretKey mandatory in the constructor.
     const signResult = await SnodeGroupSignature.getGroupSignatureByHashesParams({
       method: this.method,
@@ -631,7 +631,7 @@ export class UpdateExpiryOnNodeUserSubRequest extends SnodeAPISubRequest {
     }
   }
 
-  public async buildAndSignParameters() {
+  public async build() {
     const signResult = await SnodeSignature.generateUpdateExpiryOurSignature({
       shortenOrExtend: this.shortenOrExtend,
       messagesHashes: this.messageHashes,
@@ -698,7 +698,7 @@ export class UpdateExpiryOnNodeGroupSubRequest extends SnodeAPISubRequest {
     }
   }
 
-  public async buildAndSignParameters() {
+  public async build() {
     const signResult = await SnodeGroupSignature.generateUpdateExpiryGroupSignature({
       shortenOrExtend: this.shortenOrExtend,
       messagesHashes: this.messageHashes,
@@ -784,7 +784,7 @@ export class StoreGroupMessageSubRequest extends SnodeAPISubRequest {
     }
   }
 
-  public async buildAndSignParameters(): Promise<{
+  public async build(): Promise<{
     method: 'store';
     params: StoreOnNodeNormalParams;
   }> {
@@ -855,7 +855,7 @@ abstract class StoreGroupConfigSubRequest<
     }
   }
 
-  public async buildAndSignParameters(): Promise<{
+  public async build(): Promise<{
     method: 'store';
     params: StoreOnNodeNormalParams;
   }> {
@@ -947,7 +947,7 @@ export class StoreUserConfigSubRequest extends SnodeAPISubRequest {
     }
   }
 
-  public async buildAndSignParameters(): Promise<{
+  public async build(): Promise<{
     method: 'store';
     params: StoreOnNodeNormalParams;
   }> {
@@ -1027,7 +1027,7 @@ export class StoreUserMessageSubRequest extends SnodeAPISubRequest {
     }
   }
 
-  public async buildAndSignParameters(): Promise<{
+  public async build(): Promise<{
     method: 'store';
     params: StoreOnNodeNormalParams;
   }> {
@@ -1086,7 +1086,7 @@ export class StoreLegacyGroupMessageSubRequest extends SnodeAPISubRequest {
     }
   }
 
-  public async buildAndSignParameters(): Promise<{
+  public async build(): Promise<{
     method: 'store';
     params: StoreOnNodeNormalParams;
   }> {
@@ -1181,29 +1181,7 @@ export type RawSnodeSubRequests =
   | GetExpiriesFromNodeSubRequest
   | DeleteAllFromGroupMsgNodeSubRequest;
 
-export type BuiltSnodeSubRequests =
-  | ReturnType<RetrieveLegacyClosedGroupSubRequest['build']>
-  | AwaitedReturn<RetrieveUserSubRequest['buildAndSignParameters']>
-  | AwaitedReturn<RetrieveGroupSubRequest['buildAndSignParameters']>
-  | AwaitedReturn<StoreGroupInfoSubRequest['buildAndSignParameters']>
-  | AwaitedReturn<StoreGroupMembersSubRequest['buildAndSignParameters']>
-  | AwaitedReturn<StoreGroupKeysSubRequest['buildAndSignParameters']>
-  | AwaitedReturn<StoreGroupMessageSubRequest['buildAndSignParameters']>
-  | AwaitedReturn<StoreGroupRevokedRetrievableSubRequest['buildAndSignParameters']>
-  | AwaitedReturn<StoreUserConfigSubRequest['buildAndSignParameters']>
-  | AwaitedReturn<SwarmForSubRequest['build']>
-  | AwaitedReturn<OnsResolveSubRequest['build']>
-  | AwaitedReturn<GetServiceNodesSubRequest['build']>
-  | AwaitedReturn<NetworkTimeSubRequest['build']>
-  | AwaitedReturn<DeleteHashesFromGroupNodeSubRequest['buildAndSignParameters']>
-  | AwaitedReturn<DeleteHashesFromUserNodeSubRequest['buildAndSignParameters']>
-  | AwaitedReturn<DeleteAllFromUserNodeSubRequest['buildAndSignParameters']>
-  | AwaitedReturn<UpdateExpiryOnNodeUserSubRequest['buildAndSignParameters']>
-  | AwaitedReturn<UpdateExpiryOnNodeGroupSubRequest['buildAndSignParameters']>
-  | AwaitedReturn<SubaccountRevokeSubRequest['buildAndSignParameters']>
-  | AwaitedReturn<SubaccountUnrevokeSubRequest['buildAndSignParameters']>
-  | AwaitedReturn<GetExpiriesFromNodeSubRequest['buildAndSignParameters']>
-  | AwaitedReturn<DeleteAllFromGroupMsgNodeSubRequest['buildAndSignParameters']>;
+export type BuiltSnodeSubRequests = AwaitedReturn<RawSnodeSubRequests['build']>;
 
 export function builtRequestToLoggingId(request: BuiltSnodeSubRequests): string {
   const { method, params } = request;
@@ -1242,7 +1220,7 @@ export function builtRequestToLoggingId(request: BuiltSnodeSubRequests): string 
 }
 
 // eslint-disable-next-line @typescript-eslint/array-type
-export type NonEmptyArray<T> = [T, ...T[]];
+type NonEmptyArray<T> = [T, ...T[]];
 
 export type BatchResultEntry = {
   code: number;

@@ -27,7 +27,7 @@ const forceNetworkDeletion = async (): Promise<Array<string> | null> => {
     const maliciousSnodes = await pRetry(
       async () => {
         const snodeToMakeRequestTo = await SnodePool.getNodeFromSwarmOrThrow(usPk);
-        const builtRequest = await request.buildAndSignParameters(); // we need the timestamp to verify the signature below
+        const builtRequest = await request.build();
         const ret = await BatchRequests.doSnodeBatchRequestNoRetries(
           [builtRequest],
           snodeToMakeRequestTo,

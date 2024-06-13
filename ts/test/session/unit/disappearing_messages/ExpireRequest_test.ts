@@ -55,7 +55,7 @@ describe('ExpireRequest', () => {
         throw Error('nothing was returned when building the request');
       }
 
-      const signedReq = await request.buildAndSignParameters();
+      const signedReq = await request.build();
 
       expect(signedReq, "method should be 'expire'").to.have.property('method', 'expire');
       expect(signedReq.params.pubkey, 'should have a matching pubkey').to.equal(ourNumber);
@@ -83,7 +83,7 @@ describe('ExpireRequest', () => {
       if (!request) {
         throw Error('nothing was returned when building the request');
       }
-      const signedReq = await request.buildAndSignParameters();
+      const signedReq = await request.build();
 
       expect(signedReq, "method should be 'expire'").to.have.property('method', 'expire');
       expect(signedReq.params.pubkey, 'should have a matching pubkey').to.equal(ourNumber);
@@ -111,7 +111,7 @@ describe('ExpireRequest', () => {
       if (!request) {
         throw Error('nothing was returned when building the request');
       }
-      const signedReq = await request.buildAndSignParameters();
+      const signedReq = await request.build();
 
       expect(signedReq, "method should be 'expire'").to.have.property('method', 'expire');
       expect(signedReq.params.pubkey, 'should have a matching pubkey').to.equal(ourNumber);

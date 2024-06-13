@@ -209,7 +209,6 @@ const initNewGroupInWrapper = createAsyncThunk(
 
       const result = await GroupSync.pushChangesToGroupSwarmIfNeeded({
         groupPk,
-        supplementalKeysSubRequest: [],
         extraStoreRequests,
       });
       if (result !== RunJobResult.Success) {
@@ -499,7 +498,7 @@ async function handleWithHistoryMembers({
   }
   const encryptedSupplementKeys = withHistory.length
     ? await MetaGroupWrapperActions.generateSupplementKeys(groupPk, withHistory)
-    : [];
+    : null;
   return encryptedSupplementKeys;
 }
 
@@ -831,7 +830,6 @@ async function handleMemberRemovedFromUI({
   // revoked pubkeys, update messages, and libsession groups config in a single batch call
   const sequenceResult = await GroupSync.pushChangesToGroupSwarmIfNeeded({
     groupPk,
-    supplementalKeysSubRequest: [],
     extraStoreRequests,
   });
   if (sequenceResult !== RunJobResult.Success) {
@@ -910,7 +908,6 @@ async function handleNameChangeFromUI({
 
   const batchResult = await GroupSync.pushChangesToGroupSwarmIfNeeded({
     groupPk,
-    supplementalKeysSubRequest: [],
     extraStoreRequests,
   });
 
@@ -1030,7 +1027,6 @@ const triggerFakeAvatarUpdate = createAsyncThunk(
 
     const batchResult = await GroupSync.pushChangesToGroupSwarmIfNeeded({
       groupPk,
-      supplementalKeysSubRequest: [],
       extraStoreRequests,
     });
     if (!batchResult) {

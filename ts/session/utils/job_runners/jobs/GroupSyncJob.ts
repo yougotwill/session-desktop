@@ -1,7 +1,7 @@
 /* eslint-disable no-await-in-loop */
 import { GroupPubkeyType, WithGroupPubkey } from 'libsession_util_nodejs';
 import { to_hex } from 'libsodium-wrappers-sumo';
-import { isArray, isEmpty, isNumber } from 'lodash';
+import { compact, isArray, isEmpty, isNumber } from 'lodash';
 import { UserUtils } from '../..';
 import { assertUnreachable } from '../../../../types/sqlSharedTypes';
 import { isSignInByLinking } from '../../../../util/storage';
@@ -85,7 +85,7 @@ async function pushChangesToGroupSwarmIfNeeded({
   extraStoreRequests,
 }: WithGroupPubkey &
   WithRevokeSubRequest & {
-    supplementalKeysSubRequest: Array<StoreGroupKeysSubRequest>;
+    supplementalKeysSubRequest?: StoreGroupKeysSubRequest;
     deleteAllMessagesSubRequest?: DeleteAllFromGroupMsgNodeSubRequest;
     extraStoreRequests: Array<StoreGroupMessageSubRequest>;
   }): Promise<RunJobResult> {
@@ -136,7 +136,11 @@ async function pushChangesToGroupSwarmIfNeeded({
     // Note: this is on purpose that supplementalKeysSubRequest is before pendingConfigRequests
     // as this is to avoid a race condition where a device is polling right
     // while we are posting the configs (already encrypted with the new keys)
-    storeRequests: [...supplementalKeysSubRequest, ...pendingConfigRequests, ...extraStoreRequests],
+    storeRequests: compact([
+      supplementalKeysSubRequest,
+      ...pendingConfigRequests,
+      ...extraStoreRequests,
+    ]),
     destination: groupPk,
     deleteHashesSubRequest,
     revokeSubRequest,
@@ -146,8 +150,8 @@ async function pushChangesToGroupSwarmIfNeeded({
 
   const expectedReplyLength =
     pendingConfigRequests.length + // each of those are sent as a subrequest
-    supplementalKeysSubRequest.length + // each of those are sent as a subrequest
-    (allOldHashes.size ? 1 : 0) + // we are sending all hashes changes as a single subrequest
+    (supplementalKeysSubRequest ? 1 : 0) + // we are sending all the supplemental keys as a single subrequest
+    (deleteHashesSubRequest ? 1 : 0) + // we are sending all hashes changes as a single subrequest
     (revokeSubRequest ? 1 : 0) + // we are sending all revoke updates as a single subrequest
     (unrevokeSubRequest ? 1 : 0) + // we are sending all revoke updates as a single subrequest
     (deleteAllMessagesSubRequest ? 1 : 0) + // a delete_all sub request is a single subrequest
@@ -221,7 +225,6 @@ class GroupSyncJob extends PersistedJob<GroupSyncPersistedData> {
       // return await so we catch exceptions in here
       return await GroupSync.pushChangesToGroupSwarmIfNeeded({
         groupPk: thisJobDestination,
-        supplementalKeysSubRequest: [],
         extraStoreRequests: [],
       });
 

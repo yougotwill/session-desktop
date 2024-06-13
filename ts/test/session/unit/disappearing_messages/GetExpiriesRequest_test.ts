@@ -52,7 +52,7 @@ describe('GetExpiriesRequest', () => {
 
     it('builds a valid request given the messageHashes and valid timestamp for now', async () => {
       const unsigned = new GetExpiriesFromNodeSubRequest(props);
-      const request = await unsigned.buildAndSignParameters();
+      const request = await unsigned.build();
 
       expect(request, 'should not return null').to.not.be.null;
       expect(request, 'should not return undefined').to.not.be.undefined;
@@ -77,7 +77,7 @@ describe('GetExpiriesRequest', () => {
       let errorStr = 'fakeerror';
       try {
         const unsigned = new GetExpiriesFromNodeSubRequest(props);
-        const request = await unsigned.buildAndSignParameters();
+        const request = await unsigned.build();
         if (request) {
           throw new Error('we should not have been able to build a request');
         }
@@ -93,7 +93,7 @@ describe('GetExpiriesRequest', () => {
 
       const unsigned = new GetExpiriesFromNodeSubRequest(props);
       try {
-        const request = await unsigned.buildAndSignParameters();
+        const request = await unsigned.build();
         if (request) {
           throw new Error('should not be able to build the request');
         }

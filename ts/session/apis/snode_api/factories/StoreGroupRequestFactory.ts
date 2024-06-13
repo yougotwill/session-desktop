@@ -88,11 +88,11 @@ function makeStoreGroupKeysSubRequest({
   group,
 }: {
   group: Pick<UserGroupsGet, 'secretKey' | 'pubkeyHex'>;
-  encryptedSupplementKeys: Array<Uint8Array>;
+  encryptedSupplementKeys: Uint8Array | null;
 }) {
   const groupPk = group.pubkeyHex;
-  if (!encryptedSupplementKeys.length) {
-    return [];
+  if (!encryptedSupplementKeys?.length) {
+    return undefined;
   }
 
   // supplementalKeys are already encrypted, but we still need the secretKey to sign the request
@@ -106,12 +106,10 @@ function makeStoreGroupKeysSubRequest({
       'pushChangesToGroupSwarmIfNeeded: keysEncryptedmessage not empty but we do not have the secretKey'
     );
   }
-  return encryptedSupplementKeys.map(encryptedData => {
-    return new StoreGroupKeysSubRequest({
-      encryptedData,
-      groupPk,
-      secretKey: group.secretKey,
-    });
+  return new StoreGroupKeysSubRequest({
+    encryptedData: encryptedSupplementKeys,
+    groupPk,
+    secretKey: group.secretKey,
   });
 }
 

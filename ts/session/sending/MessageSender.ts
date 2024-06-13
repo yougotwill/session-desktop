@@ -6,7 +6,6 @@ import { compact, isArray, isEmpty, isNumber, isString } from 'lodash';
 import pRetry from 'p-retry';
 import { Data, SeenMessageHashes } from '../../data/data';
 import { SignalService } from '../../protobuf';
-import { assertUnreachable } from '../../types/sqlSharedTypes';
 import { UserGroupsWrapperActions } from '../../webworker/workers/browser/libsession_worker_interface';
 import { OpenGroupRequestCommonType } from '../apis/open_group_api/opengroupV2/ApiUtil';
 import { OpenGroupMessageV2 } from '../apis/open_group_api/opengroupV2/OpenGroupMessageV2';
@@ -17,19 +16,11 @@ import {
 import {
   BuiltSnodeSubRequests,
   DeleteAllFromGroupMsgNodeSubRequest,
-  DeleteAllFromUserNodeSubRequest,
   DeleteHashesFromGroupNodeSubRequest,
   DeleteHashesFromUserNodeSubRequest,
-  GetExpiriesFromNodeSubRequest,
-  GetServiceNodesSubRequest,
   MethodBatchType,
-  NetworkTimeSubRequest,
   NotEmptyArrayOfBatchResults,
-  OnsResolveSubRequest,
   RawSnodeSubRequests,
-  RetrieveGroupSubRequest,
-  RetrieveLegacyClosedGroupSubRequest,
-  RetrieveUserSubRequest,
   StoreGroupInfoSubRequest,
   StoreGroupKeysSubRequest,
   StoreGroupMembersSubRequest,
@@ -38,11 +29,6 @@ import {
   StoreLegacyGroupMessageSubRequest,
   StoreUserConfigSubRequest,
   StoreUserMessageSubRequest,
-  SubaccountRevokeSubRequest,
-  SubaccountUnrevokeSubRequest,
-  SwarmForSubRequest,
-  UpdateExpiryOnNodeGroupSubRequest,
-  UpdateExpiryOnNodeUserSubRequest,
 } from '../apis/snode_api/SnodeRequestTypes';
 import { BatchRequests } from '../apis/snode_api/batchRequest';
 import { GetNetworkTime } from '../apis/snode_api/getNetworkTime';
@@ -369,47 +355,7 @@ async function signSubRequests(
 ): Promise<Array<BuiltSnodeSubRequests>> {
   const signedRequests: Array<BuiltSnodeSubRequests> = await Promise.all(
     params.map(p => {
-      if (
-        p instanceof SubaccountRevokeSubRequest ||
-        p instanceof SubaccountUnrevokeSubRequest ||
-        p instanceof DeleteHashesFromUserNodeSubRequest ||
-        p instanceof DeleteHashesFromGroupNodeSubRequest ||
-        p instanceof DeleteAllFromUserNodeSubRequest ||
-        p instanceof StoreGroupInfoSubRequest ||
-        p instanceof StoreGroupMembersSubRequest ||
-        p instanceof StoreGroupKeysSubRequest ||
-        p instanceof StoreGroupRevokedRetrievableSubRequest ||
-        p instanceof StoreGroupMessageSubRequest ||
-        p instanceof StoreLegacyGroupMessageSubRequest ||
-        p instanceof StoreUserConfigSubRequest ||
-        p instanceof StoreUserMessageSubRequest ||
-        p instanceof RetrieveUserSubRequest ||
-        p instanceof RetrieveGroupSubRequest ||
-        p instanceof UpdateExpiryOnNodeUserSubRequest ||
-        p instanceof UpdateExpiryOnNodeGroupSubRequest ||
-        p instanceof GetExpiriesFromNodeSubRequest ||
-        p instanceof DeleteAllFromGroupMsgNodeSubRequest
-      ) {
-        return p.buildAndSignParameters();
-      }
-
-      if (
-        p instanceof RetrieveLegacyClosedGroupSubRequest ||
-        p instanceof SwarmForSubRequest ||
-        p instanceof OnsResolveSubRequest ||
-        p instanceof GetServiceNodesSubRequest ||
-        p instanceof NetworkTimeSubRequest
-      ) {
-        return p.build();
-      }
-
-      assertUnreachable(
-        p,
-        'If you see this error, you need to add the handling of the rawRequest above'
-      );
-      throw new Error(
-        'If you see this error, you need to add the handling of the rawRequest above'
-      );
+      return p.build();
     })
   );
 
