@@ -1,6 +1,6 @@
 import { Dispatch } from '@reduxjs/toolkit';
 import { applyTheme } from '../state/ducks/theme';
-import { classicDark, classicLight, oceanDark, oceanLight } from '.';
+import { classicDark, classicLight, oceanDark, oceanLight, windowsCrash } from '.';
 import { convertThemeStateToName, THEMES, ThemeStateType } from './constants/colors';
 import { loadThemeColors } from './variableColors';
 import { findPrimaryColorId, switchPrimaryColorTo } from './switchPrimaryColor';
@@ -32,6 +32,10 @@ export async function switchThemeTo(props: SwitchThemeProps) {
     case 'ocean-light':
       loadThemeColors(oceanLight);
       newTheme = 'ocean-light';
+      break;
+    case 'windows-crash':
+      loadThemeColors(windowsCrash);
+      newTheme = 'windows-crash';
       break;
     default:
       window.log.warn('Unsupported theme: ', theme);
