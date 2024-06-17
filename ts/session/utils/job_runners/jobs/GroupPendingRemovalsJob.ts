@@ -1,6 +1,6 @@
 /* eslint-disable no-await-in-loop */
 import { PubkeyType, WithGroupPubkey } from 'libsession_util_nodejs';
-import { isEmpty, isNumber } from 'lodash';
+import { compact, isEmpty, isNumber } from 'lodash';
 import { v4 } from 'uuid';
 import { StringUtils } from '../..';
 import { Data } from '../../../../data/data';
@@ -158,10 +158,15 @@ class GroupPendingRemovalsJob extends PersistedJob<GroupPendingRemovalsPersisted
         secretKey: group.secretKey,
       });
 
+      const revokeRequests = compact([
+        revokeUnrevokeParams.revokeSubRequest ? revokeUnrevokeParams.revokeSubRequest : null,
+        revokeUnrevokeParams.unrevokeSubRequest ? revokeUnrevokeParams.unrevokeSubRequest : null,
+      ]);
+
       const result = await MessageSender.sendEncryptedDataToSnode({
-        storeRequests: [multiEncryptRequest],
+        sortedSubRequests: [multiEncryptRequest, ...revokeRequests],
         destination: groupPk,
-        ...revokeUnrevokeParams,
+        method: 'sequence',
       });
 
       if (result?.length === 2 && result[0].code === 200 && result[1].code === 200) {

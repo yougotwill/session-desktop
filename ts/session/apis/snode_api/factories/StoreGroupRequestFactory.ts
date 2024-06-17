@@ -113,6 +113,11 @@ function makeStoreGroupKeysSubRequest({
   });
 }
 
+/**
+ * Make the requests needed to store that group config details.
+ * Note: the groupKeys request is always returned first, as it needs to be stored first on the swarm.
+ * This is to avoid a race condition where some clients get a groupInfo encrypted with a new key, when the new groupKeys was not stored yet.
+ */
 function makeStoreGroupConfigSubRequest({
   group,
   pendingConfigData,

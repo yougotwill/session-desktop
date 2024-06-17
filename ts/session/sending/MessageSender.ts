@@ -2,7 +2,7 @@
 
 import { AbortController } from 'abort-controller';
 import { GroupPubkeyType, PubkeyType } from 'libsession_util_nodejs';
-import { compact, isArray, isEmpty, isNumber, isString } from 'lodash';
+import { isArray, isEmpty, isNumber, isString } from 'lodash';
 import pRetry from 'p-retry';
 import { Data, SeenMessageHashes } from '../../data/data';
 import { SignalService } from '../../protobuf';
@@ -29,6 +29,8 @@ import {
   StoreLegacyGroupMessageSubRequest,
   StoreUserConfigSubRequest,
   StoreUserMessageSubRequest,
+  SubaccountRevokeSubRequest,
+  SubaccountUnrevokeSubRequest,
 } from '../apis/snode_api/SnodeRequestTypes';
 import { BatchRequests } from '../apis/snode_api/batchRequest';
 import { GetNetworkTime } from '../apis/snode_api/getNetworkTime';
@@ -40,7 +42,6 @@ import {
 } from '../apis/snode_api/signature/groupSignature';
 import { SnodeSignature, SnodeSignatureResult } from '../apis/snode_api/signature/snodeSignatures';
 import { SnodePool } from '../apis/snode_api/snodePool';
-import { WithRevokeSubRequest } from '../apis/snode_api/types';
 import { TTL_DEFAULT } from '../constants';
 import { ConvoHub } from '../conversations';
 import { addMessagePadding } from '../crypto/BufferPadding';
@@ -86,11 +87,9 @@ type StoreRequest03 =
   | StoreGroupRevokedRetrievableSubRequest
   | StoreGroupMessageSubRequest;
 
-type PubkeyToRequestType<T extends GroupPubkeyType | PubkeyType> = T extends PubkeyType
+type StoreRequestPerPubkey<T extends GroupPubkeyType | PubkeyType> = T extends PubkeyType
   ? StoreRequest05
   : StoreRequest03;
-
-type StoreRequestsPerPubkey<T extends PubkeyType | GroupPubkeyType> = Array<PubkeyToRequestType<T>>;
 
 type EncryptedMessageDetails = Pick<
   EncryptAndWrapMessageResults,
@@ -186,17 +185,17 @@ async function messageToRequest<T extends GroupPubkeyType | PubkeyType>({
 }: {
   destination: T;
   encryptedAndWrapped: EncryptedMessageDetails;
-}): Promise<PubkeyToRequestType<T>> {
+}): Promise<StoreRequestPerPubkey<T>> {
   if (PubKey.is03Pubkey(destination)) {
     const req = await messageToRequest03({ destination, encryptedAndWrapped });
-    return req as PubkeyToRequestType<T>; // this is mandatory, sadly
+    return req as StoreRequestPerPubkey<T>; // this is mandatory, sadly
   }
   if (PubKey.is05Pubkey(destination)) {
     const req = await messageToRequest05({
       destination,
       encryptedAndWrapped,
     });
-    return req as PubkeyToRequestType<T>; // this is mandatory, sadly
+    return req as StoreRequestPerPubkey<T>; // this is mandatory, sadly
   }
 
   throw new Error('messageToRequest: unhandled case');
@@ -208,8 +207,8 @@ async function messagesToRequests<T extends GroupPubkeyType | PubkeyType>({
 }: {
   destination: T;
   encryptedAndWrappedArr: Array<EncryptedMessageDetails>;
-}): Promise<Array<PubkeyToRequestType<T>>> {
-  const subRequests: Array<PubkeyToRequestType<T>> = [];
+}): Promise<Array<StoreRequestPerPubkey<T>>> {
+  const subRequests: Array<StoreRequestPerPubkey<T>> = [];
   for (let index = 0; index < encryptedAndWrappedArr.length; index++) {
     const encryptedAndWrapped = encryptedAndWrappedArr[index];
     // eslint-disable-next-line no-await-in-loop
@@ -366,42 +365,59 @@ type DeleteHashesRequestPerPubkey<T extends PubkeyType | GroupPubkeyType> = T ex
   ? DeleteHashesFromUserNodeSubRequest
   : DeleteHashesFromGroupNodeSubRequest;
 
-async function sendMessagesDataToSnode<T extends PubkeyType | GroupPubkeyType>(
-  storeRequests: StoreRequestsPerPubkey<T>,
-  asssociatedWith: T,
-  {
-    revokeSubRequest,
-    unrevokeSubRequest,
-    deleteHashesSubRequest,
-    deleteAllMessagesSubRequest,
-  }: WithRevokeSubRequest & {
-    deleteAllMessagesSubRequest?: DeleteAllFromGroupMsgNodeSubRequest;
-    deleteHashesSubRequest?: DeleteHashesRequestPerPubkey<T>;
-  },
-  method: MethodBatchType
-): Promise<NotEmptyArrayOfBatchResults> {
+/**
+ * Make sure that all the subrequests have been given in their sendingOrder, or throw an error.
+ */
+function assertRequestsAreSorted({ subRequests }: { subRequests: Array<RawSnodeSubRequests> }) {
+  const allSorted = subRequests.every((current, index) => {
+    const currentOrder = current.requestOrder();
+    const previousOrder =
+      index > 0 ? subRequests[index - 1].requestOrder() : Number.MIN_SAFE_INTEGER;
+    return currentOrder >= previousOrder;
+  });
+  if (!allSorted) {
+    throw new Error(
+      'assertRequestsAreSorted: Some sub requests are not correctly sorted by requestOrder().'
+    );
+  }
+}
+
+type SortedSubRequestsType<T extends PubkeyType | GroupPubkeyType> = Array<
+  | StoreRequestPerPubkey<T>
+  | DeleteHashesRequestPerPubkey<T>
+  | DeleteAllFromGroupMsgNodeSubRequest
+  | SubaccountRevokeSubRequest
+  | SubaccountUnrevokeSubRequest
+>;
+
+async function sendMessagesDataToSnode<T extends PubkeyType | GroupPubkeyType>({
+  asssociatedWith,
+  sortedSubRequests,
+  method,
+}: {
+  sortedSubRequests: SortedSubRequestsType<T>;
+  asssociatedWith: T;
+  method: MethodBatchType;
+}): Promise<NotEmptyArrayOfBatchResults> {
   if (!asssociatedWith) {
     throw new Error('sendMessagesDataToSnode first subrequest pubkey needs to be set');
   }
 
-  if (storeRequests.some(m => m.destination !== asssociatedWith)) {
+  if (sortedSubRequests.some(m => m.destination !== asssociatedWith)) {
     throw new Error(
       'sendMessagesDataToSnode tried to send batchrequest containing subrequest not for the right destination'
     );
   }
 
-  const rawRequests = compact([
-    ...storeRequests,
-    deleteHashesSubRequest,
-    revokeSubRequest,
-    unrevokeSubRequest,
-    deleteAllMessagesSubRequest,
-  ]);
+  // Note: we want to make sure the caller sorted those subrequests, as it might try to handle the batch result based on the index.
+  // If we sorted the requests here, we'd need to make sure the caller knows that the results are not in order he sent them.
+  assertRequestsAreSorted({ subRequests: sortedSubRequests });
+
   const targetNode = await SnodePool.getNodeFromSwarmOrThrow(asssociatedWith);
 
   try {
-    const storeResults = await BatchRequests.doUnsignedSnodeBatchRequestNoRetries(
-      rawRequests,
+    const responses = await BatchRequests.doUnsignedSnodeBatchRequestNoRetries(
+      sortedSubRequests,
       targetNode,
       6000,
       asssociatedWith,
@@ -409,20 +425,20 @@ async function sendMessagesDataToSnode<T extends PubkeyType | GroupPubkeyType>(
       method
     );
 
-    if (!storeResults || !storeResults.length) {
+    if (!responses || !responses.length) {
       window?.log?.warn(
         `SessionSnodeAPI::doUnsignedSnodeBatchRequestNoRetries on ${targetNode.ip}:${targetNode.port} returned falsish value`,
-        storeResults
+        responses
       );
       throw new Error('doUnsignedSnodeBatchRequestNoRetries: Invalid result');
     }
     await handleBatchResultWithSubRequests({
-      batchResult: storeResults,
-      subRequests: rawRequests,
+      batchResult: responses,
+      subRequests: sortedSubRequests,
       destination: asssociatedWith,
     });
 
-    const firstResult = storeResults[0];
+    const firstResult = responses[0];
 
     if (firstResult.code !== 200) {
       window?.log?.warn(
@@ -434,15 +450,15 @@ async function sendMessagesDataToSnode<T extends PubkeyType | GroupPubkeyType>(
 
     GetNetworkTime.handleTimestampOffsetFromNetwork('store', firstResult.body.t);
 
-    if (!isEmpty(storeResults)) {
+    if (!isEmpty(responses)) {
       window?.log?.info(
-        `sendMessagesDataToSnode - Successfully stored messages to ${ed25519Str(
+        `sendMessagesDataToSnode - Successfully sent requests to ${ed25519Str(
           asssociatedWith
-        )} via ${ed25519Str(targetNode.pubkey_ed25519)} to namespaces: ${storeRequests.map(m => SnodeNamespace.toRole(m.namespace)).join(', ')}`
+        )} via ${ed25519Str(targetNode.pubkey_ed25519)} (requests: ${sortedSubRequests.map(m => m.loggingId()).join(', ')})`
       );
     }
 
-    return storeResults;
+    return responses;
   } catch (e) {
     const snodeStr = targetNode ? `${ed25519Str(targetNode.pubkey_ed25519)}` : 'null';
     window?.log?.warn(
@@ -573,41 +589,29 @@ async function encryptMessagesAndWrap(
 
 /**
  * Send an array of preencrypted data to the corresponding swarm.
- * Warning:
- *   This does not handle result of messages and marking messages as read, syncing them currently.
- *   For this, use the `MessageQueue.sendSingleMessage()` for now.
+ * Note: also handles the result of each subrequests with `handleBatchResultWithSubRequests`
  *
  * @param params the data to deposit
  * @param destination the pubkey we should deposit those message to
- * @returns the hashes of successful deposit
+ * @returns the batch/sequence results if further processing is needed
  */
 async function sendEncryptedDataToSnode<T extends GroupPubkeyType | PubkeyType>({
   destination,
-  storeRequests,
-  deleteHashesSubRequest,
-  revokeSubRequest,
-  unrevokeSubRequest,
-  deleteAllMessagesSubRequest,
-}: WithRevokeSubRequest & {
-  storeRequests: StoreRequestsPerPubkey<T>; // keeping those as an array because the order needs to be enforced for some (groupkeys for instance)
+  sortedSubRequests,
+  method,
+}: {
+  sortedSubRequests: SortedSubRequestsType<T>; // keeping those as an array because the order needs to be enforced for some (groupkeys for instance)
   destination: T;
-  deleteHashesSubRequest?: DeleteHashesRequestPerPubkey<T>;
-  deleteAllMessagesSubRequest?: DeleteAllFromGroupMsgNodeSubRequest;
+  method: MethodBatchType;
 }): Promise<NotEmptyArrayOfBatchResults | null> {
   try {
     const batchResults = await pRetry(
       async () => {
-        return MessageSender.sendMessagesDataToSnode(
-          storeRequests,
-          destination,
-          {
-            deleteHashesSubRequest,
-            revokeSubRequest,
-            unrevokeSubRequest,
-            deleteAllMessagesSubRequest,
-          },
-          'sequence'
-        );
+        return MessageSender.sendMessagesDataToSnode({
+          sortedSubRequests,
+          asssociatedWith: destination,
+          method,
+        });
       },
       {
         retries: 2,
@@ -630,9 +634,7 @@ async function sendEncryptedDataToSnode<T extends GroupPubkeyType | PubkeyType>(
 
 /**
  * Send an array of **not** preencrypted data to the corresponding swarm.
- * WARNING:
- *   This does not handle result of messages and marking messages as read, syncing them currently.
- *   For this, use the `MessageQueue.sendSingleMessage()` for now.
+ * Note: the messages order is not changed when sending them, but if they are not correctly sorted an exception will be thrown.
  *
  * @param messages the data to deposit (after encryption)
  * @param destination the pubkey we should deposit those message to
@@ -640,6 +642,7 @@ async function sendEncryptedDataToSnode<T extends GroupPubkeyType | PubkeyType>(
 async function sendUnencryptedDataToSnode<T extends GroupPubkeyType | PubkeyType>({
   destination,
   messages,
+  method,
 }: {
   // keeping those as an array because the order needs to be enforced for some (groupkeys for instance)
   destination: T;
@@ -648,6 +651,7 @@ async function sendUnencryptedDataToSnode<T extends GroupPubkeyType | PubkeyType
       ? GroupUpdateMemberLeftMessage | GroupUpdateMemberLeftNotificationMessage
       : never
   >;
+  method: MethodBatchType;
 }) {
   const rawMessages: Array<EncryptAndWrapMessage> = messages.map(m => {
     return {
@@ -675,14 +679,15 @@ async function sendUnencryptedDataToSnode<T extends GroupPubkeyType | PubkeyType
     })
   );
 
-  const storeRequests = await messagesToRequests({
+  const sortedSubRequests = await messagesToRequests({
     encryptedAndWrappedArr,
     destination,
   });
 
   return sendEncryptedDataToSnode({
     destination,
-    storeRequests,
+    sortedSubRequests,
+    method,
   });
 }
 
@@ -752,6 +757,7 @@ export const MessageSender = {
   signSubRequests,
   encryptMessagesAndWrap,
   sendUnencryptedDataToSnode,
+  messagesToRequests,
 };
 
 /**

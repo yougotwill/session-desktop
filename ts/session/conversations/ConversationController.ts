@@ -647,6 +647,7 @@ async function leaveClosedGroup(groupPk: PubkeyType | GroupPubkeyType, fromSyncM
       const results = await MessageSender.sendUnencryptedDataToSnode({
         destination: groupPk,
         messages: [ourLeavingNotificationMessage, ourLeavingMessage],
+        method: 'sequence',
       });
 
       if (results?.[0].code !== 200) {

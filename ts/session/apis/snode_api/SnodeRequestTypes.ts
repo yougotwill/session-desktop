@@ -30,9 +30,22 @@ import { TTL_DEFAULT } from '../../constants';
 type WithMaxSize = { max_size?: number };
 export type WithShortenOrExtend = { shortenOrExtend: 'shorten' | 'extend' | '' };
 
+/**
+ * This is the base sub request class that every other type of request has to extend.
+ */
 abstract class SnodeAPISubRequest {
   public abstract method: string;
+
   public abstract loggingId(): string;
+  public abstract getDestination(): PubkeyType | GroupPubkeyType | '<none>';
+  /**
+   * When batch sending an array of requests, we will sort them by this number (the smallest will be put in front and the largest at the end).
+   * This is needed for sending and polling for 03-group keys for instance.
+   */
+
+  public requestOrder() {
+    return 0;
+  }
 }
 
 /**
@@ -67,6 +80,10 @@ export class RetrieveLegacyClosedGroupSubRequest extends SnodeAPISubRequest {
         // if we give a timestamp, a signature will be requested by the snode so this request for legacy does not take a timestamp
       },
     };
+  }
+
+  public getDestination() {
+    return this.legacyGroupPk;
   }
 
   public loggingId(): string {
@@ -141,6 +158,10 @@ export class RetrieveUserSubRequest extends SnodeAPISubRequest {
     };
   }
 
+  public getDestination() {
+    return UserUtils.getOurPubKeyStrFromCache();
+  }
+
   public loggingId(): string {
     return `${this.method}-${SnodeNamespace.toRole(this.namespace)}`;
   }
@@ -154,7 +175,7 @@ export class RetrieveGroupSubRequest extends SnodeAPISubRequest {
   public readonly last_hash: string;
   public readonly max_size: number | undefined;
   public readonly namespace: SnodeNamespacesGroup;
-  public readonly groupDetailsNeededForSignature: GroupDetailsNeededForSignature | null;
+  public readonly groupDetailsNeededForSignature: GroupDetailsNeededForSignature;
 
   constructor({
     last_hash,
@@ -170,6 +191,9 @@ export class RetrieveGroupSubRequest extends SnodeAPISubRequest {
     this.last_hash = last_hash;
     this.max_size = max_size;
     this.namespace = namespace;
+    if (isEmpty(groupDetailsNeededForSignature)) {
+      throw new Error('groupDetailsNeededForSignature is required');
+    }
     this.groupDetailsNeededForSignature = groupDetailsNeededForSignature;
   }
 
@@ -196,8 +220,21 @@ export class RetrieveGroupSubRequest extends SnodeAPISubRequest {
     };
   }
 
+  public getDestination() {
+    return this.groupDetailsNeededForSignature.pubkeyHex;
+  }
+
   public loggingId(): string {
     return `${this.method}-${SnodeNamespace.toRole(this.namespace)}`;
+  }
+
+  public override requestOrder() {
+    if (this.namespace === SnodeNamespaces.ClosedGroupKeys) {
+      // we want to retrieve the groups keys last
+      return 10;
+    }
+
+    return super.requestOrder();
   }
 }
 
@@ -225,6 +262,10 @@ export class OnsResolveSubRequest extends SnodeAPISubRequest {
 
   public loggingId(): string {
     return `${this.method}`;
+  }
+
+  public getDestination() {
+    return '<none>' as const;
   }
 }
 
@@ -257,22 +298,26 @@ export class GetServiceNodesSubRequest extends SnodeAPISubRequest {
   public loggingId(): string {
     return `${this.method}`;
   }
+
+  public getDestination() {
+    return '<none>' as const;
+  }
 }
 
 export class SwarmForSubRequest extends SnodeAPISubRequest {
   public method = 'get_swarm' as const;
-  public readonly pubkey;
+  public readonly destination;
 
   constructor(pubkey: PubkeyType | GroupPubkeyType) {
     super();
-    this.pubkey = pubkey;
+    this.destination = pubkey;
   }
 
   public build() {
     return {
       method: this.method,
       params: {
-        pubkey: this.pubkey,
+        pubkey: this.destination,
         params: {
           active_only: true,
           fields: {
@@ -289,6 +334,10 @@ export class SwarmForSubRequest extends SnodeAPISubRequest {
   public loggingId(): string {
     return `${this.method}`;
   }
+
+  public getDestination() {
+    return this.destination;
+  }
 }
 
 export class NetworkTimeSubRequest extends SnodeAPISubRequest {
@@ -304,10 +353,14 @@ export class NetworkTimeSubRequest extends SnodeAPISubRequest {
   public loggingId(): string {
     return `${this.method}`;
   }
+
+  public getDestination() {
+    return '<none>' as const;
+  }
 }
 
 abstract class AbstractRevokeSubRequest extends SnodeAPISubRequest {
-  public readonly groupPk: GroupPubkeyType;
+  public readonly destination: GroupPubkeyType;
   public readonly timestamp: number;
   public readonly revokeTokenHex: Array<string>;
   protected readonly adminSecretKey: Uint8Array;
@@ -319,7 +372,7 @@ abstract class AbstractRevokeSubRequest extends SnodeAPISubRequest {
     secretKey,
   }: WithGroupPubkey & WithTimestamp & WithSecretKey & { revokeTokenHex: Array<string> }) {
     super();
-    this.groupPk = groupPk;
+    this.destination = groupPk;
     this.timestamp = timestamp;
     this.revokeTokenHex = revokeTokenHex;
     this.adminSecretKey = secretKey;
@@ -344,7 +397,11 @@ abstract class AbstractRevokeSubRequest extends SnodeAPISubRequest {
   }
 
   public loggingId(): string {
-    return `${this.method}-${ed25519Str(this.groupPk)}`;
+    return `${this.method}-${ed25519Str(this.destination)}`;
+  }
+
+  public getDestination() {
+    return this.destination;
   }
 }
 
@@ -356,7 +413,7 @@ export class SubaccountRevokeSubRequest extends AbstractRevokeSubRequest {
     return {
       method: this.method,
       params: {
-        pubkey: this.groupPk,
+        pubkey: this.destination,
         signature,
         revoke: this.revokeTokenHex,
         timestamp: this.timestamp,
@@ -377,12 +434,16 @@ export class SubaccountUnrevokeSubRequest extends AbstractRevokeSubRequest {
     return {
       method: this.method,
       params: {
-        pubkey: this.groupPk,
+        pubkey: this.destination,
         signature,
         unrevoke: this.revokeTokenHex,
         timestamp: this.timestamp,
       },
     };
+  }
+
+  public getDestination() {
+    return this.destination;
   }
 }
 
@@ -438,6 +499,10 @@ export class GetExpiriesFromNodeSubRequest extends SnodeAPISubRequest {
   public loggingId(): string {
     return `${this.method}-us`;
   }
+
+  public getDestination() {
+    return UserUtils.getOurPubKeyStrFromCache();
+  }
 }
 
 // todo: to use where delete_all is currently manually called
@@ -472,6 +537,10 @@ export class DeleteAllFromUserNodeSubRequest extends SnodeAPISubRequest {
   public loggingId(): string {
     return `${this.method}-${this.namespace}`;
   }
+
+  public getDestination() {
+    return UserUtils.getOurPubKeyStrFromCache();
+  }
 }
 
 /**
@@ -481,11 +550,11 @@ export class DeleteAllFromGroupMsgNodeSubRequest extends SnodeAPISubRequest {
   public method = 'delete_all' as const;
   public readonly namespace = SnodeNamespaces.ClosedGroupMessages;
   public readonly adminSecretKey: Uint8Array;
-  public readonly groupPk: GroupPubkeyType;
+  public readonly destination: GroupPubkeyType;
 
   constructor(args: WithGroupPubkey & WithSecretKey) {
     super();
-    this.groupPk = args.groupPk;
+    this.destination = args.groupPk;
     this.adminSecretKey = args.secretKey;
     if (isEmpty(this.adminSecretKey)) {
       throw new Error('DeleteAllFromGroupMsgNodeSubRequest needs an adminSecretKey');
@@ -496,7 +565,7 @@ export class DeleteAllFromGroupMsgNodeSubRequest extends SnodeAPISubRequest {
     const signDetails = await SnodeGroupSignature.getSnodeGroupSignature({
       method: this.method,
       namespace: this.namespace,
-      group: { authData: null, pubkeyHex: this.groupPk, secretKey: this.adminSecretKey },
+      group: { authData: null, pubkeyHex: this.destination, secretKey: this.adminSecretKey },
     });
 
     if (!signDetails) {
@@ -514,19 +583,23 @@ export class DeleteAllFromGroupMsgNodeSubRequest extends SnodeAPISubRequest {
   }
 
   public loggingId(): string {
-    return `${this.method}-${ed25519Str(this.groupPk)}-${this.namespace}`;
+    return `${this.method}-${ed25519Str(this.destination)}-${this.namespace}`;
+  }
+
+  public getDestination() {
+    return this.destination;
   }
 }
 
 export class DeleteHashesFromUserNodeSubRequest extends SnodeAPISubRequest {
   public method = 'delete' as const;
   public readonly messageHashes: Array<string>;
-  public readonly pubkey: PubkeyType;
+  public readonly destination: PubkeyType;
 
   constructor(args: WithMessagesHashes) {
     super();
     this.messageHashes = args.messagesHashes;
-    this.pubkey = UserUtils.getOurPubKeyStrFromCache();
+    this.destination = UserUtils.getOurPubKeyStrFromCache();
 
     if (this.messageHashes.length === 0) {
       window.log.warn(`DeleteHashesFromUserNodeSubRequest given empty list of messageHashes`);
@@ -538,7 +611,7 @@ export class DeleteHashesFromUserNodeSubRequest extends SnodeAPISubRequest {
     const signResult = await SnodeSignature.getSnodeSignatureByHashesParams({
       method: this.method,
       messagesHashes: this.messageHashes,
-      pubkey: this.pubkey,
+      pubkey: this.destination,
     });
 
     if (!signResult) {
@@ -562,18 +635,22 @@ export class DeleteHashesFromUserNodeSubRequest extends SnodeAPISubRequest {
   public loggingId(): string {
     return `${this.method}-us`;
   }
+
+  public getDestination() {
+    return this.destination;
+  }
 }
 
 export class DeleteHashesFromGroupNodeSubRequest extends SnodeAPISubRequest {
   public method = 'delete' as const;
   public readonly messageHashes: Array<string>;
-  public readonly pubkey: GroupPubkeyType;
+  public readonly destination: GroupPubkeyType;
   public readonly secretKey: Uint8Array;
 
   constructor(args: WithMessagesHashes & WithGroupPubkey & WithSecretKey) {
     super();
     this.messageHashes = args.messagesHashes;
-    this.pubkey = args.groupPk;
+    this.destination = args.groupPk;
     this.secretKey = args.secretKey;
     if (!this.secretKey || isEmpty(this.secretKey)) {
       throw new Error('DeleteHashesFromGroupNodeSubRequest needs a secretKey');
@@ -581,7 +658,7 @@ export class DeleteHashesFromGroupNodeSubRequest extends SnodeAPISubRequest {
 
     if (this.messageHashes.length === 0) {
       window.log.warn(
-        `DeleteHashesFromGroupNodeSubRequest given empty list of messageHashes for ${ed25519Str(this.pubkey)}`
+        `DeleteHashesFromGroupNodeSubRequest given empty list of messageHashes for ${ed25519Str(this.destination)}`
       );
 
       throw new Error('DeleteHashesFromGroupNodeSubRequest given empty list of messageHashes');
@@ -593,8 +670,8 @@ export class DeleteHashesFromGroupNodeSubRequest extends SnodeAPISubRequest {
     const signResult = await SnodeGroupSignature.getGroupSignatureByHashesParams({
       method: this.method,
       messagesHashes: this.messageHashes,
-      groupPk: this.pubkey,
-      group: { authData: null, pubkeyHex: this.pubkey, secretKey: this.secretKey },
+      groupPk: this.destination,
+      group: { authData: null, pubkeyHex: this.destination, secretKey: this.secretKey },
     });
 
     return {
@@ -608,7 +685,11 @@ export class DeleteHashesFromGroupNodeSubRequest extends SnodeAPISubRequest {
   }
 
   public loggingId(): string {
-    return `${this.method}-${ed25519Str(this.pubkey)}`;
+    return `${this.method}-${ed25519Str(this.destination)}`;
+  }
+
+  public getDestination() {
+    return this.destination;
   }
 }
 
@@ -666,6 +747,10 @@ export class UpdateExpiryOnNodeUserSubRequest extends SnodeAPISubRequest {
 
   public loggingId(): string {
     return `${this.method}-us`;
+  }
+
+  public getDestination() {
+    return UserUtils.getOurPubKeyStrFromCache();
   }
 }
 
@@ -733,6 +818,10 @@ export class UpdateExpiryOnNodeGroupSubRequest extends SnodeAPISubRequest {
 
   public loggingId(): string {
     return `${this.method}-${ed25519Str(this.groupDetailsNeededForSignature.pubkeyHex)}`;
+  }
+
+  public getDestination() {
+    return this.groupDetailsNeededForSignature.pubkeyHex;
   }
 }
 
@@ -817,6 +906,10 @@ export class StoreGroupMessageSubRequest extends SnodeAPISubRequest {
       this.namespace
     )}`;
   }
+
+  public getDestination() {
+    return this.destination;
+  }
 }
 
 abstract class StoreGroupConfigSubRequest<
@@ -883,10 +976,21 @@ abstract class StoreGroupConfigSubRequest<
     };
   }
 
+  public getDestination() {
+    return this.destination;
+  }
+
   public loggingId(): string {
     return `${this.method}-${ed25519Str(this.destination)}-${SnodeNamespace.toRole(
       this.namespace
     )}`;
+  }
+
+  public requestOrder(): number {
+    if (this.namespace === SnodeNamespaces.ClosedGroupKeys) {
+      return 10;
+    }
+    return super.requestOrder();
   }
 }
 
@@ -982,6 +1086,10 @@ export class StoreUserConfigSubRequest extends SnodeAPISubRequest {
       this.namespace
     )}`;
   }
+
+  public getDestination() {
+    return this.destination;
+  }
 }
 
 /**
@@ -1050,6 +1158,10 @@ export class StoreUserMessageSubRequest extends SnodeAPISubRequest {
       this.namespace
     )}`;
   }
+
+  public getDestination() {
+    return this.destination;
+  }
 }
 
 /**
@@ -1109,6 +1221,10 @@ export class StoreLegacyGroupMessageSubRequest extends SnodeAPISubRequest {
     return `${this.method}-${ed25519Str(this.destination)}-${SnodeNamespace.toRole(
       this.namespace
     )}`;
+  }
+
+  public getDestination() {
+    return this.destination;
   }
 }
 

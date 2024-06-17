@@ -176,13 +176,13 @@ const networkDeleteMessageOurSwarm = async (
   try {
     const success = await pRetry(
       async () => {
-        const snodeToMakeRequestTo = await SnodePool.getNodeFromSwarmOrThrow(request.pubkey);
+        const snodeToMakeRequestTo = await SnodePool.getNodeFromSwarmOrThrow(request.destination);
 
         const ret = await BatchRequests.doUnsignedSnodeBatchRequestNoRetries(
           [request],
           snodeToMakeRequestTo,
           10000,
-          request.pubkey,
+          request.destination,
           false
         );
 
@@ -190,7 +190,7 @@ const networkDeleteMessageOurSwarm = async (
           throw new Error(
             `networkDeleteMessageOurSwarm: Empty response got for ${request.method} on snode ${ed25519Str(
               snodeToMakeRequestTo.pubkey_ed25519
-            )} about pk: ${ed25519Str(request.pubkey)}`
+            )} about pk: ${ed25519Str(request.destination)}`
           );
         }
 
@@ -243,7 +243,7 @@ const networkDeleteMessageOurSwarm = async (
               const responseHashes = snodeJson.deleted as Array<string>;
               const signatureSnode = snodeJson.signature as string;
               // The signature looks like ( PUBKEY_HEX || RMSG[0] || ... || RMSG[N] || DMSG[0] || ... || DMSG[M] )
-              const dataToVerify = `${request.pubkey}${messageHashesArr.join(
+              const dataToVerify = `${request.destination}${messageHashesArr.join(
                 ''
               )}${responseHashes.join('')}`;
               const dataToVerifyUtf8 = StringUtils.encode(dataToVerify, 'utf8');
@@ -325,13 +325,13 @@ const networkDeleteMessagesForGroup = async (
 
     await pRetry(
       async () => {
-        const snodeToMakeRequestTo = await SnodePool.getNodeFromSwarmOrThrow(request.pubkey);
+        const snodeToMakeRequestTo = await SnodePool.getNodeFromSwarmOrThrow(request.destination);
 
         const ret = await BatchRequests.doUnsignedSnodeBatchRequestNoRetries(
           [request],
           snodeToMakeRequestTo,
           10000,
-          request.pubkey,
+          request.destination,
           false
         );
 
@@ -339,7 +339,7 @@ const networkDeleteMessagesForGroup = async (
           throw new Error(
             `networkDeleteMessagesForGroup: Empty response got for ${request.method} on snode ${ed25519Str(
               snodeToMakeRequestTo.pubkey_ed25519
-            )} about pk: ${ed25519Str(request.pubkey)}`
+            )} about pk: ${ed25519Str(request.destination)}`
           );
         }
       },

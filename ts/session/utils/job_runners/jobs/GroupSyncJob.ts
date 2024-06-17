@@ -131,21 +131,25 @@ async function pushChangesToGroupSwarmIfNeeded({
     group,
     messagesHashes: allOldHashes,
   });
+  const extraRequests = compact([
+    deleteHashesSubRequest,
+    revokeSubRequest,
+    unrevokeSubRequest,
+    deleteAllMessagesSubRequest,
+  ]);
 
   const result = await MessageSender.sendEncryptedDataToSnode({
     // Note: this is on purpose that supplementalKeysSubRequest is before pendingConfigRequests
     // as this is to avoid a race condition where a device is polling right
     // while we are posting the configs (already encrypted with the new keys)
-    storeRequests: compact([
-      supplementalKeysSubRequest,
-      ...pendingConfigRequests,
-      ...extraStoreRequests,
+    sortedSubRequests: compact([
+      supplementalKeysSubRequest, // this needs to be stored first
+      ...pendingConfigRequests, // groupKeys are first in this array, so all good, then groupInfos are next
+      ...extraStoreRequests, // this can be stored anytime
+      ...extraRequests,
     ]),
     destination: groupPk,
-    deleteHashesSubRequest,
-    revokeSubRequest,
-    unrevokeSubRequest,
-    deleteAllMessagesSubRequest,
+    method: 'sequence',
   });
 
   const expectedReplyLength =

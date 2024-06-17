@@ -151,7 +151,7 @@ async function getSnodeGroupSignature({
   SigResultSubAccount | SigResultAdmin
 > {
   if (!group) {
-    throw new Error(`getSnodeGroupSignature: did not find group in wrapper`);
+    throw new Error(`getSnodeGroupSignature: we need GroupDetailsNeededForSignature`);
   }
   const { pubkeyHex: groupPk, secretKey, authData } = group;
 

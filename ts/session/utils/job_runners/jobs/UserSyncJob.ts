@@ -1,6 +1,6 @@
 /* eslint-disable no-await-in-loop */
 import { PubkeyType } from 'libsession_util_nodejs';
-import { isArray, isEmpty, isNumber, isString } from 'lodash';
+import { compact, isArray, isEmpty, isNumber, isString } from 'lodash';
 import { v4 } from 'uuid';
 import { to_hex } from 'libsodium-wrappers-sumo';
 import { UserUtils } from '../..';
@@ -116,9 +116,9 @@ async function pushChangesToUserSwarmIfNeeded() {
     : undefined;
 
   const result = await MessageSender.sendEncryptedDataToSnode({
-    storeRequests,
+    sortedSubRequests: compact([...storeRequests, deleteHashesSubRequest]),
     destination: us,
-    deleteHashesSubRequest,
+    method: 'sequence',
   });
 
   const expectedReplyLength =
