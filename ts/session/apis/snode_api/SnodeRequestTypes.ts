@@ -988,7 +988,8 @@ abstract class StoreGroupConfigSubRequest<
 
   public requestOrder(): number {
     if (this.namespace === SnodeNamespaces.ClosedGroupKeys) {
-      return 10;
+      // -10 means that we need this request to be sent before something with an order of 0 for instance
+      return -10;
     }
     return super.requestOrder();
   }
