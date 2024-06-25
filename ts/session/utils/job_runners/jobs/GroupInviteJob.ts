@@ -51,7 +51,18 @@ async function addJob({ groupPk, member }: JobExtraArgs) {
       nextAttemptTimestamp: Date.now(),
     });
     window.log.debug(`addGroupInviteJob: adding group invite for ${groupPk}:${member} `);
+    try {
+      updateFailedStateForMember(groupPk, member, false);
+
+      // we have to reset the error state so that the UI shows "sending" even if the last try failed.
+      await MetaGroupWrapperActions.memberSetInvited(groupPk, member, false);
+    } catch (e) {
+      window.log.warn('GroupInviteJob memberSetInvited (before) failed with', e.message);
+    }
+    window?.inboxStore?.dispatch(groupInfoActions.refreshGroupDetailsFromWrapper({ groupPk }));
+
     await runners.groupInviteJobRunner.addJob(groupInviteJob);
+
     window?.inboxStore?.dispatch(
       groupInfoActions.setInvitePending({ groupPk, pubkey: member, sending: true })
     );
@@ -154,17 +165,19 @@ class GroupInviteJob extends PersistedJob<GroupInvitePersistedData> {
       if (storedAt !== null) {
         failed = false;
       }
-    } finally {
-      window?.inboxStore?.dispatch(
-        groupInfoActions.setInvitePending({ groupPk, pubkey: member, sending: false })
+    } catch (e) {
+      window.log.warn(
+        `${jobType} with groupPk:"${groupPk}" member: ${member} id:"${identifier}" failed with ${e.message}`
       );
-
-      updateFailedStateForMember(groupPk, member, failed);
+    } finally {
       try {
         await MetaGroupWrapperActions.memberSetInvited(groupPk, member, failed);
       } catch (e) {
         window.log.warn('GroupInviteJob memberSetInvited failed with', e.message);
       }
+
+      updateFailedStateForMember(groupPk, member, failed);
+      window?.inboxStore?.dispatch(groupInfoActions.refreshGroupDetailsFromWrapper({ groupPk }));
     }
     // return true so this job is marked as a success and we don't need to retry it
     return RunJobResult.Success;
