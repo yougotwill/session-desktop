@@ -19,7 +19,7 @@ const StyledNoticeBanner = styled(Flex)`
 `;
 
 const StyledText = styled.span`
-  margin-right: var(--margins-lg);
+  margin-right: var(--margins-xl);
 `;
 
 type NoticeBannerProps = {

@@ -671,6 +671,7 @@ function OutdatedLegacyGroupBanner(props: {
   selectedConversation: Pick<ReduxConversationType, 'id' | 'isPrivate' | 'isPublic'>;
 }) {
   const { selectedConversation } = props;
+  // const dispatch = useDispatch();
 
   const isLegacyGroup =
     !selectedConversation.isPrivate &&
@@ -681,6 +682,7 @@ function OutdatedLegacyGroupBanner(props: {
     <NoticeBanner
       text={window.i18n('upgradeYourGroupBefore')}
       onButtonClick={() => {
+        // showLinkVisitWarningDialog('', dispatch);
         throw new Error('TODO'); // fixme audric
       }}
       icon="externalLink"
