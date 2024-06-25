@@ -29,11 +29,12 @@ import {
 import { LocalizerKeys } from '../../types/LocalizerKeys';
 import { SessionHtmlRenderer } from '../basic/SessionHTMLRenderer';
 
-const Container = styled.div`
+const Container = styled.div<{ noExtraPadding: boolean }>`
   display: flex;
   flex-direction: row;
   justify-content: center;
   background-color: var(--background-secondary-color);
+  padding: ${props => (props.noExtraPadding ? '' : 'var(--margins-lg)')};
 `;
 
 const TextInner = styled.div`
@@ -42,9 +43,17 @@ const TextInner = styled.div`
   max-width: 390px;
 `;
 
-function TextNotification({ html, dataTestId }: { html: string; dataTestId: SessionDataTestId }) {
+function TextNotification({
+  html,
+  dataTestId,
+  noExtraPadding,
+}: {
+  html: string;
+  dataTestId: SessionDataTestId;
+  noExtraPadding: boolean;
+}) {
   return (
-    <Container data-testid={dataTestId}>
+    <Container data-testid={dataTestId} noExtraPadding={noExtraPadding}>
       <TextInner>
         <SessionHtmlRenderer html={html} />
       </TextInner>
@@ -73,6 +82,7 @@ const ConversationRequestExplanation = () => {
     <TextNotification
       dataTestId="conversation-request-explanation"
       html={window.i18n('respondingToRequestWarning')}
+      noExtraPadding={true} // in this case, `TextNotification` is part of a bigger component spacing each already
     />
   );
 };
@@ -93,6 +103,7 @@ const GroupRequestExplanation = () => {
     <TextNotification
       dataTestId="group-request-explanation"
       html={window.i18n('respondingToGroupRequestWarning')}
+      noExtraPadding={true} // in this case, `TextNotification` is part of a bigger component spacing each already
     />
   );
 };
@@ -123,7 +134,13 @@ export const InvitedToGroupControlMessage = () => {
     ? window.i18n('userInvitedYouToGroup', [adminNameInvitedUs, groupName])
     : window.i18n('youWereInvitedToGroup', [groupName]);
 
-  return <TextNotification dataTestId="group-invite-control-message" html={html} />;
+  return (
+    <TextNotification
+      dataTestId="group-invite-control-message"
+      html={html}
+      noExtraPadding={true} // in this case, `TextNotification` is part of a bigger component spacing each already
+    />
+  );
 };
 
 export const NoMessageInConversation = () => {
@@ -168,6 +185,10 @@ export const NoMessageInConversation = () => {
   }
 
   return (
-    <TextNotification dataTestId={dataTestId} html={window.i18n(localizedKey, [nameToRender])} />
+    <TextNotification
+      dataTestId={dataTestId}
+      html={window.i18n(localizedKey, [nameToRender])}
+      noExtraPadding={false} // in this case, `TextNotification` is **not** part of a bigger component so we need to add some spacing
+    />
   );
 };
