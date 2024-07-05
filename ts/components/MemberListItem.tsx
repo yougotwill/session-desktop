@@ -145,14 +145,18 @@ const GroupStatusText = ({ groupPk, pubkey }: { pubkey: PubkeyType; groupPk: Gro
   const groupPromotionSent = useMemberPromotionSent(pubkey, groupPk);
   const groupInviteSending = useMemberInviteSending(groupPk, pubkey);
 
-  const statusText = groupPromotionFailed
-    ? window.i18n('promotionFailed')
-    : groupInviteFailed
-      ? window.i18n('inviteFailed')
-      : groupInviteSending
-        ? window.i18n('inviteSending')
-        : groupPromotionSending
-          ? window.i18n('promotionSending')
+  /**
+   * Note: Keep the "sending" checks here first, as we might be "sending" when we've previously failed.
+   * If we were to have the "failed" checks first, we'd hide the "sending" state when we are retrying.
+   */
+  const statusText = groupInviteSending
+    ? window.i18n('inviteSending')
+    : groupPromotionSending
+      ? window.i18n('promotionSending')
+      : groupPromotionFailed
+        ? window.i18n('promotionFailed')
+        : groupInviteFailed
+          ? window.i18n('inviteFailed')
           : groupInviteSent
             ? window.i18n('inviteSent')
             : groupPromotionSent
@@ -165,7 +169,7 @@ const GroupStatusText = ({ groupPk, pubkey }: { pubkey: PubkeyType; groupPk: Gro
   return (
     <StyledGroupStatusText
       data-testid={'group-member-status-text'}
-      isFailure={groupPromotionFailed || groupInviteFailed}
+      isFailure={(groupPromotionFailed && !groupPromotionSending) || (groupInviteFailed && !groupInviteSending)}
     >
       {statusText}
     </StyledGroupStatusText>
@@ -196,6 +200,10 @@ const ResendInviteButton = ({
   pubkey: PubkeyType;
   groupPk: GroupPubkeyType;
 }) => {
+  const inviteFailed = useMemberInviteFailed(pubkey, groupPk);
+  if (!inviteFailed) {
+    return null;
+  }
   return (
     <SessionButton
       dataTestId={'resend-invite-button'}

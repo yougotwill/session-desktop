@@ -13,6 +13,8 @@ import {
   DeleteAllFromGroupMsgNodeSubRequest,
   StoreGroupKeysSubRequest,
   StoreGroupMessageSubRequest,
+  SubaccountRevokeSubRequest,
+  SubaccountUnrevokeSubRequest,
 } from '../../../apis/snode_api/SnodeRequestTypes';
 import { DeleteGroupHashesFactory } from '../../../apis/snode_api/factories/DeleteGroupHashesRequestFactory';
 import { StoreGroupRequestFactory } from '../../../apis/snode_api/factories/StoreGroupRequestFactory';
@@ -138,6 +140,13 @@ async function pushChangesToGroupSwarmIfNeeded({
     deleteAllMessagesSubRequest,
   ]);
 
+  const extraRequestWithExpectedResults = extraRequests.filter(
+    m =>
+      m instanceof SubaccountRevokeSubRequest ||
+      m instanceof SubaccountUnrevokeSubRequest ||
+      m instanceof DeleteAllFromGroupMsgNodeSubRequest
+  );
+
   const result = await MessageSender.sendEncryptedDataToSnode({
     // Note: this is on purpose that supplementalKeysSubRequest is before pendingConfigRequests
     // as this is to avoid a race condition where a device is polling right
@@ -155,11 +164,8 @@ async function pushChangesToGroupSwarmIfNeeded({
   const expectedReplyLength =
     pendingConfigRequests.length + // each of those are sent as a subrequest
     (supplementalKeysSubRequest ? 1 : 0) + // we are sending all the supplemental keys as a single subrequest
-    (deleteHashesSubRequest ? 1 : 0) + // we are sending all hashes changes as a single subrequest
-    (revokeSubRequest ? 1 : 0) + // we are sending all revoke updates as a single subrequest
-    (unrevokeSubRequest ? 1 : 0) + // we are sending all revoke updates as a single subrequest
-    (deleteAllMessagesSubRequest ? 1 : 0) + // a delete_all sub request is a single subrequest
-    (extraStoreRequests ? 1 : 0); // each of those are sent as a subrequest
+    (extraStoreRequests ? 1 : 0) + // each of those are sent as a subrequest
+    extraRequestWithExpectedResults.length; // each of those are sent as a subrequest, but they don't all return something...
 
   // we do a sequence call here. If we do not have the right expected number of results, consider it a failure
   if (!isArray(result) || result.length !== expectedReplyLength) {

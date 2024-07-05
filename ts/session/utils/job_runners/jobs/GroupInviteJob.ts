@@ -18,6 +18,8 @@ import {
   PersistedJob,
   RunJobResult,
 } from '../PersistedJob';
+import { LibSessionUtil } from '../../libsession/libsession_utils';
+import { showUpdateGroupMembersByConvoId } from '../../../../interactions/conversationInteractions';
 
 const defaultMsBetweenRetries = 10000;
 const defaultMaxAttemps = 1;
@@ -51,15 +53,9 @@ async function addJob({ groupPk, member }: JobExtraArgs) {
       nextAttemptTimestamp: Date.now(),
     });
     window.log.debug(`addGroupInviteJob: adding group invite for ${groupPk}:${member} `);
-    try {
-      updateFailedStateForMember(groupPk, member, false);
 
-      // we have to reset the error state so that the UI shows "sending" even if the last try failed.
-      await MetaGroupWrapperActions.memberSetInvited(groupPk, member, false);
-    } catch (e) {
-      window.log.warn('GroupInviteJob memberSetInvited (before) failed with', e.message);
-    }
     window?.inboxStore?.dispatch(groupInfoActions.refreshGroupDetailsFromWrapper({ groupPk }));
+    await LibSessionUtil.saveDumpsToDb(groupPk);
 
     await runners.groupInviteJobRunner.addJob(groupInviteJob);
 
@@ -71,21 +67,27 @@ async function addJob({ groupPk, member }: JobExtraArgs) {
 
 function displayFailedInvitesForGroup(groupPk: GroupPubkeyType) {
   const thisGroupFailures = invitesFailed.get(groupPk);
+
   if (!thisGroupFailures || thisGroupFailures.failedMembers.length === 0) {
     return;
   }
+  const onToastClick = () => {
+    void showUpdateGroupMembersByConvoId(groupPk);
+  };
   const count = thisGroupFailures.failedMembers.length;
   switch (count) {
     case 1:
       ToastUtils.pushToastWarning(
         `invite-failed${groupPk}`,
-        window.i18n('groupInviteFailedOne', [...thisGroupFailures.failedMembers, groupPk])
+        window.i18n('groupInviteFailedOne', [...thisGroupFailures.failedMembers, groupPk]),
+        onToastClick
       );
       break;
     case 2:
       ToastUtils.pushToastWarning(
         `invite-failed${groupPk}`,
-        window.i18n('groupInviteFailedTwo', [...thisGroupFailures.failedMembers, groupPk])
+        window.i18n('groupInviteFailedTwo', [...thisGroupFailures.failedMembers, groupPk]),
+        onToastClick
       );
       break;
     default:
@@ -95,7 +97,8 @@ function displayFailedInvitesForGroup(groupPk: GroupPubkeyType) {
           thisGroupFailures.failedMembers[0],
           `${thisGroupFailures.failedMembers.length - 1}`,
           groupPk,
-        ])
+        ]),
+        onToastClick
       );
   }
   // toast was displayed empty the list
@@ -169,7 +172,11 @@ class GroupInviteJob extends PersistedJob<GroupInvitePersistedData> {
       window.log.warn(
         `${jobType} with groupPk:"${groupPk}" member: ${member} id:"${identifier}" failed with ${e.message}`
       );
+      failed = true;
     } finally {
+      window.log.info(
+        `${jobType} with groupPk:"${groupPk}" member: ${member} id:"${identifier}" finished. failed:${failed}`
+      );
       try {
         await MetaGroupWrapperActions.memberSetInvited(groupPk, member, failed);
       } catch (e) {
@@ -177,7 +184,11 @@ class GroupInviteJob extends PersistedJob<GroupInvitePersistedData> {
       }
 
       updateFailedStateForMember(groupPk, member, failed);
+      window?.inboxStore?.dispatch(
+        groupInfoActions.setInvitePending({ groupPk, pubkey: member, sending: false })
+      );
       window?.inboxStore?.dispatch(groupInfoActions.refreshGroupDetailsFromWrapper({ groupPk }));
+      await LibSessionUtil.saveDumpsToDb(groupPk);
     }
     // return true so this job is marked as a success and we don't need to retry it
     return RunJobResult.Success;

@@ -11,7 +11,7 @@ import { updateGroupMembersModal } from '../../state/ducks/modalDialog';
 import { MemberListItem } from '../MemberListItem';
 import { SessionWrapperModal } from '../SessionWrapperModal';
 import { SessionButton, SessionButtonColor, SessionButtonType } from '../basic/SessionButton';
-import { SpacerLG, Text } from '../basic/Text';
+import { SpacerLG } from '../basic/Text';
 
 import {
   useConversationUsername,
@@ -20,7 +20,6 @@ import {
   useIsPublic,
   useSortedGroupMembers,
   useWeAreAdmin,
-  useZombies,
 } from '../../hooks/useParamSelector';
 
 import { useSet } from '../../hooks/useSet';
@@ -84,49 +83,6 @@ const ClassicMemberList = (props: {
           />
         );
       })}
-    </>
-  );
-};
-
-const ZombiesList = ({ convoId }: { convoId: string }) => {
-  const weAreAdmin = useWeAreAdmin(convoId);
-  const zombies = useZombies(convoId);
-
-  function onZombieClicked() {
-    if (!weAreAdmin) {
-      ToastUtils.pushOnlyAdminCanRemove();
-    }
-  }
-  if (!zombies?.length) {
-    return null;
-  }
-
-  const zombieElements = zombies.map((zombie: string) => {
-    const isSelected = weAreAdmin || false; // && !member.checkmarked;
-    return (
-      <MemberListItem
-        isSelected={isSelected}
-        onSelect={onZombieClicked}
-        onUnselect={onZombieClicked}
-        isZombie={true}
-        key={zombie}
-        pubkey={zombie}
-      />
-    );
-  });
-  return (
-    <>
-      <SpacerLG />
-      {weAreAdmin && (
-        <Text
-          padding="20px"
-          text={window.i18n('removeResidueMembers')}
-          subtle={true}
-          maxWidth="400px"
-          textAlign="center"
-        />
-      )}
-      {zombieElements}
     </>
   );
 };
@@ -275,7 +231,7 @@ export const UpdateGroupMembersDialog = (props: Props) => {
 
   return (
     <SessionWrapperModal title={titleText} onClose={closeDialog}>
-      {hasClosedGroupV2QAButtons() ? (
+      {hasClosedGroupV2QAButtons() && weAreAdmin ? (
         <>
           Also remove messages:
           <SessionToggle
@@ -294,7 +250,6 @@ export const UpdateGroupMembersDialog = (props: Props) => {
           selectedMembers={membersToKeepWithUpdate}
         />
       </StyledClassicMemberList>
-      <ZombiesList convoId={conversationId} />
       {showNoMembersMessage && <p>{window.i18n('noMembersInThisGroup')}</p>}
 
       <SpacerLG />

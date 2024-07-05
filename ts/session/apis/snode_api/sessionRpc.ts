@@ -54,7 +54,7 @@ async function doRequestNoRetries({
         ? true
         : window.sessionFeatureFlags?.useOnionRequests;
     if (useOnionRequests && targetNode) {
-      const fetchResult = await Onions.lokiOnionFetchWithRetries({
+      const fetchResult = await Onions.lokiOnionFetchNoRetries({
         targetNode,
         body: fetchOptions.body,
         headers: fetchOptions.headers,

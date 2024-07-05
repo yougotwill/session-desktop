@@ -1135,10 +1135,7 @@ function getPathString(pathObjArr: Array<{ ip: string; port: number }>): string 
   return pathObjArr.map(node => `${node.ip}:${node.port}`).join(', ');
 }
 
-/**
- * If the fetch throws a retryable error we retry this call with a new path at most 3 times. If another error happens, we return it. If we have a result we just return it.
- */
-async function lokiOnionFetchWithRetries({
+async function lokiOnionFetchNoRetries({
   targetNode,
   associatedWith,
   body,
@@ -1152,33 +1149,17 @@ async function lokiOnionFetchWithRetries({
   allow401s: boolean;
 }): Promise<SnodeResponse | undefined> {
   try {
-    const retriedResult = await pRetry(
-      async () => {
-        // Get a path excluding `targetNode`:
-        const path = await OnionPaths.getOnionPath({ toExclude: targetNode });
-        const result = await sendOnionRequestSnodeDestNoRetries(
-          path,
-          targetNode,
-          headers,
-          body,
-          allow401s,
-          associatedWith
-        );
-        return result;
-      },
-      {
-        retries: 3,
-        factor: 1,
-        minTimeout: 100,
-        onFailedAttempt: e => {
-          window?.log?.warn(
-            `onionFetchRetryable attempt #${e.attemptNumber} failed. ${e.retriesLeft} retries left...`
-          );
-        },
-      }
+    // Get a path excluding `targetNode`:
+    const path = await OnionPaths.getOnionPath({ toExclude: targetNode });
+    const result = await sendOnionRequestSnodeDestNoRetries(
+      path,
+      targetNode,
+      headers,
+      body,
+      allow401s,
+      associatedWith
     );
-
-    return retriedResult as SnodeResponse | undefined;
+    return result as SnodeResponse | undefined;
   } catch (e) {
     window?.log?.warn('onionFetchRetryable failed ', e.message);
     if (e?.errno === 'ENETUNREACH') {
@@ -1197,7 +1178,7 @@ export const Onions = {
   sendOnionRequestHandlingSnodeEjectNoRetries,
   incrementBadSnodeCountOrDrop,
   decodeOnionResult,
-  lokiOnionFetchWithRetries,
+  lokiOnionFetchNoRetries,
   getPathString,
   sendOnionRequestSnodeDestNoRetries,
   processOnionResponse,

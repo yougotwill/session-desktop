@@ -11,11 +11,18 @@ export function pushToastError(id: string, description: string) {
   });
 }
 
-export function pushToastWarning(id: string, description: string) {
-  toast.warning(<SessionToast description={description} type={SessionToastType.Warning} />, {
-    toastId: id,
-    updateId: id,
-  });
+export function pushToastWarning(id: string, description: string, onToastClick?: () => void) {
+  toast.warning(
+    <SessionToast
+      description={description}
+      type={SessionToastType.Warning}
+      onToastClick={onToastClick}
+    />,
+    {
+      toastId: id,
+      updateId: id,
+    }
+  );
 }
 
 export function pushToastInfo(
