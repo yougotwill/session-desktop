@@ -514,6 +514,13 @@ export const MetaGroupWrapperActions: MetaGroupWrapperActionsCalls = {
       'memberGetOrConstruct',
       pubkeyHex,
     ]) as Promise<ReturnType<MetaGroupWrapperActionsCalls['memberGetOrConstruct']>>,
+  memberConstructAndSet: async (groupPk: GroupPubkeyType, pubkeyHex: PubkeyType) =>
+    callLibSessionWorker([
+      `MetaGroupConfig-${groupPk}`,
+      'memberConstructAndSet',
+      pubkeyHex,
+    ]) as Promise<ReturnType<MetaGroupWrapperActionsCalls['memberConstructAndSet']>>,
+
   memberGetAll: async (groupPk: GroupPubkeyType) =>
     callLibSessionWorker([`MetaGroupConfig-${groupPk}`, 'memberGetAll']) as Promise<
       ReturnType<MetaGroupWrapperActionsCalls['memberGetAll']>

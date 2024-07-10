@@ -6,6 +6,10 @@ import { toHex } from '../utils/String';
 
 export type LibSodiumWrappers = typeof libsodiumwrappers;
 
+export type WithLibSodiumWrappers = {
+  sodium: LibSodiumWrappers;
+};
+
 export async function getSodiumRenderer(): Promise<LibSodiumWrappers> {
   await libsodiumwrappers.ready;
   return libsodiumwrappers;

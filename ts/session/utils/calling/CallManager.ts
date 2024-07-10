@@ -35,13 +35,13 @@ import { MessageSender } from '../../sending';
 import { getIsRinging } from '../RingingManager';
 import { getBlackSilenceMediaStream } from './Silence';
 import { ed25519Str } from '../String';
+import { WithMessageHash } from '../../types/with';
 
 export type InputItem = { deviceId: string; label: string };
 
 export const callTimeoutMs = 60000;
 
 export type WithOptExpireUpdate = { expireDetails: ReadyToDisappearMsgUpdate | undefined };
-export type WithMessageHash = { messageHash: string };
 
 /**
  * This uuid is set only once we accepted a call or started one.

@@ -29,6 +29,7 @@ import {
   MetaGroupWrapperActions,
   UserGroupsWrapperActions,
 } from '../../webworker/workers/browser/libsession_worker_interface';
+import { WithMessageHash } from '../../session/types/with';
 
 type WithSignatureTimestamp = { signatureTimestamp: number };
 type WithAuthor = { author: PubkeyType };
@@ -535,7 +536,8 @@ async function handle1o1GroupUpdateMessage(
   details: GroupUpdateDetails &
     WithUncheckedSource &
     WithUncheckedSenderIdentity &
-    WithDisappearingMessageUpdate
+    WithDisappearingMessageUpdate &
+    WithMessageHash
 ) {
   // the message types below are received from our own swarm, so source is the sender, and senderIdentity is empty
 
@@ -558,6 +560,17 @@ async function handle1o1GroupUpdateMessage(
         author: details.source,
       });
     }
+    if (details.messageHash && !isEmpty(details.messageHash)) {
+      const deleted = await deleteMessagesFromSwarmOnly(
+        [details.messageHash],
+        UserUtils.getOurPubKeyStrFromCache()
+      );
+      if (!deleted) {
+        window.log.warn(
+          `failed to delete invite/promote while processing it in handle1o1GroupUpdateMessage. hash:${details.messageHash}`
+        );
+      }
+    }
 
     // returns true for all cases where this message was expected to be a 1o1 message, even if not processed
     return true;
@@ -570,7 +583,8 @@ async function handleGroupUpdateMessage(
   details: GroupUpdateDetails &
     WithUncheckedSource &
     WithUncheckedSenderIdentity &
-    WithDisappearingMessageUpdate
+    WithDisappearingMessageUpdate &
+    WithMessageHash
 ) {
   const was1o1Message = await handle1o1GroupUpdateMessage(details);
   if (was1o1Message) {

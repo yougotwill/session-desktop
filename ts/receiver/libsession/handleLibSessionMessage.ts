@@ -1,9 +1,8 @@
 import { EncryptionDomain, GroupPubkeyType, PubkeyType } from 'libsession_util_nodejs';
 import { isNumber, toNumber } from 'lodash';
 import { ConvoHub } from '../../session/conversations';
-import { LibSodiumWrappers } from '../../session/crypto';
+import { LibSodiumWrappers, WithLibSodiumWrappers } from '../../session/crypto';
 import { PubKey } from '../../session/types';
-import { WithLibSodiuMWrappers } from '../../session/types/with';
 import { DecryptionFailed, InvalidMessage } from '../../session/utils/errors';
 import { assertUnreachable } from '../../types/sqlSharedTypes';
 import {
@@ -67,7 +66,7 @@ async function handleLibSessionMessage(
     domain: EncryptionDomain;
     ourPk: PubkeyType;
     groupPk: GroupPubkeyType;
-  } & WithLibSodiuMWrappers
+  } & WithLibSodiumWrappers
 ) {
   switch (opts.domain) {
     case 'SessionGroupKickedMessage':

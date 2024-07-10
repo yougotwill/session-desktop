@@ -173,6 +173,7 @@ export async function handleSwarmDataMessage({
       source: envelope.source,
       senderIdentity: envelope.senderIdentity,
       expireUpdate,
+      messageHash,
     });
     // Groups update should always be able to be decrypted as we get the keys before trying to decrypt them.
     // If decryption failed once, it will keep failing, so no need to keep it in the cache.

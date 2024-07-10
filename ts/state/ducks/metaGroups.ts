@@ -151,11 +151,11 @@ const initNewGroupInWrapper = createAsyncThunk(
 
       for (let index = 0; index < uniqMembers.length; index++) {
         const member = uniqMembers[index];
-        const created = await MetaGroupWrapperActions.memberGetOrConstruct(groupPk, member);
-        if (created.pubkeyHex === us) {
-          await MetaGroupWrapperActions.memberSetAdmin(groupPk, created.pubkeyHex);
+        await MetaGroupWrapperActions.memberConstructAndSet(groupPk, member);
+        if (member === us) {
+          await MetaGroupWrapperActions.memberSetAdmin(groupPk, member);
         } else {
-          await MetaGroupWrapperActions.memberSetInvited(groupPk, created.pubkeyHex, false);
+          await MetaGroupWrapperActions.memberSetInvited(groupPk, member, false);
         }
       }
 
@@ -493,8 +493,8 @@ async function handleWithHistoryMembers({
 }) {
   for (let index = 0; index < withHistory.length; index++) {
     const member = withHistory[index];
-    const created = await MetaGroupWrapperActions.memberGetOrConstruct(groupPk, member);
-    await MetaGroupWrapperActions.memberSetInvited(groupPk, created.pubkeyHex, false);
+    await MetaGroupWrapperActions.memberConstructAndSet(groupPk, member);
+    await MetaGroupWrapperActions.memberSetInvited(groupPk, member, false);
   }
   const encryptedSupplementKeys = withHistory.length
     ? await MetaGroupWrapperActions.generateSupplementKeys(groupPk, withHistory)
@@ -512,8 +512,8 @@ async function handleWithoutHistoryMembers({
 }: WithGroupPubkey & WithAddWithoutHistoryMembers) {
   for (let index = 0; index < withoutHistory.length; index++) {
     const member = withoutHistory[index];
-    const created = await MetaGroupWrapperActions.memberGetOrConstruct(groupPk, member);
-    await MetaGroupWrapperActions.memberSetInvited(groupPk, created.pubkeyHex, false);
+    await MetaGroupWrapperActions.memberConstructAndSet(groupPk, member);
+    await MetaGroupWrapperActions.memberSetInvited(groupPk, member, false);
   }
 
   if (!isEmpty(withoutHistory)) {

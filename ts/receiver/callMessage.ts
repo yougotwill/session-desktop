@@ -3,9 +3,10 @@ import { SignalService } from '../protobuf';
 import { GetNetworkTime } from '../session/apis/snode_api/getNetworkTime';
 import { TTL_DEFAULT } from '../session/constants';
 import { CallManager, UserUtils } from '../session/utils';
-import { WithMessageHash, WithOptExpireUpdate } from '../session/utils/calling/CallManager';
+import {  WithOptExpireUpdate } from '../session/utils/calling/CallManager';
 import { IncomingMessageCache } from './cache';
 import { EnvelopePlus } from './types';
+import { WithMessageHash } from '../session/types/with';
 
 // messageHash & messageHash are only needed for actions adding a callMessage to the database (so they expire)
 export async function handleCallMessage(

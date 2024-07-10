@@ -1,5 +1,4 @@
-import { LibSodiumWrappers } from '../crypto';
 
-export type WithLibSodiuMWrappers = {
-  sodium: LibSodiumWrappers;
-};
+
+
+export type WithMessageHash = { messageHash: string };
