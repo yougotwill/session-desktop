@@ -15,10 +15,14 @@ import {
   StoreGroupMessageSubRequest,
 } from '../SnodeRequestTypes';
 import { SnodeNamespaces } from '../namespaces';
+import { GroupUpdateDeleteMemberContentMessage } from '../../../messages/outgoing/controlMessage/group_v2/to_group/GroupUpdateDeleteMemberContentMessage';
+import { GroupUpdateMemberLeftNotificationMessage } from '../../../messages/outgoing/controlMessage/group_v2/to_group/GroupUpdateMemberLeftNotificationMessage';
 
 export type StoreMessageToSubRequestType =
   | GroupUpdateMemberChangeMessage
-  | GroupUpdateInfoChangeMessage;
+  | GroupUpdateInfoChangeMessage
+  | GroupUpdateDeleteMemberContentMessage
+  | GroupUpdateMemberLeftNotificationMessage;
 
 async function makeGroupMessageSubRequest(
   updateMessages: Array<StoreMessageToSubRequestType | null>,

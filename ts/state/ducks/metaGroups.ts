@@ -770,6 +770,8 @@ async function handleMemberRemovedFromUI({
   await checkWeAreAdminOrThrow(groupPk, 'handleMemberRemovedFromUI');
 
   if (removeMembers.length === 0) {
+    window.log.debug('handleMemberRemovedFromUI: removeMembers is empty');
+
     return;
   }
 
@@ -778,24 +780,31 @@ async function handleMemberRemovedFromUI({
     removed: removeMembers,
   });
 
-  // Note: We don't revoke members from here, instead we schedule a GroupPendingRemovals which will deal with the revokes of all of them together
+  if (removed.length === 0) {
+    window.log.debug('handleMemberRemovedFromUI: removeMembers after validation is empty');
 
-  // Send the groupUpdateDeleteMessage that can still be decrypted by those removed members to namespace ClosedGroupRevokedRetrievableMessages. (not when handling a MEMBER_LEFT message)
-  // Then, rekey the wrapper, but don't push the changes yet, we want to batch all of the requests to be made together in the `pushChangesToGroupSwarmIfNeeded` below.
-  if (removed.length) {
-    await MetaGroupWrapperActions.membersMarkPendingRemoval(groupPk, removed, alsoRemoveMessages);
+    return;
   }
-  await GroupPendingRemovals.addJob({ groupPk });
 
-  const createAtNetworkTimestamp = GetNetworkTime.now();
+  // We need to mark the member as "pending removal" so any admins (including us) can deal with it as soon as possible
+  await MetaGroupWrapperActions.membersMarkPendingRemoval(groupPk, removed, alsoRemoveMessages);
   await LibSessionUtil.saveDumpsToDb(groupPk);
 
+  // We don't revoke the member's token right away. Instead we schedule a `GroupPendingRemovals`
+  // which will deal with the revokes of all of them together.
+  await GroupPendingRemovals.addJob({ groupPk });
+
+  // Build a GroupUpdateMessage to be sent if that member was kicked by us.
+  const createAtNetworkTimestamp = GetNetworkTime.now();
   const expiringDetails = DisappearingMessages.getExpireDetailsForOutgoingMesssage(
     convo,
     createAtNetworkTimestamp
   );
   let removedControlMessage: GroupUpdateMemberChangeMessage | null = null;
-  if (removed.length && !fromMemberLeftMessage) {
+
+  // We only add/send a message if that user didn't leave but was explicitely kicked.
+  // When we leaves by himself, he sends a GroupUpdateMessage.
+  if (!fromMemberLeftMessage) {
     const msgModel = await ClosedGroup.addUpdateMessage({
       diff: { type: 'kicked', kicked: removed },
       convo,
@@ -809,7 +818,7 @@ async function handleMemberRemovedFromUI({
             ? createAtNetworkTimestamp + expiringDetails.expireTimer
             : null,
       },
-      markAlreadySent: false, // the store below will mark the message as sent with dbMsgIdentifier
+      markAlreadySent: false, // the store below will mark the message as sent using dbMsgIdentifier
     });
     removedControlMessage = await getRemovedControlMessage({
       adminSecretKey: group.secretKey,
@@ -822,12 +831,13 @@ async function handleMemberRemovedFromUI({
     });
   }
 
+  // build the request for that GroupUpdateMessage if needed
   const extraStoreRequests = await StoreGroupRequestFactory.makeGroupMessageSubRequest(
     [removedControlMessage],
     group
   );
 
-  // revoked pubkeys, update messages, and libsession groups config in a single batch call
+  // Send the updated config (with changes to pending_removal) and that GroupUpdateMessage request (if any) as a sequence.
   const sequenceResult = await GroupSync.pushChangesToGroupSwarmIfNeeded({
     groupPk,
     extraStoreRequests,

@@ -49,8 +49,6 @@ import { MessageEncrypter } from '../crypto/MessageEncrypter';
 import { ContentMessage } from '../messages/outgoing';
 import { UnsendMessage } from '../messages/outgoing/controlMessage/UnsendMessage';
 import { ClosedGroupNewMessage } from '../messages/outgoing/controlMessage/group/ClosedGroupNewMessage';
-import { GroupUpdateMemberLeftMessage } from '../messages/outgoing/controlMessage/group_v2/to_group/GroupUpdateMemberLeftMessage';
-import { GroupUpdateMemberLeftNotificationMessage } from '../messages/outgoing/controlMessage/group_v2/to_group/GroupUpdateMemberLeftNotificationMessage';
 import { OpenGroupVisibleMessage } from '../messages/outgoing/visibleMessage/OpenGroupVisibleMessage';
 import { PubKey } from '../types';
 import { OutgoingRawMessage } from '../types/RawMessage';
@@ -632,65 +630,6 @@ async function sendEncryptedDataToSnode<T extends GroupPubkeyType | PubkeyType>(
   }
 }
 
-/**
- * Send an array of **not** preencrypted data to the corresponding swarm.
- * Note: the messages order is not changed when sending them, but if they are not correctly sorted an exception will be thrown.
- *
- * @param messages the data to deposit (after encryption)
- * @param destination the pubkey we should deposit those message to
- */
-async function sendUnencryptedDataToSnode<T extends GroupPubkeyType | PubkeyType>({
-  destination,
-  messages,
-  method,
-}: {
-  // keeping those as an array because the order needs to be enforced for some (groupkeys for instance)
-  destination: T;
-  messages: Array<
-    T extends GroupPubkeyType
-      ? GroupUpdateMemberLeftMessage | GroupUpdateMemberLeftNotificationMessage
-      : never
-  >;
-  method: MethodBatchType;
-}) {
-  const rawMessages: Array<EncryptAndWrapMessage> = messages.map(m => {
-    return {
-      networkTimestamp: m.createAtNetworkTimestamp,
-      plainTextBuffer: m.plainTextBuffer(),
-      ttl: m.ttl(),
-      destination: m.destination,
-      identifier: m.identifier,
-      namespace: m.namespace,
-      isSyncMessage: false,
-    };
-  });
-
-  const encryptedAndWrappedArr = await encryptMessagesAndWrap(
-    rawMessages.map(message => {
-      return {
-        destination,
-        plainTextBuffer: message.plainTextBuffer,
-        namespace: message.namespace,
-        ttl: message.ttl,
-        identifier: message.identifier,
-        networkTimestamp: message.networkTimestamp,
-        isSyncMessage: false,
-      };
-    })
-  );
-
-  const sortedSubRequests = await messagesToRequests({
-    encryptedAndWrappedArr,
-    destination,
-  });
-
-  return sendEncryptedDataToSnode({
-    destination,
-    sortedSubRequests,
-    method,
-  });
-}
-
 // ================ Open Group ================
 /**
  * Send a message to an open group v2.
@@ -756,7 +695,6 @@ export const MessageSender = {
   getSignatureParamsFromNamespace,
   signSubRequests,
   encryptMessagesAndWrap,
-  sendUnencryptedDataToSnode,
   messagesToRequests,
 };
 

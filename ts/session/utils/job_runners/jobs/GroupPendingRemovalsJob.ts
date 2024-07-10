@@ -4,20 +4,22 @@ import { compact, isEmpty, isNumber } from 'lodash';
 import { v4 } from 'uuid';
 import { StringUtils } from '../..';
 import { Data } from '../../../../data/data';
-import {
-  deleteMessagesFromSwarmOnly,
-  unsendMessagesForEveryoneGroupV2,
-} from '../../../../interactions/conversations/unsendingInteractions';
+import { deleteMessagesFromSwarmOnly } from '../../../../interactions/conversations/unsendingInteractions';
 import {
   MetaGroupWrapperActions,
   MultiEncryptWrapperActions,
   UserGroupsWrapperActions,
 } from '../../../../webworker/workers/browser/libsession_worker_interface';
-import { StoreGroupRevokedRetrievableSubRequest } from '../../../apis/snode_api/SnodeRequestTypes';
+import {
+  StoreGroupMessageSubRequest,
+  StoreGroupRevokedRetrievableSubRequest,
+} from '../../../apis/snode_api/SnodeRequestTypes';
+import { StoreGroupRequestFactory } from '../../../apis/snode_api/factories/StoreGroupRequestFactory';
 import { GetNetworkTime } from '../../../apis/snode_api/getNetworkTime';
 import { RevokeChanges, SnodeAPIRevoke } from '../../../apis/snode_api/revokeSubaccount';
 import { WithSecretKey } from '../../../apis/snode_api/types';
-import { concatUInt8Array } from '../../../crypto';
+import { concatUInt8Array, getSodiumRenderer } from '../../../crypto';
+import { GroupUpdateDeleteMemberContentMessage } from '../../../messages/outgoing/controlMessage/group_v2/to_group/GroupUpdateDeleteMemberContentMessage';
 import { MessageSender } from '../../../sending';
 import { fromHexToArray } from '../../String';
 import { runners } from '../JobRunner';
@@ -41,7 +43,7 @@ type JobExtraArgs = Pick<GroupPendingRemovalsPersistedData, 'groupPk'>;
 async function addJob({ groupPk }: JobExtraArgs) {
   const pendingRemovalJob = new GroupPendingRemovalsJob({
     groupPk,
-    nextAttemptTimestamp: Date.now(),
+    nextAttemptTimestamp: Date.now() + 1000, // postpone by 1s
   });
   window.log.debug(`addGroupPendingRemovalJob: adding group pending removal for ${groupPk} `);
   await runners.groupPendingRemovalJobRunner.addJob(pendingRemovalJob);
@@ -130,6 +132,10 @@ class GroupPendingRemovalsJob extends PersistedJob<GroupPendingRemovalsPersisted
       if (!pendingRemovals.length) {
         return RunJobResult.Success;
       }
+      const deleteMessagesOfMembers = pendingRemovals
+        .filter(m => m.removedStatus === 2)
+        .map(m => m.pubkeyHex);
+
       const sessionIdsHex = pendingRemovals.map(m => m.pubkeyHex);
       const sessionIds = sessionIdsHex.map(m => fromHexToArray(m).slice(1));
       const currentGen = await MetaGroupWrapperActions.keyGetCurrentGen(groupPk);
@@ -162,44 +168,69 @@ class GroupPendingRemovalsJob extends PersistedJob<GroupPendingRemovalsPersisted
         revokeUnrevokeParams.revokeSubRequest ? revokeUnrevokeParams.revokeSubRequest : null,
         revokeUnrevokeParams.unrevokeSubRequest ? revokeUnrevokeParams.unrevokeSubRequest : null,
       ]);
+      let storeRequests: Array<StoreGroupMessageSubRequest> = [];
+      if (deleteMessagesOfMembers.length) {
+        const deleteContentMsg = new GroupUpdateDeleteMemberContentMessage({
+          createAtNetworkTimestamp: GetNetworkTime.now(),
+          expirationType: 'unknown', // this is not displayed so not expiring.
+          expireTimer: 0,
+          groupPk,
+          memberSessionIds: deleteMessagesOfMembers,
+          messageHashes: [],
+          sodium: await getSodiumRenderer(),
+          secretKey: group.secretKey,
+        });
+        storeRequests = await StoreGroupRequestFactory.makeGroupMessageSubRequest(
+          [deleteContentMsg],
+          { authData: null, secretKey: group.secretKey }
+        );
+      }
 
+      const sortedSubRequests = compact([multiEncryptRequest, ...revokeRequests, ...storeRequests]);
       const result = await MessageSender.sendEncryptedDataToSnode({
-        sortedSubRequests: [multiEncryptRequest, ...revokeRequests],
+        sortedSubRequests,
         destination: groupPk,
         method: 'sequence',
       });
 
-      if (result?.length === 2 && result[0].code === 200 && result[1].code === 200) {
-        // both requests success, remove the members from the group member entirely and sync
-        await MetaGroupWrapperActions.memberEraseAndRekey(groupPk, sessionIdsHex);
-        await GroupSync.queueNewJobIfNeeded(groupPk);
-        const deleteMessagesOf = pendingRemovals
-          .filter(m => m.removedStatus === 2)
-          .map(m => m.pubkeyHex);
-        if (deleteMessagesOf.length) {
+      if (
+        !result ||
+        result.length !== sortedSubRequests.length ||
+        result.some(m => m.code !== 200)
+      ) {
+        window.log.warn(
+          'GroupPendingRemovalsJob: sendEncryptedDataToSnode unexpected result length or content. Scheduling retry if possible'
+        );
+        return RunJobResult.RetryJobIfPossible;
+      }
+
+      // both requests success, remove the members from the group member entirely and sync
+      await MetaGroupWrapperActions.memberEraseAndRekey(groupPk, sessionIdsHex);
+      await GroupSync.queueNewJobIfNeeded(groupPk);
+
+      try {
+        if (deleteMessagesOfMembers.length) {
           const msgHashesToDeleteOnGroupSwarm =
             await Data.deleteAllMessageFromSendersInConversation({
               groupPk,
-              toRemove: sessionIdsHex,
+              toRemove: deleteMessagesOfMembers,
               signatureTimestamp: GetNetworkTime.now(),
             });
 
-          await unsendMessagesForEveryoneGroupV2({
-            allMessagesFrom: deleteMessagesOf,
-            groupPk,
-            msgsToDelete: [],
-          });
           if (msgHashesToDeleteOnGroupSwarm.length) {
             await deleteMessagesFromSwarmOnly(msgHashesToDeleteOnGroupSwarm, groupPk);
           }
         }
+      } catch (e) {
+        window.log.warn('GroupPendingRemovalsJob failable part failed with:', e.message);
       }
+
+      // return true so this job is marked as a success and we don't need to retry it
+      return RunJobResult.Success;
     } catch (e) {
-      window.log.warn('PendingRemovalJob failed with', e.message);
+      window.log.warn('GroupPendingRemovalsJob failed with', e.message);
       return RunJobResult.RetryJobIfPossible;
     }
-    // return true so this job is marked as a success and we don't need to retry it
-    return RunJobResult.Success;
   }
 
   public serializeJob() {

@@ -46,6 +46,7 @@ import { SessionUtilContact } from '../utils/libsession/libsession_utils_contact
 import { SessionUtilConvoInfoVolatile } from '../utils/libsession/libsession_utils_convo_info_volatile';
 import { SessionUtilUserGroups } from '../utils/libsession/libsession_utils_user_groups';
 import { DisappearingMessages } from '../disappearing_messages';
+import { StoreGroupRequestFactory } from '../apis/snode_api/factories/StoreGroupRequestFactory';
 
 let instance: ConvoController | null;
 
@@ -620,7 +621,7 @@ async function leaveClosedGroup(groupPk: PubkeyType | GroupPubkeyType, fromSyncM
 
   if (PubKey.is03Pubkey(groupPk)) {
     const group = await UserGroupsWrapperActions.getGroup(groupPk);
-    if (!group) {
+    if (!group || (!group.secretKey && !group.authData)) {
       throw new Error('leaveClosedGroup: group from UserGroupsWrapperActions is null ');
     }
     const createAtNetworkTimestamp = GetNetworkTime.now();
@@ -644,9 +645,16 @@ async function leaveClosedGroup(groupPk: PubkeyType | GroupPubkeyType, fromSyncM
     // We might not be able to send our leaving messages (no encryption keypair, we were already removed, no network, etc).
     // If that happens, we should just remove everything from our current user.
     try {
-      const results = await MessageSender.sendUnencryptedDataToSnode({
+      const storeRequests = await StoreGroupRequestFactory.makeGroupMessageSubRequest(
+        [ourLeavingNotificationMessage, ourLeavingMessage],
+        {
+          authData: group.authData,
+          secretKey: group.secretKey,
+        }
+      );
+      const results = await MessageSender.sendEncryptedDataToSnode({
         destination: groupPk,
-        messages: [ourLeavingNotificationMessage, ourLeavingMessage],
+        sortedSubRequests: storeRequests,
         method: 'sequence',
       });
 

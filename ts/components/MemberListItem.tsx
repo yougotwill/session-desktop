@@ -169,7 +169,10 @@ const GroupStatusText = ({ groupPk, pubkey }: { pubkey: PubkeyType; groupPk: Gro
   return (
     <StyledGroupStatusText
       data-testid={'group-member-status-text'}
-      isFailure={(groupPromotionFailed && !groupPromotionSending) || (groupInviteFailed && !groupInviteSending)}
+      isFailure={
+        (groupPromotionFailed && !groupPromotionSending) ||
+        (groupInviteFailed && !groupInviteSending)
+      }
     >
       {statusText}
     </StyledGroupStatusText>
