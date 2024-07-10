@@ -280,11 +280,11 @@ class ConvoController {
     // we don't need to keep polling anymore.
     getSwarmPollingInstance().removePubkey(groupPk, 'deleteGroup');
 
-    const group = await UserGroupsWrapperActions.getGroup(groupPk);
+    const groupInUserGroup = await UserGroupsWrapperActions.getGroup(groupPk);
 
     // send the leave message before we delete everything for this group (including the key!)
     // Note: if we were kicked, we already lost the authdata/secretKey for it, so no need to try to send our message.
-    if (sendLeaveMessage && !group?.kicked) {
+    if (sendLeaveMessage && !groupInUserGroup?.kicked) {
       await leaveClosedGroup(groupPk, fromSyncMessage);
     }
     // a group 03 can be removed fully or kept empty as kicked.
@@ -293,12 +293,26 @@ class ConvoController {
     // Note: the pendingInvite=true case cannot really happen as we wouldn't be polling from that group (and so, not get the message kicking us)
     if (emptyGroupButKeepAsKicked) {
       // delete the secretKey/authData if we had it. If we need it for something, it has to be done before this call.
-      if (group) {
-        group.authData = null;
-        group.secretKey = null;
-        group.disappearingTimerSeconds = undefined;
-        group.kicked = true;
-        await UserGroupsWrapperActions.setGroup(group);
+      if (groupInUserGroup) {
+        groupInUserGroup.authData = null;
+        groupInUserGroup.secretKey = null;
+        groupInUserGroup.disappearingTimerSeconds = undefined;
+        groupInUserGroup.kicked = true;
+        // we want to update the groupName in usergroup with whatever is in the groupInfo,
+        // so even if the group is not polled anymore, we have an up to date name on restore.
+        let nameInMetagroup: string | undefined;
+        try {
+          const metagroup = await MetaGroupWrapperActions.infoGet(groupPk);
+          if (metagroup && metagroup.name && !isEmpty(metagroup.name)) {
+            nameInMetagroup = metagroup.name;
+          }
+        } catch (e) {
+          // nothing to do
+        }
+        if (groupInUserGroup && nameInMetagroup && groupInUserGroup.name !== nameInMetagroup) {
+          groupInUserGroup.name = nameInMetagroup;
+        }
+        await UserGroupsWrapperActions.setGroup(groupInUserGroup);
       }
     } else {
       try {

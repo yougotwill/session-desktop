@@ -1,15 +1,15 @@
 import { EncryptionDomain, GroupPubkeyType, PubkeyType } from 'libsession_util_nodejs';
 import { isNumber, toNumber } from 'lodash';
+import { ConvoHub } from '../../session/conversations';
 import { LibSodiumWrappers } from '../../session/crypto';
 import { PubKey } from '../../session/types';
+import { WithLibSodiuMWrappers } from '../../session/types/with';
 import { DecryptionFailed, InvalidMessage } from '../../session/utils/errors';
 import { assertUnreachable } from '../../types/sqlSharedTypes';
-import { WithLibSodiuMWrappers } from '../../session/types/with';
 import {
   MetaGroupWrapperActions,
   UserGroupsWrapperActions,
 } from '../../webworker/workers/browser/libsession_worker_interface';
-import { ConvoHub } from '../../session/conversations';
 
 /**
  * Logic for handling the `groupKicked` `LibSessionMessage`, this message should only be processed if it was
@@ -48,8 +48,10 @@ async function handleLibSessionKickedMessage({
   if (currentGenEmbedded < currentGenFromWrapper) {
     throw new InvalidMessage('currentgen in wrapper is higher than the one in the message ');
   }
-  const inviteWasPending =
-    (await UserGroupsWrapperActions.getGroup(groupPk))?.invitePending || false;
+
+  const groupInUserGroup = await UserGroupsWrapperActions.getGroup(groupPk);
+  const inviteWasPending = groupInUserGroup?.invitePending || false;
+
   await ConvoHub.use().deleteGroup(groupPk, {
     sendLeaveMessage: false,
     fromSyncMessage: false,
