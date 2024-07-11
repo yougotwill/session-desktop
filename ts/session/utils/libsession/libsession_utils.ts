@@ -2,6 +2,7 @@
 /* eslint-disable import/extensions */
 /* eslint-disable import/no-unresolved */
 import { GroupPubkeyType, PubkeyType } from 'libsession_util_nodejs';
+import { from_hex } from 'libsodium-wrappers-sumo';
 import { compact, difference, isString, omit } from 'lodash';
 import Long from 'long';
 import { UserUtils } from '..';
@@ -16,11 +17,11 @@ import {
   GenericWrapperActions,
   MetaGroupWrapperActions,
 } from '../../../webworker/workers/browser/libsession_worker_interface';
+import { SnodeNamespaces, SnodeNamespacesUserConfig } from '../../apis/snode_api/namespaces';
 import {
   BatchResultEntry,
   NotEmptyArrayOfBatchResults,
 } from '../../apis/snode_api/SnodeRequestTypes';
-import { SnodeNamespaces, SnodeNamespacesUserConfig } from '../../apis/snode_api/namespaces';
 import { PubKey } from '../../types';
 import { UserSync } from '../job_runners/jobs/UserSyncJob';
 import { ed25519Str } from '../String';
@@ -387,6 +388,38 @@ async function saveDumpsToDb(pubkey: PubkeyType | GroupPubkeyType) {
   }
 }
 
+/**
+ * Creates the specified member in the specified group wrapper and sets the details provided.
+ * Note: no checks are done, so if the member existed already it's name/profile picture are overriden.
+ *
+ * This should only be used when the current device is explicitely inviting a new member to the group.
+ */
+async function createMemberAndSetDetails({
+  displayName,
+  memberPubkey,
+  groupPk,
+  avatarUrl,
+  profileKeyHex,
+}: {
+  memberPubkey: PubkeyType;
+  displayName: string | null;
+  groupPk: GroupPubkeyType;
+  profileKeyHex: string | null;
+  avatarUrl: string | null;
+}) {
+  await MetaGroupWrapperActions.memberConstructAndSet(groupPk, memberPubkey);
+
+  if (displayName) {
+    await MetaGroupWrapperActions.memberSetName(groupPk, memberPubkey, displayName);
+  }
+  if (profileKeyHex && avatarUrl) {
+    await MetaGroupWrapperActions.memberSetProfilePicture(groupPk, memberPubkey, {
+      url: avatarUrl,
+      key: from_hex(profileKeyHex),
+    });
+  }
+}
+
 export const LibSessionUtil = {
   initializeLibSessionUtilWrappers,
   userNamespaceToVariant,
@@ -396,4 +429,5 @@ export const LibSessionUtil = {
   saveDumpsToDb,
   batchResultsToGroupSuccessfulChange,
   batchResultsToUserSuccessfulChange,
+  createMemberAndSetDetails,
 };

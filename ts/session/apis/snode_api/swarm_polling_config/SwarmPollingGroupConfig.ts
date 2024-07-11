@@ -14,6 +14,7 @@ import { LibSessionUtil } from '../../../utils/libsession/libsession_utils';
 import { SnodeNamespaces } from '../namespaces';
 import { RetrieveMessageItemWithNamespace } from '../types';
 import { ConvoHub } from '../../../conversations';
+import { ProfileManager } from '../../../profile_manager/ProfileManager';
 
 /**
  * This is a basic optimization to avoid running the logic when the `deleteBeforeSeconds`
@@ -125,6 +126,26 @@ async function handleMetaMergeResults(groupPk: GroupPubkeyType) {
     }
     if (changes) {
       await convo.commit();
+    }
+  }
+
+  const members = await MetaGroupWrapperActions.memberGetAll(groupPk);
+  for (let index = 0; index < members.length; index++) {
+    const member = members[index];
+    // if our DB doesn't have details about this user, set them. Otherwise we don't want to overwrite our changes with those
+    // because they are most likely out of date from what we get from the user himself.
+    const memberConvo = ConvoHub.use().get(member.pubkeyHex);
+    if (!memberConvo) {
+      continue;
+    }
+    if (member.name && member.name !== memberConvo.getRealSessionUsername()) {
+      // eslint-disable-next-line no-await-in-loop
+      await ProfileManager.updateProfileOfContact(
+        member.pubkeyHex,
+        member.name,
+        member.profilePicture?.url || null,
+        member.profilePicture?.key || null
+      );
     }
   }
 }

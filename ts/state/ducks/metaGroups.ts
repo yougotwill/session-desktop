@@ -39,6 +39,7 @@ import { GroupSync } from '../../session/utils/job_runners/jobs/GroupSyncJob';
 import { UserSync } from '../../session/utils/job_runners/jobs/UserSyncJob';
 import { RunJobResult } from '../../session/utils/job_runners/PersistedJob';
 import { LibSessionUtil } from '../../session/utils/libsession/libsession_utils';
+import { ed25519Str } from '../../session/utils/String';
 import { getUserED25519KeyPairBytes } from '../../session/utils/User';
 import { stringify, toFixedUint8ArrayOfLength } from '../../types/sqlSharedTypes';
 import {
@@ -52,7 +53,6 @@ import {
 import { StateType } from '../reducer';
 import { openConversationWithMessages } from './conversations';
 import { resetLeftOverlayMode } from './section';
-import { ed25519Str } from '../../session/utils/String';
 
 type WithFromMemberLeftMessage = { fromMemberLeftMessage: boolean }; // there are some changes we want to skip when doing changes triggered from a memberLeft message.
 export type GroupState = {
@@ -151,7 +151,19 @@ const initNewGroupInWrapper = createAsyncThunk(
 
       for (let index = 0; index < uniqMembers.length; index++) {
         const member = uniqMembers[index];
-        await MetaGroupWrapperActions.memberConstructAndSet(groupPk, member);
+        const convoMember = ConvoHub.use().get(member);
+        const displayName = convoMember?.getRealSessionUsername() || null;
+        const profileKeyHex = convoMember?.getProfileKey() || null;
+        const avatarUrl = convoMember?.getAvatarPointer() || null;
+
+        await LibSessionUtil.createMemberAndSetDetails({
+          avatarUrl,
+          displayName,
+          groupPk,
+          memberPubkey: member,
+          profileKeyHex,
+        });
+
         if (member === us) {
           await MetaGroupWrapperActions.memberSetAdmin(groupPk, member);
         } else {
@@ -493,7 +505,19 @@ async function handleWithHistoryMembers({
 }) {
   for (let index = 0; index < withHistory.length; index++) {
     const member = withHistory[index];
-    await MetaGroupWrapperActions.memberConstructAndSet(groupPk, member);
+
+    const convoMember = ConvoHub.use().get(member);
+    const displayName = convoMember?.getRealSessionUsername() || null;
+    const profileKeyHex = convoMember?.getProfileKey() || null;
+    const avatarUrl = convoMember?.getAvatarPointer() || null;
+
+    await LibSessionUtil.createMemberAndSetDetails({
+      avatarUrl,
+      displayName,
+      groupPk,
+      memberPubkey: member,
+      profileKeyHex,
+    });
     await MetaGroupWrapperActions.memberSetInvited(groupPk, member, false);
   }
   const encryptedSupplementKeys = withHistory.length
@@ -512,7 +536,18 @@ async function handleWithoutHistoryMembers({
 }: WithGroupPubkey & WithAddWithoutHistoryMembers) {
   for (let index = 0; index < withoutHistory.length; index++) {
     const member = withoutHistory[index];
-    await MetaGroupWrapperActions.memberConstructAndSet(groupPk, member);
+    const convoMember = ConvoHub.use().get(member);
+    const displayName = convoMember?.getRealSessionUsername() || null;
+    const profileKeyHex = convoMember?.getProfileKey() || null;
+    const avatarUrl = convoMember?.getAvatarPointer() || null;
+
+    await LibSessionUtil.createMemberAndSetDetails({
+      groupPk,
+      memberPubkey: member,
+      avatarUrl,
+      displayName,
+      profileKeyHex,
+    });
     await MetaGroupWrapperActions.memberSetInvited(groupPk, member, false);
   }
 
