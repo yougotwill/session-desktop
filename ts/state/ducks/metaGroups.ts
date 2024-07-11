@@ -1346,9 +1346,10 @@ const metaGroupSlice = createSlice({
       if (infos && members) {
         state.infos[groupPk] = infos;
         state.members[groupPk] = members;
-
-        // window.log.debug(`groupInfo after merge: ${stringify(infos)}`);
-        // window.log.debug(`groupMembers after merge: ${stringify(members)}`);
+        if (window.sessionFeatureFlags.debug.debugLibsessionDumps) {
+          window.log.info(`groupInfo after merge: ${stringify(infos)}`);
+          window.log.info(`groupMembers after merge: ${stringify(members)}`);
+        }
         refreshConvosModelProps([groupPk]);
       } else {
         window.log.debug(
@@ -1369,9 +1370,10 @@ const metaGroupSlice = createSlice({
         state.infos[groupPk] = infos;
         state.members[groupPk] = members;
         refreshConvosModelProps([groupPk]);
-
-        window.log.debug(`groupInfo after handleUserGroupUpdate: ${stringify(infos)}`);
-        window.log.debug(`groupMembers after handleUserGroupUpdate: ${stringify(members)}`);
+        if (window.sessionFeatureFlags.debug.debugLibsessionDumps) {
+          window.log.info(`groupInfo after handleUserGroupUpdate: ${stringify(infos)}`);
+          window.log.info(`groupMembers after handleUserGroupUpdate: ${stringify(members)}`);
+        }
       } else {
         window.log.debug(
           `handleUserGroupUpdate no details found, removing from slice: ${groupPk}}`
@@ -1390,9 +1392,12 @@ const metaGroupSlice = createSlice({
       state.infos[groupPk] = infos;
       state.members[groupPk] = members;
       refreshConvosModelProps([groupPk]);
-
-      window.log.debug(`groupInfo after currentDeviceGroupMembersChange: ${stringify(infos)}`);
-      window.log.debug(`groupMembers after currentDeviceGroupMembersChange: ${stringify(members)}`);
+      if (window.sessionFeatureFlags.debug.debugLibsessionDumps) {
+        window.log.info(`groupInfo after currentDeviceGroupMembersChange: ${stringify(infos)}`);
+        window.log.info(
+          `groupMembers after currentDeviceGroupMembersChange: ${stringify(members)}`
+        );
+      }
     });
     builder.addCase(currentDeviceGroupMembersChange.rejected, (state, action) => {
       window.log.error('a currentDeviceGroupMembersChange was rejected', action.error);
@@ -1410,9 +1415,10 @@ const metaGroupSlice = createSlice({
       state.infos[groupPk] = infos;
       state.members[groupPk] = members;
       refreshConvosModelProps([groupPk]);
-
-      window.log.debug(`groupInfo after currentDeviceGroupNameChange: ${stringify(infos)}`);
-      window.log.debug(`groupMembers after currentDeviceGroupNameChange: ${stringify(members)}`);
+      if (window.sessionFeatureFlags.debug.debugLibsessionDumps) {
+        window.log.info(`groupInfo after currentDeviceGroupNameChange: ${stringify(infos)}`);
+        window.log.info(`groupMembers after currentDeviceGroupNameChange: ${stringify(members)}`);
+      }
     });
     builder.addCase(currentDeviceGroupNameChange.rejected, (state, action) => {
       window.log.error(`a ${currentDeviceGroupNameChange.name} was rejected`, action.error);
@@ -1428,9 +1434,10 @@ const metaGroupSlice = createSlice({
       state.infos[groupPk] = infos;
       state.members[groupPk] = members;
       refreshConvosModelProps([groupPk]);
-
-      window.log.debug(`groupInfo after handleMemberLeftMessage: ${stringify(infos)}`);
-      window.log.debug(`groupMembers after handleMemberLeftMessage: ${stringify(members)}`);
+      if (window.sessionFeatureFlags.debug.debugLibsessionDumps) {
+        window.log.info(`groupInfo after handleMemberLeftMessage: ${stringify(infos)}`);
+        window.log.info(`groupMembers after handleMemberLeftMessage: ${stringify(members)}`);
+      }
     });
     builder.addCase(handleMemberLeftMessage.rejected, (_state, action) => {
       window.log.error('a handleMemberLeftMessage was rejected', action.error);
@@ -1442,9 +1449,10 @@ const metaGroupSlice = createSlice({
       state.infos[groupPk] = infos;
       state.members[groupPk] = members;
       refreshConvosModelProps([groupPk]);
-
-      window.log.debug(`groupInfo after markUsAsAdmin: ${stringify(infos)}`);
-      window.log.debug(`groupMembers after markUsAsAdmin: ${stringify(members)}`);
+      if (window.sessionFeatureFlags.debug.debugLibsessionDumps) {
+        window.log.info(`groupInfo after markUsAsAdmin: ${stringify(infos)}`);
+        window.log.info(`groupMembers after markUsAsAdmin: ${stringify(members)}`);
+      }
     });
     builder.addCase(markUsAsAdmin.rejected, (_state, action) => {
       window.log.error('a markUsAsAdmin was rejected', action.error);
@@ -1455,9 +1463,10 @@ const metaGroupSlice = createSlice({
       state.infos[groupPk] = infos;
       state.members[groupPk] = members;
       refreshConvosModelProps([groupPk]);
-
-      window.log.debug(`groupInfo after inviteResponseReceived: ${stringify(infos)}`);
-      window.log.debug(`groupMembers after inviteResponseReceived: ${stringify(members)}`);
+      if (window.sessionFeatureFlags.debug.debugLibsessionDumps) {
+        window.log.info(`groupInfo after inviteResponseReceived: ${stringify(infos)}`);
+        window.log.info(`groupMembers after inviteResponseReceived: ${stringify(members)}`);
+      }
     });
     builder.addCase(inviteResponseReceived.rejected, (_state, action) => {
       window.log.error('a inviteResponseReceived was rejected', action.error);
