@@ -1,7 +1,5 @@
 import { PubkeyType, WithGroupPubkey } from 'libsession_util_nodejs';
 
-type PrArrayMsgIds = Promise<Array<string>>;
-
 export type DataCallArgs<T extends (args: any) => any> = Parameters<T>[0];
 
 export type DeleteAllMessageFromSendersInConversationType = (
@@ -9,14 +7,14 @@ export type DeleteAllMessageFromSendersInConversationType = (
     toRemove: Array<PubkeyType>;
     signatureTimestamp: number;
   }
-) => PrArrayMsgIds;
+) => Promise<{ messageHashes: Array<string> }>;
 
 export type DeleteAllMessageHashesInConversationType = (
   args: WithGroupPubkey & {
     messageHashes: Array<string>;
     signatureTimestamp: number;
   }
-) => PrArrayMsgIds;
+) => Promise<{ messageHashes: Array<string> }>;
 
 export type DeleteAllMessageHashesInConversationMatchingAuthorType = (
   args: WithGroupPubkey & {

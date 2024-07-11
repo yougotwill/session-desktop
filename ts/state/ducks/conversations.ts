@@ -601,18 +601,32 @@ function handleMessagesChangedOrAdded(
 
 function handleMessageExpiredOrDeleted(
   state: ConversationsStateType,
-  payload: {
-    messageId: string;
-    conversationKey: string;
-  }
+  payload: { conversationKey: string } & (
+    | {
+        messageId: string;
+      }
+    | {
+        messageHash: string;
+      }
+  )
 ) {
-  const { conversationKey, messageId } = payload;
+  const { conversationKey } = payload;
+  const messageId = (payload as any).messageId as string | undefined;
+  const messageHash = (payload as any).messageHash as string | undefined;
+
   if (conversationKey === state.selectedConversation) {
     // search if we find this message id.
     // we might have not loaded yet, so this case might not happen
-    const messageInStoreIndex = state?.messages.findIndex(m => m.propsForMessage.id === messageId);
+    const messageInStoreIndex = state?.messages.findIndex(
+      m =>
+        (messageId && m.propsForMessage.id === messageId) ||
+        (messageHash && m.propsForMessage.messageHash === messageHash)
+    );
     const editedQuotes = { ...state.quotes };
     if (messageInStoreIndex >= 0) {
+      const msgToRemove = state.messages[messageInStoreIndex];
+      const extractedMessageId = msgToRemove.propsForMessage.id;
+
       // we cannot edit the array directly, so slice the first part, and slice the second part,
       // keeping the index removed out
       const editedMessages = [
@@ -637,7 +651,9 @@ function handleMessageExpiredOrDeleted(
         messages: editedMessages,
         quotes: editedQuotes,
         firstUnreadMessageId:
-          state.firstUnreadMessageId === messageId ? undefined : state.firstUnreadMessageId,
+          state.firstUnreadMessageId === extractedMessageId
+            ? undefined
+            : state.firstUnreadMessageId,
       };
     }
 
@@ -649,10 +665,16 @@ function handleMessageExpiredOrDeleted(
 function handleMessagesExpiredOrDeleted(
   state: ConversationsStateType,
   action: PayloadAction<
-    Array<{
-      messageId: string;
-      conversationKey: string;
-    }>
+    Array<
+      { conversationKey: string } & (
+        | {
+            messageId: string;
+          }
+        | {
+            messageHash: string;
+          }
+      )
+    >
   >
 ): ConversationsStateType {
   let stateCopy = state;
@@ -791,6 +813,17 @@ const conversationsSlice = createSlice({
       action: PayloadAction<
         Array<{
           messageId: string;
+          conversationKey: string;
+        }>
+      >
+    ) {
+      return handleMessagesExpiredOrDeleted(state, action);
+    },
+    messageHashesExpired(
+      state: ConversationsStateType,
+      action: PayloadAction<
+        Array<{
+          messageHash: string;
           conversationKey: string;
         }>
       >
@@ -1139,6 +1172,7 @@ export const {
   conversationRemoved,
   removeAllConversations,
   messagesExpired,
+  messageHashesExpired,
   messagesDeleted,
   conversationReset,
   messagesChanged,

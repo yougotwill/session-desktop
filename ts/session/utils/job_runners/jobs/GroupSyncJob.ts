@@ -11,6 +11,7 @@ import {
 } from '../../../../webworker/workers/browser/libsession_worker_interface';
 import {
   DeleteAllFromGroupMsgNodeSubRequest,
+  DeleteHashesFromGroupNodeSubRequest,
   StoreGroupKeysSubRequest,
   StoreGroupMessageSubRequest,
   SubaccountRevokeSubRequest,
@@ -144,27 +145,30 @@ async function pushChangesToGroupSwarmIfNeeded({
     m =>
       m instanceof SubaccountRevokeSubRequest ||
       m instanceof SubaccountUnrevokeSubRequest ||
-      m instanceof DeleteAllFromGroupMsgNodeSubRequest
+      m instanceof DeleteAllFromGroupMsgNodeSubRequest ||
+      m instanceof DeleteHashesFromGroupNodeSubRequest
   );
+
+  const sortedSubRequests = compact([
+    supplementalKeysSubRequest, // this needs to be stored first
+    ...pendingConfigRequests, // groupKeys are first in this array, so all good, then groupInfos are next
+    ...extraStoreRequests, // this can be stored anytime
+    ...extraRequests,
+  ]);
 
   const result = await MessageSender.sendEncryptedDataToSnode({
     // Note: this is on purpose that supplementalKeysSubRequest is before pendingConfigRequests
     // as this is to avoid a race condition where a device is polling right
     // while we are posting the configs (already encrypted with the new keys)
-    sortedSubRequests: compact([
-      supplementalKeysSubRequest, // this needs to be stored first
-      ...pendingConfigRequests, // groupKeys are first in this array, so all good, then groupInfos are next
-      ...extraStoreRequests, // this can be stored anytime
-      ...extraRequests,
-    ]),
+    sortedSubRequests,
     destination: groupPk,
     method: 'sequence',
   });
 
   const expectedReplyLength =
-    pendingConfigRequests.length + // each of those are sent as a subrequest
     (supplementalKeysSubRequest ? 1 : 0) + // we are sending all the supplemental keys as a single subrequest
-    (extraStoreRequests ? 1 : 0) + // each of those are sent as a subrequest
+    pendingConfigRequests.length + // each of those are sent as a subrequest
+    extraStoreRequests.length + // each of those are sent as a subrequest
     extraRequestWithExpectedResults.length; // each of those are sent as a subrequest, but they don't all return something...
 
   // we do a sequence call here. If we do not have the right expected number of results, consider it a failure

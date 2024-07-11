@@ -188,6 +188,7 @@ export async function deleteMessagesFromSwarmOnly(
   pubkey: PubkeyType | GroupPubkeyType
 ) {
   const deletionMessageHashes = isStringArray(messages) ? messages : getMessageHashes(messages);
+
   try {
     if (isEmpty(messages)) {
       return false;

@@ -1,5 +1,5 @@
 import { GroupPubkeyType, PubkeyType, WithGroupPubkey } from 'libsession_util_nodejs';
-import { isEmpty, isFinite, isNumber } from 'lodash';
+import { compact, isEmpty, isFinite, isNumber } from 'lodash';
 import { Data } from '../../data/data';
 import { deleteMessagesFromSwarmOnly } from '../../interactions/conversations/unsendingInteractions';
 import { ConversationTypeEnum } from '../../models/conversationAttributes';
@@ -21,7 +21,7 @@ import { PreConditionFailed } from '../../session/utils/errors';
 import { UserSync } from '../../session/utils/job_runners/jobs/UserSyncJob';
 import { LibSessionUtil } from '../../session/utils/libsession/libsession_utils';
 import { SessionUtilConvoInfoVolatile } from '../../session/utils/libsession/libsession_utils_convo_info_volatile';
-import { messagesExpired } from '../../state/ducks/conversations';
+import { messageHashesExpired, messagesExpired } from '../../state/ducks/conversations';
 import { groupInfoActions } from '../../state/ducks/metaGroups';
 import { toFixedUint8ArrayOfLength } from '../../types/sqlSharedTypes';
 import { BlockedNumberController } from '../../util';
@@ -460,10 +460,10 @@ async function handleGroupDeleteMemberContentMessage({
   }); // this is step 3.
 
   window.inboxStore.dispatch(
-    messagesExpired(
-      [...deletedByHashes, ...deletedBySenders].map(m => ({
+    messageHashesExpired(
+      compact([...deletedByHashes.messageHashes, ...deletedBySenders.messageHashes]).map(m => ({
         conversationKey: groupPk,
-        messageId: m,
+        messageHash: m,
       }))
     )
   );

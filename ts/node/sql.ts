@@ -1095,14 +1095,17 @@ function deleteAllMessageFromSendersInConversation(
   instance?: BetterSqlite3.Database
 ): AwaitedReturn<DeleteAllMessageFromSendersInConversationType> {
   if (!groupPk || !toRemove.length) {
-    return [];
+    return { messageHashes: [] };
   }
-  return assertGlobalInstanceOrInstance(instance)
-    .prepare(
-      `DELETE FROM ${MESSAGES_TABLE} WHERE conversationId = ? AND sent_at <= ? AND source IN ( ${toRemove.map(() => '?').join(', ')} ) RETURNING id`
-    )
-    .all(groupPk, signatureTimestamp, ...toRemove)
-    .map(m => m.id);
+  const messageHashes = compact(
+    assertGlobalInstanceOrInstance(instance)
+      .prepare(
+        `DELETE FROM ${MESSAGES_TABLE} WHERE conversationId = ? AND sent_at <= ? AND source IN ( ${toRemove.map(() => '?').join(', ')} ) RETURNING messageHash`
+      )
+      .all(groupPk, signatureTimestamp, ...toRemove)
+      .map(m => m.messageHash)
+  );
+  return { messageHashes };
 }
 
 function deleteAllMessageHashesInConversation(
@@ -1114,14 +1117,17 @@ function deleteAllMessageHashesInConversation(
   instance?: BetterSqlite3.Database
 ): AwaitedReturn<DeleteAllMessageHashesInConversationType> {
   if (!groupPk || !messageHashes.length) {
-    return [];
+    return { messageHashes: [] };
   }
-  return assertGlobalInstanceOrInstance(instance)
-    .prepare(
-      `DELETE FROM ${MESSAGES_TABLE} WHERE conversationId = ? AND sent_at <= ? AND messageHash IN ( ${messageHashes.map(() => '?').join(', ')} ) RETURNING id`
-    )
-    .all(groupPk, signatureTimestamp, ...messageHashes)
-    .map(m => m.id);
+  const deletedMessageHashes = compact(
+    assertGlobalInstanceOrInstance(instance)
+      .prepare(
+        `DELETE FROM ${MESSAGES_TABLE} WHERE conversationId = ? AND sent_at <= ? AND messageHash IN ( ${messageHashes.map(() => '?').join(', ')} ) RETURNING messageHash`
+      )
+      .all(groupPk, signatureTimestamp, ...messageHashes)
+      .map(m => m.messageHash)
+  );
+  return { messageHashes: deletedMessageHashes };
 }
 
 function deleteAllMessageHashesInConversationMatchingAuthor(

@@ -5,6 +5,7 @@ import { v4 } from 'uuid';
 import { StringUtils } from '../..';
 import { Data } from '../../../../data/data';
 import { deleteMessagesFromSwarmOnly } from '../../../../interactions/conversations/unsendingInteractions';
+import { messageHashesExpired } from '../../../../state/ducks/conversations';
 import {
   MetaGroupWrapperActions,
   MultiEncryptWrapperActions,
@@ -217,8 +218,21 @@ class GroupPendingRemovalsJob extends PersistedJob<GroupPendingRemovalsPersisted
               signatureTimestamp: GetNetworkTime.now(),
             });
 
-          if (msgHashesToDeleteOnGroupSwarm.length) {
-            await deleteMessagesFromSwarmOnly(msgHashesToDeleteOnGroupSwarm, groupPk);
+          if (msgHashesToDeleteOnGroupSwarm.messageHashes.length) {
+            const deleted = await deleteMessagesFromSwarmOnly(
+              msgHashesToDeleteOnGroupSwarm.messageHashes,
+              groupPk
+            );
+            if (deleted) {
+              window.inboxStore.dispatch(
+                messageHashesExpired(
+                  msgHashesToDeleteOnGroupSwarm.messageHashes.map(messageHash => ({
+                    conversationKey: groupPk,
+                    messageHash,
+                  }))
+                )
+              );
+            }
           }
         }
       } catch (e) {

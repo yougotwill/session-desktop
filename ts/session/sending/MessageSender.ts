@@ -56,6 +56,7 @@ import { UserUtils } from '../utils';
 import { ed25519Str, fromUInt8ArrayToBase64 } from '../utils/String';
 import { MessageSentHandler } from './MessageSentHandler';
 import { MessageWrapper } from './MessageWrapper';
+import { stringify } from '../../types/sqlSharedTypes';
 
 // ================ SNODE STORE ================
 
@@ -347,6 +348,19 @@ async function getSignatureParamsFromNamespace(
   return {};
 }
 
+function logBuildSubRequests(subRequests: Array<BuiltSnodeSubRequests>) {
+  if (!window.sessionFeatureFlags.debug.debugBuiltSnodeRequests) {
+    return;
+  }
+  window.log.debug(
+    `\n========================================\nsubRequests: [\n\t${subRequests
+      .map(m => {
+        return stringify(m);
+      })
+      .join(',\n\t')}]\n========================================`
+  );
+}
+
 async function signSubRequests(
   params: Array<RawSnodeSubRequests>
 ): Promise<Array<BuiltSnodeSubRequests>> {
@@ -355,6 +369,8 @@ async function signSubRequests(
       return p.build();
     })
   );
+
+  logBuildSubRequests(signedRequests);
 
   return signedRequests;
 }

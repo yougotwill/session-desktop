@@ -308,11 +308,15 @@ export function toFixedUint8ArrayOfLength<T extends number>(
 }
 
 export function stringify(obj: unknown) {
-  return JSON.stringify(obj, (_key, value) => {
-    return value instanceof Uint8Array
-      ? `Uint8Array(${value.length}): ${toHex(value)}`
-      : value?.type === 'Buffer' && value?.data
-        ? `Buffer: ${toHex(value.data)}`
-        : value;
-  });
+  return JSON.stringify(
+    obj,
+    (_key, value) => {
+      return value instanceof Uint8Array
+        ? `Uint8Array(${value.length}): ${toHex(value)}`
+        : value?.type === 'Buffer' && value?.data
+          ? `Buffer: ${toHex(value.data)}`
+          : value;
+    },
+    2
+  );
 }

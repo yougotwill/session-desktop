@@ -34,6 +34,7 @@ declare global {
       debug: {
         debugLogging: boolean;
         debugLibsessionDumps: boolean;
+        debugBuiltSnodeRequests: boolean;
         debugFileServerRequests: boolean;
         debugNonSnodeRequests: boolean;
         debugOnionRequests: boolean;
