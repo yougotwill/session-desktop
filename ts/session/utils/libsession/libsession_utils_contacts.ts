@@ -87,15 +87,15 @@ async function insertContactFromDBIntoWrapperAndRefresh(
   try {
     window.log.debug('inserting into contact wrapper: ', JSON.stringify(wrapperContact));
     await ContactsWrapperActions.set(wrapperContact);
-    // returned for testing purposes only
-    return wrapperContact;
   } catch (e) {
     window.log.warn(`ContactsWrapperActions.set of ${id} failed with ${e.message}`);
     // we still let this go through
+  } finally {
+    await refreshMappedValue(id);
   }
 
-  await refreshMappedValue(id);
-  return null;
+  // returned for testing purposes only
+  return wrapperContact;
 }
 
 /**
