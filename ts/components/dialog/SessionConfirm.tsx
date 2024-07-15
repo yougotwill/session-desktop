@@ -219,10 +219,16 @@ export const SessionConfirm = (props: SessionConfirmDialogProps) => {
   );
 };
 
+
+
+
+
 export const showLinkVisitWarningDialog = (urlToOpen: string, dispatch: Dispatch<any>) => {
   function onClickOk() {
     void shell.openExternal(urlToOpen);
   }
+
+
 
   dispatch(
     updateConfirmModal({
@@ -230,7 +236,7 @@ export const showLinkVisitWarningDialog = (urlToOpen: string, dispatch: Dispatch
       message: window.i18n('linkVisitWarningMessage', [urlToOpen]),
       okText: window.i18n('open'),
       okTheme: SessionButtonColor.Primary,
-      cancelText: window.i18n('editMenuCopy'),
+      cancelText: window.i18n('copyUrl'),
       showExitIcon: true,
       onClickOk,
       onClickClose: () => {

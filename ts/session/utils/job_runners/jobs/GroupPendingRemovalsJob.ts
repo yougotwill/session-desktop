@@ -173,7 +173,7 @@ class GroupPendingRemovalsJob extends PersistedJob<GroupPendingRemovalsPersisted
       if (deleteMessagesOfMembers.length) {
         const deleteContentMsg = new GroupUpdateDeleteMemberContentMessage({
           createAtNetworkTimestamp: GetNetworkTime.now(),
-          expirationType: 'unknown', // this is not displayed so not expiring.
+          expirationType: 'unknown', // GroupUpdateDeleteMemberContentMessage this is not displayed so not expiring.
           expireTimer: 0,
           groupPk,
           memberSessionIds: deleteMessagesOfMembers,

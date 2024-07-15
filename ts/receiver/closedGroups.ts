@@ -357,7 +357,7 @@ export async function handleNewClosedGroup(
     members,
     admins,
     activeAt: envelopeTimestamp,
-    expirationType: 'unknown',
+    expirationType: 'unknown', // group creation message, is not expiring
     expireTimer: 0,
   };
 

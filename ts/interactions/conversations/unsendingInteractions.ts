@@ -87,7 +87,7 @@ export async function unsendMessagesForEveryoneGroupV2({
   await getMessageQueue().sendToGroupV2NonDurably({
     message: new GroupUpdateDeleteMemberContentMessage({
       createAtNetworkTimestamp: GetNetworkTime.now(),
-      expirationType: 'unknown', // this is not displayed so not expiring.
+      expirationType: 'unknown', // GroupUpdateDeleteMemberContentMessage is not displayed so not expiring.
       expireTimer: 0,
       groupPk,
       memberSessionIds: allMessagesFrom,

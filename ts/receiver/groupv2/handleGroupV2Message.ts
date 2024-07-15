@@ -30,6 +30,7 @@ import {
   UserGroupsWrapperActions,
 } from '../../webworker/workers/browser/libsession_worker_interface';
 import { WithMessageHash } from '../../session/types/with';
+import { deleteAllMessagesByConvoIdNoConfirmation } from '../../interactions/conversationInteractions';
 
 type WithSignatureTimestamp = { signatureTimestamp: number };
 type WithAuthor = { author: PubkeyType };
@@ -66,7 +67,7 @@ async function sendInviteResponseToGroup({ groupPk }: { groupPk: GroupPubkeyType
       groupPk,
       isApproved: true,
       createAtNetworkTimestamp: GetNetworkTime.now(),
-      expirationType: 'unknown', // an invite should not expire
+      expirationType: 'unknown', // an invite response should not expire
       expireTimer: 0,
     }),
   });
@@ -124,6 +125,7 @@ async function handleGroupInviteMessage({
   const userEd25519Secretkey = (await UserUtils.getUserED25519KeyPairBytes()).privKeyBytes;
 
   let found = await UserGroupsWrapperActions.getGroup(groupPk);
+  const wasKicked = found?.kicked || false;
   if (!found) {
     found = {
       authData: null,
@@ -152,6 +154,12 @@ async function handleGroupInviteMessage({
   await convo.commit();
 
   await SessionUtilConvoInfoVolatile.insertConvoFromDBIntoWrapperAndRefresh(convo.id);
+
+  if (wasKicked && !found.kicked) {
+    // we have been reinvited to a group which we had been kicked from.
+    // Let's empty the conversation again to remove any "you were removed from the group" control message
+    await deleteAllMessagesByConvoIdNoConfirmation(groupPk);
+  }
 
   await MetaGroupWrapperActions.init(groupPk, {
     metaDumped: null,

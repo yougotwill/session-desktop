@@ -59,6 +59,8 @@ import { NoticeBanner } from '../NoticeBanner';
 import { SessionSpinner } from '../basic/SessionSpinner';
 import { ConversationMessageRequestButtons } from './MessageRequestButtons';
 import { RightPanel, StyledRightPanelContainer } from './right-panel/RightPanel';
+import { showLinkVisitWarningDialog } from '../dialog/SessionConfirm';
+import { useDispatch } from 'react-redux';
 
 const DEFAULT_JPEG_QUALITY = 0.85;
 interface State {
@@ -671,7 +673,7 @@ function OutdatedLegacyGroupBanner(props: {
   selectedConversation: Pick<ReduxConversationType, 'id' | 'isPrivate' | 'isPublic'>;
 }) {
   const { selectedConversation } = props;
-  // const dispatch = useDispatch();
+  const dispatch = useDispatch();
 
   const isLegacyGroup =
     !selectedConversation.isPrivate &&
@@ -682,7 +684,7 @@ function OutdatedLegacyGroupBanner(props: {
     <NoticeBanner
       text={window.i18n('upgradeYourGroupBefore')}
       onButtonClick={() => {
-        // showLinkVisitWarningDialog('', dispatch);
+        showLinkVisitWarningDialog('', dispatch);
         throw new Error('TODO'); // fixme audric
       }}
       icon="externalLink"
