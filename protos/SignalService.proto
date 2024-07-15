@@ -115,6 +115,7 @@ message GroupUpdateMemberChangeMessage {
 
 message GroupUpdatePromoteMessage {
   required bytes          groupIdentitySeed       = 1;
+  required string         name                    = 2;
 }
 
 message GroupUpdateMemberLeftMessage {

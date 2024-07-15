@@ -73,7 +73,7 @@ async function sendInviteResponseToGroup({ groupPk }: { groupPk: GroupPubkeyType
   });
 }
 
-async function handleGroupInviteMessage({
+async function handleGroupUpdateInviteMessage({
   inviteMessage,
   author,
   signatureTimestamp,
@@ -555,7 +555,7 @@ async function handle1o1GroupUpdateMessage(
       throw new PreConditionFailed('received group invite/promote with invalid author');
     }
     if (details.updateMessage.inviteMessage) {
-      await handleGroupInviteMessage({
+      await handleGroupUpdateInviteMessage({
         inviteMessage: details.updateMessage
           .inviteMessage as SignalService.GroupUpdateInviteMessage,
         ...details,

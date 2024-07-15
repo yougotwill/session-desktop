@@ -61,10 +61,12 @@ async function getGroupPromoteMessage({
   member,
   secretKey,
   groupPk,
+  name,
 }: {
   member: PubkeyType;
   secretKey: Uint8ArrayLen64; // len 64
   groupPk: GroupPubkeyType;
+  name: string;
 }) {
   const createAtNetworkTimestamp = GetNetworkTime.now();
 
@@ -78,6 +80,7 @@ async function getGroupPromoteMessage({
     groupIdentitySeed: secretKey.slice(0, 32), // the seed is the first 32 bytes of the secretkey
     expirationType: 'unknown', // a promote message is not expiring
     expireTimer: 0,
+    name,
   });
   return msg;
 }

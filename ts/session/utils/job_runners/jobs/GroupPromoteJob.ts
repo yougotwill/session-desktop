@@ -102,6 +102,7 @@ class GroupPromoteJob extends PersistedJob<GroupPromotePersistedData> {
         member,
         secretKey: group.secretKey,
         groupPk,
+        name: group.name,
       });
 
       const storedAt = await getMessageQueue().sendTo1o1NonDurably({
