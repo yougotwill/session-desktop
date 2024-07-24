@@ -1101,7 +1101,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     if (this.isClosedGroup()) {
       if (this.isAdmin(UserUtils.getOurPubKeyStrFromCache())) {
         if (this.isClosedGroupV2()) {
-          if (!PubKey.is03Pubkey(this.id)) {  
+          if (!PubKey.is03Pubkey(this.id)) {
             throw new Error('updateExpireTimer v2 group requires a 03 key');
           }
           const group = await UserGroupsWrapperActions.getGroup(this.id);

@@ -102,7 +102,7 @@ class GroupPromoteJob extends PersistedJob<GroupPromotePersistedData> {
         member,
         secretKey: group.secretKey,
         groupPk,
-        name: group.name,
+        groupName: group.name,
       });
 
       const storedAt = await getMessageQueue().sendTo1o1NonDurably({
@@ -118,7 +118,11 @@ class GroupPromoteJob extends PersistedJob<GroupPromotePersistedData> {
         groupInfoActions.setPromotionPending({ groupPk, pubkey: member, sending: false })
       );
       try {
-        await MetaGroupWrapperActions.memberSetPromoted(groupPk, member, failed);
+        if (failed) {
+          await MetaGroupWrapperActions.memberSetPromotionFailed(groupPk, member);
+        } else {
+          await MetaGroupWrapperActions.memberSetPromotionSent(groupPk, member);
+        }
       } catch (e) {
         window.log.warn('GroupPromoteJob memberSetPromoted failed with', e.message);
       }

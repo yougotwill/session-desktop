@@ -15,6 +15,8 @@ import { SnodeNamespaces } from '../namespaces';
 import { RetrieveMessageItemWithNamespace } from '../types';
 import { ConvoHub } from '../../../conversations';
 import { ProfileManager } from '../../../profile_manager/ProfileManager';
+import { UserUtils } from '../../../utils';
+import { GroupSync } from '../../../utils/job_runners/jobs/GroupSyncJob';
 
 /**
  * This is a basic optimization to avoid running the logic when the `deleteBeforeSeconds`
@@ -36,74 +38,105 @@ async function handleMetaMergeResults(groupPk: GroupPubkeyType) {
       to_hex(dumps)
     );
   }
-  if (infos) {
-    if (infos.isDestroyed) {
-      window.log.info(`${ed25519Str(groupPk)} is marked as destroyed after merge. Removing it.`);
-      await ConvoHub.use().deleteGroup(groupPk, {
-        sendLeaveMessage: false,
-        fromSyncMessage: false,
-        emptyGroupButKeepAsKicked: true, // we just got something from the group's swarm, so it is not pendingInvite
-        deleteAllMessagesOnSwarm: false,
-        forceDestroyForAllMembers: false,
+  if (infos.isDestroyed) {
+    window.log.info(`${ed25519Str(groupPk)} is marked as destroyed after merge. Removing it.`);
+    await ConvoHub.use().deleteGroup(groupPk, {
+      sendLeaveMessage: false,
+      fromSyncMessage: false,
+      emptyGroupButKeepAsKicked: true, // we just got something from the group's swarm, so it is not pendingInvite
+      deleteAllMessagesOnSwarm: false,
+      forceDestroyForAllMembers: false,
+    });
+  } else {
+    if (
+      isNumber(infos.deleteBeforeSeconds) &&
+      isFinite(infos.deleteBeforeSeconds) &&
+      infos.deleteBeforeSeconds > 0 &&
+      (lastAppliedRemoveMsgSentBeforeSeconds.get(groupPk) || Number.MAX_SAFE_INTEGER) >
+        infos.deleteBeforeSeconds
+    ) {
+      // delete any messages in this conversation sent before that timestamp (in seconds)
+      const deletedMsgIds = await Data.removeAllMessagesInConversationSentBefore({
+        deleteBeforeSeconds: infos.deleteBeforeSeconds,
+        conversationId: groupPk,
       });
-    } else {
-      if (
-        isNumber(infos.deleteBeforeSeconds) &&
-        isFinite(infos.deleteBeforeSeconds) &&
-        infos.deleteBeforeSeconds > 0 &&
-        (lastAppliedRemoveMsgSentBeforeSeconds.get(groupPk) || Number.MAX_SAFE_INTEGER) >
-          infos.deleteBeforeSeconds
-      ) {
-        // delete any messages in this conversation sent before that timestamp (in seconds)
-        const deletedMsgIds = await Data.removeAllMessagesInConversationSentBefore({
-          deleteBeforeSeconds: infos.deleteBeforeSeconds,
-          conversationId: groupPk,
-        });
-        window.log.info(
-          `removeAllMessagesInConversationSentBefore of ${ed25519Str(groupPk)} before ${infos.deleteBeforeSeconds}: `,
-          deletedMsgIds
-        );
-        window.inboxStore.dispatch(
-          messagesExpired(deletedMsgIds.map(messageId => ({ conversationKey: groupPk, messageId })))
-        );
-        lastAppliedRemoveMsgSentBeforeSeconds.set(groupPk, infos.deleteBeforeSeconds);
-      }
-
-      if (
-        isNumber(infos.deleteAttachBeforeSeconds) &&
-        isFinite(infos.deleteAttachBeforeSeconds) &&
-        infos.deleteAttachBeforeSeconds > 0 &&
-        (lastAppliedRemoveAttachmentSentBeforeSeconds.get(groupPk) || Number.MAX_SAFE_INTEGER) >
-          infos.deleteAttachBeforeSeconds
-      ) {
-        // delete any attachments in this conversation sent before that timestamp (in seconds)
-        const impactedMsgModels = await Data.getAllMessagesWithAttachmentsInConversationSentBefore({
-          deleteAttachBeforeSeconds: infos.deleteAttachBeforeSeconds,
-          conversationId: groupPk,
-        });
-        window.log.info(
-          `getAllMessagesWithAttachmentsInConversationSentBefore of ${ed25519Str(groupPk)} before ${infos.deleteAttachBeforeSeconds}: impactedMsgModelsIds `,
-          impactedMsgModels.map(m => m.id)
-        );
-
-        for (let index = 0; index < impactedMsgModels.length; index++) {
-          const msg = impactedMsgModels[index];
-
-          // eslint-disable-next-line no-await-in-loop
-          await msg?.cleanup();
-        }
-        lastAppliedRemoveAttachmentSentBeforeSeconds.set(groupPk, infos.deleteAttachBeforeSeconds);
-      }
+      window.log.info(
+        `removeAllMessagesInConversationSentBefore of ${ed25519Str(groupPk)} before ${infos.deleteBeforeSeconds}: `,
+        deletedMsgIds
+      );
+      window.inboxStore.dispatch(
+        messagesExpired(deletedMsgIds.map(messageId => ({ conversationKey: groupPk, messageId })))
+      );
+      lastAppliedRemoveMsgSentBeforeSeconds.set(groupPk, infos.deleteBeforeSeconds);
     }
-    const membersWithPendingRemovals =
-      await MetaGroupWrapperActions.memberGetAllPendingRemovals(groupPk);
-    if (membersWithPendingRemovals.length) {
-      const group = await UserGroupsWrapperActions.getGroup(groupPk);
-      if (group && group.secretKey && !isEmpty(group.secretKey)) {
-        await GroupPendingRemovals.addJob({ groupPk });
+
+    if (
+      isNumber(infos.deleteAttachBeforeSeconds) &&
+      isFinite(infos.deleteAttachBeforeSeconds) &&
+      infos.deleteAttachBeforeSeconds > 0 &&
+      (lastAppliedRemoveAttachmentSentBeforeSeconds.get(groupPk) || Number.MAX_SAFE_INTEGER) >
+        infos.deleteAttachBeforeSeconds
+    ) {
+      // delete any attachments in this conversation sent before that timestamp (in seconds)
+      const impactedMsgModels = await Data.getAllMessagesWithAttachmentsInConversationSentBefore({
+        deleteAttachBeforeSeconds: infos.deleteAttachBeforeSeconds,
+        conversationId: groupPk,
+      });
+      window.log.info(
+        `getAllMessagesWithAttachmentsInConversationSentBefore of ${ed25519Str(groupPk)} before ${infos.deleteAttachBeforeSeconds}: impactedMsgModelsIds `,
+        impactedMsgModels.map(m => m.id)
+      );
+
+      for (let index = 0; index < impactedMsgModels.length; index++) {
+        const msg = impactedMsgModels[index];
+
+        // eslint-disable-next-line no-await-in-loop
+        await msg?.cleanup();
       }
+      lastAppliedRemoveAttachmentSentBeforeSeconds.set(groupPk, infos.deleteAttachBeforeSeconds);
     }
   }
+  const membersWithPendingRemovals =
+    await MetaGroupWrapperActions.memberGetAllPendingRemovals(groupPk);
+  if (membersWithPendingRemovals.length) {
+    const group = await UserGroupsWrapperActions.getGroup(groupPk);
+    if (group && group.secretKey && !isEmpty(group.secretKey)) {
+      await GroupPendingRemovals.addJob({ groupPk });
+    }
+  }
+
+  const us = UserUtils.getOurPubKeyStrFromCache();
+  const usMember = await MetaGroupWrapperActions.memberGet(groupPk, us);
+  let keysAlreadyHaveAdmin = await MetaGroupWrapperActions.keysAdmin(groupPk);
+  const secretKeyInUserWrapper = (await UserGroupsWrapperActions.getGroup(groupPk))?.secretKey;
+
+  // load admin keys if needed
+  if (
+    usMember &&
+    secretKeyInUserWrapper &&
+    !isEmpty(secretKeyInUserWrapper) &&
+    !keysAlreadyHaveAdmin
+  ) {
+    try {
+      await MetaGroupWrapperActions.loadAdminKeys(groupPk, secretKeyInUserWrapper);
+      keysAlreadyHaveAdmin = await MetaGroupWrapperActions.keysAdmin(groupPk);
+    } catch (e) {
+      window.log.warn(
+        `tried to update our adminKeys/state for group ${ed25519Str(groupPk)} but failed with, ${e.message}`
+      );
+    }
+  }
+  // mark ourselves as accepting the invite if needed
+  if (usMember?.invitePending && keysAlreadyHaveAdmin) {
+    await MetaGroupWrapperActions.memberSetAccepted(groupPk, us);
+  }
+  // mark ourselves as accepting the promotion if needed
+  if (usMember?.promotionPending && keysAlreadyHaveAdmin) {
+    await MetaGroupWrapperActions.memberSetPromotionAccepted(groupPk, us);
+  }
+  // this won't do anything if there is no need for a sync, so we can safely plan one
+  await GroupSync.queueNewJobIfNeeded(groupPk);
+
   const convo = ConvoHub.use().get(groupPk);
   const refreshedInfos = await MetaGroupWrapperActions.infoGet(groupPk);
 

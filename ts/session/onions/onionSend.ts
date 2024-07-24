@@ -17,7 +17,6 @@ import {
   FinalRelayOptions,
   Onions,
   STATUS_NO_STATUS,
-  SnodeResponse,
   buildErrorMessageWithFailedCode,
 } from '../apis/snode_api/onions';
 import { PROTOCOLS } from '../constants';
@@ -73,12 +72,6 @@ const getOnionPathForSending = async () => {
     return null;
   }
   return pathNodes;
-};
-
-export type OnionSnodeResponse = {
-  result: SnodeResponse;
-  txtResponse: string;
-  response: string;
 };
 
 export type OnionV4SnodeResponse = {

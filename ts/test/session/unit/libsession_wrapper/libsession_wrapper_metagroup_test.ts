@@ -28,8 +28,11 @@ function emptyMember(pubkeyHex: PubkeyType): GroupMemberGet {
     promoted: false,
     promotionFailed: false,
     promotionPending: false,
-    admin: false,
-    removedStatus: 0,
+    inviteAccepted: false,
+    inviteNotSent: false,
+    isRemoved: false,
+    promotionNotSent: false,
+    shouldRemoveMessages: false,
     pubkeyHex,
   };
 }
@@ -166,7 +169,7 @@ describe('libsession_metagroup', () => {
     });
 
     it('can add member by setting its promoted state, both ok and nok', () => {
-      metaGroupWrapper.memberSetPromoted(member, false);
+      metaGroupWrapper.memberSetPromotionSent(member);
       expect(metaGroupWrapper.memberGetAll().length).to.be.deep.eq(1);
       expect(metaGroupWrapper.memberGetAll()[0]).to.be.deep.eq({
         ...emptyMember(member),
@@ -176,7 +179,7 @@ describe('libsession_metagroup', () => {
         admin: false,
       });
 
-      metaGroupWrapper.memberSetPromoted(member2, true);
+      metaGroupWrapper.memberSetPromotionFailed(member2);
       expect(metaGroupWrapper.memberGetAll().length).to.be.deep.eq(2);
       // the list is sorted by member pk, which means that index based test do not work
       expect(metaGroupWrapper.memberGet(member2)).to.be.deep.eq({
@@ -224,7 +227,7 @@ describe('libsession_metagroup', () => {
 
     it('can erase member', () => {
       metaGroupWrapper.memberSetAccepted(member);
-      metaGroupWrapper.memberSetPromoted(member2, false);
+      metaGroupWrapper.memberSetPromoted(member2);
       expect(metaGroupWrapper.memberGetAll().length).to.be.deep.eq(2);
 
       expect(metaGroupWrapper.memberGet(member)).to.be.deep.eq({
@@ -245,7 +248,7 @@ describe('libsession_metagroup', () => {
     });
 
     it('can add via name set', () => {
-      metaGroupWrapper.memberSetName(member, 'member name');
+      metaGroupWrapper.memberSetNameTruncated(member, 'member name');
       expect(metaGroupWrapper.memberGetAll().length).to.be.deep.eq(1);
       expect(metaGroupWrapper.memberGetAll()[0]).to.be.deep.eq({
         ...emptyMember(member),
@@ -263,14 +266,14 @@ describe('libsession_metagroup', () => {
     });
 
     it('can add via admin set', () => {
-      metaGroupWrapper.memberSetAdmin(member);
+      metaGroupWrapper.memberSetPromotionAccepted(member);
       expect(metaGroupWrapper.memberGetAll().length).to.be.deep.eq(1);
       const expected: GroupMemberGet = {
         ...emptyMember(member),
-        admin: true,
         promoted: true,
         promotionFailed: false,
         promotionPending: false,
+        promotionNotSent: false,
       };
 
       expect(metaGroupWrapper.memberGetAll()[0]).to.be.deep.eq(expected);
@@ -281,7 +284,8 @@ describe('libsession_metagroup', () => {
       expect(metaGroupWrapper.memberGetAll().length).to.be.deep.eq(1);
       const expected: GroupMemberGet = {
         ...emptyMember(member),
-        removedStatus: 2,
+        shouldRemoveMessages: true,
+        isRemoved: true,
       };
       expect(metaGroupWrapper.memberGetAll().length).to.be.deep.eq(1);
       expect(metaGroupWrapper.memberGetAll()[0]).to.be.deep.eq(expected);
@@ -292,7 +296,8 @@ describe('libsession_metagroup', () => {
       expect(metaGroupWrapper.memberGetAll().length).to.be.deep.eq(1);
       const expected: GroupMemberGet = {
         ...emptyMember(member),
-        removedStatus: 1,
+        shouldRemoveMessages: false,
+        isRemoved: true,
       };
       expect(metaGroupWrapper.memberGetAll().length).to.be.deep.eq(1);
       expect(metaGroupWrapper.memberGetAll()[0]).to.be.deep.eq(expected);
@@ -319,8 +324,8 @@ describe('libsession_metagroup', () => {
       });
 
       // mark current user as admin
-      metaGroupWrapper.memberSetPromoted(us.x25519KeyPair.pubkeyHex, false);
-      metaGroupWrapper2.memberSetPromoted(us.x25519KeyPair.pubkeyHex, false);
+      metaGroupWrapper.memberSetPromotionAccepted(us.x25519KeyPair.pubkeyHex);
+      metaGroupWrapper2.memberSetPromotionAccepted(us.x25519KeyPair.pubkeyHex);
 
       // add 2 normal members to each of those wrappers
       const m1 = TestUtils.generateFakePubKeyStr();

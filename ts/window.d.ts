@@ -31,6 +31,7 @@ declare global {
       useTestNet: boolean;
       useClosedGroupV2: boolean;
       useClosedGroupV2QAButtons: boolean;
+      useGroupV2InviteAsAdmin: boolean;
       debug: {
         debugLogging: boolean;
         debugLibsessionDumps: boolean;

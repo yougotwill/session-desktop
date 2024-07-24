@@ -410,7 +410,7 @@ async function createMemberAndSetDetails({
   await MetaGroupWrapperActions.memberConstructAndSet(groupPk, memberPubkey);
 
   if (displayName) {
-    await MetaGroupWrapperActions.memberSetName(groupPk, memberPubkey, displayName);
+    await MetaGroupWrapperActions.memberSetNameTruncated(groupPk, memberPubkey, displayName);
   }
   if (profileKeyHex && avatarUrl) {
     await MetaGroupWrapperActions.memberSetProfilePicture(groupPk, memberPubkey, {

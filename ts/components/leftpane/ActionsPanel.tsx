@@ -1,3 +1,4 @@
+/* eslint-disable no-await-in-loop */
 import { ipcRenderer } from 'electron';
 import React, { useEffect, useState } from 'react';
 

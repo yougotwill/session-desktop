@@ -32,6 +32,7 @@ import { SessionButton, SessionButtonColor, SessionButtonType } from '../basic/S
 import { SessionSpinner } from '../basic/SessionSpinner';
 import { SessionToggle } from '../basic/SessionToggle';
 import { GroupInviteRequiredVersionBanner } from '../NoticeBanner';
+import { isDevProd } from '../../shared/env_vars';
 
 type Props = {
   conversationId: string;
@@ -190,7 +191,9 @@ const InviteContactsDialogInner = (props: Props) => {
       {hasContacts && isGroupV2 && <GroupInviteRequiredVersionBanner />}
 
       <SpacerLG />
-      {isGroupV2 && (
+
+      {/* TODO: localize those strings once out releasing those buttons for real */}
+      {isGroupV2 && isDevProd() && (
         <>
           <span style={{ display: 'flex', alignItems: 'center' }}>
             Share History?{'  '}

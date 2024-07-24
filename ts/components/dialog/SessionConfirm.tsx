@@ -219,16 +219,10 @@ export const SessionConfirm = (props: SessionConfirmDialogProps) => {
   );
 };
 
-
-
-
-
 export const showLinkVisitWarningDialog = (urlToOpen: string, dispatch: Dispatch<any>) => {
   function onClickOk() {
     void shell.openExternal(urlToOpen);
   }
-
-
 
   dispatch(
     updateConfirmModal({

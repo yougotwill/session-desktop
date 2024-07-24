@@ -156,6 +156,8 @@ const initNewGroupInWrapper = createAsyncThunk(
         const profileKeyHex = convoMember?.getProfileKey() || null;
         const avatarUrl = convoMember?.getAvatarPointer() || null;
 
+        // we just create the members in the state. Their invite state defaults to NOT_SENT,
+        // which will make our logic kick in to send them an invite in the `GroupInviteJob`
         await LibSessionUtil.createMemberAndSetDetails({
           avatarUrl,
           displayName,
@@ -165,9 +167,8 @@ const initNewGroupInWrapper = createAsyncThunk(
         });
 
         if (member === us) {
-          await MetaGroupWrapperActions.memberSetAdmin(groupPk, member);
-        } else {
-          await MetaGroupWrapperActions.memberSetInvited(groupPk, member, false);
+          // we need to excplicitely mark us as having accepted the promotion
+          await MetaGroupWrapperActions.memberSetPromotionAccepted(groupPk, member);
         }
       }
 
@@ -1122,48 +1123,6 @@ const handleMemberLeftMessage = createAsyncThunk(
   }
 );
 
-const markUsAsAdmin = createAsyncThunk(
-  'group/markUsAsAdmin',
-  async (
-    {
-      groupPk,
-      secret,
-    }: {
-      groupPk: GroupPubkeyType;
-      secret: Uint8ArrayLen64;
-    },
-    payloadCreator
-  ): Promise<GroupDetailsUpdate> => {
-    const state = payloadCreator.getState() as StateType;
-    if (!state.groups.infos[groupPk] || !state.groups.members[groupPk]) {
-      throw new PreConditionFailed('markUsAsAdmin group not present in redux slice');
-    }
-    if (secret.length !== 64) {
-      throw new PreConditionFailed('markUsAsAdmin secret needs to be 64');
-    }
-    await MetaGroupWrapperActions.loadAdminKeys(groupPk, secret);
-    const us = UserUtils.getOurPubKeyStrFromCache();
-
-    if (state.groups.members[groupPk].find(m => m.pubkeyHex === us)?.admin) {
-      // we are already an admin, nothing to do
-      return {
-        groupPk,
-        infos: await MetaGroupWrapperActions.infoGet(groupPk),
-        members: await MetaGroupWrapperActions.memberGetAll(groupPk),
-      };
-    }
-    await MetaGroupWrapperActions.memberSetAdmin(groupPk, us);
-
-    await GroupSync.queueNewJobIfNeeded(groupPk);
-
-    return {
-      groupPk,
-      infos: await MetaGroupWrapperActions.infoGet(groupPk),
-      members: await MetaGroupWrapperActions.memberGetAll(groupPk),
-    };
-  }
-);
-
 const inviteResponseReceived = createAsyncThunk(
   'group/inviteResponseReceived',
   async (
@@ -1443,21 +1402,6 @@ const metaGroupSlice = createSlice({
       window.log.error('a handleMemberLeftMessage was rejected', action.error);
     });
 
-    /** markUsAsAdmin */
-    builder.addCase(markUsAsAdmin.fulfilled, (state, action) => {
-      const { infos, members, groupPk } = action.payload;
-      state.infos[groupPk] = infos;
-      state.members[groupPk] = members;
-      refreshConvosModelProps([groupPk]);
-      if (window.sessionFeatureFlags.debug.debugLibsessionDumps) {
-        window.log.info(`groupInfo after markUsAsAdmin: ${stringify(infos)}`);
-        window.log.info(`groupMembers after markUsAsAdmin: ${stringify(members)}`);
-      }
-    });
-    builder.addCase(markUsAsAdmin.rejected, (_state, action) => {
-      window.log.error('a markUsAsAdmin was rejected', action.error);
-    });
-
     builder.addCase(inviteResponseReceived.fulfilled, (state, action) => {
       const { infos, members, groupPk } = action.payload;
       state.infos[groupPk] = infos;
@@ -1488,7 +1432,6 @@ export const groupInfoActions = {
   refreshGroupDetailsFromWrapper,
   handleUserGroupUpdate,
   currentDeviceGroupMembersChange,
-  markUsAsAdmin,
   inviteResponseReceived,
   handleMemberLeftMessage,
   currentDeviceGroupNameChange,

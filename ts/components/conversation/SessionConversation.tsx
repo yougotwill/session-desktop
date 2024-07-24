@@ -6,6 +6,7 @@ import { blobToArrayBuffer } from 'blob-util';
 import loadImage from 'blueimp-load-image';
 import classNames from 'classnames';
 import styled from 'styled-components';
+import { useDispatch } from 'react-redux';
 import {
   CompositionBox,
   SendMessageType,
@@ -60,7 +61,6 @@ import { SessionSpinner } from '../basic/SessionSpinner';
 import { ConversationMessageRequestButtons } from './MessageRequestButtons';
 import { RightPanel, StyledRightPanelContainer } from './right-panel/RightPanel';
 import { showLinkVisitWarningDialog } from '../dialog/SessionConfirm';
-import { useDispatch } from 'react-redux';
 
 const DEFAULT_JPEG_QUALITY = 0.85;
 interface State {

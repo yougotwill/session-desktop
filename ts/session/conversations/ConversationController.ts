@@ -319,7 +319,7 @@ class ConvoController {
         const us = UserUtils.getOurPubKeyStrFromCache();
         const allMembers = await MetaGroupWrapperActions.memberGetAll(groupPk);
         const otherAdminsCount = allMembers
-          .filter(m => m.admin || m.promoted)
+          .filter(m => m.promoted)
           .filter(m => m.pubkeyHex !== us).length;
         const weAreLastAdmin = otherAdminsCount === 0;
         const infos = await MetaGroupWrapperActions.infoGet(groupPk);

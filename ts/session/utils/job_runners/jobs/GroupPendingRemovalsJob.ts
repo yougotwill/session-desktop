@@ -134,7 +134,7 @@ class GroupPendingRemovalsJob extends PersistedJob<GroupPendingRemovalsPersisted
         return RunJobResult.Success;
       }
       const deleteMessagesOfMembers = pendingRemovals
-        .filter(m => m.removedStatus === 2)
+        .filter(m => m.shouldRemoveMessages)
         .map(m => m.pubkeyHex);
 
       const sessionIdsHex = pendingRemovals.map(m => m.pubkeyHex);

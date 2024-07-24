@@ -5,6 +5,7 @@ import useKey from 'react-use/lib/useKey';
 import styled from 'styled-components';
 
 import { concat } from 'lodash';
+import useUpdate from 'react-use/lib/useUpdate';
 import { MemberListItem } from '../../MemberListItem';
 import { SessionButton } from '../../basic/SessionButton';
 import { SessionIdEditable } from '../../basic/SessionIdEditable';
@@ -24,6 +25,8 @@ import { useOurPkStr } from '../../../state/selectors/user';
 import { SessionSearchInput } from '../../SessionSearchInput';
 import { SpacerLG } from '../../basic/Text';
 import { GroupInviteRequiredVersionBanner } from '../../NoticeBanner';
+import { isDevProd } from '../../../shared/env_vars';
+import { SessionToggle } from '../../basic/SessionToggle';
 
 const StyledMemberListNoContacts = styled.div`
   font-family: var(--font-mono), var(--font-default);
@@ -100,6 +103,7 @@ export const OverlayClosedGroupV2 = () => {
   const privateContactsPubkeys = useContactsToInviteToGroup();
   const isCreatingGroup = useIsCreatingGroupFromUIPending();
   const [groupName, setGroupName] = useState('');
+  const forceUpdate = useUpdate();
   const {
     uniqueValues: members,
     addTo: addToSelected,
@@ -177,6 +181,22 @@ export const OverlayClosedGroupV2 = () => {
         />
       </div>
       <SessionSpinner loading={isCreatingGroup} />
+      {/* TODO: localize those strings once out releasing those buttons for real */}
+      {isDevProd() && (
+        <>
+          <span style={{ display: 'flex', alignItems: 'center' }}>
+            Invite as admin?{'  '}
+            <SessionToggle
+              active={window.sessionFeatureFlags.useGroupV2InviteAsAdmin}
+              onClick={() => {
+                window.sessionFeatureFlags.useGroupV2InviteAsAdmin =
+                  !window.sessionFeatureFlags.useGroupV2InviteAsAdmin;
+                forceUpdate();
+              }}
+            />
+          </span>
+        </>
+      )}
       <SpacerLG />
       <SessionSearchInput />
       {!noContactsForClosedGroup && window.sessionFeatureFlags.useClosedGroupV2 && (
