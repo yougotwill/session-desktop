@@ -110,7 +110,7 @@ async function deleteAllLogs(logFile: string) {
 async function cleanupLogs(logFile: string, logFolder: string) {
   const now = new Date();
   const earliestDate = new Date(
-    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 2) // keeping 2 days worth of logs at most
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 2) // we keep 2 days worth of logs when we start the app and delete the rest
   );
 
   try {
