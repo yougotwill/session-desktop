@@ -52,10 +52,19 @@ const setupTheme = async () => {
   }
 };
 
-export const SessionTheme = ({ children }: { children: ReactNode }) => {
+export const SessionTheme = ({
+  children,
+  runSetup = true,
+}: {
+  children: ReactNode;
+  /** If we don't have access to some window functions or Storage yet we might not want to run the theme setup */
+  runSetup?: boolean;
+}) => {
   useMount(() => {
     setThemeValues(THEME_GLOBALS);
-    void setupTheme();
+    if (runSetup) {
+      void setupTheme();
+    }
   });
   return children;
 };
