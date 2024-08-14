@@ -62,24 +62,27 @@ export const Image = (props: Props) => {
     width: _width,
   } = props;
 
-  const onErrorUrlFilterering = useCallback(() => {
-    if (url && onError) {
-      onError();
-    }
-  }, [url, onError]);
   const disableDrag = useDisableDrag();
 
   const { caption } = attachment || { caption: null };
   let { pending } = attachment || { pending: true };
+
   if (!url) {
     // force pending to true if the url is undefined, so we show a loader while decrypting the attachemtn
     pending = true;
   }
+
   const canClick = onClick && !pending;
   const role = canClick ? 'button' : undefined;
   const { loading, urlToLoad } = useEncryptedFileFetch(url || '', attachment.contentType, false);
   // data will be url if loading is finished and '' if not
   const srcData = !loading ? urlToLoad : '';
+
+  const onErrorUrlFilterering = useCallback(() => {
+    if (!loading && !pending && !url && onError) {
+      onError();
+    }
+  }, [loading, pending, url, onError]);
 
   const width = isNumber(_width) ? `${_width}px` : _width;
   const height = isNumber(_height) ? `${_height}px` : _height;

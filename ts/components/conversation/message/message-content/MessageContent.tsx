@@ -154,8 +154,9 @@ export const MessageContent = (props: Props) => {
 
   const toolTipTitle = moment(serverTimestamp || timestamp).format('llll');
 
-  const isDetailViewAndSupportsAttachmentCarousel =
-    isDetailView && canDisplayImagePreview(attachments);
+  window.log.debug(
+    `WIP: [MessageAttachment] ${props.messageId} timestamp ${timestamp} imageBroken ${imageBroken} display ${canDisplayImagePreview(attachments)} attachments.contentType ${attachments?.[0].contentType || 'none'}`
+  );
 
   return (
     <StyledMessageContent
@@ -204,14 +205,14 @@ export const MessageContent = (props: Props) => {
               <MessageText messageId={props.messageId} />
             </StyledMessageOpaqueContent>
           )}
-          {!isDeleted && isDetailViewAndSupportsAttachmentCarousel && !imageBroken ? null : (
+          {!isDeleted ? (
             <MessageAttachment
               messageId={props.messageId}
               imageBroken={imageBroken}
               handleImageError={handleImageError}
               highlight={highlight}
             />
-          )}
+          ) : null}
         </IsMessageVisibleContext.Provider>
       </InView>
     </StyledMessageContent>

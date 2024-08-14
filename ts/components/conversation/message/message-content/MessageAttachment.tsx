@@ -31,6 +31,7 @@ import { AudioPlayerWithEncryptedFile } from '../../H5AudioPlayer';
 import { ImageGrid } from '../../ImageGrid';
 import { ClickToTrustSender } from './ClickToTrustSender';
 import { MessageHighlighter } from './MessageHighlighter';
+import { useIsDetailMessageView } from '../../../../contexts/isDetailViewContext';
 
 export type MessageAttachmentSelectorProps = Pick<
   MessageRenderingProps,
@@ -67,6 +68,7 @@ const StyledGenericAttachmentContainer = styled(MessageHighlighter)<{ selected: 
 
 export const MessageAttachment = (props: Props) => {
   const { messageId, imageBroken, handleImageError, highlight = false } = props;
+  const isDetailView = useIsDetailMessageView();
 
   const dispatch = useDispatch();
   const attachmentProps = useSelector((state: StateType) =>
@@ -140,6 +142,10 @@ export const MessageAttachment = (props: Props) => {
     ((isImage(attachments) && hasImage(attachments)) ||
       (isVideo(attachments) && hasVideoScreenshot(attachments)))
   ) {
+    // we use the carousel in the detail view
+    if (isDetailView) {
+      return null;
+    }
     return (
       <MessageHighlighter highlight={highlight}>
         <StyledImageGridContainer messageDirection={direction}>
