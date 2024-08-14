@@ -6,6 +6,7 @@ import { SettingsKey } from '../data/settings-key';
 import { getOppositeTheme, isThemeMismatched } from '../util/theme';
 import { THEME_GLOBALS, setThemeValues } from './globals';
 import { switchThemeTo } from './switchTheme';
+import { Storage } from '../util/storage';
 
 export async function ensureThemeConsistency(): Promise<boolean> {
   const theme = window.Events.getThemeSetting();
@@ -63,7 +64,9 @@ export const SessionTheme = ({
   useMount(() => {
     setThemeValues(THEME_GLOBALS);
     if (runSetup) {
-      void setupTheme();
+      void Storage.onready(() => {
+        void setupTheme();
+      });
     }
   });
   return children;

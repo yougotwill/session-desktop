@@ -22,10 +22,13 @@ const StyledContent = styled(Flex)`
   }
 
   img:first-child {
+    filter: brightness(0) saturate(100%) invert(75%) sepia(84%) saturate(3272%) hue-rotate(103deg)
+      brightness(106%) contrast(103%);
     margin: var(--margins-2xl) 0 var(--margins-lg);
   }
 
   img:nth-child(2) {
+    filter: var(--session-logo-text-current-filter);
     margin-bottom: var(--margins-xl);
   }
 
