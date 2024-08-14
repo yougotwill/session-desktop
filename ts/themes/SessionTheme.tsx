@@ -58,7 +58,7 @@ export const SessionTheme = ({
   runSetup = true,
 }: {
   children: ReactNode;
-  /** If we don't have access to some window functions or Storage yet we might not want to run the theme setup */
+  /** If we don't have access to some window object functions we may skip theme consistency checks */
   runSetup?: boolean;
 }) => {
   useMount(() => {
