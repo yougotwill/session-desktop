@@ -1,4 +1,3 @@
-import classNames from 'classnames';
 import { clone } from 'lodash';
 import { useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
@@ -16,8 +15,6 @@ import {
 import {
   AttachmentType,
   AttachmentTypeWithPath,
-  canDisplayImagePreview,
-  getExtensionForDisplay,
   hasImage,
   hasVideoScreenshot,
   isAudio,
@@ -26,12 +23,12 @@ import {
 } from '../../../../types/Attachment';
 import { saveAttachmentToDisk } from '../../../../util/attachmentsUtil';
 import { MediaItemType } from '../../../lightbox/LightboxGallery';
-import { Spinner } from '../../../loading';
 import { AudioPlayerWithEncryptedFile } from '../../H5AudioPlayer';
 import { ImageGrid } from '../../ImageGrid';
 import { ClickToTrustSender } from './ClickToTrustSender';
 import { MessageHighlighter } from './MessageHighlighter';
 import { useIsDetailMessageView } from '../../../../contexts/isDetailViewContext';
+import { MessageGenericAttachment } from './MessageGenericAttachment';
 
 export type MessageAttachmentSelectorProps = Pick<
   MessageRenderingProps,
@@ -60,10 +57,6 @@ const StyledImageGridContainer = styled.div<{
   overflow: hidden;
   display: flex;
   justify-content: ${props => (props.messageDirection === 'incoming' ? 'flex-start' : 'flex-end')};
-`;
-
-const StyledGenericAttachmentContainer = styled(MessageHighlighter)<{ selected: boolean }>`
-  ${props => props.selected && 'box-shadow: var(--drop-shadow);'}
 `;
 
 export const MessageAttachment = (props: Props) => {
@@ -130,17 +123,14 @@ export const MessageAttachment = (props: Props) => {
   }
 
   const firstAttachment = attachments[0];
-  const displayImage = canDisplayImagePreview(attachments);
 
   if (!isTrustedForAttachmentDownload) {
     return <ClickToTrustSender messageId={messageId} />;
   }
 
   if (
-    displayImage &&
-    !imageBroken &&
-    ((isImage(attachments) && hasImage(attachments)) ||
-      (isVideo(attachments) && hasVideoScreenshot(attachments)))
+    (isImage(attachments) && hasImage(attachments)) ||
+    (isVideo(attachments) && hasVideoScreenshot(attachments))
   ) {
     // we use the carousel in the detail view
     if (isDetailView) {
@@ -152,6 +142,8 @@ export const MessageAttachment = (props: Props) => {
           <ImageGrid
             messageId={messageId}
             attachments={attachments}
+            imageBroken={imageBroken}
+            highlight={highlight}
             onError={handleImageError}
             onClickAttachment={onClickOnImageGrid}
           />
@@ -181,48 +173,15 @@ export const MessageAttachment = (props: Props) => {
       </MessageHighlighter>
     );
   }
-  const { pending, fileName, fileSize, contentType } = firstAttachment;
-  const extension = getExtensionForDisplay({ contentType, fileName });
 
   return (
-    <StyledGenericAttachmentContainer
+    <MessageGenericAttachment
+      attachment={firstAttachment}
+      direction={direction}
       highlight={highlight}
       selected={selected}
-      className={'module-message__generic-attachment'}
       onClick={onClickOnGenericAttachment}
-    >
-      {pending ? (
-        <div className="module-message__generic-attachment__spinner-container">
-          <Spinner size="small" />
-        </div>
-      ) : (
-        <div className="module-message__generic-attachment__icon-container">
-          <div role="button" className="module-message__generic-attachment__icon">
-            {extension ? (
-              <div className="module-message__generic-attachment__icon__extension">{extension}</div>
-            ) : null}
-          </div>
-        </div>
-      )}
-      <div className="module-message__generic-attachment__text">
-        <div
-          className={classNames(
-            'module-message__generic-attachment__file-name',
-            `module-message__generic-attachment__file-name--${direction}`
-          )}
-        >
-          {fileName}
-        </div>
-        <div
-          className={classNames(
-            'module-message__generic-attachment__file-size',
-            `module-message__generic-attachment__file-size--${direction}`
-          )}
-        >
-          {fileSize}
-        </div>
-      </div>
-    </StyledGenericAttachmentContainer>
+    />
   );
 };
 
