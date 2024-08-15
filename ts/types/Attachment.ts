@@ -156,7 +156,7 @@ export function isVideoAttachment(attachment?: AttachmentType): boolean {
 
 export function hasVideoScreenshot(attachments?: Array<AttachmentType>): boolean {
   const firstAttachment = attachments ? attachments[0] : null;
-  return Boolean(firstAttachment?.screenshot?.url);
+  return Boolean(firstAttachment?.screenshot?.url || firstAttachment?.pending);
 }
 
 type DimensionsType = {

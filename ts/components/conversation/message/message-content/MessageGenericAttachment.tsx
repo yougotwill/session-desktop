@@ -15,19 +15,21 @@ const StyledGenericAttachmentContainer = styled(MessageHighlighter)<{
 
 export function MessageGenericAttachment({
   attachment,
-  direction,
-  highlight,
+  /** comes from the attachment iself or the component if it needs to be decrypted */
+  pending,
   selected,
+  highlight,
+  direction,
   onClick,
 }: {
   attachment: PropsForAttachment | AttachmentTypeWithPath;
-  highlight: boolean;
+  pending: boolean;
   selected: boolean;
+  highlight: boolean;
   direction?: MessageModelType;
   onClick?: (e: any) => void;
 }) {
-  // TODO add higher level pending or loading states
-  const { pending, fileName, fileSize, contentType } = attachment;
+  const { fileName, fileSize, contentType } = attachment;
   const extension = getExtensionForDisplay({ contentType, fileName });
 
   return (
