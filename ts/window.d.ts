@@ -34,7 +34,6 @@ declare global {
       useOnionRequests: boolean;
       useTestNet: boolean;
       useClosedGroupV3: boolean;
-      integrationTestEnv: boolean;
       debug: {
         debugLogging: boolean;
         debugLibsessionDumps: boolean;
