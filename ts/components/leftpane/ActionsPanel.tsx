@@ -1,3 +1,4 @@
+import { ipcRenderer } from 'electron';
 import { debounce } from 'lodash';
 import { useEffect, useRef, useState } from 'react';
 
@@ -13,6 +14,8 @@ import { syncConfigurationIfNeeded } from '../../session/utils/sync/syncUtils';
 import { clearSearch } from '../../state/ducks/search';
 import { resetLeftOverlayMode, SectionType, showLeftPaneSection } from '../../state/ducks/section';
 import {
+  _getGlobalUnreadCount,
+  _getSortedConversations,
   getGlobalUnreadMessageCount,
   getOurPrimaryConversation,
 } from '../../state/selectors/conversations';
@@ -37,18 +40,18 @@ import { LeftPaneSectionContainer } from './LeftPaneSectionContainer';
 
 import { SettingsKey } from '../../data/settings-key';
 import { useFetchLatestReleaseFromFileServer } from '../../hooks/useFetchLatestReleaseFromFileServer';
+import { useHotkey } from '../../hooks/useHotkey';
 import {
   forceRefreshRandomSnodePool,
   getFreshSwarmFor,
 } from '../../session/apis/snode_api/snodePool';
 import { ConfigurationSync } from '../../session/utils/job_runners/jobs/ConfigurationSyncJob';
+import { getIsModalVisble } from '../../state/selectors/modal';
 import { useIsDarkTheme } from '../../state/selectors/theme';
 import { switchThemeTo } from '../../themes/switchTheme';
 import { ReleasedFeatures } from '../../util/releaseFeature';
 import { getOppositeTheme } from '../../util/theme';
 import { SessionNotificationCount } from '../icon/SessionNotificationCount';
-import { useHotkey } from '../../hooks/useHotkey';
-import { getIsModalVisble } from '../../state/selectors/modal';
 
 const Section = (props: { type: SectionType }) => {
   const ourNumber = useSelector(getOurNumber);
@@ -215,6 +218,12 @@ const doAppStartUp = async () => {
     void ConfigurationSync.queueNewJobIfNeeded();
   }, 20000);
 };
+
+global.setTimeout(() => {
+  const unreadMessageCount = useSelector(getGlobalUnreadMessageCount);
+  // Send the calculated count to the main process to update the badge count
+  ipcRenderer.send('update-badge-count', unreadMessageCount);
+}, 3000);
 
 /**
  * ActionsPanel is the far left banner (not the left pane).
