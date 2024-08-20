@@ -13,7 +13,8 @@ import { useEncryptedFileFetch } from '../../hooks/useEncryptedFileFetch';
 type Props = {
   alt: string;
   attachment: AttachmentTypeWithPath | AttachmentType;
-  url: string | undefined; // url is undefined if the message is not visible yet
+  /** undefined if the message is not visible yet, '' if the attachment is broken */
+  url: string | undefined;
   imageBroken?: boolean;
 
   height?: number | string;
@@ -36,6 +37,7 @@ type Props = {
   onClickClose?: (attachment: AttachmentTypeWithPath | AttachmentType) => void;
   onError?: () => void;
 
+  /** used for debugging */
   timestamp?: number;
 };
 
@@ -104,27 +106,18 @@ export const Image = (props: Props) => {
     if (mounted && url === '') {
       setPending(false);
       onErrorUrlFilterering();
-      window.log.debug(
-        `WIP: [Image] timestamp ${timestamp} fail  url ${url !== '' ? url : 'empty'} urlToLoad ${urlToLoad !== '' ? urlToLoad : 'empty'} loading ${loading} pending ${pending} imageBroken ${imageBroken}`
-      );
     }
 
     if (mounted && imageBroken && urlToLoad === '') {
       setPending(false);
       onErrorUrlFilterering();
-      window.log.debug(
-        `WIP: [Image] timestamp ${timestamp} fail  url ${url !== '' ? url : 'empty'} urlToLoad ${urlToLoad !== '' ? urlToLoad : 'empty'} loading ${loading} pending ${pending} imageBroken ${imageBroken}`
-      );
     }
 
     if (url) {
       setPending(false);
       setMounted(!loading && !pending);
-      window.log.debug(
-        `WIP: [Image] timestamp ${timestamp} success  url ${url !== '' ? url : 'empty'} urlToLoad ${urlToLoad !== '' ? urlToLoad : 'empty'} loading ${loading} pending ${pending} imageBroken ${imageBroken}`
-      );
     }
-  }, [imageBroken, loading, mounted, onErrorUrlFilterering, pending, timestamp, url, urlToLoad]);
+  }, [imageBroken, loading, mounted, onErrorUrlFilterering, pending, url, urlToLoad]);
 
   if (mounted && imageBroken) {
     return (
@@ -220,7 +213,7 @@ export const Image = (props: Props) => {
           className="module-image__close-button"
         />
       ) : null}
-      {!pending && playIconOverlay ? (
+      {mounted && playIconOverlay ? (
         <div className="module-image__play-overlay__circle">
           <div className="module-image__play-overlay__icon" />
         </div>

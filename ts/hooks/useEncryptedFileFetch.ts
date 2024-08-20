@@ -7,11 +7,13 @@ import {
 import { perfEnd, perfStart } from '../session/utils/Performance';
 
 export const useEncryptedFileFetch = (
+  /** undefined if the message is not visible yet, url is '' if something is broken */
   url: string | undefined,
   contentType: string,
   isAvatar: boolean,
   timestamp?: number
 ) => {
+  /** undefined if the attachment is not decrypted yet, '' if the attachment fails to decrypt */
   const [urlToLoad, setUrlToLoad] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState(true);
 
@@ -20,10 +22,6 @@ export const useEncryptedFileFetch = (
   const fetchUrl = useCallback(
     async (mediaUrl: string | undefined) => {
       if (alreadyDecrypted || !mediaUrl) {
-        window.log.debug(
-          `WIP: [Image] timestamp ${timestamp} alreadyDecrypted ${alreadyDecrypted !== '' ? alreadyDecrypted : 'empty'} mediaUrl ${mediaUrl !== '' ? mediaUrl : 'empty'}`
-        );
-
         if (alreadyDecrypted) {
           setUrlToLoad(alreadyDecrypted);
           setLoading(false);
@@ -34,16 +32,14 @@ export const useEncryptedFileFetch = (
       setLoading(true);
 
       try {
-        perfStart(`getDecryptedMediaUrl-${mediaUrl}`);
+        perfStart(`getDecryptedMediaUrl-${mediaUrl}-${timestamp}`);
         const decryptedUrl = await getDecryptedMediaUrl(mediaUrl, contentType, isAvatar);
-        perfEnd(`getDecryptedMediaUrl-${mediaUrl}`, `getDecryptedMediaUrl-${mediaUrl}`);
-        window.log.debug(
-          `WIP: [Image] timestamp ${timestamp} decryptedUrl ${decryptedUrl !== '' ? decryptedUrl : 'empty'}`
+        perfEnd(
+          `getDecryptedMediaUrl-${mediaUrl}-${timestamp}`,
+          `getDecryptedMediaUrl-${mediaUrl}-${timestamp}`
         );
-
         setUrlToLoad(decryptedUrl);
       } catch (error) {
-        window.log.error(`WIP: [Image] timestamp ${timestamp} error ${error}`);
         setUrlToLoad('');
       } finally {
         setLoading(false);
