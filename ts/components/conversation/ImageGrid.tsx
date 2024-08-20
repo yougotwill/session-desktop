@@ -10,13 +10,19 @@ import {
 } from '../../types/Attachment';
 
 import { useIsMessageVisible } from '../../contexts/isMessageVisibleContext';
-import { useMessageSelected } from '../../state/selectors';
+import {
+  useMessageDirection,
+  useMessageSelected,
+  useMessageTimestamp,
+} from '../../state/selectors';
 import { THUMBNAIL_SIDE } from '../../types/attachments/VisualAttachment';
 import { Image } from './Image';
 
 type Props = {
   attachments: Array<AttachmentTypeWithPath>;
   onError: () => void;
+  imageBroken: boolean;
+  highlight: boolean;
   onClickAttachment?: (attachment: AttachmentTypeWithPath | AttachmentType) => void;
   messageId?: string;
 };
@@ -33,21 +39,26 @@ const Row = (
     renderedSize: number;
     startIndex: number;
     totalAttachmentsCount: number;
-    selected: boolean;
   }
 ) => {
   const {
     attachments,
+    imageBroken,
+    highlight,
     onError,
     renderedSize,
     startIndex,
     onClickAttachment,
     totalAttachmentsCount,
-    selected,
+    messageId,
   } = props;
   const isMessageVisible = useIsMessageVisible();
   const moreMessagesOverlay = totalAttachmentsCount > 3;
   const moreMessagesOverlayText = moreMessagesOverlay ? `+${totalAttachmentsCount - 3}` : undefined;
+
+  const selected = useMessageSelected(messageId);
+  const direction = useMessageDirection(messageId);
+  const timestamp = useMessageTimestamp(messageId);
 
   return (
     <>
@@ -64,11 +75,15 @@ const Row = (
             url={isMessageVisible ? getThumbnailUrl(attachment) : undefined}
             attachmentIndex={startIndex + index}
             onClick={onClickAttachment}
+            imageBroken={imageBroken}
+            highlight={highlight}
             onError={onError}
             softCorners={true}
             darkOverlay={showOverlay}
             overlayText={showOverlay ? moreMessagesOverlayText : undefined}
             dropShadow={selected}
+            direction={direction}
+            timestamp={timestamp}
           />
         );
       })}
@@ -77,9 +92,7 @@ const Row = (
 };
 
 export const ImageGrid = (props: Props) => {
-  const { attachments, onError, onClickAttachment, messageId } = props;
-
-  const selected = useMessageSelected(messageId);
+  const { attachments, imageBroken, highlight, onError, onClickAttachment, messageId } = props;
 
   if (!attachments || !attachments.length) {
     return null;
@@ -90,12 +103,14 @@ export const ImageGrid = (props: Props) => {
       <StyledImageGrid flexDirection={'row'}>
         <Row
           attachments={attachments.slice(0, 1)}
+          imageBroken={imageBroken}
+          highlight={highlight}
           onError={onError}
           onClickAttachment={onClickAttachment}
           renderedSize={THUMBNAIL_SIDE}
           startIndex={0}
           totalAttachmentsCount={attachments.length}
-          selected={selected}
+          messageId={messageId}
         />
       </StyledImageGrid>
     );
@@ -107,12 +122,14 @@ export const ImageGrid = (props: Props) => {
       <StyledImageGrid flexDirection={'row'}>
         <Row
           attachments={attachments.slice(0, 2)}
+          imageBroken={imageBroken}
+          highlight={highlight}
           onError={onError}
           onClickAttachment={onClickAttachment}
           renderedSize={THUMBNAIL_SIDE}
           startIndex={0}
           totalAttachmentsCount={attachments.length}
-          selected={selected}
+          messageId={messageId}
         />
       </StyledImageGrid>
     );
@@ -125,23 +142,27 @@ export const ImageGrid = (props: Props) => {
     <StyledImageGrid flexDirection={'row'}>
       <Row
         attachments={attachments.slice(0, 1)}
+        imageBroken={imageBroken}
+        highlight={highlight}
         onError={onError}
         onClickAttachment={onClickAttachment}
         renderedSize={THUMBNAIL_SIDE}
         startIndex={0}
         totalAttachmentsCount={attachments.length}
-        selected={selected}
+        messageId={messageId}
       />
 
       <StyledImageGrid flexDirection={'column'}>
         <Row
           attachments={attachments.slice(1, 3)}
+          imageBroken={imageBroken}
+          highlight={highlight}
           onError={onError}
           onClickAttachment={onClickAttachment}
           renderedSize={columnImageSide}
           startIndex={1}
           totalAttachmentsCount={attachments.length}
-          selected={selected}
+          messageId={messageId}
         />
       </StyledImageGrid>
     </StyledImageGrid>

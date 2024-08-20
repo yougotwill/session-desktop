@@ -21,7 +21,6 @@ import {
   getShouldHighlightMessage,
 } from '../../../../state/selectors/conversations';
 import { useSelectedIsPrivate } from '../../../../state/selectors/selectedConversation';
-import { canDisplayImagePreview } from '../../../../types/Attachment';
 import { MessageAttachment } from './MessageAttachment';
 import { MessageAvatar } from './MessageAvatar';
 import { MessageHighlighter } from './MessageHighlighter';
@@ -147,16 +146,11 @@ export const MessageContent = (props: Props) => {
     return null;
   }
 
-  const { direction, text, timestamp, serverTimestamp, previews, quote, attachments } =
-    contentProps;
+  const { direction, text, timestamp, serverTimestamp, previews, quote } = contentProps;
 
   const hasContentBeforeAttachment = !isEmpty(previews) || !isEmpty(quote) || !isEmpty(text);
 
   const toolTipTitle = moment(serverTimestamp || timestamp).format('llll');
-
-  window.log.debug(
-    `WIP: [MessageAttachment] ${props.messageId} timestamp ${timestamp} imageBroken ${imageBroken} display ${canDisplayImagePreview(attachments)} attachments.contentType ${attachments?.[0].contentType || 'none'}`
-  );
 
   return (
     <StyledMessageContent

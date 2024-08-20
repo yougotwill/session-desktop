@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import {
   getAlreadyDecryptedMediaUrl,
@@ -6,40 +6,55 @@ import {
 } from '../session/crypto/DecryptedAttachmentsManager';
 import { perfEnd, perfStart } from '../session/utils/Performance';
 
-export const useEncryptedFileFetch = (url: string, contentType: string, isAvatar: boolean) => {
-  const [urlToLoad, setUrlToLoad] = useState('');
-  const [loading, setLoading] = useState(false);
+export const useEncryptedFileFetch = (
+  url: string | undefined,
+  contentType: string,
+  isAvatar: boolean,
+  timestamp?: number
+) => {
+  const [urlToLoad, setUrlToLoad] = useState<string | undefined>(undefined);
+  const [loading, setLoading] = useState(true);
 
-  const mountedRef = useRef(true);
+  const alreadyDecrypted = url ? getAlreadyDecryptedMediaUrl(url) : '';
 
-  const alreadyDecrypted = getAlreadyDecryptedMediaUrl(url);
+  const fetchUrl = useCallback(
+    async (mediaUrl: string | undefined) => {
+      if (alreadyDecrypted || !mediaUrl) {
+        window.log.debug(
+          `WIP: [Image] timestamp ${timestamp} alreadyDecrypted ${alreadyDecrypted !== '' ? alreadyDecrypted : 'empty'} mediaUrl ${mediaUrl !== '' ? mediaUrl : 'empty'}`
+        );
 
-  useEffect(() => {
-    async function fetchUrl() {
-      perfStart(`getDecryptedMediaUrl-${url}`);
-      const decryptedUrl = await getDecryptedMediaUrl(url, contentType, isAvatar);
-      perfEnd(`getDecryptedMediaUrl-${url}`, `getDecryptedMediaUrl-${url}`);
+        if (alreadyDecrypted) {
+          setUrlToLoad(alreadyDecrypted);
+          setLoading(false);
+        }
+        return;
+      }
 
-      if (mountedRef.current) {
+      setLoading(true);
+
+      try {
+        perfStart(`getDecryptedMediaUrl-${mediaUrl}`);
+        const decryptedUrl = await getDecryptedMediaUrl(mediaUrl, contentType, isAvatar);
+        perfEnd(`getDecryptedMediaUrl-${mediaUrl}`, `getDecryptedMediaUrl-${mediaUrl}`);
+        window.log.debug(
+          `WIP: [Image] timestamp ${timestamp} decryptedUrl ${decryptedUrl !== '' ? decryptedUrl : 'empty'}`
+        );
+
         setUrlToLoad(decryptedUrl);
+      } catch (error) {
+        window.log.error(`WIP: [Image] timestamp ${timestamp} error ${error}`);
+        setUrlToLoad('');
+      } finally {
         setLoading(false);
       }
-    }
-    if (alreadyDecrypted) {
-      return;
-    }
-    setLoading(true);
-    mountedRef.current = true;
-    void fetchUrl();
+    },
+    [alreadyDecrypted, contentType, isAvatar, timestamp]
+  );
 
-    // eslint-disable-next-line consistent-return
-    return () => {
-      mountedRef.current = false;
-    };
-  }, [url, alreadyDecrypted, contentType, isAvatar]);
+  useEffect(() => {
+    void fetchUrl(url);
+  }, [fetchUrl, url]);
 
-  if (alreadyDecrypted) {
-    return { urlToLoad: alreadyDecrypted, loading: false };
-  }
   return { urlToLoad, loading };
 };

@@ -15,8 +15,6 @@ import {
 import {
   AttachmentType,
   AttachmentTypeWithPath,
-  hasImage,
-  hasVideoScreenshot,
   isAudio,
   isImage,
   isVideo,
@@ -128,14 +126,12 @@ export const MessageAttachment = (props: Props) => {
     return <ClickToTrustSender messageId={messageId} />;
   }
 
-  if (
-    (isImage(attachments) && hasImage(attachments)) ||
-    (isVideo(attachments) && hasVideoScreenshot(attachments))
-  ) {
+  if (isImage(attachments) || isVideo(attachments)) {
     // we use the carousel in the detail view
     if (isDetailView) {
       return null;
     }
+
     return (
       <MessageHighlighter highlight={highlight}>
         <StyledImageGridContainer messageDirection={direction}>
@@ -177,6 +173,7 @@ export const MessageAttachment = (props: Props) => {
   return (
     <MessageGenericAttachment
       attachment={firstAttachment}
+      pending={firstAttachment.pending}
       direction={direction}
       highlight={highlight}
       selected={selected}
