@@ -154,7 +154,7 @@ export const Image = (props: Props) => {
       }}
       data-attachmentindex={attachmentIndex}
     >
-      {!mounted || loading || pending ? (
+      {!mounted ? (
         <div
           className="module-image__loading-placeholder"
           style={{
