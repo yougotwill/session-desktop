@@ -84,7 +84,7 @@ export const Image = (props: Props) => {
   );
 
   const { caption } = attachment || { caption: null };
-  const [pending, setPending] = useState<boolean>(attachment.pending || !url || true);
+  const [pending, setPending] = useState<boolean>(attachment.pending || true);
   const [mounted, setMounted] = useState<boolean>(
     (!loading || !pending) && urlToLoad === undefined
   );
