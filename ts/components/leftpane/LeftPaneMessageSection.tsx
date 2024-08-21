@@ -20,6 +20,7 @@ import { OverlayInvite } from './overlay/OverlayInvite';
 import { OverlayMessage } from './overlay/OverlayMessage';
 import { OverlayMessageRequest } from './overlay/OverlayMessageRequest';
 import { OverlayChooseAction } from './overlay/choose-action/OverlayChooseAction';
+import { getIsModalVisble } from '../../state/selectors/modal';
 
 const StyledLeftPaneContent = styled.div`
   display: flex;
@@ -85,8 +86,9 @@ const ConversationRow = (
 const ConversationList = () => {
   const searchTerm = useSelector(getSearchTerm);
   const conversationIds = useSelector(getLeftPaneConversationIds);
+  const isModalVisible = useSelector(getIsModalVisble);
 
-  if (!isEmpty(searchTerm)) {
+  if (!isModalVisible && !isEmpty(searchTerm)) {
     return <SearchResults />;
   }
 

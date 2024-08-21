@@ -207,4 +207,10 @@ export type ThemeColorVariables = {
 
   /* Session Recording */
   '--session-recording-pulse-color': string;
+
+  /* Command Palette */
+  '--command-palette-background-color': string;
+  '--command-palette-background-hover-color': string;
+  '--command-palette-background-selected-color': string;
+  '--command-palette-text-color': string;
 };

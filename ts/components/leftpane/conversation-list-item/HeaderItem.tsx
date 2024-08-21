@@ -140,7 +140,7 @@ async function openConvoToLastMention(e: MouseEvent<HTMLSpanElement>, conversati
   }
 }
 
-const AtSymbol = ({ convoId }: { convoId: string }) => {
+export const AtSymbol = ({ convoId }: { convoId: string }) => {
   const hasMentionedUs = useMentionedUs(convoId);
   const hasUnread = useHasUnread(convoId);
 
@@ -155,7 +155,7 @@ const AtSymbol = ({ convoId }: { convoId: string }) => {
   ) : null;
 };
 
-const UnreadCount = ({ convoId }: { convoId: string }) => {
+export const UnreadCount = ({ convoId }: { convoId: string }) => {
   const unreadMsgCount = useUnreadCount(convoId);
   const forcedUnread = useIsForcedUnreadWithoutUnreadMsg(convoId);
 
