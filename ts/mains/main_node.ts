@@ -648,62 +648,13 @@ async function showAbout() {
   aboutWindow?.show();
 }
 
-let debugLogWindow: BrowserWindow | null = null;
-async function showDebugLogWindow() {
-  if (debugLogWindow) {
-    debugLogWindow.show();
-    return;
-  }
-
-  if (!mainWindow) {
-    console.info('debug log needs mainwindow size to open');
-    return;
-  }
-
-  const theme = await getThemeFromMainWindow();
-  const size = mainWindow.getSize();
-  const options = {
-    width: Math.max(size[0] - 100, getDefaultWindowSize().minWidth),
-    height: Math.max(size[1] - 100, getDefaultWindowSize().minHeight),
-    resizable: true,
-    title: locale.messages.debugLog,
-    autoHideMenuBar: true,
-    backgroundColor: classicDark['--background-primary-color'],
-    shadow: true,
-    show: false,
-    modal: true,
-    webPreferences: {
-      nodeIntegration: true,
-      nodeIntegrationInWorker: false,
-      contextIsolation: false,
-      preload: path.join(getAppRootPath(), 'debug_log_preload.js'),
-      nativeWindowOpen: true,
-    },
-    parent: mainWindow,
-  };
-
-  debugLogWindow = new BrowserWindow(options);
-
-  captureClicks(debugLogWindow);
-
-  await debugLogWindow.loadURL(prepareURL([getAppRootPath(), 'debug_log.html'], { theme }));
-
-  debugLogWindow.on('closed', () => {
-    debugLogWindow = null;
-  });
-
-  debugLogWindow.once('ready-to-show', () => {
-    debugLogWindow?.setBackgroundColor(classicDark['--background-primary-color']);
-  });
-
-  // see above: looks like sometimes ready-to-show is not fired by electron
-  debugLogWindow?.show();
-}
-
 async function saveDebugLog(_event: any, logText: any) {
   const options: Electron.SaveDialogOptions = {
     title: 'Save debug log',
-    defaultPath: path.join(app.getPath('desktop'), `session_debug_${Date.now()}.txt`),
+    defaultPath: path.join(
+      app.getPath('desktop'),
+      `session_debug_${new Date().toISOString().replace(/:/g, '_')}.txt`
+    ),
     properties: ['createDirectory'],
   };
 
@@ -840,7 +791,6 @@ function setupMenu() {
   const { platform } = process;
   const menuOptions = {
     development,
-    showDebugLog: showDebugLogWindow,
     showWindow,
     showAbout,
     openReleaseNotes,
@@ -1080,13 +1030,6 @@ ipc.on('set-password', async (event, passPhrase, oldPhrase) => {
 });
 
 // Debug Log-related IPC calls
-
-ipc.on('show-debug-log', showDebugLogWindow);
-ipc.on('close-debug-log', () => {
-  if (debugLogWindow) {
-    debugLogWindow.close();
-  }
-});
 ipc.on('save-debug-log', saveDebugLog);
 ipc.on('load-maxmind-data', async (event: IpcMainEvent) => {
   try {
