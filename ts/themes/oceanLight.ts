@@ -167,4 +167,9 @@ export const oceanLight: ThemeColorVariables = {
   '--session-recording-pulse-color': hexColorToRGB(THEMES.OCEAN_LIGHT.DANGER),
 
   '--renderer-span-primary-color': 'var(--text-primary-color)',
+
+  '--command-palette-background-color': 'var(--background-primary-color)',
+  '--command-palette-background-hover-color': THEMES.OCEAN_LIGHT.COLOR5,
+  '--command-palette-background-selected-color': THEMES.OCEAN_LIGHT.COLOR6,
+  '--command-palette-text-color': 'var(--text-primary-color)',
 };

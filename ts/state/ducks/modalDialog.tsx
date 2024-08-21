@@ -6,6 +6,7 @@ import { SessionConfirmDialogProps } from '../../components/dialog/SessionConfir
 import { MediaItemType } from '../../components/lightbox/LightboxGallery';
 import { AttachmentTypeWithPath } from '../../types/Attachment';
 import type { EditProfilePictureModalProps, PasswordAction } from '../../types/ReduxTypes';
+import { CommandPaletteModalProps } from '../../components/CommandPalette';
 
 export type BanType = 'ban' | 'unban';
 
@@ -51,6 +52,8 @@ export type LightBoxOptions = {
   onClose?: () => void;
 } | null;
 
+export type CommandPaletteModalState = CommandPaletteModalProps | null;
+
 export type ModalState = {
   confirmModal: ConfirmModalState;
   inviteContactModal: InviteContactModalState;
@@ -73,6 +76,7 @@ export type ModalState = {
   hideRecoveryPasswordModalState: HideRecoveryPasswordModalState;
   openUrlModal: OpenUrlModalState;
   lightBoxOptions: LightBoxOptions;
+  commandPaletteModalState: CommandPaletteModalState;
 };
 
 export const initialModalState: ModalState = {
@@ -97,6 +101,7 @@ export const initialModalState: ModalState = {
   hideRecoveryPasswordModalState: null,
   openUrlModal: null,
   lightBoxOptions: null,
+  commandPaletteModalState: null,
 };
 
 const ModalSlice = createSlice({
@@ -180,6 +185,9 @@ const ModalSlice = createSlice({
 
       return { ...state, lightBoxOptions };
     },
+    updateCommandPaletteModal(state, action: PayloadAction<CommandPaletteModalProps | null>) {
+      return { ...state, commandPaletteModalState: action.payload };
+    },
   },
 });
 
@@ -206,5 +214,6 @@ export const {
   updateHideRecoveryPasswordModal,
   updateOpenUrlModal,
   updateLightBoxOptions,
+  updateCommandPaletteModal,
 } = actions;
 export const modalReducer = reducer;

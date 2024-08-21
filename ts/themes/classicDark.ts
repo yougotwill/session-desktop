@@ -167,4 +167,9 @@ export const classicDark: ThemeColorVariables = {
   '--session-recording-pulse-color': hexColorToRGB(THEMES.CLASSIC_DARK.DANGER),
 
   '--renderer-span-primary-color': 'var(--primary-color)',
+
+  '--command-palette-background-color': 'var(--background-primary-color)',
+  '--command-palette-background-hover-color': THEMES.CLASSIC_DARK.COLOR3,
+  '--command-palette-background-selected-color': THEMES.CLASSIC_DARK.COLOR2,
+  '--command-palette-text-color': 'var(--text-primary-color)',
 };

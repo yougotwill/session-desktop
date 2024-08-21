@@ -4,6 +4,7 @@ import {
   getBanOrUnbanUserModalState,
   getBlockOrUnblockUserModalState,
   getChangeNickNameDialog,
+  getCommandPaletteModalState,
   getConfirmModal,
   getDeleteAccountModalState,
   getEditProfileDialog,
@@ -43,6 +44,7 @@ import { UserDetailsDialog } from './UserDetailsDialog';
 import { EditProfileDialog } from './edit-profile/EditProfileDialog';
 import { OpenUrlModal } from './OpenUrlModal';
 import { BlockOrUnblockDialog } from './blockOrUnblock/BlockOrUnblockDialog';
+import { CommandPalette } from '../CommandPalette';
 
 export const ModalContainer = () => {
   const confirmModalState = useSelector(getConfirmModal);
@@ -66,6 +68,7 @@ export const ModalContainer = () => {
   const hideRecoveryPasswordModalState = useSelector(getHideRecoveryPasswordModalState);
   const openUrlModalState = useSelector(getOpenUrlModalState);
   const lightBoxOptions = useSelector(getLightBoxOptions);
+  const commandPaletteModalState = useSelector(getCommandPaletteModalState);
 
   return (
     <>
@@ -96,6 +99,7 @@ export const ModalContainer = () => {
       )}
       {openUrlModalState && <OpenUrlModal {...openUrlModalState} />}
       {lightBoxOptions && <LightboxGallery {...lightBoxOptions} />}
+      {commandPaletteModalState && <CommandPalette {...commandPaletteModalState} />}
     </>
   );
 };

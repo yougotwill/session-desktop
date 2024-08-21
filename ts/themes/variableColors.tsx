@@ -214,4 +214,10 @@ export type ThemeColorVariables = {
    * `--primary-color` on dark themes and `--text-primary-color` on light themes
    */
   '--renderer-span-primary-color': string;
+
+  /* Command Palette */
+  '--command-palette-background-color': string;
+  '--command-palette-background-hover-color': string;
+  '--command-palette-background-selected-color': string;
+  '--command-palette-text-color': string;
 };

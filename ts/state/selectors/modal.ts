@@ -4,6 +4,7 @@ import {
   AddModeratorsModalState,
   BanOrUnbanUserModalState,
   ChangeNickNameModalState,
+  CommandPaletteModalState,
   ConfirmModalState,
   DeleteAccountModalState,
   EditProfileModalState,
@@ -141,4 +142,9 @@ export const getOpenUrlModalState = createSelector(
 export const getLightBoxOptions = createSelector(
   getModal,
   (state: ModalState): LightBoxOptions => state.lightBoxOptions
+);
+
+export const getCommandPaletteModalState = createSelector(
+  getModal,
+  (state: ModalState): CommandPaletteModalState => state.commandPaletteModalState
 );
