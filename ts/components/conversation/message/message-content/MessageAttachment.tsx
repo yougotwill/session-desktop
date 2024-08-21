@@ -27,6 +27,7 @@ import { ClickToTrustSender } from './ClickToTrustSender';
 import { MessageHighlighter } from './MessageHighlighter';
 import { useIsDetailMessageView } from '../../../../contexts/isDetailViewContext';
 import { MessageGenericAttachment } from './MessageGenericAttachment';
+import { ContextMessageProvider } from '../../../../contexts/MessageIdContext';
 
 export type MessageAttachmentSelectorProps = Pick<
   MessageRenderingProps,
@@ -133,18 +134,19 @@ export const MessageAttachment = (props: Props) => {
     }
 
     return (
-      <MessageHighlighter highlight={highlight}>
-        <StyledImageGridContainer messageDirection={direction}>
-          <ImageGrid
-            messageId={messageId}
-            attachments={attachments}
-            imageBroken={imageBroken}
-            highlight={highlight}
-            onError={handleImageError}
-            onClickAttachment={onClickOnImageGrid}
-          />
-        </StyledImageGridContainer>
-      </MessageHighlighter>
+      <ContextMessageProvider value={messageId}>
+        <MessageHighlighter highlight={highlight}>
+          <StyledImageGridContainer messageDirection={direction}>
+            <ImageGrid
+              attachments={attachments}
+              imageBroken={imageBroken}
+              highlight={highlight}
+              onError={handleImageError}
+              onClickAttachment={onClickOnImageGrid}
+            />
+          </StyledImageGridContainer>
+        </MessageHighlighter>
+      </ContextMessageProvider>
     );
   }
 

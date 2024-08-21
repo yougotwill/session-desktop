@@ -10,11 +10,6 @@ import {
 } from '../../types/Attachment';
 
 import { useIsMessageVisible } from '../../contexts/isMessageVisibleContext';
-import {
-  useMessageDirection,
-  useMessageSelected,
-  useMessageTimestamp,
-} from '../../state/selectors';
 import { THUMBNAIL_SIDE } from '../../types/attachments/VisualAttachment';
 import { Image } from './Image';
 
@@ -24,7 +19,6 @@ type Props = {
   imageBroken: boolean;
   highlight: boolean;
   onClickAttachment?: (attachment: AttachmentTypeWithPath | AttachmentType) => void;
-  messageId?: string;
 };
 
 const StyledImageGrid = styled.div<{ flexDirection: 'row' | 'column' }>`
@@ -50,15 +44,10 @@ const Row = (
     startIndex,
     onClickAttachment,
     totalAttachmentsCount,
-    messageId,
   } = props;
   const isMessageVisible = useIsMessageVisible();
   const moreMessagesOverlay = totalAttachmentsCount > 3;
   const moreMessagesOverlayText = moreMessagesOverlay ? `+${totalAttachmentsCount - 3}` : undefined;
-
-  const selected = useMessageSelected(messageId);
-  const direction = useMessageDirection(messageId);
-  const timestamp = useMessageTimestamp(messageId);
 
   return (
     <>
@@ -81,9 +70,6 @@ const Row = (
             softCorners={true}
             darkOverlay={showOverlay}
             overlayText={showOverlay ? moreMessagesOverlayText : undefined}
-            dropShadow={selected}
-            direction={direction}
-            timestamp={timestamp}
           />
         );
       })}
@@ -92,7 +78,7 @@ const Row = (
 };
 
 export const ImageGrid = (props: Props) => {
-  const { attachments, imageBroken, highlight, onError, onClickAttachment, messageId } = props;
+  const { attachments, imageBroken, highlight, onError, onClickAttachment } = props;
 
   if (!attachments || !attachments.length) {
     return null;
@@ -110,7 +96,6 @@ export const ImageGrid = (props: Props) => {
           renderedSize={THUMBNAIL_SIDE}
           startIndex={0}
           totalAttachmentsCount={attachments.length}
-          messageId={messageId}
         />
       </StyledImageGrid>
     );
@@ -129,7 +114,6 @@ export const ImageGrid = (props: Props) => {
           renderedSize={THUMBNAIL_SIDE}
           startIndex={0}
           totalAttachmentsCount={attachments.length}
-          messageId={messageId}
         />
       </StyledImageGrid>
     );
@@ -149,7 +133,6 @@ export const ImageGrid = (props: Props) => {
         renderedSize={THUMBNAIL_SIDE}
         startIndex={0}
         totalAttachmentsCount={attachments.length}
-        messageId={messageId}
       />
 
       <StyledImageGrid flexDirection={'column'}>
@@ -162,7 +145,6 @@ export const ImageGrid = (props: Props) => {
           renderedSize={columnImageSide}
           startIndex={1}
           totalAttachmentsCount={attachments.length}
-          messageId={messageId}
         />
       </StyledImageGrid>
     </StyledImageGrid>

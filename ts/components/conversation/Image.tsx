@@ -6,9 +6,14 @@ import { isNumber } from 'lodash';
 import { useDisableDrag } from '../../hooks/useDisableDrag';
 import { AttachmentType, AttachmentTypeWithPath } from '../../types/Attachment';
 import { Spinner } from '../loading';
-import { MessageModelType } from '../../models/messageType';
 import { MessageGenericAttachment } from './message/message-content/MessageGenericAttachment';
 import { useEncryptedFileFetch } from '../../hooks/useEncryptedFileFetch';
+import { useMessageIdFromContext } from '../../contexts/MessageIdContext';
+import {
+  useMessageDirection,
+  useMessageSelected,
+  useMessageTimestamp,
+} from '../../state/selectors';
 
 type Props = {
   alt: string;
@@ -28,17 +33,12 @@ type Props = {
   playIconOverlay?: boolean;
   softCorners: boolean;
   forceSquare?: boolean;
-  dropShadow?: boolean;
   attachmentIndex?: number;
-  direction?: MessageModelType;
   highlight?: boolean;
 
   onClick?: (attachment: AttachmentTypeWithPath | AttachmentType) => void;
   onClickClose?: (attachment: AttachmentTypeWithPath | AttachmentType) => void;
   onError?: () => void;
-
-  /** used for debugging */
-  timestamp?: number;
 };
 
 const StyledOverlay = styled.div<Pick<Props, 'darkOverlay' | 'softCorners'>>`
@@ -66,14 +66,17 @@ export const Image = (props: Props) => {
     playIconOverlay,
     softCorners,
     forceSquare,
-    dropShadow,
     attachmentIndex,
-    direction,
     highlight,
     url,
     width: _width,
-    timestamp,
   } = props;
+
+  const messageId = useMessageIdFromContext();
+  const dropShadow = useMessageSelected(messageId);
+  const direction = useMessageDirection(messageId);
+  /** used for debugging */
+  const timestamp = useMessageTimestamp(messageId);
 
   const disableDrag = useDisableDrag();
   const { loading, urlToLoad } = useEncryptedFileFetch(
