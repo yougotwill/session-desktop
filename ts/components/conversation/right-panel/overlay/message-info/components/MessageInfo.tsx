@@ -1,5 +1,4 @@
 import { format, formatDistanceStrict } from 'date-fns';
-import { ipcRenderer } from 'electron';
 import { isEmpty } from 'lodash';
 import moment from 'moment';
 
@@ -24,6 +23,7 @@ import { useSelectedConversationKey } from '../../../../../../state/selectors/se
 import { Flex } from '../../../../../basic/Flex';
 import { SpacerSM } from '../../../../../basic/Text';
 import { CopyToClipboardIcon } from '../../../../../buttons';
+import { saveLogToDesktop } from '../../../../../../util/logging';
 
 export const MessageInfoLabel = styled.label<{ color?: string }>`
   font-size: var(--font-size-lg);
@@ -73,10 +73,6 @@ export const LabelWithInfo = (props: LabelWithInfoProps) => {
 
 // Message timestamp format: "06:02 PM Tue, 15/11/2022"
 const formatTimestamps = 'hh:mm A ddd, D/M/Y';
-
-const showDebugLog = () => {
-  ipcRenderer.send('show-debug-log');
-};
 
 const DebugMessageInfo = ({ messageId }: { messageId: string }) => {
   const convoId = useSelectedConversationKey();
@@ -164,7 +160,9 @@ export const MessageInfo = ({ messageId, errors }: { messageId: string; errors: 
             label={`${window.i18n('error')}:`}
             info={errorString || window.i18n('unknownError')}
             dataColor={'var(--danger-color)'}
-            onClick={showDebugLog}
+            onClick={() => {
+              void saveLogToDesktop();
+            }}
           />
         </>
       )}

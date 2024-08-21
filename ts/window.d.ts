@@ -82,6 +82,7 @@ declare global {
     getCommitHash: () => string | undefined;
     getVersion: () => string;
     getOSRelease: () => string;
+    saveLog: (text: string) => void;
     setAutoHideMenuBar: (val: boolean) => void;
     setMenuBarVisibility: (val: boolean) => void;
     contextMenuShown: boolean;
@@ -98,7 +99,6 @@ declare global {
     getOpengroupPruning: () => Promise<boolean>;
     setOpengroupPruning: (val: boolean) => Promise<void>;
     closeAbout: () => void;
-    closeDebugLog: () => void;
     getAutoUpdateEnabled: () => boolean;
     setAutoUpdateEnabled: (enabled: boolean) => void;
     setZoomFactor: (newZoom: number) => void;
