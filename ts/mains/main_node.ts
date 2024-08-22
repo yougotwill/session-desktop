@@ -20,6 +20,7 @@ import {
 
 import crypto from 'crypto';
 import fs from 'fs';
+import { copyFile, appendFile } from 'node:fs/promises';
 import os from 'os';
 import path, { join } from 'path';
 import { platform as osPlatform } from 'process';
@@ -671,12 +672,12 @@ async function saveDebugLog(_event: any, additionalInfo: string) {
       throw Error('No logger file path');
     }
 
-    fs.copyFileSync(loggerFilePath, outputPath);
+    await copyFile(loggerFilePath, outputPath);
     console.info(`[log] Copied logs to ${outputPath} from ${loggerFilePath}`);
 
     // append any additional info
     if (additionalInfo) {
-      fs.appendFileSync(outputPath, additionalInfo, { encoding: 'utf-8' });
+      await appendFile(outputPath, additionalInfo, { encoding: 'utf-8' });
       console.info(`[log] Saved additional info to logs ${outputPath} from ${loggerFilePath}`);
     }
   } catch (err) {
