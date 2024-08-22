@@ -149,10 +149,16 @@ window.addEventListener('unhandledrejection', rejectionEvent => {
   window.log.error('Top-level unhandled promise rejection:', errorInfo);
 });
 
-export async function saveLogToDesktop() {
-  const operatingSystemInfo = `Operating System ${window.getOSRelease()}`;
-  const commitHashInfo = window.getCommitHash() ? `Commit ${window.getCommitHash()}` : '';
-  const text = await fetchNodeLog();
-  const debugLogWithSystemInfo = `${operatingSystemInfo} ${commitHashInfo} ${text}`;
+export function saveLogToDesktop() {
+  const versionInfo = `v${window.getVersion()}`;
+  const operatingSystemInfo = `Operating System: ${window.getOSRelease()}`;
+  const commitHashInfo = window.getCommitHash() ? `Commit: ${window.getCommitHash()}` : '';
+  const debugLogWithSystemInfo = `
+******************************************************************************
+# Application Info
+${versionInfo}
+${operatingSystemInfo}
+${commitHashInfo}
+******************************************************************************`;
   window.saveLog(debugLogWithSystemInfo);
 }

@@ -29,7 +29,7 @@ window.getCommitHash = () => configAny.commitHash;
 window.getNodeVersion = () => configAny.node_version;
 window.getOSRelease = () =>
   `${os.type()} ${os.release()}, Node.js ${config.node_version} ${os.platform()} ${os.arch()}`;
-window.saveLog = logText => ipcRenderer.send('save-debug-log', logText);
+window.saveLog = additionalText => ipcRenderer.send('save-debug-log', additionalText);
 
 window.sessionFeatureFlags = {
   useOnionRequests: true,

@@ -15,6 +15,8 @@ import { redactAll } from '../util/privacy';
 const LEVELS = ['fatal', 'error', 'warn', 'info', 'debug', 'trace'];
 let logger: Logger | undefined;
 
+let loggerFilePath: string | undefined;
+
 export type ConsoleCustom = typeof console & {
   _log: (...args: any) => void;
   _warn: (...args: any) => void;
@@ -29,12 +31,13 @@ export async function initializeLogger() {
   const basePath = app.getPath('userData');
   const logFolder = path.join(basePath, 'logs');
   const logFile = path.join(logFolder, 'log.log');
+  loggerFilePath = logFile;
 
   fs.mkdirSync(logFolder, { recursive: true });
 
   await cleanupLogs(logFile, logFolder);
 
-  console.warn('logFile', logFile);
+  console.warn('[log] filepath', logFile);
 
   logger = Logger.createLogger({
     name: 'log',
@@ -64,14 +67,14 @@ export async function initializeLogger() {
       fs.mkdirSync(logFolder, { recursive: true });
     }
 
-    console.info('fetching logs from logPath');
+    console.info('[log] fetching logs from', logFile);
 
     fetchLogFile(logFile).then(
       data => {
         event.sender.send('fetched-log', data);
       },
       error => {
-        logger?.error(`Problem loading log from disk: ${error.stack}`);
+        logger?.error(`[log] Problem loading log from disk: ${error.stack}`);
       }
     );
   });
@@ -81,11 +84,15 @@ export async function initializeLogger() {
     try {
       await deleteAllLogs(logFile);
     } catch (error) {
-      logger?.error(`Problem deleting all logs: ${error.stack}`);
+      logger?.error(`[log] Problem deleting all logs: ${error.stack}`);
     }
 
     event.sender.send('delete-all-logs-complete');
   });
+}
+
+export function getLoggerFilePath() {
+  return loggerFilePath;
 }
 
 async function deleteAllLogs(logFile: string) {
@@ -116,7 +123,10 @@ async function cleanupLogs(logFile: string, logFolder: string) {
   try {
     await eliminateOldEntries(logFile, earliestDate);
   } catch (error) {
-    console.error('Error cleaning logs; deleting and starting over from scratch.', error.stack);
+    console.error(
+      '[log] Error cleaning logs; deleting and starting over from scratch.',
+      error.stack
+    );
     fs.mkdirSync(logFolder, { recursive: true });
   }
 }

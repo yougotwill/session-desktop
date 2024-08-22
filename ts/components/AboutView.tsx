@@ -54,8 +54,8 @@ export const AboutView = () => {
   }
 
   const versionInfo = `v${window.getVersion()}`;
-  const commitInfo = `Commit ${window.getCommitHash()}` || '';
-  const osInfo = `${window.getOSRelease()}`;
+  const commitInfo = `Commit: ${window.getCommitHash()}` || '';
+  const osInfo = `Operating System: ${window.getOSRelease()}`;
 
   useEffect(() => {
     if (window.theme) {

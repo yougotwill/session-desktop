@@ -77,7 +77,7 @@ import { initAttachmentsChannel } from '../node/attachment_channel';
 import * as updater from '../updater/index'; // checked - only node
 
 import { ephemeralConfig } from '../node/config/ephemeral_config'; // checked - only node
-import { getLogger, initializeLogger } from '../node/logging'; // checked - only node
+import { getLoggerFilePath, getLogger, initializeLogger } from '../node/logging'; // checked - only node
 import { createTemplate } from '../node/menu'; // checked - only node
 import { installPermissionsHandler } from '../node/permissions'; // checked - only node
 import { installFileHandler, installWebHandler } from '../node/protocol_filter'; // checked - only node
@@ -648,7 +648,7 @@ async function showAbout() {
   aboutWindow?.show();
 }
 
-async function saveDebugLog(_event: any, logText: any) {
+async function saveDebugLog(_event: any, additionalInfo: string) {
   const options: Electron.SaveDialogOptions = {
     title: 'Save debug log',
     defaultPath: path.join(
@@ -661,17 +661,24 @@ async function saveDebugLog(_event: any, logText: any) {
   try {
     const result = await dialog.showSaveDialog(options);
     const outputPath = result.filePath;
-    console.info(`Trying to save logs to ${outputPath}`);
+    console.info(`[log] Trying to save logs to ${outputPath}`);
     if (result === undefined || outputPath === undefined || outputPath === '') {
       throw Error("User clicked Save button but didn't create a file");
     }
 
-    fs.writeFile(outputPath, logText, err => {
-      if (err) {
-        throw Error(`${err}`);
-      }
-      console.info(`Saved log - ${outputPath}`);
-    });
+    const loggerFilePath = getLoggerFilePath();
+    if (!loggerFilePath) {
+      throw Error('No logger file path');
+    }
+
+    fs.copyFileSync(loggerFilePath, outputPath);
+    console.info(`[log] Copied logs to ${outputPath} from ${loggerFilePath}`);
+
+    // append any additional info
+    if (additionalInfo) {
+      fs.appendFileSync(outputPath, additionalInfo, { encoding: 'utf-8' });
+      console.info(`[log] Saved additional info to logs ${outputPath} from ${loggerFilePath}`);
+    }
   } catch (err) {
     console.error('Error saving debug log', err);
   }

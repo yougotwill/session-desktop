@@ -82,7 +82,7 @@ declare global {
     getCommitHash: () => string | undefined;
     getVersion: () => string;
     getOSRelease: () => string;
-    saveLog: (text: string) => void;
+    saveLog: (additionalText?: string) => void;
     setAutoHideMenuBar: (val: boolean) => void;
     setMenuBarVisibility: (val: boolean) => void;
     contextMenuShown: boolean;
