@@ -649,7 +649,7 @@ async function showAbout() {
   aboutWindow?.show();
 }
 
-async function saveDebugLog(_event: any, additionalInfo: string) {
+async function saveDebugLog(_event: any, additionalInfo?: string) {
   const options: Electron.SaveDialogOptions = {
     title: 'Save debug log',
     defaultPath: path.join(
@@ -799,6 +799,7 @@ function setupMenu() {
   const { platform } = process;
   const menuOptions = {
     development,
+    saveDebugLog,
     showWindow,
     showAbout,
     openReleaseNotes,
