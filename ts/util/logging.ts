@@ -151,14 +151,14 @@ window.addEventListener('unhandledrejection', rejectionEvent => {
 
 export function saveLogToDesktop() {
   const versionInfo = `v${window.getVersion()}`;
-  const operatingSystemInfo = `Operating System: ${window.getOSRelease()}`;
-  const commitHashInfo = window.getCommitHash() ? `Commit: ${window.getCommitHash()}` : '';
+  const systemInfo = `System Information: ${window.getOSRelease()}`;
+  const commitInfo = `Commit Hash: ${window.getCommitHash()}` || 'Unknown';
   const debugLogWithSystemInfo = `
 ******************************************************************************
 # Application Info
 ${versionInfo}
-${operatingSystemInfo}
-${commitHashInfo}
+${systemInfo}
+${commitInfo}
 ******************************************************************************`;
   window.saveLog(debugLogWithSystemInfo);
 }
