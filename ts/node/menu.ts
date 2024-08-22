@@ -7,6 +7,7 @@ export const createTemplate = (
     openSupportPage: () => void;
     platform: string;
     showAbout: () => void;
+    saveDebugLog: (_event: any, additionalInfo?: string) => void;
     showWindow: () => void;
   },
   messages: LocaleMessagesType
@@ -15,7 +16,8 @@ export const createTemplate = (
     throw new TypeError('`options.platform` must be a string');
   }
 
-  const { openReleaseNotes, openSupportPage, platform, showAbout, showWindow } = options;
+  const { openReleaseNotes, openSupportPage, platform, showAbout, saveDebugLog, showWindow } =
+    options;
 
   const template = [
     {
@@ -88,6 +90,15 @@ export const createTemplate = (
         {
           role: 'togglefullscreen',
           label: messages.viewMenuToggleFullScreen,
+        },
+        {
+          type: 'separator',
+        },
+        {
+          label: messages.showDebugLog,
+          click: () => {
+            saveDebugLog('save-debug-log');
+          },
         },
         {
           type: 'separator',
