@@ -42,7 +42,8 @@ declare global {
         debugOnionRequests: boolean;
       };
     };
-    onLogin: (pw: string) => Promise<void>;
+    onLogin: (pw: string) => Promise<void>; // only set on the password window
+    onTryPassword: (pw: string) => Promise<void>; // only set on the main window
     persistStore?: Persistor;
     restart: () => void;
     getSeedNodeList: () => Array<string> | undefined;
