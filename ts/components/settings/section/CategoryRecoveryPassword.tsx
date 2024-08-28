@@ -1,4 +1,3 @@
-import { isEmpty } from 'lodash';
 import { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import styled from 'styled-components';
@@ -68,7 +67,7 @@ const qrLogoProps: QRCodeLogoProps = {
 
 export const SettingsCategoryRecoveryPassword = () => {
   const recoveryPhrase = getCurrentRecoveryPhrase();
-  if (!recoveryPhrase || isEmpty(recoveryPhrase)) {
+  if (!recoveryPhrase) {
     throw new Error('SettingsCategoryRecoveryPassword recovery seed is empty');
   }
   const hexEncodedSeed = mnDecode(recoveryPhrase, 'english');

@@ -52,7 +52,7 @@ describe('GuardNodes', () => {
       Sinon.restore();
     });
 
-    it('does not fetch from seed if we got 8 or more snodes in the db', async () => {
+    it('does not fetch from seed if we have 8 or more snodes in the db', async () => {
       stubData('getSnodePoolFromDb').resolves(fakeSnodePool);
 
       getSnodePoolFromDBOrFetchFromSeed = Sinon.stub(
@@ -166,6 +166,7 @@ describe('GuardNodes', () => {
       // run the command
       const guardNodes = await OnionPaths.selectGuardNodes();
 
+      // 2 because our desiredGuardCount is 2 (not putting the variable to make the test fails if we ever change it)
       expect(guardNodes.length).to.be.equal(2);
       expect(testGuardNode.callCount).to.be.equal(2);
     });

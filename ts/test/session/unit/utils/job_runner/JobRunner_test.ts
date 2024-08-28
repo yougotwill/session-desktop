@@ -304,7 +304,7 @@ describe('JobRunner', () => {
 
       await job2.waitForCurrentTry();
       await runnerMulti.waitCurrentJob();
-      // we need to give sometime to the jobrunner to handle the return of job2 and remove it
+      // we need to give some time for the jobrunner to handle the return of job2 and remove it
       await sleepFor(100);
 
       expect(runnerMulti.getJobList()).to.deep.eq([]);

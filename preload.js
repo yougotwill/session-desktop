@@ -72,9 +72,9 @@ window.setPassword = async (passPhrase, oldPhrase) =>
   });
 
 // called to verify that the password is correct when showing the recovery from seed modal
-window.onTryPassword = passPhrase =>
+window.onTryPassword = async passPhrase =>
   new Promise((resolve, reject) => {
-    ipcRenderer.once('password-recovery-phrase-response', (event, error) => {
+    ipcRenderer.once('password-recovery-phrase-response', (_event, error) => {
       if (error) {
         return reject(error);
       }

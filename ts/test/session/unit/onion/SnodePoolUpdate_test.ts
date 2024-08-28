@@ -67,7 +67,7 @@ describe('OnionPaths', () => {
       expect(fetched).to.deep.equal(fakeSnodePool);
     });
 
-    it('if the cached snode pool 8 or less snodes, trigger a fetch from the seed nodes', async () => {
+    it('if the cached snode pool is 8 or less snodes, trigger a fetch from the seed nodes', async () => {
       const length8 = fakeSnodePool.slice(0, 8);
       expect(length8.length).to.eq(8);
       getSnodePoolFromDb = stubData('getSnodePoolFromDb').resolves(length8);

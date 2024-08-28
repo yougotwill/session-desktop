@@ -1,4 +1,5 @@
 import * as crypto from 'crypto';
+import { PASSWORD_LENGTH } from '../session/constants';
 
 const ERRORS = {
   TYPE: 'Password must be a string',
@@ -12,7 +13,6 @@ const sha512 = (text: string) => {
   return hash.digest('hex');
 };
 
-export const MAX_PASSWORD_LENGTH = 64;
 
 export const generateHash = (phrase: string) => phrase && sha512(phrase);
 export const matchesHash = (phrase: string | null, hash: string) =>
@@ -27,7 +27,7 @@ export const validatePassword = (phrase: string) => {
     return window?.i18n ? window?.i18n('noGivenPassword') : ERRORS.LENGTH;
   }
 
-  if (phrase.length < 6 || phrase.length > MAX_PASSWORD_LENGTH) {
+  if (phrase.length < PASSWORD_LENGTH.MIN_PASSWORD_LEN || phrase.length > PASSWORD_LENGTH.MAX_PASSWORD_LEN) {
     return window?.i18n ? window?.i18n('passwordLengthError') : ERRORS.LENGTH;
   }
 

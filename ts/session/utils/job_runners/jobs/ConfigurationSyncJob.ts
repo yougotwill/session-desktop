@@ -23,7 +23,7 @@ import {
 } from '../PersistedJob';
 import { DURATION } from '../../../constants';
 
-const defaultMsBetweenRetries = 5000; // a long time between retries, to avoid running multiple jobs at the same time, when one was postponed at the same time as one already planned (5s)
+const defaultMsBetweenRetries = 5 * DURATION.SECONDS; // a long time between retries, to avoid running multiple jobs at the same time, when one was postponed at the same time as one already planned (5s)
 const defaultMaxAttempts = 4;
 
 /**
@@ -320,7 +320,7 @@ async function queueNewJobIfNeeded() {
   ) {
     // Note: we postpone by 3s for two reasons:
     // - to make sure whoever is adding this job is done with what is needs to do first
-    // - to allow a just created device to process incoming config messages before pushing a new one
+    // - to allow a recently created device to process incoming config messages before pushing a new one
     // this call will make sure that there is only one configuration sync job at all times
     await runners.configurationSyncRunner.addJob(
       new ConfigurationSyncJob({ nextAttemptTimestamp: Date.now() + 3 * DURATION.SECONDS })
