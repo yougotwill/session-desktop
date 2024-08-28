@@ -5,8 +5,6 @@ function envAppInstanceIncludes(prefix: string) {
   return !!process.env.NODE_APP_INSTANCE.includes(prefix);
 }
 
-
-
 export function isDevProd() {
   return envAppInstanceIncludes('devprod');
 }
