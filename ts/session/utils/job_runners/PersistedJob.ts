@@ -116,7 +116,7 @@ export abstract class PersistedJob<T extends PersistedJobData> {
         })
         .catch(e => {
           window.log.warn(
-            'runJob() threw. this cannot happen, but rehtrowing as this should be handled in each jobs run()',
+            'runJob() threw. this cannot happen, but rethrowing as this should be handled in each jobs run()',
             e
           );
           throw e;
