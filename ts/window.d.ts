@@ -34,7 +34,6 @@ declare global {
       useOnionRequests: boolean;
       useTestNet: boolean;
       useClosedGroupV3: boolean;
-      integrationTestEnv: boolean;
       debug: {
         debugLogging: boolean;
         debugLibsessionDumps: boolean;
@@ -43,11 +42,12 @@ declare global {
         debugOnionRequests: boolean;
       };
     };
-    onLogin: (pw: string) => Promise<void>;
+    onLogin: (pw: string) => Promise<void>; // only set on the password window
+    onTryPassword: (pw: string) => Promise<void>; // only set on the main window
     persistStore?: Persistor;
     restart: () => void;
     getSeedNodeList: () => Array<string> | undefined;
-    setPassword: (newPassword: string | null, oldPassword: string | null) => Promise<string>;
+    setPassword: (newPassword: string | null, oldPassword: string | null) => Promise<string | undefined>;
     isOnline: boolean;
     toggleMediaPermissions: () => Promise<void>;
     toggleCallMediaPermissionsTo: (enabled: boolean) => Promise<void>;
