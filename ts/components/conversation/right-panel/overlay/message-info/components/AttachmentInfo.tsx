@@ -44,7 +44,7 @@ export const AttachmentInfo = (props: Props) => {
         />
         <LabelWithInfo
           label={window.i18n('attachmentsDuration')}
-          info={attachment?.duration ? attachment?.duration : window.i18n('attachmentsNa')}
+          info={attachment?.duration ? attachment.duration : window.i18n('attachmentsNa')}
         />
       </StyledLabelContainer>
     </Flex>

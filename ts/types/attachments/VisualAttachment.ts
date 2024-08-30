@@ -120,7 +120,7 @@ export async function getVideoDuration({
     const video = document.createElement('video');
 
     video.addEventListener('loadedmetadata', () => {
-      const duration = formatTimeDuration(video.duration / 1000, { unit: 'second' });
+      const duration = formatTimeDuration(video.duration * 1000, { unit: 'second' });
       resolve(duration);
     });
 
@@ -153,7 +153,7 @@ export async function getAudioDuration({
     const audio = document.createElement('audio');
 
     audio.addEventListener('loadedmetadata', () => {
-      const duration = formatTimeDuration(audio.duration / 1000, { unit: 'second' });
+      const duration = formatTimeDuration(audio.duration * 1000, { unit: 'second' });
       resolve(duration);
     });
 

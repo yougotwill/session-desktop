@@ -110,7 +110,7 @@ const DebugMessageInfo = ({ messageId }: { messageId: string }) => {
       {expirationTimestamp ? (
         <LabelWithInfo
           label={`Disappears:`}
-          info={formatTimeDistanceToNow(expirationTimestamp * 1000)}
+          info={formatTimeDistanceToNow(Math.floor(expirationTimestamp / 1000))}
         />
       ) : null}
     </>
