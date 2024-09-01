@@ -62,6 +62,8 @@ export type I18nProps<T extends LocalizerToken> = T extends LocalizerToken
       : I18nBaseProps<T> & { args: ArgsRecordExcludingDefaults<T> }
   : never;
 
+export type I18nPropsObject = I18nProps<LocalizerToken>;
+
 export type I18nMethods = {
   /** @see {@link window.i18n.stripped} */
   stripped: <T extends LocalizerToken, R extends LocalizerDictionary[T]>(

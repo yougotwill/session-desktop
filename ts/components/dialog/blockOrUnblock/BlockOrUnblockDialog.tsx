@@ -14,10 +14,11 @@ import { I18n } from '../../basic/I18n';
 import { SessionButton, SessionButtonColor, SessionButtonType } from '../../basic/SessionButton';
 import { StyledModalDescriptionContainer } from '../shared/ModalDescriptionContainer';
 import { BlockOrUnblockModalState } from './BlockOrUnblockModalState';
+import type { I18nPropsObject } from '../../../types/Localizer';
 
 type ModalState = NonNullable<BlockOrUnblockModalState>;
 
-function getUnblockTokenAndArgs(names: Array<string>) {
+function getUnblockTokenAndArgs(names: Array<string>): I18nPropsObject {
   // multiple unblock is supported
   switch (names.length) {
     case 1:
@@ -36,7 +37,7 @@ function getUnblockTokenAndArgs(names: Array<string>) {
 function useBlockUnblockI18nDescriptionArgs({
   action,
   pubkeys,
-}: Pick<ModalState, 'action' | 'pubkeys'>) {
+}: Pick<ModalState, 'action' | 'pubkeys'>): I18nPropsObject {
   const names = useConversationsNicknameRealNameOrShortenPubkey(pubkeys);
   if (!pubkeys.length) {
     throw new Error('useI18nDescriptionArgsForAction called with empty list of pubkeys');
@@ -81,6 +82,7 @@ export const BlockOrUnblockDialog = ({ pubkeys, action, onConfirmed }: NonNullab
     closeModal();
     return null;
   }
+  
   return (
     <SessionWrapperModal showExitIcon={true} title={localizedAction} onClose={closeModal}>
       <StyledModalDescriptionContainer>

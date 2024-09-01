@@ -1,5 +1,6 @@
 import { getConversationController } from '../session/conversations';
 import { UserUtils } from '../session/utils';
+import type { I18nPropsObject } from '../types/Localizer';
 
 // to remove after merge with groups
 function usAndXOthers(arr: Array<string>) {
@@ -11,7 +12,7 @@ function usAndXOthers(arr: Array<string>) {
   return { us: false, others: arr };
 }
 
-export function getKickedGroupUpdateStr(kicked: Array<string>, groupName: string) {
+export function getKickedGroupUpdateStr(kicked: Array<string>, groupName: string): I18nPropsObject {
   const { others, us } = usAndXOthers(kicked);
   const othersNames = others.map(
     getConversationController().getContactProfileNameOrShortenedPubKey
@@ -43,7 +44,7 @@ export function getKickedGroupUpdateStr(kicked: Array<string>, groupName: string
       };
     default:
       return {
-        token: 'groupRemovedMore',
+        token: 'groupRemovedMultiple',
         args: {
           name: others[0],
           count: othersNames.length - 1,
@@ -52,7 +53,10 @@ export function getKickedGroupUpdateStr(kicked: Array<string>, groupName: string
   }
 }
 
-export function getLeftGroupUpdateChangeStr(left: Array<string>, _groupName: string) {
+export function getLeftGroupUpdateChangeStr(
+  left: Array<string>,
+  _groupName: string
+): I18nPropsObject {
   const { others, us } = usAndXOthers(left);
 
   if (left.length !== 1) {
@@ -69,7 +73,10 @@ export function getLeftGroupUpdateChangeStr(left: Array<string>, _groupName: str
       };
 }
 
-export function getJoinedGroupUpdateChangeStr(joined: Array<string>, _groupName: string) {
+export function getJoinedGroupUpdateChangeStr(
+  joined: Array<string>,
+  _groupName: string
+): I18nPropsObject {
   const { others, us } = usAndXOthers(joined);
   const othersNames = others.map(
     getConversationController().getContactProfileNameOrShortenedPubKey

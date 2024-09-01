@@ -9,15 +9,14 @@ import {
   PropsForGroupUpdateType,
 } from '../../../../state/ducks/conversations';
 import { useSelectedNicknameOrProfileNameOrShortenedPubkey } from '../../../../state/selectors/selectedConversation';
-import { assertUnreachable } from '../../../../types/sqlSharedTypes';
 import { ExpirableReadableMessage } from './ExpirableReadableMessage';
 import { NotificationBubble } from './notification-bubble/NotificationBubble';
 import { I18n } from '../../../basic/I18n';
-import { I18nProps, LocalizerToken } from '../../../../types/Localizer';
+import { type I18nPropsObject } from '../../../../types/Localizer';
 
 // This component is used to display group updates in the conversation view.
 
-const ChangeItemJoined = (added: Array<string>) => {
+const ChangeItemJoined = (added: Array<string>): I18nPropsObject => {
   const groupName = useSelectedNicknameOrProfileNameOrShortenedPubkey();
 
   if (!added.length) {
@@ -27,7 +26,7 @@ const ChangeItemJoined = (added: Array<string>) => {
   return getJoinedGroupUpdateChangeStr(added, groupName);
 };
 
-const ChangeItemKicked = (kicked: Array<string>) => {
+const ChangeItemKicked = (kicked: Array<string>): I18nPropsObject => {
   if (!kicked.length) {
     throw new Error('Group update kicked is missing details');
   }
@@ -36,7 +35,7 @@ const ChangeItemKicked = (kicked: Array<string>) => {
   return getKickedGroupUpdateStr(kicked, groupName);
 };
 
-const ChangeItemLeft = (left: Array<string>) => {
+const ChangeItemLeft = (left: Array<string>): I18nPropsObject => {
   const groupName = useSelectedNicknameOrProfileNameOrShortenedPubkey();
 
   if (!left.length) {
@@ -46,7 +45,7 @@ const ChangeItemLeft = (left: Array<string>) => {
   return getLeftGroupUpdateChangeStr(left, groupName);
 };
 
-const ChangeItem = (change: PropsForGroupUpdateType) => {
+const ChangeItem = (change: PropsForGroupUpdateType): I18nPropsObject => {
   const { type } = change;
   switch (type) {
     case 'name':
@@ -62,18 +61,15 @@ const ChangeItem = (change: PropsForGroupUpdateType) => {
       return ChangeItemKicked(change.kicked);
 
     case 'general':
-      return { token: 'groupUpdated' };
     default:
-      assertUnreachable(type, `ChangeItem: Missing case error "${type}"`);
-      return null;
+      return { token: 'groupUpdated' };
   }
 };
 
 export const GroupUpdateMessage = (props: PropsForGroupUpdate) => {
   const { change, messageId } = props;
 
-  // TODO: clean up this typing
-  const changeItem = ChangeItem(change) as I18nProps<LocalizerToken> | null;
+  const changeItem = ChangeItem(change);
 
   return (
     <ExpirableReadableMessage

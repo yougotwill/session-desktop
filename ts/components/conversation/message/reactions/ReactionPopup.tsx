@@ -5,7 +5,7 @@ import { PubKey } from '../../../../session/types/PubKey';
 
 import { I18n } from '../../../basic/I18n';
 import { nativeEmojiData } from '../../../../util/emoji';
-import { I18nProps, LocalizerToken } from '../../../../types/Localizer';
+import { type I18nPropsObject } from '../../../../types/Localizer';
 
 export type TipPosition = 'center' | 'left' | 'right';
 
@@ -86,7 +86,7 @@ const getI18nComponentProps = (
   numberOfReactors: number,
   emoji: string,
   emojiName?: string
-): I18nProps<LocalizerToken> => {
+): I18nPropsObject => {
   const name = contacts[0];
   const other_name = contacts[1];
   const emoji_name = emojiName ? `:${emojiName}:` : emoji;
