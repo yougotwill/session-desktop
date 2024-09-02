@@ -29,3 +29,7 @@ export function getTranslationDictionary(): LocalizerDictionary {
   i18nLog('getTranslationDictionary: dictionary not init yet. Using en.');
   return en;
 }
+
+export function getFallbackDictionary(): LocalizerDictionary {
+  return en;
+}

@@ -13,6 +13,7 @@ import { formatMessageWithArgs } from './formatMessageWithArgs';
 import { getRawMessage } from './getRawMessage';
 import { inEnglish } from './inEnglish';
 import { stripped } from './stripped';
+import { localizeFromOld, type StringArgsRecord } from '../localizedString';
 
 /**
  * Checks if a string contains a dynamic variable.
@@ -46,14 +47,15 @@ function getMessageDefault<T extends LocalizerToken, R extends LocalizerDictiona
   ...[token, args]: GetMessageArgs<T>
 ): R | T {
   try {
-    const rawMessage = getRawMessage<T, R>(...([token, args] as GetMessageArgs<T>));
-
-    /** If a localized string does not have any arguments to substitute it is returned with no changes. */
-    if (!isStringWithArgs<R>(rawMessage)) {
-      return rawMessage;
-    }
-
-    return formatMessageWithArgs<T, R>(rawMessage, args as ArgsRecord<T>);
+    return localizeFromOld<T>(token as T, args as StringArgsRecord<R>).toString() as T | R;
+    // const rawMessage = getRawMessage<T, R>(...([token, args] as GetMessageArgs<T>));
+    //
+    // /** If a localized string does not have any arguments to substitute it is returned with no changes. */
+    // if (!isStringWithArgs<R>(rawMessage)) {
+    //   return rawMessage;
+    // }
+    //
+    // return formatMessageWithArgs<T, R>(rawMessage, args as ArgsRecord<T>);
   } catch (error) {
     i18nLog(error.message);
     return token as R;
