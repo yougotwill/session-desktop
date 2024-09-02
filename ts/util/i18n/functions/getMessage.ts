@@ -4,8 +4,6 @@ import type {
   LocalizerToken,
   LocalizerDictionary,
   GetMessageArgs,
-  ArgsRecord,
-  DictionaryWithoutPluralStrings,
   SetupI18nReturnType,
 } from '../../../types/Localizer';
 import { i18nLog } from '../shared';
@@ -15,16 +13,16 @@ import { inEnglish } from './inEnglish';
 import { stripped } from './stripped';
 import { localizeFromOld, type StringArgsRecord } from '../localizedString';
 
-/**
- * Checks if a string contains a dynamic variable.
- * @param localizedString - The string to check.
- * @returns `true` if the string contains a dynamic variable, otherwise `false`.
- *
- * TODO: Change this to a proper type assertion when the type is fixed.
- */
-const isStringWithArgs = <R extends DictionaryWithoutPluralStrings[LocalizerToken]>(
-  localizedString: string
-): localizedString is R => localizedString.includes('{');
+// /**
+//  * Checks if a string contains a dynamic variable.
+//  * @param localizedString - The string to check.
+//  * @returns `true` if the string contains a dynamic variable, otherwise `false`.
+//  *
+//  * TODO: Change this to a proper type assertion when the type is fixed.
+//  */
+// const isStringWithArgs = <R extends DictionaryWithoutPluralStrings[LocalizerToken]>(
+//   localizedString: string
+// ): localizedString is R => localizedString.includes('{');
 
 /**
  * Retrieves a localized message string, substituting variables where necessary.
