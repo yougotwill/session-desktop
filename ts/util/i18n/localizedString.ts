@@ -277,7 +277,7 @@ export class LocalizedStringBuilder<
     /** Find and replace the dynamic variables in a localized string and substitute the variables with the provided values */
     return str.replace(/\{(\w+)\}/g, (match, arg: string) => {
       const matchedArg = this.args
-        ? this.args[arg as keyof StringArgsRecord<Dict[T]>].toString()
+        ? this.args[arg as keyof StringArgsRecord<Dict[T]>]?.toString()
         : undefined;
 
       return matchedArg ?? LOCALE_DEFAULTS[arg as keyof typeof LOCALE_DEFAULTS] ?? match;

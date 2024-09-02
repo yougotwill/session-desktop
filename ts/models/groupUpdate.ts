@@ -29,7 +29,7 @@ export function getKickedGroupUpdateStr(kicked: Array<string>, groupName: string
     }
   }
 
-  switch (others.length) {
+  switch (othersNames.length) {
     case 0:
       throw new Error('kicked without anyone in it.');
     case 1:
@@ -46,7 +46,7 @@ export function getKickedGroupUpdateStr(kicked: Array<string>, groupName: string
       return {
         token: 'groupRemovedMultiple',
         args: {
-          name: others[0],
+          name: othersNames[0],
           count: othersNames.length - 1,
         },
       };
@@ -83,7 +83,7 @@ export function getJoinedGroupUpdateChangeStr(
   );
 
   if (us) {
-    switch (others.length) {
+    switch (othersNames.length) {
       case 0:
         return { token: 'legacyGroupMemberYouNew' };
       case 1:
@@ -92,7 +92,7 @@ export function getJoinedGroupUpdateChangeStr(
         return { token: 'legacyGroupMemberNewYouMultiple', args: { count: othersNames.length } };
     }
   }
-  switch (others.length) {
+  switch (othersNames.length) {
     case 0:
       throw new Error('joined without anyone in it.');
     case 1:
@@ -109,7 +109,7 @@ export function getJoinedGroupUpdateChangeStr(
       return {
         token: 'legacyGroupMemberNewMultiple',
         args: {
-          name: others[0],
+          name: othersNames[0],
           count: othersNames.length - 1,
         },
       };
