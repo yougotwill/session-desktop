@@ -30,6 +30,7 @@ import { StyledLeftPaneOverlay } from './OverlayMessage';
 
 const StyledMemberListNoContacts = styled.div`
   text-align: center;
+  align-self: center;
   padding: 20px;
 `;
 
@@ -53,9 +54,7 @@ const StyledGroupMemberListContainer = styled.div`
 `;
 
 const NoContacts = () => {
-  return (
-    <StyledMemberListNoContacts>{window.i18n('conversationsNone')}</StyledMemberListNoContacts>
-  );
+  return <StyledMemberListNoContacts>{window.i18n('contactNone')}</StyledMemberListNoContacts>;
 };
 
 /**

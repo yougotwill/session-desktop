@@ -77,7 +77,7 @@ class SessionPasswordPromptInner extends PureComponent<unknown, State> {
           type="password"
           id="password-prompt-input"
           defaultValue=""
-          placeholder={window.i18n('passwordCreate')}
+          placeholder={window.i18n('passwordEnter')}
           onKeyUp={this.onKeyUp}
           ref={input => {
             this.inputRef = input;

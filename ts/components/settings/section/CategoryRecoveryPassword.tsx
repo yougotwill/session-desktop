@@ -180,7 +180,7 @@ export const SettingsCategoryRecoveryPassword = () => {
       </SessionSettingsItemWrapper>
       {!hideRecoveryPassword ? (
         <SessionSettingButtonItem
-          title={window.i18n('recoveryPasswordHidePermanently')}
+          title={window.i18n('recoveryPasswordHideRecoveryPassword')}
           description={window.i18n('recoveryPasswordHideRecoveryPasswordDescription')}
           onClick={() => {
             dispatch(updateHideRecoveryPasswordModal({ state: 'firstWarning' }));

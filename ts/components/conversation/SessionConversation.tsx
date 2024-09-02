@@ -358,7 +358,7 @@ export class SessionConversation extends Component<Props, State> {
     }
   }
 
-  private async maybeAddAttachment(file: any) {
+  private async maybeAddAttachment(file: File) {
     if (!file) {
       return;
     }

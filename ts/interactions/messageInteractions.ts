@@ -130,6 +130,7 @@ const acceptOpenGroupInvitationV2 = (completeUrl: string, roomName?: string) => 
       },
 
       onClickClose,
+      okText: window.i18n('join'),
     })
   );
   // this function does not throw, and will showToasts if anything happens
