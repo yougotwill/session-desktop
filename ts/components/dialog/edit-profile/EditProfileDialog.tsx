@@ -10,7 +10,6 @@ import { YourSessionIDPill, YourSessionIDSelectable } from '../../basic/YourSess
 import { useHotkey } from '../../../hooks/useHotkey';
 import { useOurAvatarPath, useOurConversationUsername } from '../../../hooks/useParamSelector';
 import { ProfileManager } from '../../../session/profile_manager/ProfileManager';
-import LIBSESSION_CONSTANTS from '../../../session/utils/libsession/libsession_constants';
 import { editProfileModal, updateEditProfilePictureModal } from '../../../state/ducks/modalDialog';
 import { SessionWrapperModal } from '../../SessionWrapperModal';
 import { Flex } from '../../basic/Flex';
@@ -214,6 +213,8 @@ export const EditProfileDialog = () => {
 
     try {
       setLoading(true);
+      // Note: this will not throw, but just truncate the display name if it is too long.
+      // I guess it is expected as there is no UI to show anything else than a generic error?
       const validName = await ProfileManager.updateOurProfileDisplayName(profileName);
       setUpdateProfileName(validName);
       setProfileName(validName);
@@ -330,7 +331,6 @@ export const EditProfileDialog = () => {
             tabIndex={0}
             required={true}
             error={profileNameError}
-            maxLength={LIBSESSION_CONSTANTS.CONTACT_MAX_NAME_LENGTH}
             textSize={'xl'}
             centerText={true}
             inputRef={inputRef}

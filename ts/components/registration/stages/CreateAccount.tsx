@@ -6,7 +6,6 @@ import { mnDecode } from '../../../session/crypto/mnemonic';
 import { ProfileManager } from '../../../session/profile_manager/ProfileManager';
 import { StringUtils } from '../../../session/utils';
 import { fromHex } from '../../../session/utils/String';
-import LIBSESSION_CONSTANTS from '../../../session/utils/libsession/libsession_constants';
 import { trigger } from '../../../shims/events';
 import {
   AccountCreation,
@@ -93,7 +92,8 @@ export const CreateAccount = () => {
     }
 
     try {
-      const validName = await ProfileManager.updateOurProfileDisplayName(displayName, true);
+      // this throws if the display name is too long
+      const validName = await ProfileManager.updateOurProfileDisplayNameOnboarding(displayName);
 
       await signUp({
         displayName: validName,
@@ -102,12 +102,13 @@ export const CreateAccount = () => {
 
       dispatch(setAccountCreationStep(AccountCreation.Done));
     } catch (err) {
-      const errorString = err.message || String(err);
       window.log.error(
-        `[onboarding] create account: signUpWithDetails failed! Error: ${errorString}`
+        `[onboarding] create account: signUpWithDetails failed! Error: ${err.message || String(err)}`
       );
       dispatch(setAccountCreationStep(AccountCreation.DisplayName));
-      dispatch(setDisplayNameError(errorString));
+      // Note: we have to assume here that libsession threw an error because the name was too long.
+      // The error reporterd by libsession is not localized
+      dispatch(setDisplayNameError(window.i18n('displayNameErrorDescriptionShorter')));
     }
   };
 
@@ -146,7 +147,6 @@ export const CreateAccount = () => {
           }}
           onEnterPressed={signUpWithDetails}
           error={displayNameError}
-          maxLength={LIBSESSION_CONSTANTS.CONTACT_MAX_NAME_LENGTH}
           inputDataTestId="display-name-input"
         />
         <SpacerLG />

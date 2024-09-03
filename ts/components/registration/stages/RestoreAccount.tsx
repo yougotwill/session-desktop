@@ -7,7 +7,6 @@ import { ProfileManager } from '../../../session/profile_manager/ProfileManager'
 import { PromiseUtils } from '../../../session/utils';
 import { TaskTimedOutError } from '../../../session/utils/Promise';
 import { NotFoundError } from '../../../session/utils/errors';
-import LIBSESSION_CONSTANTS from '../../../session/utils/libsession/libsession_constants';
 import { trigger } from '../../../shims/events';
 import {
   AccountRestoration,
@@ -181,7 +180,8 @@ export const RestoreAccount = () => {
     }
 
     try {
-      const validName = await ProfileManager.updateOurProfileDisplayName(displayName, true);
+      // this will throw if the display name is too long
+      const validName = await ProfileManager.updateOurProfileDisplayNameOnboarding(displayName);
 
       const trimmedPassword = recoveryPassword.trim();
       setRecoveryPassword(trimmedPassword);
@@ -192,12 +192,14 @@ export const RestoreAccount = () => {
         dispatch,
       });
     } catch (err) {
-      const errorString = err.message || String(err);
       window.log.error(
-        `[onboarding] restore account: Failed with new display name! Error: ${errorString}`
+        `[onboarding] restore account: Failed with new display name! Error: ${err.message || String(err)}`
       );
       dispatch(setAccountRestorationStep(AccountRestoration.DisplayName));
-      dispatch(setDisplayNameError(errorString));
+
+      // Note: we have to assume here that libsession threw an error because the name was too long.
+      // The error reporterd by libsession is not localized
+      dispatch(setDisplayNameError(window.i18n('displayNameErrorDescriptionShorter')));
     }
   };
 
@@ -314,7 +316,6 @@ export const RestoreAccount = () => {
               }}
               onEnterPressed={recoverAndEnterDisplayName}
               error={displayNameError}
-              maxLength={LIBSESSION_CONSTANTS.CONTACT_MAX_NAME_LENGTH}
               inputDataTestId="display-name-input"
             />
             <SpacerLG />

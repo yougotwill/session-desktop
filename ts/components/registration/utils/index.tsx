@@ -7,24 +7,15 @@ export function sanitizeDisplayNameOrToast(
   onDisplayNameError: (error: string | undefined) => any,
   dispatch?: Dispatch
 ) {
-  try {
-    const sanitizedName = sanitizeSessionUsername(displayName);
-    const errorString = !sanitizedName ? window.i18n('displayNameErrorDescription') : undefined;
-    if (dispatch) {
-      dispatch(onDisplayNameError(errorString));
-    } else {
-      onDisplayNameError(errorString); // this is is either calling dispatch in the caller or just `setDisplayNameError`
-    }
-
-    return sanitizedName;
-  } catch (e) {
-    if (dispatch) {
-      dispatch(onDisplayNameError(window.i18n('displayNameErrorDescriptionShorter')));
-    } else {
-      onDisplayNameError(window.i18n('displayNameErrorDescriptionShorter'));
-    }
-    return displayName;
+  const sanitizedName = sanitizeSessionUsername(displayName);
+  const errorString = !sanitizedName ? window.i18n('displayNameErrorDescription') : undefined;
+  if (dispatch) {
+    dispatch(onDisplayNameError(errorString));
+  } else {
+    onDisplayNameError(errorString); // this is is either calling dispatch in the caller or just `setDisplayNameError`
   }
+
+  return sanitizedName;
 }
 
 /**
