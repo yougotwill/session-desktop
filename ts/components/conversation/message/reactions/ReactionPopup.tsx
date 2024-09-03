@@ -62,22 +62,19 @@ const StyledEmoji = styled.span`
 
 const generateContactsString = (
   senders: Array<string>
-): { contacts: Array<string>; numberOfReactors: number; hasMe: boolean } => {
+): { contacts: Array<string>; hasMe: boolean } => {
   const contacts: Array<string> = [];
   let hasMe = false;
-  let numberOfReactors = 0;
   senders.forEach(sender => {
     // TODO truncate with ellipsis if too long?
     const contact = findAndFormatContact(sender);
     if (contact.isMe) {
       hasMe = true;
-      numberOfReactors++;
     } else {
       contacts.push(contact?.profileName ?? contact?.name ?? PubKey.shorten(sender));
-      numberOfReactors++;
     }
   });
-  return { contacts, hasMe, numberOfReactors };
+  return { contacts, hasMe };
 };
 
 const getI18nComponentProps = (
@@ -118,7 +115,7 @@ type Props = {
 };
 
 export const ReactionPopup = (props: Props) => {
-  const { emoji, senders, tooltipPosition = 'center', onClick } = props;
+  const { emoji, senders, tooltipPosition = 'center', count, onClick } = props;
 
   const { emojiName, emojiAriaLabel } = useMemo(
     () => ({
@@ -128,14 +125,11 @@ export const ReactionPopup = (props: Props) => {
     [emoji]
   );
 
-  const { contacts, hasMe, numberOfReactors } = useMemo(
-    () => generateContactsString(senders),
-    [senders]
-  );
+  const { contacts, hasMe } = useMemo(() => generateContactsString(senders), [senders]);
 
   const i18nProps = useMemo(
-    () => getI18nComponentProps(hasMe, contacts, numberOfReactors, emoji, emojiName),
-    [hasMe, contacts, numberOfReactors, emoji, emojiName]
+    () => getI18nComponentProps(hasMe, contacts, count, emoji, emojiName),
+    [hasMe, contacts, count, emoji, emojiName]
   );
 
   return (
