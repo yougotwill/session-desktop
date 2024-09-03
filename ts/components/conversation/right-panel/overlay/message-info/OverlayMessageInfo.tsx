@@ -20,6 +20,7 @@ import {
 import { deleteMessagesById } from '../../../../../interactions/conversations/unsendingInteractions';
 import {
   useMessageAttachments,
+  useMessageBody,
   useMessageDirection,
   useMessageIsDeletable,
   useMessageQuote,
@@ -42,6 +43,8 @@ import { PanelButtonGroup, PanelIconButton } from '../../../../buttons';
 import { Message } from '../../../message/message-item/Message';
 import { AttachmentInfo, MessageInfo } from './components';
 import { AttachmentCarousel } from './components/AttachmentCarousel';
+import { clipboard } from 'electron';
+import { isEmpty } from 'lodash';
 
 // NOTE we override the default max-widths when in the detail isDetailView
 const StyledMessageBody = styled.div`
@@ -188,6 +191,7 @@ export const OverlayMessageInfo = () => {
   const rightOverlayMode = useRightOverlayMode();
   const messageId = useSelector(getMessageInfoId);
   const messageInfo = useMessageInfo(messageId);
+  const messageBody = useMessageBody(messageId);
   const isDeletable = useMessageIsDeletable(messageId);
   const direction = useMessageDirection(messageId);
   const timestamp = useMessageTimestamp(messageId);
@@ -285,6 +289,16 @@ export const OverlayMessageInfo = () => {
           <MessageInfo messageId={messageId} errors={messageInfo.errors} />
           <SpacerLG />
           <PanelButtonGroup style={{ margin: '0' }}>
+            {messageBody && !isEmpty(messageBody) ? (
+              <PanelIconButton
+                text={window.i18n('copy')}
+                iconType="copy"
+                onClick={() => {
+                  clipboard.writeText(messageBody);
+                }}
+                dataTestId="copy-msg-from-details"
+              />
+            ) : null}
             <PanelIconButton
               text={window.i18n('reply')}
               iconType="reply"
