@@ -13,7 +13,6 @@ import {
   useSelectedConversationKey,
   useSelectedExpireTimer,
   useSelectedIsGroupOrCommunity,
-  useSelectedWeAreAdmin,
 } from '../../../../../state/selectors/selectedConversation';
 import { ReleasedFeatures } from '../../../../../util/releaseFeature';
 import { Flex } from '../../../../basic/Flex';
@@ -117,7 +116,6 @@ export const OverlayDisappearingMessages = () => {
   const isGroup = useSelectedIsGroupOrCommunity();
   const expirationMode = useSelectedConversationDisappearingMode();
   const expireTimer = useSelectedExpireTimer();
-  const weAreAdmin = useSelectedWeAreAdmin();
 
   const [modeSelected, setModeSelected] = useState<
     DisappearingMessageConversationModeType | undefined
@@ -204,9 +202,11 @@ export const OverlayDisappearingMessages = () => {
             />
           </>
         )}
-        {isGroup && isV2Released && !weAreAdmin && (
+
+        {isGroup && (
           <>
             <SpacerLG />
+            {/* We want those to be shown no matter our admin rights in a group. */}
             <StyledNonAdminDescription>
               {window.i18n('disappearingMessagesDescription')}
               <br />
