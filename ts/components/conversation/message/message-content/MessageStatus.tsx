@@ -198,7 +198,10 @@ const MessageStatusSent = ({ dataTestId, messageId }: Omit<Props, 'isDetailView'
       isGroup={isGroup}
       clickable={false}
     >
-      <TextDetails text={window.i18n('sent')} textColor="var(--text-secondary-color)" />
+      <TextDetails
+        text={window.i18n('disappearingMessagesSent')}
+        textColor="var(--text-secondary-color)"
+      />
       <IconForExpiringMessageId messageId={messageId} iconType="circleCheck" />
     </MessageStatusContainer>
   );
