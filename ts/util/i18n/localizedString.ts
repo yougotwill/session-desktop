@@ -2,7 +2,7 @@ import { getFallbackDictionary, getTranslationDictionary } from './translationDi
 import { en } from '../../localization/locales';
 import { getLocale } from './shared';
 import { LOCALE_DEFAULTS } from '../../localization/constants';
-import { deSanitizeHtmlTags, sanitizeArgs } from '../../components/basic/I18n';
+import { deSanitizeHtmlTags, sanitizeArgs } from '../../components/basic/Localizer';
 import type { LocalizerDictionary } from '../../types/Localizer';
 
 type PluralKey = 'count';
@@ -238,23 +238,29 @@ export class LocalizedStringBuilder<
 
     // This should not be possible, but we need to handle it in case it does happen
     if (!pluralKey) {
-      i18nLog(`Attempted to get nonexistent pluralKey for plural form string '${str}'`);
+      i18nLog(
+        `Attempted to get nonexistent pluralKey for plural form string '${str}' for token '${this.token}'`
+      );
       return this.token;
     }
 
     let num = this.args?.[pluralKey as keyof StringArgsRecord<Dict[T]>];
 
     if (num === undefined) {
-      i18nLog(`Attempted to get plural count for missing argument '${pluralKey}'`);
+      i18nLog(
+        `Attempted to get plural count for missing argument '${pluralKey} for token '${this.token}'`
+      );
       num = 0;
     }
 
     if (typeof num !== 'number') {
-      i18nLog(`Attempted to get plural count for argument '${pluralKey}' which is not a number`);
+      i18nLog(
+        `Attempted to get plural count for argument '${pluralKey}' which is not a number for token '${this.token}'`
+      );
       num = parseInt(num, 10);
       if (Number.isNaN(num)) {
         i18nLog(
-          `Attempted to get parsed plural count for argument '${pluralKey}' which is not a number`
+          `Attempted to get parsed plural count for argument '${pluralKey}' which is not a number for token '${this.token}'`
         );
         num = 0;
       }
