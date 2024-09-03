@@ -10,6 +10,7 @@ import { getMessageInfoId } from '../../../../../state/selectors/conversations';
 import { Flex } from '../../../../basic/Flex';
 import { Header, HeaderTitle, StyledScrollContainer } from '../components';
 
+import { clipboard } from 'electron';
 import { IsDetailMessageViewContext } from '../../../../../contexts/isDetailViewContext';
 import { Data } from '../../../../../data/data';
 import { useRightOverlayMode } from '../../../../../hooks/useUI';
@@ -18,6 +19,7 @@ import {
   resendMessage,
 } from '../../../../../interactions/conversationInteractions';
 import { deleteMessagesById } from '../../../../../interactions/conversations/unsendingInteractions';
+import { PubKey } from '../../../../../session/types';
 import {
   useMessageAttachments,
   useMessageBody,
@@ -29,7 +31,12 @@ import {
   useMessageText,
   useMessageTimestamp,
 } from '../../../../../state/selectors';
-import { useSelectedConversationKey } from '../../../../../state/selectors/selectedConversation';
+import {
+  useSelectedConversationKey,
+  useSelectedIsGroupOrCommunity,
+  useSelectedIsPrivate,
+  useSelectedIsPublic,
+} from '../../../../../state/selectors/selectedConversation';
 import { canDisplayImagePreview } from '../../../../../types/Attachment';
 import { isAudio } from '../../../../../types/MIME';
 import {
@@ -43,8 +50,7 @@ import { PanelButtonGroup, PanelIconButton } from '../../../../buttons';
 import { Message } from '../../../message/message-item/Message';
 import { AttachmentInfo, MessageInfo } from './components';
 import { AttachmentCarousel } from './components/AttachmentCarousel';
-import { clipboard } from 'electron';
-import { isEmpty } from 'lodash';
+import { ToastUtils } from '../../../../../session/utils';
 
 // NOTE we override the default max-widths when in the detail isDetailView
 const StyledMessageBody = styled.div`
@@ -185,13 +191,80 @@ function useMessageInfo(messageId: string | undefined) {
   return details;
 }
 
+type WithMessageIdOpt = { messageId?: string };
+
+/**
+ * Always shown, even if the message has no body so we always have at least one item in the PanelButtonGroup
+ */
+function CopyMessageBodyButton({ messageId }: WithMessageIdOpt) {
+  const messageBody = useMessageBody(messageId);
+  return (
+    <PanelIconButton
+      text={window.i18n('copy')}
+      iconType="copy"
+      onClick={() => {
+        clipboard.writeText(messageBody || '');
+        ToastUtils.pushCopiedToClipBoard();
+      }}
+      dataTestId="copy-msg-from-details"
+    />
+  );
+}
+
+function ReplyToMessageButton({ messageId }: WithMessageIdOpt) {
+  const dispatch = useDispatch();
+  if (!messageId) {
+    return null;
+  }
+  return (
+    <PanelIconButton
+      text={window.i18n('reply')}
+      iconType="reply"
+      onClick={() => {
+        // eslint-disable-next-line more/no-then
+        void replyToMessage(messageId).then(foundIt => {
+          if (foundIt) {
+            dispatch(closeRightPanel());
+            dispatch(resetRightOverlayMode());
+          }
+        });
+      }}
+      dataTestId="reply-to-msg-from-details"
+    />
+  );
+}
+
+function CopySenderSessionId() {
+  const isGroupOrCommunity = useSelectedIsGroupOrCommunity();
+  const isPrivate = useSelectedIsPrivate();
+  const isPublic = useSelectedIsPublic();
+  const selectedConvo = useSelectedConversationKey();
+
+  const isGroup = isGroupOrCommunity && !isPublic;
+  const isPrivateButNotBlinded = selectedConvo && isPrivate && !PubKey.isBlinded(selectedConvo);
+
+  if (selectedConvo && (isGroup || isPrivateButNotBlinded)) {
+    return (
+      <PanelIconButton
+        text={window.i18n('accountIDCopy')}
+        iconType="copy"
+        onClick={() => {
+          clipboard.writeText(selectedConvo);
+          ToastUtils.pushCopiedToClipBoard();
+        }}
+        dataTestId="copy-sender-from-details"
+      />
+    );
+  }
+  return null;
+}
+
 export const OverlayMessageInfo = () => {
   const dispatch = useDispatch();
 
   const rightOverlayMode = useRightOverlayMode();
   const messageId = useSelector(getMessageInfoId);
   const messageInfo = useMessageInfo(messageId);
-  const messageBody = useMessageBody(messageId);
   const isDeletable = useMessageIsDeletable(messageId);
   const direction = useMessageDirection(messageId);
   const timestamp = useMessageTimestamp(messageId);
@@ -289,30 +362,10 @@ export const OverlayMessageInfo = () => {
           <MessageInfo messageId={messageId} errors={messageInfo.errors} />
           <SpacerLG />
           <PanelButtonGroup style={{ margin: '0' }}>
-            {messageBody && !isEmpty(messageBody) ? (
-              <PanelIconButton
-                text={window.i18n('copy')}
-                iconType="copy"
-                onClick={() => {
-                  clipboard.writeText(messageBody);
-                }}
-                dataTestId="copy-msg-from-details"
-              />
-            ) : null}
-            <PanelIconButton
-              text={window.i18n('reply')}
-              iconType="reply"
-              onClick={() => {
-                // eslint-disable-next-line more/no-then
-                void replyToMessage(messageId).then(foundIt => {
-                  if (foundIt) {
-                    dispatch(closeRightPanel());
-                    dispatch(resetRightOverlayMode());
-                  }
-                });
-              }}
-              dataTestId="reply-to-msg-from-details"
-            />
+            {/* CopyMessageBodyButton is always shown so the PanelButtonGroup always has at least one item */}
+            <CopyMessageBodyButton />
+            <ReplyToMessageButton />
+            <CopySenderSessionId />
             {hasErrors && direction === 'outgoing' && (
               <PanelIconButton
                 text={window.i18n('resend')}
