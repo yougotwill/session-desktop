@@ -4940,7 +4940,7 @@ levn@~0.3.0:
 
 "libsession_util_nodejs@https://github.com/oxen-io/libsession-util-nodejs/releases/download/v0.3.23/libsession_util_nodejs-v0.3.23.tar.gz":
   version "0.3.23"
-  resolved "https://github.com/oxen-io/libsession-util-nodejs/releases/download/v0.3.23/libsession_util_nodejs-v0.3.23.tar.gz#c1300f96eca50263f5837796e749df366037b508"
+  resolved "https://github.com/oxen-io/libsession-util-nodejs/releases/download/v0.3.23/libsession_util_nodejs-v0.3.23.tar.gz#fed0e0e7c087a4eb49552d7ac7da4086df79bcd4"
   dependencies:
     cmake-js "^7.2.1"
     node-addon-api "^6.1.0"
