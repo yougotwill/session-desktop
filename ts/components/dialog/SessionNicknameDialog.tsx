@@ -2,20 +2,30 @@ import _ from 'lodash';
 import { useState } from 'react';
 import { useDispatch } from 'react-redux';
 
+import styled from 'styled-components';
 import { getConversationController } from '../../session/conversations';
 
 import { changeNickNameModal } from '../../state/ducks/modalDialog';
 import { SessionWrapperModal } from '../SessionWrapperModal';
 import { SessionButton, SessionButtonColor, SessionButtonType } from '../basic/SessionButton';
 import { SpacerLG } from '../basic/Text';
+import { useConversationRealName } from '../../hooks/useParamSelector';
+import { PubKey } from '../../session/types';
+import { I18n } from '../basic/I18n';
 
 type Props = {
   conversationId: string;
 };
 
+const StyledMaxWidth = styled.span`
+  max-width: 30ch;
+`;
+
 export const SessionNicknameDialog = (props: Props) => {
   const { conversationId } = props;
   const [nickname, setNickname] = useState('');
+  // this resolves to the real user name, and not the nickname (if set) like we do usually
+  const displayName = useConversationRealName(conversationId);
 
   const dispatch = useDispatch();
 
@@ -55,16 +65,21 @@ export const SessionNicknameDialog = (props: Props) => {
       showExitIcon={false}
       showHeader={true}
     >
-      <div className="session-modal__centered">
-        <span className="subtle">{window.i18n('nicknameEnter')}</span>
+      <StyledMaxWidth className="session-modal__centered">
+        <I18n
+          token="nicknameDescription"
+          args={{
+            name: displayName || PubKey.shorten(conversationId),
+          }}
+        ></I18n>
         <SpacerLG />
-      </div>
+      </StyledMaxWidth>
 
       <input
         autoFocus={true}
         type="nickname"
         id="nickname-modal-input"
-        placeholder={window.i18n('nicknameSet')}
+        placeholder={window.i18n('nicknameEnter')}
         onKeyUp={e => {
           void onNicknameInput(_.cloneDeep(e));
         }}
@@ -73,7 +88,7 @@ export const SessionNicknameDialog = (props: Props) => {
 
       <div className="session-modal__button-group">
         <SessionButton
-          text={window.i18n('okay')}
+          text={window.i18n('save')}
           buttonType={SessionButtonType.Simple}
           onClick={saveNickname}
           dataTestId="confirm-nickname"
