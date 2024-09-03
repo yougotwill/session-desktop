@@ -24,8 +24,8 @@ import { getConversationController } from '../../session/conversations';
 import { updateConfirmModal } from '../../state/ducks/modalDialog';
 import { SessionButtonColor } from '../basic/SessionButton';
 import { SessionIcon } from '../icon';
-import { I18n } from '../basic/I18n';
-import { I18nProps, LocalizerToken } from '../../types/Localizer';
+import { Localizer } from '../basic/Localizer';
+import type { LocalizerComponentProps, LocalizerToken } from '../../types/Localizer';
 
 const FollowSettingButton = styled.button`
   color: var(--primary-color);
@@ -50,14 +50,14 @@ function useFollowSettingsButtonClick(
     const i18nMessage = props.disabled
       ? ({
           token: 'disappearingMessagesFollowSettingOff',
-        } as I18nProps<'disappearingMessagesFollowSettingOff'>)
+        } as LocalizerComponentProps<'disappearingMessagesFollowSettingOff'>)
       : ({
           token: 'disappearingMessagesFollowSettingOn',
           args: {
             time: props.timespanText,
             disappearing_messages_type: localizedMode,
           },
-        } as I18nProps<'disappearingMessagesFollowSettingOn'>);
+        } as LocalizerComponentProps<'disappearingMessagesFollowSettingOn'>);
 
     const okText = props.disabled ? window.i18n('yes') : window.i18n('set');
 
@@ -193,7 +193,7 @@ function useTextToRenderI18nProps(props: PropsForExpirationTimer) {
 export const TimerNotification = (props: PropsForExpirationTimer) => {
   const { messageId } = props;
 
-  const i18nProps = useTextToRenderI18nProps(props) as I18nProps<LocalizerToken>;
+  const i18nProps = useTextToRenderI18nProps(props) as LocalizerComponentProps<LocalizerToken>;
   const isGroupOrCommunity = useSelectedIsGroupOrCommunity();
   const isGroupV2 = useSelectedIsGroupV2();
   // renderOff is true when the update is put to off, or when we have a legacy group control message (as they are not expiring at all)
@@ -228,7 +228,7 @@ export const TimerNotification = (props: PropsForExpirationTimer) => {
           </>
         )}
         <TextWithChildren subtle={true}>
-          <I18n {...i18nProps} />
+          <Localizer {...i18nProps} />
         </TextWithChildren>
         <FollowSettingsButton {...props} />
       </Flex>

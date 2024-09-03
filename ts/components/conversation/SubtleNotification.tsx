@@ -15,7 +15,7 @@ import {
   useSelectedIsPrivate,
   useSelectedNicknameOrProfileNameOrShortenedPubkey,
 } from '../../state/selectors/selectedConversation';
-import { I18n } from '../basic/I18n';
+import { Localizer } from '../basic/Localizer';
 
 const Container = styled.div`
   display: flex;
@@ -99,18 +99,18 @@ export const NoMessageInConversation = () => {
 
   const content = useMemo(() => {
     if (isMe) {
-      return <I18n token="noteToSelfEmpty" />;
+      return <Localizer token="noteToSelfEmpty" />;
     }
 
     if (canWrite) {
-      return <I18n token="groupNoMessages" args={{ group_name: name }} />;
+      return <Localizer token="groupNoMessages" args={{ group_name: name }} />;
     }
 
     if (privateBlindedAndBlockingMsgReqs) {
-      return <I18n token="messageRequestsTurnedOff" args={{ name }} />;
+      return <Localizer token="messageRequestsTurnedOff" args={{ name }} />;
     }
 
-    return <I18n token="conversationsEmpty" args={{ conversation_name: name }} />;
+    return <Localizer token="conversationsEmpty" args={{ conversation_name: name }} />;
   }, [isMe, canWrite, privateBlindedAndBlockingMsgReqs, name]);
 
   if (!selectedConversation || hasMessages) {

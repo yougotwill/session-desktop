@@ -11,7 +11,7 @@ import { SessionButton, SessionButtonColor, SessionButtonType } from '../basic/S
 import { SpacerLG } from '../basic/Text';
 import { useConversationRealName } from '../../hooks/useParamSelector';
 import { PubKey } from '../../session/types';
-import { I18n } from '../basic/I18n';
+import { Localizer } from '../basic/Localizer';
 
 type Props = {
   conversationId: string;
@@ -66,12 +66,12 @@ export const SessionNicknameDialog = (props: Props) => {
       showHeader={true}
     >
       <StyledMaxWidth className="session-modal__centered">
-        <I18n
+        <Localizer
           token="nicknameDescription"
           args={{
             name: displayName || PubKey.shorten(conversationId),
           }}
-        ></I18n>
+        />
         <SpacerLG />
       </StyledMaxWidth>
 

@@ -17,7 +17,7 @@ import { deleteDbLocally } from '../../../util/accountManager';
 import { Flex } from '../../basic/Flex';
 import { SessionButtonColor } from '../../basic/SessionButton';
 import { SessionIconButton } from '../../icon';
-import { I18nProps, LocalizerToken } from '../../../types/Localizer';
+import { LocalizerComponentProps, LocalizerToken } from '../../../types/Localizer';
 
 /** Min height should match the onboarding step with the largest height this prevents the loading spinner from jumping around while still keeping things centered  */
 const StyledBackButtonContainer = styled(Flex)`
@@ -38,7 +38,7 @@ export const BackButtonWithinContainer = ({
   callback?: () => void;
   onQuitVisible?: () => void;
   shouldQuitOnClick?: boolean;
-  quitI18nMessageArgs: I18nProps<LocalizerToken>;
+  quitI18nMessageArgs: LocalizerComponentProps<LocalizerToken>;
 }) => {
   return (
     <StyledBackButtonContainer
@@ -70,7 +70,7 @@ export const BackButton = ({
   callback?: () => void;
   onQuitVisible?: () => void;
   shouldQuitOnClick?: boolean;
-  quitI18nMessageArgs: I18nProps<LocalizerToken>;
+  quitI18nMessageArgs: LocalizerComponentProps<LocalizerToken>;
 }) => {
   const step = useOnboardStep();
   const restorationStep = useOnboardAccountRestorationStep();

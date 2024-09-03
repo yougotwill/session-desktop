@@ -18,7 +18,7 @@ import { prepareQRCodeForLightBox } from '../../../util/qrCodes';
 import { getCurrentRecoveryPhrase } from '../../../util/storage';
 import { QRCodeLogoProps, SessionQRCode } from '../../SessionQRCode';
 import { AnimatedFlex } from '../../basic/Flex';
-import { I18n } from '../../basic/I18n';
+import { Localizer } from '../../basic/Localizer';
 import { SessionButtonColor } from '../../basic/SessionButton';
 import { SpacerMD, SpacerSM } from '../../basic/Text';
 import { CopyToClipboardIcon } from '../../buttons/CopyToClipboardButton';
@@ -110,7 +110,7 @@ export const SettingsCategoryRecoveryPassword = () => {
           iconSize: 18,
           iconColor: 'var(--text-primary-color)',
         }}
-        description={<I18n asTag="p" token="recoveryPasswordDescription" />}
+        description={<Localizer token="recoveryPasswordDescription" />}
         inline={false}
       >
         <SpacerMD />

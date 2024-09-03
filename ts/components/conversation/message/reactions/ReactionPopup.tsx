@@ -3,9 +3,9 @@ import styled from 'styled-components';
 import { findAndFormatContact } from '../../../../models/message';
 import { PubKey } from '../../../../session/types/PubKey';
 
-import { I18n } from '../../../basic/I18n';
+import { Localizer } from '../../../basic/Localizer';
 import { nativeEmojiData } from '../../../../util/emoji';
-import { type I18nPropsObject } from '../../../../types/Localizer';
+import { type LocalizerComponentPropsObject } from '../../../../types/Localizer';
 
 export type TipPosition = 'center' | 'left' | 'right';
 
@@ -83,7 +83,7 @@ const getI18nComponentProps = (
   numberOfReactors: number,
   emoji: string,
   emojiName?: string
-): I18nPropsObject => {
+): LocalizerComponentPropsObject => {
   const name = contacts[0];
   const other_name = contacts[1];
   const emoji_name = emojiName ? `:${emojiName}:` : emoji;
@@ -134,7 +134,7 @@ export const ReactionPopup = (props: Props) => {
 
   return (
     <StyledPopupContainer tooltipPosition={tooltipPosition} onClick={onClick}>
-      <I18n {...i18nProps} />
+      <Localizer {...i18nProps} />
       <StyledEmoji role={'img'} aria-label={emojiAriaLabel}>
         {emoji}
       </StyledEmoji>

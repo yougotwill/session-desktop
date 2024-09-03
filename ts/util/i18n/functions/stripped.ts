@@ -1,6 +1,6 @@
 /** NOTE: Because of docstring limitations changes MUST be manually synced between {@link setupI18n.stripped } and {@link window.i18n.stripped } */
 
-import { deSanitizeHtmlTags, sanitizeArgs } from '../../../components/basic/I18n';
+import { deSanitizeHtmlTags, sanitizeArgs } from '../../../components/basic/Localizer';
 import { GetMessageArgs, LocalizerDictionary, LocalizerToken } from '../../../types/Localizer';
 import { getMessage } from './getMessage';
 

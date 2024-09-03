@@ -2,7 +2,7 @@ import { PropsForDataExtractionNotification } from '../../../../models/messageTy
 import { SignalService } from '../../../../protobuf';
 import { ExpirableReadableMessage } from './ExpirableReadableMessage';
 import { NotificationBubble } from './notification-bubble/NotificationBubble';
-import { I18n } from '../../../basic/I18n';
+import { Localizer } from '../../../basic/Localizer';
 
 export const DataExtractionNotification = (props: PropsForDataExtractionNotification) => {
   const { name, type, source, messageId } = props;
@@ -15,7 +15,7 @@ export const DataExtractionNotification = (props: PropsForDataExtractionNotifica
       isControlMessage={true}
     >
       <NotificationBubble iconType="save">
-        <I18n
+        <Localizer
           token={
             type === SignalService.DataExtractionNotification.Type.MEDIA_SAVED
               ? 'attachmentsMediaSaved'

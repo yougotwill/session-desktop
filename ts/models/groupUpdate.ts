@@ -1,6 +1,6 @@
 import { getConversationController } from '../session/conversations';
 import { UserUtils } from '../session/utils';
-import type { I18nPropsObject } from '../types/Localizer';
+import type { LocalizerComponentPropsObject } from '../types/Localizer';
 
 // to remove after merge with groups
 function usAndXOthers(arr: Array<string>) {
@@ -12,7 +12,10 @@ function usAndXOthers(arr: Array<string>) {
   return { us: false, others: arr };
 }
 
-export function getKickedGroupUpdateStr(kicked: Array<string>, groupName: string): I18nPropsObject {
+export function getKickedGroupUpdateStr(
+  kicked: Array<string>,
+  groupName: string
+): LocalizerComponentPropsObject {
   const { others, us } = usAndXOthers(kicked);
   const othersNames = others.map(
     getConversationController().getContactProfileNameOrShortenedPubKey
@@ -56,7 +59,7 @@ export function getKickedGroupUpdateStr(kicked: Array<string>, groupName: string
 export function getLeftGroupUpdateChangeStr(
   left: Array<string>,
   _groupName: string
-): I18nPropsObject {
+): LocalizerComponentPropsObject {
   const { others, us } = usAndXOthers(left);
 
   if (left.length !== 1) {
@@ -76,7 +79,7 @@ export function getLeftGroupUpdateChangeStr(
 export function getJoinedGroupUpdateChangeStr(
   joined: Array<string>,
   _groupName: string
-): I18nPropsObject {
+): LocalizerComponentPropsObject {
   const { others, us } = usAndXOthers(joined);
   const othersNames = others.map(
     getConversationController().getContactProfileNameOrShortenedPubKey

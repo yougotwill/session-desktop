@@ -10,15 +10,15 @@ import { updateBlockOrUnblockModal } from '../../../state/ducks/modalDialog';
 import { BlockedNumberController } from '../../../util';
 import { SessionWrapperModal } from '../../SessionWrapperModal';
 import { Flex } from '../../basic/Flex';
-import { I18n } from '../../basic/I18n';
+import { Localizer } from '../../basic/Localizer';
 import { SessionButton, SessionButtonColor, SessionButtonType } from '../../basic/SessionButton';
 import { StyledModalDescriptionContainer } from '../shared/ModalDescriptionContainer';
 import { BlockOrUnblockModalState } from './BlockOrUnblockModalState';
-import type { I18nPropsObject } from '../../../types/Localizer';
+import type { LocalizerComponentPropsObject } from '../../../types/Localizer';
 
 type ModalState = NonNullable<BlockOrUnblockModalState>;
 
-function getUnblockTokenAndArgs(names: Array<string>): I18nPropsObject {
+function getUnblockTokenAndArgs(names: Array<string>): LocalizerComponentPropsObject {
   // multiple unblock is supported
   switch (names.length) {
     case 1:
@@ -37,7 +37,7 @@ function getUnblockTokenAndArgs(names: Array<string>): I18nPropsObject {
 function useBlockUnblockI18nDescriptionArgs({
   action,
   pubkeys,
-}: Pick<ModalState, 'action' | 'pubkeys'>): I18nPropsObject {
+}: Pick<ModalState, 'action' | 'pubkeys'>): LocalizerComponentPropsObject {
   const names = useConversationsNicknameRealNameOrShortenPubkey(pubkeys);
   if (!pubkeys.length) {
     throw new Error('useI18nDescriptionArgsForAction called with empty list of pubkeys');
@@ -82,11 +82,11 @@ export const BlockOrUnblockDialog = ({ pubkeys, action, onConfirmed }: NonNullab
     closeModal();
     return null;
   }
-  
+
   return (
     <SessionWrapperModal showExitIcon={true} title={localizedAction} onClose={closeModal}>
       <StyledModalDescriptionContainer>
-        <I18n {...args} />
+        <Localizer {...args} />
       </StyledModalDescriptionContainer>
       <Flex container={true} flexDirection="column" alignItems="center">
         <Flex container={true}>

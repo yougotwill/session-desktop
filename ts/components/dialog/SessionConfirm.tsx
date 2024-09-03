@@ -10,13 +10,13 @@ import { SessionButton, SessionButtonColor, SessionButtonType } from '../basic/S
 import { SessionRadioGroup, SessionRadioItems } from '../basic/SessionRadioGroup';
 import { SpacerLG } from '../basic/Text';
 import { SessionSpinner } from '../loading';
-import { type I18nPropsObject } from '../../types/Localizer';
+import { type LocalizerComponentPropsObject } from '../../types/Localizer';
 
 import { StyledI18nSubText } from '../basic/StyledI18nSubText';
 
 export interface SessionConfirmDialogProps {
-  i18nMessage?: I18nPropsObject;
-  i18nMessageSub?: I18nPropsObject;
+  i18nMessage?: LocalizerComponentPropsObject;
+  i18nMessageSub?: LocalizerComponentPropsObject;
   title?: string;
   radioOptions?: SessionRadioItems;
   onOk?: any;

@@ -8,7 +8,7 @@ import { SessionWrapperModal } from '../SessionWrapperModal';
 import { Flex } from '../basic/Flex';
 import { SessionButton, SessionButtonColor, SessionButtonType } from '../basic/SessionButton';
 import { SpacerMD } from '../basic/Text';
-import { I18n } from '../basic/I18n';
+import { Localizer } from '../basic/Localizer';
 
 const StyledDescriptionContainer = styled.div`
   width: 280px;
@@ -79,7 +79,7 @@ export function HideRecoveryPasswordDialog(props: HideRecoveryPasswordDialogProp
       additionalClassName="no-body-padding"
     >
       <StyledDescriptionContainer>
-        <I18n
+        <Localizer
           token={
             state === 'firstWarning'
               ? 'recoveryPasswordHidePermanentlyDescription1'

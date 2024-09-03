@@ -46,23 +46,23 @@ export type GetMessageArgs<T extends LocalizerToken> = T extends LocalizerToken
       : [T, ArgsRecordExcludingDefaults<T>]
   : never;
 
-/** Basic props for all calls of the I18n component */
-type I18nBaseProps<T extends LocalizerToken> = {
+/** Basic props for all calls of the Localizer component */
+type LocalizerComponentBaseProps<T extends LocalizerToken> = {
   token: T;
   asTag?: ElementType;
   className?: string;
 };
 
 /** The props for the localization component */
-export type I18nProps<T extends LocalizerToken> = T extends LocalizerToken
+export type LocalizerComponentProps<T extends LocalizerToken> = T extends LocalizerToken
   ? DynamicArgs<Dictionary[T]> extends never
-    ? I18nBaseProps<T>
+    ? LocalizerComponentBaseProps<T>
     : ArgsRecordExcludingDefaults<T> extends Record<string, never>
-      ? I18nBaseProps<T>
-      : I18nBaseProps<T> & { args: ArgsRecordExcludingDefaults<T> }
+      ? LocalizerComponentBaseProps<T>
+      : LocalizerComponentBaseProps<T> & { args: ArgsRecordExcludingDefaults<T> }
   : never;
 
-export type I18nPropsObject = I18nProps<LocalizerToken>;
+export type LocalizerComponentPropsObject = LocalizerComponentProps<LocalizerToken>;
 
 export type I18nMethods = {
   /** @see {@link window.i18n.stripped} */

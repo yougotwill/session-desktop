@@ -71,17 +71,16 @@ export const ConversationHeaderTitle = (props: ConversationHeaderTitleProps) => 
   );
 
   const memberCountSubtitle = useMemo(() => {
-    let memberCount = 0;
+    let count = 0;
     if (isGroup) {
       if (isPublic) {
-        memberCount = subscriberCount || 0;
+        count = subscriberCount || 0;
       } else {
-        memberCount = members.length;
+        count = members.length;
       }
     }
 
-    if (isGroup && memberCount > 0 && !isKickedFromGroup) {
-      const count = String(memberCount);
+    if (isGroup && count > 0 && !isKickedFromGroup) {
       return isPublic ? i18n('membersActive', { count }) : i18n('members', { count });
     }
 

@@ -2,7 +2,7 @@ import styled from 'styled-components';
 import type {
   ArgsRecord,
   GetMessageArgs,
-  I18nProps,
+  LocalizerComponentProps,
   LocalizerDictionary,
   LocalizerToken,
 } from '../../types/Localizer';
@@ -85,19 +85,17 @@ const StyledHtmlRenderer = styled.span<{ isDarkTheme: boolean }>`
  * @param props.token - The token identifying the message to retrieve and an optional record of substitution variables and their replacement values.
  * @param props.args - An optional record of substitution variables and their replacement values. This is required if the string has dynamic parts.
  * @param props.as - An optional HTML tag to render the component as. Defaults to a fragment, unless the string contains html tags. In that case, it will render as HTML in a div tag.
- * @param props.startTagProps - An optional object of props to pass to the start tag.
- * @param props.endTagProps - An optional object of props to pass to the end tag.
  *
  * @returns The localized message string with substitutions and formatting applied.
  *
  * @example
  * ```tsx
- * <I18n token="about" />
- * <I18n token="about" as='h1' />
- * <I18n token="disappearingMessagesFollowSettingOn" args={{ time: 10, type: 'mode' }} />
+ * <Localizer token="about" />
+ * <Localizer token="about" as='h1' />
+ * <Localizer token="disappearingMessagesFollowSettingOn" args={{ time: 10, type: 'mode' }} />
  * ```
  */
-export const I18n = <T extends LocalizerToken>(props: I18nProps<T>) => {
+export const Localizer = <T extends LocalizerToken>(props: LocalizerComponentProps<T>) => {
   const isDarkMode = useIsDarkTheme();
 
   const args = 'args' in props ? props.args : undefined;

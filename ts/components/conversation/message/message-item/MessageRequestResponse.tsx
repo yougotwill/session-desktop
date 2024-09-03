@@ -2,7 +2,7 @@ import { useNicknameOrProfileNameOrShortenedPubkey } from '../../../../hooks/use
 import { PropsForMessageRequestResponse } from '../../../../models/messageType';
 import { UserUtils } from '../../../../session/utils';
 import { Flex } from '../../../basic/Flex';
-import { I18n } from '../../../basic/I18n';
+import { Localizer } from '../../../basic/Localizer';
 import { SpacerSM, TextWithChildren } from '../../../basic/Text';
 import { ReadableMessage } from './ReadableMessage';
 
@@ -32,14 +32,14 @@ export const MessageRequestResponse = (props: PropsForMessageRequestResponse) =>
         <SpacerSM />
         <TextWithChildren subtle={true} ellipsisOverflow={false} textAlign="center">
           {isFromSync ? (
-            <I18n
+            <Localizer
               token="messageRequestYouHaveAccepted"
               args={{
                 name: profileName || window.i18n('unknown'),
               }}
             />
           ) : (
-            <I18n token="messageRequestsAccepted" />
+            <Localizer token="messageRequestsAccepted" />
           )}
         </TextWithChildren>
       </Flex>

@@ -1,6 +1,6 @@
 import DOMPurify from 'dompurify';
 import { createElement, type ElementType } from 'react';
-import { supportedFormattingTags } from './I18n';
+import { supportedFormattingTags } from './Localizer';
 
 type ReceivedProps = {
   html: string;

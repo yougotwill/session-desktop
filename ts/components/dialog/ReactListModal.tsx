@@ -27,7 +27,7 @@ import { MessageReactions } from '../conversation/message/message-content/Messag
 import { SessionIconButton } from '../icon';
 import { SessionWrapperModal } from '../SessionWrapperModal';
 import { findAndFormatContact } from '../../models/message';
-import { I18n } from '../basic/I18n';
+import { Localizer } from '../basic/Localizer';
 
 const StyledReactListContainer = styled(Flex)`
   width: 376px;
@@ -187,7 +187,7 @@ const StyledCountText = styled.p`
 const CountText = ({ count, emoji }: { count: number; emoji: string }) => {
   return (
     <StyledCountText>
-      <I18n
+      <Localizer
         token="emojiReactsCountOthers"
         args={{
           count: count - Reactions.SOGSReactorsFetchCount,

@@ -5,7 +5,7 @@ import { LocalizerToken } from '../../../../../types/Localizer';
 import { SessionIconType } from '../../../../icon';
 import { ExpirableReadableMessage } from '../ExpirableReadableMessage';
 import { NotificationBubble } from './NotificationBubble';
-import { I18n } from '../../../../basic/I18n';
+import { Localizer } from '../../../../basic/Localizer';
 
 type StyleType = Record<
   CallNotificationType,
@@ -45,7 +45,7 @@ export const CallNotification = (props: PropsForCallNotification) => {
       isControlMessage={true}
     >
       <NotificationBubble iconType={iconType} iconColor={iconColor}>
-        <I18n token={notificationTextKey} args={{ name }} />
+        <Localizer token={notificationTextKey} args={{ name }} />
       </NotificationBubble>
     </ExpirableReadableMessage>
   );

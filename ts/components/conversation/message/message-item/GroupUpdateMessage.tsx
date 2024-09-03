@@ -11,12 +11,12 @@ import {
 import { useSelectedNicknameOrProfileNameOrShortenedPubkey } from '../../../../state/selectors/selectedConversation';
 import { ExpirableReadableMessage } from './ExpirableReadableMessage';
 import { NotificationBubble } from './notification-bubble/NotificationBubble';
-import { I18n } from '../../../basic/I18n';
-import { type I18nPropsObject } from '../../../../types/Localizer';
+import { Localizer } from '../../../basic/Localizer';
+import { type LocalizerComponentPropsObject } from '../../../../types/Localizer';
 
 // This component is used to display group updates in the conversation view.
 
-const ChangeItemJoined = (added: Array<string>): I18nPropsObject => {
+const ChangeItemJoined = (added: Array<string>): LocalizerComponentPropsObject => {
   const groupName = useSelectedNicknameOrProfileNameOrShortenedPubkey();
 
   if (!added.length) {
@@ -26,7 +26,7 @@ const ChangeItemJoined = (added: Array<string>): I18nPropsObject => {
   return getJoinedGroupUpdateChangeStr(added, groupName);
 };
 
-const ChangeItemKicked = (kicked: Array<string>): I18nPropsObject => {
+const ChangeItemKicked = (kicked: Array<string>): LocalizerComponentPropsObject => {
   if (!kicked.length) {
     throw new Error('Group update kicked is missing details');
   }
@@ -35,7 +35,7 @@ const ChangeItemKicked = (kicked: Array<string>): I18nPropsObject => {
   return getKickedGroupUpdateStr(kicked, groupName);
 };
 
-const ChangeItemLeft = (left: Array<string>): I18nPropsObject => {
+const ChangeItemLeft = (left: Array<string>): LocalizerComponentPropsObject => {
   const groupName = useSelectedNicknameOrProfileNameOrShortenedPubkey();
 
   if (!left.length) {
@@ -45,7 +45,7 @@ const ChangeItemLeft = (left: Array<string>): I18nPropsObject => {
   return getLeftGroupUpdateChangeStr(left, groupName);
 };
 
-const ChangeItem = (change: PropsForGroupUpdateType): I18nPropsObject => {
+const ChangeItem = (change: PropsForGroupUpdateType): LocalizerComponentPropsObject => {
   const { type } = change;
   switch (type) {
     case 'name':
@@ -79,7 +79,7 @@ export const GroupUpdateMessage = (props: PropsForGroupUpdate) => {
       isControlMessage={true}
     >
       <NotificationBubble iconType="users">
-        {!isNull(changeItem) ? <I18n {...changeItem} /> : null}
+        {!isNull(changeItem) ? <Localizer {...changeItem} /> : null}
       </NotificationBubble>
     </ExpirableReadableMessage>
   );
