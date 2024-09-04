@@ -341,7 +341,7 @@ export async function showLeaveGroupByConvoId(conversationId: string, name: stri
       updateConfirmModal({
         title: window.i18n('groupLeave'),
         i18nMessage: {
-          token: 'groupLeaveDescriptionAdmin',
+          token: 'groupDeleteDescription',
           args: { group_name: name ?? '' },
         },
         onClickOk,
