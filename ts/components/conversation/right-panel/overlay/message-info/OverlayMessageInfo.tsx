@@ -4,13 +4,13 @@ import { useDispatch, useSelector } from 'react-redux';
 import styled from 'styled-components';
 // tslint:disable-next-line: no-submodule-imports
 import useKey from 'react-use/lib/useKey';
+import { clipboard } from 'electron';
 import { PropsForAttachment, closeRightPanel } from '../../../../../state/ducks/conversations';
 import { resetRightOverlayMode, setRightOverlayMode } from '../../../../../state/ducks/section';
 import { getMessageInfoId } from '../../../../../state/selectors/conversations';
 import { Flex } from '../../../../basic/Flex';
 import { Header, HeaderTitle, StyledScrollContainer } from '../components';
 
-import { clipboard } from 'electron';
 import { IsDetailMessageViewContext } from '../../../../../contexts/isDetailViewContext';
 import { Data } from '../../../../../data/data';
 import { useRightOverlayMode } from '../../../../../hooks/useUI';
