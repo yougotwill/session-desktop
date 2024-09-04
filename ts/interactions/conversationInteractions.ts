@@ -693,8 +693,8 @@ export async function showLinkSharingConfirmationModalDialog(e: any) {
     if (!alreadyDisplayedPopup) {
       window.inboxStore?.dispatch(
         updateConfirmModal({
-          title: window.i18n('linkPreviewsSend'),
-          i18nMessage: { token: 'linkPreviewsSendModalDescription' },
+          title: window.i18n('linkPreviewsEnable'),
+          i18nMessage: { token: 'linkPreviewsFirstDescription' },
           okTheme: SessionButtonColor.Danger,
           onClickOk: async () => {
             await window.setSettingValue(SettingsKey.settingsLinkPreview, true);
@@ -702,6 +702,7 @@ export async function showLinkSharingConfirmationModalDialog(e: any) {
           onClickClose: async () => {
             await Storage.put(SettingsKey.hasLinkPreviewPopupBeenDisplayed, true);
           },
+          okText: window.i18n('enable'),
         })
       );
     }
