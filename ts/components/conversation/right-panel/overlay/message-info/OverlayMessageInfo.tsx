@@ -22,6 +22,7 @@ import { deleteMessagesById } from '../../../../../interactions/conversations/un
 import { PubKey } from '../../../../../session/types';
 import {
   useMessageAttachments,
+  useMessageAuthor,
   useMessageBody,
   useMessageDirection,
   useMessageIsDeletable,
@@ -191,7 +192,7 @@ function useMessageInfo(messageId: string | undefined) {
   return details;
 }
 
-type WithMessageIdOpt = { messageId?: string };
+type WithMessageIdOpt = { messageId: string };
 
 /**
  * Always shown, even if the message has no body so we always have at least one item in the PanelButtonGroup
@@ -234,22 +235,22 @@ function ReplyToMessageButton({ messageId }: WithMessageIdOpt) {
   );
 }
 
-function CopySenderSessionId() {
+function CopySenderSessionId({ messageId }: WithMessageIdOpt) {
   const isGroupOrCommunity = useSelectedIsGroupOrCommunity();
   const isPrivate = useSelectedIsPrivate();
   const isPublic = useSelectedIsPublic();
-  const selectedConvo = useSelectedConversationKey();
+  const senderId = useMessageAuthor(messageId);
 
   const isGroup = isGroupOrCommunity && !isPublic;
-  const isPrivateButNotBlinded = selectedConvo && isPrivate && !PubKey.isBlinded(selectedConvo);
+  const isPrivateButNotBlinded = senderId && isPrivate && !PubKey.isBlinded(senderId);
 
-  if (selectedConvo && (isGroup || isPrivateButNotBlinded)) {
+  if (senderId && (isGroup || isPrivateButNotBlinded)) {
     return (
       <PanelIconButton
         text={window.i18n('accountIDCopy')}
         iconType="copy"
         onClick={() => {
-          clipboard.writeText(selectedConvo);
+          clipboard.writeText(senderId);
           ToastUtils.pushCopiedToClipBoard();
         }}
         dataTestId="copy-sender-from-details"
@@ -363,9 +364,9 @@ export const OverlayMessageInfo = () => {
           <SpacerLG />
           <PanelButtonGroup style={{ margin: '0' }}>
             {/* CopyMessageBodyButton is always shown so the PanelButtonGroup always has at least one item */}
-            <CopyMessageBodyButton />
-            <ReplyToMessageButton />
-            <CopySenderSessionId />
+            <CopyMessageBodyButton messageId={messageId} />
+            <ReplyToMessageButton messageId={messageId} />
+            <CopySenderSessionId messageId={messageId} />
             {hasErrors && direction === 'outgoing' && (
               <PanelIconButton
                 text={window.i18n('resend')}
