@@ -246,26 +246,119 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
   }
 
   public getNotificationText() {
-    let description = this.getDescription();
-    if (description) {
-      // regex with a 'g' to ignore part groups
-      const regex = new RegExp(`@${PubKey.regexForPubkeys}`, 'g');
-      const pubkeysInDesc = description.match(regex);
-      (pubkeysInDesc || []).forEach((pubkeyWithAt: string) => {
-        const pubkey = pubkeyWithAt.slice(1);
-        const isUS = isUsAnySogsFromCache(pubkey);
-        const displayName =
-          getConversationController().getContactProfileNameOrShortenedPubKey(pubkey);
-        if (isUS) {
-          description = description?.replace(pubkeyWithAt, `@${window.i18n('you')}`);
-        } else if (displayName && displayName.length) {
-          description = description?.replace(pubkeyWithAt, `@${displayName}`);
-        }
-      });
-      return description;
+    const groupUpdate = this.getGroupUpdateAsArray();
+    if (groupUpdate) {
+      const groupName =
+        this.getConversation()?.getNicknameOrRealUsernameOrPlaceholder() || window.i18n('unknown');
+
+      if (groupUpdate.left) {
+        // @ts-expect-error -- TODO: Fix by using new i18n builder
+        const { token, args } = getLeftGroupUpdateChangeStr(groupUpdate.left, groupName);
+        // TODO: clean up this typing
+        return window.i18n.stripped(...([token, args] as GetMessageArgs<LocalizerToken>));
+      }
+
+      if (groupUpdate.name) {
+        return window.i18n.stripped('groupNameNew', { group_name: groupUpdate.name });
+      }
+
+      if (groupUpdate.joined?.length) {
+        // @ts-expect-error -- TODO: Fix by using new i18n builder
+        const { token, args } = getJoinedGroupUpdateChangeStr(groupUpdate.joined, groupName);
+        // TODO: clean up this typing
+        return window.i18n.stripped(...([token, args] as GetMessageArgs<LocalizerToken>));
+      }
+
+      if (groupUpdate.kicked?.length) {
+        // @ts-expect-error -- TODO: Fix by using new i18n builder
+        const { token, args } = getKickedGroupUpdateStr(groupUpdate.kicked, groupName);
+        // TODO: clean up this typing
+        return window.i18n.stripped(...([token, args] as GetMessageArgs<LocalizerToken>));
+      }
+      window.log.warn('did not build a specific change for getDescription of ', groupUpdate);
+
+      return window.i18n.stripped('groupUpdated');
     }
-    if ((this.get('attachments') || []).length > 0) {
-      return window.i18n.stripped('contentDescriptionMediaMessage');
+
+    if (this.isGroupInvitation()) {
+      return `😎 ${window.i18n.stripped('communityInvitation')}`;
+    }
+
+    if (this.isDataExtractionNotification()) {
+      const dataExtraction = this.get(
+        'dataExtractionNotification'
+      ) as DataExtractionNotificationMsg;
+      if (dataExtraction.type === SignalService.DataExtractionNotification.Type.SCREENSHOT) {
+        return window.i18n.stripped('screenshotTaken', {
+          name: getConversationController().getContactProfileNameOrShortenedPubKey(
+            dataExtraction.source
+          ),
+        });
+      }
+
+      return window.i18n.stripped('attachmentsMediaSaved', {
+        name: getConversationController().getContactProfileNameOrShortenedPubKey(
+          dataExtraction.source
+        ),
+      });
+    }
+    if (this.isCallNotification()) {
+      const name = getConversationController().getContactProfileNameOrShortenedPubKey(
+        this.get('conversationId')
+      );
+      const callNotificationType = this.get('callNotificationType');
+      if (callNotificationType === 'missed-call') {
+        return window.i18n.stripped('callsMissedCallFrom', { name });
+      }
+      if (callNotificationType === 'started-call') {
+        return window.i18n.stripped('callsYouCalled', { name });
+      }
+      if (callNotificationType === 'answered-a-call') {
+        return window.i18n.stripped('callsInProgress');
+      }
+    }
+
+    const interactionNotification = this.getInteractionNotification();
+    if (interactionNotification) {
+      const { interactionType, interactionStatus } = interactionNotification;
+
+      // NOTE For now we only show interaction errors in the message history
+      if (interactionStatus === ConversationInteractionStatus.Error) {
+        const convo = getConversationController().get(this.get('conversationId'));
+
+        if (convo) {
+          const isGroup = !convo.isPrivate();
+          const isCommunity = convo.isPublic();
+
+          switch (interactionType) {
+            case ConversationInteractionType.Hide:
+              // there is no text for hiding changes
+              return '';
+            case ConversationInteractionType.Leave:
+              return isCommunity
+                ? window.i18n.stripped('communityLeaveError', {
+                    community_name: convo.getNicknameOrRealUsernameOrPlaceholder(),
+                  })
+                : isGroup
+                  ? window.i18n.stripped('groupLeaveErrorFailed', {
+                      group_name: convo.getNicknameOrRealUsernameOrPlaceholder(),
+                    })
+                  : '';
+            default:
+              assertUnreachable(
+                interactionType,
+                `Message.getDescription: Missing case error "${interactionType}"`
+              );
+          }
+        }
+      }
+    }
+
+    if (this.get('reaction')) {
+      const reaction = this.get('reaction');
+      if (reaction && reaction.emoji && reaction.emoji !== '') {
+        return window.i18n.stripped('emojiReactsNotification', { emoji: reaction.emoji });
+      }
     }
     if (this.isExpirationTimerUpdate()) {
       const expireTimerUpdate = this.getExpirationTimerUpdate();
@@ -282,12 +375,17 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
       );
 
       const source = expireTimerUpdate?.source;
+      const isUs = UserUtils.isUsFromCache(source);
+
       const authorName =
         getConversationController()
           .get(source || '')
           ?.getNicknameOrRealUsernameOrPlaceholder() || window.i18n.stripped('unknown');
 
       if (!expireTimerUpdate || expirationMode === 'off' || !expireTimer || expireTimer === 0) {
+        if (isUs) {
+          return window.i18n.stripped('disappearingMessagesTurnedOffYou');
+        }
         return window.i18n.stripped('disappearingMessagesTurnedOff', {
           name: authorName,
         });
@@ -298,11 +396,48 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
           ? window.i18n.stripped('disappearingMessagesTypeRead')
           : window.i18n.stripped('disappearingMessagesTypeSent');
 
+      if (isUs) {
+        return window.i18n.stripped('disappearingMessagesSetYou', {
+          time: TimerOptions.getAbbreviated(expireTimerUpdate.expireTimer || 0),
+          disappearing_messages_type: localizedMode,
+        });
+      }
+
       return window.i18n.stripped('disappearingMessagesSet', {
         time: TimerOptions.getAbbreviated(expireTimerUpdate.expireTimer || 0),
         name: authorName,
         disappearing_messages_type: localizedMode,
       });
+    }
+    const body = this.get('body');
+    if (body) {
+      let bodyMentionsMappedToNames = body;
+      // regex with a 'g' to ignore part groups
+      const regex = new RegExp(`@${PubKey.regexForPubkeys}`, 'g');
+      const pubkeysInDesc = body.match(regex);
+      (pubkeysInDesc || []).forEach((pubkeyWithAt: string) => {
+        const pubkey = pubkeyWithAt.slice(1);
+        const isUS = isUsAnySogsFromCache(pubkey);
+        const displayName =
+          getConversationController().getContactProfileNameOrShortenedPubKey(pubkey);
+        if (isUS) {
+          bodyMentionsMappedToNames = bodyMentionsMappedToNames?.replace(
+            pubkeyWithAt,
+            `@${window.i18n('you')}`
+          );
+        } else if (displayName && displayName.length) {
+          bodyMentionsMappedToNames = bodyMentionsMappedToNames?.replace(
+            pubkeyWithAt,
+            `@${displayName}`
+          );
+        }
+      });
+      return bodyMentionsMappedToNames;
+    }
+
+    // Note: we want this after the check for a body as we want to display the body if we have one.
+    if ((this.get('attachments') || []).length) {
+      return window.i18n.stripped('contentDescriptionMediaMessage');
     }
 
     return '';
@@ -1263,124 +1398,6 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
       forcedArrayUpdate.name = groupUpdate.name;
     }
     return forcedArrayUpdate;
-  }
-
-  private getDescription() {
-    const groupUpdate = this.getGroupUpdateAsArray();
-    if (groupUpdate) {
-      const groupName =
-        this.getConversation()?.getNicknameOrRealUsernameOrPlaceholder() || window.i18n('unknown');
-
-      if (groupUpdate.left) {
-        // @ts-expect-error -- TODO: Fix by using new i18n builder
-        const { token, args } = getLeftGroupUpdateChangeStr(groupUpdate.left, groupName);
-        // TODO: clean up this typing
-        return window.i18n.stripped(...([token, args] as GetMessageArgs<LocalizerToken>));
-      }
-
-      if (groupUpdate.name) {
-        return window.i18n.stripped('groupNameNew', { group_name: groupUpdate.name });
-      }
-
-      if (groupUpdate.joined?.length) {
-        // @ts-expect-error -- TODO: Fix by using new i18n builder
-        const { token, args } = getJoinedGroupUpdateChangeStr(groupUpdate.joined, groupName);
-        // TODO: clean up this typing
-        return window.i18n.stripped(...([token, args] as GetMessageArgs<LocalizerToken>));
-      }
-
-      if (groupUpdate.kicked?.length) {
-        // @ts-expect-error -- TODO: Fix by using new i18n builder
-        const { token, args } = getKickedGroupUpdateStr(groupUpdate.kicked, groupName);
-        // TODO: clean up this typing
-        return window.i18n.stripped(...([token, args] as GetMessageArgs<LocalizerToken>));
-      }
-      window.log.warn('did not build a specific change for getDescription of ', groupUpdate);
-
-      return window.i18n.stripped('groupUpdated');
-    }
-
-    if (this.isGroupInvitation()) {
-      return `😎 ${window.i18n.stripped('communityInvitation')}`;
-    }
-
-    if (this.isDataExtractionNotification()) {
-      const dataExtraction = this.get(
-        'dataExtractionNotification'
-      ) as DataExtractionNotificationMsg;
-      if (dataExtraction.type === SignalService.DataExtractionNotification.Type.SCREENSHOT) {
-        return window.i18n.stripped('screenshotTaken', {
-          name: getConversationController().getContactProfileNameOrShortenedPubKey(
-            dataExtraction.source
-          ),
-        });
-      }
-
-      return window.i18n.stripped('attachmentsMediaSaved', {
-        name: getConversationController().getContactProfileNameOrShortenedPubKey(
-          dataExtraction.source
-        ),
-      });
-    }
-    if (this.isCallNotification()) {
-      const name = getConversationController().getContactProfileNameOrShortenedPubKey(
-        this.get('conversationId')
-      );
-      const callNotificationType = this.get('callNotificationType');
-      if (callNotificationType === 'missed-call') {
-        return window.i18n.stripped('callsMissedCallFrom', { name });
-      }
-      if (callNotificationType === 'started-call') {
-        return window.i18n.stripped('callsYouCalled', { name });
-      }
-      if (callNotificationType === 'answered-a-call') {
-        return window.i18n.stripped('callsInProgress');
-      }
-    }
-
-    const interactionNotification = this.getInteractionNotification();
-    if (interactionNotification) {
-      const { interactionType, interactionStatus } = interactionNotification;
-
-      // NOTE For now we only show interaction errors in the message history
-      if (interactionStatus === ConversationInteractionStatus.Error) {
-        const convo = getConversationController().get(this.get('conversationId'));
-
-        if (convo) {
-          const isGroup = !convo.isPrivate();
-          const isCommunity = convo.isPublic();
-
-          switch (interactionType) {
-            case ConversationInteractionType.Hide:
-              // there is no text for hiding changes
-              return '';
-            case ConversationInteractionType.Leave:
-              return isCommunity
-                ? window.i18n.stripped('communityLeaveError', {
-                    community_name: convo.getNicknameOrRealUsernameOrPlaceholder(),
-                  })
-                : isGroup
-                  ? window.i18n.stripped('groupLeaveErrorFailed', {
-                      group_name: convo.getNicknameOrRealUsernameOrPlaceholder(),
-                    })
-                  : '';
-            default:
-              assertUnreachable(
-                interactionType,
-                `Message.getDescription: Missing case error "${interactionType}"`
-              );
-          }
-        }
-      }
-    }
-
-    if (this.get('reaction')) {
-      const reaction = this.get('reaction');
-      if (reaction && reaction.emoji && reaction.emoji !== '') {
-        return window.i18n.stripped('emojiReactsNotification', { emoji: reaction.emoji });
-      }
-    }
-    return this.get('body');
   }
 
   // NOTE We want to replace Backbone .get() calls with these getters as we migrate to Redux completely eventually

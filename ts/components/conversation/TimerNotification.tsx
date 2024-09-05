@@ -10,8 +10,6 @@ import {
   useSelectedExpireTimer,
   useSelectedIsGroupOrCommunity,
   useSelectedIsGroupV2,
-  useSelectedIsNoteToSelf,
-  useSelectedIsPrivate,
   useSelectedIsPrivateFriend,
 } from '../../state/selectors/selectedConversation';
 import { ReleasedFeatures } from '../../util/releaseFeature';
@@ -47,17 +45,17 @@ function useFollowSettingsButtonClick(
         ? window.i18n('disappearingMessagesTypeRead')
         : window.i18n('disappearingMessagesTypeSent');
 
-    const i18nMessage = props.disabled
-      ? ({
+    const i18nMessage: LocalizerComponentProps<LocalizerToken> = props.disabled
+      ? {
           token: 'disappearingMessagesFollowSettingOff',
-        } as LocalizerComponentProps<'disappearingMessagesFollowSettingOff'>)
-      : ({
+        }
+      : {
           token: 'disappearingMessagesFollowSettingOn',
           args: {
             time: props.timespanText,
             disappearing_messages_type: localizedMode,
           },
-        } as LocalizerComponentProps<'disappearingMessagesFollowSettingOn'>);
+        };
 
     const okText = props.disabled ? window.i18n('yes') : window.i18n('set');
 
@@ -142,21 +140,21 @@ const FollowSettingsButton = (props: PropsForExpirationTimer) => {
   );
 };
 
-function useTextToRenderI18nProps(props: PropsForExpirationTimer) {
-  const { pubkey, profileName, expirationMode, timespanText: time, type, disabled } = props;
+function useTextToRenderI18nProps(
+  props: PropsForExpirationTimer
+): LocalizerComponentProps<LocalizerToken> {
+  const { pubkey: authorPk, profileName, expirationMode, timespanText: time, disabled } = props;
 
-  const isPrivate = useSelectedIsPrivate();
-  const isNoteToSelf = useSelectedIsNoteToSelf();
-  const isPrivateAndNotNoteToSelf = isPrivate && !isNoteToSelf;
+  const authorIsUs = authorPk === UserUtils.getOurPubKeyStrFromCache();
 
-  const name = profileName ?? pubkey;
+  const name = profileName ?? authorPk;
 
   // TODO: legacy messages support will be removed in a future release
   if (isLegacyDisappearingModeEnabled(expirationMode)) {
     return {
       token: 'deleteAfterLegacyDisappearingMessagesTheyChangedTimer',
       args: {
-        name: type === 'fromOther' ? name : window.i18n('you'),
+        name: authorIsUs ? window.i18n('you') : name,
         time,
       },
     };
@@ -168,7 +166,7 @@ function useTextToRenderI18nProps(props: PropsForExpirationTimer) {
       : window.i18n('disappearingMessagesTypeSent');
 
   if (disabled) {
-    if (type === 'fromMe' || isPrivateAndNotNoteToSelf) {
+    if (authorIsUs) {
       return {
         token: 'disappearingMessagesTurnedOffYou',
       };
@@ -180,12 +178,22 @@ function useTextToRenderI18nProps(props: PropsForExpirationTimer) {
       },
     };
   }
+  if (authorIsUs) {
+    return {
+      token: 'disappearingMessagesSetYou',
+      args: {
+        time,
+        disappearing_messages_type,
+      },
+    };
+  }
 
   return {
-    token: 'disappearingMessagesSetYou',
+    token: 'disappearingMessagesSet',
     args: {
       time,
       disappearing_messages_type,
+      name,
     },
   };
 }
@@ -193,7 +201,7 @@ function useTextToRenderI18nProps(props: PropsForExpirationTimer) {
 export const TimerNotification = (props: PropsForExpirationTimer) => {
   const { messageId } = props;
 
-  const i18nProps = useTextToRenderI18nProps(props) as LocalizerComponentProps<LocalizerToken>;
+  const i18nProps = useTextToRenderI18nProps(props);
   const isGroupOrCommunity = useSelectedIsGroupOrCommunity();
   const isGroupV2 = useSelectedIsGroupV2();
   // renderOff is true when the update is put to off, or when we have a legacy group control message (as they are not expiring at all)
