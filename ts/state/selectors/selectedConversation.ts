@@ -17,25 +17,6 @@ import {
 } from './conversations';
 import { getCanWrite, getModerators, getSubscriberCount } from './sogsRoomInfo';
 
-/**
- * Returns the formatted text for notification setting.
- */
-const getCurrentNotificationSettingText = (state: StateType): string | undefined => {
-  if (!state) {
-    return undefined;
-  }
-  const currentNotificationSetting = getSelectedConversation(state)?.currentNotificationSetting;
-  switch (currentNotificationSetting) {
-    case 'mentions_only':
-      return window.i18n('notificationsMentionsOnly');
-    case 'disabled':
-      return window.i18n('notificationsMute');
-    case 'all':
-    default:
-      return window.i18n('notificationsAllMessages');
-  }
-};
-
 const getIsSelectedPrivate = (state: StateType): boolean => {
   return Boolean(getSelectedConversation(state)?.isPrivate) || false;
 };
@@ -118,6 +99,19 @@ function getSelectedBlindedDisabledMsgRequests(state: StateType) {
   );
 
   return isBlindedAndDisabledMsgRequests;
+}
+
+/**
+ * Defaults to 'all' if undefined
+ */
+function getSelectedNotificationSetting(state: StateType) {
+  const selectedConvoPubkey = getSelectedConversationKey(state);
+  if (!selectedConvoPubkey) {
+    return false;
+  }
+  const selectedConvo = getSelectedConversation(state);
+
+  return selectedConvo?.currentNotificationSetting || 'all';
 }
 
 const getSelectedConversationType = (state: StateType): ConversationTypeEnum | null => {
@@ -239,6 +233,10 @@ export function useSelectedHasDisabledBlindedMsgRequests() {
   return useSelector(getSelectedBlindedDisabledMsgRequests);
 }
 
+export function useSelectedNotificationSetting() {
+  return useSelector(getSelectedNotificationSetting);
+}
+
 /**
  * Returns true if the given arguments corresponds to a private contact which is approved both sides. i.e. a friend.
  */
@@ -283,10 +281,6 @@ export function useSelectedMembers() {
 
 export function useSelectedSubscriberCount() {
   return useSelector(getSelectedSubscriberCount);
-}
-
-export function useSelectedNotificationSetting() {
-  return useSelector(getCurrentNotificationSettingText);
 }
 
 export function useSelectedIsKickedFromGroup() {

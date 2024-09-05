@@ -34,6 +34,19 @@ type ConversationHeaderTitleProps = {
   showSubtitle?: boolean;
 };
 
+function useLocalizedNotificationText() {
+  const currentNotificationSetting = useSelectedNotificationSetting();
+  switch (currentNotificationSetting) {
+    case 'mentions_only':
+      return window.i18n('notificationsHeaderMentionsOnly');
+    case 'disabled':
+      return window.i18n('notificationsHeaderMute');
+    case 'all':
+    default:
+      return window.i18n('notificationsHeaderAllMessages');
+  }
+}
+
 export const ConversationHeaderTitle = (props: ConversationHeaderTitleProps) => {
   const { showSubtitle = true } = props;
 
@@ -41,7 +54,6 @@ export const ConversationHeaderTitle = (props: ConversationHeaderTitleProps) => 
   const convoId = useSelectedConversationKey();
   const convoName = useSelectedNicknameOrProfileNameOrShortenedPubkey();
 
-  const notificationSetting = useSelectedNotificationSetting();
   const isRightPanelOn = useIsRightPanelShowing();
   const subscriberCount = useSelectedSubscriberCount();
 
@@ -65,10 +77,7 @@ export const ConversationHeaderTitle = (props: ConversationHeaderTitleProps) => 
 
   const { i18n } = window;
 
-  const notificationSubtitle = useMemo(
-    () => (notificationSetting ? i18n('sessionNotifications') : null),
-    [i18n, notificationSetting]
-  );
+  const notificationSubtitle = useLocalizedNotificationText();
 
   const memberCountSubtitle = useMemo(() => {
     let count = 0;
