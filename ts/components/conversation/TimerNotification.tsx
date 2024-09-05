@@ -57,7 +57,7 @@ function useFollowSettingsButtonClick(
           },
         };
 
-    const okText = props.disabled ? window.i18n('yes') : window.i18n('set');
+    const okText = window.i18n('confirm');
 
     dispatch(
       updateConfirmModal({

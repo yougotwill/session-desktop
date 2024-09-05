@@ -206,7 +206,6 @@ export const OverlayRightPanelSettings = () => {
   const weAreAdmin = useSelectedWeAreAdmin();
   const disappearingMessagesSubtitle = useDisappearingMessageSettingText({
     convoId: selectedConvoKey,
-    separator: ': ',
   });
   const lastMessage = useSelectedLastMessage();
 

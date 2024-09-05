@@ -398,32 +398,16 @@ export function useSortedGroupMembers(convoId: string | undefined): Array<string
 export function useDisappearingMessageSettingText({
   convoId,
   abbreviate,
-  separator = ' - ',
 }: {
   convoId?: string;
   abbreviate?: boolean;
-  separator?: string;
 }): string {
   const convoProps = useConversationPropsById(convoId);
   if (!convoProps) {
     return '';
   }
 
-  const { expirationMode, expireTimer, isMe, isPublic } = convoProps;
-
-  const isGroup = !convoProps.isPrivate && !convoProps.isPublic;
-
-  // TODO legacy messages support will be removed in a future release
-  const expirationModeText =
-    expirationMode === 'deleteAfterRead'
-      ? window.i18n('disappearingMessagesDisappearAfterRead')
-      : expirationMode === 'deleteAfterSend'
-        ? window.i18n('disappearingMessagesDisappearAfterSend')
-        : expirationMode === 'legacy'
-          ? isMe || (isGroup && !isPublic)
-            ? window.i18n('disappearingMessagesDisappearAfterSend')
-            : window.i18n('disappearingMessagesDisappearAfterRead')
-          : null;
+  const { expirationMode, expireTimer } = convoProps;
 
   const expireTimerText = isNumber(expireTimer)
     ? abbreviate
@@ -431,9 +415,19 @@ export function useDisappearingMessageSettingText({
       : TimerOptions.getName(expireTimer)
     : null;
 
-  return expireTimer && expirationModeText
-    ? `${expirationModeText}${expireTimerText ? `${separator}${expireTimerText}` : ''}`
-    : '';
+  if (!expireTimerText) {
+    return '';
+  }
+
+  if (expirationMode === 'legacy') {
+    throw new Error('legacy support is removed');
+  }
+
+  return expirationMode === 'deleteAfterRead'
+    ? window.i18n('disappearingMessagesDisappearAfterReadState', { time: expireTimerText })
+    : expirationMode === 'deleteAfterSend'
+      ? window.i18n('disappearingMessagesDisappearAfterSendState', { time: expireTimerText })
+      : '';
 }
 
 export function useLastMessage(convoId?: string) {
