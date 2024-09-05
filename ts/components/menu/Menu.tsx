@@ -24,7 +24,6 @@ import {
   approveConvoAndSendResponse,
   blockConvoById,
   clearNickNameByConvoId,
-  copyPublicKeyByConvoId,
   declineConversationWithConfirm,
   deleteAllMessagesByConvoIdWithConfirmation,
   markAllReadByConvoId,
@@ -40,6 +39,10 @@ import {
   unblockConvoById,
 } from '../../interactions/conversationInteractions';
 import {
+  ConversationInteractionStatus,
+  ConversationInteractionType,
+} from '../../interactions/types';
+import {
   ConversationNotificationSetting,
   ConversationNotificationSettingType,
 } from '../../models/conversationAttributes';
@@ -54,10 +57,6 @@ import { getIsMessageSection } from '../../state/selectors/section';
 import { useSelectedConversationKey } from '../../state/selectors/selectedConversation';
 import { LocalizerToken } from '../../types/Localizer';
 import { SessionButtonColor } from '../basic/SessionButton';
-import {
-  ConversationInteractionType,
-  ConversationInteractionStatus,
-} from '../../interactions/types';
 
 /** Menu items standardized */
 
@@ -291,29 +290,6 @@ export const BanMenuItem = (): JSX.Element | null => {
         }}
       >
         {window.i18n('banUser')}
-      </Item>
-    );
-  }
-  return null;
-};
-
-export const CopyMenuItem = (): JSX.Element | null => {
-  const convoId = useConvoIdFromContext();
-  const isPublic = useIsPublic(convoId);
-  const isPrivate = useIsPrivate(convoId);
-  const isBlinded = useIsBlinded(convoId);
-
-  // we want to show the copyId for open groups and private chats only
-
-  if ((isPrivate && !isBlinded) || isPublic) {
-    const copyIdLabel = isPublic ? window.i18n('communityUrlCopy') : window.i18n('accountIDCopy');
-    return (
-      <Item
-        onClick={() => {
-          void copyPublicKeyByConvoId(convoId);
-        }}
-      >
-        {copyIdLabel}
       </Item>
     );
   }

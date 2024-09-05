@@ -48,6 +48,8 @@ import { Reactions } from '../../../../util/reactions';
 import { SessionContextMenuContainer } from '../../../SessionContextMenuContainer';
 import { SessionEmojiPanel, StyledEmojiPanel } from '../../SessionEmojiPanel';
 import { MessageReactBar } from './MessageReactBar';
+import { showCopyAccountIdAction } from '../../../menu/items/CopyAccountId';
+import { CopyAccountIdMenuItem } from '../../../menu/items/CopyAccountId/CopyAccountIdMenuItem';
 
 export type MessageContextMenuSelectorProps = Pick<
   MessageRenderingProps,
@@ -382,6 +384,10 @@ export const MessageContextMenu = (props: Props) => {
           >
             {window.i18n('info')}
           </Item>
+          {/* this is a message in the view, so always private */}
+          {sender && showCopyAccountIdAction({ isPrivate: true, pubkey: sender }) ? (
+            <CopyAccountIdMenuItem pubkey={sender} />
+          ) : null}
           <RetryItem messageId={messageId} />
           {isDeletable ? <Item onClick={onSelect}>{selectMessageText}</Item> : null}
           <DeleteItem messageId={messageId} />

@@ -19,7 +19,6 @@ import {
   resendMessage,
 } from '../../../../../interactions/conversationInteractions';
 import { deleteMessagesById } from '../../../../../interactions/conversations/unsendingInteractions';
-import { PubKey } from '../../../../../session/types';
 import {
   useMessageAttachments,
   useMessageAuthor,
@@ -52,6 +51,7 @@ import { Message } from '../../../message/message-item/Message';
 import { AttachmentInfo, MessageInfo } from './components';
 import { AttachmentCarousel } from './components/AttachmentCarousel';
 import { ToastUtils } from '../../../../../session/utils';
+import { showCopyAccountIdAction } from '../../../../menu/items/CopyAccountId';
 
 // NOTE we override the default max-widths when in the detail isDetailView
 const StyledMessageBody = styled.div`
@@ -242,9 +242,10 @@ function CopySenderSessionId({ messageId }: WithMessageIdOpt) {
   const senderId = useMessageAuthor(messageId);
 
   const isGroup = isGroupOrCommunity && !isPublic;
-  const isPrivateButNotBlinded = senderId && isPrivate && !PubKey.isBlinded(senderId);
+  const isPrivateAndShouldShow =
+    senderId && showCopyAccountIdAction({ isPrivate, pubkey: senderId });
 
-  if (senderId && (isGroup || isPrivateButNotBlinded)) {
+  if (senderId && (isGroup || isPrivateAndShouldShow)) {
     return (
       <PanelIconButton
         text={window.i18n('accountIDCopy')}

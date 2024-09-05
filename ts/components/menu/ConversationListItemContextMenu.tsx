@@ -13,7 +13,6 @@ import {
   BlockMenuItem,
   ChangeNicknameMenuItem,
   ClearNicknameMenuItem,
-  CopyMenuItem,
   DeclineAndBlockMsgRequestMenuItem,
   DeclineMsgRequestMenuItem,
   DeleteMessagesMenuItem,
@@ -26,6 +25,8 @@ import {
   ShowUserDetailsMenuItem,
   UnbanMenuItem,
 } from './Menu';
+import { CopyCommunityUrlMenuItem } from './items/CopyCommunityUrl/CopyCommunityUrlMenuItem';
+import { CopyAccountIdMenuItem } from './items/CopyAccountId/CopyAccountIdMenuItem';
 
 export type PropsContextConversationItem = {
   triggerId: string;
@@ -34,6 +35,8 @@ export type PropsContextConversationItem = {
 const ConversationListItemContextMenu = (props: PropsContextConversationItem) => {
   const { triggerId } = props;
   const isSearching = useIsSearching();
+
+  const convoIdFromContext = useConvoIdFromContext();
 
   if (isSearching) {
     return null;
@@ -51,7 +54,8 @@ const ConversationListItemContextMenu = (props: PropsContextConversationItem) =>
         <NotificationForConvoMenuItem />
 
         <BlockMenuItem />
-        <CopyMenuItem />
+        <CopyCommunityUrlMenuItem convoId={convoIdFromContext} />
+        <CopyAccountIdMenuItem pubkey={convoIdFromContext} />
         {/* Read state actions */}
         <MarkAllReadMenuItem />
         <MarkConversationUnreadMenuItem />
