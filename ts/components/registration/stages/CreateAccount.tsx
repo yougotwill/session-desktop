@@ -107,7 +107,7 @@ export const CreateAccount = () => {
       );
       dispatch(setAccountCreationStep(AccountCreation.DisplayName));
       // Note: we have to assume here that libsession threw an error because the name was too long.
-      // The error reporterd by libsession is not localized
+      // The error reported by libsession is not localized
       dispatch(setDisplayNameError(window.i18n('displayNameErrorDescriptionShorter')));
     }
   };

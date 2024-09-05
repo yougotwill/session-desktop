@@ -1,6 +1,8 @@
 import { isDevProd } from '../../shared/env_vars';
-import { formatAbbreviatedExpireTimer } from '../../util/i18n/formater/expirationTimer';
-import { formatTimeDuration } from '../../util/i18n/formater/generics';
+import {
+  formatAbbreviatedExpireTimer,
+  formatNonAbbreviatedExpireTimer,
+} from '../../util/i18n/formater/expirationTimer';
 import { DURATION_SECONDS } from '../constants';
 
 type TimerOptionsEntry = { name: string; value: number };
@@ -40,13 +42,13 @@ function getName(seconds = 0) {
     return window.i18n('off');
   }
   if (seconds > 0) {
-    return formatTimeDuration(seconds * 1000);
+    return formatNonAbbreviatedExpireTimer(seconds);
   }
 
   return [seconds, 'seconds'].join(' ');
 }
 
-function getAbbreviated(seconds = 0) {
+function getAbbreviated(seconds: number) {
   if (seconds >= 0) {
     return formatAbbreviatedExpireTimer(seconds);
   }

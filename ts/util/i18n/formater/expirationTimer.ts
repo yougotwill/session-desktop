@@ -1,6 +1,7 @@
 import { Duration, formatDuration, intervalToDuration } from 'date-fns';
 import { DURATION_SECONDS } from '../../../session/constants';
 import { getForcedEnglishTimeLocale } from '../timeLocaleMap';
+import { getTimeLocaleDictionary } from '../shared';
 
 /**
  * We decided against localizing the abbreviated durations like 1h, 1m, 1s as most apps don't.
@@ -52,6 +53,12 @@ const secondsToDuration = (seconds: number): Duration => {
   return duration;
 };
 
+function assertIsValidExpirationTimerSeconds(timerSeconds: number) {
+  if (timerSeconds > DURATION_SECONDS.WEEKS * 4) {
+    throw new Error('assertIsValidExpirationTimer is not design to handle >4 weeks durations ');
+  }
+}
+
 /**
  * Format an expiring/disappearing message timer to its abbreviated form.
  * Note: we don't localize this, and cannot have a value > 4 weeks
@@ -60,9 +67,7 @@ const secondsToDuration = (seconds: number): Duration => {
  * @returns '1h' for a duration of 3600s.
  */
 export const formatAbbreviatedExpireTimer = (timerSeconds: number) => {
-  if (timerSeconds > DURATION_SECONDS.WEEKS * 4) {
-    throw new Error('formatAbbreviatedExpireTimer is not design to handle >4 weeks durations ');
-  }
+  assertIsValidExpirationTimerSeconds(timerSeconds);
   if (timerSeconds <= 0) {
     return window.i18n('off');
   }
@@ -74,6 +79,27 @@ export const formatAbbreviatedExpireTimer = (timerSeconds: number) => {
   });
 
   return unlocalizedDurationToAbbreviated(unlocalized);
+};
+
+/**
+ * Format an expiring/disappearing message timer to its full localized form.
+ * Note: throws if the value is > 4 weeks
+ *
+ * @param timerSeconds the timer to format, in seconds
+ * @returns '1hour' for a duration of 3600s.
+ */
+export const formatNonAbbreviatedExpireTimer = (timerSeconds: number) => {
+  assertIsValidExpirationTimerSeconds(timerSeconds);
+
+  if (timerSeconds <= 0) {
+    return window.i18n('off');
+  }
+
+  const duration = secondsToDuration(timerSeconds);
+
+  return formatDuration(duration, {
+    locale: getTimeLocaleDictionary(), // we want the full form  to be localized
+  });
 };
 
 /**

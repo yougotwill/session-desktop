@@ -102,16 +102,10 @@ function getSelectedBlindedDisabledMsgRequests(state: StateType) {
 }
 
 /**
- * Defaults to 'all' if undefined
+ * Defaults to 'all' if undefined/unset
  */
 function getSelectedNotificationSetting(state: StateType) {
-  const selectedConvoPubkey = getSelectedConversationKey(state);
-  if (!selectedConvoPubkey) {
-    return false;
-  }
-  const selectedConvo = getSelectedConversation(state);
-
-  return selectedConvo?.currentNotificationSetting || 'all';
+  return getSelectedConversation(state)?.currentNotificationSetting || 'all';
 }
 
 const getSelectedConversationType = (state: StateType): ConversationTypeEnum | null => {
