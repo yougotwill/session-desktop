@@ -156,12 +156,17 @@ export const declineConversationWithConfirm = ({
   syncToDevices: boolean;
   blockContact: boolean; // if set to false, the contact will just be set to not approved
 }) => {
+  const convoName =
+    getConversationController().get(conversationId)?.getNicknameOrRealUsernameOrPlaceholder() ||
+    window.i18n('unknown');
   window?.inboxStore?.dispatch(
     updateConfirmModal({
       okText: blockContact ? window.i18n('block') : window.i18n('delete'),
       cancelText: window.i18n('cancel'),
-      title: window.i18n('delete'),
-      i18nMessage: { token: 'messageRequestsDelete' },
+      title: blockContact ? window.i18n('block') : window.i18n('delete'),
+      i18nMessage: blockContact
+        ? { token: 'blockDescription', args: { name: convoName } }
+        : { token: 'messageRequestsDelete' },
       onClickOk: async () => {
         await declineConversationWithoutConfirm({
           conversationId,
