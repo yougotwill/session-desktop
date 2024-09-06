@@ -10,7 +10,9 @@ import {
   useSelectedExpireTimer,
   useSelectedIsGroupOrCommunity,
   useSelectedIsGroupV2,
+  useSelectedIsLegacyGroup,
   useSelectedIsPrivateFriend,
+  useSelectedIsPublic,
 } from '../../state/selectors/selectedConversation';
 import { ReleasedFeatures } from '../../util/releaseFeature';
 import { Flex } from '../basic/Flex';
@@ -20,10 +22,10 @@ import { ExpirableReadableMessage } from './message/message-item/ExpirableReadab
 import { ConversationInteraction } from '../../interactions';
 import { getConversationController } from '../../session/conversations';
 import { updateConfirmModal } from '../../state/ducks/modalDialog';
+import type { LocalizerComponentProps, LocalizerToken } from '../../types/Localizer';
+import { Localizer } from '../basic/Localizer';
 import { SessionButtonColor } from '../basic/SessionButton';
 import { SessionIcon } from '../icon';
-import { Localizer } from '../basic/Localizer';
-import type { LocalizerComponentProps, LocalizerToken } from '../../types/Localizer';
 
 const FollowSettingButton = styled.button`
   color: var(--primary-color);
@@ -145,6 +147,8 @@ function useTextToRenderI18nProps(
 ): LocalizerComponentProps<LocalizerToken> {
   const { pubkey: authorPk, profileName, expirationMode, timespanText: time, disabled } = props;
 
+  const isLegacyGroup = useSelectedIsLegacyGroup();
+
   const authorIsUs = authorPk === UserUtils.getOurPubKeyStrFromCache();
 
   const name = profileName ?? authorPk;
@@ -165,14 +169,32 @@ function useTextToRenderI18nProps(
       ? window.i18n('disappearingMessagesTypeRead')
       : window.i18n('disappearingMessagesTypeSent');
 
+  if (isLegacyGroup) {
+    if (disabled) {
+      if (authorIsUs) {
+        return {
+          token: 'disappearingMessagesTurnedOffYouGroup',
+        };
+      }
+      return {
+        token: 'disappearingMessagesTurnedOffGroup',
+        args: {
+          name,
+        },
+      };
+    }
+  }
+
   if (disabled) {
     if (authorIsUs) {
       return {
-        token: 'disappearingMessagesTurnedOffYou',
+        token: isLegacyGroup
+          ? 'disappearingMessagesTurnedOffYouGroup'
+          : 'disappearingMessagesTurnedOffYou',
       };
     }
     return {
-      token: 'disappearingMessagesTurnedOff',
+      token: isLegacyGroup ? 'disappearingMessagesTurnedOffGroup' : 'disappearingMessagesTurnedOff',
       args: {
         name,
       },
@@ -204,8 +226,9 @@ export const TimerNotification = (props: PropsForExpirationTimer) => {
   const i18nProps = useTextToRenderI18nProps(props);
   const isGroupOrCommunity = useSelectedIsGroupOrCommunity();
   const isGroupV2 = useSelectedIsGroupV2();
+  const isPublic = useSelectedIsPublic();
   // renderOff is true when the update is put to off, or when we have a legacy group control message (as they are not expiring at all)
-  const renderOffIcon = props.disabled || (isGroupOrCommunity && !isGroupV2);
+  const renderOffIcon = props.disabled || (isGroupOrCommunity && isPublic && !isGroupV2);
 
   return (
     <ExpirableReadableMessage

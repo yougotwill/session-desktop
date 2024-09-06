@@ -203,8 +203,35 @@ export function useSelectedIsGroupV2() {
   return useSelector(getSelectedConversationIsGroupV2);
 }
 
+/**
+ *
+ * @returns true if the selected conversation is a group (or group v2), but not a community
+ */
+export function useSelectedIsGroupOrGroupV2() {
+  const isGroupOrCommunity = useSelectedIsGroupOrCommunity();
+  const isPublic = useSelectedIsPublic();
+
+  return isGroupOrCommunity && !isPublic;
+}
+
+/**
+ *
+ * @returns true if the selected conversation is a community (public groups)
+ */
 export function useSelectedIsPublic() {
   return useSelector(getSelectedConversationIsPublic);
+}
+
+/**
+ *
+ * @returns true if the conversation is a legacy group (closed group with a 05 pubkey)
+ */
+export function useSelectedIsLegacyGroup() {
+  const isGroupOrCommunity = useSelectedIsGroupOrCommunity();
+  const isGroupV2 = useSelectedIsGroupV2();
+  const isPublic = useSelectedIsPublic();
+
+  return isGroupOrCommunity && !isGroupV2 && !isPublic;
 }
 
 export function useSelectedIsPrivate() {

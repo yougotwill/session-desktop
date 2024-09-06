@@ -891,11 +891,12 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
      * - ignores a off setting for a legacy group (as we can get a setting from restored from configMessage, and a newgroup can still be in the swarm when linking a device
      */
     const shouldAddExpireUpdateMsgGroup =
-      isLegacyGroup &&
-      !fromConfigMessage &&
-      (expirationMode !== this.get('expirationMode') || expireTimer !== this.get('expireTimer')) &&
-      expirationMode !== 'off';
-
+      fromCurrentDevice ||
+      (isLegacyGroup &&
+        !fromConfigMessage &&
+        (expirationMode !== this.get('expirationMode') ||
+          expireTimer !== this.get('expireTimer')) &&
+        expirationMode !== 'off');
     const shouldAddExpireUpdateMessage =
       shouldAddExpireUpdateMsgPrivate || shouldAddExpireUpdateMsgGroup;
 
