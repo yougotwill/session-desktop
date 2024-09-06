@@ -391,9 +391,9 @@ class CompositionBoxInner extends Component<Props, State> {
     const { showEmojiPanel } = this.state;
     const { typingEnabled } = this.props;
 
-    // we can only send a message if the conversation allows writing in it
-    // - we've got a message body
-    // - or we've got a staged attachments
+    // we can only send a message if the conversation allows writing in it AND
+    // - we've got a message body OR
+    // - we've got a staged attachments
     const showSendButton =
       typingEnabled && (!isEmpty(this.state.draft) || !isEmpty(this.props.stagedAttachments));
 
@@ -674,7 +674,7 @@ class CompositionBoxInner extends Component<Props, State> {
       const onSave = (caption: string) => {
         // eslint-disable-next-line no-param-reassign
         attachment.caption = caption;
-        ToastUtils.pushToastInfo('saved', window.i18n('saved'));
+        ToastUtils.pushToastInfo('saved', window.i18n.stripped('saved'));
         // close the lightbox on save
         this.setState({
           showCaptionEditor: undefined,

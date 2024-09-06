@@ -3,7 +3,7 @@
 
 import { expect } from 'chai';
 import { initI18n, testDictionary } from './util';
-import { resetTranslationDictionary } from '../../../../../util/i18n/translationDictionaries';
+import { resetLocaleAndTranslationDict } from '../../../../../util/i18n/shared';
 
 describe('getMessage', () => {
   let i18n;
@@ -12,7 +12,7 @@ describe('getMessage', () => {
   });
 
   afterEach(() => {
-    resetTranslationDictionary();
+    resetLocaleAndTranslationDict();
   });
 
   it('returns the message for a token', () => {

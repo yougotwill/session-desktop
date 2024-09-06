@@ -4,7 +4,6 @@ import { isEmpty } from 'lodash';
 import { LocalizerDictionary, SetupI18nReturnType } from '../../types/Localizer';
 import { getMessage } from './functions/getMessage';
 import { i18nLog, Locale, setInitialLocale } from './shared';
-import { setTranslationDictionary } from './translationDictionaries';
 
 /**
  * Sets up the i18n function with the provided locale and messages.
@@ -30,8 +29,7 @@ export const setupI18n = ({
     throw new Error('translationDictionary was not provided');
   }
 
-  setTranslationDictionary(translationDictionary);
-  setInitialLocale(locale);
+  setInitialLocale(locale, translationDictionary);
 
   i18nLog(`Setup Complete with locale: ${locale}`);
 

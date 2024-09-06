@@ -218,8 +218,8 @@ export class SessionSetPasswordDialog extends Component<Props, State> {
 
       ToastUtils.pushToastSuccess(
         'setPasswordSuccessToast',
-        window.i18n('passwordSet'),
-        window.i18n('passwordSetDescription')
+        window.i18n.stripped('passwordSet'),
+        window.i18n.stripped('passwordSetDescription')
       );
 
       this.props.onOk();
@@ -271,7 +271,7 @@ export class SessionSetPasswordDialog extends Component<Props, State> {
 
       ToastUtils.pushToastSuccess(
         'setPasswordSuccessToast',
-        window.i18n('passwordChangedDescription')
+        window.i18n.stripped('passwordChangedDescription')
       );
 
       this.props.onOk();
@@ -310,7 +310,7 @@ export class SessionSetPasswordDialog extends Component<Props, State> {
 
       ToastUtils.pushToastWarning(
         'setPasswordSuccessToast',
-        window.i18n('passwordRemovedDescription')
+        window.i18n.stripped('passwordRemovedDescription')
       );
 
       this.props.onOk();

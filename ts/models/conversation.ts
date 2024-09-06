@@ -2053,7 +2053,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     const roomInfo = OpenGroupData.getV2OpenGroupRoom(groupUrl);
 
     if (!roomInfo || !roomInfo.serverPublicKey) {
-      ToastUtils.pushToastError('no-sogs-matching', window.i18n('communityJoinError'));
+      ToastUtils.pushToastError('no-sogs-matching', window.i18n.stripped('communityJoinError'));
       window?.log?.error('Could not find room with matching server url', groupUrl);
       throw new Error(`Could not find room with matching server url: ${groupUrl}`);
     }

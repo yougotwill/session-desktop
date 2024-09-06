@@ -182,7 +182,6 @@
     "chai": "^4.3.4",
     "chai-as-promised": "^7.1.1",
     "chai-bytes": "^0.1.2",
-    "concurrently": "^8.2.2",
     "cross-env": "^6.0.3",
     "css-loader": "^6.7.2",
     "dmg-builder": "23.6.0",

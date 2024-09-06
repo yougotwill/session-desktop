@@ -74,7 +74,7 @@ export const MessageLinkPreview = (props: Props) => {
           <div className="module-message__link-preview__image_container">
             <Image
               softCorners={true}
-              alt={first.domain}
+              alt={`Link preview for ${first.domain}`} // TODO this needs to be fixed via crowdin
               height={linkPreviewsImageSize}
               width={linkPreviewsImageSize}
               url={first.image.url}

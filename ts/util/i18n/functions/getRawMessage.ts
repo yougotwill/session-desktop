@@ -8,30 +8,11 @@ import {
   PluralKey,
   PluralString,
 } from '../../../types/Localizer';
-import { getLocale, i18nLog } from '../shared';
-import { getTranslationDictionary } from '../translationDictionaries';
+import { getTranslationDictionary, getLocale, getStringForCardinalRule, i18nLog } from '../shared';
 
 function getPluralKey<R extends PluralKey | undefined>(string: PluralString): R {
   const match = /{(\w+), plural, one \[.+\] other \[.+\]}/g.exec(string);
   return (match?.[1] ?? undefined) as R;
-}
-
-function getStringForCardinalRule(
-  localizedString: string,
-  cardinalRule: Intl.LDMLPluralRule
-): string | undefined {
-  // TODO: investigate if this is the best way to handle regex like this
-  const cardinalPluralRegex: Record<Intl.LDMLPluralRule, RegExp> = {
-    zero: /zero \[(.*?)\]/g,
-    one: /one \[(.*?)\]/g,
-    two: /two \[(.*?)\]/g,
-    few: /few \[(.*?)\]/g,
-    many: /many \[(.*?)\]/g,
-    other: /other \[(.*?)\]/g,
-  };
-  const regex = cardinalPluralRegex[cardinalRule];
-  const match = regex.exec(localizedString);
-  return match?.[1] ?? undefined;
 }
 
 const isPluralForm = (localizedString: string): localizedString is PluralString =>

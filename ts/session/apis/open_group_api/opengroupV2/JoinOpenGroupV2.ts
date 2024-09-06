@@ -140,7 +140,10 @@ export async function joinOpenGroupV2WithUIEvents(
     const parsedRoom = parseOpenGroupV2(completeUrl);
     if (!parsedRoom) {
       if (showToasts) {
-        ToastUtils.pushToastError('connectToServer', window.i18n('communityEnterUrlErrorInvalid'));
+        ToastUtils.pushToastError(
+          'connectToServer',
+          window.i18n.stripped('communityEnterUrlErrorInvalid')
+        );
       }
       if (errorHandler) {
         errorHandler(window.i18n('communityEnterUrlErrorInvalid'));
@@ -155,7 +158,10 @@ export async function joinOpenGroupV2WithUIEvents(
       await existingConvo.setIsApproved(true, false);
       await existingConvo.commit();
       if (showToasts) {
-        ToastUtils.pushToastError('communityJoinedAlready', window.i18n('communityJoinedAlready'));
+        ToastUtils.pushToastError(
+          'communityJoinedAlready',
+          window.i18n.stripped('communityJoinedAlready')
+        );
       }
       if (errorHandler) {
         errorHandler(window.i18n('communityJoinedAlready'));
@@ -163,7 +169,7 @@ export async function joinOpenGroupV2WithUIEvents(
       return false;
     }
     if (showToasts) {
-      ToastUtils.pushToastInfo('connectingToServer', window.i18n('callsConnecting'));
+      ToastUtils.pushToastInfo('connectingToServer', window.i18n.stripped('callsConnecting'));
     }
 
     uiCallback?.({ loadingState: 'started', conversationKey: conversationID });
@@ -172,14 +178,17 @@ export async function joinOpenGroupV2WithUIEvents(
 
     if (convoCreated) {
       if (showToasts) {
-        ToastUtils.pushToastSuccess('connectToServerSuccess', window.i18n('communityJoined'));
+        ToastUtils.pushToastSuccess(
+          'connectToServerSuccess',
+          window.i18n.stripped('communityJoined')
+        );
       }
       uiCallback?.({ loadingState: 'finished', conversationKey: convoCreated?.id });
 
       return true;
     }
     if (showToasts) {
-      ToastUtils.pushToastError('communityJoinError', window.i18n('communityJoinError'));
+      ToastUtils.pushToastError('communityJoinError', window.i18n.stripped('communityJoinError'));
     }
     if (errorHandler) {
       errorHandler(window.i18n('communityJoinError'));
@@ -189,7 +198,7 @@ export async function joinOpenGroupV2WithUIEvents(
   } catch (error) {
     window?.log?.warn('got error while joining open group:', error.message);
     if (showToasts) {
-      ToastUtils.pushToastError('communityJoinError', window.i18n('communityJoinError'));
+      ToastUtils.pushToastError('communityJoinError', window.i18n.stripped('communityJoinError'));
     }
     if (errorHandler) {
       errorHandler(window.i18n('communityJoinError'));

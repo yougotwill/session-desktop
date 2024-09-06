@@ -117,13 +117,8 @@ type Props = {
 export const ReactionPopup = (props: Props) => {
   const { emoji, senders, tooltipPosition = 'center', count, onClick } = props;
 
-  const { emojiName, emojiAriaLabel } = useMemo(
-    () => ({
-      emojiName: nativeEmojiData?.ids?.[emoji],
-      emojiAriaLabel: nativeEmojiData?.ariaLabels?.[emoji],
-    }),
-    [emoji]
-  );
+  const emojiName = nativeEmojiData?.ids?.[emoji];
+  const emojiAriaLabel = nativeEmojiData?.ariaLabels?.[emoji];
 
   const { contacts, hasMe } = useMemo(() => generateContactsString(senders), [senders]);
 

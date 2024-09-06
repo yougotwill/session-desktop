@@ -319,7 +319,7 @@ export const getSuggestedFilename = ({
     return attachment.fileName;
   }
   const prefix = 'session-attachment';
-  const suffix = timestamp ? `-${format(new Date(timestamp), 'yyyy-MM-dd-HHmmss')}` : '';
+  const suffix = timestamp ? format(new Date(timestamp), '-yyyy-MM-dd-HHmmss') : '';
   const fileType = getFileExtension(attachment);
   const extension = fileType ? `.${fileType}` : '';
   const indexSuffix = index ? `_${padStart(index.toString(), 3, '0')}` : '';

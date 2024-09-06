@@ -83,7 +83,7 @@ export const StagedAttachmentList = (props: Props) => {
             return (
               <Image
                 key={imageKey}
-                alt={''}
+                alt="Staged Attachment" // TODO localize this (and others alt/aria-labels) via crowdin
                 attachment={attachment}
                 softCorners={true}
                 playIconOverlay={isVideoAttachment(attachment)}

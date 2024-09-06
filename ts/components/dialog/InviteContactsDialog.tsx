@@ -148,7 +148,7 @@ const InviteContactsDialogInner = (props: Props) => {
     return event.key === 'Esc' || event.key === 'Escape';
   }, closeDialog);
 
-  const titleText = `${window.i18n('membersInvite')}`;
+  const titleText = window.i18n('membersInvite');
   const cancelText = window.i18n('cancel');
   const okText = window.i18n('okay');
 

@@ -104,18 +104,21 @@ function formatTimeLeft({ timeLeftMs }: { timeLeftMs: number }) {
   }
 
   const parts = formatAbbreviatedExpireDoubleTimer(timeLeftSeconds);
-  if (parts.length === 2) {
-    return window.i18n('disappearingMessagesCountdownBigSmall', {
-      time_large: parts[0],
-      time_small: parts[1],
-    });
+  switch (parts.length) {
+    case 2:
+      return window.i18n('disappearingMessagesCountdownBigSmall', {
+        time_large: parts[0],
+        time_small: parts[1],
+      });
+
+    case 1:
+      return window.i18n('disappearingMessagesCountdownBig', {
+        time_large: parts[0],
+      });
+
+    default:
+      throw new Error('formatTimeLeft unexpected duration given');
   }
-  if (parts.length === 1) {
-    return window.i18n('disappearingMessagesCountdownBig', {
-      time_large: parts[0],
-    });
-  }
-  throw new Error('formatTimeLeft unexpected duration given');
 }
 
 const ExpiresInItem = ({ expirationTimestamp }: { expirationTimestamp?: number | null }) => {

@@ -78,7 +78,7 @@ export const IncomingCallDialog = () => {
     return (
       <SessionWrapperModal
         title={window.i18n('callsIncoming', {
-          name: from ?? 'unknown',
+          name: from ?? window.i18n('unknown'),
         })}
       >
         <IncomingCallAvatarContainer>

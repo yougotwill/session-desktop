@@ -67,7 +67,7 @@ async function createClosedGroupWithErrorHandling(
 ): Promise<boolean> {
   // Validate groupName and groupMembers length
   if (groupName.length === 0) {
-    ToastUtils.pushToastError('invalidGroupName', window.i18n('groupNameEnterPlease'));
+    ToastUtils.pushToastError('invalidGroupName', window.i18n.stripped('groupNameEnterPlease'));
 
     onError(window.i18n('groupNameEnterPlease'));
     return false;

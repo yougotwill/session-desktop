@@ -8,7 +8,7 @@ import {
   _getSortedConversations,
 } from '../../../../state/selectors/conversations';
 import { TestUtils } from '../../../test-utils';
-import { resetTranslationDictionary } from '../../../../util/i18n/translationDictionaries';
+import { resetLocaleAndTranslationDict } from '../../../../util/i18n/shared';
 
 describe('state/selectors/conversations', () => {
   beforeEach(() => {
@@ -16,7 +16,7 @@ describe('state/selectors/conversations', () => {
     TestUtils.stubI18n();
   });
   afterEach(() => {
-    resetTranslationDictionary();
+    resetLocaleAndTranslationDict();
     Sinon.restore();
   });
   describe('#getSortedConversationsList', () => {

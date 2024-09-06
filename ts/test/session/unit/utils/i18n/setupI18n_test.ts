@@ -1,10 +1,10 @@
 import { expect } from 'chai';
 import { initI18n } from './util';
-import { resetTranslationDictionary } from '../../../../../util/i18n/translationDictionaries';
+import { resetLocaleAndTranslationDict } from '../../../../../util/i18n/shared';
 
 describe('setupI18n', () => {
   afterEach(() => {
-    resetTranslationDictionary();
+    resetLocaleAndTranslationDict();
   });
   it('returns setupI18n with all methods defined', () => {
     const setupI18nReturn = initI18n();

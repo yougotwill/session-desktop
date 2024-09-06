@@ -13,17 +13,6 @@ import { inEnglish } from './inEnglish';
 import { stripped } from './stripped';
 import { localizeFromOld, type StringArgsRecord } from '../localizedString';
 
-// /**
-//  * Checks if a string contains a dynamic variable.
-//  * @param localizedString - The string to check.
-//  * @returns `true` if the string contains a dynamic variable, otherwise `false`.
-//  *
-//  * TODO: Change this to a proper type assertion when the type is fixed.
-//  */
-// const isStringWithArgs = <R extends DictionaryWithoutPluralStrings[LocalizerToken]>(
-//   localizedString: string
-// ): localizedString is R => localizedString.includes('{');
-
 /**
  * Retrieves a localized message string, substituting variables where necessary.
  *
@@ -46,14 +35,6 @@ function getMessageDefault<T extends LocalizerToken, R extends LocalizerDictiona
 ): R | T {
   try {
     return localizeFromOld<T>(token as T, args as StringArgsRecord<R>).toString() as T | R;
-    // const rawMessage = getRawMessage<T, R>(...([token, args] as GetMessageArgs<T>));
-    //
-    // /** If a localized string does not have any arguments to substitute it is returned with no changes. */
-    // if (!isStringWithArgs<R>(rawMessage)) {
-    //   return rawMessage;
-    // }
-    //
-    // return formatMessageWithArgs<T, R>(rawMessage, args as ArgsRecord<T>);
   } catch (error) {
     i18nLog(error.message);
     return token as R;

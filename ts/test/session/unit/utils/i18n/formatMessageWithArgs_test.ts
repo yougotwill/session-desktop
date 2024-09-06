@@ -3,7 +3,7 @@
 
 import { expect } from 'chai';
 import { initI18n, testDictionary } from './util';
-import { resetTranslationDictionary } from '../../../../../util/i18n/translationDictionaries';
+import { resetLocaleAndTranslationDict } from '../../../../../util/i18n/shared';
 
 describe('formatMessageWithArgs', () => {
   let i18n;
@@ -11,7 +11,7 @@ describe('formatMessageWithArgs', () => {
     i18n = initI18n(testDictionary);
   });
   afterEach(() => {
-    resetTranslationDictionary();
+    resetLocaleAndTranslationDict();
   });
 
   it('returns the message with args for a message', () => {

@@ -1,6 +1,10 @@
-import { getFallbackDictionary, getTranslationDictionary } from './translationDictionaries';
 import { en } from '../../localization/locales';
-import { getLocale } from './shared';
+import {
+  getLocale,
+  getStringForCardinalRule,
+  getFallbackDictionary,
+  getTranslationDictionary,
+} from './shared';
 import { LOCALE_DEFAULTS } from '../../localization/constants';
 import { deSanitizeHtmlTags, sanitizeArgs } from '../../components/basic/Localizer';
 import type { LocalizerDictionary } from '../../types/Localizer';
@@ -11,8 +15,6 @@ type ArgString = `${string}{${string}}${string}`;
 type RawString = ArgString | string;
 
 type PluralString = `{${PluralKey}, plural, one [${RawString}] other [${RawString}]}`;
-
-// type LocalizedString = string;
 
 type GenericLocalizedDictionary = Record<string, RawString | PluralString>;
 
@@ -90,24 +92,6 @@ export type StringArgsRecord<T extends string> = Record<StringArgs<T>, string | 
 function getPluralKey<R extends PluralKey>(string: PluralString): R {
   const match = /{(\w+), plural, one \[.+\] other \[.+\]}/g.exec(string);
   return match?.[1] as R;
-}
-
-function getStringForCardinalRule(
-  localizedString: string,
-  cardinalRule: Intl.LDMLPluralRule
-): string | undefined {
-  // TODO: investigate if this is the best way to handle regex like this
-  const cardinalPluralRegex: Record<Intl.LDMLPluralRule, RegExp> = {
-    zero: /zero \[(.*?)\]/g,
-    one: /one \[(.*?)\]/g,
-    two: /two \[(.*?)\]/g,
-    few: /few \[(.*?)\]/g,
-    many: /many \[(.*?)\]/g,
-    other: /other \[(.*?)\]/g,
-  };
-  const regex = cardinalPluralRegex[cardinalRule];
-  const match = regex.exec(localizedString);
-  return match?.[1] ?? undefined;
 }
 
 const isPluralForm = (localizedString: string): localizedString is PluralString =>

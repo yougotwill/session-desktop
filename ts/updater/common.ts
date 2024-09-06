@@ -43,12 +43,11 @@ export async function showUpdateDialog(
 ): Promise<boolean> {
   const RESTART_BUTTON = 0;
   const LATER_BUTTON = 1;
-  const options = {
+  const options: Electron.MessageBoxOptions = {
     type: 'info' as const,
     buttons: [i18n('restart'), i18n('later')],
     title: i18n('updateSession'),
     message: i18n('updateDownloaded'),
-    detail: i18n('updateDownloaded'),
     defaultId: LATER_BUTTON,
     cancelId: RESTART_BUTTON,
   };

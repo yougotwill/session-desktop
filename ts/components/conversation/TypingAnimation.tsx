@@ -73,7 +73,7 @@ const StyledSpacer = styled.div`
 
 export const TypingAnimation = () => {
   return (
-    <StyledTypingContainer>
+    <StyledTypingContainer aria-label={window.i18n('typingIndicators')}>
       <StyledTypingDot index={0} />
       <StyledSpacer />
       <StyledTypingDot index={1} />

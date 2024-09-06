@@ -77,7 +77,7 @@ export const StagedLinkPreview = (props: Props) => {
         {isLoaded && image && isContentTypeImage ? (
           <StyledImage>
             <Image
-              alt={domain ?? ''}
+              alt={'Image of staged link preview'} // TODO this needs to be fixed via crowdin
               attachment={image as any}
               height={100}
               width={100}

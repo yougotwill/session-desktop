@@ -21,7 +21,7 @@ export const DataExtractionNotification = (props: PropsForDataExtractionNotifica
               ? 'attachmentsMediaSaved'
               : 'screenshotTaken'
           }
-          args={{ name: name ?? source }}
+          args={{ name: name || source }}
         />
       </NotificationBubble>
     </ExpirableReadableMessage>
