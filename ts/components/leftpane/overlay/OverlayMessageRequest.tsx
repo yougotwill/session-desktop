@@ -86,6 +86,9 @@ export const OverlayMessageRequest = () => {
         onClickClose: () => {
           window.inboxStore?.dispatch(updateConfirmModal(null));
         },
+        okTheme: SessionButtonColor.Danger,
+        closeTheme: SessionButtonColor.Primary,
+        okText: window.i18n('clear'),
       })
     );
   }

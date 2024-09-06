@@ -158,8 +158,9 @@ export const declineConversationWithConfirm = ({
 }) => {
   window?.inboxStore?.dispatch(
     updateConfirmModal({
-      okText: blockContact ? window.i18n('block') : window.i18n('decline'),
+      okText: blockContact ? window.i18n('block') : window.i18n('delete'),
       cancelText: window.i18n('cancel'),
+      title: window.i18n('delete'),
       i18nMessage: { token: 'messageRequestsDelete' },
       onClickOk: async () => {
         await declineConversationWithoutConfirm({
@@ -175,6 +176,8 @@ export const declineConversationWithConfirm = ({
       onClickClose: () => {
         window?.inboxStore?.dispatch(updateConfirmModal(null));
       },
+      okTheme: SessionButtonColor.Danger,
+      closeTheme: SessionButtonColor.Primary,
     })
   );
 };
