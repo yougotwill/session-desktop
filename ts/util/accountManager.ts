@@ -333,10 +333,10 @@ export async function deleteEverythingAndNetworkData() {
       window?.inboxStore?.dispatch(updateDeleteAccountModal(null));
       window?.inboxStore?.dispatch(
         updateConfirmModal({
-          title: window.i18n('clearDeviceAndNetworkConfirm'),
+          title: window.i18n('clearDataAll'),
           i18nMessage: { token: 'clearDataErrorDescriptionGeneric' },
           okTheme: SessionButtonColor.Danger,
-          okText: window.i18n('clearDeviceOnly'),
+          okText: window.i18n('clearDevice'),
           onClickOk: async () => {
             await deleteDbLocally();
             window.restart();
@@ -360,7 +360,7 @@ export async function deleteEverythingAndNetworkData() {
       // open a new confirm dialog to ask user what to do
       window?.inboxStore?.dispatch(
         updateConfirmModal({
-          title: window.i18n('clearDeviceAndNetworkConfirm'),
+          title: window.i18n('clearDataAll'),
           i18nMessage: {
             token: 'clearDataErrorDescription',
             args: {
@@ -370,7 +370,7 @@ export async function deleteEverythingAndNetworkData() {
           },
           i18nMessageSub: { token: 'clearDeviceAndNetworkConfirm' },
           okTheme: SessionButtonColor.Danger,
-          okText: window.i18n('clearDeviceOnly'),
+          okText: window.i18n('clearDevice'),
           onClickOk: async () => {
             await deleteDbLocally();
             window.restart();

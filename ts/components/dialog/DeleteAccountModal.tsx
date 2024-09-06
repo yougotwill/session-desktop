@@ -44,7 +44,6 @@ const DescriptionBeforeAskingConfirmation = (props: {
   );
 };
 
-// NODE: strings - check merge conflict
 const DescriptionWhenAskingConfirmation = (props: { deleteMode: DeleteModes }) => {
   return (
     <span className="session-confirm-main-message">
