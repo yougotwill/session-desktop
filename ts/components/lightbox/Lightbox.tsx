@@ -12,6 +12,7 @@ import { assertUnreachable } from '../../types/sqlSharedTypes';
 import { GoogleChrome } from '../../util';
 import { Flex } from '../basic/Flex';
 import { SessionIconButton, SessionIconSize, SessionIconType } from '../icon';
+import { AriaLabels } from '../../util/hardcodedAriaLabels';
 
 const colorSVG = (url: string, color: string) => {
   return {
@@ -231,6 +232,7 @@ export const LightboxObject = ({
         style={styles.object as any}
         onDragStart={disableDrag}
         src={urlToLoad}
+        alt={AriaLabels.imageSentInConversation}
         ref={renderedRef}
       />
     );

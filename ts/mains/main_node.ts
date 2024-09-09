@@ -161,7 +161,7 @@ import { getAppRootPath } from '../node/getRootPath';
 import { setLastestRelease } from '../node/latest_desktop_release';
 import { isDevProd, isTestIntegration } from '../shared/env_vars';
 import { classicDark } from '../themes';
-import type { SetupI18nReturnType } from '../types/Localizer';
+import type { SetupI18nReturnType } from '../types/localizer';
 import { getTranslationDictionary } from '../util/i18n/shared';
 import { getLocale, isLocaleSet, type Locale } from '../util/i18n/shared';
 import { loadLocalizedDictionary } from '../node/locale';
@@ -346,6 +346,7 @@ async function createWindow() {
 
   // Create the browser window.
   mainWindow = new BrowserWindow(windowOptions);
+
   setupSpellChecker(mainWindow, i18n);
 
   const setWindowFocus = () => {

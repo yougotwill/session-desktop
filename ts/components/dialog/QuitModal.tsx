@@ -10,7 +10,7 @@ import { SpacerLG, SpacerSM } from '../basic/Text';
 import { SessionConfirmDialogProps } from './SessionConfirm';
 import { StyledI18nSubText } from '../basic/StyledI18nSubText';
 
-const thisSpecificModalStyle: CSSProperties = {
+const modalStyle: CSSProperties = {
   maxWidth: '300px',
   width: '100%',
   lineHeight: 1.4,
@@ -82,7 +82,7 @@ export const QuitModal = (props: SessionConfirmDialogProps) => {
           width={'100%'}
           justifyContent="center"
           alignItems="center"
-          style={thisSpecificModalStyle}
+          style={modalStyle}
         >
           <SpacerLG />
           <StyledI18nSubText {...i18nMessage}></StyledI18nSubText>

@@ -12,7 +12,7 @@ import { ToastUtils } from '../../session/utils';
 import { GoogleChrome } from '../../util';
 import { autoScaleForAvatar, autoScaleForThumbnail } from '../../util/attachmentsUtil';
 import { isAudio } from '../MIME';
-import { formatTimeDuration } from '../../util/i18n/formater/generics';
+import { formatTimeDurationMs } from '../../util/i18n/formatting/generics';
 import { isTestIntegration } from '../../shared/env_vars';
 
 export const THUMBNAIL_SIDE = 200;
@@ -120,7 +120,7 @@ export async function getVideoDuration({
     const video = document.createElement('video');
 
     video.addEventListener('loadedmetadata', () => {
-      const duration = formatTimeDuration(video.duration * 1000, { unit: 'second' });
+      const duration = formatTimeDurationMs(video.duration * 1000, { unit: 'second' });
       resolve(duration);
     });
 
@@ -153,7 +153,7 @@ export async function getAudioDuration({
     const audio = document.createElement('audio');
 
     audio.addEventListener('loadedmetadata', () => {
-      const duration = formatTimeDuration(audio.duration * 1000, { unit: 'second' });
+      const duration = formatTimeDurationMs(audio.duration * 1000, { unit: 'second' });
       resolve(duration);
     });
 

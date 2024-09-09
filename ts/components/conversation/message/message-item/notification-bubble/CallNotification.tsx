@@ -1,7 +1,7 @@
 import { CallNotificationType, PropsForCallNotification } from '../../../../../state/ducks/types';
 
 import { useSelectedNicknameOrProfileNameOrShortenedPubkey } from '../../../../../state/selectors/selectedConversation';
-import { LocalizerToken } from '../../../../../types/Localizer';
+import type { LocalizerToken } from '../../../../../types/localizer';
 import { SessionIconType } from '../../../../icon';
 import { ExpirableReadableMessage } from '../ExpirableReadableMessage';
 import { NotificationBubble } from './NotificationBubble';

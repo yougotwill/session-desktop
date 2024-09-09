@@ -24,9 +24,9 @@ import { SpacerSM } from '../../../../../basic/Text';
 import { CopyToClipboardIcon } from '../../../../../buttons';
 import {
   formatTimeDistanceToNow,
-  formatTimeDuration,
-  formatWithLocale,
-} from '../../../../../../util/i18n/formater/generics';
+  formatTimeDurationMs,
+  formatDateWithLocale,
+} from '../../../../../../util/i18n/formatting/generics';
 import { saveLogToDesktop } from '../../../../../../util/logging';
 
 export const MessageInfoLabel = styled.label<{ color?: string }>`
@@ -104,7 +104,7 @@ const DebugMessageInfo = ({ messageId }: { messageId: string }) => {
       {expirationDurationMs ? (
         <LabelWithInfo
           label={`Expiration Duration:`}
-          info={formatTimeDuration(Math.floor(expirationDurationMs))}
+          info={formatTimeDurationMs(Math.floor(expirationDurationMs))}
         />
       ) : null}
       {expirationTimestamp ? (
@@ -129,11 +129,11 @@ export const MessageInfo = ({ messageId, errors }: { messageId: string; errors: 
     return null;
   }
 
-  const sentAtStr = formatWithLocale({
+  const sentAtStr = formatDateWithLocale({
     date: new Date(serverTimestamp || sentAt || 0),
     formatStr: formatTimestampStr,
   });
-  const receivedAtStr = formatWithLocale({
+  const receivedAtStr = formatDateWithLocale({
     date: new Date(receivedAt || 0),
     formatStr: formatTimestampStr,
   });

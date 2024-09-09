@@ -10,7 +10,7 @@ import { SessionButton, SessionButtonColor, SessionButtonType } from '../basic/S
 import { SessionRadioGroup, SessionRadioItems } from '../basic/SessionRadioGroup';
 import { SpacerLG } from '../basic/Text';
 import { SessionSpinner } from '../loading';
-import { type LocalizerComponentPropsObject } from '../../types/Localizer';
+import type { LocalizerComponentPropsObject } from '../../types/localizer';
 
 import { StyledI18nSubText } from '../basic/StyledI18nSubText';
 

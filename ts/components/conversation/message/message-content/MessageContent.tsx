@@ -26,7 +26,7 @@ import { MessageHighlighter } from './MessageHighlighter';
 import { MessageLinkPreview } from './MessageLinkPreview';
 import { MessageQuote } from './MessageQuote';
 import { MessageText } from './MessageText';
-import { formatFullDate } from '../../../../util/i18n/formater/generics';
+import { formatFullDate } from '../../../../util/i18n/formatting/generics';
 
 export type MessageContentSelectorProps = Pick<
   MessageRenderingProps,

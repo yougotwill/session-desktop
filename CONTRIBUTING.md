@@ -237,7 +237,7 @@ So you wanna make a pull request? Please observe the following guidelines.
   this script generates updated TypeScript type definitions to ensure you aren't
   using a localisation key which doesn't exist.
 - Please do not submit pull requests for pure translation fixes. Anyone can update
-  the translations at [Crowdin](https://crowdin.com/project/session-crossplatform-strings).
+  the translations at [Crowdin](https://getsession.org/translate).
 - [Rebase](https://nathanleclaire.com/blog/2014/09/14/dont-be-scared-of-git-rebase/) your
   changes on the latest `clearnet` branch, resolving any conflicts.
   This ensures that your changes will merge cleanly when you open your PR.

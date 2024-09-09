@@ -1,13 +1,13 @@
 /** NOTE: Because of docstring limitations changes MUST be manually synced between {@link setupI18n.getRawMessage } and {@link window.i18n.getRawMessage } */
 
 import { en } from '../../../localization/locales';
-import {
+import type {
   DictionaryWithoutPluralStrings,
   GetMessageArgs,
   LocalizerToken,
   PluralKey,
   PluralString,
-} from '../../../types/Localizer';
+} from '../../../types/localizer';
 import { getTranslationDictionary, getLocale, getStringForCardinalRule, i18nLog } from '../shared';
 
 function getPluralKey<R extends PluralKey | undefined>(string: PluralString): R {

@@ -14,6 +14,7 @@ import {
   useMessageSelected,
   useMessageTimestamp,
 } from '../../state/selectors';
+import { AriaLabels } from '../../util/hardcodedAriaLabels';
 
 type Props = {
   alt: string;
@@ -195,6 +196,7 @@ export const Image = (props: Props) => {
         <img
           className="module-image__caption-icon"
           src="images/caption-shadow.svg"
+          alt={AriaLabels.imageCaptionAlt}
           onDragStart={disableDrag}
         />
       ) : null}

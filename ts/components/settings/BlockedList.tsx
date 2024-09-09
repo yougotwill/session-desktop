@@ -1,5 +1,4 @@
 import { useState } from 'react';
-
 import { useDispatch } from 'react-redux';
 import useUpdate from 'react-use/lib/useUpdate';
 import styled from 'styled-components';
@@ -7,6 +6,7 @@ import { useSet } from '../../hooks/useSet';
 import { updateBlockOrUnblockModal } from '../../state/ducks/modalDialog';
 import { BlockedNumberController } from '../../util';
 import { MemberListItem } from '../MemberListItem';
+import { Localizer } from '../basic/Localizer';
 import { SessionButton, SessionButtonColor } from '../basic/SessionButton';
 import { SpacerLG, SpacerSM } from '../basic/Text';
 import { SessionIconButton } from '../icon';
@@ -73,7 +73,11 @@ const BlockedEntries = (props: {
 };
 
 const NoBlockedContacts = () => {
-  return <div>{window.i18n('blockBlockedNone')}</div>;
+  return (
+    <div>
+      <Localizer token="blockBlockedNone" />
+    </div>
+  );
 };
 
 export const BlockedContactsList = () => {

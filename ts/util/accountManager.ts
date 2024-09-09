@@ -7,12 +7,12 @@ import { configurationMessageReceived, trigger } from '../shims/events';
 import { SessionButtonColor } from '../components/basic/SessionButton';
 import { Data } from '../data/data';
 import { SettingsKey } from '../data/settings-key';
+import { ConversationTypeEnum } from '../models/types';
 import { deleteAllLogs } from '../node/logs';
 import { SessionKeyPair } from '../receiver/keypairs';
 import { clearInbox } from '../session/apis/open_group_api/sogsv3/sogsV3ClearInbox';
 import { getAllValidOpenGroupV2ConversationRoomInfos } from '../session/apis/open_group_api/utils/OpenGroupUtils';
 import { getSwarmPollingInstance } from '../session/apis/snode_api';
-import { SnodeAPI } from '../session/apis/snode_api/SNodeAPI';
 import { mnDecode, mnEncode } from '../session/crypto/mnemonic';
 import { getOurPubKeyStrFromCache } from '../session/utils/User';
 import { LibSessionUtil } from '../session/utils/libsession/libsession_utils';
@@ -21,7 +21,7 @@ import { updateConfirmModal, updateDeleteAccountModal } from '../state/ducks/mod
 import { actions as userActions } from '../state/ducks/user';
 import { Registration } from './registration';
 import { Storage, saveRecoveryPhrase, setLocalPubKey, setSignInByLinking } from './storage';
-import { ConversationTypeEnum } from '../models/types';
+import { SnodeAPI } from '../session/apis/snode_api/SNodeAPI';
 
 /**
  * Might throw
@@ -349,7 +349,7 @@ export async function deleteEverythingAndNetworkData() {
       return;
     }
 
-    if (potentiallyMaliciousSnodes.length > 0) {
+    if (potentiallyMaliciousSnodes.length) {
       const snodeStr = potentiallyMaliciousSnodes.map(ed25519Str);
       window?.log?.warn(
         'DeleteAccount => forceNetworkDeletion Got some potentially malicious snodes',
@@ -362,15 +362,11 @@ export async function deleteEverythingAndNetworkData() {
         updateConfirmModal({
           title: window.i18n('clearDataAll'),
           i18nMessage: {
-            token: 'clearDataErrorDescription',
-            args: {
-              count: potentiallyMaliciousSnodes.length,
-              service_node_id: potentiallyMaliciousSnodes.join(', '),
-            },
+            token: 'clearDataErrorDescriptionGeneric',
           },
           i18nMessageSub: { token: 'clearDeviceAndNetworkConfirm' },
           okTheme: SessionButtonColor.Danger,
-          okText: window.i18n('clearDevice'),
+          okText: window.i18n('clearDeviceOnly'),
           onClickOk: async () => {
             await deleteDbLocally();
             window.restart();

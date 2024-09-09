@@ -1,5 +1,5 @@
 import { en } from '../../localization/locales';
-import type { LocalizerDictionary } from '../../types/Localizer';
+import type { LocalizerDictionary } from '../../types/localizer';
 import { timeLocaleMap } from './timeLocaleMap';
 
 let mappedBrowserLocaleDisplayed = false;
@@ -34,7 +34,7 @@ export function getFallbackDictionary(): LocalizerDictionary {
 /**
  * Logs an i18n message to the console.
  * @param message - The message to log.
- *
+ * @deprecated we want to use a normal logger instead of this function, eventually.
  */
 export function i18nLog(message: string) {
   if (typeof window !== 'undefined') {
@@ -98,6 +98,8 @@ export function getStringForCardinalRule(
   cardinalRule: Intl.LDMLPluralRule
 ): string | undefined {
   // TODO: investigate if this is the best way to handle regex like this
+  // We need block scoped regex to avoid running into this issue:
+  // https://stackoverflow.com/questions/18462784/why-is-javascript-regex-matching-every-second-time
   const cardinalPluralRegex: Record<Intl.LDMLPluralRule, RegExp> = {
     zero: /zero \[(.*?)\]/g,
     one: /one \[(.*?)\]/g,

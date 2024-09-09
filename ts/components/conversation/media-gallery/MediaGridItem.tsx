@@ -6,6 +6,7 @@ import { useEncryptedFileFetch } from '../../../hooks/useEncryptedFileFetch';
 import { LightBoxOptions, updateLightBoxOptions } from '../../../state/ducks/modalDialog';
 import { isImageTypeSupported, isVideoTypeSupported } from '../../../util/GoogleChrome';
 import { MediaItemType } from '../../lightbox/LightboxGallery';
+import { AriaLabels } from '../../../util/hardcodedAriaLabels';
 
 type Props = {
   mediaItem: MediaItemType;
@@ -50,6 +51,7 @@ const MediaGridItemContent = (props: Props) => {
       <img
         className="module-media-grid-item__image"
         src={srcData}
+        alt={AriaLabels.imageSentInConversation}
         onError={onImageError}
         onDragStart={disableDrag}
       />
@@ -72,6 +74,7 @@ const MediaGridItemContent = (props: Props) => {
         <img
           className="module-media-grid-item__image"
           src={srcData}
+          alt={AriaLabels.imageSentInConversation}
           onError={onImageError}
           onDragStart={disableDrag}
         />

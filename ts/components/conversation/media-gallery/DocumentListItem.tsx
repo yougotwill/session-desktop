@@ -5,7 +5,7 @@ import formatFileSize from 'filesize';
 import { useSelectedConversationKey } from '../../../state/selectors/selectedConversation';
 import { saveAttachmentToDisk } from '../../../util/attachmentsUtil';
 import { MediaItemType } from '../../lightbox/LightboxGallery';
-import { formatWithLocale } from '../../../util/i18n/formater/generics';
+import { formatDateWithLocale } from '../../../util/i18n/formatting/generics';
 
 type Props = {
   // Required
@@ -63,7 +63,7 @@ export const DocumentListItem = (props: Props) => {
           </span>
         </div>
         <div className="module-document-list-item__date">
-          {formatWithLocale({ date: new Date(timestamp), formatStr: 'ddd, MMM D, Y' })}
+          {formatDateWithLocale({ date: new Date(timestamp), formatStr: 'ddd, MMM D, Y' })}
         </div>
       </div>
     </div>

@@ -25,9 +25,8 @@ export class BlockedNumberController {
   }
 
   /**
-   * Block a user or group, by pubkey
-   *
-   * @param user The user to block.
+   * Block a user or group.
+   * @param user The sessionID or groupID to block.
    */
   public static async block(user: string): Promise<void> {
     // The reason we add all linked device to block number set instead of checking if any device of a user is in the `isBlocked` function because

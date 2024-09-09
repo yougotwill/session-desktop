@@ -2,7 +2,7 @@ import { app, clipboard, dialog } from 'electron';
 import { redactAll } from '../util/privacy'; // checked - only node
 import { ConsoleCustom } from './logging'; // checked - only node
 
-// We use hard-coded strings until we're able to update these strings from the locale.
+// TODO use localize strings if we can.
 const quitText = 'Quit';
 const copyErrorAndQuitText = 'Copy error to clipboard';
 

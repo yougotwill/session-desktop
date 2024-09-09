@@ -8,6 +8,7 @@ import { isAudio } from '../../../../types/MIME';
 import { isImageTypeSupported, isVideoTypeSupported } from '../../../../util/GoogleChrome';
 import { SessionButtonColor } from '../../../basic/SessionButton';
 import { SessionIcon } from '../../../icon';
+import { Localizer } from '../../../basic/Localizer';
 
 const StyledTrustSenderUI = styled.div`
   padding-inline: var(--margins-lg);
@@ -131,11 +132,14 @@ export const ClickToTrustSender = (props: { messageId: string }) => {
     <StyledTrustSenderUI onClick={openConfirmationModal}>
       <SessionIcon iconSize="small" iconType="gallery" />
       <ClickToDownload>
-        {window.i18n('attachmentsClickToDownload', {
-          // Note: we don't want to change the case of a localized string, but as an exception this one is approved.
-          // The reason is that the attachments logic is scheduled to be changed soon :tm:
-          file_type: fileType.toLocaleLowerCase(),
-        })}
+        <Localizer
+          token="attachmentsClickToDownload"
+          args={{
+            // Note: we don't want to change the case of a localized string, but as an exception this one is approved.
+            // The reason is that the attachments logic is scheduled to be changed soon :tm:
+            file_type: fileType.toLocaleLowerCase(),
+          }}
+        />
       </ClickToDownload>
     </StyledTrustSenderUI>
   );

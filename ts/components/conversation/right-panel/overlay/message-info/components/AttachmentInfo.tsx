@@ -20,7 +20,7 @@ export const AttachmentInfo = (props: Props) => {
   return (
     <Flex container={true} flexDirection="column">
       <LabelWithInfo
-        label={`${window.i18n('attachmentsFileId')}`}
+        label={window.i18n('attachmentsFileId')}
         info={attachment?.id ? String(attachment.id) : window.i18n('attachmentsNa')}
       />
       <StyledLabelContainer container={true} flexDirection="row" flexWrap="wrap">

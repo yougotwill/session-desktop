@@ -14,6 +14,8 @@ import {
 } from '../../../../state/selectors/selectedConversation';
 import { ContactName } from '../../ContactName';
 import { MessageBody } from './MessageBody';
+import { Localizer } from '../../../basic/Localizer';
+import { AriaLabels } from '../../../../util/hardcodedAriaLabels';
 
 export type QuotePropsWithoutListener = {
   attachment?: QuotedAttachmentType;
@@ -133,7 +135,12 @@ export const QuoteImage = (props: {
 
   return (
     <div className="module-quote__icon-container">
-      <img src={srcData} onDragStart={disableDrag} onError={handleImageErrorBound} />
+      <img
+        src={srcData}
+        onDragStart={disableDrag}
+        onError={handleImageErrorBound}
+        alt={AriaLabels.quoteImageThumbnail}
+      />
       {iconElement}
     </div>
   );
@@ -325,7 +332,7 @@ export const QuoteReferenceWarning = (
           isIncoming ? 'module-quote__reference-warning__text--incoming' : null
         )}
       >
-        {window.i18n('messageErrorOriginal')}
+        <Localizer token="messageErrorOriginal" />
       </div>
     </div>
   );

@@ -48,7 +48,7 @@ import {
   OPEN_GROUP_ROOMS_V2_TABLE,
   toSqliteBoolean,
 } from './database_utility';
-import type { SetupI18nReturnType } from '../types/Localizer'; // checked - only node
+import type { SetupI18nReturnType } from '../types/localizer'; // checked - only node
 import { StorageItem } from './storage_item'; // checked - only node
 
 import {

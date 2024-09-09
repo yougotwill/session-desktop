@@ -50,6 +50,7 @@ import { SessionEmojiPanel, StyledEmojiPanel } from '../../SessionEmojiPanel';
 import { MessageReactBar } from './MessageReactBar';
 import { showCopyAccountIdAction } from '../../../menu/items/CopyAccountId';
 import { CopyAccountIdMenuItem } from '../../../menu/items/CopyAccountId/CopyAccountIdMenuItem';
+import { Localizer } from '../../../basic/Localizer';
 
 export type MessageContextMenuSelectorProps = Pick<
   MessageRenderingProps,
@@ -244,8 +245,6 @@ export const MessageContextMenu = (props: Props) => {
     [showEmojiPanel]
   );
 
-  const selectMessageText = window.i18n('messageSelect');
-
   const onReply = useCallback(() => {
     if (isSelectedBlocked) {
       pushUnblockToSend();
@@ -382,14 +381,18 @@ export const MessageContextMenu = (props: Props) => {
               void showMessageInfoOverlay({ messageId, dispatch });
             }}
           >
-            {window.i18n('info')}
+            <Localizer token="info" />
           </Item>
           {/* this is a message in the view, so always private */}
           {sender && showCopyAccountIdAction({ isPrivate: true, pubkey: sender }) ? (
             <CopyAccountIdMenuItem pubkey={sender} />
           ) : null}
           <RetryItem messageId={messageId} />
-          {isDeletable ? <Item onClick={onSelect}>{selectMessageText}</Item> : null}
+          {isDeletable ? (
+            <Item onClick={onSelect}>
+              <Localizer token="messageSelect" />
+            </Item>
+          ) : null}
           <DeleteItem messageId={messageId} />
           <AdminActionItems messageId={messageId} />
         </Menu>

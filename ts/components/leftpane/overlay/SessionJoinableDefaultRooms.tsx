@@ -13,6 +13,7 @@ import { PillContainerHoverable, StyledPillContainerHoverable } from '../../basi
 import { SpacerXS } from '../../basic/Text';
 import { SessionSpinner } from '../../loading';
 import { useHTMLDirection } from '../../../util/i18n/rtlSupport';
+import { Localizer } from '../../basic/Localizer';
 
 export type JoinableRoomProps = {
   completeUrl: string;
@@ -167,7 +168,9 @@ export const SessionJoinableRooms = (props: {
       dir={htmlDirection}
       width="100%"
     >
-      <H4>{window.i18n('communityJoinOfficial')}</H4>
+      <H4>
+        <Localizer token="communityJoinOfficial" />
+      </H4>
       <SpacerXS />
       <Flex
         container={true}

@@ -5,7 +5,7 @@ import type {
   LocalizerDictionary,
   GetMessageArgs,
   SetupI18nReturnType,
-} from '../../../types/Localizer';
+} from '../../../types/localizer';
 import { i18nLog } from '../shared';
 import { formatMessageWithArgs } from './formatMessageWithArgs';
 import { getRawMessage } from './getRawMessage';

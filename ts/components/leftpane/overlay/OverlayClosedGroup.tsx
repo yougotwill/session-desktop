@@ -27,6 +27,7 @@ import { Flex } from '../../basic/Flex';
 import { SpacerLG, SpacerMD } from '../../basic/Text';
 import { SessionInput } from '../../inputs';
 import { StyledLeftPaneOverlay } from './OverlayMessage';
+import { Localizer } from '../../basic/Localizer';
 
 const StyledMemberListNoContacts = styled.div`
   text-align: center;
@@ -54,7 +55,11 @@ const StyledGroupMemberListContainer = styled.div`
 `;
 
 const NoContacts = () => {
-  return <StyledMemberListNoContacts>{window.i18n('contactNone')}</StyledMemberListNoContacts>;
+  return (
+    <StyledMemberListNoContacts>
+      <Localizer token="contactNone" />
+    </StyledMemberListNoContacts>
+  );
 };
 
 /**
@@ -184,7 +189,7 @@ export const OverlayClosedGroup = () => {
           <NoContacts />
         ) : searchTerm && !contactsToRender.length ? (
           <StyledNoResults>
-            {window.i18n('searchMatchesNoneSpecific', { query: searchTerm })}
+            <Localizer token="searchMatchesNoneSpecific" args={{ query: searchTerm }} />
           </StyledNoResults>
         ) : (
           contactsToRender.map((pubkey: string) => (

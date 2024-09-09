@@ -19,6 +19,7 @@ import { SessionButton } from '../basic/SessionButton';
 import { SpacerMD, SpacerSM } from '../basic/Text';
 import { MenuButton } from '../buttons';
 import { SessionIcon, SessionIconButton } from '../icon';
+import { Localizer } from '../basic/Localizer';
 
 const StyledLeftPaneSectionHeader = styled(Flex)`
   height: var(--main-view-header-height);
@@ -149,7 +150,9 @@ export const LeftPaneBanner = () => {
         padding={'var(--margins-md)'}
       >
         <Flex container={true} width={'100%'} alignItems="flex-start">
-          <StyledBannerTitle>{window.i18n('recoveryPasswordBannerTitle')}</StyledBannerTitle>
+          <StyledBannerTitle>
+            <Localizer token="recoveryPasswordBannerTitle" />
+          </StyledBannerTitle>
           <SessionIcon
             iconType={isDarkTheme ? 'recoveryPasswordFill' : 'recoveryPasswordOutline'}
             iconSize="medium"

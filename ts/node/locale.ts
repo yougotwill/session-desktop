@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import type { LocalizerDictionary, SetupI18nReturnType } from '../types/Localizer';
+import type { LocalizerDictionary, SetupI18nReturnType } from '../types/localizer';
 import { getAppRootPath } from './getRootPath';
 import type { Locale } from '../util/i18n/shared';
 import { en } from '../localization/locales';

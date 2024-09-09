@@ -132,6 +132,7 @@ export const SettingsThemeSwitcher = () => {
               active={item.id === selectedPrimaryColor}
               value={item.id}
               inputName="primary-colors"
+              ariaLabel={item.ariaLabel}
               color={item.color}
               onClick={() => {
                 void switchPrimaryColorTo(item.id, dispatch);

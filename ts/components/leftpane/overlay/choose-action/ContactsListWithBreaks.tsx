@@ -14,6 +14,7 @@ import { StyledChooseActionTitle } from './ActionRow';
 import { ContactRow, ContactRowBreak } from './ContactRow';
 import { getThemeValue, pxValueToNumber } from '../../../../themes/globals';
 import { SearchResultsMergedListItem } from '../../../../state/selectors/search';
+import { Localizer } from '../../../basic/Localizer';
 
 const StyledContactSection = styled.div`
   display: flex;
@@ -122,7 +123,9 @@ export const ContactsListWithBreaks = () => {
       {contactsCount > 0 ? (
         <ContactListItemSection />
       ) : (
-        <StyledContactsEmpty>{window.i18n('contactNone')}</StyledContactsEmpty>
+        <StyledContactsEmpty>
+          <Localizer token="contactNone" />
+        </StyledContactsEmpty>
       )}
     </StyledContactSection>
   );

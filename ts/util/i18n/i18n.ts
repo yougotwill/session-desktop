@@ -1,7 +1,7 @@
 // this file is a weird one as it is used by both sides of electron at the same time
 
 import { isEmpty } from 'lodash';
-import { LocalizerDictionary, SetupI18nReturnType } from '../../types/Localizer';
+import type { LocalizerDictionary, SetupI18nReturnType } from '../../types/localizer';
 import { getMessage } from './functions/getMessage';
 import { i18nLog, Locale, setInitialLocale } from './shared';
 

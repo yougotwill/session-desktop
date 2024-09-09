@@ -1,7 +1,7 @@
 import path from 'path';
 
 import { app, type BrowserWindow, Menu, Tray } from 'electron';
-import type { SetupI18nReturnType } from '../types/Localizer';
+import type { SetupI18nReturnType } from '../types/localizer';
 import { getAppRootPath } from './getRootPath';
 import { LOCALE_DEFAULTS } from '../localization/constants';
 

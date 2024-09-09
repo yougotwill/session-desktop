@@ -17,7 +17,7 @@ import { deleteDbLocally } from '../../../util/accountManager';
 import { Flex } from '../../basic/Flex';
 import { SessionButtonColor } from '../../basic/SessionButton';
 import { SessionIconButton } from '../../icon';
-import { LocalizerComponentProps, LocalizerToken } from '../../../types/Localizer';
+import type { LocalizerComponentProps, LocalizerToken } from '../../../types/localizer';
 
 /** Min height should match the onboarding step with the largest height this prevents the loading spinner from jumping around while still keeping things centered  */
 const StyledBackButtonContainer = styled(Flex)`

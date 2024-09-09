@@ -1,5 +1,5 @@
 import { en } from '../../../../../localization/locales';
-import type { LocalizerDictionary } from '../../../../../types/Localizer';
+import type { LocalizerDictionary } from '../../../../../types/localizer';
 import { setupI18n } from '../../../../../util/i18n/i18n';
 
 export const testDictionary = {

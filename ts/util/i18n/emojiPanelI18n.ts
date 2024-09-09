@@ -11,6 +11,8 @@ export const loadEmojiPanelI18n = async () => {
   if (lang !== 'en') {
     try {
       triedLocales.push(lang);
+      // TODO we should replace this with a locale -> emojimart locale map. like with datefns
+
       const langData = await import(`@emoji-mart/data/i18n/${lang}.json`);
       return langData;
     } catch (err) {
@@ -19,6 +21,8 @@ export const loadEmojiPanelI18n = async () => {
         try {
           const shortenLang = lang.slice(0, firstDashIndex);
           triedLocales.push(shortenLang);
+          // TODO we should replace this with a locale -> emojimart locale map. like with datefns
+
           const langData = await import(`@emoji-mart/data/i18n/${shortenLang}.json`);
           return langData;
         } catch (e) {

@@ -20,6 +20,7 @@ import { SpacerLG, SpacerMD } from '../../basic/Text';
 import { HelpDeskButton } from '../../buttons';
 import { SessionInput } from '../../inputs';
 import { ConversationTypeEnum } from '../../../models/types';
+import { Localizer } from '../../basic/Localizer';
 
 const StyledDescriptionContainer = styled(motion.div)`
   margin: 0 auto;
@@ -180,7 +181,7 @@ export const OverlayMessage = () => {
             transition={{ duration: THEME_GLOBALS['--default-duration-seconds'] }}
           >
             <SessionIDDescription>
-              {window.i18n('messageNewDescriptionDesktop')}
+              <Localizer token="messageNewDescriptionDesktop" />
             </SessionIDDescription>
             <HelpDeskButton style={{ display: 'inline-flex' }} />
           </StyledDescriptionContainer>

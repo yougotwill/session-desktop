@@ -1,7 +1,7 @@
 import styled from 'styled-components';
 import { forwardRef } from 'react';
 import { Localizer } from './Localizer';
-import { LocalizerComponentProps, LocalizerToken } from '../../types/Localizer';
+import type { LocalizerComponentProps, LocalizerToken } from '../../types/localizer';
 
 const StyledI18nSubTextContainer = styled('div')`
   font-size: var(--font-size-md);

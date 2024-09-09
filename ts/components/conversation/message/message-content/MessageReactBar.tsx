@@ -9,7 +9,7 @@ import { nativeEmojiData } from '../../../../util/emoji';
 import { getRecentReactions } from '../../../../util/storage';
 import { SpacerSM } from '../../../basic/Text';
 import { SessionIcon, SessionIconButton } from '../../../icon';
-import { formatAbbreviatedExpireDoubleTimer } from '../../../../util/i18n/formater/expirationTimer';
+import { formatAbbreviatedExpireDoubleTimer } from '../../../../util/i18n/formatting/expirationTimer';
 
 type Props = {
   action: (...args: Array<any>) => void;
@@ -103,22 +103,20 @@ function formatTimeLeft({ timeLeftMs }: { timeLeftMs: number }) {
     return `0s`;
   }
 
-  const parts = formatAbbreviatedExpireDoubleTimer(timeLeftSeconds);
-  switch (parts.length) {
-    case 2:
-      return window.i18n('disappearingMessagesCountdownBigSmall', {
-        time_large: parts[0],
-        time_small: parts[1],
-      });
-
-    case 1:
-      return window.i18n('disappearingMessagesCountdownBig', {
-        time_large: parts[0],
-      });
-
-    default:
-      throw new Error('formatTimeLeft unexpected duration given');
+  const [time_large, time_small] = formatAbbreviatedExpireDoubleTimer(timeLeftSeconds);
+  if (time_large && time_small) {
+    return window.i18n('disappearingMessagesCountdownBigSmall', {
+      time_large,
+      time_small,
+    });
   }
+  if (time_large) {
+    return window.i18n('disappearingMessagesCountdownBig', {
+      time_large,
+    });
+  }
+
+  throw new Error('formatTimeLeft unexpected duration given');
 }
 
 const ExpiresInItem = ({ expirationTimestamp }: { expirationTimestamp?: number | null }) => {

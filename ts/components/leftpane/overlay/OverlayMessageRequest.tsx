@@ -10,6 +10,7 @@ import { useSelectedConversationKey } from '../../../state/selectors/selectedCon
 import { SessionButton, SessionButtonColor } from '../../basic/SessionButton';
 import { SpacerLG } from '../../basic/Text';
 import { ConversationListItem } from '../conversation-list-item/ConversationListItem';
+import { Localizer } from '../../basic/Localizer';
 
 const MessageRequestListPlaceholder = styled.div`
   color: var(--conversation-tab-text-color);
@@ -109,7 +110,7 @@ export const OverlayMessageRequest = () => {
         <>
           <SpacerLG />
           <MessageRequestListPlaceholder>
-            {window.i18n('messageRequestsNonePending')}
+            <Localizer token="messageRequestsNonePending" />
           </MessageRequestListPlaceholder>
         </>
       )}

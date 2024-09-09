@@ -66,10 +66,6 @@ export const AddModeratorsDialog = (props: Props) => {
     }
   };
 
-  const { i18n } = window;
-
-  const title = i18n('adminPromote');
-
   const onPubkeyBoxChanges = (e: any) => {
     const val = e.target.value;
     setInputBoxValue(val);
@@ -78,7 +74,7 @@ export const AddModeratorsDialog = (props: Props) => {
   return (
     <SessionWrapperModal
       showExitIcon={true}
-      title={title}
+      title={window.i18n('adminPromote')}
       onClose={() => {
         dispatch(updateAddModeratorsModal(null));
       }}
@@ -87,7 +83,7 @@ export const AddModeratorsDialog = (props: Props) => {
         <SessionHeaderSearchInput
           type="text"
           isDarkTheme={isDarkTheme}
-          placeholder={i18n('accountIdEnter')}
+          placeholder={window.i18n('accountIdEnter')}
           dir="auto"
           onChange={onPubkeyBoxChanges}
           disabled={addingInProgress}
@@ -97,7 +93,7 @@ export const AddModeratorsDialog = (props: Props) => {
         <SessionButton
           buttonType={SessionButtonType.Simple}
           onClick={addAsModerator}
-          text={i18n('add')}
+          text={window.i18n('add')}
           disabled={addingInProgress}
         />
 

@@ -12,6 +12,7 @@ import {
   sendConfigMessageAndDeleteEverything,
 } from '../../util/accountManager';
 import { SessionRadioGroup } from '../basic/SessionRadioGroup';
+import { Localizer } from '../basic/Localizer';
 
 const DEVICE_ONLY = 'device_only';
 const DEVICE_AND_NETWORK = 'device_and_network';
@@ -24,7 +25,9 @@ const DescriptionBeforeAskingConfirmation = (props: {
   const { deleteMode, setDeleteMode } = props;
   return (
     <>
-      <span className="session-confirm-main-message">{window.i18n('clearDataAllDescription')}</span>
+      <span className="session-confirm-main-message">
+        <Localizer token="clearDataAllDescription" />
+      </span>
 
       <SpacerLG />
       <SessionRadioGroup

@@ -5,7 +5,7 @@ import type {
   ArgsRecord,
   DictionaryWithoutPluralStrings,
   LocalizerToken,
-} from '../../../types/Localizer';
+} from '../../../types/localizer';
 
 /**
  * Formats a localized message string with arguments and returns the formatted string.
@@ -14,6 +14,8 @@ import type {
  * is required if the string has dynamic variables. This can be optional as a strings args may be defined in @see {@link LOCALE_DEFAULTS}
  *
  * @returns The formatted message string.
+ *
+ * @deprecated this will eventually be replaced by LocalizedStringBuilder
  *
  * @example
  * // The string greeting is 'Hello, {name}!' in the current locale

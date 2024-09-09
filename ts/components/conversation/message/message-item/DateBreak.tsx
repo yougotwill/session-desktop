@@ -1,6 +1,9 @@
 import styled from 'styled-components';
 import { DURATION } from '../../../../session/constants';
-import { formatFullDate, formatRelativeWithLocale } from '../../../../util/i18n/formater/generics';
+import {
+  formatFullDate,
+  formatRelativeTimestampWithLocale,
+} from '../../../../util/i18n/formatting/generics';
 
 const DateBreakContainer = styled.div``;
 
@@ -21,7 +24,7 @@ export const MessageDateBreak = (props: { timestamp: number; messageId: string }
   // otherwise, we display the date + time separately
   const text =
     Date.now() - timestamp <= DURATION.DAYS * 7
-      ? formatRelativeWithLocale(timestamp)
+      ? formatRelativeTimestampWithLocale(timestamp)
       : formatFullDate(new Date(timestamp));
 
   return (

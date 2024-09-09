@@ -4,10 +4,11 @@ import {
   getStringForCardinalRule,
   getFallbackDictionary,
   getTranslationDictionary,
+  i18nLog,
 } from './shared';
 import { LOCALE_DEFAULTS } from '../../localization/constants';
 import { deSanitizeHtmlTags, sanitizeArgs } from '../../components/basic/Localizer';
-import type { LocalizerDictionary } from '../../types/Localizer';
+import type { LocalizerDictionary } from '../../types/localizer';
 
 type PluralKey = 'count';
 
@@ -21,8 +22,6 @@ type GenericLocalizedDictionary = Record<string, RawString | PluralString>;
 type TokenString<Dict extends GenericLocalizedDictionary> = keyof Dict extends string
   ? keyof Dict
   : never;
-
-// type GenericArgsRecord = Record<string, string | number>;
 
 /** The dynamic arguments in a localized string */
 type StringArgs<T extends string> =
@@ -104,20 +103,6 @@ const isPluralForm = (localizedString: string): localizedString is PluralString 
  */
 const isStringWithArgs = (localizedString: string): localizedString is ArgString =>
   localizedString.includes('{');
-
-/**
- * Logs an i18n message to the console.
- * @param message - The message to log.
- */
-export function i18nLog(message: string) {
-  if (typeof window !== 'undefined') {
-    // eslint-disable-next-line no-console
-    (window?.log?.error ?? console.log)(`i18n: ${message}`);
-  } else {
-    // eslint-disable-next-line no-console
-    console.log(`i18n: ${message}`);
-  }
-}
 
 const isReplaceLocalizedStringsWithKeysEnabled = () =>
   !!(typeof window !== 'undefined' && window?.sessionFeatureFlags?.replaceLocalizedStringsWithKeys);

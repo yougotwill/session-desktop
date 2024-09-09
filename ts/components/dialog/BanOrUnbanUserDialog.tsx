@@ -105,8 +105,7 @@ export const BanOrUnBanUserDialog = (props: {
     setInProgress(false);
   };
 
-  const chatName = convo.getNicknameOrRealUsernameOrPlaceholder();
-  const title = `${isBan ? window.i18n('banUser') : window.i18n('banUnbanUser')}: ${chatName}`;
+  const title = isBan ? window.i18n('banUser') : window.i18n('banUnbanUser');
 
   const onPubkeyBoxChanges = (e: ChangeEvent<HTMLInputElement>) => {
     setInputBoxValue(e.target.value?.trim() || '');

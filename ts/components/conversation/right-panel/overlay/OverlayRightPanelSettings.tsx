@@ -49,6 +49,7 @@ import {
   ConversationInteractionStatus,
   ConversationInteractionType,
 } from '../../../../interactions/types';
+import { Localizer } from '../../../basic/Localizer';
 
 async function getMediaGalleryProps(conversationId: string): Promise<{
   documents: Array<MediaItemType>;
@@ -173,7 +174,7 @@ const HeaderItem = () => {
       {showMemberCount && (
         <Flex container={true} flexDirection={'column'}>
           <div role="button" className="subtle">
-            {window.i18n('members', { count: subscriberCount })}
+            <Localizer token="members" args={{ count: subscriberCount }} />
           </div>
           <SpacerMD />
         </Flex>

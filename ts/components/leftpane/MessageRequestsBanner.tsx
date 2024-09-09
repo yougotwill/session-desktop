@@ -8,6 +8,7 @@ import { useIsSearching } from '../../state/selectors/search';
 import { getHideMessageRequestBanner } from '../../state/selectors/userConfig';
 import { SessionIcon, SessionIconSize, SessionIconType } from '../icon';
 import { MessageRequestBannerContextMenu } from '../menu/MessageRequestBannerContextMenu';
+import { Localizer } from '../basic/Localizer';
 
 const StyledMessageRequestBanner = styled.div`
   height: 64px;
@@ -121,7 +122,7 @@ export const MessageRequestsBanner = (props: { handleOnClick: () => any }) => {
       >
         <CirclularIcon iconType="messageRequest" iconSize={22} />
         <StyledMessageRequestBannerHeader>
-          {window.i18n('sessionMessageRequests')}
+          <Localizer token="sessionMessageRequests" />
         </StyledMessageRequestBannerHeader>
         <StyledUnreadCounter>
           <div>{conversationRequestsUnread || 0}</div>

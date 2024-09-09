@@ -12,7 +12,7 @@ import { useSelectedNicknameOrProfileNameOrShortenedPubkey } from '../../../../s
 import { ExpirableReadableMessage } from './ExpirableReadableMessage';
 import { NotificationBubble } from './notification-bubble/NotificationBubble';
 import { Localizer } from '../../../basic/Localizer';
-import { type LocalizerComponentPropsObject } from '../../../../types/Localizer';
+import type { LocalizerComponentPropsObject } from '../../../../types/localizer';
 
 // This component is used to display group updates in the conversation view.
 

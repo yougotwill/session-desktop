@@ -17,7 +17,7 @@ import { getForcedEnglishTimeLocale } from '../timeLocaleMap';
  * @param options - An optional object containing formatting options.
  * @returns A formatted string representing the duration.
  */
-export const formatTimeDuration = (
+export const formatTimeDurationMs = (
   durationMs: number,
   options?: Omit<FormatDistanceStrictOptions, 'locale'>
 ) => {
@@ -27,7 +27,7 @@ export const formatTimeDuration = (
   });
 };
 
-export const formatWithLocale = ({ formatStr, date }: { date: Date; formatStr: string }) => {
+export const formatDateWithLocale = ({ date, formatStr }: { date: Date; formatStr: string }) => {
   return format(date, formatStr, { locale: getTimeLocaleDictionary() });
 };
 
@@ -47,7 +47,11 @@ export const formatFullDate = (date: Date) => {
   );
 };
 
-export const formatRelativeWithLocale = (timestampMs: number) => {
+/**
+ * @param timestampMs The timestamp in ms to display with a relative string
+ * @returns a localized string like "last thursday", "yesterday at 10:28am", ...
+ */
+export const formatRelativeTimestampWithLocale = (timestampMs: number) => {
   return upperFirst(formatRelative(timestampMs, Date.now(), { locale: getTimeLocaleDictionary() }));
 };
 

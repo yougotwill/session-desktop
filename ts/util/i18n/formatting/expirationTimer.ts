@@ -17,11 +17,16 @@ import { getTimeLocaleDictionary } from '../shared';
  */
 const unlocalizedDurationToAbbreviated = (unlocalized: string): string => {
   return unlocalized
-    .replace(/ weeks?/g, 'w')
-    .replace(/ days?/g, 'd')
-    .replace(/ hours?/g, 'h')
-    .replace(/ minutes?/g, 'm')
-    .replace(/ seconds?/g, 's');
+    .replaceAll(' weeks', 'w')
+    .replaceAll(' week', 'w')
+    .replaceAll(' days', 'd')
+    .replaceAll(' day', 'd')
+    .replaceAll(' hours', 'h')
+    .replaceAll(' hour', 'h')
+    .replaceAll(' minutes', 'm')
+    .replaceAll(' minute', 'm')
+    .replaceAll(' seconds', 's')
+    .replaceAll(' second', 's');
 };
 
 /**
@@ -29,16 +34,14 @@ const unlocalizedDurationToAbbreviated = (unlocalized: string): string => {
  * This is a simple wrapper to avoid duplicating this (and not forget about it).
  *
  * Note:
- *  - date-fns intervalToDuration returns doesn't return 2w for 14d and such, so this forces it to be used.
+ *  - date-fns intervalToDuration returns 14d, so this forces it to return 2w which we want to use.
  *  - this will throw if the duration is > 4 weeks
  *
  * @param seconds the seconds to get the durations from
  * @returns a date-fns `Duration` type with the fields set
  */
 const secondsToDuration = (seconds: number): Duration => {
-  if (seconds > 3600 * 24 * 28) {
-    throw new Error('secondsToDuration cannot handle more than 4 weeks for now');
-  }
+  assertIsValidExpirationTimerSeconds(seconds);
   const duration = intervalToDuration({ start: 0, end: new Date(seconds * 1000) });
 
   if (!duration) {
@@ -107,7 +110,7 @@ export const formatNonAbbreviatedExpireTimer = (timerSeconds: number) => {
  * Note: we don't localize this, and cannot have a value > 4 weeks
  *
  * @param timerSeconds the timer to format, in seconds
- * @returns '1h' for a duration of 3600s.
+ * @returns '1h 1s' for a duration of 3601s.
  */
 export const formatAbbreviatedExpireDoubleTimer = (timerSeconds: number) => {
   if (timerSeconds > DURATION_SECONDS.WEEKS * 4) {

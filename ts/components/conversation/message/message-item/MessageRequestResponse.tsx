@@ -10,7 +10,7 @@ import { ReadableMessage } from './ReadableMessage';
 export const MessageRequestResponse = (props: PropsForMessageRequestResponse) => {
   const { messageId, isUnread, receivedAt, conversationId } = props;
 
-  const profileName = useNicknameOrProfileNameOrShortenedPubkey(conversationId);
+  const name = useNicknameOrProfileNameOrShortenedPubkey(conversationId);
   const isFromSync = props.source === UserUtils.getOurPubKeyStrFromCache();
 
   return (
@@ -35,7 +35,7 @@ export const MessageRequestResponse = (props: PropsForMessageRequestResponse) =>
             <Localizer
               token="messageRequestYouHaveAccepted"
               args={{
-                name: profileName || window.i18n('unknown'),
+                name,
               }}
             />
           ) : (

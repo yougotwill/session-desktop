@@ -1,6 +1,7 @@
 import * as GoogleChrome from '../util/GoogleChrome';
 
 import { AttachmentType } from '../types/Attachment';
+import { AriaLabels } from '../util/hardcodedAriaLabels';
 
 type Props = {
   attachment: AttachmentType;
@@ -16,7 +17,14 @@ const CaptionEditorObject = (props: Props) => {
 
   const isImageTypeSupported = GoogleChrome.isImageTypeSupported(contentType);
   if (isImageTypeSupported) {
-    return <img className="module-caption-editor__image" src={url} onClick={onClose} />;
+    return (
+      <img
+        className="module-caption-editor__image"
+        src={url}
+        onClick={onClose}
+        alt={AriaLabels.imageAttachmentAlt}
+      />
+    );
   }
 
   const isVideoTypeSupported = GoogleChrome.isVideoTypeSupported(contentType);

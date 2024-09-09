@@ -14,6 +14,7 @@ import { MemberListItem } from '../MemberListItem';
 import { SessionWrapperModal } from '../SessionWrapperModal';
 import { SessionButton, SessionButtonColor, SessionButtonType } from '../basic/SessionButton';
 import { SessionSpinner } from '../loading';
+import { Localizer } from '../basic/Localizer';
 
 type Props = {
   conversationId: string;
@@ -105,7 +106,9 @@ export const RemoveModeratorsDialog = (props: Props) => {
             ))}
           </div>
         ) : (
-          <p>{i18n('adminRemoveCommunityNone')}</p>
+          <p>
+            <Localizer token="adminRemoveCommunityNone" />
+          </p>
         )}
 
         <div className="session-modal__button-group">

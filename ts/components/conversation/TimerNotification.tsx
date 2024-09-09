@@ -22,7 +22,7 @@ import { ExpirableReadableMessage } from './message/message-item/ExpirableReadab
 import { ConversationInteraction } from '../../interactions';
 import { getConversationController } from '../../session/conversations';
 import { updateConfirmModal } from '../../state/ducks/modalDialog';
-import type { LocalizerComponentProps, LocalizerToken } from '../../types/Localizer';
+import type { LocalizerComponentProps, LocalizerToken } from '../../types/localizer';
 import { Localizer } from '../basic/Localizer';
 import { SessionButtonColor } from '../basic/SessionButton';
 import { SessionIcon } from '../icon';
@@ -171,53 +171,52 @@ function useTextToRenderI18nProps(
 
   if (isLegacyGroup) {
     if (disabled) {
-      if (authorIsUs) {
-        return {
-          token: 'disappearingMessagesTurnedOffYouGroup',
-        };
-      }
-      return {
-        token: 'disappearingMessagesTurnedOffGroup',
-        args: {
-          name,
-        },
-      };
+      return authorIsUs
+        ? {
+            token: 'disappearingMessagesTurnedOffYouGroup',
+          }
+        : {
+            token: 'disappearingMessagesTurnedOffGroup',
+            args: {
+              name,
+            },
+          };
     }
   }
 
   if (disabled) {
-    if (authorIsUs) {
-      return {
-        token: isLegacyGroup
-          ? 'disappearingMessagesTurnedOffYouGroup'
-          : 'disappearingMessagesTurnedOffYou',
-      };
-    }
-    return {
-      token: isLegacyGroup ? 'disappearingMessagesTurnedOffGroup' : 'disappearingMessagesTurnedOff',
-      args: {
-        name,
-      },
-    };
-  }
-  if (authorIsUs) {
-    return {
-      token: 'disappearingMessagesSetYou',
-      args: {
-        time,
-        disappearing_messages_type,
-      },
-    };
+    return authorIsUs
+      ? {
+          token: isLegacyGroup
+            ? 'disappearingMessagesTurnedOffYouGroup'
+            : 'disappearingMessagesTurnedOffYou',
+        }
+      : {
+          token: isLegacyGroup
+            ? 'disappearingMessagesTurnedOffGroup'
+            : 'disappearingMessagesTurnedOff',
+          args: {
+            name,
+          },
+        };
   }
 
-  return {
-    token: 'disappearingMessagesSet',
-    args: {
-      time,
-      disappearing_messages_type,
-      name,
-    },
-  };
+  return authorIsUs
+    ? {
+        token: 'disappearingMessagesSetYou',
+        args: {
+          time,
+          disappearing_messages_type,
+        },
+      }
+    : {
+        token: 'disappearingMessagesSet',
+        args: {
+          time,
+          disappearing_messages_type,
+          name,
+        },
+      };
 }
 
 export const TimerNotification = (props: PropsForExpirationTimer) => {

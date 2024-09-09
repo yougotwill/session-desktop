@@ -2,7 +2,7 @@ import { isDevProd } from '../../shared/env_vars';
 import {
   formatAbbreviatedExpireTimer,
   formatNonAbbreviatedExpireTimer,
-} from '../../util/i18n/formater/expirationTimer';
+} from '../../util/i18n/formatting/expirationTimer';
 import { DURATION_SECONDS } from '../constants';
 
 type TimerOptionsEntry = { name: string; value: number };

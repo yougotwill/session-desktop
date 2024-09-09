@@ -94,17 +94,17 @@ export type PrimaryColorStateType =
   | 'orange'
   | 'red';
 
-// NOTE - Making arialLabel optional instead of removing it as we'll be using it again later
-type PrimaryColorType = { id: PrimaryColorStateType; ariaLabel?: string; color: string };
+// TODO: localize the ariaLabels below
+type PrimaryColorType = { id: PrimaryColorStateType; ariaLabel: string; color: string };
 
 export const getPrimaryColors = (): Array<PrimaryColorType> => [
-  { id: 'green', color: COLORS.PRIMARY.GREEN },
-  { id: 'blue', color: COLORS.PRIMARY.BLUE },
-  { id: 'yellow', color: COLORS.PRIMARY.YELLOW },
-  { id: 'pink', color: COLORS.PRIMARY.PINK },
-  { id: 'purple', color: COLORS.PRIMARY.PURPLE },
-  { id: 'orange', color: COLORS.PRIMARY.ORANGE },
-  { id: 'red', color: COLORS.PRIMARY.RED },
+  { id: 'green', ariaLabel: 'Primary color green', color: COLORS.PRIMARY.GREEN },
+  { id: 'blue', ariaLabel: 'Primary color blue', color: COLORS.PRIMARY.BLUE },
+  { id: 'yellow', ariaLabel: 'Primary color yellow', color: COLORS.PRIMARY.YELLOW },
+  { id: 'pink', ariaLabel: 'Primary color pink', color: COLORS.PRIMARY.PINK },
+  { id: 'purple', ariaLabel: 'Primary color purple', color: COLORS.PRIMARY.PURPLE },
+  { id: 'orange', ariaLabel: 'Primary color orange', color: COLORS.PRIMARY.ORANGE },
+  { id: 'red', ariaLabel: 'Primary color red', color: COLORS.PRIMARY.RED },
 ];
 
 // Themes

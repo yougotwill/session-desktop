@@ -1,5 +1,5 @@
 import { expect } from 'chai';
-import { formatAbbreviatedExpireDoubleTimer } from '../../../../../util/i18n/formater/expirationTimer';
+import { formatAbbreviatedExpireDoubleTimer } from '../../../../../util/i18n/formatting/expirationTimer';
 
 describe('formatAbbreviatedExpireDoubleTimer', () => {
   it('<= 0 returns 0s', () => {

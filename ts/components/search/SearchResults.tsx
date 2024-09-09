@@ -13,6 +13,7 @@ import {
   getSearchTerm,
 } from '../../state/selectors/search';
 import { calcContactRowHeight } from '../leftpane/overlay/choose-action/ContactsListWithBreaks';
+import { Localizer } from '../basic/Localizer';
 
 const StyledSeparatorSection = styled.div<{ isSubtitle: boolean }>`
   height: 36px;
@@ -113,7 +114,9 @@ export const SearchResults = () => {
   return (
     <SearchResultsContainer>
       {!hasSearchResults ? (
-        <NoResults>{window.i18n('searchMatchesNoneSpecific', { query })}</NoResults>
+        <NoResults>
+          <Localizer token="searchMatchesNoneSpecific" args={{ query }} />
+        </NoResults>
       ) : (
         <VirtualizedList />
       )}

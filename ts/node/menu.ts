@@ -1,5 +1,5 @@
 import { isString } from 'lodash';
-import type { SetupI18nReturnType } from '../types/Localizer';
+import type { SetupI18nReturnType } from '../types/localizer';
 import { LOCALE_DEFAULTS } from '../localization/constants';
 
 /**

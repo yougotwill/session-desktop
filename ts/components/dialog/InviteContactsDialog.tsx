@@ -17,6 +17,7 @@ import { MemberListItem } from '../MemberListItem';
 import { SessionWrapperModal } from '../SessionWrapperModal';
 import { SessionButton, SessionButtonColor, SessionButtonType } from '../basic/SessionButton';
 import { ConversationTypeEnum } from '../../models/types';
+import { Localizer } from '../basic/Localizer';
 
 type Props = {
   conversationId: string;
@@ -173,7 +174,9 @@ const InviteContactsDialogInner = (props: Props) => {
         ) : (
           <>
             <SpacerLG />
-            <p className="no-contacts">{window.i18n('contactNone')}</p>
+            <p className="no-contacts">
+              <Localizer token="contactNone" />
+            </p>
             <SpacerLG />
           </>
         )}

@@ -16,7 +16,7 @@ import {
   showDownloadUpdateDialog,
   showUpdateDialog,
 } from './common';
-import type { SetupI18nReturnType } from '../types/Localizer';
+import type { SetupI18nReturnType } from '../types/localizer';
 
 let isUpdating = false;
 let downloadIgnored = false;

@@ -7,6 +7,7 @@ import { ATTACHMENT_DEFAULT_MAX_SIDE } from '../util/attachmentsUtil';
 import { saveURLAsFile } from '../util/saveURLAsFile';
 import * as MIME from './MIME';
 import { THUMBNAIL_SIDE } from './attachments/VisualAttachment';
+import { AriaLabels } from '../util/hardcodedAriaLabels';
 
 const MAX_WIDTH = THUMBNAIL_SIDE;
 const MAX_HEIGHT = THUMBNAIL_SIDE;
@@ -213,8 +214,10 @@ export function areAllAttachmentsVisual(attachments?: Array<AttachmentType>): bo
 }
 
 export function getAlt(attachment: AttachmentType): string {
-  // TODO: Rework when the alt text is available
-  return isVideoAttachment(attachment) ? '' : '';
+  // TODO: make those localized through crowdin
+  return isVideoAttachment(attachment)
+    ? AriaLabels.screenshotVideoInMsg
+    : AriaLabels.imageAttachmentAlt;
 }
 
 // Migration-related attachment stuff

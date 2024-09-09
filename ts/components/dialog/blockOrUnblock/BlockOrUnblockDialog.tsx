@@ -1,4 +1,3 @@
-/* eslint-disable no-await-in-loop */
 import { useDispatch } from 'react-redux';
 
 import { isEmpty } from 'lodash';
@@ -14,7 +13,7 @@ import { Localizer } from '../../basic/Localizer';
 import { SessionButton, SessionButtonColor, SessionButtonType } from '../../basic/SessionButton';
 import { StyledModalDescriptionContainer } from '../shared/ModalDescriptionContainer';
 import { BlockOrUnblockModalState } from './BlockOrUnblockModalState';
-import type { LocalizerComponentPropsObject } from '../../../types/Localizer';
+import type { LocalizerComponentPropsObject } from '../../../types/localizer';
 
 type ModalState = NonNullable<BlockOrUnblockModalState>;
 
@@ -69,6 +68,7 @@ export const BlockOrUnblockDialog = ({ pubkeys, action, onConfirmed }: NonNullab
       // we never block more than one user from the UI, so this is not very useful, just a type guard
       for (let index = 0; index < pubkeys.length; index++) {
         const pubkey = pubkeys[index];
+        // eslint-disable-next-line no-await-in-loop
         await BlockedNumberController.block(pubkey);
       }
     } else {

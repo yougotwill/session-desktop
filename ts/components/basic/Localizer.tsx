@@ -5,7 +5,7 @@ import type {
   LocalizerComponentProps,
   LocalizerDictionary,
   LocalizerToken,
-} from '../../types/Localizer';
+} from '../../types/localizer';
 import { useIsDarkTheme } from '../../state/selectors/theme';
 import { SessionHtmlRenderer } from './SessionHTMLRenderer';
 
@@ -96,7 +96,7 @@ const StyledHtmlRenderer = styled.span<{ isDarkTheme: boolean }>`
  * ```
  */
 export const Localizer = <T extends LocalizerToken>(props: LocalizerComponentProps<T>) => {
-  const isDarkMode = useIsDarkTheme();
+  const isDarkTheme = useIsDarkTheme();
 
   const args = 'args' in props ? props.args : undefined;
 
@@ -114,7 +114,7 @@ export const Localizer = <T extends LocalizerToken>(props: LocalizerComponentPro
 
   return containsFormattingTags ? (
     /** If the string contains a relevant formatting tag, render it as HTML */
-    <StyledHtmlRenderer isDarkTheme={isDarkMode}>
+    <StyledHtmlRenderer isDarkTheme={isDarkTheme}>
       <SessionHtmlRenderer tag={props.asTag} html={i18nString} className={props.className} />
     </StyledHtmlRenderer>
   ) : (

@@ -91,7 +91,7 @@ import {
   getKickedGroupUpdateStr,
   getLeftGroupUpdateChangeStr,
 } from './groupUpdate';
-import { GetMessageArgs, LocalizerToken } from '../types/Localizer';
+import type { GetMessageArgs, LocalizerToken } from '../types/localizer';
 
 // tslint:disable: cyclomatic-complexity
 

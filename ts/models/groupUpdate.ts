@@ -1,6 +1,6 @@
 import { getConversationController } from '../session/conversations';
 import { UserUtils } from '../session/utils';
-import type { LocalizerComponentPropsObject } from '../types/Localizer';
+import type { LocalizerComponentPropsObject } from '../types/localizer';
 
 // to remove after merge with groups
 function usAndXOthers(arr: Array<string>) {

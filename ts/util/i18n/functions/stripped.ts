@@ -1,11 +1,13 @@
 /** NOTE: Because of docstring limitations changes MUST be manually synced between {@link setupI18n.stripped } and {@link window.i18n.stripped } */
 
 import { deSanitizeHtmlTags, sanitizeArgs } from '../../../components/basic/Localizer';
-import { GetMessageArgs, LocalizerDictionary, LocalizerToken } from '../../../types/Localizer';
+import type { GetMessageArgs, LocalizerDictionary, LocalizerToken } from '../../../types/localizer';
 import { getMessage } from './getMessage';
 
 /**
  * Retrieves a localized message string, substituting variables where necessary. Then strips the message of any HTML and custom tags.
+ *
+ * @deprecated This will eventually be replaced altogether by LocalizedStringBuilder
  *
  * @param token - The token identifying the message to retrieve.
  * @param args - An optional record of substitution variables and their replacement values. This is required if the string has dynamic variables.

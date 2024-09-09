@@ -22,7 +22,7 @@ export const getConversationItemString = (date: Date) => {
     return formatter.format(date);
   }
 
-  // if since our start of the day, display the hour and minute only, am/pm locale dependent
+  // if it is today, display the hour and minutes only, am/pm locale dependent
   if (isAfter(date, getStartOfToday())) {
     const formatter = new Intl.DateTimeFormat(getBrowserLocale(), {
       hour: 'numeric',

@@ -1,5 +1,5 @@
 import { BrowserWindow, dialog } from 'electron';
-import type { SetupI18nReturnType } from '../types/Localizer';
+import type { SetupI18nReturnType } from '../types/localizer';
 
 export type MessagesType = {
   [key: string]: string;

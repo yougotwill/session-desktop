@@ -6,12 +6,12 @@ import { Persistor } from 'redux-persist/es/types';
 
 import { ConversationCollection } from './models/conversation';
 import { PrimaryColorStateType, ThemeStateType } from './themes/constants/colors';
-import {
+import type {
   GetMessageArgs,
   I18nMethods,
   LocalizerDictionary,
   LocalizerToken,
-} from './types/Localizer';
+} from './types/localizer';
 
 export interface LibTextsecure {
   messaging: boolean;
@@ -34,6 +34,7 @@ declare global {
 
     /** NOTE: Because of docstring limitations changes MUST be manually synced between {@link setupI18n.getMessage } and {@link window.i18n } */
     /**
+     * @deprecated this will eventually be replaced by LocalizedStringBuilder
      * Retrieves a localized message string, substituting variables where necessary.
      *
      * @param token - The token identifying the message to retrieve.
@@ -61,6 +62,8 @@ declare global {
        *
        * @returns The localized message string with substitutions applied.
        *
+       * @deprecated
+       *
        * NOTE: This is intended to be used to get the raw string then format it with {@link formatMessageWithArgs}
        *
        * @example
@@ -83,6 +86,8 @@ declare global {
        *
        * @returns The formatted message string.
        *
+       * @deprecated
+       *
        * @example
        * // The string greeting is 'Hello, {name}!' in the current locale
        * window.i18n.getRawMessage('greeting', { name: 'Alice' });
@@ -101,6 +106,8 @@ declare global {
       /** NOTE: Because of docstring limitations changes MUST be manually synced between {@link setupI18n.stripped } and {@link window.i18n.stripped } */
       /**
        * Retrieves a localized message string, substituting variables where necessary. Then strips the message of any HTML and custom tags.
+       *
+       * @deprecated
        *
        * @param token - The token identifying the message to retrieve.
        * @param args - An optional record of substitution variables and their replacement values. This is required if the string has dynamic variables.
@@ -122,6 +129,8 @@ declare global {
        * non-user-facing strings. Plural string support can be added splitting out the logic for
        * {@link setupI18n.formatMessageWithArgs} and creating a new getMessageFromDictionary, which
        * specifies takes a dictionary as an argument. This is left as an exercise for the reader.
+       *
+       * @deprecated
        *
        * @param token - The token identifying the message to retrieve.
        * @param args - An optional record of substitution variables and their replacement values. This is required if the string has dynamic variables.

@@ -30,7 +30,6 @@ export function OpenUrlModal(props: OpenUrlModalState) {
 
   function onClickOpen() {
     void shell.openExternal(url);
-
     onClose();
   }
 
