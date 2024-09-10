@@ -326,47 +326,27 @@ export async function deleteEverythingAndNetworkData() {
 
     // send deletion message to the network
     const potentiallyMaliciousSnodes = await SnodeAPI.forceNetworkDeletion();
-    if (potentiallyMaliciousSnodes === null) {
+    if (potentiallyMaliciousSnodes === null || potentiallyMaliciousSnodes.length) {
       window?.log?.warn('DeleteAccount => forceNetworkDeletion failed');
 
-      // close this dialog
-      window?.inboxStore?.dispatch(updateDeleteAccountModal(null));
-      window?.inboxStore?.dispatch(
-        updateConfirmModal({
-          title: window.i18n('clearDataAll'),
-          i18nMessage: { token: 'clearDataErrorDescriptionGeneric' },
-          okTheme: SessionButtonColor.Danger,
-          okText: window.i18n('clearDevice'),
-          onClickOk: async () => {
-            await deleteDbLocally();
-            window.restart();
-          },
-          onClickClose: () => {
-            window.inboxStore?.dispatch(updateConfirmModal(null));
-          },
-        })
-      );
-      return;
-    }
+      if (potentiallyMaliciousSnodes?.length) {
+        const snodeStr = potentiallyMaliciousSnodes.map(ed25519Str);
+        window?.log?.warn(
+          'DeleteAccount => forceNetworkDeletion Got some potentially malicious snodes',
+          snodeStr
+        );
+      }
 
-    if (potentiallyMaliciousSnodes.length) {
-      const snodeStr = potentiallyMaliciousSnodes.map(ed25519Str);
-      window?.log?.warn(
-        'DeleteAccount => forceNetworkDeletion Got some potentially malicious snodes',
-        snodeStr
-      );
       // close this dialog
       window?.inboxStore?.dispatch(updateDeleteAccountModal(null));
       // open a new confirm dialog to ask user what to do
       window?.inboxStore?.dispatch(
         updateConfirmModal({
           title: window.i18n('clearDataAll'),
-          i18nMessage: {
-            token: 'clearDataErrorDescriptionGeneric',
-          },
-          i18nMessageSub: { token: 'clearDeviceAndNetworkConfirm' },
+          i18nMessage: { token: 'clearDataErrorDescriptionGeneric' },
           okTheme: SessionButtonColor.Danger,
           okText: window.i18n('clearDeviceOnly'),
+          cancelText: window.i18n('cancel'),
           onClickOk: async () => {
             await deleteDbLocally();
             window.restart();
