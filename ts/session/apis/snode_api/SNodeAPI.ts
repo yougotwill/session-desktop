@@ -150,7 +150,7 @@ const forceNetworkDeletion = async (): Promise<Array<string> | null> => {
             }
           },
           {
-            retries: 3,
+            retries: 1,
             minTimeout: SnodeAPI.TEST_getMinTimeout(),
             onFailedAttempt: e => {
               window?.log?.warn(
