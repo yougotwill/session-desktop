@@ -74,7 +74,7 @@ export const AboutView = () => {
 
   return (
     <Provider store={themeStore}>
-      <SessionTheme runSetup={false}>
+      <SessionTheme>
         <SessionToastContainer />
         <StyledContent
           container={true}
