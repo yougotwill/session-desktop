@@ -1,5 +1,5 @@
 import { MouseEvent, useEffect, useState } from 'react';
-import { contextMenu, Item, Menu } from 'react-contexify';
+import { contextMenu, Menu } from 'react-contexify';
 import { useDispatch, useSelector } from 'react-redux';
 import styled from 'styled-components';
 
@@ -10,6 +10,7 @@ import { getHasOngoingCallWithPubkey } from '../../state/selectors/call';
 import { SessionIconButton } from '../icon';
 import { DropDownAndToggleButton } from '../icon/DropDownAndToggleButton';
 import { SessionContextMenuContainer } from '../SessionContextMenuContainer';
+import { ItemWithDataTestId } from '../menu/items/MenuItemWithDataTestId';
 
 const VideoInputMenu = ({
   triggerId,
@@ -23,14 +24,14 @@ const VideoInputMenu = ({
       <Menu id={triggerId} animation="fade">
         {camerasList.map(m => {
           return (
-            <Item
+            <ItemWithDataTestId
               key={m.deviceId}
               onClick={() => {
                 void CallManager.selectCameraByDeviceId(m.deviceId);
               }}
             >
               {m.label.substr(0, 40)}
-            </Item>
+            </ItemWithDataTestId>
           );
         })}
       </Menu>
@@ -96,14 +97,14 @@ const AudioInputMenu = ({
       <Menu id={triggerId} animation="fade">
         {audioInputsList.map(m => {
           return (
-            <Item
+            <ItemWithDataTestId
               key={m.deviceId}
               onClick={() => {
                 void CallManager.selectAudioInputByDeviceId(m.deviceId);
               }}
             >
               {m.label.substr(0, 40)}
-            </Item>
+            </ItemWithDataTestId>
           );
         })}
       </Menu>
@@ -165,14 +166,14 @@ const AudioOutputMenu = ({
       <Menu id={triggerId} animation="fade">
         {audioOutputsList.map(m => {
           return (
-            <Item
+            <ItemWithDataTestId
               key={m.deviceId}
               onClick={() => {
                 void CallManager.selectAudioOutputByDeviceId(m.deviceId);
               }}
             >
               {m.label.substr(0, 40)}
-            </Item>
+            </ItemWithDataTestId>
           );
         })}
       </Menu>

@@ -1,9 +1,10 @@
-import { Item, Menu } from 'react-contexify';
+import { Menu } from 'react-contexify';
 import { useDispatch } from 'react-redux';
 
 import { SessionContextMenuContainer } from '../SessionContextMenuContainer';
 
 import { hideMessageRequestBanner } from '../../state/ducks/userConfig';
+import { ItemWithDataTestId } from './items/MenuItemWithDataTestId';
 
 export type PropsContextConversationItem = {
   triggerId: string;
@@ -12,13 +13,13 @@ export type PropsContextConversationItem = {
 const HideBannerMenuItem = (): JSX.Element => {
   const dispatch = useDispatch();
   return (
-    <Item
+    <ItemWithDataTestId
       onClick={() => {
         dispatch(hideMessageRequestBanner());
       }}
     >
       {window.i18n('hide')}
-    </Item>
+    </ItemWithDataTestId>
   );
 };
 

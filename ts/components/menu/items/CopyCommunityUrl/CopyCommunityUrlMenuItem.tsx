@@ -1,8 +1,8 @@
-import { Item } from 'react-contexify';
 import { showCopyCommunityUrlMenuItem } from '.';
 import { useIsPublic } from '../../../../hooks/useParamSelector';
 import { copyPublicKeyByConvoId } from '../../../../interactions/conversationInteractions';
 import { Localizer } from '../../../basic/Localizer';
+import { ItemWithDataTestId } from '../MenuItemWithDataTestId';
 
 export const CopyCommunityUrlMenuItem = ({ convoId }: { convoId: string }): JSX.Element | null => {
   const isPublic = useIsPublic(convoId);
@@ -11,13 +11,13 @@ export const CopyCommunityUrlMenuItem = ({ convoId }: { convoId: string }): JSX.
 
   if (showCopyCommunityUrlMenuItem({ isPublic })) {
     return (
-      <Item
+      <ItemWithDataTestId
         onClick={() => {
           void copyPublicKeyByConvoId(convoId);
         }}
       >
         <Localizer token="communityUrlCopy" />
-      </Item>
+      </ItemWithDataTestId>
     );
   }
   return null;

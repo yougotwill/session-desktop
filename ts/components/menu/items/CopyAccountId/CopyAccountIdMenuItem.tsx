@@ -1,8 +1,8 @@
-import { Item } from 'react-contexify';
 import { useIsPrivate } from '../../../../hooks/useParamSelector';
 import { copyPublicKeyByConvoId } from '../../../../interactions/conversationInteractions';
 import { Localizer } from '../../../basic/Localizer';
 import { showCopyAccountIdAction } from '.';
+import { ItemWithDataTestId } from '../MenuItemWithDataTestId';
 
 /**
  * Can be used to copy the conversation AccountID or the message's author sender'id.
@@ -15,13 +15,13 @@ export const CopyAccountIdMenuItem = ({ pubkey }: { pubkey: string }): JSX.Eleme
 
   if (showCopyAccountIdAction({ isPrivate, pubkey })) {
     return (
-      <Item
+      <ItemWithDataTestId
         onClick={() => {
           void copyPublicKeyByConvoId(pubkey);
         }}
       >
         <Localizer token="accountIDCopy" />
-      </Item>
+      </ItemWithDataTestId>
     );
   }
   return null;

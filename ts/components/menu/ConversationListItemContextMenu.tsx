@@ -1,4 +1,4 @@
-import { Item, Menu } from 'react-contexify';
+import { Menu } from 'react-contexify';
 
 import { useSelector } from 'react-redux';
 import { useConvoIdFromContext } from '../../contexts/ConvoIdContext';
@@ -27,6 +27,7 @@ import {
 } from './Menu';
 import { CopyCommunityUrlMenuItem } from './items/CopyCommunityUrl/CopyCommunityUrlMenuItem';
 import { CopyAccountIdMenuItem } from './items/CopyAccountId/CopyAccountIdMenuItem';
+import { ItemWithDataTestId } from './items/MenuItemWithDataTestId';
 
 export type PropsContextConversationItem = {
   triggerId: string;
@@ -92,7 +93,7 @@ export const PinConversationMenuItem = (): JSX.Element | null => {
     };
 
     const menuText = isPinned ? window.i18n('pinUnpin') : window.i18n('pin');
-    return <Item onClick={togglePinConversation}>{menuText}</Item>;
+    return <ItemWithDataTestId onClick={togglePinConversation}>{menuText}</ItemWithDataTestId>;
   }
   return null;
 };
