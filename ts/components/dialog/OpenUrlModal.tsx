@@ -53,7 +53,7 @@ export function OpenUrlModal(props: OpenUrlModalState) {
       <SpacerMD />
       <div className="session-modal__button-group">
         <SessionButton
-          text={window.i18n('urlOpen')}
+          text={window.i18n('open')}
           buttonColor={SessionButtonColor.Danger}
           buttonType={SessionButtonType.Simple}
           onClick={onClickOpen}
