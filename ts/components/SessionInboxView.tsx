@@ -37,7 +37,7 @@ import { SessionTheme } from '../themes/SessionTheme';
 import { Storage } from '../util/storage';
 import { NoticeBanner } from './NoticeBanner';
 import { Flex } from './basic/Flex';
-import { themeStore } from '../state/theme/store';
+import { initialThemeState } from '../state/theme/ducks/theme';
 
 function makeLookup<T>(items: Array<T>, key: string): { [key: string]: T } {
   // Yep, we can't index into item without knowing what it is. True. But we want to.
@@ -69,6 +69,7 @@ function createSessionInboxStore() {
     section: initialSectionState,
     defaultRooms: initialDefaultRoomState,
     search: initialSearchState,
+    theme: initialThemeState,
     primaryColor: initialPrimaryColorState,
     onionPaths: initialOnionPathState,
     modals: initialModalState,
@@ -135,22 +136,20 @@ export const SessionInboxView = () => {
 
   return (
     <div className="inbox index">
-      <Provider store={themeStore}>
-        <Provider store={window.inboxStore}>
-          <PersistGate loading={null} persistor={persistor}>
-            <SessionTheme>
-              <SomeDeviceOutdatedSyncingNotice />
-              <AnimatePresence>
-                <Flex container={true} height="0" flexShrink={100} flexGrow={1}>
-                  <StyledGutter>
-                    <LeftPane />
-                  </StyledGutter>
-                  <SessionMainPanel />
-                </Flex>
-              </AnimatePresence>
-            </SessionTheme>
-          </PersistGate>
-        </Provider>
+      <Provider store={window.inboxStore}>
+        <PersistGate loading={null} persistor={persistor}>
+          <SessionTheme>
+            <SomeDeviceOutdatedSyncingNotice />
+            <AnimatePresence>
+              <Flex container={true} height="0" flexShrink={100} flexGrow={1}>
+                <StyledGutter>
+                  <LeftPane />
+                </StyledGutter>
+                <SessionMainPanel />
+              </Flex>
+            </AnimatePresence>
+          </SessionTheme>
+        </PersistGate>
       </Provider>
     </div>
   );

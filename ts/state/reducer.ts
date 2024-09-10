@@ -8,8 +8,8 @@ import { reducer as search, SearchStateType } from './ducks/search';
 import { reducer as section, SectionStateType } from './ducks/section';
 import { ReduxSogsRoomInfos, SogsRoomInfoState } from './ducks/sogsRoomInfo';
 import { reducer as user, UserStateType } from './ducks/user';
-
-import { PrimaryColorStateType } from '../themes/constants/colors';
+import themeReducer from './theme/ducks/theme';
+import { PrimaryColorStateType, ThemeStateType } from '../themes/constants/colors';
 import { modalReducer as modals, ModalState } from './ducks/modalDialog';
 import { defaultOnionReducer as onionPaths, OnionState } from './ducks/onion';
 import { settingsReducer, SettingsState } from './ducks/settings';
@@ -23,6 +23,7 @@ export type StateType = {
   search: SearchStateType;
   user: UserStateType;
   conversations: ConversationsStateType;
+  theme: ThemeStateType;
   primaryColor: PrimaryColorStateType;
   section: SectionStateType;
   defaultRooms: DefaultRoomsState;
@@ -37,8 +38,9 @@ export type StateType = {
 
 const reducers = {
   search,
-  conversations,
   user,
+  conversations,
+  theme: themeReducer,
   primaryColor,
   section,
   defaultRooms,
