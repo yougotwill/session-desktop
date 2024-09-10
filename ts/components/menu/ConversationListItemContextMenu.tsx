@@ -28,6 +28,7 @@ import {
 import { CopyCommunityUrlMenuItem } from './items/CopyCommunityUrl/CopyCommunityUrlMenuItem';
 import { CopyAccountIdMenuItem } from './items/CopyAccountId/CopyAccountIdMenuItem';
 import { ItemWithDataTestId } from './items/MenuItemWithDataTestId';
+import { getMenuAnimation } from './MenuAnimation';
 
 export type PropsContextConversationItem = {
   triggerId: string;
@@ -45,7 +46,7 @@ const ConversationListItemContextMenu = (props: PropsContextConversationItem) =>
 
   return (
     <SessionContextMenuContainer>
-      <Menu id={triggerId} animation="fade">
+      <Menu id={triggerId} animation={getMenuAnimation()}>
         {/* Message request related actions */}
         <AcceptMsgRequestMenuItem />
         <DeclineMsgRequestMenuItem />

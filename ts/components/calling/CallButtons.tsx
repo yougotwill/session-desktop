@@ -11,6 +11,7 @@ import { SessionIconButton } from '../icon';
 import { DropDownAndToggleButton } from '../icon/DropDownAndToggleButton';
 import { SessionContextMenuContainer } from '../SessionContextMenuContainer';
 import { ItemWithDataTestId } from '../menu/items/MenuItemWithDataTestId';
+import { getMenuAnimation } from '../menu/MenuAnimation';
 
 const VideoInputMenu = ({
   triggerId,
@@ -21,7 +22,7 @@ const VideoInputMenu = ({
 }) => {
   return (
     <SessionContextMenuContainer>
-      <Menu id={triggerId} animation="fade">
+      <Menu id={triggerId} animation={getMenuAnimation()}>
         {camerasList.map(m => {
           return (
             <ItemWithDataTestId
@@ -94,7 +95,7 @@ const AudioInputMenu = ({
 }) => {
   return (
     <SessionContextMenuContainer>
-      <Menu id={triggerId} animation="fade">
+      <Menu id={triggerId} animation={getMenuAnimation()}>
         {audioInputsList.map(m => {
           return (
             <ItemWithDataTestId
@@ -163,7 +164,7 @@ const AudioOutputMenu = ({
 }) => {
   return (
     <SessionContextMenuContainer>
-      <Menu id={triggerId} animation="fade">
+      <Menu id={triggerId} animation={getMenuAnimation()}>
         {audioOutputsList.map(m => {
           return (
             <ItemWithDataTestId

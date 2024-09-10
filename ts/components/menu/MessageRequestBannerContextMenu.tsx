@@ -5,6 +5,7 @@ import { SessionContextMenuContainer } from '../SessionContextMenuContainer';
 
 import { hideMessageRequestBanner } from '../../state/ducks/userConfig';
 import { ItemWithDataTestId } from './items/MenuItemWithDataTestId';
+import { getMenuAnimation } from './MenuAnimation';
 
 export type PropsContextConversationItem = {
   triggerId: string;
@@ -28,7 +29,7 @@ export const MessageRequestBannerContextMenu = (props: PropsContextConversationI
 
   return (
     <SessionContextMenuContainer>
-      <Menu id={triggerId} animation="fade">
+      <Menu id={triggerId} animation={getMenuAnimation()}>
         <HideBannerMenuItem />
       </Menu>
     </SessionContextMenuContainer>

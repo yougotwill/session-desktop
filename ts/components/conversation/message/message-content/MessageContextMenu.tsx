@@ -52,6 +52,7 @@ import { showCopyAccountIdAction } from '../../../menu/items/CopyAccountId';
 import { CopyAccountIdMenuItem } from '../../../menu/items/CopyAccountId/CopyAccountIdMenuItem';
 import { Localizer } from '../../../basic/Localizer';
 import { ItemWithDataTestId } from '../../../menu/items/MenuItemWithDataTestId';
+import { getMenuAnimation } from '../../../menu/MenuAnimation';
 
 export type MessageContextMenuSelectorProps = Pick<
   MessageRenderingProps,
@@ -369,7 +370,11 @@ export const MessageContextMenu = (props: Props) => {
         </StyledEmojiPanelContainer>
       )}
       <SessionContextMenuContainer>
-        <Menu id={contextMenuId} onVisibilityChange={onVisibilityChange} animation="fade">
+        <Menu
+          id={contextMenuId}
+          onVisibilityChange={onVisibilityChange}
+          animation={getMenuAnimation()}
+        >
           {enableReactions && (
             // eslint-disable-next-line @typescript-eslint/no-misused-promises
             <MessageReactBar
