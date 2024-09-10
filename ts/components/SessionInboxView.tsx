@@ -25,7 +25,6 @@ import { initialPrimaryColorState } from '../state/ducks/primaryColor';
 import { initialSearchState } from '../state/ducks/search';
 import { initialSectionState } from '../state/ducks/section';
 import { getEmptyStagedAttachmentsState } from '../state/ducks/stagedAttachments';
-import { initialThemeState } from '../state/ducks/theme';
 import { initialUserConfigState } from '../state/ducks/userConfig';
 import { StateType } from '../state/reducer';
 import { SessionMainPanel } from './SessionMainPanel';
@@ -69,7 +68,6 @@ function createSessionInboxStore() {
     section: initialSectionState,
     defaultRooms: initialDefaultRoomState,
     search: initialSearchState,
-    theme: initialThemeState,
     primaryColor: initialPrimaryColorState,
     onionPaths: initialOnionPathState,
     modals: initialModalState,

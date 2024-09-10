@@ -5,7 +5,6 @@ import { actions as modalDialog } from './ducks/modalDialog';
 import { actions as primaryColor } from './ducks/primaryColor';
 import { actions as search } from './ducks/search';
 import { actions as sections } from './ducks/section';
-import { actions as theme } from './ducks/theme';
 import { actions as user } from './ducks/user';
 
 export function mapDispatchToProps(dispatch: Dispatch): object {
@@ -15,7 +14,6 @@ export function mapDispatchToProps(dispatch: Dispatch): object {
         ...search,
         ...conversations,
         ...user,
-        ...theme,
         ...sections,
         ...modalDialog,
         ...primaryColor,
