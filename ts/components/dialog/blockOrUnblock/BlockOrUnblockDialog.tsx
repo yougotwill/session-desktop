@@ -68,6 +68,7 @@ export const BlockOrUnblockDialog = ({ pubkeys, action, onConfirmed }: NonNullab
       // we never block more than one user from the UI, so this is not very useful, just a type guard
       for (let index = 0; index < pubkeys.length; index++) {
         const pubkey = pubkeys[index];
+        // TODO: make BlockedNumberController.block take an array and do the change in a single call.
         // eslint-disable-next-line no-await-in-loop
         await BlockedNumberController.block(pubkey);
       }

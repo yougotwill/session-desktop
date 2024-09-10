@@ -93,6 +93,7 @@ function getPluralKey<R extends PluralKey>(string: PluralString): R {
   return match?.[1] as R;
 }
 
+// TODO This regex is only going to work for the one/other case what about other langs where we can have one/two/other for example
 const isPluralForm = (localizedString: string): localizedString is PluralString =>
   /{\w+, plural, one \[.+\] other \[.+\]}/g.test(localizedString);
 

@@ -100,7 +100,7 @@ function formatTimeLeft({ timeLeftMs }: { timeLeftMs: number }) {
   const timeLeftSeconds = Math.floor(timeLeftMs / 1000);
 
   if (timeLeftSeconds <= 0) {
-    return `0s`;
+    return '0s';
   }
 
   const [time_large, time_small] = formatAbbreviatedExpireDoubleTimer(timeLeftSeconds);

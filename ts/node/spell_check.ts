@@ -7,8 +7,7 @@ export const setup = (browserWindow: BrowserWindow, i18n: SetupI18nReturnType) =
   // NOTE: we do not rely on the locale parsed by node here because we want
   // to support a broader list of spell checks than what the app is localised for.
   // For instance: en_AU is not a supported language on crowdin, but we still want the user to
-  // - if he has the dictionaries installed for it - be able to spell check "esky", "arvo" or "bogan"
-  //
+  // - if they have the dictionary installed for it - we should be able to spell check "esky", "arvo" or "bogan"
   const userLocale = process.env.LANGUAGE
     ? process.env.LANGUAGE
     : osLocaleSync().replace(/_/g, '-');
