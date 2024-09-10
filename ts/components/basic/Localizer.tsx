@@ -6,7 +6,7 @@ import type {
   LocalizerDictionary,
   LocalizerToken,
 } from '../../types/localizer';
-import { useIsDarkTheme } from '../../state/selectors/theme';
+import { useIsDarkTheme } from '../../state/theme/selectors/theme';
 import { SessionHtmlRenderer } from './SessionHTMLRenderer';
 
 /** An array of supported html tags to render if found in a string */

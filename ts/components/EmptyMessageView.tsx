@@ -1,7 +1,7 @@
 import { useSelector } from 'react-redux';
 import styled from 'styled-components';
 import { getLeftPaneConversationIdsCount } from '../state/selectors/conversations';
-import { useIsDarkTheme } from '../state/selectors/theme';
+import { useIsDarkTheme } from '../state/theme/selectors/theme';
 import { isSignWithRecoveryPhrase } from '../util/storage';
 import { Flex } from './basic/Flex';
 import { Spacer2XL, SpacerXS } from './basic/Text';

@@ -1,11 +1,13 @@
 import { useEffect } from 'react';
 import styled from 'styled-components';
+import { Provider } from 'react-redux';
 import { SessionTheme } from '../themes/SessionTheme';
 import { switchThemeTo } from '../themes/switchTheme';
 import { SessionToastContainer } from './SessionToastContainer';
 import { Flex } from './basic/Flex';
 import { SessionButtonType } from './basic/SessionButton';
 import { CopyToClipboardButton } from './buttons/CopyToClipboardButton';
+import { themeStore } from '../state/theme/store';
 
 const StyledContent = styled(Flex)`
   background-color: var(--background-primary-color);
@@ -71,58 +73,60 @@ export const AboutView = () => {
   }, []);
 
   return (
-    <SessionTheme runSetup={false}>
-      <SessionToastContainer />
-      <StyledContent
-        container={true}
-        flexDirection={'column'}
-        justifyContent={'center'}
-        alignItems={'center'}
-      >
-        <img
-          src="images/session/session_icon.png"
-          alt="session brand icon"
-          width="200"
-          height="200"
-        />
-        <img
-          src="images/session/session-text.svg"
-          alt="session brand text"
-          width={192}
-          height={26}
-        />
-        <CopyToClipboardButton
-          className="version"
-          text={versionInfo}
-          buttonType={SessionButtonType.Simple}
-        />
-        <CopyToClipboardButton
-          className="os"
-          text={systemInfo}
-          buttonType={SessionButtonType.Simple}
-        />
-        <CopyToClipboardButton
-          className="commitHash"
-          text={commitInfo}
-          buttonType={SessionButtonType.Simple}
-        />
-        {environmentStates.length ? (
+    <Provider store={themeStore}>
+      <SessionTheme runSetup={false}>
+        <SessionToastContainer />
+        <StyledContent
+          container={true}
+          flexDirection={'column'}
+          justifyContent={'center'}
+          alignItems={'center'}
+        >
+          <img
+            src="images/session/session_icon.png"
+            alt="session brand icon"
+            width="200"
+            height="200"
+          />
+          <img
+            src="images/session/session-text.svg"
+            alt="session brand text"
+            width={192}
+            height={26}
+          />
           <CopyToClipboardButton
-            className="environment"
-            text={environmentStates.join(' - ')}
+            className="version"
+            text={versionInfo}
             buttonType={SessionButtonType.Simple}
           />
-        ) : null}
-        <a href="https://getsession.org">https://getsession.org</a>
-        <br />
-        <a className="privacy" href="https://getsession.org/privacy-policy">
-          {window.i18n('onboardingPrivacy')}
-        </a>
-        <a className="privacy" href="https://getsession.org/terms-of-service/">
-          {window.i18n('onboardingTos')}
-        </a>
-        <br />
-      </StyledContent>
-    </SessionTheme>
+          <CopyToClipboardButton
+            className="os"
+            text={systemInfo}
+            buttonType={SessionButtonType.Simple}
+          />
+          <CopyToClipboardButton
+            className="commitHash"
+            text={commitInfo}
+            buttonType={SessionButtonType.Simple}
+          />
+          {environmentStates.length ? (
+            <CopyToClipboardButton
+              className="environment"
+              text={environmentStates.join(' - ')}
+              buttonType={SessionButtonType.Simple}
+            />
+          ) : null}
+          <a href="https://getsession.org">https://getsession.org</a>
+          <br />
+          <a className="privacy" href="https://getsession.org/privacy-policy">
+            {window.i18n('onboardingPrivacy')}
+          </a>
+          <a className="privacy" href="https://getsession.org/terms-of-service/">
+            {window.i18n('onboardingTos')}
+          </a>
+          <br />
+        </StyledContent>
+      </SessionTheme>
+    </Provider>
   );
 };

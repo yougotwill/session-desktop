@@ -42,7 +42,7 @@ import {
   getFreshSwarmFor,
 } from '../../session/apis/snode_api/snodePool';
 import { ConfigurationSync } from '../../session/utils/job_runners/jobs/ConfigurationSyncJob';
-import { useIsDarkTheme } from '../../state/selectors/theme';
+import { useIsDarkTheme } from '../../state/theme/selectors/theme';
 import { switchThemeTo } from '../../themes/switchTheme';
 import { ReleasedFeatures } from '../../util/releaseFeature';
 import { getOppositeTheme } from '../../util/theme';

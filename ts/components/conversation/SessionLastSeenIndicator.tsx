@@ -3,7 +3,7 @@ import { useSelector } from 'react-redux';
 import styled from 'styled-components';
 import { useScrollToLoadedMessage } from '../../contexts/ScrollToLoadedMessage';
 import { getQuotedMessageToAnimate } from '../../state/selectors/conversations';
-import { useIsDarkTheme } from '../../state/selectors/theme';
+import { useIsDarkTheme } from '../../state/theme/selectors/theme';
 
 const LastSeenBar = styled.div`
   height: 2px;

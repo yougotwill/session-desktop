@@ -5,7 +5,7 @@ import { useSelector } from 'react-redux';
 import styled from 'styled-components';
 
 import { getPrimaryColor } from '../../state/selectors/primaryColor';
-import { useIsDarkTheme, useTheme } from '../../state/selectors/theme';
+import { useIsDarkTheme, useTheme } from '../../state/theme/selectors/theme';
 import {
   COLORS,
   ColorsType,

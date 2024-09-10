@@ -11,7 +11,7 @@ import {
 import { disableRecoveryPhrasePrompt } from '../../state/ducks/userConfig';
 import { getFocusedSection, getLeftOverlayMode } from '../../state/selectors/section';
 import { useHideRecoveryPasswordEnabled } from '../../state/selectors/settings';
-import { useIsDarkTheme } from '../../state/selectors/theme';
+import { useIsDarkTheme } from '../../state/theme/selectors/theme';
 import { getShowRecoveryPhrasePrompt } from '../../state/selectors/userConfig';
 import { isSignWithRecoveryPhrase } from '../../util/storage';
 import { Flex } from '../basic/Flex';
