@@ -345,7 +345,7 @@ export async function deleteEverythingAndNetworkData() {
           title: window.i18n('clearDataAll'),
           i18nMessage: { token: 'clearDataErrorDescriptionGeneric' },
           okTheme: SessionButtonColor.Danger,
-          okText: window.i18n('clearDeviceOnly'),
+          okText: window.i18n('clearDevice'),
           cancelText: window.i18n('cancel'),
           onClickOk: async () => {
             await deleteDbLocally();

@@ -309,7 +309,6 @@ const doDeleteSelectedMessages = async ({
   }
 
   // #region deletion for 1-1 and closed groups
-
   if (deleteForEveryone) {
     if (!isAllOurs) {
       ToastUtils.pushMessageDeleteForbidden();
@@ -392,6 +391,7 @@ export async function deleteMessagesById(messageIds: Array<string>, conversation
   const isMe = conversation.isMe();
 
   const closeDialog = () => window.inboxStore?.dispatch(updateConfirmModal(null));
+  const clearMessagesForEveryone = 'clearMessagesForEveryone';
 
   window.inboxStore?.dispatch(
     updateConfirmModal({
@@ -399,8 +399,11 @@ export async function deleteMessagesById(messageIds: Array<string>, conversation
       i18nMessage: { token: 'deleteMessage', args: { count: selectedMessages.length } },
       radioOptions: !isMe
         ? [
-            { label: window.i18n('clearMessagesForMe'), value: 'clearMessagesForMe' },
-            { label: window.i18n('clearMessagesForEveryone'), value: 'clearMessagesForEveryone' },
+            { label: window.i18n('clearMessagesForMe'), value: 'clearMessagesForMe' as const },
+            {
+              label: window.i18n('clearMessagesForEveryone'),
+              value: clearMessagesForEveryone,
+            },
           ]
         : undefined,
       okText: window.i18n('delete'),
@@ -409,7 +412,7 @@ export async function deleteMessagesById(messageIds: Array<string>, conversation
         await doDeleteSelectedMessages({
           selectedMessages,
           conversation,
-          deleteForEveryone: args === 'deleteForEveryone', // chosenOption from radioOptions
+          deleteForEveryone: args === clearMessagesForEveryone,
         });
         window.inboxStore?.dispatch(updateConfirmModal(null));
         window.inboxStore?.dispatch(closeRightPanel());
