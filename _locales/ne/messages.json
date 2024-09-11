@@ -165,7 +165,6 @@
   "communityInvitation": "Community Invitation",
   "communityJoin": "समुदायमा सामेल हुनुहोस्",
   "communityJoinDescription": "तपाईं {community_name} सामुदायमा सामेल हुन निश्चित हुनुहुन्छ?",
-  "communityJoinError": "{community_name} मा सामेल हुन असफल भयो।",
   "communityJoinOfficial": "वा ती मध्ये कुनैमा सम्मिलित हुनुहोस्",
   "communityJoined": "समुदायमा सामेल हुनुभयो",
   "communityLeave": "समुदाय छोड्नुहोस",
