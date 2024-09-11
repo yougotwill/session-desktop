@@ -76,7 +76,7 @@ jobs:
         working-directory: ./release/
 
       - name: Upload Production Artifacts
-        uses: actions/upload-artifact@v1
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ runner.os }}-${{ runner.arch }}-production
           path: release

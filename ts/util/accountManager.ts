@@ -21,6 +21,7 @@ import { updateConfirmModal, updateDeleteAccountModal } from '../state/ducks/mod
 import { actions as userActions } from '../state/ducks/user';
 import { Registration } from './registration';
 import { Storage, saveRecoveryPhrase, setLocalPubKey, setSignInByLinking } from './storage';
+import { PromiseUtils } from '../session/utils';
 import { SnodeAPI } from '../session/apis/snode_api/SNodeAPI';
 
 /**
@@ -271,10 +272,14 @@ export async function sendConfigMessageAndDeleteEverything() {
   try {
     // DELETE LOCAL DATA ONLY, NOTHING ON NETWORK
     window?.log?.info('DeleteAccount => Sending a last SyncConfiguration');
+    if (window.isOnline) {
+      // be sure to wait for the message being effectively sent. Otherwise we won't be able to encrypt it for our devices !
+      await forceSyncConfigurationNowIfNeeded(true);
+      window?.log?.info('Last configuration message sent!');
+    } else {
+      window?.log?.warn('sendConfigMessageAndDeleteEverything: we are offline, just deleting');
+    }
 
-    // be sure to wait for the message being effectively sent. Otherwise we won't be able to encrypt it for our devices !
-    await forceSyncConfigurationNowIfNeeded(true);
-    window?.log?.info('Last configuration message sent!');
     await deleteDbLocally();
   } catch (error) {
     // if an error happened, it's not related to the delete everything on network logic as this is handled above.
@@ -294,38 +299,47 @@ export async function sendConfigMessageAndDeleteEverything() {
   }
 }
 
+async function deleteEverythingOnNetwork() {
+  const allRoomInfos = await getAllValidOpenGroupV2ConversationRoomInfos();
+  const allRoomInfosArray = Array.from(allRoomInfos?.values() || []);
+  // clear all sogs inboxes (includes message requests)
+
+  if (allRoomInfosArray.length) {
+    // clear each inbox per sogs
+
+    const clearInboxPromises = allRoomInfosArray.map(async roomInfo => {
+      const success = await clearInbox(roomInfo);
+      if (!success) {
+        throw Error(`Failed to clear inbox for ${roomInfo.conversationId}`);
+      }
+      return true;
+    });
+
+    const results = await Promise.allSettled(clearInboxPromises);
+    results.forEach((result, index) => {
+      if (result.status === 'rejected') {
+        window.log.error(result.reason);
+      } else {
+        window.log.info('Inbox cleared for room', allRoomInfosArray[index]);
+      }
+    });
+  }
+
+  return SnodeAPI.forceNetworkDeletion();
+}
+
 export async function deleteEverythingAndNetworkData() {
   try {
     // DELETE EVERYTHING ON NETWORK, AND THEN STUFF LOCALLY STORED
     // a bit of duplicate code below, but it's easier to follow every case like that (helped with returns)
-
-    // clear all sogs inboxes (includes message requests)
-    const allRoomInfos = await getAllValidOpenGroupV2ConversationRoomInfos();
-    const allRoomInfosArray = Array.from(allRoomInfos?.values() || []);
-
-    if (allRoomInfosArray.length) {
-      // clear each inbox per sogs
-
-      const clearInboxPromises = allRoomInfosArray.map(async roomInfo => {
-        const success = await clearInbox(roomInfo);
-        if (!success) {
-          throw Error(`Failed to clear inbox for ${roomInfo.conversationId}`);
-        }
-        return true;
-      });
-
-      const results = await Promise.allSettled(clearInboxPromises);
-      results.forEach((result, index) => {
-        if (result.status === 'rejected') {
-          window.log.error(result.reason);
-        } else {
-          window.log.info('Inbox cleared for room', allRoomInfosArray[index]);
-        }
-      });
+    let potentiallyMaliciousSnodes: Array<string> | null = null;
+    try {
+      potentiallyMaliciousSnodes = await PromiseUtils.timeout(deleteEverythingOnNetwork(), 15000);
+    } catch (e) {
+      potentiallyMaliciousSnodes = null; // mark as generic fail
     }
 
     // send deletion message to the network
-    const potentiallyMaliciousSnodes = await SnodeAPI.forceNetworkDeletion();
     if (potentiallyMaliciousSnodes === null || potentiallyMaliciousSnodes.length) {
       window?.log?.warn('DeleteAccount => forceNetworkDeletion failed');
 
