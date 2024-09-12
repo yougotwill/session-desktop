@@ -158,7 +158,7 @@ if (windowFromUserConfig) {
 
 import { readFile } from 'fs-extra';
 import { getAppRootPath } from '../node/getRootPath';
-import { setLastestRelease } from '../node/latest_desktop_release';
+import { setLatestRelease } from '../node/latest_desktop_release';
 import { isDevProd, isTestIntegration } from '../shared/env_vars';
 import { classicDark } from '../themes';
 import type { SetupI18nReturnType } from '../types/localizer';
@@ -492,7 +492,7 @@ ipc.on('show-window', () => {
 });
 
 ipc.on('set-release-from-file-server', (_event, releaseGotFromFileServer) => {
-  setLastestRelease(releaseGotFromFileServer);
+  setLatestRelease(releaseGotFromFileServer);
 });
 
 let isReadyForUpdates = false;

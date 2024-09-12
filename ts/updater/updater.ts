@@ -1,14 +1,15 @@
 /* eslint-disable @typescript-eslint/no-misused-promises */
 /* eslint-disable no-console */
-import * as path from 'path';
 import { app, type BrowserWindow } from 'electron';
 import { autoUpdater, type UpdateInfo } from 'electron-updater';
 import * as fs from 'fs-extra';
+import * as path from 'path';
 import { gt as isVersionGreaterThan, parse as parseVersion } from 'semver';
 
 import { windowMarkShouldQuit } from '../node/window_state';
 
-import { getLastestRelease } from '../node/latest_desktop_release';
+import { getLatestRelease } from '../node/latest_desktop_release';
+import type { SetupI18nReturnType } from '../types/localizer';
 import {
   getPrintableError,
   type LoggerType,
@@ -16,7 +17,6 @@ import {
   showDownloadUpdateDialog,
   showUpdateDialog,
 } from './common';
-import type { SetupI18nReturnType } from '../types/localizer';
 
 let isUpdating = false;
 let downloadIgnored = false;
@@ -95,7 +95,7 @@ async function checkForUpdates(
   isUpdating = true;
 
   try {
-    const latestVersionFromFsFromRenderer = getLastestRelease();
+    const latestVersionFromFsFromRenderer = getLatestRelease();
 
     logger.info('[updater] latestVersionFromFsFromRenderer', latestVersionFromFsFromRenderer);
     if (!latestVersionFromFsFromRenderer || !latestVersionFromFsFromRenderer?.length) {

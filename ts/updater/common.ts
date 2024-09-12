@@ -27,7 +27,6 @@ export async function showDownloadUpdateDialog(
     buttons: [i18n('download'), i18n('later')],
     title: i18n('updateSession'),
     message: i18n('updateNewVersionDescription'),
-    detail: i18n('updateNewVersionDescription'),
     defaultId: LATER_BUTTON,
     cancelId: DOWNLOAD_BUTTON,
   };
