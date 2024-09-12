@@ -433,7 +433,7 @@
   "groupRemovedMultiple": "<b>{name}</b> et <b>{count} autres</b> ont été retirés du groupe.",
   "groupRemovedTwo": "<b>{name}</b> et <b>{other_name}</b> ont été retirés du groupe.",
   "groupRemovedYou": "Vous avez été retiré de <b>{group_name}.</b>",
-  "groupRemovedYouMultiple": "Message de contrôle indiquant que l'utilisateur et un autre membre ont été retirés du groupe.",
+  "groupRemovedYouMultiple": "<b>Vous</b> et <b>{count} autres</b> ont été supprimés du groupe.",
   "groupRemovedYouTwo": "<b>Vous</b> et <b>{other_name}</b> avez été retiré(e)s du groupe.",
   "groupSetDisplayPicture": "Définir la photo du groupe",
   "groupUnknown": "Groupe inconnu",
