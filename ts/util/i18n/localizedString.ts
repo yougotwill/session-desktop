@@ -239,11 +239,20 @@ export class LocalizedStringBuilder<
     const currentLocale = getLocale();
     const cardinalRule = new Intl.PluralRules(currentLocale).select(num);
 
-    const pluralString = getStringForCardinalRule(str, cardinalRule);
+    let pluralString = getStringForCardinalRule(str, cardinalRule);
 
     if (!pluralString) {
-      i18nLog(`Plural string not found for cardinal '${cardinalRule}': '${str}'`);
-      return this.token;
+      i18nLog(
+        `Plural string not found for cardinal '${cardinalRule}': '${str}' Falling back to 'other' cardinal`
+      );
+
+      pluralString = getStringForCardinalRule(str, 'other');
+
+      if (!pluralString) {
+        i18nLog(`Plural string not found for fallback cardinal 'other': '${str}'`);
+
+        return this.token;
+      }
     }
 
     return pluralString.replaceAll('#', `${num}`);
