@@ -89,13 +89,13 @@ export type StringArgsRecord<T extends string> = Record<StringArgs<T>, string | 
 // Above is testing stuff
 
 function getPluralKey<R extends PluralKey>(string: PluralString): R {
-  const match = /{(\w+), plural, one \[.+\] other \[.+\]}/g.exec(string);
+  const match = /{(\w+), plural, (zero|one|two|few|many|other) \[.+\]}/g.exec(string);
   return match?.[1] as R;
 }
 
 // TODO This regex is only going to work for the one/other case what about other langs where we can have one/two/other for example
 const isPluralForm = (localizedString: string): localizedString is PluralString =>
-  /{\w+, plural, one \[.+\] other \[.+\]}/g.test(localizedString);
+  /{(\w+), plural, (zero|one|two|few|many|other) \[.+\]}/g.test(localizedString);
 
 /**
  * Checks if a string contains a dynamic variable.
