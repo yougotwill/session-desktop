@@ -92,13 +92,13 @@ declare global {
        * // The string greeting is 'Hello, {name}!' in the current locale
        * window.i18n.getRawMessage('greeting', { name: 'Alice' });
        * // => 'Hello, {name}!'
-       * window.i18n.formatMessageWithArgs('greeting', { name: 'Alice' });
+       * window.i18n.formatMessageWithArgs('Hello, {name}!', { name: 'Alice' });
        * // => 'Hello, Alice!'
        *
        * // The string search is '{count, plural, one [{found_count} of # match] other [{found_count} of # matches]}' in the current locale
        * window.i18n.getRawMessage('search', { count: 1, found_count: 1 });
        * // => '{found_count} of {count} match'
-       * window.i18n.formatMessageWithArgs('search', { count: 1, found_count: 1 });
+       * window.i18n.formatMessageWithArgs('{found_count} of {count} match', { count: 1, found_count: 1 });
        * // => '1 of 1 match'
        */
       formatMessageWithArgs: I18nMethods['formatMessageWithArgs'];
