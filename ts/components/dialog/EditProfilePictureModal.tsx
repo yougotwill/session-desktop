@@ -108,7 +108,7 @@ export const EditProfilePictureModal = (props: EditProfilePictureModalProps) => 
 
   return (
     <SessionWrapperModal
-      title={window.i18n('profileDisplayPicture')}
+      title={window.i18n('profileDisplayPictureSet')}
       onClose={closeDialog}
       showHeader={true}
       headerReverse={true}
