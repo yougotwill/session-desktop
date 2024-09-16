@@ -316,7 +316,7 @@
   "disappearingMessagesSetYou": "<b>Вие</b> настроихте съобщенията да изчезват {time} след като са били {disappearing_messages_type}.",
   "disappearingMessagesTimer": "Таймер",
   "disappearingMessagesTurnedOff": "<b>{name}</b> е изключил изчезващите съобщения. Съобщенията, които изпраща, вече няма да изчезват.",
-  "disappearingMessagesTurnedOffGroup": "<b>{name}</b> изключи изчезващите съобщения.",
+  "disappearingMessagesTurnedOffGroup": "<b>{name}</b> <b>изключи</b> изчезващите съобщения.",
   "disappearingMessagesTurnedOffYou": "<b>Вие</b> изключихте <b>изчезващи съобщения</b>. Съобщенията, които изпращате, вече няма да изчезват.",
   "disappearingMessagesTurnedOffYouGroup": "<b>Вие</b> изключихте <b>изчезващите съобщения</b>.",
   "disappearingMessagesTypeRead": "прочетено",

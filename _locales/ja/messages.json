@@ -127,7 +127,7 @@
   "blockBlockedUser": "{name} をブロックしました",
   "blockDescription": "本当に<b>{name}</b>をブロックしますか？ブロックされたユーザーは、メッセージリクエスト、グループ招待や通話を送ることができません。",
   "blockUnblock": "ブロック解除",
-  "blockUnblockName": "本当に{name}のブロックを解除しますか？",
+  "blockUnblockName": "本当に<b>{name}</b>のブロックを解除しますか？",
   "blockUnblockNameMultiple": "本当に<b>{name}</b>と<b>{count}</b>人の他の人のブロックを解除しますか？",
   "blockUnblockNameTwo": "本当に<b>{name}</b>と1人の他の人のブロックを解除しますか？",
   "blockUnblockedUser": "ブロック解除済み {name}",

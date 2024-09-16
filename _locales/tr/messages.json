@@ -127,7 +127,7 @@
   "blockBlockedUser": "{name} engellendi",
   "blockDescription": "<b>{name}</b>'i engellemek istediğinizden emin misiniz? Engelli kullanıcılar size mesaj isteği gönderemez, grup davetiyeleri gönderemez veya sizi arayamaz.",
   "blockUnblock": "Engeli Kaldır",
-  "blockUnblockName": "{name} kişisinin engelini kaldırmak istediğinizden emin misiniz?",
+  "blockUnblockName": "<b>{name}</b> kişisinin engelini kaldırmak istediğinizden emin misiniz?",
   "blockUnblockNameMultiple": "{name} ve {count} diğerinin engelini kaldırmak istediğinizden emin misiniz?",
   "blockUnblockNameTwo": "{name} ve 1 diğerinin engelini kaldırmak istediğinizden emin misiniz?",
   "blockUnblockedUser": "Engel kaldırıldı {name}",
