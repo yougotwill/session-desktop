@@ -142,6 +142,7 @@
   "callsInProgress": "Call in progress",
   "callsIncoming": "Incoming call from {name}",
   "callsIncomingUnknown": "Incoming call",
+  "callsMicrophonePermissionsRequired": "You missed a call from <b>{name}</b> because you haven't granted <b>microphone access</b>.",
   "callsMissed": "Missed Call",
   "callsMissedCallFrom": "Missed call from {name}",
   "callsNotificationsRequired": "Voice and Video Calls require notifications to be enabled in your device system settings.",

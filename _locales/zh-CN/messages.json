@@ -142,6 +142,7 @@
   "callsInProgress": "呼叫中",
   "callsIncoming": "来自 {name} 的来电",
   "callsIncomingUnknown": "来电",
+  "callsMicrophonePermissionsRequired": "您错过了来自<b>{name}</b>的通话，因为您没有授予<b>麦克风访问权限</b>。",
   "callsMissed": "未接来电",
   "callsMissedCallFrom": "来自 {name} 的未接来电",
   "callsNotificationsRequired": "语音和视频通话要求在您的设备系统设置中启用通知。",

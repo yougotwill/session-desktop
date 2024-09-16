@@ -142,6 +142,7 @@
   "callsInProgress": "Gesprek gaande",
   "callsIncoming": "Inkomende oproep van {name}",
   "callsIncomingUnknown": "Inkomende oproep",
+  "callsMicrophonePermissionsRequired": "Je hebt een gemiste oproep van <b>{name}</b> omdat je geen <b>microfoontoegang</b> hebt verleend.",
   "callsMissed": "Gemiste oproep",
   "callsMissedCallFrom": "Gemiste oproep van {name}",
   "callsNotificationsRequired": "Spraak- en video-oproepen vereisen dat meldingen zijn ingeschakeld in de systeeminstellingen van uw apparaat.",
