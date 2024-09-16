@@ -6,7 +6,6 @@ import type {
   LocalizerDictionary,
   LocalizerToken,
 } from '../../types/localizer';
-import { useIsDarkTheme } from '../../state/selectors/theme';
 import { SessionHtmlRenderer } from './SessionHTMLRenderer';
 
 /** An array of supported html tags to render if found in a string */
@@ -73,9 +72,9 @@ export function sanitizeArgs(
   );
 }
 
-const StyledHtmlRenderer = styled.span<{ isDarkTheme: boolean }>`
+const StyledHtmlRenderer = styled.span`
   * > span {
-    color: ${props => (props.isDarkTheme ? 'var(--primary-color)' : 'var(--text-primary-color)')};
+    color: var(--renderer-span-primary-color);
   }
 `;
 
@@ -96,8 +95,6 @@ const StyledHtmlRenderer = styled.span<{ isDarkTheme: boolean }>`
  * ```
  */
 export const Localizer = <T extends LocalizerToken>(props: LocalizerComponentProps<T>) => {
-  const isDarkTheme = useIsDarkTheme();
-
   const args = 'args' in props ? props.args : undefined;
 
   const rawString = window.i18n.getRawMessage<T, LocalizerDictionary[T]>(
@@ -114,7 +111,7 @@ export const Localizer = <T extends LocalizerToken>(props: LocalizerComponentPro
 
   return containsFormattingTags ? (
     /** If the string contains a relevant formatting tag, render it as HTML */
-    <StyledHtmlRenderer isDarkTheme={isDarkTheme}>
+    <StyledHtmlRenderer>
       <SessionHtmlRenderer tag={props.asTag} html={i18nString} className={props.className} />
     </StyledHtmlRenderer>
   ) : (
