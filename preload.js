@@ -11,12 +11,12 @@ const _ = require('lodash');
 
 const { setupI18n } = require('./ts/util/i18n/i18n');
 
-const { dictionary, locale } = ipc.sendSync('locale-data');
+const { dictionary, crowdinLocale } = ipc.sendSync('locale-data');
 
 const config = url.parse(window.location.toString(), true).query;
 const configAny = config;
 
-window.i18n = setupI18n({ locale, translationDictionary: dictionary });
+window.i18n = setupI18n({ crowdinLocale, translationDictionary: dictionary });
 
 let title = config.name;
 if (config.environment !== 'production') {

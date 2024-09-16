@@ -162,8 +162,12 @@ import { setLatestRelease } from '../node/latest_desktop_release';
 import { isDevProd, isTestIntegration } from '../shared/env_vars';
 import { classicDark } from '../themes';
 import type { SetupI18nReturnType } from '../types/localizer';
-import { getTranslationDictionary } from '../util/i18n/shared';
-import { getLocale, isLocaleSet, type Locale } from '../util/i18n/shared';
+
+import {
+  isSessionLocaleSet,
+  getTranslationDictionary,
+  getCrowdinLocale,
+} from '../util/i18n/shared';
 import { loadLocalizedDictionary } from '../node/locale';
 
 // Both of these will be set after app fires the 'ready' event
@@ -184,7 +188,7 @@ function prepareURL(pathSegments: Array<string>, moreKeys?: { theme: any }) {
     slashes: true,
     query: {
       name: packageJson.productName,
-      locale: getLocale(),
+      locale: getCrowdinLocale(),
       version: app.getVersion(),
       commitHash: config.get('commitHash'),
       environment: (config as any).environment,
@@ -717,11 +721,12 @@ app.on('ready', async () => {
   logger = getLogger();
   assertLogger().info('app ready');
   assertLogger().info(`starting version ${packageJson.version}`);
-  if (!isLocaleSet()) {
-    const appLocale = (process.env.LANGUAGE || app.getLocale() || 'en') as Locale;
+  if (!isSessionLocaleSet()) {
+    const appLocale = process.env.LANGUAGE || app.getLocale() || 'en';
     const loadedLocale = loadLocalizedDictionary({ appLocale, logger });
     i18n = loadedLocale.i18n;
-    assertLogger().info(`locale is ${loadedLocale.locale}`);
+    assertLogger().info(`appLocale is ${appLocale}`);
+    assertLogger().info(`crowdin locale is ${loadedLocale.crowdinLocale}`);
   }
 
   const key = getDefaultSQLKey();
@@ -907,7 +912,7 @@ ipc.on('locale-data', event => {
   // eslint-disable-next-line no-param-reassign
   event.returnValue = {
     dictionary: getTranslationDictionary(),
-    locale: getLocale(),
+    crowdinLocale: getCrowdinLocale(),
   };
 });
 

@@ -22,7 +22,7 @@ import { THEME_GLOBALS } from '../../themes/globals';
 import { SessionWrapperModal } from '../SessionWrapperModal';
 import { SessionIcon, SessionIconButton } from '../icon';
 import { SessionSpinner } from '../loading';
-import { getLocale } from '../../util/i18n/shared';
+import { getCrowdinLocale } from '../../util/i18n/shared';
 
 export type StatusLightType = {
   glowStartDelay: number;
@@ -136,9 +136,9 @@ const OnionPathModalInner = () => {
           <Flex container={true} flexDirection="column" alignItems="flex-start">
             {nodes.map((snode: Snode | any) => {
               const country = reader?.get(snode.ip || '0.0.0.0')?.country;
-              const locale = getLocale();
+              const locale = getCrowdinLocale();
 
-              // typescript complains that the [] operator cannot be used with the 'string' coming from getLocale()
+              // typescript complains that the [] operator cannot be used with the 'string' coming from getCrowdinLocale()
               const countryNamesAsAny = country?.names as any;
               const countryName =
                 snode.label || // to take care of the "Device" case

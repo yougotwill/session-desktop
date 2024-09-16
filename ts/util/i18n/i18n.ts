@@ -3,35 +3,36 @@
 import { isEmpty } from 'lodash';
 import type { LocalizerDictionary, SetupI18nReturnType } from '../../types/localizer';
 import { getMessage } from './functions/getMessage';
-import { i18nLog, Locale, setInitialLocale } from './shared';
+import { i18nLog, setInitialLocale } from './shared';
+import { CrowdinLocale } from '../../localization/constants';
 
 /**
  * Sets up the i18n function with the provided locale and messages.
  *
  * @param params - An object containing optional parameters.
- * @param params.locale - The locale to use for translations
- * @param params.translationDictionary - A dictionary of localized messages. Defaults to {@link en}.
+ * @param params.crowdinLocale - The locale to use for translations (crowdin)
+ * @param params.translationDictionary - A dictionary of localized messages
  *
  * @returns A function that retrieves a localized message string, substituting variables where necessary.
  */
 export const setupI18n = ({
-  locale,
+  crowdinLocale,
   translationDictionary,
 }: {
-  locale: Locale;
+  crowdinLocale: CrowdinLocale;
   translationDictionary: LocalizerDictionary;
 }): SetupI18nReturnType => {
-  if (!locale) {
-    throw new Error(`locale not provided in i18n setup`);
+  if (!crowdinLocale) {
+    throw new Error(`crowdinLocale not provided in i18n setup`);
   }
 
   if (!translationDictionary || isEmpty(translationDictionary)) {
     throw new Error('translationDictionary was not provided');
   }
 
-  setInitialLocale(locale, translationDictionary);
+  setInitialLocale(crowdinLocale, translationDictionary);
 
-  i18nLog(`Setup Complete with locale: ${locale}`);
+  i18nLog(`Setup Complete with crowdinLocale: ${crowdinLocale}`);
 
   return getMessage;
 };

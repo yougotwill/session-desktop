@@ -11,10 +11,11 @@ export const setup = (browserWindow: BrowserWindow, i18n: SetupI18nReturnType) =
   const userLocale = process.env.LANGUAGE
     ? process.env.LANGUAGE
     : osLocaleSync().replace(/_/g, '-');
-  const userLocales = [userLocale, userLocale.split('-')[0]];
+  const userLocales = [userLocale, userLocale.split('-')[0], userLocale.split('_')[0]];
 
   const available = session.availableSpellCheckerLanguages;
   const languages = userLocales.filter(l => available.includes(l));
+  console.log(`spellcheck: userLocales: ${userLocales}`);
   console.log(`spellcheck: user locale: ${userLocale}`);
   console.log('spellcheck: available spellchecker languages: ', available);
   console.log('spellcheck: setting languages to: ', languages);

@@ -8,7 +8,12 @@ import type {
   PluralKey,
   PluralString,
 } from '../../../types/localizer';
-import { getTranslationDictionary, getLocale, getStringForCardinalRule, i18nLog } from '../shared';
+import {
+  getTranslationDictionary,
+  getStringForCardinalRule,
+  i18nLog,
+  getCrowdinLocale,
+} from '../shared';
 
 function getPluralKey<R extends PluralKey | undefined>(string: PluralString): R {
   const match = /{(\w+), plural, one \[.+\] other \[.+\]}/g.exec(string);
@@ -80,7 +85,7 @@ export function getRawMessage<
       } else {
         const num = args?.[pluralKey as keyof typeof args] ?? 0;
 
-        const currentLocale = getLocale();
+        const currentLocale = getCrowdinLocale();
         const cardinalRule = new Intl.PluralRules(currentLocale).select(num);
 
         const pluralString = getStringForCardinalRule(localizedString, cardinalRule);

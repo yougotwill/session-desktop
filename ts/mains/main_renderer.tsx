@@ -29,7 +29,7 @@ import { Notifications } from '../util/notifications';
 import { Registration } from '../util/registration';
 import { Storage, isSignInByLinking } from '../util/storage';
 import { getOppositeTheme, isThemeMismatched } from '../util/theme';
-import { getLocale } from '../util/i18n/shared';
+import { getCrowdinLocale } from '../util/i18n/shared';
 import { rtlLocales } from '../localization/constants';
 
 // Globally disable drag and drop
@@ -292,7 +292,7 @@ async function start() {
   });
 
   function switchBodyToRtlIfNeeded() {
-    const loc = getLocale();
+    const loc = getCrowdinLocale();
     if (rtlLocales.includes(loc) && !document.getElementById('body')?.classList.contains('rtl')) {
       document.getElementById('body')?.classList.add('rtl');
     }

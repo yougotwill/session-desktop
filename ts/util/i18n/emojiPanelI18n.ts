@@ -1,4 +1,4 @@
-import { getLocale } from './shared';
+import { getCrowdinLocale } from './shared';
 
 let langNotSupportedMessageShown = false;
 
@@ -7,7 +7,7 @@ export const loadEmojiPanelI18n = async () => {
     return undefined;
   }
   const triedLocales: Array<string> = [];
-  const lang = getLocale();
+  const lang = getCrowdinLocale();
   if (lang !== 'en') {
     try {
       triedLocales.push(lang);

@@ -1,12 +1,13 @@
 import fs from 'fs';
 import path from 'path';
+import { isEmpty } from 'lodash';
 import type { LocalizerDictionary, SetupI18nReturnType } from '../types/localizer';
 import { getAppRootPath } from './getRootPath';
-import type { Locale } from '../util/i18n/shared';
 import { en } from '../localization/locales';
 import { setupI18n } from '../util/i18n/i18n';
+import { CrowdinLocale } from '../localization/constants';
 
-function normalizeLocaleName(locale: string) {
+export function normalizeLocaleName(locale: string) {
   const dashedLocale = locale.replaceAll('_', '-');
 
   // Note: this is a pain, but we somehow needs to keep in sync this logic and the LOCALE_PATH_MAPPING from
@@ -46,8 +47,11 @@ function getLocaleMessages(locale: string): LocalizerDictionary {
 export function loadLocalizedDictionary({
   appLocale,
   logger,
-}: { appLocale?: Locale; logger?: any } = {}): {
-  locale: Locale;
+}: {
+  appLocale: string;
+  logger?: any;
+}): {
+  crowdinLocale: CrowdinLocale;
   i18n: SetupI18nReturnType;
 } {
   if (!appLocale) {
@@ -63,26 +67,28 @@ export function loadLocalizedDictionary({
   //
   // possible locales:
   // https://github.com/electron/electron/blob/master/docs/api/locales.md
-  let locale = normalizeLocaleName(appLocale) as Locale;
+  let crowdinLocale = normalizeLocaleName(appLocale) as CrowdinLocale;
   let translationDictionary;
 
   try {
-    translationDictionary = getLocaleMessages(locale);
+    translationDictionary = getLocaleMessages(crowdinLocale);
   } catch (e) {
-    logger.error(`Problem loading messages for locale ${locale} ${e.stack}`);
+    logger.error(`Problem loading messages for locale ${crowdinLocale} ${e.stack}`);
     logger.error('Falling back to en locale');
+  }
 
-    locale = 'en';
+  if (!translationDictionary || isEmpty(translationDictionary)) {
     translationDictionary = en;
+    crowdinLocale = 'en';
   }
 
   const i18n = setupI18n({
-    locale,
+    crowdinLocale,
     translationDictionary,
   });
 
   return {
-    locale,
+    crowdinLocale,
     i18n,
   };
 }

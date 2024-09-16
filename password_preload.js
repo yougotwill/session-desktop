@@ -6,13 +6,14 @@ const url = require('url');
 const { setupI18n } = require('./ts/util/i18n/i18n');
 
 const config = url.parse(window.location.toString(), true).query;
-const { dictionary, locale } = ipcRenderer.sendSync('locale-data');
+const { dictionary, crowdinLocale } = ipcRenderer.sendSync('locale-data');
 
 // If the app is locked we can't access the database to check the theme.
 window.theme = 'classic-dark';
 window.primaryColor = 'green';
+
 window.i18n = setupI18n({
-  locale,
+  crowdinLocale,
   translationDictionary: dictionary,
 });
 

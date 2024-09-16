@@ -12,5 +12,8 @@ export const testDictionary = {
 } as const;
 
 export function initI18n(dictionary: Record<string, string> = en) {
-  return setupI18n({ locale: 'en', translationDictionary: dictionary as LocalizerDictionary });
+  return setupI18n({
+    crowdinLocale: 'en',
+    translationDictionary: dictionary as LocalizerDictionary,
+  });
 }
