@@ -133,6 +133,7 @@ found_old_dynamic_variables = identifyAndPrintOldDynamicVariables(
 )
 
 # Wrapping up the script and printing out the results
+number_of_tag_problems = 0
 
 if problems:
   message = "There are issues with the locales."
@@ -212,7 +213,6 @@ if problems:
 
     console.info(f"Problem strings: {json.dumps(locales_to_strings, indent=2)}")
     message += " See above for problem strings and which locales they are in."
-    number_of_problems = 0
     for locale, locale_strings in locales_to_strings.items():
       printed_locale = False
       for tag_type, tag_strings in locale_strings.items():
@@ -221,10 +221,10 @@ if problems:
             print(f"{locale} - [Link Here](https://crowdin.com/editor/session-crossplatform-strings/300/en-{locale})")
             printed_locale = True
           for tag_string in tag_strings:
-            number_of_problems += 1
+            number_of_tag_problems += 1
             print(
               f"- [{tag_string}](https://crowdin.com/editor/session-crossplatform-strings/300/en-{locale}?view=comfortable&filter=basic&value=3#q={tag_string})")
-    print(f"Total Problems: {number_of_problems}")
+    print(f"Total Problems: {number_of_tag_problems}")
 
   if args.print_problems:
     prettyPrintIssuesTable(problems)
@@ -257,7 +257,7 @@ console.debug("Locales generation complete")
 
 timer.stop()
 
-if (args.error_on_problems and problems) or (
+if (args.error_on_problems and (problems or number_of_tag_problems > 0)) or (
   args.error_old_dynamic_variables and found_old_dynamic_variables
 ):
   sys.exit(1)
