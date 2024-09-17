@@ -127,7 +127,7 @@
   "blockBlockedUser": "Blokir {name}",
   "blockDescription": "Apakah Anda yakin ingin memblokir <b>{name}?</b> Pengguna yang diblokir tidak bisa mengirimkan Anda permintaan pesan, undangan grup, atau menelepon Anda.",
   "blockUnblock": "Buka blokir",
-  "blockUnblockName": "Apakah Anda yakin ingin membuka blokir {name}?",
+  "blockUnblockName": "Apakah Anda yakin ingin membuka blokir <b>{name}</b>?",
   "blockUnblockNameMultiple": "Apakah Anda yakin ingin membuka blokir <b>{name}</b> dan <b>{count} lainnya</b>?",
   "blockUnblockNameTwo": "Apakah Anda yakin ingin membuka blokir <b>{name}</b> dan 1 lainnya?",
   "blockUnblockedUser": "Buka blokir {name}",

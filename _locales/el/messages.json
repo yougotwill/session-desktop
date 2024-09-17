@@ -317,7 +317,7 @@
   "disappearingMessagesSetYou": "<b>Εσείς</b> ορίσατε τα μηνύματα να εξαφανίζονται {time} αφότου έχουν {disappearing_messages_type}.",
   "disappearingMessagesTimer": "Χρονόμετρο",
   "disappearingMessagesTurnedOff": "<b>{name}</b> απενεργοποίησε τα εξαφανιζόμενα μηνύματα. Τα μηνύματα που θα στείλει δε θα εξαφανίζονται πλέον.",
-  "disappearingMessagesTurnedOffGroup": "<b>{name}</b> απενεργοποίησε τα εξαφανιζόμενα μηνύματα.",
+  "disappearingMessagesTurnedOffGroup": "<b>{name}</b> <b>απενεργοποίησε</b> τα εξαφανιζόμενα μηνύματα.",
   "disappearingMessagesTurnedOffYou": "<b>Εσείς</b> <b>απενεργοποιήσατε</b> τα εξαφανιζόμενα μηνύματα. Τα μηνύματα που θα στείλετε δε θα εξαφανίζονται πλέον.",
   "disappearingMessagesTurnedOffYouGroup": "<b>Εσείς</b> <b>απενεργοποιήσατε</b> τα εξαφανιζόμενα μηνύματα.",
   "disappearingMessagesTypeRead": "ανάγνωση",

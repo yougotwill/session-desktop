@@ -469,7 +469,7 @@
   "legacyGroupMemberNewYouMultiple": "<b>Vous</b> et <b>{count} autres</b> avez été invité(e) à rejoindre le groupe.",
   "legacyGroupMemberNewYouOther": "<b>Vous</b> et <b>{other_name}</b> avez rejoint le groupe.",
   "legacyGroupMemberTwoNew": "<b>{name}</b> et <b>{other_name}</b> ont rejoint le groupe.",
-  "legacyGroupMemberYouNew": "<b>Vous<b> avez rejoint le groupe.",
+  "legacyGroupMemberYouNew": "<b>Vous</b> avez rejoint le groupe.",
   "linkPreviews": "Aperçus des liens",
   "linkPreviewsDescription": "Afficher les aperçus de lien pour les URL supportées.",
   "linkPreviewsEnable": "Activer les aperçus de lien",

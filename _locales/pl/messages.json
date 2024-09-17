@@ -317,7 +317,7 @@
   "disappearingMessagesTimer": "Minutnik",
   "disappearingMessagesTurnedOff": "<b>{name}</b> wyłączył(a) znikające wiadomości. Wiadomości, które wysyłają, nie będą już znikać.",
   "disappearingMessagesTurnedOffGroup": "<b>{name}</b> <b>wyłącza</b> znikające wiadomości.",
-  "disappearingMessagesTurnedOffYou": "<b>Ty</b> wyłączyłeś(-aś) znikające wiadomości. Wysłane wiadomości nie będą już znikały.",
+  "disappearingMessagesTurnedOffYou": "<b>Ty</b> <b>wyłączyłeś(-aś)</b> znikające wiadomości. Wysłane wiadomości nie będą już znikały.",
   "disappearingMessagesTurnedOffYouGroup": "<b>Wyłączono</b> znikające wiadomości.",
   "disappearingMessagesTypeRead": "przeczytano",
   "disappearingMessagesTypeSent": "wysłano",

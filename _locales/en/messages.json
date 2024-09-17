@@ -431,7 +431,7 @@
   "groupRemoveDescriptionMultiple": "Would you like to remove <b>{name}</b> and <b>{count} others</b> from <b>{group_name}</b>?",
   "groupRemoveDescriptionTwo": "Would you like to remove <b>{name}</b> and <b>{other_name}</b> from <b>{group_name}</b>?",
   "groupRemoveMessages": "{count, plural, one [Remove user and their messages] other [Remove users and their messages]}",
-  "groupRemoveUserOnly": "{count, plural, one [Remove user ] other [Remove users]}",
+  "groupRemoveUserOnly": "{count, plural, one [Remove user] other [Remove users]}",
   "groupRemoved": "<b>{name}</b> was removed from the group.",
   "groupRemovedMultiple": "<b>{name}</b> and <b>{count} others</b> were removed from the group.",
   "groupRemovedTwo": "<b>{name}</b> and <b>{other_name}</b> were removed from the group.",

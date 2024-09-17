@@ -127,7 +127,7 @@
   "blockBlockedUser": "Blocked {name}",
   "blockDescription": "Ziur zaude <b>{name}</b> blokeatu nahi duzula? Erabiltzaile blokeatuek ezin dizkizute mezu-eskaerak, talde-gonbidapenak bidali edo deiak egin.",
   "blockUnblock": "Desblokeatu",
-  "blockUnblockName": "Ziur zaude {name} blokatzea nahi duzula?",
+  "blockUnblockName": "Ziur zaude <b>{name}</b> blokatzea nahi duzula?",
   "blockUnblockNameMultiple": "Ziur zaude <b>{name}</b> eta beste <b>{count} batzuk blokatzea nahi duzula</b>?",
   "blockUnblockNameTwo": "Ziur zaude <b>{name}</b> eta beste bat blokatzea nahi duzula?",
   "blockUnblockedUser": "{name} desblokeatu da",

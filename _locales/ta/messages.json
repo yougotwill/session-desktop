@@ -398,7 +398,7 @@
   "groupInviteYouAndMoreNew": "<b>நீங்கள்</b> மற்றும் <b>{count} பிறர்</b> குழுவில் சேர்ந்தனர்.",
   "groupInviteYouAndOtherNew": "<b>நீங்கள்</b> மற்றும் <b>{other_name}</b> குழுவில் சேர்ந்தனர்.",
   "groupLeave": "குழுவிலிருந்து வெளியேறு",
-  "groupLeaveDescription": "{group_name} யிலிருந்து வெளியேற விரும்புகிறீர்களா?",
+  "groupLeaveDescription": "<b>{group_name}</b> யிலிருந்து வெளியேற விரும்புகிறீர்களா?",
   "groupLeaveDescriptionAdmin": "நீங்கள் <b>{group_name}</b> க்கு விட்டு வெளியேற உறுதியாக உள்ளீர்களா?<br/><br/>இது அனைத்து உறுப்பினர்களையும் அகற்றி, அனைத்து குழு உள்ளடக்கங்களை நீக்கும்.",
   "groupLeaveErrorFailed": "{group_name} விட்டு நீக்குவதில் தோல்வி",
   "groupLegacyBanner": "குழுக்கள் மேம்படுத்தப்பட்டுள்ளன, மேம்படுத்த புதிய குழுவை உருவாக்கவும். பழைய குழு செயல்பாடு {date} முதல் குறைக்கப்படும்.",

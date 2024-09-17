@@ -405,7 +405,7 @@
   "groupMemberLeft": "<b>{name}</b> 離開此群組。",
   "groupMemberLeftMultiple": "<b>{name}</b> 和 <b>{count} 位其他成員</b> 離開了群組。",
   "groupMemberLeftTwo": "<b>{name}</b> 和 <b>{other_name}</b> 離開此群組。",
-  "groupMemberNew": "<b>{name} <\\/b> 加入了群組。",
+  "groupMemberNew": "<b>{name}</b> 加入了群組。",
   "groupMemberNewHistory": "<b>{name}</b> 被邀請加入群組。 聊天記錄已分享。",
   "groupMemberNewHistoryMultiple": "<b>{name}</b> 和 <b>{count} 位其他成員</b> 已被邀請加入群組。已分享聊天記錄。",
   "groupMemberNewHistoryTwo": "<b>{name}</b> 和 <b>{other_name}</b> 被邀請加入群組。已分享聊天記錄。",

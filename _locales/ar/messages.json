@@ -419,7 +419,6 @@
   "groupNameNew": "أسم المجموعة الآن '{group_name}.",
   "groupNameUpdated": "تم تحديث اسم المجموعة.",
   "groupNoMessages": "ليس لديك رسائل من <b>{group_name}</b>. أرسل رسالة لبدء المحادثة!",
-  "groupOnlyAdmin": "أنت الأدمن الوحيد في </b>{group_name}<b>.<br/><br/> لا يمكن تغيير أعضاء المجموعة والإعدادات بدون أدمن.",
   "groupPromotedYou": "<b>أنت</b> تم ترقيتك إلى مشرف.",
   "groupPromotedYouMultiple": "<b>أنت</b> و <b>{count} آخرين</b> تمت ترقيتهم إلى مشرف.",
   "groupPromotedYouTwo": "<b>أنت</b> و <b>{name}</b> تم ترقيتهم إلى مشرف.",
