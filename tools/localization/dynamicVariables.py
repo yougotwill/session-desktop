@@ -112,7 +112,6 @@ def findImproperTags(input_dict):
     # Find all improper tag matches
     improper_tags = [match for match in improper_tag_pattern.findall(value)
                      if not re.match(r'<\s*/?\s*\w+.*?>', match)]
-    print(improper_tags)
 
     # Store the results in the output dictionary
     output_dict[key] = improper_tags
@@ -179,7 +178,7 @@ def extractFormattingTags(input_dict):
   return output_dict_b_tags, output_dict_br_tags, output_dict_span_tags, disallowed_tags, improper_tags
 
 
-def identifyLocaleDyanmicVariableDifferences(locales, locale_b_tags,
+def identifyLocaleDynamicVariableDifferences(locales, locale_b_tags,
                                              locale_br_tags,
                                              locale_span_tags, locale_disallowed_tags, locale_improper_tags):
   """
@@ -288,12 +287,12 @@ def identifyLocaleDyanmicVariableDifferences(locales, locale_b_tags,
 
 def prettyPrintIssuesTable(issues):
   """
-  Pretty prints a table from the return of identifyLocaleDyanmicVariableDifferences
+  Pretty prints a table from the return of identifyLocaleDynamicVariableDifferences
   where the rows are locale name and the columns are the issue types.
   Values will be number of occurrences of each issues.
 
   Args:
-    issues (dict): The issues dictionary returned from identifyLocaleDyanmicVariableDifferences.
+    issues (dict): The issues dictionary returned from identifyLocaleDynamicVariableDifferences.
 
   """
 

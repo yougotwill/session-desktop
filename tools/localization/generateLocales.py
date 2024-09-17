@@ -13,7 +13,7 @@ timer = ExecutionTimer()
 
 from dynamicVariables import (
   extractVariablesFromDict,
-  identifyLocaleDyanmicVariableDifferences,
+  identifyLocaleDynamicVariableDifferences,
   prettyPrintIssuesTable,
   identifyAndPrintOldDynamicVariables, extractFormattingTags,
 )
@@ -135,7 +135,7 @@ for locale, data in locales.items():
     locale_improper_tags[locale],
   ) = extractFormattingTags(data)
 
-problems = identifyLocaleDyanmicVariableDifferences(localeVariables, locale_b_tags,
+problems = identifyLocaleDynamicVariableDifferences(localeVariables, locale_b_tags,
                                                     locale_br_tags,
                                                     locale_span_tags, locale_disallowed_tags, locale_improper_tags)
 
@@ -174,7 +174,6 @@ if problems:
       if "missing_b_tags" in locale_problems:
         for problem_string, tag_issues in locale_problems["missing_b_tags"].items():
           if tag_issues > 0:
-            print("ME", problem_string, tag_issues)
             if problem_string not in string_to_locales:
               string_to_locales[problem_string] = [locale]
             else:
@@ -188,7 +187,6 @@ if problems:
               string_to_locales[problem_string].append(locale)
       if "disallowed_tags" in locale_problems:
         for problem_string, tag_issues in locale_problems["disallowed_tags"].items():
-          print(f"problem string: {problem_string}, tag_issues: {tag_issues}")
           if tag_issues > 0:
             if problem_string not in string_to_locales:
               string_to_locales[problem_string] = [locale]
