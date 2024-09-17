@@ -21,6 +21,13 @@ from localization.localeTypes import generateLocalesType
 from util.logger import console
 from util.fileUtils import createMappedJsonFileDictionary, writeFile
 
+# These string keys are ignored for formatting tag checks
+ignored_strings_formatting = {
+  "pl": [
+    # disappearingMessagesTurnedOffYouGroup in pl only has one bold word as the word combines both bold words
+    "disappearingMessagesTurnedOffYouGroup"]
+}
+
 # If the --throw-error-on-missing flag is passed, the script will exit with an error if there are any missing keys or dynamic variables
 # This is useful for CI/CD pipelines to ensure that all translations are consistent
 parser = argparse.ArgumentParser(description="Generate locale files")
@@ -217,6 +224,8 @@ if problems:
       printed_locale = False
       for tag_type, tag_strings in locale_strings.items():
         if tag_strings:
+          if locale in ignored_strings_formatting and tag_strings == ignored_strings_formatting[locale]:
+            continue
           if not printed_locale:
             print(f"{locale} - [Link Here](https://crowdin.com/editor/session-crossplatform-strings/300/en-{locale})")
             printed_locale = True
