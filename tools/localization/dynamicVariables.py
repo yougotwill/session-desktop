@@ -60,6 +60,100 @@ def extractVariablesFromDict(input_dict):
   return output_dict_new, output_dict_old
 
 
+def extractDisallowedTags(input_dict, allowed_tags):
+  """
+  Reads through a dictionary of key-value pairs and creates a new dictionary
+  where the value is just a list of tags that are not allowed as per the allowed_tags.
+
+  Args:
+      input_dict (dict): The dictionary to extract tags from.
+      allowed_tags (list): A list of allowed tag names (e.g., ['b', 'br', 'span']).
+
+  Returns:
+      dict: A dictionary with the same keys as input_dict, but the values are lists of disallowed tags.
+  """
+  # Compile a regex to match any HTML-like tags
+  tag_pattern = re.compile(r'<(/?)(\w+)[^>]*>')
+
+  # Create a set of allowed tags for quick lookup
+  allowed_tag_set = set(allowed_tags)
+
+  output_dict = {}
+  for key, value in input_dict.items():
+    disallowed_tags = []
+    for match in tag_pattern.finditer(value):
+      tag_name = match.group(2)
+      if tag_name not in allowed_tag_set:
+        disallowed_tags.append(match.group(0))
+
+    output_dict[key] = disallowed_tags
+
+  return output_dict
+
+
+def findImproperTags(input_dict):
+  """
+  Reads through a dictionary of key-value pairs and identifies any uses of angled brackets
+  that do not form a proper HTML tag.
+
+  Args:
+      input_dict (dict): The dictionary to search for improper tags.
+
+  Returns:
+      dict: A dictionary with the same keys as input_dict, but the values are lists of improper tags.
+  """
+  # Regular expression to find improper use of angled brackets:
+  # 1. Matches a standalone '<' or '>' not forming a valid tag.
+  # 2. Matches text enclosed in angled brackets that do not form a valid HTML tag.
+  improper_tag_pattern = re.compile(r'<[^>]*>|>')
+
+  output_dict = {}
+  for key, value in input_dict.items():
+    # Find all improper tag matches
+    improper_tags = [match for match in improper_tag_pattern.findall(value)
+                     if not re.match(r'<\s*/?\s*\w+.*?>', match)]
+    print(improper_tags)
+
+    # Store the results in the output dictionary
+    output_dict[key] = improper_tags
+
+  return output_dict
+
+
+def flagInvalidAngleBrackets(input_dict, allowed_tag_starts):
+  """
+  Flags an issue if a string contains an angled bracket '<'
+  but that angle bracket is not followed by a 'b' or an 's' (case-insensitive).
+
+  Args:
+      input_dict (dict): A dictionary where the values are strings to check.
+
+  Returns:
+      dict: A dictionary where keys are the same as input_dict,
+            and values are lists of issues found in the corresponding string.
+  """
+  output_dict = {}
+  for key, value in input_dict.items():
+    issues = []
+    # Find all occurrences of '<'
+    indices = [m.start() for m in re.finditer('<', value)]
+    for idx in indices:
+      # Look ahead to find the next non-space character after '<'
+      match = re.match(r'\s*([^\s>])', value[idx + 1:])
+      if match:
+        next_char = match.group(1)
+        if next_char.lower() not in allowed_tag_starts:
+          # Flag an issue
+          snippet = value[idx:idx + 10]  # Extract a snippet for context
+          issues.append(f"Invalid tag starting with '<{next_char}' at position {idx}: '{snippet}'")
+      else:
+        # No non-space character after '<', flag an issue
+        issues.append(f"Invalid angle bracket '<' at position {idx}")
+    if issues:
+      output_dict[key] = issues
+  return output_dict
+
+
 def extractFormattingTags(input_dict):
   """
   Reads through a dictionary of key-value pairs and creates a new dictionary
@@ -74,17 +168,20 @@ def extractFormattingTags(input_dict):
   output_dict_b_tags = {}
   output_dict_br_tags = {}
   output_dict_span_tags = {}
+  disallowed_tags = extractDisallowedTags(input_dict, ["b", "br", "span"])
+  improper_tags = findImproperTags(input_dict)
+
   for key, value in input_dict.items():
     console.debug(f"key: {key}, value: {value}")
     output_dict_b_tags[key] = extractAllMatches(value, r"<b>(.*?)</b>")
     output_dict_br_tags[key] = extractAllMatches(value, r"<br/>")
     output_dict_span_tags[key] = extractAllMatches(value, r"<span>(.*?)</span>")
-  return output_dict_b_tags, output_dict_br_tags, output_dict_span_tags
+  return output_dict_b_tags, output_dict_br_tags, output_dict_span_tags, disallowed_tags, improper_tags
 
 
 def identifyLocaleDyanmicVariableDifferences(locales, locale_b_tags,
                                              locale_br_tags,
-                                             locale_span_tags):
+                                             locale_span_tags, locale_disallowed_tags, locale_improper_tags):
   """
   Identifies the differences between each locale's dynamic variables.
 
@@ -104,6 +201,8 @@ def identifyLocaleDyanmicVariableDifferences(locales, locale_b_tags,
     current_locale_b_tags = locale_b_tags[locale_name]
     current_locale_br_tags = locale_br_tags[locale_name]
     current_locale_span_tags = locale_span_tags[locale_name]
+    current_locale_disallowed_tags = locale_disallowed_tags[locale_name]
+    current_locale_improper_tags = locale_improper_tags[locale_name]
     if locale_name == "en":
       continue
 
@@ -115,6 +214,8 @@ def identifyLocaleDyanmicVariableDifferences(locales, locale_b_tags,
       "missing_b_tags": {},
       "missing_br_tags": {},
       "missing_span_tags": {},
+      "disallowed_tags": {},
+      "improper_tags": {},
     }
 
     for key, value in master_locale.items():
@@ -138,6 +239,8 @@ def identifyLocaleDyanmicVariableDifferences(locales, locale_b_tags,
         locale_issues["missing_b_tags"][key] = len(master_locale_b_tags[key]) - len(current_locale_b_tags[key])
         locale_issues["missing_br_tags"][key] = len(master_locale_br_tags[key]) - len(current_locale_br_tags[key])
         locale_issues["missing_span_tags"][key] = len(master_locale_span_tags[key]) - len(current_locale_span_tags[key])
+        locale_issues["disallowed_tags"][key] = len(current_locale_disallowed_tags[key])
+        locale_issues["improper_tags"][key] = len(current_locale_improper_tags[key])
 
     for key in locale:
       if key not in master_locale:

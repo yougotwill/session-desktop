@@ -118,6 +118,8 @@ localeVariablesOld = dict()
 locale_b_tags = dict()
 locale_br_tags = dict()
 locale_span_tags = dict()
+locale_disallowed_tags = dict()
+locale_improper_tags = dict()
 # Extract the dynamic variables from each locale and store them in a dictionary
 for locale, data in locales.items():
   console.debug(f"Extracting dynamic variables for {locale}")
@@ -129,11 +131,13 @@ for locale, data in locales.items():
     locale_b_tags[locale],
     locale_br_tags[locale],
     locale_span_tags[locale],
+    locale_disallowed_tags[locale],
+    locale_improper_tags[locale],
   ) = extractFormattingTags(data)
 
 problems = identifyLocaleDyanmicVariableDifferences(localeVariables, locale_b_tags,
                                                     locale_br_tags,
-                                                    locale_span_tags, )
+                                                    locale_span_tags, locale_disallowed_tags, locale_improper_tags)
 
 found_old_dynamic_variables = identifyAndPrintOldDynamicVariables(
   localeVariablesOld, args.print_old_dynamic_variables
@@ -182,8 +186,23 @@ if problems:
               string_to_locales[problem_string] = [locale]
             else:
               string_to_locales[problem_string].append(locale)
+      if "disallowed_tags" in locale_problems:
+        for problem_string, tag_issues in locale_problems["disallowed_tags"].items():
+          print(f"problem string: {problem_string}, tag_issues: {tag_issues}")
+          if tag_issues > 0:
+            if problem_string not in string_to_locales:
+              string_to_locales[problem_string] = [locale]
+            else:
+              string_to_locales[problem_string].append(locale)
+      if "improper_tags" in locale_problems:
+        for problem_string, tag_issues in locale_problems["improper_tags"].items():
+          if tag_issues > 0:
+            if problem_string not in string_to_locales:
+              string_to_locales[problem_string] = [locale]
+            else:
+              string_to_locales[problem_string].append(locale)
 
-    console.info(f"Problem strings: {json.dumps(string_to_locales, indent=2)}")
+    console.debug(f"Problem strings: {json.dumps(string_to_locales, indent=2)}")
     message += " See above for problem strings and which locales they are in."
 
   if args.print_problem_formatting_tag_strings:
@@ -192,6 +211,8 @@ if problems:
       locale_missing_br_tags = set()
       locale_missing_b_tags = set()
       locale_missing_span_tags = set()
+      locale_disallowed_tags = set()
+      locale_improper_tags = set()
       if "missing_br_tags" in locale_problems:
         for problem_string, tag_issues in locale_problems["missing_br_tags"].items():
           if tag_issues > 0:
@@ -204,11 +225,21 @@ if problems:
         for problem_string, tag_issues in locale_problems["missing_span_tags"].items():
           if tag_issues > 0:
             locale_missing_span_tags.add(problem_string)
+      if "disallowed_tags" in locale_problems:
+        for problem_string, tag_issues in locale_problems["disallowed_tags"].items():
+          if tag_issues > 0:
+            locale_disallowed_tags.add(problem_string)
+      if "improper_tags" in locale_problems:
+        for problem_string, tag_issues in locale_problems["improper_tags"].items():
+          if tag_issues > 0:
+            locale_improper_tags.add(problem_string)
 
       locales_to_strings[locale] = {
         "br": list(locale_missing_br_tags),
         "b": list(locale_missing_b_tags),
         "span": list(locale_missing_span_tags),
+        "disallowed_tags": list(locale_disallowed_tags),
+        "improper_tags": list(locale_improper_tags),
       }
 
       if locales_to_strings[locale]["br"] == []:
@@ -217,11 +248,16 @@ if problems:
         del locales_to_strings[locale]["b"]
       if locales_to_strings[locale]["span"] == []:
         del locales_to_strings[locale]["span"]
+      if locales_to_strings[locale]["disallowed_tags"] == []:
+        del locales_to_strings[locale]["disallowed_tags"]
+      if locales_to_strings[locale]["improper_tags"] == []:
+        del locales_to_strings[locale]["improper_tags"]
 
     console.info(f"Problem strings: {json.dumps(locales_to_strings, indent=2)}")
     message += " See above for problem strings and which locales they are in."
     for locale, locale_strings in locales_to_strings.items():
       printed_locale = False
+      printed_problem_strings = set()
       for tag_type, tag_strings in locale_strings.items():
         if tag_strings:
           if locale in ignored_strings_formatting and tag_strings == ignored_strings_formatting[locale]:
@@ -230,9 +266,11 @@ if problems:
             print(f"{locale} - [Link Here](https://crowdin.com/editor/session-crossplatform-strings/300/en-{locale})")
             printed_locale = True
           for tag_string in tag_strings:
-            number_of_tag_problems += 1
-            print(
-              f"- [{tag_string}](https://crowdin.com/editor/session-crossplatform-strings/300/en-{locale}?view=comfortable&filter=basic&value=3#q={tag_string})")
+            if tag_string not in printed_problem_strings:
+              printed_problem_strings.add(tag_string)
+              number_of_tag_problems += 1
+              print(
+                f"- [{tag_string}](https://crowdin.com/editor/session-crossplatform-strings/300/en-{locale}?view=comfortable&filter=basic&value=3#q={tag_string})")
     print(f"Total Problems: {number_of_tag_problems}")
 
   if args.print_problems:
