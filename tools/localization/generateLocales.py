@@ -15,7 +15,7 @@ from dynamicVariables import (
   extractVariablesFromDict,
   identifyLocaleDyanmicVariableDifferences,
   prettyPrintIssuesTable,
-  identifyAndPrintOldDynamicVariables,
+  identifyAndPrintOldDynamicVariables, extractFormattingTags,
 )
 from localization.localeTypes import generateLocalesType
 from util.logger import console
@@ -41,6 +41,11 @@ parser.add_argument(
 )
 parser.add_argument(
   "--print-problem-strings",
+  action="store_true",
+  help="Print the problem strings and which locales they are in",
+)
+parser.add_argument(
+  "--print-problem-formatting-tag-strings",
   action="store_true",
   help="Print the problem strings and which locales they are in",
 )
@@ -103,7 +108,9 @@ if GENERATE_TYPES:
 
 localeVariables = dict()
 localeVariablesOld = dict()
-
+locale_b_tags = dict()
+locale_br_tags = dict()
+locale_span_tags = dict()
 # Extract the dynamic variables from each locale and store them in a dictionary
 for locale, data in locales.items():
   console.debug(f"Extracting dynamic variables for {locale}")
@@ -111,8 +118,15 @@ for locale, data in locales.items():
     localeVariables[locale],
     localeVariablesOld[locale],
   ) = extractVariablesFromDict(data)
+  (
+    locale_b_tags[locale],
+    locale_br_tags[locale],
+    locale_span_tags[locale],
+  ) = extractFormattingTags(data)
 
-problems = identifyLocaleDyanmicVariableDifferences(localeVariables)
+problems = identifyLocaleDyanmicVariableDifferences(localeVariables, locale_b_tags,
+                                                    locale_br_tags,
+                                                    locale_span_tags, )
 
 found_old_dynamic_variables = identifyAndPrintOldDynamicVariables(
   localeVariablesOld, args.print_old_dynamic_variables
@@ -138,8 +152,79 @@ if problems:
             string_to_locales[problem_string] = [locale]
           else:
             string_to_locales[problem_string].append(locale)
+      if "missing_br_tags" in locale_problems:
+        for problem_string, tag_issues in locale_problems["missing_br_tags"].items():
+          if tag_issues > 0:
+            if problem_string not in string_to_locales:
+              string_to_locales[problem_string] = [locale]
+            else:
+              string_to_locales[problem_string].append(locale)
+      if "missing_b_tags" in locale_problems:
+        for problem_string, tag_issues in locale_problems["missing_b_tags"].items():
+          if tag_issues > 0:
+            print("ME", problem_string, tag_issues)
+            if problem_string not in string_to_locales:
+              string_to_locales[problem_string] = [locale]
+            else:
+              string_to_locales[problem_string].append(locale)
+      if "missing_span_tags" in locale_problems:
+        for problem_string, tag_issues in locale_problems["missing_span_tags"].items():
+          if tag_issues > 0:
+            if problem_string not in string_to_locales:
+              string_to_locales[problem_string] = [locale]
+            else:
+              string_to_locales[problem_string].append(locale)
+
     console.info(f"Problem strings: {json.dumps(string_to_locales, indent=2)}")
     message += " See above for problem strings and which locales they are in."
+
+  if args.print_problem_formatting_tag_strings:
+    locales_to_strings = {}
+    for locale, locale_problems in problems.items():
+      locale_missing_br_tags = set()
+      locale_missing_b_tags = set()
+      locale_missing_span_tags = set()
+      if "missing_br_tags" in locale_problems:
+        for problem_string, tag_issues in locale_problems["missing_br_tags"].items():
+          if tag_issues > 0:
+            locale_missing_br_tags.add(problem_string)
+      if "missing_b_tags" in locale_problems:
+        for problem_string, tag_issues in locale_problems["missing_b_tags"].items():
+          if tag_issues > 0:
+            locale_missing_b_tags.add(problem_string)
+      if "missing_span_tags" in locale_problems:
+        for problem_string, tag_issues in locale_problems["missing_span_tags"].items():
+          if tag_issues > 0:
+            locale_missing_span_tags.add(problem_string)
+
+      locales_to_strings[locale] = {
+        "br": list(locale_missing_br_tags),
+        "b": list(locale_missing_b_tags),
+        "span": list(locale_missing_span_tags),
+      }
+
+      if locales_to_strings[locale]["br"] == []:
+        del locales_to_strings[locale]["br"]
+      if locales_to_strings[locale]["b"] == []:
+        del locales_to_strings[locale]["b"]
+      if locales_to_strings[locale]["span"] == []:
+        del locales_to_strings[locale]["span"]
+
+    console.info(f"Problem strings: {json.dumps(locales_to_strings, indent=2)}")
+    message += " See above for problem strings and which locales they are in."
+    number_of_problems = 0
+    for locale, locale_strings in locales_to_strings.items():
+      printed_locale = False
+      for tag_type, tag_strings in locale_strings.items():
+        if tag_strings:
+          if not printed_locale:
+            print(f"{locale} - [Link Here](https://crowdin.com/editor/session-crossplatform-strings/300/en-{locale})")
+            printed_locale = True
+          for tag_string in tag_strings:
+            number_of_problems += 1
+            print(
+              f"- [{tag_string}](https://crowdin.com/editor/session-crossplatform-strings/300/en-{locale}?view=comfortable&filter=basic&value=3#q={tag_string})")
+    print(f"Total Problems: {number_of_problems}")
 
   if args.print_problems:
     prettyPrintIssuesTable(problems)
