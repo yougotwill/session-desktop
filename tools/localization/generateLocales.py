@@ -266,7 +266,45 @@ console.debug("Locales generation complete")
 
 timer.stop()
 
-if (args.error_on_problems and (problems or number_of_tag_problems > 0)) or (
-  args.error_old_dynamic_variables and found_old_dynamic_variables
-):
-  sys.exit(1)
+if args.error_on_problems:
+  missing_keys_all = 0
+  additional_keys_all = 0
+  missing_variables_all = 0
+  additional_variables_all = 0
+
+  for locale_name, locale_issues in problems.items():
+    if locale_name == "en":
+      continue
+
+    missing_keys_all += len(locale_issues.get("missing_keys", []))
+    additional_keys_all += len(locale_issues.get("additional_keys", []))
+    missing_variables_all += sum(
+      len(v) for v in locale_issues.get("missing_variables", {}).values()
+    )
+    additional_variables_all += sum(
+      len(v) for v in locale_issues.get("additional_variables", {}).values()
+    )
+
+  EXIT_CODE = 0
+
+  if missing_keys_all > 0:
+    console.log(f"Missing keys: {missing_keys_all}")
+
+  if additional_keys_all > 0:
+    console.log(f"Additional keys: {additional_keys_all}")
+
+  if missing_variables_all > 0:
+    console.log(f"Missing variables: {missing_variables_all}")
+    EXIT_CODE = 1
+
+  if additional_variables_all > 0:
+    console.log(f"Additional variables: {additional_variables_all}")
+    EXIT_CODE = 1
+
+  if number_of_tag_problems > 0:
+    console.log(f"Formatting issues: {number_of_tag_problems}")
+    EXIT_CODE = 1
+
+  sys.exit(EXIT_CODE)
+
+sys.exit(0)
