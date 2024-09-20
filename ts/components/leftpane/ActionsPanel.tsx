@@ -217,12 +217,6 @@ const doAppStartUp = async () => {
   }, 20000);
 };
 
-// global.setTimeout(() => {
-//   const unreadMessageCount = useSelector(getGlobalUnreadMessageCount);
-//   // Send the calculated count to the main process to update the badge count
-//   ipcRenderer.send('update-badge-count', unreadMessageCount);
-// }, 3000);
-
 /**
  * ActionsPanel is the far left banner (not the left pane).
  * The panel with buttons to switch between the message/contact/settings/theme views
