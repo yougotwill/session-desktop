@@ -14,8 +14,6 @@ import { syncConfigurationIfNeeded } from '../../session/utils/sync/syncUtils';
 import { clearSearch } from '../../state/ducks/search';
 import { resetLeftOverlayMode, SectionType, showLeftPaneSection } from '../../state/ducks/section';
 import {
-  _getGlobalUnreadCount,
-  _getSortedConversations,
   getGlobalUnreadMessageCount,
   getOurPrimaryConversation,
 } from '../../state/selectors/conversations';
@@ -219,11 +217,11 @@ const doAppStartUp = async () => {
   }, 20000);
 };
 
-global.setTimeout(() => {
-  const unreadMessageCount = useSelector(getGlobalUnreadMessageCount);
-  // Send the calculated count to the main process to update the badge count
-  ipcRenderer.send('update-badge-count', unreadMessageCount);
-}, 3000);
+// global.setTimeout(() => {
+//   const unreadMessageCount = useSelector(getGlobalUnreadMessageCount);
+//   // Send the calculated count to the main process to update the badge count
+//   ipcRenderer.send('update-badge-count', unreadMessageCount);
+// }, 3000);
 
 /**
  * ActionsPanel is the far left banner (not the left pane).
@@ -246,6 +244,16 @@ export const ActionsPanel = () => {
 
     return () => clearTimeout(timeout);
   }, []);
+
+  const globalUnreadMessageCount = useSelector(getGlobalUnreadMessageCount);
+  const unreadToShow = globalUnreadMessageCount;
+
+  // Reuse the unreadToShow from the global state to update the badge count
+  useEffect(() => {
+    if (unreadToShow !== undefined) {
+      ipcRenderer.send('update-badge-count', unreadToShow);
+    }
+  }, [unreadToShow]);
 
   useInterval(cleanUpOldDecryptedMedias, startCleanUpMedia ? cleanUpMediasInterval : null);
 
