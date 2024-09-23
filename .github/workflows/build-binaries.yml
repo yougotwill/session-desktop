@@ -53,8 +53,20 @@ jobs:
         # we want this to run always, except on "push" to "master"
         if: github.event_name != 'push' || github.ref != 'master'
         uses: ./actions/build_no_publish
+        with:
+          MAC_CERTIFICATE: ${{ secrets.MAC_CERTIFICATE }}
+          MAC_CERTIFICATE_PASSWORD: ${{ secrets.MAC_CERTIFICATE_PASSWORD }}
+          SIGNING_APPLE_ID: ${{ secrets.SIGNING_APPLE_ID }}
+          SIGNING_APP_PASSWORD: ${{ secrets.SIGNING_APP_PASSWORD }}
+          SIGNING_TEAM_ID: ${{ secrets.SIGNING_TEAM_ID }}
 
       - name: Build & publish
         # we want this to run only when on "push" to "master"
         if: github.event_name == 'push' && github.ref == 'master'
         uses: ./actions/build_publish
+        with:
+          MAC_CERTIFICATE: ${{ secrets.MAC_CERTIFICATE }}
+          MAC_CERTIFICATE_PASSWORD: ${{ secrets.MAC_CERTIFICATE_PASSWORD }}
+          SIGNING_APPLE_ID: ${{ secrets.SIGNING_APPLE_ID }}
+          SIGNING_APP_PASSWORD: ${{ secrets.SIGNING_APP_PASSWORD }}
+          SIGNING_TEAM_ID: ${{ secrets.SIGNING_TEAM_ID }}
