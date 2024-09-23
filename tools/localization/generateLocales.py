@@ -25,7 +25,13 @@ from util.fileUtils import createMappedJsonFileDictionary, writeFile
 ignored_strings_formatting = {
   "pl": [
     # disappearingMessagesTurnedOffYouGroup in pl only has one bold word as the word combines both bold words
-    "disappearingMessagesTurnedOffYouGroup"]
+    "disappearingMessagesTurnedOffYouGroup"],
+  "ru": [
+    # disappearingMessagesTurnedOffGroup in ru only has one bold word as the word combines both bold words
+    "disappearingMessagesTurnedOffGroup"],
+  "sr_CS": [
+    # disappearingMessagesTurnedOffGroup in sr_CS only has one bold word as the word combines both bold words
+    "disappearingMessagesTurnedOffGroup"]
 }
 
 # If the --throw-error-on-missing flag is passed, the script will exit with an error if there are any missing keys or dynamic variables
@@ -261,14 +267,14 @@ if problems:
           if locale in ignored_strings_formatting and tag_strings == ignored_strings_formatting[locale]:
             continue
           if not printed_locale:
-            print(f"{locale} - [Link Here](https://crowdin.com/editor/session-crossplatform-strings/300/en-{locale})")
+            print(f"{locale}")
             printed_locale = True
           for tag_string in tag_strings:
             if tag_string not in printed_problem_strings:
               printed_problem_strings.add(tag_string)
               number_of_tag_problems += 1
               print(
-                f"- [{tag_string}](https://crowdin.com/editor/session-crossplatform-strings/300/en-{locale}?view=comfortable&filter=basic&value=3#q={tag_string})")
+                f"- [{tag_string}](https://crowdin.com/editor/session-crossplatform-strings/300/en-{locale.replace('-','').replace('_','').lower()}?view=comfortable&filter=basic&value=3#q={tag_string})")
     print(f"Total Problems: {number_of_tag_problems}")
 
   if args.print_problems:
