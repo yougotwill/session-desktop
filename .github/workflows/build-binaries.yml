@@ -6,14 +6,15 @@ on:
     branches:
       - clearnet
       - unstable
-      - release/
-      - ci/
+      - 'release/**'
+      - 'ci/**'
   pull_request:
     branches:
       - clearnet
       - unstable
-      - release/
-      - ci/
+      - 'release/**'
+      - 'ci/**'
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
