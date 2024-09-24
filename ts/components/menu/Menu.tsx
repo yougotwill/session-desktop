@@ -1,4 +1,4 @@
-import { Item, Submenu } from 'react-contexify';
+import { Submenu } from 'react-contexify';
 import { useDispatch, useSelector } from 'react-redux';
 import { useConvoIdFromContext } from '../../contexts/ConvoIdContext';
 import {
@@ -16,6 +16,7 @@ import {
   useIsPrivateAndFriend,
   useIsPublic,
   useLastMessage,
+  useNicknameOrProfileNameOrShortenedPubkey,
   useNotificationSetting,
   useWeAreAdmin,
 } from '../../hooks/useParamSelector';
@@ -23,7 +24,6 @@ import {
   approveConvoAndSendResponse,
   blockConvoById,
   clearNickNameByConvoId,
-  copyPublicKeyByConvoId,
   declineConversationWithConfirm,
   deleteAllMessagesByConvoIdWithConfirmation,
   markAllReadByConvoId,
@@ -39,6 +39,10 @@ import {
   unblockConvoById,
 } from '../../interactions/conversationInteractions';
 import {
+  ConversationInteractionStatus,
+  ConversationInteractionType,
+} from '../../interactions/types';
+import {
   ConversationNotificationSetting,
   ConversationNotificationSettingType,
 } from '../../models/conversationAttributes';
@@ -51,12 +55,9 @@ import {
 } from '../../state/ducks/modalDialog';
 import { getIsMessageSection } from '../../state/selectors/section';
 import { useSelectedConversationKey } from '../../state/selectors/selectedConversation';
-import { LocalizerKeys } from '../../types/LocalizerKeys';
+import type { LocalizerToken } from '../../types/localizer';
 import { SessionButtonColor } from '../basic/SessionButton';
-import {
-  ConversationInteractionType,
-  ConversationInteractionStatus,
-} from '../../interactions/types';
+import { ItemWithDataTestId } from './items/MenuItemWithDataTestId';
 
 /** Menu items standardized */
 
@@ -66,13 +67,13 @@ export const InviteContactMenuItem = (): JSX.Element | null => {
 
   if (isPublic) {
     return (
-      <Item
+      <ItemWithDataTestId
         onClick={() => {
           showInviteContactByConvoId(convoId);
         }}
       >
-        {window.i18n('inviteContacts')}
-      </Item>
+        {window.i18n('membersInvite')}
+      </ItemWithDataTestId>
     );
   }
   return null;
@@ -91,7 +92,11 @@ export const MarkConversationUnreadMenuItem = (): JSX.Element | null => {
       void conversation?.markAsUnread(true);
     };
 
-    return <Item onClick={markUnread}>{window.i18n('markUnread')}</Item>;
+    return (
+      <ItemWithDataTestId onClick={markUnread}>
+        {window.i18n('messageMarkUnread')}
+      </ItemWithDataTestId>
+    );
   }
   return null;
 };
@@ -107,8 +112,10 @@ export const DeletePrivateContactMenuItem = () => {
   const isPrivate = useIsPrivate(convoId);
   const isRequest = useIsIncomingRequest(convoId);
 
+  const name = useNicknameOrProfileNameOrShortenedPubkey(convoId);
+
   if (isPrivate && !isRequest) {
-    const menuItemText = window.i18n('editMenuDeleteContact');
+    const menuItemText = window.i18n('contactDelete');
 
     const onClickClose = () => {
       dispatch(updateConfirmModal(null));
@@ -118,7 +125,7 @@ export const DeletePrivateContactMenuItem = () => {
       dispatch(
         updateConfirmModal({
           title: menuItemText,
-          message: window.i18n('deleteContactConfirmation'),
+          i18nMessage: { token: 'contactDeleteDescription', args: { name } },
           onClickClose,
           okTheme: SessionButtonColor.Danger,
           onClickOk: async () => {
@@ -131,7 +138,7 @@ export const DeletePrivateContactMenuItem = () => {
       );
     };
 
-    return <Item onClick={showConfirmationModal}>{menuItemText}</Item>;
+    return <ItemWithDataTestId onClick={showConfirmationModal}>{menuItemText}</ItemWithDataTestId>;
   }
   return null;
 };
@@ -147,18 +154,18 @@ export const LeaveGroupOrCommunityMenuItem = () => {
 
   if (!isKickedFromGroup && !isLeft && !isPrivate) {
     return (
-      <Item
+      <ItemWithDataTestId
         onClick={() => {
           void showLeaveGroupByConvoId(convoId, username);
         }}
       >
         {isPublic
-          ? window.i18n('leaveCommunity')
+          ? window.i18n('communityLeave')
           : lastMessage?.interactionType === ConversationInteractionType.Leave &&
               lastMessage?.interactionStatus === ConversationInteractionStatus.Error
-            ? window.i18n('deleteConversation')
-            : window.i18n('leaveGroup')}
-      </Item>
+            ? window.i18n('conversationsDelete')
+            : window.i18n('groupLeave')}
+      </ItemWithDataTestId>
     );
   }
 
@@ -175,7 +182,7 @@ export const ShowUserDetailsMenuItem = () => {
 
   if (isPrivate && !isBlinded) {
     return (
-      <Item
+      <ItemWithDataTestId
         onClick={() => {
           dispatch(
             updateUserDetailsModal({
@@ -186,8 +193,8 @@ export const ShowUserDetailsMenuItem = () => {
           );
         }}
       >
-        {window.i18n('showUserDetails')}
-      </Item>
+        {window.i18n('contactUserDetails')}
+      </ItemWithDataTestId>
     );
   }
 
@@ -202,13 +209,13 @@ export const UpdateGroupNameMenuItem = () => {
 
   if (!isKickedFromGroup && !left && weAreAdmin) {
     return (
-      <Item
+      <ItemWithDataTestId
         onClick={() => {
           void showUpdateGroupNameByConvoId(convoId);
         }}
       >
-        {window.i18n('editGroup')}
-      </Item>
+        {window.i18n('groupEdit')}
+      </ItemWithDataTestId>
     );
   }
   return null;
@@ -222,13 +229,13 @@ export const RemoveModeratorsMenuItem = (): JSX.Element | null => {
 
   if (!isKickedFromGroup && weAreAdmin && isPublic) {
     return (
-      <Item
+      <ItemWithDataTestId
         onClick={() => {
           showRemoveModeratorsByConvoId(convoId);
         }}
       >
-        {window.i18n('removeModerators')}
-      </Item>
+        {window.i18n('adminRemove')}
+      </ItemWithDataTestId>
     );
   }
   return null;
@@ -242,13 +249,13 @@ export const AddModeratorsMenuItem = (): JSX.Element | null => {
 
   if (!isKickedFromGroup && weAreAdmin && isPublic) {
     return (
-      <Item
+      <ItemWithDataTestId
         onClick={() => {
           showAddModeratorsByConvoId(convoId);
         }}
       >
-        {window.i18n('addModerators')}
-      </Item>
+        {window.i18n('adminPromote')}
+      </ItemWithDataTestId>
     );
   }
   return null;
@@ -262,13 +269,13 @@ export const UnbanMenuItem = (): JSX.Element | null => {
 
   if (isPublic && !isKickedFromGroup && weAreAdmin) {
     return (
-      <Item
+      <ItemWithDataTestId
         onClick={() => {
           showUnbanUserByConvoId(convoId);
         }}
       >
-        {window.i18n('unbanUser')}
-      </Item>
+        {window.i18n('banUnbanUser')}
+      </ItemWithDataTestId>
     );
   }
   return null;
@@ -282,36 +289,13 @@ export const BanMenuItem = (): JSX.Element | null => {
 
   if (isPublic && !isKickedFromGroup && weAreAdmin) {
     return (
-      <Item
+      <ItemWithDataTestId
         onClick={() => {
           showBanUserByConvoId(convoId);
         }}
       >
         {window.i18n('banUser')}
-      </Item>
-    );
-  }
-  return null;
-};
-
-export const CopyMenuItem = (): JSX.Element | null => {
-  const convoId = useConvoIdFromContext();
-  const isPublic = useIsPublic(convoId);
-  const isPrivate = useIsPrivate(convoId);
-  const isBlinded = useIsBlinded(convoId);
-
-  // we want to show the copyId for open groups and private chats only
-
-  if ((isPrivate && !isBlinded) || isPublic) {
-    const copyIdLabel = isPublic ? window.i18n('copyOpenGroupURL') : window.i18n('accountIDCopy');
-    return (
-      <Item
-        onClick={() => {
-          void copyPublicKeyByConvoId(convoId);
-        }}
-      >
-        {copyIdLabel}
-      </Item>
+      </ItemWithDataTestId>
     );
   }
   return null;
@@ -323,9 +307,9 @@ export const MarkAllReadMenuItem = (): JSX.Element | null => {
   if (!isIncomingRequest && !PubKey.isBlinded(convoId)) {
     return (
       // eslint-disable-next-line @typescript-eslint/no-misused-promises
-      <Item onClick={async () => markAllReadByConvoId(convoId)}>
-        {window.i18n('markAllAsRead')}
-      </Item>
+      <ItemWithDataTestId onClick={async () => markAllReadByConvoId(convoId)}>
+        {window.i18n('messageMarkRead')}
+      </ItemWithDataTestId>
     );
   }
   return null;
@@ -339,12 +323,12 @@ export const BlockMenuItem = (): JSX.Element | null => {
   const isIncomingRequest = useIsIncomingRequest(convoId);
 
   if (!isMe && isPrivate && !isIncomingRequest && !PubKey.isBlinded(convoId)) {
-    const blockTitle = isBlocked ? window.i18n('unblock') : window.i18n('block');
+    const blockTitle = isBlocked ? window.i18n('blockUnblock') : window.i18n('block');
     const blockHandler = isBlocked
       ? async () => unblockConvoById(convoId)
       : async () => blockConvoById(convoId);
     // eslint-disable-next-line @typescript-eslint/no-misused-promises
-    return <Item onClick={blockHandler}>{blockTitle}</Item>;
+    return <ItemWithDataTestId onClick={blockHandler}>{blockTitle}</ItemWithDataTestId>;
   }
   return null;
 };
@@ -362,9 +346,9 @@ export const ClearNicknameMenuItem = (): JSX.Element | null => {
 
   return (
     // eslint-disable-next-line @typescript-eslint/no-misused-promises
-    <Item onClick={async () => clearNickNameByConvoId(convoId)}>
-      {window.i18n('clearNickname')}
-    </Item>
+    <ItemWithDataTestId onClick={async () => clearNickNameByConvoId(convoId)}>
+      {window.i18n('nicknameRemove')}
+    </ItemWithDataTestId>
   );
 };
 
@@ -379,13 +363,13 @@ export const ChangeNicknameMenuItem = () => {
     return null;
   }
   return (
-    <Item
+    <ItemWithDataTestId
       onClick={() => {
         dispatch(changeNickNameModal({ conversationId: convoId }));
       }}
     >
-      {window.i18n('changeNickname')}
-    </Item>
+      {window.i18n('nicknameSet')}
+    </ItemWithDataTestId>
   );
 };
 
@@ -401,13 +385,14 @@ export const DeleteMessagesMenuItem = () => {
     return null;
   }
   return (
-    <Item
+    <ItemWithDataTestId
       onClick={() => {
         deleteAllMessagesByConvoIdWithConfirmation(convoId);
       }}
     >
-      {window.i18n('deleteMessages')}
-    </Item>
+      {/* just more than 1 to have the string Delete Messages */}
+      {window.i18n('deleteMessage', { count: 2 })}
+    </ItemWithDataTestId>
   );
 };
 
@@ -418,7 +403,6 @@ export const DeleteMessagesMenuItem = () => {
  */
 export const DeletePrivateConversationMenuItem = () => {
   const convoId = useConvoIdFromContext();
-  const username = useConversationUsername(convoId) || convoId;
   const isRequest = useIsIncomingRequest(convoId);
   const isPrivate = useIsPrivate(convoId);
   const isMe = useIsMe(convoId);
@@ -428,13 +412,13 @@ export const DeletePrivateConversationMenuItem = () => {
   }
 
   return (
-    <Item
+    <ItemWithDataTestId
       onClick={() => {
-        showLeavePrivateConversationbyConvoId(convoId, username);
+        showLeavePrivateConversationbyConvoId(convoId);
       }}
     >
-      {isMe ? window.i18n('hideConversation') : window.i18n('deleteConversation')}
-    </Item>
+      {isMe ? window.i18n('noteToSelfHide') : window.i18n('conversationsDelete')}
+    </ItemWithDataTestId>
   );
 };
 
@@ -446,7 +430,7 @@ export const AcceptMsgRequestMenuItem = () => {
 
   if (isRequest && isPrivate) {
     return (
-      <Item
+      <ItemWithDataTestId
         // eslint-disable-next-line @typescript-eslint/no-misused-promises
         onClick={async () => {
           await convo.setDidApproveMe(true);
@@ -455,7 +439,7 @@ export const AcceptMsgRequestMenuItem = () => {
         }}
       >
         {window.i18n('accept')}
-      </Item>
+      </ItemWithDataTestId>
     );
   }
   return null;
@@ -469,7 +453,7 @@ export const DeclineMsgRequestMenuItem = () => {
 
   if (isPrivate && isRequest) {
     return (
-      <Item
+      <ItemWithDataTestId
         onClick={() => {
           declineConversationWithConfirm({
             conversationId: convoId,
@@ -480,7 +464,7 @@ export const DeclineMsgRequestMenuItem = () => {
         }}
       >
         {window.i18n('decline')}
-      </Item>
+      </ItemWithDataTestId>
     );
   }
   return null;
@@ -494,7 +478,7 @@ export const DeclineAndBlockMsgRequestMenuItem = () => {
 
   if (isRequest && isPrivate) {
     return (
-      <Item
+      <ItemWithDataTestId
         onClick={() => {
           declineConversationWithConfirm({
             conversationId: convoId,
@@ -505,7 +489,7 @@ export const DeclineAndBlockMsgRequestMenuItem = () => {
         }}
       >
         {window.i18n('block')}
-      </Item>
+      </ItemWithDataTestId>
     );
   }
   return null;
@@ -542,26 +526,26 @@ export const NotificationForConvoMenuItem = (): JSX.Element | null => {
     isPrivate ? n !== 'mentions_only' : true
   ).map((n: ConversationNotificationSettingType) => {
     // do this separately so typescript's compiler likes it
-    const keyToUse: LocalizerKeys =
+    const keyToUse: LocalizerToken =
       n === 'all' || !n
-        ? 'notificationForConvo_all'
+        ? 'notificationsAllMessages'
         : n === 'disabled'
-          ? 'notificationForConvo_disabled'
-          : 'notificationForConvo_mentions_only';
+          ? 'notificationsMute'
+          : 'notificationsMentionsOnly';
     return { value: n, name: window.i18n(keyToUse) };
   });
 
   return (
     // Remove the && false to make context menu work with RTL support
     <Submenu
-      label={window.i18n('notificationForConvo') as any}
+      label={window.i18n('sessionNotifications') as any}
       // rtl={isRtlMode && false}
     >
       {(notificationForConvoOptions || []).map(item => {
         const disabled = item.value === currentNotificationSetting;
 
         return (
-          <Item
+          <ItemWithDataTestId
             key={item.value}
             onClick={() => {
               void setNotificationForConvoId(convoId, item.value);
@@ -569,7 +553,7 @@ export const NotificationForConvoMenuItem = (): JSX.Element | null => {
             disabled={disabled}
           >
             {item.name}
-          </Item>
+          </ItemWithDataTestId>
         );
       })}
     </Submenu>

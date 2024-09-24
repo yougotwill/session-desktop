@@ -105,8 +105,7 @@ export const BanOrUnBanUserDialog = (props: {
     setInProgress(false);
   };
 
-  const chatName = convo.getNicknameOrRealUsernameOrPlaceholder();
-  const title = `${isBan ? window.i18n('banUser') : window.i18n('unbanUser')}: ${chatName}`;
+  const title = isBan ? window.i18n('banUser') : window.i18n('banUnbanUser');
 
   const onPubkeyBoxChanges = (e: ChangeEvent<HTMLInputElement>) => {
     setInputBoxValue(e.target.value?.trim() || '');
@@ -119,7 +118,7 @@ export const BanOrUnBanUserDialog = (props: {
     await banOrUnBanUser(true);
   };
 
-  const buttonText = isBan ? i18n('banUser') : i18n('unbanUser');
+  const buttonText = isBan ? i18n('banUser') : i18n('banUnbanUser');
 
   return (
     <SessionWrapperModal
@@ -154,7 +153,7 @@ export const BanOrUnBanUserDialog = (props: {
                 buttonType={SessionButtonType.Simple}
                 buttonColor={SessionButtonColor.Danger}
                 onClick={startBanAndDeleteAllSequence}
-                text={i18n('banUserAndDeleteAll')}
+                text={i18n('banDeleteAll')}
                 disabled={inProgress}
               />
             </>
