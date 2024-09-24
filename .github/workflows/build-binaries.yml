@@ -55,7 +55,7 @@ jobs:
         # no need to dedup yarn.lock on all platforms
         uses: ./actions/deduplicate_fail
 
-        # we want to test on all platforms are some are testing the menus rendered (and are depent on the platform)
+        # we want to test on all platforms since some are testing the rendered menus (and are dependent on the platform)
       - name: Unit Test
         run: yarn test
 
@@ -93,7 +93,7 @@ jobs:
         with:
           cache_suffix: 'windows_x64'
 
-        # we want to test on all platforms are some are testing the menus rendered (and are depent on the platform)
+        # we want to test on all platforms since some are testing the rendered menus (and are dependent on the platform)
       - name: Unit Test
         run: yarn test
 
@@ -136,7 +136,7 @@ jobs:
         with:
           cache_suffix: 'macos_x64'
 
-        # we want to test on all platforms are some are testing the menus rendered (and are depent on the platform)
+        # we want to test on all platforms since some are testing the rendered menus (and are dependent on the platform)
       - name: Unit Test
         run: yarn test
 
