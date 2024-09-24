@@ -7,6 +7,7 @@ name: Session Desktop
 on:
   push:
     branches:
+      - master
       - clearnet
       - unstable
       - 'release/**'
