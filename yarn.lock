@@ -765,13 +765,6 @@
   resolved "https://registry.yarnpkg.com/@types/filesize/-/filesize-3.6.0.tgz#5f1a25c7b4e3d5ee2bc63133d374d096b7008c8d"
   integrity sha512-rOWxCKMjt2DBuwddUnl5GOpf/jAkkqteB+XldncpVxVX+HPTmK2c5ACMOVEbp9gaH81IlhTdC3TwvRa5nopasw==
 
-"@types/firstline@^2.0.2":
-  version "2.0.4"
-  resolved "https://registry.yarnpkg.com/@types/firstline/-/firstline-2.0.4.tgz#b8d3f8f7396d1589efea89db183c047a42efaf04"
-  integrity sha512-EYoMzk783ncj3soLGADXD/rklDMw1PAO5Hc3lRZa5G21vkfacwkdTlIdhTJ39omqDLezTSmxjDG1psd4A/mUHg==
-  dependencies:
-    "@types/node" "*"
-
 "@types/fs-extra@5.0.5":
   version "5.0.5"
   resolved "https://registry.yarnpkg.com/@types/fs-extra/-/fs-extra-5.0.5.tgz#080d90a792f3fa2c5559eb44bd8ef840aae9104b"
@@ -3674,11 +3667,6 @@ find-yarn-workspace-root@^2.0.0:
   dependencies:
     micromatch "^4.0.2"
 
-firstline@1.2.1:
-  version "1.2.1"
-  resolved "https://registry.yarnpkg.com/firstline/-/firstline-1.2.1.tgz#b88673c42009f8821fac2926e99720acee924fae"
-  integrity sha512-6eMQNJtDzyXSC1yeCBWspqA6LeV5la2XHGTXQq4O0xkglAutpyny/sB+zVdXTZ9nzcDW9ZGLxwXXkB+ZEtJuPw==
-
 flat-cache@^3.0.4:
   version "3.2.0"
   resolved "https://registry.yarnpkg.com/flat-cache/-/flat-cache-3.2.0.tgz#2c0c2d5040c99b1632771a9d105725c0115363ee"
@@ -6381,11 +6369,6 @@ read-config-file@6.2.0:
     json5 "^2.2.0"
     lazy-val "^1.0.4"
 
-read-last-lines-ts@^1.2.1:
-  version "1.2.1"
-  resolved "https://registry.yarnpkg.com/read-last-lines-ts/-/read-last-lines-ts-1.2.1.tgz#99e46288c5373c06e16e90e666a46b595dad80a1"
-  integrity sha512-1VcCrAU38DILYiF4sbNY13zdrMGwrFqjGQnXJy28G1zLJItvnWtgCbqoAJlnZZSiEICMKdM4Ol7LYvVMEoKrAg==
-
 read-pkg-up@^7.0.1:
   version "7.0.1"
   resolved "https://registry.yarnpkg.com/read-pkg-up/-/read-pkg-up-7.0.1.tgz#f3a6135758459733ae2b95638056e1854e7ef507"
@@ -6694,11 +6677,6 @@ run-parallel@^1.1.9:
   integrity sha512-5l4VyZR86LZ/lDxZTR6jqL8AFE2S0IFLMP26AbjsLVADxHdhB/c0GUsH+y39UfCi3dzz8OlQuPmnaJOMoDHQBA==
   dependencies:
     queue-microtask "^1.2.2"
-
-run-script-os@^1.1.6:
-  version "1.1.6"
-  resolved "https://registry.yarnpkg.com/run-script-os/-/run-script-os-1.1.6.tgz#8b0177fb1b54c99a670f95c7fdc54f18b9c72347"
-  integrity sha512-ql6P2LzhBTTDfzKts+Qo4H94VUKpxKDFz6QxxwaUZN0mwvi7L3lpOI7BqPCq7lgDh3XLl0dpeXwfcVIitlrYrw==
 
 safe-array-concat@^1.1.2:
   version "1.1.2"

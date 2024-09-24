@@ -274,3 +274,5 @@ You can build a production binary by running the following:
 yarn build-everything
 yarn build-release
 ```
+
+On linux, you can change in package.json `"target": ["deb"],` to any of the [electron-builder targets](https://www.electron.build/linux#target) to build for another target.
