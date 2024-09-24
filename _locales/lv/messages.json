@@ -599,7 +599,7 @@
   "permissionsKeepInSystemTrayDescription": "{app_name} turpina darboties fonā, kad aizverat logu",
   "permissionsLibrary": "{app_name} ir nepieciešama piekļuve foto galerijai, lai turpinātu. Jūs varat ieslēgt piekļuvi iOS iestatījumos.",
   "permissionsMicrophone": "Mikrofons",
-  "permissionsMicrophoneAccessRequired": "{app_name} ir nepieciešama piekļuve mikrofonam, lai veiktu zvanus un sūtītu audio ziņas, bet tā ir pastāvīgi aizliegta. Pieskarieties iestatījumos -> Atļaujas un ieslēdziet \"Mikrofons\".",
+  "permissionsMicrophoneAccessRequired": "{app_name} ir nepieciešama piekļuve mikrofonam, lai veiktu zvanus un sūtītu audio ziņas, bet tā ir pastāvīgi aizliegta. Pieskarieties iestatījumos → Atļaujas un ieslēdziet \"Mikrofons\".",
   "permissionsMicrophoneAccessRequiredDesktop": "Jūs varat aktivizēt mikrofonu piekļuvi {app_name} privātuma iestatījumos",
   "permissionsMicrophoneAccessRequiredIos": "{app_name} ir nepieciešama piekļuve mikrofonam, lai veiktu zvanus un ierakstītu audio ziņas.",
   "permissionsMicrophoneDescription": "Atļaut piekļuvi mikrofonam.",
