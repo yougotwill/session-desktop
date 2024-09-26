@@ -58,12 +58,12 @@ export const convertIconToImageURL = async (
     />
   );
   // wait for it to render
-  await sleepFor(100);
+  await sleepFor(500);
 
   const svg = root?.querySelector(`#icon-to-image-url svg`);
   svg?.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
   const svgString = svg?.outerHTML;
-
+  window.log.debug(`WIP: [convertIconToImageUrl] svgString: ${svgString}`);
   reactRoot?.unmount();
   root?.removeChild(divElement);
 
