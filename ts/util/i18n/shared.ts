@@ -72,16 +72,26 @@ export function getBrowserLocale() {
   // supportedLocalesOf will throw if the locales has a '_' instead of a '-' in it.
   const userLocaleDashed = browserLocale.replaceAll('_', '-');
 
-  const matchingLocales = Intl.DateTimeFormat.supportedLocalesOf(userLocaleDashed);
+  try {
+    const matchingLocales = Intl.DateTimeFormat.supportedLocalesOf(userLocaleDashed);
 
-  const mappingTo = matchingLocales?.[0] || 'en';
+    const mappingTo = matchingLocales?.[0] || 'en';
 
-  if (!mappedBrowserLocaleDisplayed) {
-    mappedBrowserLocaleDisplayed = true;
-    i18nLog(`userLocaleDashed: '${userLocaleDashed}', mapping to browser locale: ${mappingTo}`);
+    if (!mappedBrowserLocaleDisplayed) {
+      mappedBrowserLocaleDisplayed = true;
+      i18nLog(`userLocaleDashed: '${userLocaleDashed}', mapping to browser locale: ${mappingTo}`);
+    }
+
+    return mappingTo;
+  } catch (e) {
+    if (!mappedBrowserLocaleDisplayed) {
+      mappedBrowserLocaleDisplayed = true;
+      i18nLog(
+        `userLocaleDashed: '${userLocaleDashed}' was an invalid locale for supportedLocalesOf(). Falling back to 'en'. Error:${e.message} `
+      );
+    }
+    return 'en';
   }
-
-  return mappingTo;
 }
 
 export function setInitialLocale(crowdinLocaleArg: CrowdinLocale, dictionary: LocalizerDictionary) {
