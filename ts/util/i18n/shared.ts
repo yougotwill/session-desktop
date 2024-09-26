@@ -73,7 +73,19 @@ export function getBrowserLocale() {
   const userLocaleDashed = browserLocale.replaceAll('_', '-');
 
   try {
-    const matchingLocales = Intl.DateTimeFormat.supportedLocalesOf(userLocaleDashed);
+    let matchingLocales: Array<string> = [];
+    try {
+      matchingLocales = Intl.DateTimeFormat.supportedLocalesOf(userLocaleDashed);
+    } catch (innerError) {
+      // some users have a locale setup with a ':' in it.
+      // see https://github.com/oxen-io/session-desktop/issues/3221
+      const semiColonIndex = userLocaleDashed.indexOf(':');
+      if (semiColonIndex > -1) {
+        matchingLocales = Intl.DateTimeFormat.supportedLocalesOf(
+          userLocaleDashed.substring(0, semiColonIndex)
+        );
+      }
+    }
 
     const mappingTo = matchingLocales?.[0] || 'en';
 
