@@ -35,8 +35,8 @@ const DescriptionBeforeAskingConfirmation = (props: {
     },
   ].map(m => ({
     ...m,
-    inputDatatestId: `input-${m.value}` as const,
-    labelDatatestId: `label-${m.value}` as const,
+    inputDataTestId: `input-${m.value}` as const,
+    labelDataTestId: `label-${m.value}` as const,
   }));
 
   return (

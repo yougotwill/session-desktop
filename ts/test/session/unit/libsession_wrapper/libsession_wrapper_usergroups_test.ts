@@ -2,10 +2,7 @@ import { expect } from 'chai';
 
 import Sinon from 'sinon';
 import { ConversationModel } from '../../../../models/conversation';
-import {
-  CONVERSATION_PRIORITIES,
-  ConversationTypeEnum,
-} from '../../../../models/conversationAttributes';
+import { CONVERSATION_PRIORITIES, ConversationTypeEnum } from '../../../../models/types';
 import { UserUtils } from '../../../../session/utils';
 import { SessionUtilUserGroups } from '../../../../session/utils/libsession/libsession_utils_user_groups';
 import { TestUtils } from '../../../test-utils';

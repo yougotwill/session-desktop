@@ -4,20 +4,21 @@ import Sinon, * as sinon from 'sinon';
 
 import chaiAsPromised from 'chai-as-promised';
 import { ConversationModel } from '../../../../models/conversation';
-import { getSwarmPollingInstance, SnodePool } from '../../../../session/apis/snode_api';
+import { getSwarmPollingInstance } from '../../../../session/apis/snode_api';
 import { resetHardForkCachedValues } from '../../../../session/apis/snode_api/hfHandling';
 import { SnodeAPIRetrieve } from '../../../../session/apis/snode_api/retrieveRequest';
 import { SwarmPolling } from '../../../../session/apis/snode_api/swarmPolling';
 import { SWARM_POLLING_TIMEOUT } from '../../../../session/constants';
 import { PubKey } from '../../../../session/types';
 import { UserUtils } from '../../../../session/utils';
-import { ConfigurationSync } from '../../../../session/utils/job_runners/jobs/ConfigurationSyncJob';
+import { UserSync } from '../../../../session/utils/job_runners/jobs/UserSyncJob';
 import { sleepFor } from '../../../../session/utils/Promise';
 import { UserGroupsWrapperActions } from '../../../../webworker/workers/browser/libsession_worker_interface';
 import { TestUtils } from '../../../test-utils';
 import { generateFakeSnodes, stubData } from '../../../test-utils/utils';
 import { ConversationTypeEnum } from '../../../../models/types';
 import { ConvoHub } from '../../../../session/conversations';
+import { SnodePool } from '../../../../session/apis/snode_api/snodePool';
 
 chai.use(chaiAsPromised as any);
 chai.should();
@@ -26,8 +27,8 @@ const { expect } = chai;
 
 describe('SwarmPolling', () => {
   // Initialize new stubbed cache
-  const ourPubkey = TestUtils.generateFakePubKey();
-  const ourNumber = ourPubkey.key;
+  const ourNumber = TestUtils.generateFakePubKeyStr();
+  const ourPubkey = PubKey.cast(ourNumber);
 
   let pollOnceForKeySpy: Sinon.SinonSpy<any>;
 
@@ -38,7 +39,7 @@ describe('SwarmPolling', () => {
   beforeEach(async () => {
     ConvoHub.use().reset();
     TestUtils.stubWindowFeatureFlags();
-    Sinon.stub(ConfigurationSync, 'queueNewJobIfNeeded').resolves();
+    Sinon.stub(UserSync, 'queueNewJobIfNeeded').resolves();
 
     // Utils Stubs
     Sinon.stub(UserUtils, 'getOurPubKeyStrFromCache').returns(ourNumber);
@@ -194,10 +195,7 @@ describe('SwarmPolling', () => {
       Sinon.restore();
     });
     it('does run for our pubkey even if activeAt is really old ', async () => {
-      const convo = ConvoHub.use().getOrCreate(
-        ourNumber,
-        ConversationTypeEnum.PRIVATE
-      );
+      const convo = ConvoHub.use().getOrCreate(ourNumber, ConversationTypeEnum.PRIVATE);
       convo.set('active_at', Date.now() - 1000 * 3600 * 25);
       await swarmPolling.start(true);
 
@@ -206,10 +204,7 @@ describe('SwarmPolling', () => {
     });
 
     it('does run for our pubkey even if activeAt is recent ', async () => {
-      const convo = ConvoHub.use().getOrCreate(
-        ourNumber,
-        ConversationTypeEnum.PRIVATE
-      );
+      const convo = ConvoHub.use().getOrCreate(ourNumber, ConversationTypeEnum.PRIVATE);
       convo.set('active_at', Date.now());
       await swarmPolling.start(true);
 

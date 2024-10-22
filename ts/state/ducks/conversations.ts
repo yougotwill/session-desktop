@@ -7,11 +7,9 @@ import { QuotedAttachmentType } from '../../components/conversation/message/mess
 import { Data } from '../../data/data';
 
 import {
-  CONVERSATION_PRIORITIES,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   ConversationAttributes,
   ConversationNotificationSettingType,
-  ConversationTypeEnum,
 } from '../../models/conversationAttributes';
 import {
   MessageModelType,
@@ -33,6 +31,7 @@ import {
   PropsForInteractionNotification,
 } from './types';
 import { AttachmentType } from '../../types/Attachment';
+import { CONVERSATION_PRIORITIES, ConversationTypeEnum } from '../../models/types';
 
 export type MessageModelPropsWithoutConvoProps = {
   propsForMessage: PropsForMessageWithoutConvoProps;
@@ -1193,7 +1192,7 @@ export async function openConversationToSpecificMessage(args: {
 
   const mostRecentMessageIdOnOpen = await Data.getLastMessageIdInConversation(conversationKey);
 
-  // we do not care about the firstunread message id when opening to a specific message
+  // we do not care about the first unread message id when opening to a specific message
   window.inboxStore?.dispatch(
     actions.openConversationToSpecificMessage({
       conversationKey,

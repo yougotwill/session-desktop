@@ -2342,7 +2342,7 @@ function getV2OpenGroupRoom(conversationId: string, db?: BetterSqlite3.Database)
   return jsonToObject(row.json);
 }
 
-function saveV2OpenGroupRoom({ serverUrl, roomId, conversationId } : OpenGroupV2Room, instance?: BetterSqlite3.Database) {
+function saveV2OpenGroupRoom(opengroupsV2Room: OpenGroupV2Room, instance?: BetterSqlite3.Database) {
   assertGlobalInstanceOrInstance(instance)
     .prepare(
       `INSERT OR REPLACE INTO ${OPEN_GROUP_ROOMS_V2_TABLE} (
@@ -2358,10 +2358,10 @@ function saveV2OpenGroupRoom({ serverUrl, roomId, conversationId } : OpenGroupV2
     )`
     )
     .run({
-      serverUrl,
-      roomId,
-      conversationId,
-      json: objectToJSON(opengroupsv2Room),
+      serverUrl: opengroupsV2Room.serverUrl,
+      roomId: opengroupsV2Room.roomId,
+      conversationId: opengroupsV2Room.conversationId,
+      json: objectToJSON(opengroupsV2Room),
     });
 }
 

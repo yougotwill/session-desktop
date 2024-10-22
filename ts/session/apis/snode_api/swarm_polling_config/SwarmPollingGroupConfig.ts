@@ -34,7 +34,7 @@ async function handleMetaMergeResults(groupPk: GroupPubkeyType) {
   if (window.sessionFeatureFlags.debug.debugLibsessionDumps) {
     const dumps = await MetaGroupWrapperActions.metaMakeDump(groupPk);
     window.log.info(
-      `pushChangesToGroupSwarmIfNeeded: current metadump: ${ed25519Str(groupPk)}:`,
+      `pushChangesToGroupSwarmIfNeeded: current meta dump: ${ed25519Str(groupPk)}:`,
       to_hex(dumps)
     );
   }
@@ -64,7 +64,7 @@ async function handleMetaMergeResults(groupPk: GroupPubkeyType) {
         `removeAllMessagesInConversationSentBefore of ${ed25519Str(groupPk)} before ${infos.deleteBeforeSeconds}: `,
         deletedMsgIds
       );
-      window.inboxStore.dispatch(
+      window.inboxStore?.dispatch(
         messagesExpired(deletedMsgIds.map(messageId => ({ conversationKey: groupPk, messageId })))
       );
       lastAppliedRemoveMsgSentBeforeSeconds.set(groupPk, infos.deleteBeforeSeconds);
@@ -236,10 +236,10 @@ async function handleGroupSharedConfigMessages(
     await LibSessionUtil.saveDumpsToDb(groupPk);
 
     // refresh the redux slice with the merged result
-    window.inboxStore.dispatch(
+    window.inboxStore?.dispatch(
       groupInfoActions.refreshGroupDetailsFromWrapper({
         groupPk,
-      })
+      })as any
     );
   } catch (e) {
     window.log.warn(

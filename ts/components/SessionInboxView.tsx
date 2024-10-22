@@ -98,7 +98,7 @@ async function setupLeftPane(forceUpdateInboxComponent: () => void) {
 
   window.inboxStore = await createSessionInboxStore();
 
-  window.inboxStore.dispatch(
+  window.inboxStore?.dispatch(
     updateAllOnStorageReady({
       hasBlindedMsgRequestsEnabled: Storage.getBoolOrFalse(
         SettingsKey.hasBlindedMsgRequestsEnabled
@@ -110,7 +110,7 @@ async function setupLeftPane(forceUpdateInboxComponent: () => void) {
       hideRecoveryPassword: Storage.getBoolOrFalse(SettingsKey.hideRecoveryPassword),
     })
   );
-  window.inboxStore.dispatch(groupInfoActions.loadMetaDumpsFromDB()); // this loads the dumps from DB and fills the 03-groups slice with the corresponding details
+  window.inboxStore?.dispatch(groupInfoActions.loadMetaDumpsFromDB() as any); // this loads the dumps from DB and fills the 03-groups slice with the corresponding details
   forceUpdateInboxComponent();
   window.getState = window.inboxStore.getState;
 }

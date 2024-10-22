@@ -41,7 +41,7 @@ const IconDiv = styled.div`
 `;
 
 function useReplacePkInTextWithNames(description: string) {
-  const pubkeysToLookup = [...description.matchAll(/0[3,5][0-9a-fA-F]{64}/g)] || [];
+  const pubkeysToLookup = [...description.matchAll(/0[3,5][0-9a-fA-F]{64}/g)];
   const memberNames = useConversationsUsernameWithQuoteOrShortPk(pubkeysToLookup.map(m => m[0]));
 
   let replacedWithNames = clone(description);

@@ -88,7 +88,7 @@ export class PubKey {
     const pk = value instanceof PubKey ? valAny.key : value;
 
     if (!pk || pk.length < 8) {
-      throw new Error('PubkKey.shorten was given an invalid PubKey to shorten.');
+      throw new Error('PubKey.shorten was given an invalid PubKey to shorten.');
     }
 
     return `(${pk.substring(0, 4)}...${pk.substring(pk.length - 4)})`;

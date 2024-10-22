@@ -35,7 +35,7 @@ const getFakeResponseOnPath = (statusCode?: number, body?: string) => {
 
 const getFakeResponseOnDestination = (statusCode?: number, body?: string) => {
   return {
-    status: 200 || 0,
+    status: 200,
     text: async () => {
       return JSON.stringify({ status: statusCode, body: body || '' });
     },
@@ -111,12 +111,13 @@ describe('OnionPathsErrors', () => {
     await OnionPaths.getOnionPath({});
 
     oldOnionPaths = OnionPaths.TEST_getTestOnionPath();
-    Sinon.stub(Onions, 'decodeOnionResult').callsFake((_symmetricKey: ArrayBuffer, plaintext: string) =>
-      Promise.resolve({
-        plaintext,
-        ciphertextBuffer: new Uint8Array(),
-        plaintextBuffer: Buffer.alloc(0),
-      })
+    Sinon.stub(Onions, 'decodeOnionResult').callsFake(
+      (_symmetricKey: ArrayBuffer, plaintext: string) =>
+        Promise.resolve({
+          plaintext,
+          ciphertextBuffer: new Uint8Array(),
+          plaintextBuffer: Buffer.alloc(0),
+        })
     );
   });
 

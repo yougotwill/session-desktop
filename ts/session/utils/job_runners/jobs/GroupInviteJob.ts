@@ -22,7 +22,7 @@ import { LibSessionUtil } from '../../libsession/libsession_utils';
 import { showUpdateGroupMembersByConvoId } from '../../../../interactions/conversationInteractions';
 
 const defaultMsBetweenRetries = 10000;
-const defaultMaxAttemps = 1;
+const defaultMaxAttempts = 1;
 
 type JobExtraArgs = {
   groupPk: GroupPubkeyType;
@@ -54,7 +54,9 @@ async function addJob({ groupPk, member }: JobExtraArgs) {
     });
     window.log.debug(`addGroupInviteJob: adding group invite for ${groupPk}:${member} `);
 
-    window?.inboxStore?.dispatch(groupInfoActions.refreshGroupDetailsFromWrapper({ groupPk }));
+    window?.inboxStore?.dispatch(
+      groupInfoActions.refreshGroupDetailsFromWrapper({ groupPk }) as any
+    );
     await LibSessionUtil.saveDumpsToDb(groupPk);
 
     await runners.groupInviteJobRunner.addJob(groupInviteJob);
@@ -79,7 +81,7 @@ function displayFailedInvitesForGroup(groupPk: GroupPubkeyType) {
     case 1:
       ToastUtils.pushToastWarning(
         `invite-failed${groupPk}`,
-        window.i18n('groupInviteFailedOne', [...thisGroupFailures.failedMembers, groupPk]),
+        window.i18n('groupInviteFailedUser', [...thisGroupFailures.failedMembers, groupPk]),
         onToastClick
       );
       break;
@@ -93,7 +95,7 @@ function displayFailedInvitesForGroup(groupPk: GroupPubkeyType) {
     default:
       ToastUtils.pushToastWarning(
         `invite-failed${groupPk}`,
-        window.i18n('groupInviteFailedOthers', [
+        window.i18n('groupInviteFailedMultiple', [
           thisGroupFailures.failedMembers[0],
           `${thisGroupFailures.failedMembers.length - 1}`,
           groupPk,
@@ -130,7 +132,7 @@ class GroupInviteJob extends PersistedJob<GroupInvitePersistedData> {
       member,
       groupPk,
       delayBetweenRetries: defaultMsBetweenRetries,
-      maxAttempts: isNumber(maxAttempts) ? maxAttempts : defaultMaxAttemps,
+      maxAttempts: isNumber(maxAttempts) ? maxAttempts : defaultMaxAttempts,
       nextAttemptTimestamp: nextAttemptTimestamp || Date.now() + defaultMsBetweenRetries,
       currentRetry: isNumber(currentRetry) ? currentRetry : 0,
     });
@@ -194,7 +196,9 @@ class GroupInviteJob extends PersistedJob<GroupInvitePersistedData> {
       window?.inboxStore?.dispatch(
         groupInfoActions.setInvitePending({ groupPk, pubkey: member, sending: false })
       );
-      window?.inboxStore?.dispatch(groupInfoActions.refreshGroupDetailsFromWrapper({ groupPk }));
+      window?.inboxStore?.dispatch(
+        groupInfoActions.refreshGroupDetailsFromWrapper({ groupPk }) as any
+      );
       await LibSessionUtil.saveDumpsToDb(groupPk);
     }
     // return true so this job is marked as a success and we don't need to retry it

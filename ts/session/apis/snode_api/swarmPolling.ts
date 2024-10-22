@@ -53,15 +53,12 @@ import {
   RetrieveMessageItem,
   RetrieveMessageItemWithNamespace,
   RetrieveMessagesResultsBatched,
-
   RetrieveRequestResult,
 } from './types';
 import { ConversationTypeEnum } from '../../../models/types';
 import { Snode } from '../../../data/types';
 
 const minMsgCountShouldRetry = 95;
-
-
 
 function extractWebSocketContent(
   message: string,
@@ -156,7 +153,6 @@ export class SwarmPolling {
     }
     this.resetSwarmPolling();
   }
-
 
   public forcePolledTimestamp(pubkey: string, lastPoll: number) {
     const foundAt = this.groupPolling.findIndex(group => {
@@ -458,7 +454,7 @@ export class SwarmPolling {
       resultsFromAllNamespaces
     );
     window.log.debug(
-      `received confMessages:${confMessages?.length ||0}, revokedMessages:${revokedMessages?.length ||0}, `
+      `received confMessages:${confMessages?.length || 0}, revokedMessages:${revokedMessages?.length || 0}, `
     );
     // We always handle the config messages first (for groups 03 or our own messages)
     await this.handleUserOrGroupConfMessages({ confMessages, pubkey, type });
@@ -490,6 +486,9 @@ export class SwarmPolling {
       `handleSeenMessages: ${newMessages.length} out of ${uniqOtherMsgs.length} are not seen yet. snode: ${toPollFrom ? ed25519Str(toPollFrom.pubkey_ed25519) : 'undefined'}`
     );
     if (type === ConversationTypeEnum.GROUPV2) {
+      if (!PubKey.is03Pubkey(pubkey)) {
+        throw new Error('groupv2 expects a 03 key');
+      }
       // groupv2 messages are not stored in the cache, so for each that we process, we also add it as seen message.
       // this is to take care of a crash half way through processing messages. We'd get the same 100 messages back, and we'd skip up to the first not seen message
       await handleMessagesForGroupV2(newMessages, pubkey);
@@ -837,9 +836,10 @@ export class SwarmPolling {
     const resultsFromUserProfile = await SnodeAPIRetrieve.retrieveNextMessagesNoRetries(
       toPollFrom,
       pubkey.key,
-      [{lastHash: '',namespace: SnodeNamespaces.UserProfile}],
+      [{ lastHash: '', namespace: SnodeNamespaces.UserProfile }],
       pubkey.key,
-      null, false
+      null,
+      false
     );
 
     // Note: always print something so we know if the polling is hanging
@@ -862,7 +862,7 @@ export class SwarmPolling {
     const userConfigMessagesWithNamespace: Array<Array<RetrieveMessageItemWithNamespace>> =
       resultsFromUserProfile.map(r => {
         return (r.messages.messages || []).map(m => {
-          return { ...m, namespace: SnodeNamespaces.UserProfile};
+          return { ...m, namespace: SnodeNamespaces.UserProfile };
         });
       });
 
@@ -890,11 +890,11 @@ export class SwarmPolling {
       await UserConfigWrapperActions.init(privateKeyEd25519, null);
       await UserConfigWrapperActions.merge(incomingConfigMessages);
 
-      const foundName  = await UserConfigWrapperActions.getName();
+      const foundName = await UserConfigWrapperActions.getName();
       if (!foundName) {
         throw new Error('UserInfo not found or name is empty');
       }
-      displayNameFound =foundName
+      displayNameFound = foundName;
     } catch (e) {
       window.log.warn('LibSessionUtil.initializeLibSessionUtilWrappers failed with', e.message);
     } finally {

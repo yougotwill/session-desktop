@@ -117,7 +117,7 @@ export class SessionConversation extends Component<Props, State> {
   }
 
   // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  // ~~~~~~~~~~~~~~~~ LIFECYCLES ~~~~~~~~~~~~~~~~
+  // ~~~~~~~~~~~~~~~~ LIFE CYCLES ~~~~~~~~~~~~~~~~
   // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
   public componentDidUpdate(prevProps: Props, _prevState: State) {
@@ -199,7 +199,7 @@ export class SessionConversation extends Component<Props, State> {
 
     const recoveryPhrase = getCurrentRecoveryPhrase();
 
-    // string replace to fix case where pasted text contains invis characters causing false negatives
+    // string replace to fix case where pasted text contains invisible characters causing false negatives
     if (msg.body.replace(/\s/g, '').includes(recoveryPhrase.replace(/\s/g, ''))) {
       window.inboxStore?.dispatch(
         updateConfirmModal({
@@ -257,7 +257,7 @@ export class SessionConversation extends Component<Props, State> {
         ) : (
           <>
             <div
-              // if you change the classname, also update it on onKeyDown
+              // if you change the class name, also update it on onKeyDown
               className={classNames('conversation-content', selectionMode && 'selection-mode')}
               tabIndex={0}
               onKeyDown={this.onKeyDown}
@@ -518,8 +518,8 @@ export class SessionConversation extends Component<Props, State> {
     );
 
     const allMembers = allPubKeys.map((pubKey: string) => {
-      const conv = ConvoHub.use().get(pubKey);
-      const profileName = conv?.getNicknameOrRealUsernameOrPlaceholder();
+      const convo = ConvoHub.use().get(pubKey);
+      const profileName = convo?.getNicknameOrRealUsernameOrPlaceholder();
 
       return {
         id: pubKey,
@@ -662,7 +662,7 @@ function OutdatedLegacyGroupBanner(props: {
 
   return isLegacyGroup ? (
     <NoticeBanner
-      text={window.i18n('upgradeYourGroupBefore')}
+      text={window.i18n('groupLegacyBanner')}
       onButtonClick={() => {
         showLinkVisitWarningDialog('', dispatch);
         throw new Error('TODO'); // fixme audric

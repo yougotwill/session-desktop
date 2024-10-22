@@ -12,7 +12,7 @@ import {
 import { UserGroupsWrapperActions } from '../../../webworker/workers/browser/libsession_worker_interface';
 import { ConvoHub } from '../../conversations';
 import { PubKey } from '../../types';
-import { CONVERSATION_PRIORITIES } from '../../../models/conversationAttributes';
+import { CONVERSATION_PRIORITIES } from '../../../models/types';
 
 /**
  * Returns true if that conversation is an active group
@@ -110,7 +110,7 @@ async function insertGroupsFromDBIntoWrapperAndRefresh(
       });
 
       try {
-        window.log.debug(`inserting into usergroup wrapper "${JSON.stringify(wrapperComm)}"...`);
+        window.log.debug(`inserting into user group wrapper "${JSON.stringify(wrapperComm)}"...`);
         // this does the create or the update of the matching existing community
         await UserGroupsWrapperActions.setCommunityByFullUrl(
           wrapperComm.fullUrl,
@@ -147,7 +147,7 @@ async function insertGroupsFromDBIntoWrapperAndRefresh(
 
       try {
         window.log.debug(
-          `inserting into usergroup wrapper "${foundConvo.id}"... }`,
+          `inserting into user group wrapper "${foundConvo.id}"... }`,
           JSON.stringify(wrapperLegacyGroup)
         );
         // this does the create or the update of the matching existing legacy group
@@ -178,7 +178,7 @@ async function insertGroupsFromDBIntoWrapperAndRefresh(
       };
       try {
         window.log.debug(
-          `inserting into usergroup wrapper "${foundConvo.id}"... }`,
+          `inserting into user group wrapper "${foundConvo.id}"... }`,
           JSON.stringify(groupInfo)
         );
         // this does the create or the update of the matching existing group
@@ -195,7 +195,7 @@ async function insertGroupsFromDBIntoWrapperAndRefresh(
     default:
       assertUnreachable(
         convoType,
-        `insertGroupsFromDBIntoWrapperAndRefresh case not handeld "${convoType}"`
+        `insertGroupsFromDBIntoWrapperAndRefresh case not handled "${convoType}"`
       );
   }
   return null;

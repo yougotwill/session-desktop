@@ -1,5 +1,5 @@
 /**
- * Makes a post to a node to receive the timestamp info. If non-existant, returns -1
+ * Makes a post to a node to receive the timestamp info. If non-existent, returns -1
  * @param snode Snode to send request to
  * @returns timestamp of the response from snode
  */
@@ -12,17 +12,17 @@ import { NetworkTimeSubRequest } from './SnodeRequestTypes';
 
 
 const getNetworkTime = async (snode: Snode): Promise<string | number> => {
-  const subrequest = new NetworkTimeSubRequest();
+  const subRequest = new NetworkTimeSubRequest();
 
   const result = await BatchRequests.doUnsignedSnodeBatchRequestNoRetries(
-    [subrequest],
+    [subRequest],
     snode,
     10000,
     null,
     false
   );
   if (!result || !result.length) {
-    window?.log?.warn(`getNetworkTime on ${snode.ip}:${snode.port} returned falsish value`, result);
+    window?.log?.warn(`getNetworkTime on ${snode.ip}:${snode.port} returned falsy value`, result);
     throw new Error('getNetworkTime: Invalid result');
   }
 
@@ -76,7 +76,7 @@ function now() {
 function getNowWithNetworkOffsetSeconds() {
   // make sure to call exports here, as we stub the exported one for testing.
 
-  return Math.floor(GetNetworkTime.getNowWithNetworkOffset() / 1000);
+  return Math.floor(GetNetworkTime.now() / 1000);
 }
 
 export const GetNetworkTime = {

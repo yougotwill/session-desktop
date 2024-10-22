@@ -91,14 +91,14 @@ const EnterKeyFunctionSetting = () => {
     {
       label: window.i18n('conversationsEnterSends'),
       value: 'enterForSend',
-      inputDatatestId: 'input-enterForSend',
-      labelDatatestId: 'label-enterForSend',
+      inputDataTestId: 'input-enterForSend',
+      labelDataTestId: 'label-enterForSend',
     },
     {
       label: window.i18n('conversationsEnterNewLine'),
       value: selectedWithSettingTrue,
-      inputDatatestId: `input-${selectedWithSettingTrue}`,
-      labelDatatestId: `label-${selectedWithSettingTrue}`,
+      inputDataTestId: `input-${selectedWithSettingTrue}`,
+      labelDataTestId: `label-${selectedWithSettingTrue}`,
     },
   ];
 

@@ -4,7 +4,6 @@ import {
   useSelectedConversationKey,
   useSelectedIsBlocked,
   useSelectedIsKickedFromGroup,
-  useSelectedIsLeft,
   useSelectedNicknameOrProfileNameOrShortenedPubkey,
 } from '../../../state/selectors/selectedConversation';
 import { updateDraftForConversation } from '../SessionConversationDrafts';
@@ -56,7 +55,6 @@ export const CompositionTextArea = (props: Props) => {
   const selectedConversationKey = useSelectedConversationKey();
   const htmlDirection = useHTMLDirection();
   const isKickedFromGroup = useSelectedIsKickedFromGroup();
-  const left = useSelectedIsLeft();
   const isBlocked = useSelectedIsBlocked();
   const groupName = useSelectedNicknameOrProfileNameOrShortenedPubkey();
 
@@ -67,9 +65,6 @@ export const CompositionTextArea = (props: Props) => {
   const makeMessagePlaceHolderText = () => {
     if (isKickedFromGroup) {
       return window.i18n('groupRemovedYou', { group_name: groupName });
-    }
-    if (left) {
-      return window.i18n('groupMemberYouLeft');
     }
     if (isBlocked) {
       return window.i18n('blockBlockedDescription');

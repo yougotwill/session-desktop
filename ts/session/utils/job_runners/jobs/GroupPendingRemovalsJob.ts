@@ -37,7 +37,7 @@ export type WithAddWithHistoryMembers = { withHistory: Array<PubkeyType> };
 export type WithRemoveMembers = { removed: Array<PubkeyType> };
 
 const defaultMsBetweenRetries = 10000;
-const defaultMaxAttemps = 1;
+const defaultMaxAttempts = 1;
 
 type JobExtraArgs = Pick<GroupPendingRemovalsPersistedData, 'groupPk'>;
 
@@ -109,7 +109,7 @@ class GroupPendingRemovalsJob extends PersistedJob<GroupPendingRemovalsPersisted
       identifier: identifier || v4(),
       groupPk,
       delayBetweenRetries: defaultMsBetweenRetries,
-      maxAttempts: isNumber(maxAttempts) ? maxAttempts : defaultMaxAttemps,
+      maxAttempts: isNumber(maxAttempts) ? maxAttempts : defaultMaxAttempts,
       nextAttemptTimestamp: nextAttemptTimestamp || Date.now() + defaultMsBetweenRetries,
       currentRetry: isNumber(currentRetry) ? currentRetry : 0,
     });
@@ -224,7 +224,7 @@ class GroupPendingRemovalsJob extends PersistedJob<GroupPendingRemovalsPersisted
               groupPk
             );
             if (deleted) {
-              window.inboxStore.dispatch(
+              window.inboxStore?.dispatch(
                 messageHashesExpired(
                   msgHashesToDeleteOnGroupSwarm.messageHashes.map(messageHash => ({
                     conversationKey: groupPk,
@@ -236,7 +236,7 @@ class GroupPendingRemovalsJob extends PersistedJob<GroupPendingRemovalsPersisted
           }
         }
       } catch (e) {
-        window.log.warn('GroupPendingRemovalsJob failable part failed with:', e.message);
+        window.log.warn('GroupPendingRemovalsJob allowed to fail part failed with:', e.message);
       }
 
       // return true so this job is marked as a success and we don't need to retry it

@@ -5,17 +5,16 @@ import { SnodePool } from './snodePool';
 import { Snode } from '../../../data/types';
 import { GetServiceNodesSubRequest } from './SnodeRequestTypes';
 
-
 /**
  * Returns a list of unique snodes got from the specified targetNode.
  * This function won't try to rebuild a path if at some point we don't have enough snodes.
  * This is exported for testing purpose only.
  */
 async function getSnodePoolFromSnode(targetNode: Snode): Promise<Array<Snode>> {
-  const subrequest = new GetServiceNodesSubRequest();
+  const subRequest = new GetServiceNodesSubRequest();
 
   const results = await BatchRequests.doUnsignedSnodeBatchRequestNoRetries(
-    [subrequest],
+    [subRequest],
     targetNode,
     10000,
     null,

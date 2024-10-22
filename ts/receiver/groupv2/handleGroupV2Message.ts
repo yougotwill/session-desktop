@@ -3,7 +3,7 @@ import { compact, isEmpty, isFinite, isNumber } from 'lodash';
 import { Data } from '../../data/data';
 import { deleteAllMessagesByConvoIdNoConfirmation } from '../../interactions/conversationInteractions';
 import { deleteMessagesFromSwarmOnly } from '../../interactions/conversations/unsendingInteractions';
-import { ConversationTypeEnum } from '../../models/conversationAttributes';
+import { ConversationTypeEnum } from '../../models/types';
 import { HexString } from '../../node/hexStrings';
 import { SignalService } from '../../protobuf';
 import { getMessageQueue } from '../../session';
@@ -302,7 +302,7 @@ async function handleGroupMemberChangeMessage({
   const filteredMemberChange = change.memberSessionIds.filter(PubKey.is05Pubkey);
 
   if (!filteredMemberChange) {
-    window.log.info('returning groupupdate of member change without associated members...');
+    window.log.info('returning groupUpdate of member change without associated members...');
 
     return;
   }
@@ -358,11 +358,11 @@ async function handleGroupMemberLeftMessage({
   window.log.info(`handleGroupMemberLeftMessage for ${ed25519Str(groupPk)}`);
 
   // this does nothing if we are not an admin
-  window.inboxStore.dispatch(
+  window.inboxStore?.dispatch(
     groupInfoActions.handleMemberLeftMessage({
       groupPk,
       memberLeft: author,
-    })
+    }) as any
   );
 }
 
@@ -424,7 +424,7 @@ async function handleGroupDeleteMemberContentMessage({
         signatureTimestamp,
       });
 
-    window.inboxStore.dispatch(
+    window.inboxStore?.dispatch(
       messagesExpired(msgIdsDeleted.map(m => ({ conversationKey: groupPk, messageId: m })))
     );
 
@@ -467,7 +467,7 @@ async function handleGroupDeleteMemberContentMessage({
     signatureTimestamp,
   }); // this is step 3.
 
-  window.inboxStore.dispatch(
+  window.inboxStore?.dispatch(
     messageHashesExpired(
       compact([...deletedByHashes.messageHashes, ...deletedBySenders.messageHashes]).map(m => ({
         conversationKey: groupPk,
@@ -498,7 +498,9 @@ async function handleGroupUpdateInviteResponseMessage({
     return;
   }
 
-  window.inboxStore.dispatch(groupInfoActions.inviteResponseReceived({ groupPk, member: author }));
+  window.inboxStore?.dispatch(
+    groupInfoActions.inviteResponseReceived({ groupPk, member: author }) as any
+  );
 }
 
 async function handleGroupUpdatePromoteMessage({

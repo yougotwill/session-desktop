@@ -208,14 +208,14 @@ const DestroyGroupForAllMembersButton = () => {
         dataTestId="delete-group-button"
         iconType="delete"
         color={'var(--danger-color)'}
-        text={window.i18n('editMenuDeleteGroup')}
+        text={window.i18n('groupDelete')}
         onClick={() => {
           dispatch(
             // TODO build the right UI for this (just adding buttons for QA for now)
             updateConfirmModal({
               okText: window.i18n('delete'),
               okTheme: SessionButtonColor.Danger,
-              title: window.i18n('editMenuDeleteGroup'),
+              title: window.i18n('groupDelete'),
               conversationId: groupPk,
               onClickOk: () => {
                 void ConvoHub.use().deleteGroup(groupPk, {
@@ -315,7 +315,7 @@ export const OverlayRightPanelSettings = () => {
         ? window.i18n('groupRemovedYou', {
             group_name: selectedUsername || window.i18n('groupUnknown'),
           })
-        :  window.i18n('groupLeave');
+        : window.i18n('groupLeave');
 
   const showUpdateGroupNameButton = isGroup && weAreAdmin && !commonNoShow; // legacy groups non-admin cannot change groupname anymore
   const showAddRemoveModeratorsButton = weAreAdmin && !commonNoShow && isPublic;
@@ -349,8 +349,8 @@ export const OverlayRightPanelSettings = () => {
                 if (!PubKey.is03Pubkey(selectedConvoKey)) {
                   throw new Error('triggerFakeAvatarUpdate needs a 03 pubkey');
                 }
-                window.inboxStore.dispatch(
-                  groupInfoActions.triggerFakeAvatarUpdate({ groupPk: selectedConvoKey })
+                window.inboxStore?.dispatch(
+                  groupInfoActions.triggerFakeAvatarUpdate({ groupPk: selectedConvoKey }) as any
                 );
               }}
               dataTestId="edit-group-name"

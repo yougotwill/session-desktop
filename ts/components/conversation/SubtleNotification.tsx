@@ -1,12 +1,13 @@
 import { SessionDataTestId } from 'react';
 import { useSelector } from 'react-redux';
 import styled from 'styled-components';
-import { useIsIncomingRequest, useIsOutgoingRequest } from '../../hooks/useParamSelector';
-import { SessionUtilContact } from '../../session/utils/libsession/libsession_utils_contacts';
 import {
-  useNicknameOrProfileNameOrShortenedPubkey
+  useIsIncomingRequest,
+  useIsOutgoingRequest,
+  useNicknameOrProfileNameOrShortenedPubkey,
 } from '../../hooks/useParamSelector';
 import { PubKey } from '../../session/types';
+import { SessionUtilContact } from '../../session/utils/libsession/libsession_utils_contacts';
 import {
   hasSelectedConversationIncomingMessages,
   hasSelectedConversationOutgoingMessages,
@@ -29,8 +30,8 @@ import {
   useLibGroupKicked,
   useLibGroupWeHaveSecretKey,
 } from '../../state/selectors/userGroups';
-import { SessionHtmlRenderer } from '../basic/SessionHTMLRenderer';
 import { localize } from '../../util/i18n/localizedString';
+import { SessionHtmlRenderer } from '../basic/SessionHTMLRenderer';
 
 const Container = styled.div<{ noExtraPadding: boolean }>`
   display: flex;
@@ -64,8 +65,6 @@ function TextNotification({
   );
 }
 
-
-
 /**
  * This component is used to display a warning when the user is sending a message request.
  *
@@ -90,14 +89,17 @@ export const ConversationOutgoingRequestExplanation = () => {
   // This works because a blinded conversation is not saved in libsession currently, and will only be once approved_me is true
   if (!contactFromLibsession || !contactFromLibsession.approvedMe) {
     return (
-      <Container data-testid={'empty-conversation-notification'} style={{ padding: 0 }} noExtraPadding={true}>
+      <Container
+        data-testid={'empty-conversation-notification'}
+        style={{ padding: 0 }}
+        noExtraPadding={true}
+      >
         <TextInner>{window.i18n('messageRequestPendingDescription')}</TextInner>
       </Container>
     );
   }
   return null;
 };
-
 
 /**
  * This component is used to display a warning when the user is responding to a message request.
@@ -170,10 +172,16 @@ export const InvitedToGroupControlMessage = () => {
   // when restoring from seed we might not have the pubkey of who invited us, in that case, we just use a fallback
   const html = conversationOrigin
     ? weHaveSecretKey
-      ? window.i18n('userInvitedYouToGroupAsAdmin',  {group_name: groupName, name: adminNameInvitedUs}])
-      : window.i18n('messageRequestGroupInvite', {group_name: groupName, name: adminNameInvitedUs})
+      ? window.i18n('userInvitedYouToGroupAsAdmin', {
+          group_name: groupName,
+          name: adminNameInvitedUs,
+        })
+      : window.i18n('messageRequestGroupInvite', {
+          group_name: groupName,
+          name: adminNameInvitedUs,
+        })
     : weHaveSecretKey
-      ? window.i18n('youWereInvitedToGroupAsAdmin', {group_name: groupName})
+      ? window.i18n('youWereInvitedToGroupAsAdmin', { group_name: groupName })
       : window.i18n('groupInviteYou');
 
   return (
@@ -195,43 +203,42 @@ export const NoMessageInConversation = () => {
   const canWrite = useSelector(getSelectedCanWrite);
   const privateBlindedAndBlockingMsgReqs = useSelectedHasDisabledBlindedMsgRequests();
 
-const isPrivate = useSelectedIsPrivate();
-const isIncomingRequest = useIsIncomingRequest(selectedConversation);
-const isKickedFromGroup = useLibGroupKicked(selectedConversation);
+  const isPrivate = useSelectedIsPrivate();
+  const isIncomingRequest = useIsIncomingRequest(selectedConversation);
+  const isKickedFromGroup = useLibGroupKicked(selectedConversation);
   const name = useSelectedNicknameOrProfileNameOrShortenedPubkey();
 
   const getHtmlToRender = () => {
     if (isMe) {
-      return localize("noteToSelfEmpty").toString();
+      return localize('noteToSelfEmpty').toString();
     }
 
     if (canWrite) {
-      return localize("groupNoMessages").withArgs({ group_name: name }).toString();
+      return localize('groupNoMessages').withArgs({ group_name: name }).toString();
     }
 
     if (privateBlindedAndBlockingMsgReqs) {
-      return localize("messageRequestsTurnedOff").withArgs({ name }).toString();
+      return localize('messageRequestsTurnedOff').withArgs({ name }).toString();
     }
 
     if (isGroupV2 && isKickedFromGroup) {
-      return localize("groupRemovedYou").withArgs({group_name: name}).toString();
+      return localize('groupRemovedYou').withArgs({ group_name: name }).toString();
     }
-    return localize("conversationsEmpty").withArgs({conversation_name: name}).toString();
+    return localize('conversationsEmpty').withArgs({ conversation_name: name }).toString();
   };
 
+  // groupV2 use its own invite logic as part of <GroupRequestExplanation />
+  if (
+    !selectedConversation ||
+    hasMessages ||
+    (isGroupV2 && isInvitePending) ||
+    (isPrivate && isIncomingRequest)
+  ) {
+    return null;
+  }
 
-    // groupV2 use its own invite logic as part of <GroupRequestExplanation />
-    if (
-      !selectedConversation ||
-      hasMessages ||
-      (isGroupV2 && isInvitePending) ||
-      (isPrivate && isIncomingRequest)
-    ) {
-      return null;
-    }
-
-  const dataTestId: SessionDataTestId = isGroupV2 && isKickedFromGroup ? 'empty-conversation-notification' : 'group-control-message';
-
+  const dataTestId: SessionDataTestId =
+    isGroupV2 && isKickedFromGroup ? 'empty-conversation-notification' : 'group-control-message';
 
   return (
     <TextNotification

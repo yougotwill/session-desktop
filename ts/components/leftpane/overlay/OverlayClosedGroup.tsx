@@ -9,8 +9,7 @@ import useUpdate from 'react-use/lib/useUpdate';
 import { MemberListItem } from '../../MemberListItem';
 import { SessionButton } from '../../basic/SessionButton';
 import { SessionIdEditable } from '../../basic/SessionIdEditable';
-import { SessionSpinner } from '../../basic/SessionSpinner';
-import { OverlayHeader } from './OverlayHeader';
+
 
 import { useSet } from '../../../hooks/useSet';
 import { VALIDATION } from '../../../session/constants';
@@ -23,7 +22,11 @@ import { clearSearch } from '../../../state/ducks/search';
 import { resetLeftOverlayMode } from '../../../state/ducks/section';
 import { useContactsToInviteToGroup } from '../../../state/selectors/conversations';
 import { useIsCreatingGroupFromUIPending } from '../../../state/selectors/groups';
-import { getSearchResultsContactOnly, getSearchTerm, useIsSearching } from '../../../state/selectors/search';
+import {
+  getSearchResultsContactOnly,
+  getSearchTerm,
+  useIsSearching,
+} from '../../../state/selectors/search';
 import { useOurPkStr } from '../../../state/selectors/user';
 import { GroupInviteRequiredVersionBanner } from '../../NoticeBanner';
 import { SessionSearchInput } from '../../SessionSearchInput';
@@ -33,6 +36,8 @@ import { SessionToggle } from '../../basic/SessionToggle';
 import { SpacerLG, SpacerMD } from '../../basic/Text';
 import { SessionInput } from '../../inputs';
 import { StyledLeftPaneOverlay } from './OverlayMessage';
+import { Header } from '../../conversation/right-panel/overlay/components';
+import { SessionSpinner } from '../../loading';
 
 const StyledMemberListNoContacts = styled.div`
   text-align: center;
@@ -134,11 +139,11 @@ export const OverlayClosedGroupV2 = () => {
     }
     // Validate groupName and groupMembers length
     if (groupName.length === 0) {
-      ToastUtils.pushToastError('invalidGroupName', window.i18n('invalidGroupNameTooShort'));
+      ToastUtils.pushToastError('invalidGroupName', window.i18n('groupNameEnterPlease'));
       return;
     }
-    if (groupName.length > VALIDATION.MAX_GROUP_NAME_LENGTH) {
-      ToastUtils.pushToastError('invalidGroupName', window.i18n('invalidGroupNameTooLong'));
+    if (groupName.length > LIBSESSION_CONSTANTS.BASE_GROUP_MAX_NAME_LENGTH) {
+      ToastUtils.pushToastError('invalidGroupName', window.i18n('groupNameEnterShorter'));
       return;
     }
 
@@ -146,11 +151,11 @@ export const OverlayClosedGroupV2 = () => {
     // the same is valid with groups count < 1
 
     if (members.length < 1) {
-      ToastUtils.pushToastError('pickClosedGroupMember', window.i18n('pickClosedGroupMember'));
+      ToastUtils.pushToastError('pickClosedGroupMember', window.i18n('groupCreateErrorNoMembers'));
       return;
     }
     if (members.length >= VALIDATION.CLOSED_GROUP_SIZE_LIMIT) {
-      ToastUtils.pushToastError('closedGroupMaxSize', window.i18n('closedGroupMaxSize'));
+      ToastUtils.pushToastError('closedGroupMaxSize', window.i18n('groupAddMemberMaximum'));
       return;
     }
     // trigger the add through redux.
@@ -165,10 +170,9 @@ export const OverlayClosedGroupV2 = () => {
 
   useKey('Escape', closeOverlay);
 
-  const title = window.i18n('createGroup');
+  const title = window.i18n('groupCreate');
   const buttonText = window.i18n('create');
   const subtitle = window.i18n('createClosedGroupNamePrompt');
-  const placeholder = window.i18n('createClosedGroupPlaceholder');
 
   const noContactsForClosedGroup = privateContactsPubkeys.length === 0;
 
@@ -178,14 +182,14 @@ export const OverlayClosedGroupV2 = () => {
 
   return (
     <div className="module-left-pane-overlay">
-      <OverlayHeader title={title} subtitle={subtitle} />
+      <Header title={title} subtitle={subtitle} />
       <div className="create-group-name-input">
         <SessionIdEditable
           editable={!noContactsForClosedGroup}
-          placeholder={placeholder}
+          placeholder={window.i18n('groupNameEnter')}
           value={groupName}
           isGroup={true}
-          maxLength={VALIDATION.MAX_GROUP_NAME_LENGTH}
+          maxLength={LIBSESSION_CONSTANTS.BASE_GROUP_MAX_NAME_LENGTH}
           onChange={setGroupName}
           onPressEnter={onEnterPressed}
           dataTestId="new-closed-group-name"

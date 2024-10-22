@@ -16,6 +16,8 @@ import { PubKey } from '../types';
 import { UserUtils } from '../utils';
 import { forceSyncConfigurationNowIfNeeded } from '../utils/sync/syncUtils';
 import { ConvoHub } from './ConversationController';
+import { ConversationTypeEnum } from '../../models/types';
+import { getMessageQueue } from '../sending';
 
 /**
  * Creates a brand new closed group from user supplied details. This function generates a new identityKeyPair so cannot be used to restore a closed group.
@@ -172,7 +174,7 @@ async function sendToGroupMembers(
   inviteResults.forEach((result, index) => {
     const member = listOfMembers[index];
     // group invite must always contain the admin member.
-    if (result !== true || admins.includes(member)) {
+    if (!result || admins.includes(member)) {
       membersToResend.push(member);
     }
   });

@@ -1,6 +1,6 @@
 import { expect } from 'chai';
 import Sinon from 'sinon';
-import { ConversationTypeEnum } from '../../../../models/conversationAttributes';
+import { ConversationTypeEnum } from '../../../../models/types';
 import {
   SwarmPolling,
   getSwarmPollingInstance,

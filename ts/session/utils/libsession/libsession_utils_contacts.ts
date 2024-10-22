@@ -4,7 +4,7 @@ import { getContactInfoFromDBValues } from '../../../types/sqlSharedTypes';
 import { ContactsWrapperActions } from '../../../webworker/workers/browser/libsession_worker_interface';
 import { ConvoHub } from '../../conversations';
 import { PubKey } from '../../types';
-import { CONVERSATION_PRIORITIES } from '../../../models/conversationAttributes';
+import { CONVERSATION_PRIORITIES } from '../../../models/types';
 
 /**
  * This file is centralizing the management of data from the Contacts Wrapper of libsession.

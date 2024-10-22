@@ -1,7 +1,6 @@
 import { expect } from 'chai';
 import { LegacyGroupInfo, UserGroupsGet } from 'libsession_util_nodejs';
 import Sinon from 'sinon';
-import { ConversationTypeEnum } from '../../../../models/conversationAttributes';
 import { getSwarmPollingInstance } from '../../../../session/apis/snode_api';
 import { resetHardForkCachedValues } from '../../../../session/apis/snode_api/hfHandling';
 import { SwarmPolling } from '../../../../session/apis/snode_api/swarmPolling';
@@ -10,6 +9,7 @@ import { PubKey } from '../../../../session/types';
 import { UserUtils } from '../../../../session/utils';
 import { TestUtils } from '../../../test-utils';
 import { stubData } from '../../../test-utils/utils';
+import { ConversationTypeEnum } from '../../../../models/types';
 
 describe('getPollingDetails', () => {
   // Initialize new stubbed cache

@@ -106,7 +106,7 @@ export const BlockOrUnblockDialog = ({ pubkeys, action, onConfirmed }: NonNullab
               buttonColor={SessionButtonColor.White}
               onClick={closeModal}
               text={window.i18n('cancel')}
-              dataTestId="session-cancel-ok-button"
+              dataTestId="session-confirm-cancel-button"
             />
           </div>
         </Flex>

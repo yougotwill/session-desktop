@@ -3,39 +3,54 @@ import {
   formatAbbreviatedExpireTimer,
   formatNonAbbreviatedExpireTimer,
 } from '../../util/i18n/formatting/expirationTimer';
-import { DURATION_SECONDS } from '../constants';
 
-type TimerOptionsEntry = { name: string; value: number };
-export type TimerOptionsArray = Array<TimerOptionsEntry>
+type TimerSeconds =
+  | 0
+  | 5
+  | 10
+  | 30
+  | 60
+  | 300
+  | 1800
+  | 3600
+  | 21600
+  | 43200
+  | 86400
+  | 604800
+  | 1209600;
 
-const VALUES: Array<number> = [
+type TimerOptionsEntry = { name: string; value: TimerSeconds };
+export type TimerOptionsArray = Array<TimerOptionsEntry>;
+
+// prettier-ignore
+const VALUES: Array<TimerSeconds> = [
   /** off */
   0,
   /** 5 seconds */
-  5 * DURATION_SECONDS.SECONDS,
+  5,
   /** 10 seconds */
-  10 * DURATION_SECONDS.SECONDS,
+  10,
   /** 30 seconds */
-  30 * DURATION_SECONDS.SECONDS,
+  30,
   /** 1 minute */
-  1 * DURATION_SECONDS.MINUTES,
+  60,
   /** 5 minutes */
-  5 * DURATION_SECONDS.MINUTES,
+  300,
   /** 30 minutes */
-  30 * DURATION_SECONDS.MINUTES,
+  1800,
   /** 1 hour */
-  1 * DURATION_SECONDS.HOURS,
+  3600,
   /** 6 hours */
-  6 * DURATION_SECONDS.HOURS,
+  21600,
   /** 12 hours */
-  12 * DURATION_SECONDS.HOURS,
+  43200,
   /** 1 day */
-  1 * DURATION_SECONDS.DAYS,
+  86400,
   /** 1 week */
-  1 * DURATION_SECONDS.WEEKS,
+  604800,
   /** 2 weeks */
-  2 * DURATION_SECONDS.WEEKS,
-];
+  1209600,
+] as const;
 
 function getName(seconds = 0) {
   if (seconds === 0) {
@@ -55,7 +70,6 @@ function getAbbreviated(seconds: number) {
 
   return [seconds, 's'].join('');
 }
-
 
 const filterOutDebugValues = (option: number) => {
   return isDevProd() || option > 60; // when not a dev build, filter out options with less than 60s

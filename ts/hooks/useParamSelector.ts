@@ -7,7 +7,7 @@ import {
   hasValidIncomingRequestValues,
   hasValidOutgoingRequestValues,
 } from '../models/conversation';
-import { ConversationTypeEnum } from '../models/conversationAttributes';
+import { ConversationTypeEnum } from '../models/types';
 import { isUsAnySogsFromCache } from '../session/apis/open_group_api/sogsv3/knownBlindedkeys';
 import { TimerOptions, TimerOptionsArray } from '../session/disappearing_messages/timerOptions';
 import { PubKey } from '../session/types';

@@ -9,7 +9,7 @@ import {
   UserGroupsGet,
 } from 'libsession_util_nodejs';
 import { ConversationModel, Convo } from '../../../../models/conversation';
-import { ConversationTypeEnum } from '../../../../models/conversationAttributes';
+import { ConversationTypeEnum } from '../../../../models/types';
 import { getSwarmPollingInstance } from '../../../../session/apis/snode_api';
 import { resetHardForkCachedValues } from '../../../../session/apis/snode_api/hfHandling';
 import { SnodeAPIRetrieve } from '../../../../session/apis/snode_api/retrieveRequest';

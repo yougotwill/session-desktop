@@ -7,7 +7,6 @@ import pRetry from 'p-retry';
 import { Data, SeenMessageHashes } from '../../data/data';
 import { SignalService } from '../../protobuf';
 import { UserGroupsWrapperActions } from '../../webworker/workers/browser/libsession_worker_interface';
-import { OpenGroupRequestCommonType } from '../apis/open_group_api/opengroupV2/ApiUtil';
 import { OpenGroupMessageV2 } from '../apis/open_group_api/opengroupV2/OpenGroupMessageV2';
 import {
   sendMessageOnionV4BlindedRequest,
@@ -57,6 +56,7 @@ import { ed25519Str, fromUInt8ArrayToBase64 } from '../utils/String';
 import { MessageSentHandler } from './MessageSentHandler';
 import { MessageWrapper } from './MessageWrapper';
 import { stringify } from '../../types/sqlSharedTypes';
+import { OpenGroupRequestCommonType } from '../../data/types';
 
 // ================ SNODE STORE ================
 
@@ -405,7 +405,7 @@ type SortedSubRequestsType<T extends PubkeyType | GroupPubkeyType> = Array<
 >;
 
 async function sendMessagesDataToSnode<T extends PubkeyType | GroupPubkeyType>({
-  associatedWith: associatedWith,
+  associatedWith,
   sortedSubRequests,
   method,
 }: {

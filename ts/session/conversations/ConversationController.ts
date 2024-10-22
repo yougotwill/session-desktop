@@ -370,7 +370,7 @@ class ConvoController {
     await ConfigDumpData.deleteDumpFor(groupPk);
     getSwarmPollingInstance().removePubkey(groupPk, 'deleteGroup');
 
-    window.inboxStore.dispatch(groupInfoActions.removeGroupDetailsFromSlice({ groupPk }));
+    window.inboxStore?.dispatch(groupInfoActions.removeGroupDetailsFromSlice({ groupPk }));
     await UserSync.queueNewJobIfNeeded();
   }
 
@@ -563,7 +563,7 @@ class ConvoController {
     // not a private conversation, so not a contact for the ContactWrapper
     await Data.removeConversation(convoId);
 
-    // remove the data from the opengrouprooms table too if needed
+    // remove the data from the opengroup rooms table too if needed
     if (convoId && OpenGroupUtils.isOpenGroupV2(convoId)) {
       // remove the roomInfos locally for this open group room including the pubkey
       try {

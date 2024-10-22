@@ -39,6 +39,7 @@ import {
   ConfigWrapperObjectTypesMeta,
   ConfigWrapperUser,
   getGroupPubkeyFromWrapperType,
+  isBlindingWrapperType,
   isMultiEncryptWrapperType,
   isUserConfigWrapperType,
 } from '../webworker/workers/browser/libsession_worker_functions';
@@ -70,11 +71,9 @@ type IncomingUserResult = {
   namespace: SnodeNamespacesUserConfig;
 };
 
-
-
 function byUserNamespace(incomingConfigs: Array<RetrieveMessageItemWithNamespace>) {
   const groupedByVariant: Map<
-  SnodeNamespacesUserConfig,
+    SnodeNamespacesUserConfig,
     Array<RetrieveMessageItemWithNamespace>
   > = new Map();
 
@@ -98,7 +97,7 @@ async function printDumpForDebug(prefix: string, variant: ConfigWrapperObjectTyp
     window.log.info(prefix, StringUtils.toHex(await GenericWrapperActions.makeDump(variant)));
     return;
   }
-  if (isMultiEncryptWrapperType(variant)) {
+  if (isMultiEncryptWrapperType(variant) || isBlindingWrapperType(variant)) {
     return; // nothing to print for this one
   }
   const metaGroupDumps = await MetaGroupWrapperActions.metaMakeDump(
@@ -239,7 +238,11 @@ async function handleUserProfileUpdate(result: IncomingUserResult): Promise<void
     await window.setSettingValue(SettingsKey.hasBlindedMsgRequestsEnabled, newBlindedMsgRequest); // this does the dispatch to redux
   }
 
-  const picUpdate = profilePic.key && !isEmpty(profilePic.key) && !isEmpty(profilePic.url) && profilePic.key.length === 32;
+  const picUpdate =
+    profilePic.key &&
+    !isEmpty(profilePic.key) &&
+    !isEmpty(profilePic.url) &&
+    profilePic.key.length === 32;
 
   // NOTE: if you do any changes to the user's settings which are synced, it should be done above the `updateOurProfileViaLibSession` call
   await updateOurProfileViaLibSession({
@@ -718,7 +721,7 @@ async function handleSingleGroupUpdate({
     });
   } catch (e) {
     window.log.warn(
-      `handleSingleGroupUpdate metawrapper init of "${groupPk}" failed with`,
+      `handleSingleGroupUpdate meta wrapper init of "${groupPk}" failed with`,
       e.message
     );
   }
@@ -768,14 +771,14 @@ async function handleSingleGroupUpdateToLeave(toLeave: GroupPubkeyType) {
 async function handleGroupUpdate(latestEnvelopeTimestamp: number) {
   // first let's check which groups needs to be joined or left by doing a diff of what is in the wrapper and what is in the DB
   const allGroupsInWrapper = await UserGroupsWrapperActions.getAllGroups();
-  const allGoupsIdsInDb = ConvoHub.use()
+  const allGroupsIdsInDb = ConvoHub.use()
     .getConversations()
     .map(m => m.id)
     .filter(PubKey.is03Pubkey);
 
-  const allGoupsIdsInWrapper = allGroupsInWrapper.map(m => m.pubkeyHex);
-  window.log.debug('allGoupsIdsInWrapper', stringify(allGoupsIdsInWrapper));
-  window.log.debug('allGoupsIdsInDb', stringify(allGoupsIdsInDb));
+  const allGroupsIdsInWrapper = allGroupsInWrapper.map(m => m.pubkeyHex);
+  window.log.debug('allGroupsIdsInWrapper', stringify(allGroupsIdsInWrapper));
+  window.log.debug('allGroupsIdsInDb', stringify(allGroupsIdsInDb));
 
   const userEdKeypair = await UserUtils.getUserED25519KeyPairBytes();
   if (!userEdKeypair) {
@@ -784,12 +787,12 @@ async function handleGroupUpdate(latestEnvelopeTimestamp: number) {
 
   for (let index = 0; index < allGroupsInWrapper.length; index++) {
     const groupInWrapper = allGroupsInWrapper[index];
-    window.inboxStore?.dispatch(groupInfoActions.handleUserGroupUpdate(groupInWrapper));
+    window.inboxStore?.dispatch(groupInfoActions.handleUserGroupUpdate(groupInWrapper) as any);
 
     await handleSingleGroupUpdate({ groupInWrapper, latestEnvelopeTimestamp, userEdKeypair });
   }
 
-  const groupsInDbButNotInWrapper = difference(allGoupsIdsInDb, allGoupsIdsInWrapper);
+  const groupsInDbButNotInWrapper = difference(allGroupsIdsInDb, allGroupsIdsInWrapper);
   window.log.info(
     `we have to leave ${groupsInDbButNotInWrapper.length} 03 groups in DB compared to what is in the wrapper`
   );
@@ -896,9 +899,9 @@ async function handleConvoInfoVolatileUpdate() {
         break;
       case 'Community':
         try {
-          const wrapperComms = await ConvoInfoVolatileWrapperActions.getAllCommunities();
-          for (let index = 0; index < wrapperComms.length; index++) {
-            const fromWrapper = wrapperComms[index];
+          const wrapperCommunities = await ConvoInfoVolatileWrapperActions.getAllCommunities();
+          for (let index = 0; index < wrapperCommunities.length; index++) {
+            const fromWrapper = wrapperCommunities[index];
 
             const convoId = getOpenGroupV2ConversationId(
               fromWrapper.baseUrl,
