@@ -41,7 +41,7 @@ export function useConversationUsername(convoId?: string) {
   const groupName = useLibGroupName(convoId);
 
   if (convoId && PubKey.is03Pubkey(convoId) && groupName) {
-    // when getting a new 03 group from the usergroup wrapper,
+    // when getting a new 03 group from the user group wrapper,
     // we set the displayNameInProfile with the name from the wrapper.
     // So let's keep falling back to convoProps?.displayNameInProfile if groupName is not set yet (it comes later through the groupInfos namespace)
     return groupName;
@@ -120,6 +120,19 @@ export function useConversationsUsernameWithQuoteOrShortPk(pubkeys: Array<string
       const nameGot = usernameForQuoteOrFullPk(pubkey, state);
 
       return nameGot?.length ? nameGot : PubKey.shorten(pubkey);
+    });
+  });
+}
+
+export function useConversationsNicknameRealNameOrShortenPubkey(pubkeys: Array<string>) {
+  return useSelector((state: StateType) => {
+    return pubkeys.map(pk => {
+      if (pk === UserUtils.getOurPubKeyStrFromCache() || pk.toLowerCase() === 'you') {
+        return window.i18n('you');
+      }
+      const convo = state.conversations.conversationLookup[pk];
+
+      return convo?.nickname || convo?.displayNameInProfile || PubKey.shorten(pk);
     });
   });
 }
@@ -268,6 +281,7 @@ export function useIsOutgoingRequest(convoId?: string) {
   if (!convoProps) {
     return false;
   }
+
   return Boolean(
     convoProps &&
       hasValidOutgoingRequestValues({
@@ -482,32 +496,16 @@ export function useSortedGroupMembers(convoId: string | undefined): Array<Pubkey
 export function useDisappearingMessageSettingText({
   convoId,
   abbreviate,
-  separator = ' - ',
 }: {
   convoId?: string;
   abbreviate?: boolean;
-  separator?: string;
 }): string {
   const convoProps = useConversationPropsById(convoId);
   if (!convoProps) {
     return '';
   }
 
-  const { expirationMode, expireTimer, isMe, isPublic } = convoProps;
-
-  const isGroup = !convoProps.isPrivate && !convoProps.isPublic;
-
-  // TODO legacy messages support will be removed in a future release
-  const expirationModeText =
-    expirationMode === 'deleteAfterRead'
-      ? window.i18n('disappearingMessagesModeAfterRead')
-      : expirationMode === 'deleteAfterSend'
-        ? window.i18n('disappearingMessagesModeAfterSend')
-        : expirationMode === 'legacy'
-          ? isMe || (isGroup && !isPublic)
-            ? window.i18n('disappearingMessagesModeAfterSend')
-            : window.i18n('disappearingMessagesModeAfterRead')
-          : null;
+  const { expirationMode, expireTimer } = convoProps;
 
   const expireTimerText = isNumber(expireTimer)
     ? abbreviate
@@ -515,9 +513,19 @@ export function useDisappearingMessageSettingText({
       : TimerOptions.getName(expireTimer)
     : null;
 
-  return expireTimer && expirationModeText
-    ? `${expirationModeText}${expireTimerText ? `${separator}${expireTimerText}` : ''}`
-    : '';
+  if (!expireTimerText) {
+    return '';
+  }
+
+  if (expirationMode === 'legacy') {
+    throw new Error('legacy support is removed');
+  }
+
+  return expirationMode === 'deleteAfterRead'
+    ? window.i18n('disappearingMessagesDisappearAfterReadState', { time: expireTimerText })
+    : expirationMode === 'deleteAfterSend'
+      ? window.i18n('disappearingMessagesDisappearAfterSendState', { time: expireTimerText })
+      : '';
 }
 
 export function useLastMessage(convoId?: string) {

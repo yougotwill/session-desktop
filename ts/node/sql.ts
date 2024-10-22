@@ -16,6 +16,7 @@ import {
   intersection,
   isArray,
   isEmpty,
+  isFunction,
   isNumber,
   isObject,
   isString,
@@ -49,10 +50,9 @@ import {
   OPEN_GROUP_ROOMS_V2_TABLE,
   toSqliteBoolean,
 } from './database_utility';
-import { LocaleMessagesType } from './locale'; // checked - only node
+import type { SetupI18nReturnType } from '../types/localizer'; // checked - only node
 import { StorageItem } from './storage_item'; // checked - only node
 
-import { OpenGroupV2Room } from '../data/opengroups';
 import {
   AwaitedReturn,
   CONFIG_DUMP_TABLE,
@@ -76,6 +76,7 @@ import { SignalService } from '../protobuf';
 import { Quote } from '../receiver/types';
 import { DURATION } from '../session/constants';
 import { createDeleter, getAttachmentsPath } from '../shared/attachments/shared_attachments';
+import { ed25519Str } from '../session/utils/String';
 import {
   getSQLCipherIntegrityCheck,
   openAndMigrateDatabase,
@@ -89,7 +90,7 @@ import {
   initDbInstanceWith,
   isInstanceInitialized,
 } from './sqlInstance';
-import { ed25519Str } from '../session/utils/String';
+import { OpenGroupV2Room } from '../data/types';
 
 // eslint:disable: function-name non-literal-fs-path
 
@@ -149,15 +150,15 @@ function showFailedToStart() {
 async function initializeSql({
   configDir,
   key,
-  messages,
+  i18n,
   passwordAttempt,
 }: {
   configDir: string;
   key: string;
-  messages: LocaleMessagesType;
+  i18n: SetupI18nReturnType;
   passwordAttempt: boolean;
 }) {
-  console.info('initializeSql sqlnode');
+  console.info('initializeSql sql node');
   if (isInstanceInitialized()) {
     throw new Error('Cannot initialize more than once!');
   }
@@ -168,8 +169,8 @@ async function initializeSql({
   if (!isString(key)) {
     throw new Error('initialize: key is required!');
   }
-  if (!isObject(messages)) {
-    throw new Error('initialize: message is required!');
+  if (!isFunction(i18n)) {
+    throw new Error('initialize: i18n is required!');
   }
 
   _initializePaths(configDir);
@@ -219,10 +220,10 @@ async function initializeSql({
     }
     console.log('Database startup error:', error.stack);
     const button = await dialog.showMessageBox({
-      buttons: [messages.copyErrorAndQuit, messages.clearAllData],
+      buttons: [i18n('errorCopyAndQuit'), i18n('clearDataAll')],
       defaultId: 0,
       detail: redactAll(error.stack),
-      message: messages.databaseError,
+      message: i18n('errorDatabase'),
       noLink: true,
       type: 'error',
     });
@@ -259,10 +260,12 @@ function removeDB(configDir: string | null = null) {
 
 // Password hash
 const PASS_HASH_ID = 'passHash';
+
 function getPasswordHash() {
   const item = getItemById(PASS_HASH_ID);
   return item && item.value;
 }
+
 function savePasswordHash(hash: string) {
   if (isEmpty(hash)) {
     removePasswordHash();
@@ -272,6 +275,7 @@ function savePasswordHash(hash: string) {
   const data = { id: PASS_HASH_ID, value: hash };
   createOrUpdateItem(data);
 }
+
 function removePasswordHash() {
   removeItemById(PASS_HASH_ID);
 }
@@ -295,7 +299,7 @@ function getGuardNodes() {
 function updateGuardNodes(nodes: Array<string>) {
   assertGlobalInstance().transaction(() => {
     assertGlobalInstance().exec(`DELETE FROM ${GUARD_NODE_TABLE}`);
-    nodes.map(edkey =>
+    nodes.map(edKey =>
       assertGlobalInstance()
         .prepare(
           `INSERT INTO ${GUARD_NODE_TABLE} (
@@ -303,7 +307,7 @@ function updateGuardNodes(nodes: Array<string>) {
       ) values ($ed25519PubKey)`
         )
         .run({
-          ed25519PubKey: edkey,
+          ed25519PubKey: edKey,
         })
     );
   })();
@@ -312,15 +316,18 @@ function updateGuardNodes(nodes: Array<string>) {
 function createOrUpdateItem(data: StorageItem, instance?: BetterSqlite3.Database) {
   createOrUpdate(ITEMS_TABLE, data, instance);
 }
+
 function getItemById(id: string, instance?: BetterSqlite3.Database) {
   return getById(ITEMS_TABLE, id, instance);
 }
+
 function getAllItems() {
   const rows = assertGlobalInstance()
     .prepare(`SELECT json FROM ${ITEMS_TABLE} ORDER BY id ASC;`)
     .all();
   return map(rows, row => jsonToObject(row.json));
 }
+
 function removeItemById(id: string) {
   removeById(ITEMS_TABLE, id);
 }
@@ -488,8 +495,8 @@ function saveConversation(data: ConversationAttributes): SaveConversationReturn 
     blocksSogsMsgReqsTimestamp,
   } = formatted;
 
-  const omited = omit(formatted);
-  const keys = Object.keys(omited);
+  const omitted = omit(formatted);
+  const keys = Object.keys(omitted);
   const columnsCommaSeparated = keys.join(', ');
   const valuesArgs = keys.map(k => `$${k}`).join(', ');
 
@@ -720,15 +727,19 @@ function searchConversations(query: string) {
   const rows = assertGlobalInstance()
     .prepare(
       `SELECT * FROM ${CONVERSATIONS_TABLE} WHERE
-      (
-        displayNameInProfile LIKE $displayNameInProfile OR
-        nickname LIKE $nickname
-      ) AND active_at > 0
-     ORDER BY active_at DESC
-     LIMIT $limit`
+    (
+      displayNameInProfile LIKE $displayNameInProfile COLLATE NOCASE OR
+      nickname LIKE $nickname COLLATE NOCASE OR
+      (id LIKE $id AND
+        (displayNameInProfile IS NULL OR displayNameInProfile = '') AND (nickname IS NULL OR nickname = '')
+      )
+    ) AND active_at > 0
+    ORDER BY (COALESCE(NULLIF(nickname, ''), displayNameInProfile) COLLATE NOCASE)
+    LIMIT $limit`
     )
     .all({
       displayNameInProfile: `%${query}%`,
+      id: `%${query}%`,
       nickname: `%${query}%`,
       limit: 50,
     });
@@ -1208,7 +1219,7 @@ function getMessageIdsFromServerIds(serverIds: Array<string | number>, conversat
     Sqlite3 doesn't have a good way to have `IN` query with another query.
     See: https://github.com/mapbox/node-sqlite3/issues/762.
 
-    So we have to use templating to insert the values.
+    So we have to use string templates to insert the values.
   */
   const rows = assertGlobalInstance()
     .prepare(
@@ -1612,7 +1623,7 @@ function hasConversationOutgoingMessage(conversationId: string) {
       conversationId,
     });
   if (!row) {
-    throw new Error('hasConversationOutgoingMessage: Unable to get coun');
+    throw new Error('hasConversationOutgoingMessage: Unable to get count');
   }
 
   return Boolean(row['count(*)']);
@@ -1809,12 +1820,12 @@ function getNextExpiringMessage() {
   return map(rows, row => jsonToObject(row.json));
 }
 
-/* Unproccessed a received messages not yet processed */
+/* Unprocessed a received messages not yet processed */
 const unprocessed: UnprocessedDataNode = {
   saveUnprocessed: (data: UnprocessedParameter) => {
     const { id, timestamp, version, attempts, envelope, senderIdentity, messageHash } = data;
     if (!id) {
-      throw new Error(`saveUnprocessed: id was falsey: ${id}`);
+      throw new Error(`saveUnprocessed: id was falsy: ${id}`);
     }
 
     assertGlobalInstance()
@@ -1975,9 +1986,11 @@ function resetAttachmentDownloadPending() {
     .prepare(`UPDATE ${ATTACHMENT_DOWNLOADS_TABLE} SET pending = 0 WHERE pending != 0;`)
     .run();
 }
+
 function removeAttachmentDownloadJob(id: string) {
   removeById(ATTACHMENT_DOWNLOADS_TABLE, id);
 }
+
 function removeAllAttachmentDownloadJobs() {
   assertGlobalInstance().exec(`DELETE FROM ${ATTACHMENT_DOWNLOADS_TABLE};`);
 }
@@ -2264,7 +2277,7 @@ function getLatestClosedGroupEncryptionKeyPair(
 
 function addClosedGroupEncryptionKeyPair(
   groupPublicKey: string,
-  keypair: object,
+  keyPair: object,
   instance?: BetterSqlite3.Database
 ) {
   const timestamp = Date.now();
@@ -2284,7 +2297,7 @@ function addClosedGroupEncryptionKeyPair(
     .run({
       groupPublicKey,
       timestamp,
-      json: objectToJSON(keypair),
+      json: objectToJSON(keyPair),
     });
 }
 
@@ -2329,8 +2342,7 @@ function getV2OpenGroupRoom(conversationId: string, db?: BetterSqlite3.Database)
   return jsonToObject(row.json);
 }
 
-function saveV2OpenGroupRoom(opengroupsv2Room: OpenGroupV2Room, instance?: BetterSqlite3.Database) {
-  const { serverUrl, roomId, conversationId } = opengroupsv2Room;
+function saveV2OpenGroupRoom({ serverUrl, roomId, conversationId } : OpenGroupV2Room, instance?: BetterSqlite3.Database) {
   assertGlobalInstanceOrInstance(instance)
     .prepare(
       `INSERT OR REPLACE INTO ${OPEN_GROUP_ROOMS_V2_TABLE} (

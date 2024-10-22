@@ -56,7 +56,7 @@ describe('BlockedNumberController', () => {
 
       const other = TestUtils.generateFakePubKey();
 
-      await BlockedNumberController.block(other);
+      await BlockedNumberController.block(other.key);
 
       const blockedNumbers = BlockedNumberController.getBlockedNumbers();
       expect(blockedNumbers).to.have.lengthOf(1);

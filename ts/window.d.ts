@@ -1,9 +1,16 @@
 // eslint-disable-next-line import/no-unresolved
 import {} from 'styled-components/cssprop';
 
-import { LocalizerType } from './types/Util';
+import { Store } from '@reduxjs/toolkit';
+import { Persistor } from 'redux-persist/es/types';
 
 import { PrimaryColorStateType, ThemeStateType } from './themes/constants/colors';
+import type {
+  GetMessageArgs,
+  I18nMethods,
+  LocalizerDictionary,
+  LocalizerToken,
+} from './types/localizer';
 
 export interface LibTextsecure {
   messaging: boolean;
@@ -24,7 +31,111 @@ declare global {
     getSettingValue: (id: string, comparisonValue?: any) => any;
     setSettingValue: (id: string, value: any) => Promise<void>;
 
-    i18n: LocalizerType;
+    /** NOTE: Because of docstring limitations changes MUST be manually synced between {@link setupI18n.getMessage } and {@link window.i18n } */
+    /**
+     * @deprecated this will eventually be replaced by LocalizedStringBuilder
+     * Retrieves a localized message string, substituting variables where necessary.
+     *
+     * @param token - The token identifying the message to retrieve.
+     * @param args - An optional record of substitution variables and their replacement values. This is required if the string has dynamic variables.
+     *
+     * @returns The localized message string with substitutions applied.
+     *
+     * @example
+     * // The string greeting is 'Hello, {name}!' in the current locale
+     * window.i18n('greeting', { name: 'Alice' });
+     * // => 'Hello, Alice!'
+     *
+     * // The string search is '{count, plural, one [{found_count} of # match] other [{found_count} of # matches]}' in the current locale
+     * window.i18n('search', { count: 1, found_count: 1 });
+     * // => '1 of 1 match'
+     */
+    i18n: (<T extends LocalizerToken, R extends LocalizerDictionary[T]>(
+      ...[token, args]: GetMessageArgs<T>
+    ) => R) & {
+      /** NOTE: Because of docstring limitations changes MUST be manually synced between {@link setupI18n.getRawMessage } and {@link window.i18n.getRawMessage } */
+      /**
+       * Retrieves a localized message string, without substituting any variables. This resolves any plural forms using the given args
+       * @param token - The token identifying the message to retrieve.
+       * @param args - An optional record of substitution variables and their replacement values. This is required if the string has dynamic variables.
+       *
+       * @returns The localized message string with substitutions applied.
+       *
+       * @deprecated
+       *
+       * NOTE: This is intended to be used to get the raw string then format it with {@link formatMessageWithArgs}
+       *
+       * @example
+       * // The string greeting is 'Hello, {name}!' in the current locale
+       * window.i18n.getRawMessage('greeting', { name: 'Alice' });
+       * // => 'Hello, {name}!'
+       *
+       * // The string search is '{count, plural, one [{found_count} of # match] other [{found_count} of # matches]}' in the current locale
+       * window.i18n.getRawMessage('search', { count: 1, found_count: 1 });
+       * // => '{found_count} of {count} match'
+       */
+      getRawMessage: I18nMethods['getRawMessage'];
+
+      /** NOTE: Because of docstring limitations changes MUST be manually synced between {@link setupI18n.formatMessageWithArgs } and {@link window.i18n.formatMessageWithArgs } */
+      /**
+       * Formats a localized message string with arguments and returns the formatted string.
+       * @param rawMessage - The raw message string to format. After using @see {@link getRawMessage} to get the raw string.
+       * @param args - An optional record of substitution variables and their replacement values. This
+       * is required if the string has dynamic variables. This can be optional as a strings args may be defined in @see {@link LOCALE_DEFAULTS}
+       *
+       * @returns The formatted message string.
+       *
+       * @deprecated
+       *
+       * @example
+       * // The string greeting is 'Hello, {name}!' in the current locale
+       * window.i18n.getRawMessage('greeting', { name: 'Alice' });
+       * // => 'Hello, {name}!'
+       * window.i18n.formatMessageWithArgs('Hello, {name}!', { name: 'Alice' });
+       * // => 'Hello, Alice!'
+       *
+       * // The string search is '{count, plural, one [{found_count} of # match] other [{found_count} of # matches]}' in the current locale
+       * window.i18n.getRawMessage('search', { count: 1, found_count: 1 });
+       * // => '{found_count} of {count} match'
+       * window.i18n.formatMessageWithArgs('{found_count} of {count} match', { count: 1, found_count: 1 });
+       * // => '1 of 1 match'
+       */
+      formatMessageWithArgs: I18nMethods['formatMessageWithArgs'];
+
+      /** NOTE: Because of docstring limitations changes MUST be manually synced between {@link setupI18n.stripped } and {@link window.i18n.stripped } */
+      /**
+       * Retrieves a localized message string, substituting variables where necessary. Then strips the message of any HTML and custom tags.
+       *
+       * @deprecated
+       *
+       * @param token - The token identifying the message to retrieve.
+       * @param args - An optional record of substitution variables and their replacement values. This is required if the string has dynamic variables.
+       *
+       * @returns The localized message string with substitutions applied. Any HTML and custom tags are removed.
+       *
+       * @example
+       * // The string greeting is 'Hello, {name}! <b>Welcome!</b>' in the current locale
+       * window.i18n.stripped('greeting', { name: 'Alice' });
+       * // => 'Hello, Alice! Welcome!'
+       */
+      stripped: I18nMethods['stripped'];
+
+      /** NOTE: Because of docstring limitations changes MUST be manually synced between {@link setupI18n.inEnglish } and {@link window.i18n.inEnglish } */
+      /**
+       * Retrieves a message string in the {@link en} locale, substituting variables where necessary.
+       *
+       * NOTE: This does not work for plural strings. This function should only be used for debug and
+       * non-user-facing strings. Plural string support can be added splitting out the logic for
+       * {@link setupI18n.formatMessageWithArgs} and creating a new getMessageFromDictionary, which
+       * specifies takes a dictionary as an argument. This is left as an exercise for the reader.
+       *
+       * @deprecated
+       *
+       * @param token - The token identifying the message to retrieve.
+       * @param args - An optional record of substitution variables and their replacement values. This is required if the string has dynamic variables.
+       */
+      inEnglish: I18nMethods['inEnglish'];
+    };
     log: any;
     sessionFeatureFlags: {
       useOnionRequests: boolean;
@@ -32,6 +143,7 @@ declare global {
       useClosedGroupV2: boolean;
       useClosedGroupV2QAButtons: boolean;
       useGroupV2InviteAsAdmin: boolean;
+      replaceLocalizedStringsWithKeys: boolean;
       debug: {
         debugLogging: boolean;
         debugLibsessionDumps: boolean;
@@ -41,11 +153,15 @@ declare global {
         debugOnionRequests: boolean;
       };
     };
-    onLogin: (pw: string) => Promise<void>;
+    onLogin: (pw: string) => Promise<void>; // only set on the password window
+    onTryPassword: (pw: string) => Promise<void>; // only set on the main window
     persistStore?: Persistor;
     restart: () => void;
     getSeedNodeList: () => Array<string> | undefined;
-    setPassword: (newPassword: string | null, oldPassword: string | null) => Promise<void>;
+    setPassword: (
+      newPassword: string | null,
+      oldPassword: string | null
+    ) => Promise<string | undefined>;
     isOnline: boolean;
     toggleMediaPermissions: () => Promise<void>;
     toggleCallMediaPermissionsTo: (enabled: boolean) => Promise<void>;
@@ -77,6 +193,8 @@ declare global {
     getAppInstance: () => string;
     getCommitHash: () => string | undefined;
     getVersion: () => string;
+    getOSRelease: () => string;
+    saveLog: (additionalText?: string) => void;
     setAutoHideMenuBar: (val: boolean) => void;
     setMenuBarVisibility: (val: boolean) => void;
     contextMenuShown: boolean;
@@ -92,7 +210,6 @@ declare global {
     getOpengroupPruning: () => Promise<boolean>;
     setOpengroupPruning: (val: boolean) => Promise<void>;
     closeAbout: () => void;
-    closeDebugLog: () => void;
     getAutoUpdateEnabled: () => boolean;
     setAutoUpdateEnabled: (enabled: boolean) => void;
     setZoomFactor: (newZoom: number) => void;

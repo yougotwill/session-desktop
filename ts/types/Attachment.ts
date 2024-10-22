@@ -1,47 +1,53 @@
 import { isUndefined, padStart } from 'lodash';
-import moment from 'moment';
 
+import { format } from 'date-fns';
 import { SignalService } from '../protobuf';
 import { isImageTypeSupported, isVideoTypeSupported } from '../util/GoogleChrome';
 import { ATTACHMENT_DEFAULT_MAX_SIDE } from '../util/attachmentsUtil';
 import { saveURLAsFile } from '../util/saveURLAsFile';
 import * as MIME from './MIME';
 import { THUMBNAIL_SIDE } from './attachments/VisualAttachment';
+import { AriaLabels } from '../util/hardcodedAriaLabels';
 
 const MAX_WIDTH = THUMBNAIL_SIDE;
 const MAX_HEIGHT = THUMBNAIL_SIDE;
 const MIN_WIDTH = THUMBNAIL_SIDE;
 const MIN_HEIGHT = THUMBNAIL_SIDE;
 
-// Used for display
+// Used for displaying attachments in the UI
+export type AttachmentScreenshot = {
+  contentType: MIME.MIMEType;
+  height: number;
+  width: number;
+  url?: string;
+  path?: string;
+};
+
+export type AttachmentThumbnail = {
+  contentType: MIME.MIMEType;
+  height: number;
+  width: number;
+  url?: string;
+  path?: string;
+};
 
 export interface AttachmentType {
-  caption?: string;
   contentType: MIME.MIMEType;
   fileName: string;
-  /** Not included in protobuf, needs to be pulled from flags */
-  isVoiceMessage?: boolean;
   /** For messages not already on disk, this will be a data url */
   url: string;
-  videoUrl?: string;
-  size?: number;
   fileSize: string | null;
   pending?: boolean;
+  screenshot: AttachmentScreenshot | null;
+  thumbnail: AttachmentThumbnail | null;
+  caption?: string;
+  size?: number;
   width?: number;
   height?: number;
   duration?: string;
-  screenshot: {
-    height: number;
-    width: number;
-    url?: string;
-    contentType: MIME.MIMEType;
-  } | null;
-  thumbnail: {
-    height: number;
-    width: number;
-    url?: string;
-    contentType: MIME.MIMEType;
-  } | null;
+  videoUrl?: string;
+  /** Not included in protobuf, needs to be pulled from flags */
+  isVoiceMessage?: boolean;
 }
 
 export interface AttachmentTypeWithPath extends AttachmentType {
@@ -49,21 +55,6 @@ export interface AttachmentTypeWithPath extends AttachmentType {
   id: number;
   flags?: number;
   error?: any;
-
-  screenshot: {
-    height: number;
-    width: number;
-    url?: string;
-    contentType: MIME.MIMEType;
-    path?: string;
-  } | null;
-  thumbnail: {
-    height: number;
-    width: number;
-    url?: string;
-    contentType: MIME.MIMEType;
-    path?: string;
-  } | null;
 }
 
 // UI-focused functions
@@ -150,6 +141,7 @@ export function isImageAttachment(attachment: AttachmentType): boolean {
     attachment && attachment.contentType && isImageTypeSupported(attachment.contentType)
   );
 }
+
 export function hasImage(attachments?: Array<AttachmentType>): boolean {
   return Boolean(attachments && attachments[0] && (attachments[0].url || attachments[0].pending));
 }
@@ -166,7 +158,7 @@ export function isVideoAttachment(attachment?: AttachmentType): boolean {
 
 export function hasVideoScreenshot(attachments?: Array<AttachmentType>): boolean {
   const firstAttachment = attachments ? attachments[0] : null;
-  return Boolean(firstAttachment?.screenshot?.url);
+  return Boolean(firstAttachment?.screenshot?.url || firstAttachment?.pending);
 }
 
 type DimensionsType = {
@@ -222,9 +214,10 @@ export function areAllAttachmentsVisual(attachments?: Array<AttachmentType>): bo
 }
 
 export function getAlt(attachment: AttachmentType): string {
+  // TODO: make those localized through crowdin
   return isVideoAttachment(attachment)
-    ? window.i18n('videoAttachmentAlt')
-    : window.i18n('imageAttachmentAlt');
+    ? AriaLabels.screenshotVideoInMsg
+    : AriaLabels.imageAttachmentAlt;
 }
 
 // Migration-related attachment stuff
@@ -329,7 +322,7 @@ export const getSuggestedFilename = ({
     return attachment.fileName;
   }
   const prefix = 'session-attachment';
-  const suffix = timestamp ? moment(timestamp).format('-YYYY-MM-DD-HHmmss') : '';
+  const suffix = timestamp ? format(new Date(timestamp), '-yyyy-MM-dd-HHmmss') : '';
   const fileType = getFileExtension(attachment);
   const extension = fileType ? `.${fileType}` : '';
   const indexSuffix = index ? `_${padStart(index.toString(), 3, '0')}` : '';

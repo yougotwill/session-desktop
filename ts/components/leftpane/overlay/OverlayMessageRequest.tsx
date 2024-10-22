@@ -1,5 +1,3 @@
-import React from 'react';
-
 import { useDispatch, useSelector } from 'react-redux';
 import useKey from 'react-use/lib/useKey';
 import styled from 'styled-components';
@@ -13,6 +11,7 @@ import { SessionButton, SessionButtonColor } from '../../basic/SessionButton';
 import { SpacerLG } from '../../basic/Text';
 import { ConversationListItem } from '../conversation-list-item/ConversationListItem';
 import { ed25519Str } from '../../../session/utils/String';
+import { Localizer } from '../../basic/Localizer';
 
 const MessageRequestListPlaceholder = styled.div`
   color: var(--conversation-tab-text-color);
@@ -43,6 +42,7 @@ const MessageRequestList = () => {
 export const OverlayMessageRequest = () => {
   useKey('Escape', closeOverlay);
   const dispatch = useDispatch();
+
   function closeOverlay() {
     dispatch(resetLeftOverlayMode());
   }
@@ -58,15 +58,12 @@ export const OverlayMessageRequest = () => {
    * @returns void
    */
   function handleClearAllRequestsClick() {
-    const { i18n } = window;
-    const title = i18n('clearAll');
-    const message = i18n('clearAllConfirmationBody');
     const onClose = dispatch(updateConfirmModal(null));
 
     dispatch(
       updateConfirmModal({
-        title,
-        message,
+        title: window.i18n('clearAll'),
+        i18nMessage: { token: 'messageRequestsClearAllExplanation' },
         onClose,
         okTheme: SessionButtonColor.Danger,
         closeTheme: SessionButtonColor.Primary,
@@ -121,7 +118,7 @@ export const OverlayMessageRequest = () => {
         <>
           <SpacerLG />
           <MessageRequestListPlaceholder>
-            {window.i18n('noMessageRequestsPending')}
+            <Localizer token="messageRequestsNonePending" />
           </MessageRequestListPlaceholder>
         </>
       )}

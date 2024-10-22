@@ -1,13 +1,11 @@
-import React from 'react';
-
 import { AttachmentType, getExtensionForDisplay } from '../../types/Attachment';
 
-interface Props {
+type Props = {
   attachment: AttachmentType;
   onClose: (attachment: AttachmentType) => void;
-}
+};
 
-export const StagedGenericAttachment = (props: Props) => {
+export function StagedGenericAttachment(props: Props) {
   const { attachment, onClose } = props;
   const { fileName, contentType } = attachment;
   const extension = getExtensionForDisplay({ contentType, fileName });
@@ -31,4 +29,4 @@ export const StagedGenericAttachment = (props: Props) => {
       <div className="module-staged-generic-attachment__filename">{fileName}</div>
     </div>
   );
-};
+}

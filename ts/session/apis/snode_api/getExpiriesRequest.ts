@@ -2,7 +2,7 @@
 import { PubkeyType } from 'libsession_util_nodejs';
 import { isFinite, isNil, isNumber } from 'lodash';
 import pRetry from 'p-retry';
-import { Snode } from '../../../data/data';
+import { Snode } from '../../../data/types';
 import { UserUtils } from '../../utils';
 import { SeedNodeAPI } from '../seed_node_api';
 import { GetExpiriesFromNodeSubRequest, fakeHash } from './SnodeRequestTypes';

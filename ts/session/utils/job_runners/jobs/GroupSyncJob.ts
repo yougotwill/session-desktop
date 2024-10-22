@@ -40,7 +40,7 @@ const defaultMaxAttempts = 2;
 
 /**
  * We want to run each of those jobs at least 3 seconds apart.
- * So every time one of that job finishes, update this timestamp, so we know when adding a new job, what is the next minimun date to run it.
+ * So every time one of that job finishes, update this timestamp, so we know when adding a new job, what is the next minimum date to run it.
  */
 const lastRunConfigSyncJobTimestamps = new Map<string, number | null>();
 

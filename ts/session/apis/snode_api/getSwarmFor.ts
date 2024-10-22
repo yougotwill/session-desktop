@@ -1,11 +1,13 @@
 import { isArray } from 'lodash';
 import pRetry from 'p-retry';
-import { Snode } from '../../../data/data';
 import { PubKey } from '../../types';
-import { SwarmForSubRequest } from './SnodeRequestTypes';
 import { BatchRequests } from './batchRequest';
 import { GetNetworkTime } from './getNetworkTime';
 import { SnodePool } from './snodePool';
+import { Snode } from '../../../data/types';
+import { SwarmForSubRequest } from './SnodeRequestTypes';
+
+
 
 /**
  * get snodes for pubkey from random snode. Uses an existing snode

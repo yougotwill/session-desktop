@@ -15,9 +15,10 @@ import { OnionPaths } from '../../onions';
 import { incrementBadPathCountOrDrop } from '../../onions/onionPath';
 import { ed25519Str, toHex } from '../../utils/String';
 
-import { Snode } from '../../../data/data';
+import { Snode } from '../../../data/types';
 import { callUtilsWorker } from '../../../webworker/workers/browser/util_worker_interface';
 import { encodeV4Request } from '../../onions/onionv4';
+import { SnodeResponseError } from '../../utils/errors';
 import { fileServerHost } from '../file_server_api/FileServerApi';
 import { hrefPnServerProd } from '../push_notification_api/PnServer';
 import { ERROR_CODE_NO_CONNECT } from './SNodeAPI';
@@ -1131,10 +1132,9 @@ async function sendOnionRequestSnodeDestNoRetries(
   });
 }
 
-function getPathString(pathObjArr: Array<{ ip: string; port: number }>): string {
-  return pathObjArr.map(node => `${node.ip}:${node.port}`).join(', ');
-}
-
+/**
+ * If the fetch throws a retryable error we retry this call with a new path at most 3 times. If another error happens, we return it. If we have a result we just return it.
+ */
 async function lokiOnionFetchNoRetries({
   targetNode,
   associatedWith,
@@ -1164,7 +1164,7 @@ async function lokiOnionFetchNoRetries({
     window?.log?.warn('onionFetchRetryable failed ', e.message);
     if (e?.errno === 'ENETUNREACH') {
       // better handle the no connection state
-      throw new Error(ERROR_CODE_NO_CONNECT);
+      throw new SnodeResponseError(ERROR_CODE_NO_CONNECT);
     }
     if (e?.message === CLOCK_OUT_OF_SYNC_MESSAGE_ERROR) {
       window?.log?.warn('Its a clock out of sync error ');
@@ -1179,7 +1179,6 @@ export const Onions = {
   incrementBadSnodeCountOrDrop,
   decodeOnionResult,
   lokiOnionFetchNoRetries,
-  getPathString,
   sendOnionRequestSnodeDestNoRetries,
   processOnionResponse,
   processOnionResponseV4,

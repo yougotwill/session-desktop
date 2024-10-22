@@ -1,21 +1,22 @@
 import chai from 'chai';
-import Sinon from 'sinon';
+import chaiAsPromised from 'chai-as-promised';
 import _ from 'lodash';
 import { describe } from 'mocha';
-import chaiAsPromised from 'chai-as-promised';
+import Sinon from 'sinon';
 
-import { TestUtils } from '../../../test-utils';
 import * as SNodeAPI from '../../../../session/apis/snode_api';
+import { TestUtils } from '../../../test-utils';
 
+import { GuardNode, Snode } from '../../../../data/types';
 import * as OnionPaths from '../../../../session/onions/onionPath';
-import { GuardNode, Snode } from '../../../../data/data';
 import {
-  generateFakeSnodes,
   generateFakeSnodeWithEdKey,
+  generateFakeSnodes,
   stubData,
 } from '../../../test-utils/utils';
 import { SeedNodeAPI } from '../../../../session/apis/seed_node_api';
 import { ServiceNodesList } from '../../../../session/apis/snode_api/getServiceNodesList';
+import { TEST_resetState } from '../../../../session/apis/snode_api/snodePool';
 
 chai.use(chaiAsPromised as any);
 chai.should();
@@ -108,6 +109,71 @@ describe('OnionPaths', () => {
         // actually, we remove the nodes causing issues from the snode pool so we shouldn't find this one neither
         expect(allEd25519Keys).to.not.include(newOnionPath[2][2].pubkey_ed25519);
       });
+    });
+  });
+
+  describe('getRandomEdgeSnode', () => {
+    it('random if multiple matches', () => {
+      const originalSnodePool = generateFakeSnodes(5);
+      const winner = OnionPaths.getRandomEdgeSnode(originalSnodePool);
+      expect(originalSnodePool).to.deep.include(winner);
+    });
+  });
+
+  describe('pick edge snode with at least storage server v2.8.0', () => {
+    let fetchSnodePoolFromSeedNodeWithRetries: Sinon.SinonStub;
+    beforeEach(async () => {
+      // Utils Stubs
+      Sinon.stub(OnionPaths, 'selectGuardNodes').resolves(fakeGuardNodes);
+      Sinon.stub(ServiceNodesList, 'getSnodePoolFromSnode').resolves(fakeGuardNodes);
+      // we can consider that nothing is in the DB for those tests
+      stubData('getSnodePoolFromDb').resolves([]);
+
+      TestUtils.stubData('getGuardNodes').resolves(fakeGuardNodesFromDB);
+      TestUtils.stubData('createOrUpdateItem').resolves();
+      TestUtils.stubWindow('getSeedNodeList', () => ['seednode1']);
+
+      TestUtils.stubWindowLog();
+      TEST_resetState();
+
+      fetchSnodePoolFromSeedNodeWithRetries = Sinon.stub(
+        SeedNodeAPI,
+        'fetchSnodePoolFromSeedNodeWithRetries'
+      );
+      SNodeAPI.Onions.resetSnodeFailureCount();
+      OnionPaths.resetPathFailureCount();
+      OnionPaths.clearTestOnionPath();
+      Sinon.stub(OnionPaths, 'getOnionPathMinTimeout').returns(10);
+    });
+
+    afterEach(() => {
+      Sinon.restore();
+    });
+
+    it('builds a path correctly if no issues with input', async () => {
+      fetchSnodePoolFromSeedNodeWithRetries.resolves(generateFakeSnodes(20));
+      const newOnionPath = await OnionPaths.getOnionPath({});
+      expect(newOnionPath.length).to.eq(3);
+    });
+
+    it('throws if we cannot find a valid edge snode', async () => {
+      const badPool = generateFakeSnodes(0).map(m => {
+        return { ...m, storage_server_version: [2, 1, 1] };
+      });
+      fetchSnodePoolFromSeedNodeWithRetries.reset();
+      fetchSnodePoolFromSeedNodeWithRetries.resolves(badPool);
+
+      if (OnionPaths.TEST_getTestOnionPath().length) {
+        throw new Error('expected this to be empty');
+      }
+
+      try {
+        await OnionPaths.getOnionPath({});
+
+        throw new Error('fake error');
+      } catch (e) {
+        expect(e.message).to.not.be.eq('fake error');
+      }
     });
   });
 });

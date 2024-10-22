@@ -26,6 +26,10 @@ const forceNetworkDeletion = async (): Promise<Array<string> | null> => {
   try {
     const maliciousSnodes = await pRetry(
       async () => {
+        if (!window.isOnline) {
+          window?.log?.warn('forceNetworkDeletion: we are offline.');
+          return null;
+        }
         const snodeToMakeRequestTo = await SnodePool.getNodeFromSwarmOrThrow(usPk);
         const builtRequest = await request.build();
         const ret = await BatchRequests.doSnodeBatchRequestNoRetries(
@@ -106,7 +110,7 @@ const forceNetworkDeletion = async (): Promise<Array<string> | null> => {
               }
               const sortedHashes = hashes.sort();
               const signatureSnode = snodeJson.signature as string;
-              // The signature format is (with sortedHashes accross all namespaces) ( PUBKEY_HEX || TIMESTAMP || DELETEDHASH[0] || ... || DELETEDHASH[N] )
+              // The signature format is (with sortedHashes across all namespaces) ( PUBKEY_HEX || TIMESTAMP || DELETEDHASH[0] || ... || DELETEDHASH[N] )
               const dataToVerify = `${usPk}${builtRequest.params.timestamp}${sortedHashes.join('')}`;
 
               const dataToVerifyUtf8 = StringUtils.encode(dataToVerify, 'utf8');
@@ -170,7 +174,7 @@ const networkDeleteMessageOurSwarm = async (
   const messageHashesArr = [...messagesHashes];
   const request = DeleteUserHashesFactory.makeUserHashesToDeleteSubRequest({ messagesHashes });
   if (!request) {
-    throw new Error('makeUserHashesToDeleteSubRequest returned invalid subrequest');
+    throw new Error('makeUserHashesToDeleteSubRequest returned invalid sub request');
   }
 
   try {
@@ -291,7 +295,7 @@ const networkDeleteMessageOurSwarm = async (
 
 /**
  * Delete the specified message hashes from the 03-group's swarm.
- * Returns true when the hashes have been removed successufuly.
+ * Returns true when the hashes have been removed successfully.
  * Returns false when
  *  - we don't have the secretKey
  *  - if one of the hash was already not present in the swarm,

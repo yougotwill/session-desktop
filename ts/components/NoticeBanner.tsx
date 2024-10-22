@@ -1,4 +1,4 @@
-import React, { SessionDataTestId } from 'react';
+import { SessionDataTestId } from 'react';
 import styled from 'styled-components';
 import { Flex } from './basic/Flex';
 import { SessionIconButton, SessionIconType } from './icon';

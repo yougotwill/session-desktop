@@ -1,5 +1,5 @@
 import { ipcRenderer, shell } from 'electron';
-import React, { useState, SessionDataTestId } from 'react';
+import { useState, SessionDataTestId } from 'react';
 
 import { useDispatch } from 'react-redux';
 import useHover from 'react-use/lib/useHover';
@@ -7,8 +7,7 @@ import styled from 'styled-components';
 
 import { isEmpty, isTypedArray } from 'lodash';
 import { CityResponse, Reader } from 'maxmind';
-import { useMount } from 'react-use';
-import { Snode } from '../../data/data';
+import useMount from 'react-use/lib/useMount';
 import { onionPathModal } from '../../state/ducks/modalDialog';
 import {
   useFirstOnionPath,
@@ -18,9 +17,12 @@ import {
 } from '../../state/selectors/onions';
 import { Flex } from '../basic/Flex';
 
+import { Snode } from '../../data/types';
+import { THEME_GLOBALS } from '../../themes/globals';
 import { SessionWrapperModal } from '../SessionWrapperModal';
-import { SessionSpinner } from '../basic/SessionSpinner';
 import { SessionIcon, SessionIconButton } from '../icon';
+import { SessionSpinner } from '../loading';
+import { getCrowdinLocale } from '../../util/i18n/shared';
 
 export type StatusLightType = {
   glowStartDelay: number;
@@ -104,19 +106,17 @@ const OnionPathModalInner = () => {
 
   const nodes = [
     {
-      label: window.i18n('device'),
+      label: window.i18n('you'),
     },
     ...onionPath,
     {
-      label: window.i18n('destination'),
+      label: window.i18n('onionRoutingPathDestination'),
     },
   ];
 
   return (
     <>
-      <StyledOnionDescription>
-        {window.i18n('onionPathIndicatorDescription')}
-      </StyledOnionDescription>
+      <StyledOnionDescription>{window.i18n('onionRoutingPathDescription')}</StyledOnionDescription>
       <StyledOnionNodeList>
         <Flex container={true}>
           <StyledLightsContainer>
@@ -136,16 +136,16 @@ const OnionPathModalInner = () => {
           <Flex container={true} flexDirection="column" alignItems="flex-start">
             {nodes.map((snode: Snode | any) => {
               const country = reader?.get(snode.ip || '0.0.0.0')?.country;
-              const locale = (window.i18n as any).getLocale() as string;
+              const locale = getCrowdinLocale();
 
-              // typescript complains that the [] operator cannot be used with the 'string' coming from getLocale()
+              // typescript complains that the [] operator cannot be used with the 'string' coming from getCrowdinLocale()
               const countryNamesAsAny = country?.names as any;
               const countryName =
                 snode.label || // to take care of the "Device" case
                 countryNamesAsAny?.[locale] || // try to find the country name based on the user local first
                 // eslint-disable-next-line dot-notation
                 countryNamesAsAny?.['en'] || // if not found, fallback to the country in english
-                window.i18n('unknownCountry');
+                window.i18n('onionRoutingPathUnknownCountry');
 
               return (
                 <OnionCountryDisplay
@@ -218,6 +218,8 @@ export const ActionPanelOnionStatusLight = (props: {
   const firstPathLength = useFirstOnionPathLength();
   const isOnline = useIsOnline();
 
+  const glowDuration = Number(THEME_GLOBALS['--duration-onion-status-glow']); // 10 seconds
+
   // Set icon color based on result
   const errorColor = 'var(--button-path-error-color)';
   const defaultColor = 'var(--button-path-default-color)';
@@ -237,7 +239,7 @@ export const ActionPanelOnionStatusLight = (props: {
       iconType="circle"
       iconColor={iconColor}
       onClick={handleClick}
-      glowDuration={10}
+      glowDuration={glowDuration}
       glowStartDelay={0}
       noScale={true}
       isSelected={isSelected}
@@ -255,7 +257,7 @@ export const OnionPathModal = () => {
   const dispatch = useDispatch();
   return (
     <SessionWrapperModal
-      title={window.i18n('onionPathIndicatorTitle')}
+      title={window.i18n('onionRoutingPath')}
       confirmText={window.i18n('learnMore')}
       cancelText={window.i18n('cancel')}
       onConfirm={onConfirm}

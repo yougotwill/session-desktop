@@ -1,17 +1,17 @@
 import { isEmpty } from 'lodash';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import styled from 'styled-components';
 import { useIsPrivate, useIsPublic } from '../../../hooks/useParamSelector';
-import {
-  ConversationInteractionStatus,
-  ConversationInteractionType,
-} from '../../../interactions/conversationInteractions';
 
 import { ConvoHub } from '../../../session/conversations';
-import { LastMessageType } from '../../../state/ducks/conversations';
 import { assertUnreachable } from '../../../types/sqlSharedTypes';
 import { MessageBody } from '../../conversation/message/message-content/MessageBody';
+import {
+  ConversationInteractionType,
+  ConversationInteractionStatus,
+} from '../../../interactions/types';
+import { LastMessageType } from '../../../state/ducks/types';
 
 const StyledInteractionItemText = styled.div<{ isError: boolean }>`
   ${props => props.isError && 'color: var(--danger-color) !important;'}
@@ -37,7 +37,10 @@ export const InteractionItem = (props: InteractionItemProps) => {
     if (conversationId) {
       const convo = ConvoHub.use().get(conversationId);
 
-      if (storedLastMessageInteractionStatus !== convo.get('lastMessageInteractionStatus')) {
+      if (
+        convo &&
+        storedLastMessageInteractionStatus !== convo.get('lastMessageInteractionStatus')
+      ) {
         setStoredLastMessageInteractionStatus(convo.get('lastMessageInteractionStatus'));
         setStoredLastMessageText(convo.get('lastMessage'));
       }
@@ -57,16 +60,22 @@ export const InteractionItem = (props: InteractionItemProps) => {
   let text = storedLastMessageText || '';
   let errorText = '';
 
+  const name = ConvoHub.use()
+    .get(conversationId)
+    ?.getNicknameOrRealUsernameOrPlaceholder();
+
   switch (interactionType) {
     case ConversationInteractionType.Hide:
       // if it's hidden or pending hiding, we don't show any text
       break;
     case ConversationInteractionType.Leave:
       errorText = isCommunity
-        ? window.i18n('leaveCommunityFailed')
+        ? window.i18n('communityLeaveError', {
+            community_name: name || window.i18n('unknown'),
+          })
         : isGroup
-          ? window.i18n('leaveGroupFailed')
-          : window.i18n('deleteConversationFailed');
+          ? window.i18n('groupLeaveErrorFailed', { group_name: name })
+          : ''; // this cannot happen
       text =
         interactionStatus === ConversationInteractionStatus.Error
           ? errorText

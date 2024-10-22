@@ -1,9 +1,9 @@
 import { isEmpty } from 'lodash';
-import { OpenGroupData, OpenGroupV2Room } from '../../../../data/opengroups';
+import { OpenGroupData } from '../../../../data/opengroups';
 import { ConvoHub } from '../../../conversations';
-import { SessionUtilUserGroups } from '../../../utils/libsession/libsession_utils_user_groups';
-import { OpenGroupRequestCommonType } from '../opengroupV2/ApiUtil';
 import { getOpenGroupManager } from '../opengroupV2/OpenGroupManagerV2';
+import { SessionUtilUserGroups } from '../../../utils/libsession/libsession_utils_user_groups';
+import { OpenGroupV2Room, OpenGroupRequestCommonType } from '../../../../data/types';
 
 // eslint-disable-next-line prefer-regex-literals
 const protocolRegex = new RegExp('https?://');
@@ -51,7 +51,7 @@ export function getCompleteUrlFromRoom(roomInfos: OpenGroupV2Room) {
     isEmpty(roomInfos.roomId) ||
     isEmpty(roomInfos.serverPublicKey)
   ) {
-    throw new Error('getCompleteUrlFromRoom needs serverPublicKey, roomid and serverUrl to be set');
+    throw new Error('getCompleteUrlFromRoom needs serverPublicKey, roomId and serverUrl to be set');
   }
   // serverUrl has the port and protocol already
   return `${roomInfos.serverUrl}/${roomInfos.roomId}?${publicKeyParam}${roomInfos.serverPublicKey}`;

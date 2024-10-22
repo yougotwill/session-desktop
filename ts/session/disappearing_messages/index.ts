@@ -389,7 +389,7 @@ async function checkForExpireUpdateInContentMessage(
     messageExpirationFromRetrieve,
   };
 
-  // NOTE some platforms do not include the diappearing message values in the Data Message for sent messages so we have to trust the conversation settings until v2 is released
+  // NOTE some platforms do not include the disappearing message values in the Data Message for sent messages so we have to trust the conversation settings until v2 is released
   if (
     !isDisappearingMessagesV2Released &&
     !isLegacyConversationSettingMessage &&
@@ -544,7 +544,7 @@ function getMessageReadyToDisappear(
   ) {
     /**
      * Edge case: when we send a message before we poll for a message sent earlier, our convo volatile update will
-     * mark that incoming message as read right away (because it was sent earlier than our latest convolatile lastRead).
+     * mark that incoming message as read right away (because it was sent earlier than our latest convo volatile lastRead).
      * To take care of this case, we need to check if an incoming DaR message is in a read state but its expiration has not been updated yet.
      * The way we do it, is by checking that the swarm expiration is before (now + expireTimer).
      * If it looks like this expiration was not updated yet, we need to trigger a UpdateExpiryJob for that message.
@@ -701,7 +701,7 @@ async function updateMessageExpiriesOnSwarm(messages: Array<MessageModel>) {
   }
 }
 
-function getExpireDetailsForOutgoingMesssage(
+function getExpireDetailsForOutgoingMessage(
   convo: ConversationModel,
   createAtNetworkTimestamp: number
 ) {
@@ -726,7 +726,7 @@ export const DisappearingMessages = {
   updateExpiringMessagesCheck,
   setExpirationStartTimestamp,
   changeToDisappearingMessageType,
-  getExpireDetailsForOutgoingMesssage,
+  getExpireDetailsForOutgoingMessage,
   changeToDisappearingConversationMode,
   forcedDeleteAfterReadMsgSetting,
   forcedDeleteAfterSendMsgSetting,

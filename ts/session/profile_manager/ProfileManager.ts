@@ -1,8 +1,11 @@
-import { isEmpty } from 'lodash';
+import { isEmpty, isNil } from 'lodash';
 import { ConvoHub } from '../conversations';
-import { UserUtils } from '../utils';
-import { toHex } from '../utils/String';
+import { setLastProfileUpdateTimestamp } from '../../util/storage';
+import { UserConfigWrapperActions } from '../../webworker/workers/browser/libsession_worker_interface';
+import { SyncUtils, UserUtils } from '../utils';
+import { fromHexToArray, sanitizeSessionUsername, toHex } from '../utils/String';
 import { AvatarDownload } from '../utils/job_runners/jobs/AvatarDownloadJob';
+import { CONVERSATION_PRIORITIES, ConversationTypeEnum } from '../../models/types';
 
 export type Profile = {
   displayName: string | undefined;
@@ -91,7 +94,76 @@ async function updateProfileOfContact(
   }
 }
 
+/**
+ * This will throw if the display name given is too long.
+ * When registering a user/linking a device, we want to enforce a limit on the displayName length.
+ * That limit is enforced by libsession when calling `setName` on the `UserConfigWrapper`.
+ * `updateOurProfileDisplayNameOnboarding` is used to create a temporary `UserConfigWrapper`, call `setName` on it and release the memory used by the wrapper.
+ * @returns the set displayName set if no error where thrown.
+ */
+async function updateOurProfileDisplayNameOnboarding(newName: string) {
+  const cleanName = sanitizeSessionUsername(newName).trim();
+
+  try {
+    // create a temp user config wrapper to test the display name with libsession
+    const privKey = new Uint8Array(64);
+    crypto.getRandomValues(privKey);
+    await UserConfigWrapperActions.init(privKey, null);
+    // this throws if the name is too long
+    await UserConfigWrapperActions.setName(cleanName);
+    const appliedName = await UserConfigWrapperActions.getName();
+
+    if (isNil(appliedName)) {
+      throw new Error(
+        'updateOurProfileDisplayNameOnboarding failed to retrieve name after setting it'
+      );
+    }
+
+    return appliedName;
+  } finally {
+    await UserConfigWrapperActions.free();
+  }
+}
+
+async function updateOurProfileDisplayName(newName: string) {
+  const ourNumber = UserUtils.getOurPubKeyStrFromCache();
+  const conversation = await ConvoHub.use().getOrCreateAndWait(
+    ourNumber,
+    ConversationTypeEnum.PRIVATE
+  );
+
+  const dbProfileUrl = conversation.get('avatarPointer');
+  const dbProfileKey = conversation.get('profileKey')
+    ? fromHexToArray(conversation.get('profileKey')!)
+    : null;
+  const dbPriority = conversation.get('priority') || CONVERSATION_PRIORITIES.default;
+
+  // we don't want to throw if somehow our display name in the DB is too long here, so we use the truncated version.
+  await UserConfigWrapperActions.setNameTruncated(sanitizeSessionUsername(newName).trim());
+  const truncatedName = await UserConfigWrapperActions.getName();
+  if (isNil(truncatedName)) {
+    throw new Error('updateOurProfileDisplayName: failed to get truncated displayName back');
+  }
+  await UserConfigWrapperActions.setPriority(dbPriority);
+  if (dbProfileUrl && !isEmpty(dbProfileKey)) {
+    await UserConfigWrapperActions.setProfilePic({ key: dbProfileKey, url: dbProfileUrl });
+  } else {
+    await UserConfigWrapperActions.setProfilePic({ key: null, url: null });
+  }
+
+  conversation.setSessionDisplayNameNoCommit(truncatedName);
+
+  // might be good to not trigger a sync if the name did not change
+  await conversation.commit();
+  await setLastProfileUpdateTimestamp(Date.now());
+  await SyncUtils.forceSyncConfigurationNowIfNeeded(true);
+
+  return truncatedName;
+}
+
 export const ProfileManager = {
   updateOurProfileSync,
   updateProfileOfContact,
+  updateOurProfileDisplayName,
+  updateOurProfileDisplayNameOnboarding,
 };

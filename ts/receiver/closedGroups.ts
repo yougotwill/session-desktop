@@ -11,7 +11,6 @@ import { decryptWithSessionProtocol } from './contentMessage';
 import { EnvelopePlus } from './types';
 
 import { ConversationModel } from '../models/conversation';
-import { ConversationTypeEnum } from '../models/conversationAttributes';
 
 import { getSwarmPollingInstance } from '../session/apis/snode_api';
 import { GetNetworkTime } from '../session/apis/snode_api/getNetworkTime';
@@ -30,6 +29,7 @@ import { IncomingMessageCache } from './cache';
 import { getSettingsKeyFromLibsessionWrapper } from './configMessage';
 import { ECKeyPair, HexKeyPair } from './keypairs';
 import { queueAllCachedFromSource } from './receiver';
+import { ConversationTypeEnum } from '../models/types';
 
 export const distributingClosedGroupEncryptionKeyPairs = new Map<string, ECKeyPair>();
 

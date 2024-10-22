@@ -1,34 +1,34 @@
 /* eslint-disable @typescript-eslint/no-misused-promises */
 /* eslint-disable no-console */
-import { app, BrowserWindow } from 'electron';
-import { autoUpdater, UpdateInfo } from 'electron-updater';
+import { app, type BrowserWindow } from 'electron';
+import { autoUpdater, type UpdateInfo } from 'electron-updater';
 import * as fs from 'fs-extra';
-// eslint-disable-next-line import/order
 import * as path from 'path';
 import { gt as isVersionGreaterThan, parse as parseVersion } from 'semver';
 
 import { windowMarkShouldQuit } from '../node/window_state';
 
-import { getLastestRelease } from '../node/latest_desktop_release';
 import { UPDATER_INTERVAL_MS } from '../session/constants';
+import type { SetupI18nReturnType } from '../types/localizer';
 import {
   getPrintableError,
-  LoggerType,
-  MessagesType,
+  type LoggerType,
   showCannotUpdateDialog,
   showDownloadUpdateDialog,
   showUpdateDialog,
 } from './common';
+import { getLatestRelease } from '../node/latest_desktop_release';
 
 let isUpdating = false;
 let downloadIgnored = false;
 let interval: NodeJS.Timeout | undefined;
 let stopped = false;
+
 // eslint:disable: no-console
 
 export async function start(
   getMainWindow: () => BrowserWindow | null,
-  messages: MessagesType,
+  i18n: SetupI18nReturnType,
   logger: LoggerType
 ) {
   if (interval) {
@@ -44,7 +44,7 @@ export async function start(
 
   interval = global.setInterval(async () => {
     try {
-      await checkForUpdates(getMainWindow, messages, logger);
+      await checkForUpdates(getMainWindow, i18n, logger);
     } catch (error) {
       logger.error('auto-update: error:', getPrintableError(error));
     }
@@ -54,13 +54,13 @@ export async function start(
   global.setTimeout(
     async () => {
       try {
-        await checkForUpdates(getMainWindow, messages, logger);
+        await checkForUpdates(getMainWindow, i18n, logger);
       } catch (error) {
         logger.error('auto-update: error:', getPrintableError(error));
       }
     },
     2 * 60 * 1000
-  ); // we do checks from the fileserver every 1 minute.
+  ); // we do checks from the file server every 1 minute.
 }
 
 export function stop() {
@@ -73,7 +73,7 @@ export function stop() {
 
 async function checkForUpdates(
   getMainWindow: () => BrowserWindow | null,
-  messages: MessagesType,
+  i18n: SetupI18nReturnType,
   logger: LoggerType
 ) {
   logger.info('[updater] checkForUpdates');
@@ -93,7 +93,7 @@ async function checkForUpdates(
   isUpdating = true;
 
   try {
-    const latestVersionFromFsFromRenderer = getLastestRelease();
+    const latestVersionFromFsFromRenderer = getLatestRelease();
 
     logger.info('[updater] latestVersionFromFsFromRenderer', latestVersionFromFsFromRenderer);
     if (!latestVersionFromFsFromRenderer || !latestVersionFromFsFromRenderer?.length) {
@@ -108,7 +108,7 @@ async function checkForUpdates(
     logger.info('[updater] checkForUpdates isMoreRecent', isMoreRecent);
     if (!isMoreRecent) {
       logger.info(
-        `Fileserver has no update so we are not looking for an update from github current:${currentVersion} fromFileServer:${latestVersionFromFsFromRenderer}`
+        `File server has no update so we are not looking for an update from github current:${currentVersion} fromFileServer:${latestVersionFromFsFromRenderer}`
       );
       return;
     }
@@ -140,7 +140,7 @@ async function checkForUpdates(
         return;
       }
       logger.info('[updater] showing download dialog...');
-      const shouldDownload = await showDownloadUpdateDialog(mainWindow, messages);
+      const shouldDownload = await showDownloadUpdateDialog(mainWindow, i18n);
       logger.info('[updater] shouldDownload:', shouldDownload);
 
       if (!shouldDownload) {
@@ -156,7 +156,7 @@ async function checkForUpdates(
         console.error('cannot showDownloadUpdateDialog, mainWindow is unset');
         return;
       }
-      await showCannotUpdateDialog(mainWindow, messages);
+      await showCannotUpdateDialog(mainWindow, i18n);
       throw error;
     }
     const window = getMainWindow();
@@ -166,7 +166,7 @@ async function checkForUpdates(
     }
     // Update downloaded successfully, we should ask the user to update
     logger.info('[updater] showing update dialog...');
-    const shouldUpdate = await showUpdateDialog(window, messages);
+    const shouldUpdate = await showUpdateDialog(window, i18n);
     if (!shouldUpdate) {
       return;
     }

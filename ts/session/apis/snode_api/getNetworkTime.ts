@@ -5,9 +5,11 @@
  */
 
 import { isNumber } from 'lodash';
-import { Snode } from '../../../data/data';
-import { NetworkTimeSubRequest } from './SnodeRequestTypes';
+
 import { BatchRequests } from './batchRequest';
+import { Snode } from '../../../data/types';
+import { NetworkTimeSubRequest } from './SnodeRequestTypes';
+
 
 const getNetworkTime = async (snode: Snode): Promise<string | number> => {
   const subrequest = new NetworkTimeSubRequest();
@@ -71,9 +73,16 @@ function now() {
   return Date.now() - GetNetworkTime.getLatestTimestampOffset();
 }
 
+function getNowWithNetworkOffsetSeconds() {
+  // make sure to call exports here, as we stub the exported one for testing.
+
+  return Math.floor(GetNetworkTime.getNowWithNetworkOffset() / 1000);
+}
+
 export const GetNetworkTime = {
   getNetworkTime,
   handleTimestampOffsetFromNetwork,
+  getNowWithNetworkOffsetSeconds,
   getLatestTimestampOffset,
   now,
 };

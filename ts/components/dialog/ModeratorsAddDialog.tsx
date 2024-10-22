@@ -1,17 +1,17 @@
-import React, { useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import { useState } from 'react';
+import { useDispatch } from 'react-redux';
 
+import { sogsV3AddAdmin } from '../../session/apis/open_group_api/sogsv3/sogsV3AddRemoveMods';
 import { PubKey } from '../../session/types';
 import { ToastUtils } from '../../session/utils';
-import { Flex } from '../basic/Flex';
 import { ConvoHub } from '../../session/conversations';
 import { updateAddModeratorsModal } from '../../state/ducks/modalDialog';
-import { SessionButton, SessionButtonType } from '../basic/SessionButton';
-import { SessionSpinner } from '../basic/SessionSpinner';
-import { SessionWrapperModal } from '../SessionWrapperModal';
-import { sogsV3AddAdmin } from '../../session/apis/open_group_api/sogsv3/sogsV3AddRemoveMods';
+import { useIsDarkTheme } from '../../state/selectors/theme';
 import { SessionHeaderSearchInput } from '../SessionHeaderSearchInput';
-import { isDarkTheme } from '../../state/selectors/theme';
+import { SessionWrapperModal } from '../SessionWrapperModal';
+import { Flex } from '../basic/Flex';
+import { SessionButton, SessionButtonType } from '../basic/SessionButton';
+import { SessionSpinner } from '../loading';
 
 type Props = {
   conversationId: string;
@@ -21,7 +21,7 @@ export const AddModeratorsDialog = (props: Props) => {
   const { conversationId } = props;
 
   const dispatch = useDispatch();
-  const darkMode = useSelector(isDarkTheme);
+  const isDarkTheme = useIsDarkTheme();
   const convo = ConvoHub.use().get(conversationId);
 
   const [inputBoxValue, setInputBoxValue] = useState('');
@@ -50,8 +50,11 @@ export const AddModeratorsDialog = (props: Props) => {
 
         ToastUtils.pushFailedToAddAsModerator();
       } else {
+        const userDisplayName =
+          ConvoHub.use().get(pubkey.key)?.getNicknameOrRealUsernameOrPlaceholder() ||
+          window.i18n('unknown');
         window?.log?.info(`${pubkey.key} added as moderator...`);
-        ToastUtils.pushUserAddedToModerators();
+        ToastUtils.pushUserAddedToModerators(userDisplayName);
 
         // clear input box
         setInputBoxValue('');
@@ -63,11 +66,6 @@ export const AddModeratorsDialog = (props: Props) => {
     }
   };
 
-  const { i18n } = window;
-  const chatName = convo.getNicknameOrRealUsernameOrPlaceholder();
-
-  const title = `${i18n('addModerators')}: ${chatName}`;
-
   const onPubkeyBoxChanges = (e: any) => {
     const val = e.target.value;
     setInputBoxValue(val);
@@ -76,17 +74,16 @@ export const AddModeratorsDialog = (props: Props) => {
   return (
     <SessionWrapperModal
       showExitIcon={true}
-      title={title}
+      title={window.i18n('adminPromote')}
       onClose={() => {
         dispatch(updateAddModeratorsModal(null));
       }}
     >
       <Flex container={true} flexDirection="column" alignItems="center">
-        <p>Add Moderator:</p>
         <SessionHeaderSearchInput
           type="text"
-          darkMode={darkMode}
-          placeholder={i18n('enterSessionID')}
+          isDarkTheme={isDarkTheme}
+          placeholder={window.i18n('accountIdEnter')}
           dir="auto"
           onChange={onPubkeyBoxChanges}
           disabled={addingInProgress}
@@ -96,7 +93,7 @@ export const AddModeratorsDialog = (props: Props) => {
         <SessionButton
           buttonType={SessionButtonType.Simple}
           onClick={addAsModerator}
-          text={i18n('add')}
+          text={window.i18n('add')}
           disabled={addingInProgress}
         />
 

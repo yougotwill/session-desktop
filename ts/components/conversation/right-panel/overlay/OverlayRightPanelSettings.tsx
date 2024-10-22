@@ -1,5 +1,5 @@
 import { compact, flatten, isEqual } from 'lodash';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { useDispatch } from 'react-redux';
 import useInterval from 'react-use/lib/useInterval';
@@ -13,8 +13,6 @@ import {
 } from '../../../../hooks/useParamSelector';
 import { useIsRightPanelShowing } from '../../../../hooks/useUI';
 import {
-  ConversationInteractionStatus,
-  ConversationInteractionType,
   showAddModeratorsByConvoId,
   showInviteContactByConvoId,
   showLeaveGroupByConvoId,
@@ -53,6 +51,11 @@ import { PanelButtonGroup, PanelIconButton } from '../../../buttons';
 import { MediaItemType } from '../../../lightbox/LightboxGallery';
 import { MediaGallery } from '../../media-gallery/MediaGallery';
 import { Header, StyledScrollContainer } from './components';
+import {
+  ConversationInteractionStatus,
+  ConversationInteractionType,
+} from '../../../../interactions/types';
+import { Localizer } from '../../../basic/Localizer';
 
 async function getMediaGalleryProps(conversationId: string): Promise<{
   documents: Array<MediaItemType>;
@@ -182,7 +185,7 @@ const HeaderItem = () => {
       {showMemberCount && (
         <Flex container={true} flexDirection={'column'}>
           <div role="button" className="subtle">
-            {window.i18n('members', [`${subscriberCount}`])}
+            <Localizer token="members" args={{ count: subscriberCount }} />
           </div>
           <SpacerMD />
         </Flex>
@@ -252,7 +255,6 @@ export const OverlayRightPanelSettings = () => {
   const weAreAdmin = useSelectedWeAreAdmin();
   const disappearingMessagesSubtitle = useDisappearingMessageSettingText({
     convoId: selectedConvoKey,
-    separator: ': ',
   });
   const lastMessage = useSelectedLastMessage();
 
@@ -305,13 +307,15 @@ export const OverlayRightPanelSettings = () => {
   const commonNoShow = isKickedFromGroup || isBlocked || !isActive;
   const hasDisappearingMessages = !isPublic && !commonNoShow;
   const leaveGroupString = isPublic
-    ? window.i18n('leaveCommunity')
+    ? window.i18n('communityLeave')
     : lastMessage?.interactionType === ConversationInteractionType.Leave &&
         lastMessage?.interactionStatus === ConversationInteractionStatus.Error
-      ? window.i18n('deleteConversation')
+      ? window.i18n('conversationsDelete')
       : isKickedFromGroup
-        ? window.i18n('youGotKickedFromGroup')
-        : window.i18n('leaveGroup');
+        ? window.i18n('groupRemovedYou', {
+            group_name: selectedUsername || window.i18n('groupUnknown'),
+          })
+        :  window.i18n('groupLeave');
 
   const showUpdateGroupNameButton = isGroup && weAreAdmin && !commonNoShow; // legacy groups non-admin cannot change groupname anymore
   const showAddRemoveModeratorsButton = weAreAdmin && !commonNoShow && isPublic;
@@ -328,8 +332,8 @@ export const OverlayRightPanelSettings = () => {
         <PanelButtonGroup style={{ margin: '0 var(--margins-lg)' }}>
           {showUpdateGroupNameButton && (
             <PanelIconButton
-              iconType={'group'}
-              text={isPublic ? window.i18n('editGroup') : window.i18n('editGroupName')}
+              iconType={'groupMembers'}
+              text={window.i18n('groupEdit')}
               onClick={() => {
                 void showUpdateGroupNameByConvoId(selectedConvoKey);
               }}
@@ -357,7 +361,7 @@ export const OverlayRightPanelSettings = () => {
             <>
               <PanelIconButton
                 iconType={'addModerator'}
-                text={window.i18n('addModerators')}
+                text={window.i18n('adminPromote')}
                 onClick={() => {
                   showAddModeratorsByConvoId(selectedConvoKey);
                 }}
@@ -366,7 +370,7 @@ export const OverlayRightPanelSettings = () => {
 
               <PanelIconButton
                 iconType={'deleteModerator'}
-                text={window.i18n('removeModerators')}
+                text={window.i18n('adminRemove')}
                 onClick={() => {
                   showRemoveModeratorsByConvoId(selectedConvoKey);
                 }}
@@ -377,7 +381,7 @@ export const OverlayRightPanelSettings = () => {
 
           {showUpdateGroupMembersButton && (
             <PanelIconButton
-              iconType={'group'}
+              iconType={'groupMembers'}
               text={window.i18n('groupMembers')}
               onClick={() => {
                 void showUpdateGroupMembersByConvoId(selectedConvoKey);

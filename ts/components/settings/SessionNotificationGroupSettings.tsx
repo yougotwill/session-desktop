@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-misused-promises */
-import React from 'react';
 
 import useUpdate from 'react-use/lib/useUpdate';
 import styled from 'styled-components';
@@ -33,16 +32,16 @@ export const SessionNotificationGroupSettings = () => {
     initialNotificationEnabled && initialNotificationEnabled !== NotificationType.off;
 
   const options = [
-    { label: window.i18n('nameAndMessage'), value: NotificationType.message },
-    { label: window.i18n('nameOnly'), value: NotificationType.name },
-    { label: window.i18n('noNameOrMessage'), value: NotificationType.count },
+    { label: window.i18n('notificationsContentShowNameAndContent'), value: NotificationType.message },
+    { label: window.i18n('notificationsContentShowNameOnly'), value: NotificationType.name },
+    { label: window.i18n('notificationsContentShowNoNameOrContent'), value: NotificationType.count },
   ] as const;
 
   const items: SessionRadioItems = options.map(m => ({
     label: m.label,
     value: m.value,
-    inputDatatestId: `input-${m.value}`,
-    labelDatatestId: `label-${m.value}`,
+    inputDataTestId: `input-${m.value}`,
+    labelDataTestId: `label-${m.value}`,
   }));
 
   const onClickPreview = () => {
@@ -51,11 +50,8 @@ export const SessionNotificationGroupSettings = () => {
     }
     Notifications.addPreviewNotification({
       conversationId: `preview-notification-${Date.now()}`,
-      message:
-        items.find(m => m.value === initialNotificationEnabled)?.label ||
-        window?.i18n?.('messageBody') ||
-        'Message body',
-      title: window.i18n('notificationPreview'),
+      message: items.find(m => m.value === initialNotificationEnabled)?.label || 'Message body',
+      title: window.i18n('preview'),
       iconUrl: null,
       isExpiringMessage: false,
       messageSentAt: Date.now(),
@@ -72,7 +68,7 @@ export const SessionNotificationGroupSettings = () => {
           );
           forceUpdate();
         }}
-        title={window.i18n('notificationsSettingsTitle')}
+        title={window.i18n('sessionNotifications')}
         active={notificationsAreEnabled}
       />
       {notificationsAreEnabled && isAudioNotificationSupported() && (
@@ -84,14 +80,14 @@ export const SessionNotificationGroupSettings = () => {
             );
             forceUpdate();
           }}
-          title={window.i18n('audioNotificationsSettingsTitle')}
+          title={window.i18n('notificationsSoundDesktop')}
           active={initialAudioNotificationEnabled}
         />
       )}
       {notificationsAreEnabled ? (
         <SessionSettingsItemWrapper
-          title={window.i18n('notificationsSettingsContent')}
-          description={window.i18n('notificationSettingsDialog')}
+          title={window.i18n('notificationsContent')}
+          description={window.i18n('notificationsContentDescription')}
           inline={false}
         >
           <SessionRadioGroup
@@ -105,7 +101,7 @@ export const SessionNotificationGroupSettings = () => {
           />
           <StyledButtonContainer>
             <SpacerLG />
-            <SessionButton text={window.i18n('notificationPreview')} onClick={onClickPreview} />
+            <SessionButton text={window.i18n('preview')} onClick={onClickPreview} />
           </StyledButtonContainer>
         </SessionSettingsItemWrapper>
       ) : null}

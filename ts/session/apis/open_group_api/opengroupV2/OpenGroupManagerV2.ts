@@ -4,7 +4,7 @@
 import autoBind from 'auto-bind';
 import { clone, groupBy, isEqual, uniqBy } from 'lodash';
 
-import { OpenGroupData, OpenGroupV2Room } from '../../../../data/opengroups';
+import { OpenGroupData } from '../../../../data/opengroups';
 import { ConversationModel } from '../../../../models/conversation';
 import { ConvoHub } from '../../../conversations';
 import { allowOnlyOneAtATime } from '../../../utils/Promise';
@@ -12,21 +12,14 @@ import {
   getAllValidOpenGroupV2ConversationRoomInfos,
   getOpenGroupV2ConversationId,
 } from '../utils/OpenGroupUtils';
-import {
-  OpenGroupRequestCommonType,
-  ourSogsDomainName,
-  ourSogsLegacyIp,
-  ourSogsUrl,
-} from './ApiUtil';
+import { ourSogsDomainName, ourSogsLegacyIp, ourSogsUrl } from './ApiUtil';
 import { OpenGroupServerPoller } from './OpenGroupServerPoller';
 
-import {
-  CONVERSATION_PRIORITIES,
-  ConversationTypeEnum,
-} from '../../../../models/conversationAttributes';
-import { UserGroupsWrapperActions } from '../../../../webworker/workers/browser/libsession_worker_interface';
 import { SessionUtilUserGroups } from '../../../utils/libsession/libsession_utils_user_groups';
 import { openGroupV2GetRoomInfoViaOnionV4 } from '../sogsv3/sogsV3RoomInfos';
+import { UserGroupsWrapperActions } from '../../../../webworker/workers/browser/libsession_worker_interface';
+import { OpenGroupRequestCommonType, OpenGroupV2Room } from '../../../../data/types';
+import { ConversationTypeEnum, CONVERSATION_PRIORITIES } from '../../../../models/types';
 
 let instance: OpenGroupManagerV2 | undefined;
 
@@ -64,15 +57,15 @@ export class OpenGroupManagerV2 {
     publicKey: string
   ): Promise<ConversationModel | undefined> {
     // make sure to use the https version of our official sogs
-    const overridenUrl =
+    const overriddenUrl =
       (serverUrl.includes(`://${ourSogsDomainName}`) && !serverUrl.startsWith('https')) ||
       serverUrl.includes(`://${ourSogsLegacyIp}`)
         ? ourSogsUrl
         : serverUrl;
 
-    const oneAtaTimeStr = `oneAtaTimeOpenGroupV2Join:${overridenUrl}${roomId}`;
+    const oneAtaTimeStr = `oneAtaTimeOpenGroupV2Join:${overriddenUrl}${roomId}`;
     return allowOnlyOneAtATime(oneAtaTimeStr, async () => {
-      return this.attemptConnectionV2(overridenUrl, roomId, publicKey);
+      return this.attemptConnectionV2(overriddenUrl, roomId, publicKey);
     });
   }
 
@@ -158,7 +151,7 @@ export class OpenGroupManagerV2 {
 
     if (ConvoHub.use().get(conversationId)) {
       // Url incorrect or server not compatible
-      throw new Error(window.i18n('publicChatExists'));
+      throw new Error(window.i18n('communityJoinedAlready'));
     }
 
     try {
@@ -232,7 +225,6 @@ export class OpenGroupManagerV2 {
     } catch (e) {
       window?.log?.warn('Failed to join open group v2', e.message);
       await OpenGroupData.removeV2OpenGroupRoom(conversationId);
-      // throw new Error(window.i18n('connectToServerFail'));
       return undefined;
     }
   }

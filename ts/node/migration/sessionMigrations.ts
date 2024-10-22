@@ -7,16 +7,14 @@ import {
   UserGroupsWrapperNode,
 } from 'libsession_util_nodejs';
 import { compact, isArray, isEmpty, isNil, isString, map, pick } from 'lodash';
-import {
-  CONVERSATION_PRIORITIES,
-  ConversationAttributes,
-} from '../../models/conversationAttributes';
+import { ConversationAttributes } from '../../models/conversationAttributes';
 import { fromHexToArray } from '../../session/utils/String';
-import { CONFIG_DUMP_TABLE, toFixedUint8ArrayOfLength } from '../../types/sqlSharedTypes';
+import { CONFIG_DUMP_TABLE } from '../../types/sqlSharedTypes';
 import {
   CLOSED_GROUP_V2_KEY_PAIRS_TABLE,
   CONVERSATIONS_TABLE,
   GUARD_NODE_TABLE,
+  ITEMS_TABLE,
   LAST_HASHES_TABLE,
   MESSAGES_TABLE,
   NODES_FOR_PUBKEY_TABLE,
@@ -26,7 +24,7 @@ import {
   rebuildFtsTable,
 } from '../database_utility';
 
-import { SettingsKey } from '../../data/settings-key';
+import { SettingsKey, SNODE_POOL_ITEM_ID } from '../../data/settings-key';
 import { sleepFor } from '../../session/utils/Promise';
 import { sqlNode } from '../sql';
 import MIGRATION_HELPERS from './helpers';
@@ -35,6 +33,7 @@ import {
   getLoggedInUserConvoDuringMigration,
   hasDebugEnvVariable,
 } from './utils';
+import { CONVERSATION_PRIORITIES } from '../../models/types';
 
 // eslint:disable: quotemark one-variable-per-declaration no-unused-expression
 
@@ -106,6 +105,7 @@ const LOKI_SCHEMA_VERSIONS = [
   updateToSessionSchemaVersion35,
   updateToSessionSchemaVersion36,
   updateToSessionSchemaVersion37,
+  updateToSessionSchemaVersion38,
 ];
 
 function updateToSessionSchemaVersion1(currentVersion: number, db: BetterSqlite3.Database) {
@@ -628,7 +628,7 @@ function updateToSessionSchemaVersion20(currentVersion: number, db: BetterSqlite
 
     //   // obj.profile.displayName is the display as this user set it.
     //   if (obj?.nickname?.length && obj?.profile?.displayName?.length) {
-    //     // this one has a nickname set, but name is unset, set it to the displayName in the lokiProfile if it's exisitng
+    //     // this one has a nickname set, but name is unset, set it to the displayName in the lokiProfile if it's existing
     //     obj.name = obj.profile.displayName;
     //     sqlNode.saveConversation(obj as ConversationAttributes, db);
     //   }
@@ -932,8 +932,8 @@ function updateToSessionSchemaVersion27(currentVersion: number, db: BetterSqlite
   }
 
   function getAllOpenGroupV2Conversations(instance: BetterSqlite3.Database) {
-    // first _ matches all opengroupv1 (they are completely removed in a migration now),
-    // second _ force a second char to be there, so it can only be opengroupv2 convos
+    // first _ matches all opengroup v1 (they are completely removed in a migration now),
+    // second _ force a second char to be there, so it can only be opengroup v2 convos
 
     const rows = instance
       .prepare(
@@ -1377,14 +1377,13 @@ function updateToSessionSchemaVersion31(currentVersion: number, db: BetterSqlite
       const ourDbProfileKey = fromHexToArray(ourConversation.profileKey || '');
       const ourConvoPriority = ourConversation.priority;
 
+      // we don't want to throw if somehow our display name in the DB is too long here, so we use the truncated version.
+      userProfileWrapper.setNameTruncated(ourDbName);
+      userProfileWrapper.setPriority(ourConvoPriority);
       if (ourDbProfileUrl && !isEmpty(ourDbProfileKey)) {
-        if (ourDbProfileKey.length === 32) {
-          const ourKeyFixedLen = toFixedUint8ArrayOfLength(ourDbProfileKey, 32);
-          userProfileWrapper.setUserInfo(ourDbName, ourConvoPriority, {
-            url: ourDbProfileUrl,
-            key: ourKeyFixedLen.buffer, // TODO make this use the fixed length array
-          });
-        }
+        userProfileWrapper.setProfilePic({ key: ourDbProfileKey, url: ourDbProfileUrl });
+      } else {
+        userProfileWrapper.setProfilePic({ key: null, url: null });
       }
 
       MIGRATION_HELPERS.V31.insertContactIntoContactWrapper(
@@ -1465,7 +1464,7 @@ function updateToSessionSchemaVersion31(currentVersion: number, db: BetterSqlite
       });
 
       /**
-       * Setup up the UserGroups Wrapper with all the comunities details which needs to be stored in it.
+       * Setup up the UserGroups Wrapper with all the communities details which needs to be stored in it.
        */
 
       // this filter is based on the `isCommunityToStoreInWrapper` function.
@@ -1495,7 +1494,7 @@ function updateToSessionSchemaVersion31(currentVersion: number, db: BetterSqlite
         });
 
         console.info(
-          '===================== Done with communinities inserting ======================='
+          '===================== Done with communities inserting ======================='
         );
       }
 
@@ -1618,11 +1617,11 @@ function updateToSessionSchemaVersion33(currentVersion: number, db: BetterSqlite
     const loggedInUser = getLoggedInUserConvoDuringMigration(db);
 
     if (!loggedInUser?.ourKeys) {
-      // no user loggedin was empty. Considering no users are logged in
+      // Considering no users are logged in
       writeSessionSchemaVersion(targetVersion, db);
       return;
     }
-    // a user is logged in, we want to enable the 'inbox' polling for sogs, only if the current userwrapper for that field is undefined
+    // a user is logged in, we want to enable the 'inbox' polling for sogs, only if the current user wrapper for that field is undefined
     const { privateEd25519, publicKeyHex } = loggedInUser.ourKeys;
 
     // Get existing config wrapper dump and update it
@@ -1953,8 +1952,28 @@ function updateToSessionSchemaVersion36(currentVersion: number, db: BetterSqlite
   console.log(`updateToSessionSchemaVersion${targetVersion}: success!`);
 }
 
+
 function updateToSessionSchemaVersion37(currentVersion: number, db: BetterSqlite3.Database) {
   const targetVersion = 37;
+  if (currentVersion >= targetVersion) {
+    return;
+  }
+
+  console.log(`updateToSessionSchemaVersion${targetVersion}: starting...`);
+
+  db.transaction(() => {
+    console.info(`clearing ${SNODE_POOL_ITEM_ID} cache`);
+    db.prepare(`DELETE FROM ${ITEMS_TABLE} WHERE id = $snodePoolId;`).run({
+      snodePoolId: SNODE_POOL_ITEM_ID,
+    });
+    writeSessionSchemaVersion(targetVersion, db);
+  })();
+
+  console.log(`updateToSessionSchemaVersion${targetVersion}: success!`);
+}
+
+function updateToSessionSchemaVersion38(currentVersion: number, db: BetterSqlite3.Database) {
+  const targetVersion = 38;
   if (currentVersion >= targetVersion) {
     return;
   }

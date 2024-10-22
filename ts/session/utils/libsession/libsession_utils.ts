@@ -33,6 +33,11 @@ const requiredUserVariants: Array<ConfigWrapperUser> = [
   'ConvoInfoVolatileConfig',
 ];
 
+
+
+/**
+ * Initializes the libsession wrappers for the required user variants if the dumps are not already in the database. It will use an empty dump if the dump is not found.
+ */
 async function initializeLibSessionUtilWrappers() {
   const keypair = await UserUtils.getUserED25519KeyPairBytes();
   if (!keypair || !keypair.privKeyBytes) {
@@ -159,7 +164,6 @@ async function pendingChangesForUs(): Promise<UserDestinationChanges> {
 
     const { data, seqno, hashes, namespace } = await GenericWrapperActions.push(variant);
     variantsNeedingPush.add(variant);
-
     results.messages.push({
       ciphertext: data,
       seqno: Long.fromNumber(seqno),
@@ -390,9 +394,9 @@ async function saveDumpsToDb(pubkey: PubkeyType | GroupPubkeyType) {
 
 /**
  * Creates the specified member in the specified group wrapper and sets the details provided.
- * Note: no checks are done, so if the member existed already it's name/profile picture are overriden.
+ * Note: no checks are done, so if the member existed already it's name/profile picture are overridden.
  *
- * This should only be used when the current device is explicitely inviting a new member to the group.
+ * This should only be used when the current device is explicitly inviting a new member to the group.
  */
 async function createMemberAndSetDetails({
   displayName,

@@ -1,6 +1,5 @@
 import { fromPairs, map } from 'lodash';
-import moment from 'moment';
-import React from 'react';
+
 import { Provider } from 'react-redux';
 import useMount from 'react-use/lib/useMount';
 import useUpdate from 'react-use/lib/useUpdate';
@@ -8,6 +7,7 @@ import { persistStore } from 'redux-persist';
 import { PersistGate } from 'redux-persist/integration/react';
 import styled from 'styled-components';
 
+import { AnimatePresence } from 'framer-motion';
 import { LeftPane } from './leftpane/LeftPane';
 // moment does not support es-419 correctly (and cause white screen on app start)
 import { ConvoHub } from '../session/conversations';
@@ -35,6 +35,7 @@ import { groupInfoActions, initialGroupState } from '../state/ducks/metaGroups';
 import { getSettingsInitialState, updateAllOnStorageReady } from '../state/ducks/settings';
 import { initialSogsRoomInfoState } from '../state/ducks/sogsRoomInfo';
 import { useHasDeviceOutdatedSyncing } from '../state/selectors/settings';
+import { SessionTheme } from '../themes/SessionTheme';
 import { Storage } from '../util/storage';
 import { UserGroupsWrapperActions } from '../webworker/workers/browser/libsession_worker_interface';
 import { NoticeBanner } from './NoticeBanner';
@@ -47,14 +48,8 @@ function makeLookup<T>(items: Array<T>, key: string): { [key: string]: T } {
   return fromPairs(pairs);
 }
 
-// Default to the locale from env. It will be overridden if moment
-// does not recognize it with what moment knows which is the closest.
-// i.e. es-419 will return 'es'.
-// We just need to use what we got from moment in getLocale on the updateLocale below
-moment.locale((window.i18n as any).getLocale());
-
 const StyledGutter = styled.div`
-  width: 380px !important;
+  width: var(--left-panel-width) !important;
   transition: none;
 `;
 
@@ -112,6 +107,7 @@ async function setupLeftPane(forceUpdateInboxComponent: () => void) {
       settingsLinkPreview: Storage.getBoolOrFalse(SettingsKey.settingsLinkPreview),
       hasFollowSystemThemeEnabled: Storage.getBoolOrFalse(SettingsKey.hasFollowSystemThemeEnabled),
       hasShiftSendEnabled: Storage.getBoolOrFalse(SettingsKey.hasShiftSendEnabled),
+      hideRecoveryPassword: Storage.getBoolOrFalse(SettingsKey.hideRecoveryPassword),
     })
   );
   window.inboxStore.dispatch(groupInfoActions.loadMetaDumpsFromDB()); // this loads the dumps from DB and fills the 03-groups slice with the corresponding details
@@ -131,7 +127,7 @@ const SomeDeviceOutdatedSyncingNotice = () => {
   }
   return (
     <NoticeBanner
-      text={window.i18n('someOfYourDeviceUseOutdatedVersion')}
+      text={window.i18n('deleteAfterGroupFirstReleaseConfigOutdated')}
       onButtonClick={dismiss}
       icon="exit"
       dataTestId="some-of-your-devices-outdated-inbox"
@@ -157,13 +153,17 @@ export const SessionInboxView = () => {
     <div className="inbox index">
       <Provider store={window.inboxStore}>
         <PersistGate loading={null} persistor={persistor}>
-          <SomeDeviceOutdatedSyncingNotice />
-          <Flex container={true} height="0" flexShrink={100} flexGrow={1}>
-            <StyledGutter>
-              <LeftPane />
-            </StyledGutter>
-            <SessionMainPanel />
-          </Flex>
+          <SessionTheme>
+            <SomeDeviceOutdatedSyncingNotice />
+            <AnimatePresence>
+              <Flex container={true} height="0" flexShrink={100} flexGrow={1}>
+                <StyledGutter>
+                  <LeftPane />
+                </StyledGutter>
+                <SessionMainPanel />
+              </Flex>
+            </AnimatePresence>
+          </SessionTheme>
         </PersistGate>
       </Provider>
     </div>

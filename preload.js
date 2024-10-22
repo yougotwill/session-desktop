@@ -1,15 +1,22 @@
 // eslint:disable: no-require-imports no-var-requires
-const { clipboard, ipcRenderer, webFrame } = require('electron/main');
+const { clipboard, ipcRenderer: ipc, webFrame } = require('electron/main');
 const { Storage } = require('./ts/util/storage');
 
 const { isTestNet, isTestIntegration } = require('./ts/shared/env_vars');
 
+const os = require('os');
 const url = require('url');
 
 const _ = require('lodash');
 
+const { setupI18n } = require('./ts/util/i18n/i18n');
+
+const { dictionary, crowdinLocale } = ipc.sendSync('locale-data');
+
 const config = url.parse(window.location.toString(), true).query;
 const configAny = config;
+
+window.i18n = setupI18n({ crowdinLocale, translationDictionary: dictionary });
 
 let title = config.name;
 if (config.environment !== 'production') {
@@ -26,12 +33,16 @@ window.getAppInstance = () => configAny.appInstance;
 window.getVersion = () => configAny.version;
 window.getCommitHash = () => configAny.commitHash;
 window.getNodeVersion = () => configAny.node_version;
+window.getOSRelease = () =>
+  `${os.type()} ${os.release()}, Node.js ${config.node_version} ${os.platform()} ${os.arch()}`;
+window.saveLog = additionalText => ipc.send('save-debug-log', additionalText);
 
 window.sessionFeatureFlags = {
   useOnionRequests: true,
   useTestNet: isTestNet() || isTestIntegration(),
   useClosedGroupV2: true, // TODO DO NOT MERGE Remove after QA
   useClosedGroupV2QAButtons: true, // TODO DO NOT MERGE Remove after QA
+  replaceLocalizedStringsWithKeys: false,
   debug: {
     debugLogging: !_.isEmpty(process.env.SESSION_DEBUG),
     debugLibsessionDumps: !_.isEmpty(process.env.SESSION_DEBUG_LIBSESSION_DUMPS),
@@ -49,9 +60,6 @@ window.versionInfo = {
   appInstance: window.getAppInstance(),
 };
 
-const ipc = ipcRenderer;
-const localeMessages = ipc.sendSync('locale-data');
-
 window.updateZoomFactor = () => {
   const zoomFactor = window.getSettingValue('zoom-factor-setting') || 100;
   window.setZoomFactor(zoomFactor / 100);
@@ -64,15 +72,29 @@ window.setZoomFactor = number => {
 // Set the password for the database
 window.setPassword = async (passPhrase, oldPhrase) =>
   new Promise((resolve, reject) => {
-    ipc.once('set-password-response', (_event, error) => {
-      if (error) {
-        reject(error);
-        return;
+    ipc.once('set-password-response', (_event, response) => {
+      if (!response) {
+        // We don't reject here, but return undefined and handle the result in the caller.
+        // The reason is because we sometimes want to reject, but sometimes not depending on what the caller is doing (set/change/remove)
+        // For instance, removing a password makes `!response` true, and so we would reject here even if we
+        // technically didn't have an reason to.
+        return resolve(undefined);
       }
-      resolve(undefined);
-      return;
+      return resolve(response);
     });
     ipc.send('set-password', passPhrase, oldPhrase);
+  });
+
+// called to verify that the password is correct when showing the recovery from seed modal
+window.onTryPassword = async passPhrase =>
+  new Promise((resolve, reject) => {
+    ipc.once('password-recovery-phrase-response', (_event, error) => {
+      if (error) {
+        return reject(error);
+      }
+      return resolve();
+    });
+    ipc.send('password-recovery-phrase', passPhrase);
   });
 
 window.setStartInTray = async startInTray =>
@@ -234,25 +256,16 @@ if (config.proxyUrl) {
 window.nodeSetImmediate = setImmediate;
 
 const data = require('./ts/data/dataInit');
-const { setupi18n } = require('./ts/util/i18n');
 data.initData();
 
 const { ConvoHub } = require('./ts/session/conversations/ConversationController');
 window.getConversationController = ConvoHub.use;
 
-const { stringify } = require('./ts/types/sqlSharedTypes');
-window.stringify = stringify;
-
-const { IncomingMessageCache } = require('./ts/receiver/cache');
-window.IncomingMessageCache = IncomingMessageCache;
 
 // Linux seems to periodically let the event loop stop, so this is a global workaround
 setInterval(() => {
   window.nodeSetImmediate(() => {});
 }, 1000);
-
-window.React = require('react');
-window.ReactDOM = require('react-dom');
 
 window.clipboard = clipboard;
 
@@ -265,9 +278,6 @@ window.getSeedNodeList = () =>
         'https://seed2.getsession.org:4443/',
         'https://seed3.getsession.org:4443/',
       ];
-
-const { locale: localFromEnv } = config;
-window.i18n = setupi18n(localFromEnv || 'en', localeMessages);
 
 window.addEventListener('contextmenu', e => {
   const editable = e && e.target.closest('textarea, input, [contenteditable="true"]');

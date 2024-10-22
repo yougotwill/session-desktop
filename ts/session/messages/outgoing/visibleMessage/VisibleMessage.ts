@@ -1,9 +1,9 @@
 import ByteBuffer from 'bytebuffer';
 import { isEmpty } from 'lodash';
 import { SignalService } from '../../../../protobuf';
-import { LokiProfile } from '../../../../types/Message';
 import { Reaction } from '../../../../types/Reaction';
 import { DataMessage } from '../DataMessage';
+import { LokiProfile } from '../../../../types/message';
 import { ExpirableMessageParams } from '../ExpirableMessage';
 
 interface AttachmentPointerCommon {

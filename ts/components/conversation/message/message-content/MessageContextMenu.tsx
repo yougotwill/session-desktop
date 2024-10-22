@@ -1,10 +1,11 @@
 /* eslint-disable @typescript-eslint/no-misused-promises */
-import React, { Dispatch, useCallback, useEffect, useRef, useState } from 'react';
+import { Dispatch, useCallback, useEffect, useRef, useState } from 'react';
 
 import { isNumber } from 'lodash';
-import { Item, ItemParams, Menu, useContextMenu } from 'react-contexify';
+import { ItemParams, Menu, useContextMenu } from 'react-contexify';
 import { useDispatch } from 'react-redux';
-import { useClickAway, useMouse } from 'react-use';
+import useClickAway from 'react-use/lib/useClickAway';
+import useMouse from 'react-use/lib/useMouse';
 import styled from 'styled-components';
 import { Data } from '../../../../data/data';
 
@@ -47,6 +48,11 @@ import { Reactions } from '../../../../util/reactions';
 import { SessionContextMenuContainer } from '../../../SessionContextMenuContainer';
 import { SessionEmojiPanel, StyledEmojiPanel } from '../../SessionEmojiPanel';
 import { MessageReactBar } from './MessageReactBar';
+import { showCopyAccountIdAction } from '../../../menu/items/CopyAccountId';
+import { CopyAccountIdMenuItem } from '../../../menu/items/CopyAccountId/CopyAccountIdMenuItem';
+import { Localizer } from '../../../basic/Localizer';
+import { ItemWithDataTestId } from '../../../menu/items/MenuItemWithDataTestId';
+import { getMenuAnimation } from '../../../menu/MenuAnimation';
 
 export type MessageContextMenuSelectorProps = Pick<
   MessageRenderingProps,
@@ -105,7 +111,7 @@ const DeleteItem = ({ messageId }: { messageId: string }) => {
     return null;
   }
 
-  return <Item onClick={onDelete}>{window.i18n('delete')}</Item>;
+  return <ItemWithDataTestId onClick={onDelete}>{window.i18n('delete')}</ItemWithDataTestId>;
 };
 
 type MessageId = { messageId: string };
@@ -142,12 +148,16 @@ const AdminActionItems = ({ messageId }: MessageId) => {
 
   return showAdminActions ? (
     <>
-      <Item onClick={onBan}>{window.i18n('banUser')}</Item>
-      <Item onClick={onUnban}>{window.i18n('unbanUser')}</Item>
+      <ItemWithDataTestId onClick={onBan}>{window.i18n('banUser')}</ItemWithDataTestId>
+      <ItemWithDataTestId onClick={onUnban}>{window.i18n('banUnbanUser')}</ItemWithDataTestId>
       {isSenderAdmin ? (
-        <Item onClick={removeModerator}>{window.i18n('removeFromModerators')}</Item>
+        <ItemWithDataTestId onClick={removeModerator}>
+          {window.i18n('adminRemoveAsAdmin')}
+        </ItemWithDataTestId>
       ) : (
-        <Item onClick={addModerator}>{window.i18n('addAsModerator')}</Item>
+        <ItemWithDataTestId onClick={addModerator}>
+          {window.i18n('adminPromoteToAdmin')}
+        </ItemWithDataTestId>
       )}
     </>
   ) : null;
@@ -166,7 +176,9 @@ const RetryItem = ({ messageId }: MessageId) => {
       await found.retrySend();
     }
   }, [messageId]);
-  return showRetry ? <Item onClick={onRetry}>{window.i18n('resend')}</Item> : null;
+  return showRetry ? (
+    <ItemWithDataTestId onClick={onRetry}>{window.i18n('resend')}</ItemWithDataTestId>
+  ) : null;
 };
 
 export const showMessageInfoOverlay = async ({
@@ -240,8 +252,6 @@ export const MessageContextMenu = (props: Props) => {
     },
     [showEmojiPanel]
   );
-
-  const selectMessageText = window.i18n('selectMessage');
 
   const onReply = useCallback(() => {
     if (isSelectedBlocked) {
@@ -360,7 +370,11 @@ export const MessageContextMenu = (props: Props) => {
         </StyledEmojiPanelContainer>
       )}
       <SessionContextMenuContainer>
-        <Menu id={contextMenuId} onVisibilityChange={onVisibilityChange} animation="fade">
+        <Menu
+          id={contextMenuId}
+          onVisibilityChange={onVisibilityChange}
+          animation={getMenuAnimation()}
+        >
           {enableReactions && (
             // eslint-disable-next-line @typescript-eslint/no-misused-promises
             <MessageReactBar
@@ -369,22 +383,30 @@ export const MessageContextMenu = (props: Props) => {
               messageId={messageId}
             />
           )}
-          {attachments?.length ? (
-            <Item onClick={saveAttachment}>{window.i18n('downloadAttachment')}</Item>
+          {attachments?.length && attachments.every(m => !m.pending && m.path) ? (
+            <ItemWithDataTestId onClick={saveAttachment}>{window.i18n('save')}</ItemWithDataTestId>
           ) : null}
-          <Item onClick={copyText}>{window.i18n('copyMessage')}</Item>
+          <ItemWithDataTestId onClick={copyText}>{window.i18n('copy')}</ItemWithDataTestId>
           {(isSent || !isOutgoing) && (
-            <Item onClick={onReply}>{window.i18n('replyToMessage')}</Item>
+            <ItemWithDataTestId onClick={onReply}>{window.i18n('reply')}</ItemWithDataTestId>
           )}
-          <Item
+          <ItemWithDataTestId
             onClick={() => {
               void showMessageInfoOverlay({ messageId, dispatch });
             }}
           >
-            {window.i18n('moreInformation')}
-          </Item>
+            <Localizer token="info" />
+          </ItemWithDataTestId>
+          {/* this is a message in the view, so always private */}
+          {sender && showCopyAccountIdAction({ isPrivate: true, pubkey: sender }) ? (
+            <CopyAccountIdMenuItem pubkey={sender} />
+          ) : null}
           <RetryItem messageId={messageId} />
-          {isDeletable ? <Item onClick={onSelect}>{selectMessageText}</Item> : null}
+          {isDeletable ? (
+            <ItemWithDataTestId onClick={onSelect}>
+              <Localizer token="messageSelect" />
+            </ItemWithDataTestId>
+          ) : null}
           <DeleteItem messageId={messageId} />
           <AdminActionItems messageId={messageId} />
         </Menu>

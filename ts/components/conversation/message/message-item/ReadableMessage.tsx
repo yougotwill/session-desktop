@@ -1,7 +1,10 @@
 import { debounce, noop } from 'lodash';
-import React, {
-  MouseEventHandler,
+import {
   SessionDataTestId,
+  AriaRole,
+  MouseEvent,
+  MouseEventHandler,
+  ReactNode,
   useCallback,
   useLayoutEffect,
   useState,
@@ -30,16 +33,16 @@ import { getIsAppFocused } from '../../../../state/selectors/section';
 import { useSelectedConversationKey } from '../../../../state/selectors/selectedConversation';
 
 export type ReadableMessageProps = {
-  children: React.ReactNode;
+  children: ReactNode;
   messageId: string;
   className?: string;
   receivedAt: number | undefined;
   isUnread: boolean;
   onClick?: MouseEventHandler<HTMLElement>;
   onDoubleClickCapture?: MouseEventHandler<HTMLElement>;
-  role?: string;
   dataTestId: SessionDataTestId;
-  onContextMenu?: (e: React.MouseEvent<HTMLElement>) => void;
+  role?: AriaRole;
+  onContextMenu?: (e: MouseEvent<HTMLElement>) => void;
   isControlMessage?: boolean;
 };
 

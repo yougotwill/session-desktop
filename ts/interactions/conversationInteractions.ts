@@ -1,7 +1,6 @@
 import { isNil } from 'lodash';
 import {
   ConversationNotificationSettingType,
-  ConversationTypeEnum,
   READ_MESSAGE_STATE,
 } from '../models/conversationAttributes';
 import { CallManager, PromiseUtils, SyncUtils, ToastUtils, UserUtils } from '../session/utils';
@@ -11,6 +10,7 @@ import { getCallMediaPermissionsSettings } from '../components/settings/SessionS
 import { Data } from '../data/data';
 import { SettingsKey } from '../data/settings-key';
 import { GroupV2Receiver } from '../receiver/groupv2/handleGroupV2Message';
+import { ConversationTypeEnum } from '../models/types';
 import { uploadFileToFsWithOnionV4 } from '../session/apis/file_server_api/FileServerApi';
 import { OpenGroupUtils } from '../session/apis/open_group_api/utils';
 import { getSwarmPollingInstance } from '../session/apis/snode_api';
@@ -35,6 +35,7 @@ import {
   changeNickNameModal,
   updateAddModeratorsModal,
   updateBanOrUnbanUserModal,
+  updateBlockOrUnblockModal,
   updateConfirmModal,
   updateGroupMembersModal,
   updateGroupNameModal,
@@ -42,27 +43,16 @@ import {
   updateRemoveModeratorsModal,
 } from '../state/ducks/modalDialog';
 import { MIME } from '../types';
-import { LocalizerKeys } from '../types/LocalizerKeys';
 import { IMAGE_JPEG } from '../types/MIME';
 import { processNewAttachment } from '../types/MessageAttachment';
 import { urlToBlob } from '../types/attachments/VisualAttachment';
-import { BlockedNumberController } from '../util/blockedNumberController';
 import { encryptProfile } from '../util/crypto/profileEncrypter';
 import { ReleasedFeatures } from '../util/releaseFeature';
 import { Storage, setLastProfileUpdateTimestamp } from '../util/storage';
 import { UserGroupsWrapperActions } from '../webworker/workers/browser/libsession_worker_interface';
-
-export enum ConversationInteractionStatus {
-  Start = 'start',
-  Loading = 'loading',
-  Error = 'error',
-  Complete = 'complete',
-}
-
-export enum ConversationInteractionType {
-  Hide = 'hide',
-  Leave = 'leave',
-}
+import { ConversationInteractionStatus, ConversationInteractionType } from './types';
+import { BlockedNumberController } from '../util';
+import { LocalizerComponentProps, LocalizerToken } from '../types/localizer';
 
 export async function copyPublicKeyByConvoId(convoId: string) {
   if (OpenGroupUtils.isOpenGroupV2(convoId)) {
@@ -83,33 +73,21 @@ export async function copyPublicKeyByConvoId(convoId: string) {
 }
 
 export async function blockConvoById(conversationId: string) {
-  const conversation = ConvoHub.use().get(conversationId);
-
-  if (!conversation.id || conversation.isPublic()) {
-    return;
-  }
-
-  await BlockedNumberController.block(conversation.id);
-  await conversation.commit();
-  ToastUtils.pushToastSuccess('blocked', window.i18n('blocked'));
+  window.inboxStore?.dispatch(
+    updateBlockOrUnblockModal({
+      action: 'block',
+      pubkeys: [conversationId],
+    })
+  );
 }
 
 export async function unblockConvoById(conversationId: string) {
-  const conversation = ConvoHub.use().get(conversationId);
-
-  if (!conversation) {
-    // we assume it's a block contact and not group.
-    // this is to be able to unlock a contact we don't have a conversation with.
-    await BlockedNumberController.unblockAll([conversationId]);
-    ToastUtils.pushToastSuccess('unblocked', window.i18n('unblocked'));
-    return;
-  }
-  if (!conversation.id || conversation.isPublic()) {
-    return;
-  }
-  await BlockedNumberController.unblockAll([conversationId]);
-  ToastUtils.pushToastSuccess('unblocked', window.i18n('unblocked'));
-  await conversation.commit();
+  window.inboxStore?.dispatch(
+    updateBlockOrUnblockModal({
+      action: 'unblock',
+      pubkeys: [conversationId],
+    })
+  );
 }
 
 export const handleAcceptConversationRequest = async ({ convoId }: { convoId: string }) => {
@@ -168,7 +146,7 @@ export const handleAcceptConversationRequest = async ({ convoId }: { convoId: st
       await PromiseUtils.timeout(pollAndSendResponsePromise, timeout);
     } catch (e) {
       window.log.warn(
-        `handleAcceptConversationRequest: waited ${timeout}ms for first poll of group ${ed25519Str(convoId)} to happen, but timedout with: ${e.message}`
+        `handleAcceptConversationRequest: waited ${timeout}ms for first poll of group ${ed25519Str(convoId)} to happen, but timed out with: ${e.message}`
       );
     }
   }
@@ -213,14 +191,15 @@ export async function declineConversationWithoutConfirm({
   await conversationToDecline.commit();
   if (alsoBlock) {
     if (PubKey.is03Pubkey(conversationId)) {
-      // Note: if we do want to block this convo, we actually want to block the person who invited us, not the 03 pubkey itself
+      // Note: if we do want to block this convo, we actually want to block the person who invited us, not the 03 pubkey itself.
+      // Also, we don't want to show the block/unblock modal in this case
+      // (we are on the WithoutConfirm function)
       if (conversationIdOrigin && !PubKey.is03Pubkey(conversationIdOrigin)) {
         // restoring from seed we can be missing the conversationIdOrigin, so we wouldn't be able to block the person who invited us
-
-        await blockConvoById(conversationIdOrigin);
+        await BlockedNumberController.block(conversationIdOrigin);
       }
     } else {
-      await blockConvoById(conversationId);
+      await BlockedNumberController.block(conversationId);
     }
   }
   // when removing a message request, without blocking it, we actually have no need to store the conversation in the wrapper. So just remove the entry
@@ -258,41 +237,30 @@ export const declineConversationWithConfirm = ({
   conversationIdOrigin: string | null;
 }) => {
   const isGroupV2 = PubKey.is03Pubkey(conversationId);
-
-  const okKey: LocalizerKeys = alsoBlock ? 'block' : 'delete';
-  const nameToBlock =
+  // restoring from seed we might not have the sender of that invite, so we need to take care of not having one (and not block)
+  const originNameToBlock =
     alsoBlock && !!conversationIdOrigin
       ? ConvoHub.use().get(conversationIdOrigin)?.getContactProfileNameOrShortenedPubKey()
       : null;
-  const messageKey: LocalizerKeys = isGroupV2
-    ? alsoBlock && nameToBlock
-      ? 'deleteGroupRequestAndBlock'
-      : 'deleteGroupRequest'
-    : 'declineRequestMessage';
 
-  let message = '';
-  // restoring from seeed we might not have the sender of that invite, so we need to take care of not having one (and not block)
-  if (isGroupV2 && messageKey === 'deleteGroupRequestAndBlock') {
-    if (!nameToBlock) {
-      throw new Error(
-        'deleteGroupRequestAndBlock needs a nameToBlock (or block should not be visible)'
-      );
-    }
+ const convoName =
+    ConvoHub.use().get(conversationId)?.getNicknameOrRealUsernameOrPlaceholder();
 
-    message = window.i18n(
-      messageKey,
-      messageKey === 'deleteGroupRequestAndBlock' ? [nameToBlock] : []
-    );
-  } else {
-    message = window.i18n(messageKey);
-  }
+const i18nMessage: LocalizerComponentProps<LocalizerToken> = isGroupV2
+		? alsoBlock && originNameToBlock
+			? { token: 'blockDescription', args: { name: originNameToBlock }}: // groupv2, and blocking by sender name
+			{ token: 'groupInviteDelete' } // groupv2, and no info about the sender, falling back to delete only
+		: alsoBlock
+        		? { token: 'blockDescription', args: { name: convoName } }
+        		: { token: 'messageRequestsDelete' };
+
 
   window?.inboxStore?.dispatch(
     updateConfirmModal({
-      okText: window.i18n(okKey),
+      okText: alsoBlock ? window.i18n('block') : window.i18n('delete'),
       cancelText: window.i18n('cancel'),
-      title: window.i18n(okKey),
-      message,
+      title: alsoBlock ? window.i18n('block') : window.i18n('delete'),
+      i18nMessage,
       okTheme: SessionButtonColor.Danger,
       closeTheme: SessionButtonColor.Primary,
       onClickOk: async () => {
@@ -340,10 +308,7 @@ export async function showUpdateGroupMembersByConvoId(conversationId: string) {
   window.inboxStore?.dispatch(updateGroupMembersModal({ conversationId }));
 }
 
-export function showLeavePrivateConversationbyConvoId(
-  conversationId: string,
-  name: string | undefined
-) {
+export function showLeavePrivateConversationbyConvoId(conversationId: string) {
   const conversation = ConvoHub.use().get(conversationId);
   const isMe = conversation.isMe();
 
@@ -382,10 +347,15 @@ export function showLeavePrivateConversationbyConvoId(
 
   window?.inboxStore?.dispatch(
     updateConfirmModal({
-      title: isMe ? window.i18n('hideConversation') : window.i18n('deleteConversation'),
-      message: isMe
-        ? window.i18n('hideNoteToSelfConfirmation')
-        : window.i18n('deleteConversationConfirmation', name ? [name] : ['']),
+      title: isMe ? window.i18n('noteToSelfHide') : window.i18n('conversationsDelete'),
+      i18nMessage: isMe
+        ? { token: 'noteToSelfHideDescription' }
+        : {
+            token: 'conversationsDeleteDescription',
+            args: {
+              name: conversation.getNicknameOrRealUsernameOrPlaceholder(),
+            },
+          },
       onClickOk,
       okText: isMe ? window.i18n('hide') : window.i18n('delete'),
       okTheme: SessionButtonColor.Danger,
@@ -492,10 +462,11 @@ export async function showLeaveGroupByConvoId(conversationId: string, name: stri
     // NOTE For legacy closed groups
     window?.inboxStore?.dispatch(
       updateConfirmModal({
-        title: window.i18n('leaveGroup'),
-        message: window.i18n('leaveGroupConfirmationOnlyAdminLegacy', [
-          name || window.i18n('unknown'),
-        ]),
+        title: window.i18n('groupLeave'),
+        i18nMessage: {
+          token: 'groupDeleteDescription',
+          args: { group_name: name || window.i18n('unknown') },
+        },
         onClickOk,
         okText: window.i18n('leave'),
         okTheme: SessionButtonColor.Danger,
@@ -512,8 +483,8 @@ export async function showLeaveGroupByConvoId(conversationId: string, name: stri
     // };
     // window?.inboxStore?.dispatch(
     //   updateConfirmModal({
-    //     title: window.i18n('leaveGroup'),
-    //     message: window.i18n('leaveGroupConfirmationOnlyAdmin', name ? [name] : ['']),
+    //     title: window.i18n('groupLeave'),
+    //     message: window.i18n('leaveGroupConfirmationOnlyAdmin', {name: name ?? ''}),
     //     messageSub: window.i18n('leaveGroupConfirmationOnlyAdminWarning'),
     //     onClickOk: onClickOkLastAdmin,
     //     okText: window.i18n('addModerator'),
@@ -529,8 +500,8 @@ export async function showLeaveGroupByConvoId(conversationId: string, name: stri
   } else if (isPublic || (isClosedGroup && !isAdmin)) {
     window?.inboxStore?.dispatch(
       updateConfirmModal({
-        title: isPublic ? window.i18n('leaveCommunity') : window.i18n('leaveGroup'),
-        message: window.i18n('leaveGroupConfirmation', name ? [name] : ['']),
+        title: isPublic ? window.i18n('communityLeave') : window.i18n('groupLeave'),
+        i18nMessage: { token: 'groupLeaveDescription', args: { group_name: name ?? '' } },
         onClickOk,
         okText: window.i18n('leave'),
         okTheme: SessionButtonColor.Danger,
@@ -586,6 +557,7 @@ export async function setNotificationForConvoId(
     await conversation.commit();
   }
 }
+
 export async function clearNickNameByConvoId(conversationId: string) {
   const conversation = ConvoHub.use().get(conversationId);
   await conversation.setNickname(null, true);
@@ -623,8 +595,8 @@ export function deleteAllMessagesByConvoIdWithConfirmation(conversationId: strin
 
   window?.inboxStore?.dispatch(
     updateConfirmModal({
-      title: window.i18n('deleteMessages'),
-      message: window.i18n('deleteMessagesConfirmation'),
+      title: window.i18n('deleteMessage', { count: 2 }), // count of 2 to get the plural "Messages Deleted"
+      i18nMessage: { token: 'deleteAfterGroupPR3DeleteMessagesConfirmation' },
       onClickOk,
       okTheme: SessionButtonColor.Danger,
       onClickClose,
@@ -642,7 +614,6 @@ export async function setDisappearingMessagesByConvoId(
   const canSetDisappearing = !conversation.isOutgoingRequest() && !conversation.isIncomingRequest();
 
   if (!canSetDisappearing) {
-    ToastUtils.pushMustBeApproved();
     return;
   }
 
@@ -666,7 +637,7 @@ export async function setDisappearingMessagesByConvoId(
 }
 
 /**
- * This function can be used for reupload our avatar to the fileserver or upload a new avatar.
+ * This function can be used for reupload our avatar to the file server or upload a new avatar.
  *
  * If this is a reupload, the old profileKey is used, otherwise a new one is generated
  */
@@ -724,7 +695,7 @@ export async function uploadOurAvatar(newAvatarDecrypted?: ArrayBuffer) {
 
   const avatarPointer = await uploadFileToFsWithOnionV4(encryptedData);
   if (!avatarPointer) {
-    window.log.warn('failed to upload avatar to fileserver');
+    window.log.warn('failed to upload avatar to file server');
     return null;
   }
   const { fileUrl, fileId } = avatarPointer;
@@ -846,10 +817,8 @@ export async function showLinkSharingConfirmationModalDialog(e: any) {
     if (!alreadyDisplayedPopup) {
       window.inboxStore?.dispatch(
         updateConfirmModal({
-          shouldShowConfirm:
-            !window.getSettingValue(SettingsKey.settingsLinkPreview) && !alreadyDisplayedPopup,
-          title: window.i18n('linkPreviewsTitle'),
-          message: window.i18n('linkPreviewsConfirmMessage'),
+          title: window.i18n('linkPreviewsEnable'),
+          i18nMessage: { token: 'linkPreviewsFirstDescription' },
           okTheme: SessionButtonColor.Danger,
           onClickOk: async () => {
             await window.setSettingValue(SettingsKey.settingsLinkPreview, true);
@@ -857,6 +826,7 @@ export async function showLinkSharingConfirmationModalDialog(e: any) {
           onClickClose: async () => {
             await Storage.put(SettingsKey.hasLinkPreviewPopupBeenDisplayed, true);
           },
+          okText: window.i18n('enable'),
         })
       );
     }
@@ -895,8 +865,8 @@ export async function callRecipient(pubkey: string, canCall: boolean) {
 
 /**
  * Updates the interaction state for a conversation. Remember to run clearConversationInteractionState() when the interaction is complete and we don't want to show it in the UI anymore.
- * @param conversationId id of the converation we want to interact with
- * @param type the type of conversation interaciton we are doing
+ * @param conversationId id of the conversation we want to interact with
+ * @param type the type of conversation interaction we are doing
  * @param status the status of that interaction
  */
 export async function updateConversationInteractionState({

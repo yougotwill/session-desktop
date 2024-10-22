@@ -14,17 +14,16 @@ You're most likely to have your pull request accepted if it addresses an existin
 
 Of course we encourage community developers to work on ANY issue filed on our Github regardless of how it’s tagged, however if you pick up or create an issue without the “Good first issue” tag it would be best if you leave a comment on the issue so that the core team can give you any guidance required, especially around UI heavy features or issues which require cross platform integration.
 
-## Developer Setup
+## Developer Setup Tips
 
-First, you'll need [Node.js](https://nodejs.org/) which matches our current version.
-You can check [`.nvmrc` in the `clearnet` branch](https://github.com/oxen-io/session-desktop/blob/clearnet/.nvmrc) to see what the current version is. If you have [nvm](https://github.com/creationix/nvm)
-you can just run `nvm use` in the project directory and it will switch to the project's
-desired Node.js version.
+## Node.js
 
-If you are using Windows [nvm for windows](https://github.com/coreybutler/nvm-windows) is
-still useful, but it doesn't support `.nvmrc` files. In this case you will need to `nvm install` the projects node version and `nvm use` the installed version
+You'll need a [Node.js](https://nodejs.org/) version which matches our current version. You can check [`.nvmrc` in the `unstable` branch](https://github.com/oxen-io/session-desktop/blob/unstable/.nvmrc) to see what the current version is.
 
-Then you need `git`, if you don't have that yet: https://git-scm.com/
+If you use other node versions you might have or need a node version manager.
+
+- [nvm](https://github.com/creationix/nvm) - you can run `nvm use` in the project directory and it will use the node version specified in `.nvmrc`.
+- Some node version management tools can read from the `.nvmrc` file and automatically make the change. If you use [asdf](https://asdf-vm.com/) you can make a [config change](https://asdf-vm.com/guide/getting-started.html#using-existing-tool-version-files) to support the `.nvmrc` file.
 
 ## Platform Specific Instructions
 
@@ -34,7 +33,88 @@ Then you need `git`, if you don't have that yet: https://git-scm.com/
 
 ### Windows
 
-Building on Windows is a pain, but is possible see our CI/Windows build machine prerequisites here [Windows-2022 GH image](https://github.com/actions/runner-images/blob/main/images/win/Windows2022-Readme.md)
+Building on Windows can be a bit tricky. You can set this up manually, but we recommend using [Chocolatey](https://chocolatey.org/) to install the necessary dependencies.
+
+The following instructions will install the following:
+
+- [Git](https://git-scm.com/download/win)
+- [CMake](https://cmake.org/download/)
+- [Visual Studio 2022](https://visualstudio.microsoft.com/downloads/)
+- [Visual Studio C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/)
+- [Node.js](https://nodejs.org/en/download/)
+- [Python](https://www.python.org/downloads/)
+
+Setup instructions for Windows using Chocolatey:
+
+- Open PowerShell as Administrator
+
+- Install [Chocolatey](https://docs.chocolatey.org/en-us/choco/setup#installing-chocolatey-cli)
+
+  ```PowerShell
+  Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+  ```
+
+- Install [Git](https://git-scm.com/download/win)
+
+  ```shell
+  choco install git
+  ```
+
+- Install [CMake](https://cmake.org/download/)
+
+  CMake does not add itself to the system path by default, so you'll need specify the `ADD_CMAKE_TO_PATH` argument.
+
+  ```shell
+  choco install cmake --installargs 'ADD_CMAKE_TO_PATH=System'
+  ```
+
+- Install [Visual Studio 2022](https://visualstudio.microsoft.com/downloads/)
+
+  ```shell
+  choco install visualstudio2022community
+  ```
+
+- Install [Visual C++ build tools workload for Visual Studio 2022](https://community.chocolatey.org/packages/visualstudio2022-workload-vctools)
+
+  ```shell
+  choco install visualstudio2022-workload-vctools
+  ```
+
+- Install [Node.js](https://nodejs.org/en/download/) 18.15.0
+
+  If you have multiple node version installed and/or use a node version manager you should install a Node how you normally would.
+
+  If you are using [nvm for windows](https://github.com/coreybutler/nvm-windows) you will need to run `nvm install <version>` and `nvm use <version>` as it doesn't support `.nvmrc` files.
+
+  ```shell
+  choco install nodejs --version 18.15.0
+  ```
+
+- Install [Python](https://www.python.org/downloads/) 3.12.2
+
+  ```shell
+  choco install python --version 3.12.2
+  ```
+
+- Install [setuptools](https://pypi.org/project/setuptools/)
+
+  Setuptools was removed in python 3.12, so you'll need to install it manually.
+
+  ```shell
+  pip install setuptools
+  ```
+
+- Install [Yarn Classic](https://classic.yarnpkg.com/en/docs/install/#windows-stable)
+
+  ```shell
+  npm install --global yarn
+  ```
+
+  You'll likely encounter an issue with windows preventing you from running scripts when you run the `yarn` command, See: [Exclusion Policies](https:/go.microsoft.com/fwlink/?LinkID=135170). If you do, you can fix it by running the following command:
+
+  ```PowerShell
+  Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+  ```
 
 ### Linux
 
@@ -42,16 +122,17 @@ Building on Windows is a pain, but is possible see our CI/Windows build machine 
 2.  Depending on your distro, you might need to install `hunspell` and `hunspell-<lan>` (e.g. `hunspell-en-au`)
 
 In Ubuntu, you may also need to install
+
 ```
 sudo apt install cmake
 npm install cmake-js
 ```
 
 In Fedora, you may also need to install
+
 ```
 sudo dnf install make automake gcc gcc-c++ kernel-devel
 ```
-
 
 ### All platforms
 
@@ -156,7 +237,7 @@ So you wanna make a pull request? Please observe the following guidelines.
   this script generates updated TypeScript type definitions to ensure you aren't
   using a localisation key which doesn't exist.
 - Please do not submit pull requests for pure translation fixes. Anyone can update
-  the translations at [Crowdin](https://crowdin.com/project/session-desktop).
+  the translations at [Crowdin](https://getsession.org/translate).
 - [Rebase](https://nathanleclaire.com/blog/2014/09/14/dont-be-scared-of-git-rebase/) your
   changes on the latest `clearnet` branch, resolving any conflicts.
   This ensures that your changes will merge cleanly when you open your PR.
@@ -193,3 +274,5 @@ You can build a production binary by running the following:
 yarn build-everything
 yarn build-release
 ```
+
+On linux, you can change in package.json `"target": ["deb"],` to any of the [electron-builder targets](https://www.electron.build/linux#target) to build for another target.

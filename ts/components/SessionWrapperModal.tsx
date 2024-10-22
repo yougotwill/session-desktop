@@ -1,24 +1,34 @@
 import classNames from 'classnames';
-import React, { useRef } from 'react';
+import { ReactNode, useRef } from 'react';
 import useKey from 'react-use/lib/useKey';
 
+import styled from 'styled-components';
 import { SessionIconButton } from './icon';
 
 import { SessionButton, SessionButtonColor, SessionButtonType } from './basic/SessionButton';
 import { StyledRootDialog } from './dialog/StyledRootDialog';
 import { SessionFocusTrap } from './SessionFocusTrap';
+import { Flex } from './basic/Flex';
+import { SpacerXL } from './basic/Text';
+
+const StyledTitle = styled.div`
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  padding: 0 var(--margins-sm);
+`;
 
 export type SessionWrapperModalType = {
   title?: string;
   showHeader?: boolean;
   onConfirm?: () => void;
-  onClose?: () => void;
+  onClose?: (event?: KeyboardEvent) => void;
   showClose?: boolean;
   confirmText?: string;
   cancelText?: string;
   showExitIcon?: boolean;
   headerIconButtons?: Array<any>;
-  children: React.ReactNode;
+  children: ReactNode;
   headerReverse?: boolean;
   additionalClassName?: string;
 };
@@ -40,8 +50,8 @@ export const SessionWrapperModal = (props: SessionWrapperModalType) => {
 
   useKey(
     'Esc',
-    () => {
-      props.onClose?.();
+    event => {
+      props.onClose?.(event);
     },
     undefined,
     [props.onClose]
@@ -49,8 +59,8 @@ export const SessionWrapperModal = (props: SessionWrapperModalType) => {
 
   useKey(
     'Escape',
-    () => {
-      props.onClose?.();
+    event => {
+      props.onClose?.(event);
     },
     undefined,
     [props.onClose]
@@ -74,34 +84,73 @@ export const SessionWrapperModal = (props: SessionWrapperModalType) => {
         <div className="session-confirm-wrapper">
           <div ref={modalRef} className="session-modal">
             {showHeader ? (
-              <div className={classNames('session-modal__header', headerReverse && 'reverse')}>
-                <div className="session-modal__header__close">
+              <Flex
+                container={true}
+                flexDirection={headerReverse ? 'row-reverse' : 'row'}
+                justifyContent={'space-between'}
+                alignItems={'center'}
+                padding={'var(--margins-lg)'}
+                className={'session-modal__header'}
+              >
+                <Flex
+                  container={true}
+                  flexDirection={headerReverse ? 'row-reverse' : 'row'}
+                  alignItems={'center'}
+                  padding={'0'}
+                  margin={'0'}
+                  className={'session-modal__header__close'}
+                >
                   {showExitIcon ? (
                     <SessionIconButton
                       iconType="exit"
                       iconSize="small"
-                      onClick={props.onClose}
+                      onClick={() => {
+                        props.onClose?.();
+                      }}
+                      padding={'5px'}
+                      margin={'0'}
                       dataTestId="modal-close-button"
                     />
                   ) : null}
-                </div>
-                <div className="session-modal__header__title">{title}</div>
-                <div className="session-modal__header__icons">
-                  {headerIconButtons
-                    ? headerIconButtons.map((iconItem: any) => {
-                        return (
-                          <SessionIconButton
-                            key={iconItem.iconType}
-                            iconType={iconItem.iconType}
-                            iconSize={'large'}
-                            iconRotation={iconItem.iconRotation}
-                            onClick={iconItem.onClick}
-                          />
-                        );
+                  {headerIconButtons?.length
+                    ? headerIconButtons.map((_, index) => {
+                        const offset = showExitIcon
+                          ? headerIconButtons.length - 2
+                          : headerIconButtons.length - 1;
+                        if (index > offset) {
+                          return null;
+                        }
+                        return <SpacerXL key={`session-modal__header_space-${index}`} />;
                       })
                     : null}
-                </div>
-              </div>
+                </Flex>
+                <StyledTitle className="session-modal__header__title">{title}</StyledTitle>
+                <Flex
+                  container={true}
+                  flexDirection={headerReverse ? 'row-reverse' : 'row'}
+                  alignItems={'center'}
+                  padding={'0'}
+                  margin={'0'}
+                >
+                  {headerIconButtons?.length ? (
+                    headerIconButtons.map((iconItem: any) => {
+                      return (
+                        <SessionIconButton
+                          key={iconItem.iconType}
+                          iconType={iconItem.iconType}
+                          iconSize={'large'}
+                          iconRotation={iconItem.iconRotation}
+                          onClick={iconItem.onClick}
+                          padding={'0'}
+                          margin={'0'}
+                        />
+                      );
+                    })
+                  ) : showExitIcon ? (
+                    <SpacerXL />
+                  ) : null}
+                </Flex>
+              </Flex>
             ) : null}
 
             <div className="session-modal__body">
@@ -111,7 +160,7 @@ export const SessionWrapperModal = (props: SessionWrapperModalType) => {
                 <div className="session-modal__button-group">
                   {onConfirm ? (
                     <SessionButton buttonType={SessionButtonType.Simple} onClick={props.onConfirm}>
-                      {confirmText || window.i18n('ok')}
+                      {confirmText || window.i18n('okay')}
                     </SessionButton>
                   ) : null}
                   {onClose && showClose ? (

@@ -1,5 +1,5 @@
 import classNames from 'classnames';
-import React from 'react';
+import { CSSProperties } from 'react';
 
 import {
   useIsPrivate,
@@ -16,12 +16,11 @@ type Props = {
     | 'module-message-search-result__header__name'
     | 'module-message__author';
   boldProfileName?: boolean;
-  compact?: boolean;
   shouldShowPubkey: boolean;
 };
 
 export const ContactName = (props: Props) => {
-  const { pubkey, name, profileName, module, boldProfileName, compact, shouldShowPubkey } = props;
+  const { pubkey, name, profileName, module, boldProfileName, shouldShowPubkey } = props;
   const prefix = module || 'module-contact-name';
 
   const convoName = useNicknameOrProfileNameOrShortenedPubkey(pubkey);
@@ -32,7 +31,7 @@ export const ContactName = (props: Props) => {
     'min-width': 0,
     'text-overflow': 'ellipsis',
     overflow: 'hidden',
-  } as React.CSSProperties;
+  } as CSSProperties;
 
   const styles = (
     boldProfileName
@@ -41,12 +40,12 @@ export const ContactName = (props: Props) => {
           ...commonStyles,
         }
       : commonStyles
-  ) as React.CSSProperties;
+  ) as CSSProperties;
   const textProfile = profileName || name || convoName || window.i18n('anonymous');
 
   return (
     <span
-      className={classNames(prefix, compact && 'compact')}
+      className={classNames(prefix)}
       dir="auto"
       data-testid={`${prefix}__profile-name` as const}
       style={{

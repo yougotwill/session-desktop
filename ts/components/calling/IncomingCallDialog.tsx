@@ -1,15 +1,15 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { useSelector } from 'react-redux';
 
 import styled from 'styled-components';
 import { useConversationUsername } from '../../hooks/useParamSelector';
 import { CallManager } from '../../session/utils';
+import { ed25519Str } from '../../session/utils/String';
 import { callTimeoutMs } from '../../session/utils/calling/CallManager';
 import { getHasIncomingCall, getHasIncomingCallFrom } from '../../state/selectors/call';
+import { SessionWrapperModal } from '../SessionWrapperModal';
 import { Avatar, AvatarSize } from '../avatar/Avatar';
 import { SessionButton, SessionButtonColor, SessionButtonType } from '../basic/SessionButton';
-import { SessionWrapperModal } from '../SessionWrapperModal';
-import { ed25519Str } from '../../session/utils/String';
 
 export const CallWindow = styled.div`
   position: absolute;
@@ -72,10 +72,15 @@ export const IncomingCallDialog = () => {
   if (!hasIncomingCall || !incomingCallFromPubkey) {
     return null;
   }
+  // #endregion
 
   if (hasIncomingCall) {
     return (
-      <SessionWrapperModal title={window.i18n('incomingCallFrom', [from || 'unknown'])}>
+      <SessionWrapperModal
+        title={window.i18n('callsIncoming', {
+          name: from ?? window.i18n('unknown'),
+        })}
+      >
         <IncomingCallAvatarContainer>
           <Avatar size={AvatarSize.XL} pubkey={incomingCallFromPubkey} />
         </IncomingCallAvatarContainer>

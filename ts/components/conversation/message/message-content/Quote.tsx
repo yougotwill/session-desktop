@@ -1,6 +1,6 @@
 import classNames from 'classnames';
-import React, { useState } from 'react';
 import { noop } from 'lodash';
+import { MouseEvent, useState } from 'react';
 
 import * as MIME from '../../../../types/MIME';
 import * as GoogleChrome from '../../../../util/GoogleChrome';
@@ -14,6 +14,8 @@ import {
 } from '../../../../state/selectors/selectedConversation';
 import { ContactName } from '../../ContactName';
 import { MessageBody } from './MessageBody';
+import { Localizer } from '../../../basic/Localizer';
+import { AriaLabels } from '../../../../util/hardcodedAriaLabels';
 
 export type QuotePropsWithoutListener = {
   attachment?: QuotedAttachmentType;
@@ -27,7 +29,7 @@ export type QuotePropsWithoutListener = {
 };
 
 export type QuotePropsWithListener = QuotePropsWithoutListener & {
-  onClick?: (e: React.MouseEvent<HTMLDivElement>) => void;
+  onClick?: (e: MouseEvent<HTMLDivElement>) => void;
 };
 
 export interface QuotedAttachmentType {
@@ -75,10 +77,10 @@ function getTypeLabel({
     return window.i18n('video');
   }
   if (GoogleChrome.isImageTypeSupported(contentType)) {
-    return window.i18n('photo');
+    return window.i18n('image');
   }
   if (MIME.isAudio(contentType) && isVoiceMessage) {
-    return window.i18n('voiceMessage');
+    return window.i18n('messageVoice');
   }
   if (MIME.isAudio(contentType)) {
     return window.i18n('audio');
@@ -86,6 +88,7 @@ function getTypeLabel({
 
   return undefined;
 }
+
 export const QuoteIcon = (props: any) => {
   const { icon } = props;
 
@@ -134,9 +137,9 @@ export const QuoteImage = (props: {
     <div className="module-quote__icon-container">
       <img
         src={srcData}
-        alt={window.i18n('quoteThumbnailAlt')}
         onDragStart={disableDrag}
         onError={handleImageErrorBound}
+        alt={AriaLabels.quoteImageThumbnail}
       />
       {iconElement}
     </div>
@@ -218,7 +221,8 @@ export const QuoteIconContainer = (
   if (MIME.isAudio(contentType)) {
     return <QuoteIcon icon="microphone" />;
   }
-  return null;
+
+  return <QuoteIcon icon="file" />;
 };
 
 export const QuoteText = (
@@ -291,7 +295,6 @@ const QuoteAuthor = (props: QuoteAuthorProps) => {
           pubkey={PubKey.shorten(author)}
           name={authorName}
           profileName={authorProfileName}
-          compact={true}
           shouldShowPubkey={Boolean(props.showPubkeyForAuthor)}
         />
       )}
@@ -329,7 +332,7 @@ export const QuoteReferenceWarning = (
           isIncoming ? 'module-quote__reference-warning__text--incoming' : null
         )}
       >
-        {window.i18n('originalMessageNotFound')}
+        <Localizer token="messageErrorOriginal" />
       </div>
     </div>
   );

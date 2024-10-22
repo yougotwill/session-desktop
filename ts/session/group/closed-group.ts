@@ -4,7 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { getMessageQueue } from '..';
 import { Data } from '../../data/data';
 import { ConversationModel } from '../../models/conversation';
-import { ConversationAttributes, ConversationTypeEnum } from '../../models/conversationAttributes';
+import { ConversationAttributes } from '../../models/conversationAttributes';
 import { MessageModel } from '../../models/message';
 import { MessageAttributesOptionals, MessageGroupUpdate } from '../../models/messageType';
 import { SignalService } from '../../protobuf';
@@ -33,6 +33,7 @@ import { PubKey } from '../types';
 import { UserUtils } from '../utils';
 import { fromHexToArray, toHex } from '../utils/String';
 import { PreConditionFailed } from '../utils/errors';
+import { ConversationTypeEnum } from '../../models/types';
 
 export type GroupInfo = {
   id: string;
@@ -63,7 +64,7 @@ async function initiateClosedGroupUpdate(
 ) {
   const isGroupV2 = PubKey.is03Pubkey(groupId);
   if (isGroupV2) {
-    throw new PreConditionFailed('initiateClosedGroupUpdate does not handle closedgroupv2');
+    throw new PreConditionFailed('initiateClosedGroupUpdate does not handle closed groupv2');
   }
   const convo = await ConvoHub.use().getOrCreateAndWait(groupId, ConversationTypeEnum.GROUP);
 
@@ -201,7 +202,7 @@ export async function addUpdateMessage({
   /**
    * When we receive an update from our linked device, it is an outgoing message
    *   but which was obviously already synced (as we got it).
-   * When that's the case we need to makr the message as sent right away,
+   * When that's the case we need to mark the message as sent right away,
    *   so the MessageStatus 'sending' state is not shown for the last message in the left pane.
    */
   if (msgAttrs.type === 'outgoing' && markAlreadySent) {
@@ -479,7 +480,7 @@ async function generateAndSendNewEncryptionKeyPair(
     distributingClosedGroupEncryptionKeyPairs.delete(toHex(groupId));
 
     await addKeyPairToCacheAndDBIfNeeded(toHex(groupId), newKeyPair.toHexKeyPair());
-    await groupConvo?.commit(); // this makes sure to include the new encryption keypair in the libsession usergroup wrapper
+    await groupConvo?.commit(); // this makes sure to include the new encryption key pair in the libsession user group wrapper
   };
 
   // this is to be sent to the group pubkey address

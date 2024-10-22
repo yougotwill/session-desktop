@@ -10,9 +10,10 @@ export type RetrieveMessageItem = {
   storedAt: number; // **not** the envelope timestamp, but when the message was effectively stored on the snode
 };
 
+
 export type RetrieveMessageItemWithNamespace = RetrieveMessageItem & {
   namespace: SnodeNamespaces; // the namespace from which this message was fetched
-};
+}
 
 export type RetrieveMessagesResultsContent = {
   hf?: Array<number>;

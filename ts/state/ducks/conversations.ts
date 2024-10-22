@@ -4,12 +4,8 @@ import { PubkeyType } from 'libsession_util_nodejs';
 import { omit, toNumber } from 'lodash';
 import { ReplyingToMessageProps } from '../../components/conversation/composition/CompositionBox';
 import { QuotedAttachmentType } from '../../components/conversation/message/message-content/quote/Quote';
-import { LightBoxOptions } from '../../components/conversation/SessionConversation';
 import { Data } from '../../data/data';
-import {
-  ConversationInteractionStatus,
-  ConversationInteractionType,
-} from '../../interactions/conversationInteractions';
+
 import {
   CONVERSATION_PRIORITIES,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -29,13 +25,14 @@ import {
   DisappearingMessageType,
 } from '../../session/disappearing_messages/types';
 import { ReactionList } from '../../types/Reaction';
-
-export type CallNotificationType = 'missed-call' | 'started-call' | 'answered-a-call';
-
-export type PropsForCallNotification = {
-  notificationType: CallNotificationType;
-  messageId: string;
-};
+import { resetRightOverlayMode } from './section';
+import {
+  LastMessageStatusType,
+  LastMessageType,
+  PropsForCallNotification,
+  PropsForInteractionNotification,
+} from './types';
+import { AttachmentType } from '../../types/Attachment';
 
 export type MessageModelPropsWithoutConvoProps = {
   propsForMessage: PropsForMessageWithoutConvoProps;
@@ -62,8 +59,6 @@ export type ContactPropsMessageDetail = {
   avatarPath?: string | null;
   errors?: Array<Error>;
 };
-
-export type LastMessageStatusType = 'sending' | 'sent' | 'read' | 'error' | undefined;
 
 export type FindAndFormatContactType = {
   pubkey: string;
@@ -148,35 +143,13 @@ export type PropsForGroupInvitation = {
   messageId: string;
 };
 
-export type PropsForAttachment = {
+export type PropsForAttachment = AttachmentType & {
   id: number;
-  contentType: string;
-  caption?: string;
-  size: number;
-  width?: number;
-  height?: number;
-  duration?: string;
-  url: string;
-  path: string;
-  fileSize: string | null;
   isVoiceMessage: boolean;
+  size: number;
+  path: string;
   pending: boolean;
-  fileName: string;
-  error?: number; // if the download somhehow failed, this will be set to true and be 0-1 once saved in the db
-  screenshot: {
-    contentType: string;
-    width: number;
-    height: number;
-    url?: string;
-    path?: string;
-  } | null;
-  thumbnail: {
-    contentType: string;
-    width: number;
-    height: number;
-    url?: string;
-    path?: string;
-  } | null;
+  error?: number; // if the download somehow failed, this will be set to true and be 0 or 1 in the db
 };
 
 export type PropsForQuote = {
@@ -187,14 +160,6 @@ export type PropsForQuote = {
   id?: string; // this is the quoted message timestamp
   isFromMe?: boolean;
   referencedMessageNotFound?: boolean;
-};
-
-export type PropsForInteractionNotification = {
-  notificationType: InteractionNotificationType;
-  convoId: string;
-  messageId: string;
-  receivedAt: number;
-  isUnread: boolean;
 };
 
 export type PropsForMessageWithoutConvoProps = {
@@ -234,18 +199,6 @@ export type PropsForMessageWithConvoProps = PropsForMessageWithoutConvoProps & {
   isDeletableForEveryone: boolean;
   isBlocked: boolean;
   isDeleted?: boolean;
-};
-
-export type LastMessageType = {
-  status: LastMessageStatusType;
-  text: string | null;
-  interactionType: ConversationInteractionType | null;
-  interactionStatus: ConversationInteractionStatus | null;
-};
-
-export type InteractionNotificationType = {
-  interactionType: ConversationInteractionType;
-  interactionStatus: ConversationInteractionStatus;
 };
 
 /**
@@ -325,7 +278,6 @@ export type ConversationsStateType = {
   messageInfoId: string | undefined;
   showRightPanel: boolean;
   selectedMessageIds: Array<string>;
-  lightBox?: LightBoxOptions;
   quotedMessage?: ReplyingToMessageProps;
   areMoreMessagesBeingFetched: boolean;
 
@@ -914,7 +866,6 @@ const conversationsSlice = createSlice({
         showRightPanel: false,
         selectedMessageIds: [],
 
-        lightBox: undefined,
         messageInfoId: undefined,
         quotedMessage: undefined,
 
@@ -978,13 +929,6 @@ const conversationsSlice = createSlice({
     },
     resetOldBottomMessageId(state: ConversationsStateType) {
       state.oldBottomMessageId = null;
-      return state;
-    },
-    showLightBox(
-      state: ConversationsStateType,
-      action: PayloadAction<LightBoxOptions | undefined>
-    ) {
-      state.lightBox = action.payload;
       return state;
     },
     showScrollToBottomButton(state: ConversationsStateType, action: PayloadAction<boolean>) {
@@ -1187,7 +1131,6 @@ export const {
   addMessageIdToSelection,
   resetSelectedMessageIds,
   toggleSelectedMessageId,
-  showLightBox,
   quoteMessage,
   showScrollToBottomButton,
   quotedMessageToAnimate,
@@ -1231,6 +1174,7 @@ export async function openConversationWithMessages(args: {
       initialQuotes,
     })
   );
+  window.inboxStore?.dispatch(resetRightOverlayMode());
 }
 
 export async function openConversationToSpecificMessage(args: {

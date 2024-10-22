@@ -10,10 +10,9 @@ import { IncomingMessageCache } from './cache';
 import { Data } from '../data/data';
 import { SettingsKey } from '../data/settings-key';
 import {
-  deleteMessagesFromSwarmAndCompletelyLocally,
-  deleteMessagesFromSwarmAndMarkAsDeletedLocally,
+    deleteMessagesFromSwarmAndCompletelyLocally,
+    deleteMessagesFromSwarmAndMarkAsDeletedLocally,
 } from '../interactions/conversations/unsendingInteractions';
-import { CONVERSATION_PRIORITIES, ConversationTypeEnum } from '../models/conversationAttributes';
 import { findCachedBlindedMatchOrLookupOnAllServers } from '../session/apis/open_group_api/sogsv3/knownBlindedkeys';
 import { ConvoHub } from '../session/conversations';
 import { concatUInt8Array, getSodiumRenderer } from '../session/crypto';
@@ -21,7 +20,7 @@ import { removeMessagePadding } from '../session/crypto/BufferPadding';
 import { DisappearingMessages } from '../session/disappearing_messages';
 import { ReadyToDisappearMsgUpdate } from '../session/disappearing_messages/types';
 import { ProfileManager } from '../session/profile_manager/ProfileManager';
-import { GroupUtils, UserUtils } from '../session/utils';
+import { UserUtils } from '../session/utils';
 import { perfEnd, perfStart } from '../session/utils/Performance';
 import { ed25519Str, fromHexToArray, toHex } from '../session/utils/String';
 import { isUsFromCache } from '../session/utils/User';
@@ -30,12 +29,13 @@ import { BlockedNumberController } from '../util';
 import { ReadReceipts } from '../util/readReceipts';
 import { Storage } from '../util/storage';
 import {
-  ContactsWrapperActions,
-  MetaGroupWrapperActions,
+    ContactsWrapperActions,
+    MetaGroupWrapperActions,
 } from '../webworker/workers/browser/libsession_worker_interface';
 import { handleCallMessage } from './callMessage';
 import { getAllCachedECKeyPair, sentAtMoreRecentThanWrapper } from './closedGroups';
 import { ECKeyPair } from './keypairs';
+import { CONVERSATION_PRIORITIES, ConversationTypeEnum } from '../models/types';
 
 export async function handleSwarmContentMessage(
   envelope: EnvelopePlus,
@@ -71,10 +71,7 @@ async function decryptForClosedGroup(
   window?.log?.info('received closed group message');
   try {
     const hexEncodedGroupPublicKey = envelope.source;
-    if (!GroupUtils.isClosedGroup(PubKey.cast(hexEncodedGroupPublicKey))) {
-      window?.log?.warn('received medium group message but not for an existing medium group');
-      throw new Error('Invalid group public key'); // invalidGroupPublicKey
-    }
+
     const encryptionKeyPairs = await getAllCachedECKeyPair(hexEncodedGroupPublicKey);
 
     const encryptionKeyPairsCount = encryptionKeyPairs?.length;
@@ -316,8 +313,12 @@ async function shouldDropIncomingPrivateMessage(
   envelope: EnvelopePlus,
   content: SignalService.Content
 ) {
+  const isUs = UserUtils.isUsFromCache(envelope.source);
   // sentAtMoreRecentThanWrapper is going to be true, if the latest contact wrapper we processed was roughly more recent that this message timestamp
-  const moreRecentOrNah = await sentAtMoreRecentThanWrapper(sentAtTimestamp, 'ContactsConfig');
+  const moreRecentOrNah = await sentAtMoreRecentThanWrapper(
+    sentAtTimestamp,
+    isUs ? 'UserConfig' : 'ContactsConfig'
+  );
   const isSyncedMessage = isUsFromCache(envelope.source);
 
   if (moreRecentOrNah === 'wrapper_more_recent') {
@@ -329,30 +330,50 @@ async function shouldDropIncomingPrivateMessage(
         ? content.dataMessage?.syncTarget || undefined
         : envelope.source;
 
+      // handle the `us` case first, as we will never find ourselves in the contacts wrapper. The NTS details are in the UserProfile wrapper.
+      if (isUs) {
+        const us = ConvoHub.use().get(envelope.source);
+        const ourPriority = us?.get('priority') || CONVERSATION_PRIORITIES.default;
+        if (us && ourPriority <= CONVERSATION_PRIORITIES.hidden) {
+          // if the wrapper data is more recent than this message and the NTS conversation is hidden, just drop this incoming message to avoid showing the NTS conversation again.
+          window.log.info(
+            `shouldDropIncomingPrivateMessage: received message in NTS which appears to be hidden in our most recent libsession userconfig, sentAt: ${sentAtTimestamp}. Dropping it`
+          );
+          return true;
+        }
+        window.log.info(
+          `shouldDropIncomingPrivateMessage: received message on conversation ${syncTargetOrSource} which appears to NOT be hidden/removed in our most recent libsession userconfig, sentAt: ${sentAtTimestamp}. `
+        );
+        return false;
+      }
+
       if (!syncTargetOrSource) {
         return false;
       }
 
-      const privateConvoInWrapper = await ContactsWrapperActions.get(syncTargetOrSource);
-      if (
-        !privateConvoInWrapper ||
-        privateConvoInWrapper.priority <= CONVERSATION_PRIORITIES.hidden
-      ) {
-        // the wrapper is more recent that this message and there is no such private conversation. Just drop this incoming message.
-        window.log.info(
-          `received message on conversation ${syncTargetOrSource} which appears to be hidden/removed in our most recent libsession contactconfig, sentAt: ${sentAtTimestamp}. Dropping it`
-        );
-        return true;
-      }
+      if (syncTargetOrSource.startsWith('05')) {
+        const privateConvoInWrapper = await ContactsWrapperActions.get(syncTargetOrSource);
+        if (
+          !privateConvoInWrapper ||
+          privateConvoInWrapper.priority <= CONVERSATION_PRIORITIES.hidden
+        ) {
+          // the wrapper is more recent that this message and there is no such private conversation. Just drop this incoming message.
+          window.log.info(
+            `shouldDropIncomingPrivateMessage: received message on conversation ${syncTargetOrSource} which appears to be hidden/removed in our most recent libsession contactconfig, sentAt: ${sentAtTimestamp}. Dropping it`
+          );
+          return true;
+        }
 
-      window.log.info(
-        `received message on conversation ${syncTargetOrSource} which appears to NOT be hidden/removed in our most recent libsession contactconfig, sentAt: ${sentAtTimestamp}. `
-      );
+        window.log.info(
+          `shouldDropIncomingPrivateMessage: received message on conversation ${syncTargetOrSource} which appears to NOT be hidden/removed in our most recent libsession contactconfig, sentAt: ${sentAtTimestamp}. `
+        );
+      } else {
+        window.log.info(
+          `shouldDropIncomingPrivateMessage: received message on conversation ${syncTargetOrSource} but neither NTS not 05. Probably nothing to do but let it through. `
+        );
+      }
     } catch (e) {
-      window.log.warn(
-        'ContactsWrapperActions.get in handleSwarmDataMessage failed with',
-        e.message
-      );
+      window.log.warn('shouldDropIncomingPrivateMessage: failed with', e.message);
     }
   }
   return false;

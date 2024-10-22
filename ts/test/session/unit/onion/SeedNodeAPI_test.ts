@@ -6,10 +6,11 @@ import Sinon from 'sinon';
 import { Onions } from '../../../../session/apis/snode_api';
 import { TestUtils } from '../../../test-utils';
 
-import { Snode } from '../../../../data/data';
+import { SnodePool } from '../../../../session/apis/snode_api/snodePool';
+
+import { Snode } from '../../../../data/types';
 import { SeedNodeAPI } from '../../../../session/apis/seed_node_api';
 import { SnodeFromSeed } from '../../../../session/apis/seed_node_api/SeedNodeAPI';
-import { SnodePool } from '../../../../session/apis/snode_api/snodePool';
 import * as OnionPaths from '../../../../session/onions/onionPath';
 import { generateFakeSnodes, generateFakeSnodeWithEdKey } from '../../../test-utils/utils';
 
@@ -36,6 +37,7 @@ const fakeSnodePoolFromSeedNode: Array<SnodeFromSeed> = fakeSnodePool.map(m => {
     storage_port: m.port,
     pubkey_x25519: m.pubkey_x25519,
     pubkey_ed25519: m.pubkey_ed25519,
+    storage_server_version: m.storage_server_version,
   };
 });
 

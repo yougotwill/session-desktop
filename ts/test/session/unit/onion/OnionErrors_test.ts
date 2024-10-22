@@ -7,8 +7,8 @@ import Sinon, * as sinon from 'sinon';
 import * as SnodeAPI from '../../../../session/apis/snode_api';
 import { TestUtils } from '../../../test-utils';
 
-import { Snode } from '../../../../data/data';
 import { SNODE_POOL_ITEM_ID } from '../../../../data/settings-key';
+import { Snode } from '../../../../data/types';
 import { SeedNodeAPI } from '../../../../session/apis/seed_node_api';
 import { ServiceNodesList } from '../../../../session/apis/snode_api/getServiceNodesList';
 import {
@@ -89,7 +89,7 @@ describe('OnionPathsErrors', () => {
       guardPubkeys[1],
       guardPubkeys[2],
     ]);
-    TestUtils.stubWindow('getSeedNodeList', () => ['seednode1']);
+    TestUtils.stubWindow('getSeedNodeList', () => ['whatever']);
     Sinon.stub(SeedNodeAPI, 'fetchSnodePoolFromSeedNodeWithRetries').resolves(fakeSnodePool);
     stubData('getSwarmNodesForPubkey').resolves(fakeSwarmForAssociatedWith);
     updateGuardNodesStub = stubData('updateGuardNodes').resolves();
@@ -111,7 +111,7 @@ describe('OnionPathsErrors', () => {
     await OnionPaths.getOnionPath({});
 
     oldOnionPaths = OnionPaths.TEST_getTestOnionPath();
-    Sinon.stub(Onions, 'decodeOnionResult').callsFake((_symkey: ArrayBuffer, plaintext: string) =>
+    Sinon.stub(Onions, 'decodeOnionResult').callsFake((_symmetricKey: ArrayBuffer, plaintext: string) =>
       Promise.resolve({
         plaintext,
         ciphertextBuffer: new Uint8Array(),
@@ -307,7 +307,7 @@ describe('OnionPathsErrors', () => {
           expect(dropSnodeFromSwarmIfNeededSpy.firstCall.args[0]).to.eq(associatedWith);
           expect(dropSnodeFromSwarmIfNeededSpy.firstCall.args[1]).to.eq(targetNode);
 
-          // this node failed only once. it should not be dropped yet from the snodepool
+          // this node failed only once. it should not be dropped yet from the snode pool
           expect(dropSnodeFromSnodePool.callCount).to.eq(0);
           expect(dropSnodeFromPathSpy.callCount).to.eq(0);
           expect(incrementBadPathCountOrDropSpy.callCount).to.eq(0);
@@ -351,8 +351,8 @@ describe('OnionPathsErrors', () => {
 
           // we got a new swarm for this pubkey. so it's OK that dropSnodeFromSwarm was not called for this pubkey
 
-          // this node failed only once. it should not be dropped yet from the snodepool
-          // this node failed only once. it should not be dropped yet from the snodepool
+          // this node failed only once. it should not be dropped yet from the snode pool
+          // this node failed only once. it should not be dropped yet from the snode pool
           expect(dropSnodeFromSnodePool.callCount).to.eq(0);
           expect(dropSnodeFromPathSpy.callCount).to.eq(0);
           expect(incrementBadPathCountOrDropSpy.callCount).to.eq(0);
@@ -390,7 +390,7 @@ describe('OnionPathsErrors', () => {
           expect(dropSnodeFromSwarmIfNeededSpy.callCount).to.eq(1);
           expect(dropSnodeFromSwarmIfNeededSpy.firstCall.args[0]).to.eq(associatedWith);
           expect(dropSnodeFromSwarmIfNeededSpy.firstCall.args[1]).to.eq(targetNode);
-          // this node failed only once. it should not be dropped yet from the snodepool
+          // this node failed only once. it should not be dropped yet from the snode pool
           expect(dropSnodeFromSnodePool.callCount).to.eq(0);
           expect(dropSnodeFromPathSpy.callCount).to.eq(0);
           expect(incrementBadPathCountOrDropSpy.callCount).to.eq(0);
@@ -430,7 +430,7 @@ describe('OnionPathsErrors', () => {
           expect(dropSnodeFromSwarmIfNeededSpy.firstCall.args[0]).to.eq(associatedWith);
           expect(dropSnodeFromSwarmIfNeededSpy.firstCall.args[1]).to.eq(targetNode);
 
-          // this node failed only once. it should not be dropped yet from the snodepool
+          // this node failed only once. it should not be dropped yet from the snode pool
           expect(dropSnodeFromSnodePool.callCount).to.eq(0);
           expect(dropSnodeFromPathSpy.callCount).to.eq(0);
           expect(incrementBadPathCountOrDropSpy.callCount).to.eq(0);
@@ -448,7 +448,7 @@ describe('OnionPathsErrors', () => {
    * processOnionResponse OXEN SERVER ERROR
    */
   describe('processOnionResponse - OXEN_SERVER_ERROR', () => {
-    // open group server v2 only talkes onion routing request. So errors can only happen at destination
+    // open group server v2 only talks onion routing request. So errors can only happen at destination
     it('throws a non-retryable error on oxen server errors on destination', async () => {
       const targetNode = otherNodesPubkeys[0];
 
@@ -483,7 +483,7 @@ describe('OnionPathsErrors', () => {
    * processOnionResponse OXEN SERVER ERROR
    */
   describe('processOnionResponse - 502 - node not found', () => {
-    // open group server v2 only talkes onion routing request. So errors can only happen at destination
+    // open group server v2 only talks onion routing request. So errors can only happen at destination
     it('throws a retryable error on 502 on intermediate snode', async () => {
       const targetNode = otherNodesPubkeys[0];
       const failingSnode = oldOnionPaths[0][1];
@@ -632,7 +632,7 @@ describe('OnionPathsErrors', () => {
         if (index < 2) {
           expect(pathFailureCount[guardNode.pubkey_ed25519]).to.eq(index + 1);
         } else {
-          // pathFailureCount is reset once we hit 3 for this guardnode
+          // pathFailureCount is reset once we hit 3 for this guard node
           expect(pathFailureCount[guardNode.pubkey_ed25519]).to.eq(0);
         }
       }
@@ -652,7 +652,7 @@ describe('OnionPathsErrors', () => {
     }
 
     expect(updateGuardNodesStub.callCount).to.eq(1);
-    // we dont know which snode failed so don't exclude any of those from swarms
+    // we don't know which snode failed so don't exclude any of those from swarms
     expect(dropSnodeFromSwarmIfNeededSpy.callCount).to.eq(0);
 
     expect(guardNode.pubkey_ed25519).to.eq(incrementBadPathCountOrDropSpy.args[0][0]);

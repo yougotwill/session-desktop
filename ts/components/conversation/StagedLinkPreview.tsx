@@ -1,14 +1,14 @@
-import React from 'react';
 import styled from 'styled-components';
 
 import { Image } from './Image';
 
-import { SessionSpinner } from '../basic/SessionSpinner';
-import { StagedLinkPreviewImage } from './composition/CompositionBox';
-import { isImage } from '../../types/MIME';
 import { fromArrayBufferToBase64 } from '../../session/utils/String';
+import { isImage } from '../../types/MIME';
 import { Flex } from '../basic/Flex';
 import { SessionIconButton } from '../icon';
+import { SessionSpinner } from '../loading';
+import { StagedLinkPreviewImage } from './composition/CompositionBox';
+import { AriaLabels } from '../../util/hardcodedAriaLabels';
 
 type Props = {
   isLoaded: boolean;
@@ -78,7 +78,7 @@ export const StagedLinkPreview = (props: Props) => {
         {isLoaded && image && isContentTypeImage ? (
           <StyledImage>
             <Image
-              alt={window.i18n('stagedPreviewThumbnail', [domain || ''])}
+              alt={AriaLabels.imageStagedLinkPreview}
               attachment={image as any}
               height={100}
               width={100}

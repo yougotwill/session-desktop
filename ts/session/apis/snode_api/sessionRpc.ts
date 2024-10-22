@@ -1,11 +1,11 @@
 import https from 'https';
-// eslint-disable-next-line import/no-named-default
 import { clone } from 'lodash';
 // eslint-disable-next-line import/no-named-default
 import { default as insecureNodeFetch } from 'node-fetch';
 import pRetry from 'p-retry';
 
-import { Snode } from '../../../data/data';
+
+import { Snode } from '../../../data/types';
 import { HTTPError, NotFoundError } from '../../utils/errors';
 
 import { APPLICATION_JSON } from '../../../types/MIME';

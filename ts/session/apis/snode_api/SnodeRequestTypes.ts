@@ -103,6 +103,7 @@ type FetchSnodeListParams = {
     storage_port: true;
     pubkey_x25519: true;
     pubkey_ed25519: true;
+    storage_server_version: true;
   };
 };
 
@@ -168,7 +169,7 @@ export class RetrieveUserSubRequest extends SnodeAPISubRequest {
 }
 
 /**
- * Build and sign a request with either the admin key if we have it, or with our subaccount details
+ * Build and sign a request with either the admin key if we have it, or with our sub account details
  */
 export class RetrieveGroupSubRequest extends SnodeAPISubRequest {
   public method = 'retrieve' as const;
@@ -200,7 +201,7 @@ export class RetrieveGroupSubRequest extends SnodeAPISubRequest {
   public async build() {
     /**
      * This will return the signature details we can use with the admin secretKey if we have it,
-     * or with the subaccount details if we don't.
+     * or with the sub account details if we don't.
      * If there is no valid groupDetails, this throws
      */
     const sigResult = await SnodeGroupSignature.getSnodeGroupSignature({
@@ -383,7 +384,7 @@ abstract class AbstractRevokeSubRequest extends SnodeAPISubRequest {
 
   public async signWithAdminSecretKey() {
     if (!this.adminSecretKey) {
-      throw new Error('we need an admin secretkey');
+      throw new Error('we need an admin secretKey');
     }
     const tokensBytes = from_hex(this.revokeTokenHex.join(''));
 
@@ -448,7 +449,7 @@ export class SubaccountUnrevokeSubRequest extends AbstractRevokeSubRequest {
 }
 
 /**
- * The getExpiriies request can currently only be used for our own pubkey as we use it to fetch
+ * The getExpiries request can currently only be used for our own pubkey as we use it to fetch
  * the expiries updated by another of our devices.
  */
 export class GetExpiriesFromNodeSubRequest extends SnodeAPISubRequest {
@@ -861,14 +862,14 @@ export class StoreGroupMessageSubRequest extends SnodeAPISubRequest {
       throw new Error('this.encryptedData cannot be empty');
     }
     if (!PubKey.is03Pubkey(this.destination)) {
-      throw new Error('StoreGroupMessageSubRequest: groupconfig namespace required a 03 pubkey');
+      throw new Error('StoreGroupMessageSubRequest: group config namespace required a 03 pubkey');
     }
     if (isEmpty(this.secretKey) && isEmpty(this.authData)) {
       throw new Error('StoreGroupMessageSubRequest needs either authData or secretKey to be set');
     }
     if (SnodeNamespace.isGroupConfigNamespace(this.namespace) && isEmpty(this.secretKey)) {
       throw new Error(
-        `StoreGroupMessageSubRequest: groupconfig namespace [${this.namespace}] requires an adminSecretKey`
+        `StoreGroupMessageSubRequest: group config namespace [${this.namespace}] requires an adminSecretKey`
       );
     }
   }
@@ -879,7 +880,7 @@ export class StoreGroupMessageSubRequest extends SnodeAPISubRequest {
   }> {
     const encryptedDataBase64 = ByteBuffer.wrap(this.encryptedData).toString('base64');
 
-    // this will either sign with our admin key or with the subaccount key if the admin one isn't there
+    // this will either sign with our admin key or with the sub account key if the admin one isn't there
     const signDetails = await SnodeGroupSignature.getSnodeGroupSignature({
       method: this.method,
       namespace: this.namespace,
@@ -941,7 +942,7 @@ abstract class StoreGroupConfigSubRequest<
       throw new Error('this.encryptedData cannot be empty');
     }
     if (!PubKey.is03Pubkey(this.destination)) {
-      throw new Error('StoreGroupConfigSubRequest: groupconfig namespace required a 03 pubkey');
+      throw new Error('StoreGroupConfigSubRequest: group config namespace required a 03 pubkey');
     }
     if (isEmpty(this.secretKey)) {
       throw new Error('StoreGroupConfigSubRequest needs secretKey to be set');
@@ -954,7 +955,7 @@ abstract class StoreGroupConfigSubRequest<
   }> {
     const encryptedDataBase64 = ByteBuffer.wrap(this.encryptedData).toString('base64');
 
-    // this will either sign with our admin key or with the subaccount key if the admin one isn't there
+    // this will either sign with our admin key or with the sub account key if the admin one isn't there
     const signDetails = await SnodeGroupSignature.getSnodeGroupSignature({
       method: this.method,
       namespace: this.namespace,
@@ -1241,7 +1242,7 @@ export type StoreGroupExtraData = {
 } & { namespace: SnodeNamespacesGroupConfig | SnodeNamespaces.ClosedGroupMessages };
 
 /**
- * STORE SUBREQUESTS
+ * STORE SUB REQUESTS
  */
 type StoreOnNodeNormalParams = {
   pubkey: string;
@@ -1261,8 +1262,8 @@ type StoreOnNodeSubAccountParams = Pick<
     pubkey: GroupPubkeyType;
     subaccount: string;
     subaccount_sig: string;
-    namespace: SnodeNamespaces.ClosedGroupMessages; // this can only be this one, subaccounts holder can not post to something else atm
-    // signature is mandatory for subaccount
+    namespace: SnodeNamespaces.ClosedGroupMessages; // this can only be this one, sub accounts holder can not post to something else atm
+    // signature is mandatory for sub account
   };
 
 type StoreOnNodeParams = StoreOnNodeNormalParams | StoreOnNodeSubAccountParams;

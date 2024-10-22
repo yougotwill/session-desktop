@@ -3,7 +3,7 @@ import { toNumber } from 'lodash';
 import pRetry from 'p-retry';
 
 import { OnionPaths } from '.';
-import { Snode } from '../../data/data';
+import { Snode } from '../../data/types';
 import { fileServerPubKey, fileServerURL } from '../apis/file_server_api/FileServerApi';
 import { OpenGroupPollingUtils } from '../apis/open_group_api/opengroupV2/OpenGroupPollingUtils';
 import { invalidAuthRequiresBlinding } from '../apis/open_group_api/opengroupV2/OpenGroupServerPoller';
@@ -496,8 +496,9 @@ async function sendJsonViaOnionV4ToFileServer(sendOptions: {
   method: string;
   stringifiedBody: string | null;
   abortSignal: AbortSignal;
+  headers: Record<string, string | number>;
 }): Promise<OnionV4JSONSnodeResponse | null> {
-  const { endpoint, method, stringifiedBody, abortSignal } = sendOptions;
+  const { endpoint, method, stringifiedBody, abortSignal, headers } = sendOptions;
   if (!endpoint.startsWith('/')) {
     throw new Error('endpoint needs a leading /');
   }
@@ -508,7 +509,7 @@ async function sendJsonViaOnionV4ToFileServer(sendOptions: {
     builtUrl,
     {
       method,
-      headers: {},
+      headers,
       body: stringifiedBody,
       useV4: true,
     },

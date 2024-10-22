@@ -1,5 +1,5 @@
 import classNames from 'classnames';
-import React from 'react';
+
 import styled from 'styled-components';
 
 import { acceptOpenGroupInvitation } from '../../../../interactions/messageInteractions';
@@ -74,7 +74,7 @@ export const GroupInvitation = (props: PropsForGroupInvitation) => {
   if (props.direction === 'outgoing') {
     classes.push('invitation-outgoing');
   }
-  const openGroupInvitation = window.i18n('openGroupInvitation');
+  const openGroupInvitation = window.i18n('communityInvitation');
 
   return (
     <ExpirableReadableMessage

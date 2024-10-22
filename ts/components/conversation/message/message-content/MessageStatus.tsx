@@ -1,5 +1,4 @@
-import { ipcRenderer } from 'electron';
-import React, { SessionDataTestId, useCallback } from 'react';
+import { SessionDataTestId } from 'react';
 import { useSelector } from 'react-redux';
 import styled from 'styled-components';
 import { useMessageExpirationPropsById } from '../../../../hooks/useParamSelector';
@@ -11,6 +10,7 @@ import { useSelectedIsGroupOrCommunity } from '../../../../state/selectors/selec
 import { SpacerXS } from '../../../basic/Text';
 import { SessionIcon, SessionIconType } from '../../../icon';
 import { ExpireTimer } from '../../ExpireTimer';
+import { saveLogToDesktop } from '../../../../util/logging';
 
 type Props = {
   messageId: string;
@@ -63,7 +63,11 @@ export const MessageStatus = ({ messageId, dataTestId }: Props) => {
   }
 };
 
-const MessageStatusContainer = styled.div<{ isIncoming: boolean; isGroup: boolean }>`
+const MessageStatusContainer = styled.div<{
+  isIncoming: boolean;
+  isGroup: boolean;
+  clickable: boolean;
+}>`
   display: inline-block;
   align-self: ${props => (props.isIncoming ? 'flex-start' : 'flex-end')};
   flex-direction: ${props =>
@@ -73,7 +77,7 @@ const MessageStatusContainer = styled.div<{ isIncoming: boolean; isGroup: boolea
 
   margin-bottom: 2px;
   margin-inline-start: 5px;
-  cursor: pointer;
+  cursor: ${props => (props.clickable ? 'pointer' : 'inherit')};
   display: flex;
   align-items: center;
   margin-inline-start: ${props =>
@@ -153,6 +157,7 @@ const MessageStatusSending = ({ dataTestId }: Omit<Props, 'isDetailView'>) => {
       data-testtype="sending"
       isIncoming={false}
       isGroup={false}
+      clickable={false}
     >
       <TextDetails text={window.i18n('sending')} textColor="var(--text-secondary-color)" />
       <IconNormal rotateDuration={2} iconType="sending" />
@@ -192,8 +197,12 @@ const MessageStatusSent = ({ dataTestId, messageId }: Omit<Props, 'isDetailView'
       data-testtype="sent"
       isIncoming={false}
       isGroup={isGroup}
+      clickable={false}
     >
-      <TextDetails text={window.i18n('sent')} textColor="var(--text-secondary-color)" />
+      <TextDetails
+        text={window.i18n('disappearingMessagesSent')}
+        textColor="var(--text-secondary-color)"
+      />
       <IconForExpiringMessageId messageId={messageId} iconType="circleCheck" />
     </MessageStatusContainer>
   );
@@ -220,6 +229,7 @@ const MessageStatusRead = ({
       data-testtype="read"
       isIncoming={isIncoming}
       isGroup={isGroup}
+      clickable={false}
     >
       <TextDetails text={window.i18n('read')} textColor="var(--text-secondary-color)" />
       <IconForExpiringMessageId messageId={messageId} iconType="doubleCheckCircleFilled" />
@@ -228,9 +238,6 @@ const MessageStatusRead = ({
 };
 
 const MessageStatusError = ({ dataTestId }: Omit<Props, 'isDetailView'>) => {
-  const showDebugLog = useCallback(() => {
-    ipcRenderer.send('show-debug-log');
-  }, []);
   // when on error, we do not display the expire timer at all.
   const isGroup = useSelectedIsGroupOrCommunity();
 
@@ -238,12 +245,18 @@ const MessageStatusError = ({ dataTestId }: Omit<Props, 'isDetailView'>) => {
     <MessageStatusContainer
       data-testid={dataTestId}
       data-testtype="failed"
-      onClick={showDebugLog}
-      title={window.i18n('sendFailed')}
+      title={window.i18n('messageStatusFailedToSend')}
+      onClick={() => {
+        void saveLogToDesktop();
+      }}
       isIncoming={false}
+      clickable={true}
       isGroup={isGroup}
     >
-      <TextDetails text={window.i18n('failedToSendMessage')} textColor="var(--danger-color)" />
+      <TextDetails
+        text={window.i18n('messageStatusFailedToSend')}
+        textColor="var(--danger-color)"
+      />
       <IconDanger iconType="error" />
     </MessageStatusContainer>
   );

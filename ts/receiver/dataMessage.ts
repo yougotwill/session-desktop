@@ -14,7 +14,6 @@ import { StringUtils, UserUtils } from '../session/utils';
 import { handleLegacyClosedGroupControlMessage } from './closedGroups';
 import { handleMessageJob, toRegularMessage } from './queuedJob';
 
-import { ConversationTypeEnum } from '../models/conversationAttributes';
 import { MessageModel } from '../models/message';
 import {
   createSwarmMessageSentFromNotUs,
@@ -28,6 +27,7 @@ import { Action, Reaction } from '../types/Reaction';
 import { toLogFormat } from '../types/attachments/Errors';
 import { Reactions } from '../util/reactions';
 import { GroupV2Receiver } from './groupv2/handleGroupV2Message';
+import { ConversationTypeEnum } from '../models/types';
 
 function cleanAttachment(attachment: any) {
   return {

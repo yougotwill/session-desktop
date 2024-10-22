@@ -1,4 +1,4 @@
-import React, { MouseEvent, useState } from 'react';
+import { MouseEvent, useState } from 'react';
 
 import { isEmpty } from 'lodash';
 import styled from 'styled-components';
@@ -37,6 +37,7 @@ const StyledQuoteTextContent = styled.div`
   padding-inline-start: 10px;
   padding-inline-end: 10px;
   max-width: 100%;
+  overflow: hidden;
 
   display: flex;
   flex-direction: column;
@@ -51,7 +52,7 @@ export type QuoteProps = {
   text?: string;
   attachment?: QuotedAttachmentType;
 
-  onClick?: (e: React.MouseEvent<HTMLDivElement>) => void;
+  onClick?: (e: MouseEvent<HTMLDivElement>) => void;
 };
 
 export interface QuotedAttachmentThumbnailType {

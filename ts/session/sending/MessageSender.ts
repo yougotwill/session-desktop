@@ -273,15 +273,15 @@ async function sendSingleMessage({
         found.getExpireTimerSeconds() > 0 &&
         encryptedAndWrapped.isSyncMessage;
 
-      let overridenTtl = encryptedAndWrapped.ttl;
+      let overriddenTtl = encryptedAndWrapped.ttl;
       if (isSyncedDeleteAfterReadMessage && found.getExpireTimerSeconds() > 0) {
         const asMs = found.getExpireTimerSeconds() * 1000;
         window.log.debug(`overriding ttl for synced DaR message to ${asMs}`);
-        overridenTtl = asMs;
+        overriddenTtl = asMs;
       }
 
       const subRequests = await messagesToRequests({
-        encryptedAndWrappedArr: [{ ...encryptedAndWrapped, ttl: overridenTtl }],
+        encryptedAndWrappedArr: [{ ...encryptedAndWrapped, ttl: overriddenTtl }],
         destination,
       });
 
@@ -334,7 +334,7 @@ async function getSignatureParamsFromNamespace(
   ) {
     if (!PubKey.is03Pubkey(destination)) {
       throw new Error(
-        'getSignatureParamsFromNamespace: groupconfig namespace required a 03 pubkey'
+        'getSignatureParamsFromNamespace: group config namespace required a 03 pubkey'
       );
     }
     const found = await UserGroupsWrapperActions.getGroup(destination);
@@ -380,7 +380,7 @@ type DeleteHashesRequestPerPubkey<T extends PubkeyType | GroupPubkeyType> = T ex
   : DeleteHashesFromGroupNodeSubRequest;
 
 /**
- * Make sure that all the subrequests have been given in their sendingOrder, or throw an error.
+ * Make sure that all the sub requests have been given in their sendingOrder, or throw an error.
  */
 function assertRequestsAreSorted({ subRequests }: { subRequests: Array<RawSnodeSubRequests> }) {
   const allSorted = subRequests.every((current, index) => {
@@ -405,43 +405,43 @@ type SortedSubRequestsType<T extends PubkeyType | GroupPubkeyType> = Array<
 >;
 
 async function sendMessagesDataToSnode<T extends PubkeyType | GroupPubkeyType>({
-  asssociatedWith,
+  associatedWith: associatedWith,
   sortedSubRequests,
   method,
 }: {
   sortedSubRequests: SortedSubRequestsType<T>;
-  asssociatedWith: T;
+  associatedWith: T;
   method: MethodBatchType;
 }): Promise<NotEmptyArrayOfBatchResults> {
-  if (!asssociatedWith) {
-    throw new Error('sendMessagesDataToSnode first subrequest pubkey needs to be set');
+  if (!associatedWith) {
+    throw new Error('sendMessagesDataToSnode first sub request pubkey needs to be set');
   }
 
-  if (sortedSubRequests.some(m => m.destination !== asssociatedWith)) {
+  if (sortedSubRequests.some(m => m.destination !== associatedWith)) {
     throw new Error(
-      'sendMessagesDataToSnode tried to send batchrequest containing subrequest not for the right destination'
+      'sendMessagesDataToSnode tried to send batch request containing sub request not for the right destination'
     );
   }
 
-  // Note: we want to make sure the caller sorted those subrequests, as it might try to handle the batch result based on the index.
+  // Note: we want to make sure the caller sorted those sub requests, as it might try to handle the batch result based on the index.
   // If we sorted the requests here, we'd need to make sure the caller knows that the results are not in order he sent them.
   assertRequestsAreSorted({ subRequests: sortedSubRequests });
 
-  const targetNode = await SnodePool.getNodeFromSwarmOrThrow(asssociatedWith);
+  const targetNode = await SnodePool.getNodeFromSwarmOrThrow(associatedWith);
 
   try {
     const responses = await BatchRequests.doUnsignedSnodeBatchRequestNoRetries(
       sortedSubRequests,
       targetNode,
       6000,
-      asssociatedWith,
+      associatedWith,
       false,
       method
     );
 
     if (!responses || !responses.length) {
       window?.log?.warn(
-        `SessionSnodeAPI::doUnsignedSnodeBatchRequestNoRetries on ${targetNode.ip}:${targetNode.port} returned falsish value`,
+        `SessionSnodeAPI::doUnsignedSnodeBatchRequestNoRetries on ${targetNode.ip}:${targetNode.port} returned falsy value`,
         responses
       );
       throw new Error('doUnsignedSnodeBatchRequestNoRetries: Invalid result');
@@ -449,7 +449,7 @@ async function sendMessagesDataToSnode<T extends PubkeyType | GroupPubkeyType>({
     await handleBatchResultWithSubRequests({
       batchResult: responses,
       subRequests: sortedSubRequests,
-      destination: asssociatedWith,
+      destination: associatedWith,
     });
 
     const firstResult = responses[0];
@@ -467,7 +467,7 @@ async function sendMessagesDataToSnode<T extends PubkeyType | GroupPubkeyType>({
     if (!isEmpty(responses)) {
       window?.log?.info(
         `sendMessagesDataToSnode - Successfully sent requests to ${ed25519Str(
-          asssociatedWith
+          associatedWith
         )} via ${ed25519Str(targetNode.pubkey_ed25519)} (requests: ${sortedSubRequests.map(m => m.loggingId()).join(', ')})`
       );
     }
@@ -476,7 +476,7 @@ async function sendMessagesDataToSnode<T extends PubkeyType | GroupPubkeyType>({
   } catch (e) {
     const snodeStr = targetNode ? `${ed25519Str(targetNode.pubkey_ed25519)}` : 'null';
     window?.log?.warn(
-      `sendMessagesDataToSnode - "${e.code}:${e.message}" to ${asssociatedWith} via snode:${snodeStr}`
+      `sendMessagesDataToSnode - "${e.code}:${e.message}" to ${associatedWith} via snode:${snodeStr}`
     );
     throw e;
   }
@@ -602,8 +602,8 @@ async function encryptMessagesAndWrap(
 }
 
 /**
- * Send an array of preencrypted data to the corresponding swarm.
- * Note: also handles the result of each subrequests with `handleBatchResultWithSubRequests`
+ * Send an array of pre-encrypted data to the corresponding swarm.
+ * Note: also handles the result of each sub requests with `handleBatchResultWithSubRequests`
  *
  * @param params the data to deposit
  * @param destination the pubkey we should deposit those message to
@@ -614,7 +614,7 @@ async function sendEncryptedDataToSnode<T extends GroupPubkeyType | PubkeyType>(
   sortedSubRequests,
   method,
 }: {
-  sortedSubRequests: SortedSubRequestsType<T>; // keeping those as an array because the order needs to be enforced for some (groupkeys for instance)
+  sortedSubRequests: SortedSubRequestsType<T>; // keeping those as an array because the order needs to be enforced for some (group keys for instance)
   destination: T;
   method: MethodBatchType;
 }): Promise<NotEmptyArrayOfBatchResults | null> {
@@ -623,7 +623,7 @@ async function sendEncryptedDataToSnode<T extends GroupPubkeyType | PubkeyType>(
       async () => {
         return MessageSender.sendMessagesDataToSnode({
           sortedSubRequests,
-          asssociatedWith: destination,
+          associatedWith: destination,
           method,
         });
       },
@@ -657,7 +657,7 @@ async function sendToOpenGroupV2(
   blinded: boolean,
   filesToLink: Array<number>
 ): Promise<OpenGroupMessageV2 | boolean> {
-  // we agreed to pad message for opengroupv2
+  // we agreed to pad message for opengroup v2
   const paddedBody = addMessagePadding(rawMessage.plainTextBuffer());
   const v2Message = new OpenGroupMessageV2({
     sentTimestamp: GetNetworkTime.now(),

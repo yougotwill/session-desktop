@@ -33,7 +33,6 @@ import { MessageModel } from './message';
 import { MessageAttributesOptionals } from './messageType';
 
 import { Data } from '../data/data';
-import { OpenGroupRequestCommonType } from '../session/apis/open_group_api/opengroupV2/ApiUtil';
 import { OpenGroupUtils } from '../session/apis/open_group_api/utils';
 import { getOpenGroupV2FromConversationId } from '../session/apis/open_group_api/utils/OpenGroupUtils';
 import { ExpirationTimerUpdateMessage } from '../session/messages/outgoing/controlMessage/ExpirationTimerUpdateMessage';
@@ -100,10 +99,8 @@ import { Reactions } from '../util/reactions';
 import { Registration } from '../util/registration';
 import { Storage } from '../util/storage';
 import {
-  CONVERSATION_PRIORITIES,
   ConversationAttributes,
   ConversationNotificationSetting,
-  ConversationTypeEnum,
   fillConvoAttributesWithDefaults,
   isDirectConversation,
   isOpenOrClosedGroup,
@@ -140,6 +137,8 @@ import {
 } from '../webworker/workers/browser/libsession_worker_interface';
 import { markAttributesAsReadIfNeeded } from './messageFactory';
 import { StoreGroupRequestFactory } from '../session/apis/snode_api/factories/StoreGroupRequestFactory';
+import { OpenGroupRequestCommonType } from '../data/types';
+import { ConversationTypeEnum, CONVERSATION_PRIORITIES } from './types';
 
 type InMemoryConvoInfos = {
   mentionedUs: boolean;
@@ -291,7 +290,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
    * @returns true if this conversation is private and hidden.
    * A non-private conversation cannot be hidden currently.
    *  - a community is removed straight away when we leave it and not marked hidden
-   *  - a legacy group is kept visible if we leave it, until we explicitely delete it. At that time, it is removed completely and not marked hidden
+   *  - a legacy group is kept visible if we leave it, until we explicitly delete it. At that time, it is removed completely and not marked hidden
    */
   public isHidden() {
     const priority = this.getPriority();
@@ -771,7 +770,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
   /**
    * Sends an accepted message request response to a private chat
    * Currently, we never send anything for denied message requests.
-   * Note: you souldn't to use this directly. Instead use `handleAcceptConversationRequest()`
+   * Note: you shouldn't need to use this directly. Instead use `handleAcceptConversationRequest()`
    */
   public async sendMessageRequestResponse() {
     if (!this.isPrivate()) {
@@ -807,7 +806,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       quote: isEmpty(quote) ? undefined : quote,
       preview,
       attachments,
-      sent_at: networkTimestamp, // overriden later, but we need one to have the sorting done in the UI even when the sending is pending
+      sent_at: networkTimestamp, // overridden later, but we need one to have the sorting done in the UI even when the sending is pending
       expirationType: DisappearingMessages.changeToDisappearingMessageType(
         this,
         this.getExpireTimer(),
@@ -919,15 +918,17 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
      * it's ugly, but we want to add a message for legacy groups only when
      * - not coming from a config message
      * - effectively changes the setting
-     * - ignores a off setting for a legacy group (as we can get a setting from restored from configMessage, and a newgroup can still be in the swarm when linking a device
+     * - ignores a off setting for a legacy group (as we can get a setting from restored from configMessage, and a new group can still be in the swarm when linking a device
      */
     const shouldAddExpireUpdateMsgLegacyGroup =
+    fromCurrentDevice || (
       isLegacyGroup &&
       !fromConfigMessage &&
       (expirationMode !== this.get('expirationMode') || expireTimer !== this.get('expireTimer')) &&
-      expirationMode !== 'off';
+      expirationMode !== 'off');
 
     const shouldAddExpireUpdateMsgGroupV2 = this.isClosedGroupV2() && !fromConfigMessage;
+
 
     const shouldAddExpireUpdateMessage =
       shouldAddExpireUpdateMsgPrivate ||
@@ -1419,6 +1420,9 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     if (this.isPrivate()) {
       return window.i18n('anonymous');
     }
+    if (this.isPublic()) {
+      return window.i18n('communityUnknown');
+    }
     return window.i18n('unknown');
   }
 
@@ -1796,7 +1800,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
   }
 
   /**
-   * For a private convo, returns the loki profilename if set, or a shortened
+   * For a private convo, returns the loki profile name if set, or a shortened
    * version of the contact pubkey.
    * Throws an error if called on a group convo.
    *
@@ -1876,7 +1880,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       const isFirstMessageOfConvo =
         (await Data.getMessagesByConversation(this.id, { messageId: null })).messages.length === 1;
       if (hadNoRequestsPrior && isFirstMessageOfConvo) {
-        friendRequestText = window.i18n('youHaveANewFriendRequest');
+        friendRequestText = window.i18n('messageRequestsNew');
       } else {
         window?.log?.info(
           'notification cancelled for as pending requests already exist',
@@ -1960,9 +1964,9 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       conversationId,
       iconUrl,
       isExpiringMessage: false,
-      message: window.i18n('incomingCallFrom', [
-        this.getNicknameOrRealUsername() || window.i18n('anonymous'),
-      ]),
+      message: window.i18n('callsIncoming', {
+        name: this.getNicknameOrRealUsername() || window.i18n('anonymous'),
+      }),
       messageSentAt: now,
       title: this.getNicknameOrRealUsernameOrPlaceholder(),
     });
@@ -2228,7 +2232,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     const roomInfo = OpenGroupData.getV2OpenGroupRoom(groupUrl);
 
     if (!roomInfo || !roomInfo.serverPublicKey) {
-      ToastUtils.pushToastError('no-sogs-matching', window.i18n('couldntFindServerMatching'));
+      ToastUtils.pushToastError('no-sogs-matching', window.i18n.stripped('communityJoinError'));
       window?.log?.error('Could not find room with matching server url', groupUrl);
       throw new Error(`Could not find room with matching server url: ${groupUrl}`);
     }
@@ -2769,6 +2773,7 @@ export class ConversationCollection extends Backbone.Collection<ConversationMode
     };
   }
 }
+
 ConversationCollection.prototype.model = ConversationModel;
 
 export function hasValidOutgoingRequestValues({
@@ -2788,7 +2793,14 @@ export function hasValidOutgoingRequestValues({
 }): boolean {
   const isActive = activeAt && isFinite(activeAt) && activeAt > 0;
 
-  return Boolean(!isMe && isApproved && isPrivate && !isBlocked && !didApproveMe && isActive);
+  // Started a new message, but haven't sent a message yet
+  const emptyConvo = !isMe && !isApproved && isPrivate && !isBlocked && !didApproveMe && !!isActive;
+
+  // Started a new message, and sent a message
+  const sentOutgoingRequest =
+    !isMe && isApproved && isPrivate && !isBlocked && !didApproveMe && !!isActive;
+
+  return emptyConvo || sentOutgoingRequest;
 }
 
 /**

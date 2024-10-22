@@ -1,19 +1,19 @@
 import autoBind from 'auto-bind';
 import classNames from 'classnames';
 import { isString } from 'lodash';
-import React, { useEffect } from 'react';
+import { PureComponent, useEffect } from 'react';
 import { toast } from 'react-toastify';
 import styled from 'styled-components';
 
 import { SessionButton, SessionButtonColor, SessionButtonType } from './basic/SessionButton';
-// import { SessionSpinner } from './basic/SessionSpinner';
 import { SessionTheme } from '../themes/SessionTheme';
 import { switchPrimaryColorTo } from '../themes/switchPrimaryColor';
 import { switchThemeTo } from '../themes/switchTheme';
 import { SessionToastContainer } from './SessionToastContainer';
 import { SessionWrapperModal } from './SessionWrapperModal';
-import { SessionSpinner } from './basic/SessionSpinner';
 import { SessionToast } from './basic/SessionToast';
+import { SessionSpinner } from './loading';
+import { Localizer } from './basic/Localizer';
 
 interface State {
   errorCount: number;
@@ -27,7 +27,11 @@ const TextPleaseWait = (props: { isLoading: boolean }) => {
   if (!props.isLoading) {
     return null;
   }
-  return <div>{window.i18n('pleaseWaitOpenAndOptimizeDb')}</div>;
+  return (
+    <div>
+      <Localizer token="waitOneMoment" />
+    </div>
+  );
 };
 
 const StyledContent = styled.div`
@@ -45,7 +49,7 @@ function pushToastError(id: string, description: string) {
   });
 }
 
-class SessionPasswordPromptInner extends React.PureComponent<unknown, State> {
+class SessionPasswordPromptInner extends PureComponent<unknown, State> {
   private inputRef?: any;
 
   constructor(props: any) {
@@ -70,14 +74,16 @@ class SessionPasswordPromptInner extends React.PureComponent<unknown, State> {
     const isLoading = this.state.loading;
     const spinner = isLoading ? <SessionSpinner loading={true} /> : null;
     const featureElement = this.state.clearDataView ? (
-      <p>{window.i18n('deleteAccountFromLogin')}</p>
+      <p>
+        <Localizer token="clearDeviceDescription" />
+      </p>
     ) : (
       <div className="session-modal__input-group">
         <input
           type="password"
           id="password-prompt-input"
           defaultValue=""
-          placeholder={window.i18n('enterPassword')}
+          placeholder={window.i18n('passwordEnter')}
           onKeyUp={this.onKeyUp}
           ref={input => {
             this.inputRef = input;
@@ -88,9 +94,7 @@ class SessionPasswordPromptInner extends React.PureComponent<unknown, State> {
 
     return (
       <SessionWrapperModal
-        title={
-          this.state.clearDataView ? window.i18n('clearDevice') : window.i18n('passwordViewTitle')
-        }
+        title={this.state.clearDataView ? window.i18n('clearDevice') : window.i18n('passwordEnter')}
       >
         {spinner || featureElement}
         <TextPleaseWait isLoading={isLoading} />
@@ -112,10 +116,9 @@ class SessionPasswordPromptInner extends React.PureComponent<unknown, State> {
   }
 
   public async onLogin(passPhrase: string) {
-    const passPhraseTrimmed = passPhrase.trim();
-
+    // Note: we don't trim the password anymore. If the user entered a space at the end, so be it.
     try {
-      await window.onLogin(passPhraseTrimmed);
+      await window.onLogin(passPhrase);
     } catch (error) {
       // Increment the error counter and show the button if necessary
       this.setState({

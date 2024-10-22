@@ -2,7 +2,6 @@
 import { expect } from 'chai';
 import Sinon from 'sinon';
 import { KNOWN_BLINDED_KEYS_ITEM } from '../../../../data/settings-key';
-import { ConversationTypeEnum } from '../../../../models/conversationAttributes';
 import { getSodiumNode } from '../../../../node/sodiumNode';
 import {
   addCachedBlindedKey,
@@ -24,6 +23,7 @@ import { LibSodiumWrappers } from '../../../../session/crypto';
 import { UserUtils } from '../../../../session/utils';
 import { TestUtils } from '../../../test-utils';
 import { expectAsyncToThrow, stubData, stubWindowLog } from '../../../test-utils/utils';
+import { ConversationTypeEnum } from '../../../../models/types';
 
 const serverPublicKey = 'serverPublicKey';
 const blindedId = '151111';
@@ -235,7 +235,7 @@ describe('knownBlindedKeys', () => {
       }, 'blindedId is not a blinded key');
     });
 
-    it('throws with realSessionId not unlinded', async () => {
+    it('throws with realSessionId not unblinded', async () => {
       getItemById.resolves();
       await loadKnownBlindedKeys();
 
@@ -308,7 +308,7 @@ describe('knownBlindedKeys', () => {
       });
     });
 
-    it('adds a new one if not matching serverpubkey', async () => {
+    it('adds a new one if not matching server pubkey', async () => {
       getItemById.resolves();
       await loadKnownBlindedKeys();
       await addCachedBlindedKey({

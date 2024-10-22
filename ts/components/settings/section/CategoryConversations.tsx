@@ -1,4 +1,3 @@
-import React from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 
 import useUpdate from 'react-use/lib/useUpdate';
@@ -39,8 +38,8 @@ const CommunitiesPruningSetting = () => {
         await toggleCommunitiesPruning();
         forceUpdate();
       }}
-      title={window.i18n('pruneSettingTitle')}
-      description={window.i18n('pruneSettingDescription')}
+      title={window.i18n('conversationsMessageTrimmingTrimCommunities')}
+      description={window.i18n('conversationsMessageTrimmingTrimCommunitiesDescription')}
       active={isOpengroupPruningEnabled}
     />
   );
@@ -59,8 +58,8 @@ const SpellCheckSetting = () => {
         window.toggleSpellCheck();
         forceUpdate();
       }}
-      title={window.i18n('spellCheckTitle')}
-      description={window.i18n('spellCheckDescription')}
+      title={window.i18n('conversationsSpellCheck')}
+      description={window.i18n('conversationsSpellCheckDescription')}
       active={isSpellCheckActive}
     />
   );
@@ -77,8 +76,8 @@ const AudioMessageAutoPlaySetting = () => {
         dispatch(toggleAudioAutoplay());
         forceUpdate();
       }}
-      title={window.i18n('audioMessageAutoplayTitle')}
-      description={window.i18n('audioMessageAutoplayDescription')}
+      title={window.i18n('conversationsAutoplayAudioMessage')}
+      description={window.i18n('conversationsAutoplayAudioMessageDescription')}
       active={audioAutoPlay}
     />
   );
@@ -90,13 +89,13 @@ const EnterKeyFunctionSetting = () => {
 
   const items: SessionRadioItems = [
     {
-      label: window.i18n('enterSendNewMessageDescription'),
+      label: window.i18n('conversationsEnterSends'),
       value: 'enterForSend',
       inputDatatestId: 'input-enterForSend',
       labelDatatestId: 'label-enterForSend',
     },
     {
-      label: window.i18n('enterNewLineDescription'),
+      label: window.i18n('conversationsEnterNewLine'),
       value: selectedWithSettingTrue,
       inputDatatestId: `input-${selectedWithSettingTrue}`,
       labelDatatestId: `label-${selectedWithSettingTrue}`,
@@ -105,8 +104,8 @@ const EnterKeyFunctionSetting = () => {
 
   return (
     <SessionSettingsItemWrapper
-      title={window.i18n('enterKeySettingTitle')}
-      description={window.i18n('enterKeySettingDescription')}
+      title={window.i18n('conversationsEnter')}
+      description={window.i18n('conversationsEnterDescription')}
       inline={false}
     >
       <SessionRadioGroup

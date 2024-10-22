@@ -1,26 +1,9 @@
 import { defaults } from 'lodash';
 import { DisappearingMessageConversationModeType } from '../session/disappearing_messages/types';
-import { LastMessageStatusType } from '../state/ducks/conversations';
-import {
-  ConversationInteractionStatus,
-  ConversationInteractionType,
-} from '../interactions/conversationInteractions';
 
-/**
- * Private chats have always the type `Private`
- * Open groups have always the type `Group`
- * Closed group have the type `Group` when they are not v3 and the type `CLOSED_GROUP` when they v3.
- * To identity between an open or closed group before v3, we need to rely on the prefix (05 is closed groups, 'http%' is opengroup)
- *
- *
- * We will need to support existing closed groups foir now, but we will be able to get rid of existing closed groups at some point.
- * When we do get rid of them, we will be able to remove any GROUP conversation with prefix 05 (as they are old closed groups) and update the remaining GROUP to be opengroups instead
- */
-export enum ConversationTypeEnum {
-  GROUP = 'group',
-  GROUPV2 = 'groupv2',
-  PRIVATE = 'private',
-}
+import { ConversationTypeEnum, CONVERSATION_PRIORITIES } from './types';
+import { ConversationInteractionType, ConversationInteractionStatus } from '../interactions/types';
+import { LastMessageStatusType } from '../state/ducks/types';
 
 export function isOpenOrClosedGroup(conversationType: ConversationTypeEnum) {
   return (
@@ -63,7 +46,7 @@ export interface ConversationAttributes {
   /**
    * lastMessage is actually just a preview of the last message text, shortened to 60 chars.
    * This is to avoid filling the redux store with a huge last message when it's only used in the
-   * preview of a conversation (leftpane).
+   * preview of a conversation (left pane).
    * The shortening is made in sql.ts directly.
    */
   lastMessage: string | null;
@@ -78,7 +61,7 @@ export interface ConversationAttributes {
 
   avatarInProfile?: string; // this is the avatar path locally once downloaded and stored in the application attachments folder
 
-  isTrustedForAttachmentDownload: boolean; // not synced accross devices, this field is used if we should auto download attachments from this conversation or not
+  isTrustedForAttachmentDownload: boolean; // not synced across devices, this field is used if we should auto download attachments from this conversation or not
 
   conversationIdOrigin?: string; // The conversation from which this conversation originated from: blinded message request or 03-group admin who invited us
 
@@ -96,7 +79,7 @@ export interface ConversationAttributes {
   nickname?: string; // this is the name WE gave to that user (only applicable to private chats, not closed group neither opengroups)
   profileKey?: string; // Consider this being a hex string if it is set
   triggerNotificationsFor: ConversationNotificationSettingType;
-  avatarPointer?: string; // this is the url of the avatar on the file server v2. we use this to detect if we need to redownload the avatar from someone (not used for opengroups)
+  avatarPointer?: string; // this is the url of the avatar on the file server v2. we use this to detect if we need to re-download the avatar from someone (not used for opengroups)
   /** in seconds, 0 means no expiration */
   expireTimer: number;
 
@@ -156,24 +139,6 @@ export const fillConvoAttributesWithDefaults = (
     markedAsUnread: false,
     blocksSogsMsgReqsTimestamp: 0,
   });
-};
-
-/**
- * Priorities have a weird behavior.
- * * 0 always means unpinned and not hidden.
- * * -1 always means hidden.
- * * anything over 0 means pinned with the higher priority the better. (No sorting currently implemented)
- *
- * When our local user pins a conversation we should use 1 as the priority.
- * When we get an update from the libsession util wrapper, we should trust the value and set it locally as is.
- * So if we get 100 as priority, we set the conversation priority to 100.
- * If we get -20 as priority we set it as is, even if our current client does not understand what that means.
- *
- */
-export const CONVERSATION_PRIORITIES = {
-  default: 0,
-  hidden: -1,
-  pinned: 1, // anything over 0 means pinned, but when our local users pins a conversation, we set the priority to 1
 };
 
 export const READ_MESSAGE_STATE = {

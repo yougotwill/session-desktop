@@ -1,16 +1,17 @@
 import classNames from 'classnames';
 import { isEmpty } from 'lodash';
-import React from 'react';
+
 import { useSelector } from 'react-redux';
 import { useConvoIdFromContext } from '../../../contexts/ConvoIdContext';
 import {
   useHasUnread,
+  useIsOutgoingRequest,
   useIsPrivate,
   useIsTyping,
   useLastMessage,
 } from '../../../hooks/useParamSelector';
-import { LastMessageStatusType } from '../../../state/ducks/conversations';
-import { isSearching } from '../../../state/selectors/search';
+import { LastMessageStatusType } from '../../../state/ducks/types';
+import { useIsSearching } from '../../../state/selectors/search';
 import { getIsMessageRequestOverlayShown } from '../../../state/selectors/section';
 import { assertUnreachable } from '../../../types/sqlSharedTypes';
 import { TypingAnimation } from '../../conversation/TypingAnimation';
@@ -26,8 +27,13 @@ export const MessageItem = () => {
   const hasUnread = useHasUnread(conversationId);
   const isConvoTyping = useIsTyping(conversationId);
   const isMessageRequest = useSelector(getIsMessageRequestOverlayShown);
+  const isOutgoingRequest = useIsOutgoingRequest(conversationId);
 
-  const isSearchingMode = useSelector(isSearching);
+  const isSearching = useIsSearching();
+
+  if (isOutgoingRequest) {
+    return null;
+  }
 
   if (lastMessage?.interactionType && lastMessage?.interactionStatus) {
     return <InteractionItem conversationId={conversationId} lastMessage={lastMessage} />;
@@ -63,7 +69,7 @@ export const MessageItem = () => {
           />
         )}
       </div>
-      {!isSearchingMode && lastMessage && lastMessage.status && !isMessageRequest ? (
+      {!isSearching && lastMessage && lastMessage.status && !isMessageRequest ? (
         <IconMessageStatus status={lastMessage.status} />
       ) : null}
     </div>

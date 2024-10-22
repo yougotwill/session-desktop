@@ -1,6 +1,7 @@
 /* eslint-disable import/extensions */
 /* eslint-disable import/no-unresolved */
 import {
+  BlindingActionsCalls,
   ContactInfoSet,
   ContactsWrapperActionsCalls,
   ConvoInfoVolatileWrapperActionsCalls,
@@ -61,6 +62,7 @@ type GenericWrapperActionsCalls = {
     ed25519Key: Uint8Array,
     dump: Uint8Array | null
   ) => Promise<void>;
+  free: (    wrapperId: ConfigWrapperUser  ) => Promise<void>;
   confirmPushed: GenericWrapperActionsCall<ConfigWrapperUser, 'confirmPushed'>;
   dump: GenericWrapperActionsCall<ConfigWrapperUser, 'dump'>;
   makeDump: GenericWrapperActionsCall<ConfigWrapperUser, 'makeDump'>;
@@ -81,6 +83,12 @@ export const GenericWrapperActions: GenericWrapperActionsCalls = {
       GenericWrapperActionsCalls['init']
     >,
 
+
+  /** This function is used to free wrappers from memory only.
+   *
+   * See freeUserWrapper() in libsession.worker.ts */
+  free: async (wrapperId: ConfigWrapperUser) =>
+    callLibSessionWorker([wrapperId, 'free']) as Promise<void>,
   confirmPushed: async (wrapperId: ConfigWrapperUser, seqno: number, hash: string) =>
     callLibSessionWorker([wrapperId, 'confirmPushed', seqno, hash]) as ReturnType<
       GenericWrapperActionsCalls['confirmPushed']
@@ -120,6 +128,7 @@ function createBaseActionsFor(wrapperType: ConfigWrapperUser) {
     /* Reuse the GenericWrapperActions with the UserConfig argument */
     init: async (ed25519Key: Uint8Array, dump: Uint8Array | null) =>
       GenericWrapperActions.init(wrapperType, ed25519Key, dump),
+    free: async () => GenericWrapperActions.free(wrapperType),
     confirmPushed: async (seqno: number, hash: string) =>
       GenericWrapperActions.confirmPushed(wrapperType, seqno, hash),
     dump: async () => GenericWrapperActions.dump(wrapperType),
@@ -130,7 +139,6 @@ function createBaseActionsFor(wrapperType: ConfigWrapperUser) {
     currentHashes: async () => GenericWrapperActions.currentHashes(wrapperType),
     merge: async (toMerge: Array<MergeSingle>) => GenericWrapperActions.merge(wrapperType, toMerge),
     storageNamespace: async () => GenericWrapperActions.storageNamespace(wrapperType),
-    free: async () => {},
   };
 }
 
@@ -139,17 +147,33 @@ export const UserConfigWrapperActions: UserConfigWrapperActionsCalls = {
   ...createBaseActionsFor('UserConfig'),
 
   /** UserConfig wrapper specific actions */
-  getUserInfo: async () =>
-    callLibSessionWorker(['UserConfig', 'getUserInfo']) as Promise<
-      ReturnType<UserConfigWrapperActionsCalls['getUserInfo']>
+  getPriority: async () =>
+    callLibSessionWorker(['UserConfig', 'getPriority']) as Promise<
+      ReturnType<UserConfigWrapperActionsCalls['getPriority']>
     >,
-  setUserInfo: async (
-    name: string,
-    priority: number,
-    profilePic: { url: string; key: Uint8Array } | null
-  ) =>
-    callLibSessionWorker(['UserConfig', 'setUserInfo', name, priority, profilePic]) as Promise<
-      ReturnType<UserConfigWrapperActionsCalls['setUserInfo']>
+  getName: async () =>
+    callLibSessionWorker(['UserConfig', 'getName']) as Promise<
+      ReturnType<UserConfigWrapperActionsCalls['getName']>
+    >,
+  getProfilePic: async () =>
+    callLibSessionWorker(['UserConfig', 'getProfilePic']) as Promise<
+      ReturnType<UserConfigWrapperActionsCalls['getProfilePic']>
+    >,
+  setPriority: async (priority: number) =>
+    callLibSessionWorker(['UserConfig', 'setPriority', priority]) as Promise<
+      ReturnType<UserConfigWrapperActionsCalls['setPriority']>
+    >,
+  setName: async (name: string) =>
+    callLibSessionWorker(['UserConfig', 'setName', name]) as Promise<
+      ReturnType<UserConfigWrapperActionsCalls['setName']>
+    >,
+  setNameTruncated: async (name: string) =>
+    callLibSessionWorker(['UserConfig', 'setNameTruncated', name]) as Promise<
+      ReturnType<UserConfigWrapperActionsCalls['setNameTruncated']>
+    >,
+  setProfilePic: async (profilePic: ProfilePicture) =>
+    callLibSessionWorker(['UserConfig', 'setProfilePic', profilePic]) as Promise<
+      ReturnType<UserConfigWrapperActionsCalls['setProfilePic']>
     >,
   getEnableBlindedMsgRequest: async () =>
     callLibSessionWorker(['UserConfig', 'getEnableBlindedMsgRequest']) as Promise<
@@ -637,8 +661,8 @@ export const MetaGroupWrapperActions: MetaGroupWrapperActionsCalls = {
     callLibSessionWorker([`MetaGroupConfig-${groupPk}`, 'keyGetCurrentGen']) as Promise<
       ReturnType<MetaGroupWrapperActionsCalls['keyGetCurrentGen']>
     >,
-  encryptMessages: async (groupPk: GroupPubkeyType, plaintexts: Array<Uint8Array>) =>
-    callLibSessionWorker([`MetaGroupConfig-${groupPk}`, 'encryptMessages', plaintexts]) as Promise<
+  encryptMessages: async (groupPk: GroupPubkeyType, plainTexts: Array<Uint8Array>) =>
+    callLibSessionWorker([`MetaGroupConfig-${groupPk}`, 'encryptMessages', plainTexts]) as Promise<
       ReturnType<MetaGroupWrapperActionsCalls['encryptMessages']>
     >,
   decryptMessage: async (groupPk: GroupPubkeyType, ciphertext: Uint8Array) =>
@@ -704,6 +728,17 @@ export const MultiEncryptWrapperActions: MultiEncryptActionsCalls = {
 };
 
 export const EncryptionDomains = ['SessionGroupKickedMessage'] as const;
+
+export const BlindingActions: BlindingActionsCalls = {
+  blindVersionPubkey: async (opts: { ed25519SecretKey: Uint8Array }) =>
+    callLibSessionWorker(['Blinding', 'blindVersionPubkey', opts]) as Promise<
+      ReturnType<BlindingActionsCalls['blindVersionPubkey']>
+    >,
+  blindVersionSign: async (opts: { ed25519SecretKey: Uint8Array; sigTimestampSeconds: number }) =>
+    callLibSessionWorker(['Blinding', 'blindVersionSign', opts]) as Promise<
+      ReturnType<BlindingActionsCalls['blindVersionSign']>
+    >,
+};
 
 export const callLibSessionWorker = async (
   callToMake: LibSessionWorkerFunctions

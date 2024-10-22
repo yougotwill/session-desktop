@@ -1,7 +1,6 @@
 import classNames from 'classnames';
 import { isEmpty } from 'lodash';
-import moment from 'moment';
-import React, { useCallback, useLayoutEffect, useState } from 'react';
+import { MouseEvent, useCallback, useLayoutEffect, useState } from 'react';
 import { InView } from 'react-intersection-observer';
 import { useSelector } from 'react-redux';
 import styled from 'styled-components';
@@ -21,13 +20,13 @@ import {
   getShouldHighlightMessage,
 } from '../../../../state/selectors/conversations';
 import { useSelectedIsPrivate } from '../../../../state/selectors/selectedConversation';
-import { canDisplayImagePreview } from '../../../../types/Attachment';
 import { MessageAttachment } from './MessageAttachment';
 import { MessageAvatar } from './MessageAvatar';
 import { MessageHighlighter } from './MessageHighlighter';
 import { MessageLinkPreview } from './MessageLinkPreview';
 import { MessageQuote } from './MessageQuote';
 import { MessageText } from './MessageText';
+import { formatFullDate } from '../../../../util/i18n/formatting/generics';
 
 export type MessageContentSelectorProps = Pick<
   MessageRenderingProps,
@@ -40,7 +39,7 @@ type Props = {
 
 // TODO not too sure what is this doing? It is not preventDefault()
 // or stopPropagation() so I think this is never cancelling a click event?
-function onClickOnMessageInnerContainer(event: React.MouseEvent<HTMLDivElement>) {
+function onClickOnMessageInnerContainer(event: MouseEvent<HTMLDivElement>) {
   const selection = window.getSelection();
   // Text is being selected
   if (selection && selection.type === 'Range') {
@@ -146,15 +145,11 @@ export const MessageContent = (props: Props) => {
     return null;
   }
 
-  const { direction, text, timestamp, serverTimestamp, previews, quote, attachments } =
-    contentProps;
+  const { direction, text, timestamp, serverTimestamp, previews, quote } = contentProps;
 
   const hasContentBeforeAttachment = !isEmpty(previews) || !isEmpty(quote) || !isEmpty(text);
 
-  const toolTipTitle = moment(serverTimestamp || timestamp).format('llll');
-
-  const isDetailViewAndSupportsAttachmentCarousel =
-    isDetailView && canDisplayImagePreview(attachments);
+  const toolTipTitle = formatFullDate(new Date(serverTimestamp || timestamp));
 
   return (
     <StyledMessageContent
@@ -203,14 +198,14 @@ export const MessageContent = (props: Props) => {
               <MessageText messageId={props.messageId} />
             </StyledMessageOpaqueContent>
           )}
-          {!isDeleted && isDetailViewAndSupportsAttachmentCarousel && !imageBroken ? null : (
+          {!isDeleted ? (
             <MessageAttachment
               messageId={props.messageId}
               imageBroken={imageBroken}
               handleImageError={handleImageError}
               highlight={highlight}
             />
-          )}
+          ) : null}
         </IsMessageVisibleContext.Provider>
       </InView>
     </StyledMessageContent>

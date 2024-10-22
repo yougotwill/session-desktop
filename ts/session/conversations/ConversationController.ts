@@ -17,7 +17,6 @@ import { PubKey } from '../types';
 import { getMessageQueue } from '..';
 import { ConfigDumpData } from '../../data/configDump/configDump';
 import { deleteAllMessagesByConvoIdNoConfirmation } from '../../interactions/conversationInteractions';
-import { CONVERSATION_PRIORITIES, ConversationTypeEnum } from '../../models/conversationAttributes';
 import { removeAllClosedGroupEncryptionKeyPairs } from '../../receiver/closedGroups';
 import { groupInfoActions } from '../../state/ducks/metaGroups';
 import { getCurrentlySelectedConversationOutsideRedux } from '../../state/selectors/conversations';
@@ -47,6 +46,7 @@ import { SessionUtilConvoInfoVolatile } from '../utils/libsession/libsession_uti
 import { SessionUtilUserGroups } from '../utils/libsession/libsession_utils_user_groups';
 import { DisappearingMessages } from '../disappearing_messages';
 import { StoreGroupRequestFactory } from '../apis/snode_api/factories/StoreGroupRequestFactory';
+import { CONVERSATION_PRIORITIES, ConversationTypeEnum } from '../../models/types';
 
 let instance: ConvoController | null;
 
@@ -283,7 +283,7 @@ class ConvoController {
     const groupInUserGroup = await UserGroupsWrapperActions.getGroup(groupPk);
 
     // send the leave message before we delete everything for this group (including the key!)
-    // Note: if we were kicked, we already lost the authdata/secretKey for it, so no need to try to send our message.
+    // Note: if we were kicked, we already lost the authData/secretKey for it, so no need to try to send our message.
     if (sendLeaveMessage && !groupInUserGroup?.kicked) {
       await leaveClosedGroup(groupPk, fromSyncMessage);
     }
@@ -298,19 +298,19 @@ class ConvoController {
         groupInUserGroup.secretKey = null;
         groupInUserGroup.disappearingTimerSeconds = undefined;
         groupInUserGroup.kicked = true;
-        // we want to update the groupName in usergroup with whatever is in the groupInfo,
+        // we want to update the groupName in user group with whatever is in the groupInfo,
         // so even if the group is not polled anymore, we have an up to date name on restore.
-        let nameInMetagroup: string | undefined;
+        let nameInMetaGroup: string | undefined;
         try {
-          const metagroup = await MetaGroupWrapperActions.infoGet(groupPk);
-          if (metagroup && metagroup.name && !isEmpty(metagroup.name)) {
-            nameInMetagroup = metagroup.name;
+          const metaGroup = await MetaGroupWrapperActions.infoGet(groupPk);
+          if (metaGroup && metaGroup.name && !isEmpty(metaGroup.name)) {
+            nameInMetaGroup = metaGroup.name;
           }
         } catch (e) {
           // nothing to do
         }
-        if (groupInUserGroup && nameInMetagroup && groupInUserGroup.name !== nameInMetagroup) {
-          groupInUserGroup.name = nameInMetagroup;
+        if (groupInUserGroup && nameInMetaGroup && groupInUserGroup.name !== nameInMetaGroup) {
+          groupInUserGroup.name = nameInMetaGroup;
         }
         await UserGroupsWrapperActions.setGroup(groupInUserGroup);
       }
@@ -364,9 +364,9 @@ class ConvoController {
 
     await SessionUtilConvoInfoVolatile.removeGroupFromWrapper(groupPk);
     // release the memory (and the current meta-dumps in memory for that group)
-    window.log.info(`freeing metagroup wrapper: ${ed25519Str(groupPk)}`);
+    window.log.info(`freeing meta group wrapper: ${ed25519Str(groupPk)}`);
     await MetaGroupWrapperActions.free(groupPk);
-    // delete the dumps from the metagroup state only, not the details in the UserGroups wrapper itself.
+    // delete the dumps from the meta group state only, not the details in the UserGroups wrapper itself.
     await ConfigDumpData.deleteDumpFor(groupPk);
     getSwarmPollingInstance().removePubkey(groupPk, 'deleteGroup');
 
@@ -426,7 +426,7 @@ class ConvoController {
       }
       if (conversation.id.startsWith('05')) {
         // make sure to filter blinded contacts as it will throw otherwise
-        await SessionUtilContact.removeContactFromWrapper(conversation.id); // then remove the entry alltogether from the wrapper
+        await SessionUtilContact.removeContactFromWrapper(conversation.id); // then remove the entry altogether from the wrapper
         await SessionUtilConvoInfoVolatile.removeContactFromWrapper(conversation.id);
       }
       if (getCurrentlySelectedConversationOutsideRedux() === conversation.id) {
@@ -443,7 +443,7 @@ class ConvoController {
    *
    * @returns the reference of the list of conversations stored.
    * Warning: You should not edit things directly from that list. This must only be used for reading things.
-   * If you need to make a change, do the usual getConversationControler().get('the id you want to edit')
+   * If you need to make a change, do the usual ConvoHub.use().get('the id you want to edit')
    */
   public getConversations(): Array<ConversationModel> {
     return this.conversations.models;
@@ -590,7 +590,8 @@ class ConvoController {
 }
 
 /**
- * You most likely don't want to call this function directly, but instead use the deleteLegacyGroup() from the ConversationController as it will take care of more cleaningup.
+ * You most likely don't want to call this function directly, but instead use the deleteLegacyGroup()
+ * from the ConversationController as it will take care of more cleaning up.
  * This throws if a leaveMessage needs to be sent, but fails to be sent.
  *
  * Note: `fromSyncMessage` is used to know if we need to send a leave group message to the group first.
@@ -650,13 +651,13 @@ async function leaveClosedGroup(groupPk: PubkeyType | GroupPubkeyType, fromSyncM
     const ourLeavingNotificationMessage = new GroupUpdateMemberLeftNotificationMessage({
       createAtNetworkTimestamp,
       groupPk,
-      ...DisappearingMessages.getExpireDetailsForOutgoingMesssage(convo, createAtNetworkTimestamp), // this one should be expiring with the convo expiring details
+      ...DisappearingMessages.getExpireDetailsForOutgoingMessage(convo, createAtNetworkTimestamp), // this one should be expiring with the convo expiring details
     });
 
     window?.log?.info(
       `We are leaving the group ${ed25519Str(groupPk)}. Sending our leaving messages.`
     );
-    // We might not be able to send our leaving messages (no encryption keypair, we were already removed, no network, etc).
+    // We might not be able to send our leaving messages (no encryption key pair, we were already removed, no network, etc).
     // If that happens, we should just remove everything from our current user.
     try {
       const storeRequests = await StoreGroupRequestFactory.makeGroupMessageSubRequest(
@@ -691,10 +692,10 @@ async function leaveClosedGroup(groupPk: PubkeyType | GroupPubkeyType, fromSyncM
   }
 
   // TODO remove legacy group support
-  const keypair = await Data.getLatestClosedGroupEncryptionKeyPair(groupPk);
-  if (!keypair || isEmpty(keypair) || isEmpty(keypair.publicHex) || isEmpty(keypair.privateHex)) {
-    // if we do not have a keypair, we won't be able to send our leaving message neither, so just skip sending it.
-    // this can happen when getting a group from a broken libsession usergroup wrapper, but not only.
+  const keyPair = await Data.getLatestClosedGroupEncryptionKeyPair(groupPk);
+  if (!keyPair || isEmpty(keyPair) || isEmpty(keyPair.publicHex) || isEmpty(keyPair.privateHex)) {
+    // if we do not have a keyPair, we won't be able to send our leaving message neither, so just skip sending it.
+    // this can happen when getting a group from a broken libsession user group wrapper, but not only.
     return;
   }
 
@@ -706,16 +707,16 @@ async function leaveClosedGroup(groupPk: PubkeyType | GroupPubkeyType, fromSyncM
     expireTimer: null,
   });
 
-  window?.log?.info(`We are leaving the legacygroup ${groupPk}. Sending our leaving message.`);
+  window?.log?.info(`We are leaving the legacy group ${groupPk}. Sending our leaving message.`);
 
-  // if we do not have a keypair for that group, we can't send our leave message, so just skip the message sending part
+  // if we do not have a keyPair for that group, we can't send our leave message, so just skip the message sending part
   const wasSent = await getMessageQueue().sendToLegacyGroupNonDurably({
     message: ourLeavingMessage,
     namespace: SnodeNamespaces.LegacyClosedGroup,
     destination: groupPk,
   });
   // The leaving message might fail to be sent for some specific reason we want to still delete the group.
-  // For instance, if we do not have the encryption keypair anymore, we cannot send our left message, but we should still delete its content
+  // For instance, if we do not have the encryption keyPair anymore, we cannot send our left message, but we should still delete its content
   if (wasSent) {
     window?.log?.info(
       `Leaving message sent ${ed25519Str(groupPk)}. Removing everything related to this group.`

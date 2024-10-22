@@ -1,15 +1,11 @@
-import classNames from 'classnames';
 import { clone } from 'lodash';
-import React, { useCallback } from 'react';
+import { useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import styled from 'styled-components';
 import { Data } from '../../../../data/data';
 import { MessageModelType, MessageRenderingProps } from '../../../../models/messageType';
-import {
-  PropsForAttachment,
-  showLightBox,
-  toggleSelectedMessageId,
-} from '../../../../state/ducks/conversations';
+import { PropsForAttachment, toggleSelectedMessageId } from '../../../../state/ducks/conversations';
+import { LightBoxOptions, updateLightBoxOptions } from '../../../../state/ducks/modalDialog';
 import { StateType } from '../../../../state/reducer';
 import { useMessageSelected } from '../../../../state/selectors';
 import {
@@ -19,21 +15,19 @@ import {
 import {
   AttachmentType,
   AttachmentTypeWithPath,
-  canDisplayImagePreview,
-  getExtensionForDisplay,
-  hasImage,
-  hasVideoScreenshot,
   isAudio,
   isImage,
   isVideo,
 } from '../../../../types/Attachment';
 import { saveAttachmentToDisk } from '../../../../util/attachmentsUtil';
-import { Spinner } from '../../../basic/Spinner';
+import { MediaItemType } from '../../../lightbox/LightboxGallery';
 import { AudioPlayerWithEncryptedFile } from '../../H5AudioPlayer';
 import { ImageGrid } from '../../ImageGrid';
-import { LightBoxOptions } from '../../SessionConversation';
 import { ClickToTrustSender } from './ClickToTrustSender';
 import { MessageHighlighter } from './MessageHighlighter';
+import { useIsDetailMessageView } from '../../../../contexts/isDetailViewContext';
+import { MessageGenericAttachment } from './MessageGenericAttachment';
+import { ContextMessageProvider } from '../../../../contexts/MessageIdContext';
 
 export type MessageAttachmentSelectorProps = Pick<
   MessageRenderingProps,
@@ -64,12 +58,9 @@ const StyledImageGridContainer = styled.div<{
   justify-content: ${props => (props.messageDirection === 'incoming' ? 'flex-start' : 'flex-end')};
 `;
 
-const StyledGenericAttachmentContainer = styled(MessageHighlighter)<{ selected: boolean }>`
-  ${props => props.selected && 'box-shadow: var(--drop-shadow);'}
-`;
-
 export const MessageAttachment = (props: Props) => {
   const { messageId, imageBroken, handleImageError, highlight = false } = props;
+  const isDetailView = useIsDetailMessageView();
 
   const dispatch = useDispatch();
   const attachmentProps = useSelector((state: StateType) =>
@@ -131,29 +122,31 @@ export const MessageAttachment = (props: Props) => {
   }
 
   const firstAttachment = attachments[0];
-  const displayImage = canDisplayImagePreview(attachments);
 
   if (!isTrustedForAttachmentDownload) {
     return <ClickToTrustSender messageId={messageId} />;
   }
 
-  if (
-    displayImage &&
-    !imageBroken &&
-    ((isImage(attachments) && hasImage(attachments)) ||
-      (isVideo(attachments) && hasVideoScreenshot(attachments)))
-  ) {
+  if (isImage(attachments) || isVideo(attachments)) {
+    // we use the carousel in the detail view
+    if (isDetailView) {
+      return null;
+    }
+
     return (
-      <MessageHighlighter highlight={highlight}>
-        <StyledImageGridContainer messageDirection={direction}>
-          <ImageGrid
-            messageId={messageId}
-            attachments={attachments}
-            onError={handleImageError}
-            onClickAttachment={onClickOnImageGrid}
-          />
-        </StyledImageGridContainer>
-      </MessageHighlighter>
+      <ContextMessageProvider value={messageId}>
+        <MessageHighlighter highlight={highlight}>
+          <StyledImageGridContainer messageDirection={direction}>
+            <ImageGrid
+              attachments={attachments}
+              imageBroken={imageBroken}
+              highlight={highlight}
+              onError={handleImageError}
+              onClickAttachment={onClickOnImageGrid}
+            />
+          </StyledImageGridContainer>
+        </MessageHighlighter>
+      </ContextMessageProvider>
     );
   }
 
@@ -178,48 +171,16 @@ export const MessageAttachment = (props: Props) => {
       </MessageHighlighter>
     );
   }
-  const { pending, fileName, fileSize, contentType } = firstAttachment;
-  const extension = getExtensionForDisplay({ contentType, fileName });
 
   return (
-    <StyledGenericAttachmentContainer
+    <MessageGenericAttachment
+      attachment={firstAttachment}
+      pending={firstAttachment.pending}
+      direction={direction}
       highlight={highlight}
       selected={selected}
-      className={'module-message__generic-attachment'}
       onClick={onClickOnGenericAttachment}
-    >
-      {pending ? (
-        <div className="module-message__generic-attachment__spinner-container">
-          <Spinner size="small" />
-        </div>
-      ) : (
-        <div className="module-message__generic-attachment__icon-container">
-          <div role="button" className="module-message__generic-attachment__icon">
-            {extension ? (
-              <div className="module-message__generic-attachment__icon__extension">{extension}</div>
-            ) : null}
-          </div>
-        </div>
-      )}
-      <div className="module-message__generic-attachment__text">
-        <div
-          className={classNames(
-            'module-message__generic-attachment__file-name',
-            `module-message__generic-attachment__file-name--${direction}`
-          )}
-        >
-          {fileName}
-        </div>
-        <div
-          className={classNames(
-            'module-message__generic-attachment__file-size',
-            `module-message__generic-attachment__file-size--${direction}`
-          )}
-        >
-          {fileSize}
-        </div>
-      </div>
-    </StyledGenericAttachmentContainer>
+    />
   );
 };
 
@@ -244,7 +205,7 @@ export async function showLightboxFromAttachmentProps(
   const media = (msgAttachments || []).map(attachmentForMedia => {
     index++;
     const messageTimestamp =
-      found.get('timestamp') || found.get('serverTimestamp') || found.get('received_at');
+      found.get('timestamp') || found.get('serverTimestamp') || found.get('received_at') || -1;
 
     return {
       index: clone(index),
@@ -259,10 +220,10 @@ export async function showLightboxFromAttachmentProps(
 
   if (attachmentIsAttachmentTypeWithPath(selected)) {
     const lightBoxOptions: LightBoxOptions = {
-      media: media as any,
+      media,
       attachment: selected,
     };
-    window.inboxStore?.dispatch(showLightBox(lightBoxOptions));
+    window.inboxStore?.dispatch(updateLightBoxOptions(lightBoxOptions));
   } else {
     window.log.warn('Attachment is not of the right type');
   }
@@ -281,10 +242,10 @@ const onClickAttachment = async (onClickProps: {
   }
   const msgAttachments = found.getPropsForMessage().attachments;
 
-  const media = (msgAttachments || []).map(attachmentForMedia => {
+  const media: Array<MediaItemType> = (msgAttachments || []).map(attachmentForMedia => {
     index++;
     const messageTimestamp =
-      found.get('timestamp') || found.get('serverTimestamp') || found.get('received_at');
+      found.get('timestamp') || found.get('serverTimestamp') || found.get('received_at') || -1;
 
     return {
       index: clone(index),
@@ -299,10 +260,10 @@ const onClickAttachment = async (onClickProps: {
 
   if (attachmentIsAttachmentTypeWithPath(onClickProps.attachment)) {
     const lightBoxOptions: LightBoxOptions = {
-      media: media as any,
+      media,
       attachment: onClickProps.attachment,
     };
-    window.inboxStore?.dispatch(showLightBox(lightBoxOptions));
+    window.inboxStore?.dispatch(updateLightBoxOptions(lightBoxOptions));
   } else {
     window.log.warn('Attachment is not of the right type');
   }

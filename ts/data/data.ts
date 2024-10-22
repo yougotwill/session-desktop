@@ -2,7 +2,6 @@
 
 import { GroupPubkeyType } from 'libsession_util_nodejs';
 import _, { isEmpty } from 'lodash';
-import { MessageResultProps } from '../components/search/MessageSearchResults';
 import { ConversationModel } from '../models/conversation';
 import { ConversationAttributes } from '../models/conversationAttributes';
 import { MessageCollection, MessageModel } from '../models/message';
@@ -14,6 +13,7 @@ import { getSodiumRenderer } from '../session/crypto';
 import { DisappearingMessages } from '../session/disappearing_messages';
 import { PubKey } from '../session/types';
 import { fromArrayBufferToBase64, fromBase64ToArrayBuffer } from '../session/utils/String';
+import { MessageResultProps } from '../types/message';
 import {
   AsyncWrapper,
   MsgDuplicateSearchOpenGroup,
@@ -32,33 +32,11 @@ import {
   DeleteAllMessageHashesInConversationMatchingAuthorType,
   DeleteAllMessageHashesInConversationType,
 } from './sharedDataTypes';
+import { GuardNode, Snode } from './types';
 
 const ERASE_SQL_KEY = 'erase-sql-key';
 const ERASE_ATTACHMENTS_KEY = 'erase-attachments';
 const CLEANUP_ORPHANED_ATTACHMENTS_KEY = 'cleanup-orphaned-attachments';
-
-export type IdentityKey = {
-  id: string;
-  publicKey: ArrayBuffer;
-  firstUse: boolean;
-  nonblockingApproval: boolean;
-  secretKey?: string; // found in medium groups
-};
-
-export type GuardNode = {
-  ed25519PubKey: string;
-};
-
-export type Snode = {
-  ip: string;
-  port: number;
-  pubkey_x25519: string;
-  pubkey_ed25519: string;
-};
-
-export type SwarmNode = Snode & {
-  address: string;
-};
 
 // Basic
 async function shutdown(): Promise<void> {

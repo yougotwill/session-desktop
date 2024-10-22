@@ -68,7 +68,7 @@ declare module 'react' {
 
     // settings menu item types
     | 'messageRequests-settings-menu-item'
-    | 'recoveryPhrase-settings-menu-item'
+    | 'recoveryPassword-settings-menu-item'
     | 'privacy-settings-menu-item'
     | 'notifications-settings-menu-item'
     | 'conversations-settings-menu-item'

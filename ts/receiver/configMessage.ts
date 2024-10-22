@@ -1,11 +1,10 @@
 /* eslint-disable no-await-in-loop */
 import { ContactInfo, GroupPubkeyType, UserGroupsGet } from 'libsession_util_nodejs';
-import { base64_variants, from_base64 } from 'libsodium-wrappers-sumo';
 import { compact, difference, isEmpty, isNil, isNumber, toNumber } from 'lodash';
 import { ConfigDumpData } from '../data/configDump/configDump';
 import { SettingsKey } from '../data/settings-key';
 import { deleteAllMessagesByConvoIdNoConfirmation } from '../interactions/conversationInteractions';
-import { CONVERSATION_PRIORITIES, ConversationTypeEnum } from '../models/conversationAttributes';
+import { ClosedGroup } from '../session';
 import { getOpenGroupManager } from '../session/apis/open_group_api/opengroupV2/OpenGroupManagerV2';
 import { OpenGroupUtils } from '../session/apis/open_group_api/utils';
 import { getOpenGroupV2ConversationId } from '../session/apis/open_group_api/utils/OpenGroupUtils';
@@ -34,7 +33,7 @@ import {
   SnodeNamespacesUserConfig,
 } from '../session/apis/snode_api/namespaces';
 import { RetrieveMessageItemWithNamespace } from '../session/apis/snode_api/types';
-import { ClosedGroup, GroupInfo } from '../session/group/closed-group';
+import { GroupInfo } from '../session/group/closed-group';
 import { groupInfoActions } from '../state/ducks/metaGroups';
 import {
   ConfigWrapperObjectTypesMeta,
@@ -60,6 +59,9 @@ import { addKeyPairToCacheAndDBIfNeeded } from './closedGroups';
 import { HexKeyPair } from './keypairs';
 import { queueAllCachedFromSource } from './receiver';
 
+import { CONVERSATION } from '../session/constants';
+import { CONVERSATION_PRIORITIES, ConversationTypeEnum } from '../models/types';
+
 type IncomingUserResult = {
   needsPush: boolean;
   needsDump: boolean;
@@ -68,9 +70,11 @@ type IncomingUserResult = {
   namespace: SnodeNamespacesUserConfig;
 };
 
+
+
 function byUserNamespace(incomingConfigs: Array<RetrieveMessageItemWithNamespace>) {
   const groupedByVariant: Map<
-    SnodeNamespacesUserConfig,
+  SnodeNamespacesUserConfig,
     Array<RetrieveMessageItemWithNamespace>
   > = new Map();
 
@@ -106,7 +110,7 @@ async function printDumpForDebug(prefix: string, variant: ConfigWrapperObjectTyp
 async function mergeUserConfigsWithIncomingUpdates(
   incomingConfigs: Array<RetrieveMessageItemWithNamespace>
 ): Promise<Map<ConfigWrapperUser, IncomingUserResult>> {
-  // first, group by namesapces so we do a single merge call
+  // first, group by namespaces so we do a single merge call
   // Note: this call throws if given a non user kind as this function should only handle user variants/kinds
   const groupedByNamespaces = byUserNamespace(incomingConfigs);
 
@@ -122,7 +126,7 @@ async function mergeUserConfigsWithIncomingUpdates(
         continue;
       }
       const toMerge = sameVariant.map(msg => ({
-        data: from_base64(msg.data, base64_variants.ORIGINAL),
+        data: StringUtils.fromBase64ToArray(msg.data),
         hash: msg.hash,
       }));
 
@@ -141,7 +145,7 @@ async function mergeUserConfigsWithIncomingUpdates(
       const needsPush = await GenericWrapperActions.needsPush(variant);
       const mergedTimestamps = sameVariant
         .filter(m => hashesMerged.includes(m.hash))
-        .map(m => m.storedAt);
+        .map(m => m.timestamp);
       const latestEnvelopeTimestamp = Math.max(...mergedTimestamps);
 
       window.log.debug(
@@ -173,7 +177,7 @@ export function getSettingsKeyFromLibsessionWrapper(
 ): string | null {
   if (!isUserConfigWrapperType(wrapperType)) {
     throw new Error(
-      `getSettingsKeyFromLibsessionWrapper only cares about uservariants but got ${wrapperType}`
+      `getSettingsKeyFromLibsessionWrapper only cares about user variants but got ${wrapperType}`
     );
   }
   switch (wrapperType) {
@@ -222,8 +226,10 @@ async function updateLibsessionLatestProcessedUserTimestamp(
  * Instead you will need to updateOurProfileLegacyOrViaLibSession() to support them
  */
 async function handleUserProfileUpdate(result: IncomingUserResult): Promise<void> {
-  const updateUserInfo = await UserConfigWrapperActions.getUserInfo();
-  if (!updateUserInfo) {
+  const profilePic = await UserConfigWrapperActions.getProfilePic();
+  const displayName = await UserConfigWrapperActions.getName();
+  const priority = await UserConfigWrapperActions.getPriority();
+  if (!profilePic || isEmpty(profilePic)) {
     return;
   }
 
@@ -233,21 +239,18 @@ async function handleUserProfileUpdate(result: IncomingUserResult): Promise<void
     await window.setSettingValue(SettingsKey.hasBlindedMsgRequestsEnabled, newBlindedMsgRequest); // this does the dispatch to redux
   }
 
-  const picUpdate =
-    !isEmpty(updateUserInfo.key) &&
-    !isEmpty(updateUserInfo.url) &&
-    updateUserInfo.key.length === 32;
+  const picUpdate = profilePic.key && !isEmpty(profilePic.key) && !isEmpty(profilePic.url) && profilePic.key.length === 32;
 
   // NOTE: if you do any changes to the user's settings which are synced, it should be done above the `updateOurProfileViaLibSession` call
   await updateOurProfileViaLibSession({
     sentAt: result.latestEnvelopeTimestamp,
-    displayName: updateUserInfo.name,
-    profileUrl: picUpdate ? updateUserInfo.url : null,
-    profileKey: picUpdate ? updateUserInfo.key : null,
-    priority: updateUserInfo.priority,
+    displayName: displayName || '',
+    profileUrl: picUpdate ? profilePic.url : null,
+    profileKey: picUpdate ? profilePic.key : null,
+    priority,
   });
 
-  // NOTE: If we want to update the conversation in memory with changes from the updated user profile we need to wait untl the profile has been updated to prevent multiple merge conflicts
+  // NOTE: If we want to update the conversation in memory with changes from the updated user profile we need to wait until the profile has been updated to prevent multiple merge conflicts
   const ourConvo = ConvoHub.use().get(UserUtils.getOurPubKeyStrFromCache());
 
   if (ourConvo) {
@@ -617,7 +620,10 @@ async function handleLegacyGroupUpdate(latestEnvelopeTimestamp: number) {
 
     const members = fromWrapper.members.map(m => m.pubkeyHex);
     const admins = fromWrapper.members.filter(m => m.isAdmin).map(m => m.pubkeyHex);
-    const activeAt = legacyGroupConvo.getActiveAt();
+    const creationTimestamp = fromWrapper.joinedAtSeconds
+      ? fromWrapper.joinedAtSeconds * 1000
+      : CONVERSATION.LAST_JOINED_FALLBACK_TIMESTAMP;
+
     // then for all the existing legacy group in the wrapper, we need to override the field of what we have in the DB with what is in the wrapper
     // We only set group admins on group creation
     const groupDetails: GroupInfo = {
@@ -626,9 +632,9 @@ async function handleLegacyGroupUpdate(latestEnvelopeTimestamp: number) {
       members,
       admins,
       activeAt:
-        !!activeAt && activeAt < latestEnvelopeTimestamp
-          ? legacyGroupConvo.getActiveAt()
-          : latestEnvelopeTimestamp,
+        !!legacyGroupConvo.get('active_at') && legacyGroupConvo.get('active_at') > creationTimestamp
+          ? legacyGroupConvo.get('active_at')
+          : creationTimestamp,
     };
 
     await ClosedGroup.updateOrCreateClosedGroup(groupDetails);
@@ -657,18 +663,17 @@ async function handleLegacyGroupUpdate(latestEnvelopeTimestamp: number) {
 
     const existingTimestampMs = legacyGroupConvo.getLastJoinedTimestamp();
     const existingJoinedAtSeconds = Math.floor(existingTimestampMs / 1000);
-    if (existingJoinedAtSeconds !== fromWrapper.joinedAtSeconds) {
+    if (existingJoinedAtSeconds !== creationTimestamp) {
       legacyGroupConvo.set({
-        lastJoinedTimestamp: fromWrapper.joinedAtSeconds * 1000,
+        lastJoinedTimestamp: creationTimestamp,
       });
       changes = true;
     }
-
     // start polling for this group if we are still part of it.
     if (!legacyGroupConvo.isKickedFromGroup()) {
       getSwarmPollingInstance().addGroupId(PubKey.cast(fromWrapper.pubkeyHex));
 
-      // save the encryption keypair if needed
+      // save the encryption key pair if needed
       if (!isEmpty(fromWrapper.encPubkey) && !isEmpty(fromWrapper.encSeckey)) {
         try {
           const inWrapperKeypair: HexKeyPair = {
@@ -678,13 +683,13 @@ async function handleLegacyGroupUpdate(latestEnvelopeTimestamp: number) {
 
           await addKeyPairToCacheAndDBIfNeeded(fromWrapper.pubkeyHex, inWrapperKeypair);
         } catch (e) {
-          window.log.warn('failed to save keypair for legacugroup', fromWrapper.pubkeyHex);
+          window.log.warn('failed to save key pair for legacy group', fromWrapper.pubkeyHex);
         }
       }
     }
 
     if (changes) {
-      // this commit will grab the latest encryption keypair and add it to the user group wrapper if needed
+      // this commit will grab the latest encryption key pair and add it to the user group wrapper if needed
       await legacyGroupConvo.commit();
     }
 
@@ -779,7 +784,7 @@ async function handleGroupUpdate(latestEnvelopeTimestamp: number) {
 
   for (let index = 0; index < allGroupsInWrapper.length; index++) {
     const groupInWrapper = allGroupsInWrapper[index];
-    window.inboxStore.dispatch(groupInfoActions.handleUserGroupUpdate(groupInWrapper));
+    window.inboxStore?.dispatch(groupInfoActions.handleUserGroupUpdate(groupInWrapper));
 
     await handleSingleGroupUpdate({ groupInWrapper, latestEnvelopeTimestamp, userEdKeypair });
   }
@@ -959,7 +964,7 @@ async function handleConvoInfoVolatileUpdate() {
         break;
 
       default:
-        assertUnreachable(type, `handleConvoInfoVolatileUpdate: unhandeld switch case: ${type}`);
+        assertUnreachable(type, `handleConvoInfoVolatileUpdate: unhandled switch case: ${type}`);
     }
   }
 }
@@ -1077,7 +1082,7 @@ async function updateOurProfileViaLibSession(
   await ProfileManager.updateOurProfileSync({ displayName, profileUrl, profileKey, priority });
 
   await setLastProfileUpdateTimestamp(toNumber(sentAt));
-  // do not trigger a signin by linking if the display name is empty
+  // do not trigger a sign in by linking if the display name is empty
   if (!isEmpty(displayName)) {
     trigger(configurationMessageReceived, displayName);
   } else {

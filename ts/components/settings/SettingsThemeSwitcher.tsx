@@ -1,8 +1,7 @@
-import React from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import styled from 'styled-components';
 import { getPrimaryColor } from '../../state/selectors/primaryColor';
-import { getTheme } from '../../state/selectors/theme';
+import { useTheme } from '../../state/selectors/theme';
 import {
   StyleSessionSwitcher,
   getPrimaryColors,
@@ -13,6 +12,7 @@ import { switchThemeTo } from '../../themes/switchTheme';
 import { SessionRadio, SessionRadioPrimaryColors } from '../basic/SessionRadio';
 import { SpacerLG, SpacerMD } from '../basic/Text';
 import { StyledDescriptionSettingsItem, StyledTitleSettingsItem } from './SessionSettingListItem';
+import { Localizer } from '../basic/Localizer';
 
 const StyledSwitcherContainer = styled.div`
   font-size: var(--font-size-md);
@@ -38,7 +38,7 @@ const ThemeContainer = styled.button`
 
   transition: var(--default-duration);
 
-  :hover {
+  &:hover {
     background: var(--settings-tab-background-hover-color);
   }
 `;
@@ -74,7 +74,7 @@ const ThemePreview = (props: { style: StyleSessionSwitcher }) => {
 
 const Themes = () => {
   const themes = getThemeColors();
-  const selectedTheme = useSelector(getTheme);
+  const selectedTheme = useTheme();
   const dispatch = useDispatch();
 
   return (
@@ -113,12 +113,16 @@ export const SettingsThemeSwitcher = () => {
 
   return (
     <StyledSwitcherContainer>
-      <StyledTitleSettingsItem>{window.i18n('themesSettingTitle')}</StyledTitleSettingsItem>
+      <StyledTitleSettingsItem>
+        <Localizer token="appearanceThemes" />
+      </StyledTitleSettingsItem>
       <ThemesContainer>
         <Themes />
       </ThemesContainer>
       <SpacerMD />
-      <StyledDescriptionSettingsItem>{window.i18n('primaryColor')}</StyledDescriptionSettingsItem>
+      <StyledDescriptionSettingsItem>
+        <Localizer token="appearancePrimaryColor" />
+      </StyledDescriptionSettingsItem>
       <SpacerMD />
       <ThemesContainer style={{ marginInlineStart: 'var(--margins-xs)' }}>
         {getPrimaryColors().map(item => {

@@ -1,25 +1,25 @@
-import React, { useState } from 'react';
-
+import { useState } from 'react';
+import { useDispatch } from 'react-redux';
 import useUpdate from 'react-use/lib/useUpdate';
 import styled from 'styled-components';
 import { useSet } from '../../hooks/useSet';
-import { ToastUtils } from '../../session/utils';
+import { updateBlockOrUnblockModal } from '../../state/ducks/modalDialog';
 import { BlockedNumberController } from '../../util';
-import { SessionButton, SessionButtonColor } from '../basic/SessionButton';
-import { SpacerLG } from '../basic/Text';
-import { SessionIconButton } from '../icon';
 import { MemberListItem } from '../MemberListItem';
-import { SettingsTitleAndDescription } from './SessionSettingListItem';
+import { Localizer } from '../basic/Localizer';
+import { SessionButton, SessionButtonColor } from '../basic/SessionButton';
+import { SpacerLG, SpacerSM } from '../basic/Text';
+import { SessionIconButton } from '../icon';
+import { SessionSettingsItemWrapper, SettingsTitleAndDescription } from './SessionSettingListItem';
 
 const BlockedEntriesContainer = styled.div`
-  flex-shrink: 1;
-  overflow: auto;
-  min-height: 40px;
-  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  width: 100%;
 `;
 
 const BlockedEntriesRoundedContainer = styled.div`
-  overflow: hidden;
   background: var(--background-secondary-color);
   border: 1px solid var(--border-color);
   border-radius: 16px;
@@ -27,36 +27,22 @@ const BlockedEntriesRoundedContainer = styled.div`
   margin: 0 var(--margins-lg);
 `;
 
-const BlockedContactsSection = styled.div`
-  display: flex;
-  flex-direction: column;
-  min-height: 80px;
-
-  background: var(--settings-tab-background-color);
-  color: var(--settings-tab-text-color);
-  border-top: 1px solid var(--border-color);
-  border-bottom: 1px solid var(--border-color);
-
-  margin-bottom: var(--margins-lg);
-`;
-
 const BlockedContactListTitle = styled.div`
   display: flex;
   justify-content: space-between;
-  min-height: 45px;
   align-items: center;
 `;
 
 const BlockedContactListTitleButtons = styled.div`
   display: flex;
   align-items: center;
+  min-height: 34px; // height of the unblock button
 `;
 
-export const StyledBlockedSettingItem = styled.div<{ clickable: boolean }>`
+export const StyledBlockedSettingItem = styled.div<{ clickable: boolean; expanded: boolean }>`
   font-size: var(--font-size-md);
-  padding: var(--margins-lg);
-
   cursor: ${props => (props.clickable ? 'pointer' : 'unset')};
+  ${props => props.expanded && 'padding-bottom: var(--margins-lg);'}
 `;
 
 const BlockedEntries = (props: {
@@ -72,9 +58,9 @@ const BlockedEntries = (props: {
         {blockedNumbers.map(blockedEntry => {
           return (
             <MemberListItem
+              key={`blocked-list-item-${blockedEntry}`}
               pubkey={blockedEntry}
               isSelected={selectedIds.includes(blockedEntry)}
-              key={blockedEntry}
               onSelect={addToSelected}
               onUnselect={removeFromSelected}
               disableBg={true}
@@ -87,10 +73,15 @@ const BlockedEntries = (props: {
 };
 
 const NoBlockedContacts = () => {
-  return <div>{window.i18n('noBlockedContacts')}</div>;
+  return (
+    <div>
+      <Localizer token="blockBlockedNone" />
+    </div>
+  );
 };
 
 export const BlockedContactsList = () => {
+  const dispatch = useDispatch();
   const [expanded, setExpanded] = useState(false);
   const {
     uniqueValues: selectedIds,
@@ -113,18 +104,28 @@ export const BlockedContactsList = () => {
 
   async function unBlockThoseUsers() {
     if (selectedIds.length) {
-      await BlockedNumberController.unblockAll(selectedIds);
-      emptySelected();
-      ToastUtils.pushToastSuccess('unblocked', window.i18n('unblocked'));
-      forceUpdate();
+      dispatch(
+        updateBlockOrUnblockModal({
+          action: 'unblock',
+          pubkeys: selectedIds,
+          onConfirmed: () => {
+            // annoying, but until that BlockedList is in redux, we need to force a refresh of this component when a change is made.
+            emptySelected();
+            forceUpdate();
+          },
+        })
+      );
     }
   }
 
   return (
-    <BlockedContactsSection>
-      <StyledBlockedSettingItem clickable={!noBlockedNumbers}>
+    <SessionSettingsItemWrapper inline={false}>
+      <StyledBlockedSettingItem
+        clickable={!noBlockedNumbers}
+        expanded={!noBlockedNumbers && expanded}
+      >
         <BlockedContactListTitle onClick={toggleUnblockList}>
-          <SettingsTitleAndDescription title={window.i18n('blockedSettingsTitle')} />
+          <SettingsTitleAndDescription title={window.i18n('conversationsBlockedContacts')} />
           {noBlockedNumbers ? (
             <NoBlockedContacts />
           ) : (
@@ -132,7 +133,7 @@ export const BlockedContactsList = () => {
               {hasAtLeastOneSelected && expanded ? (
                 <SessionButton
                   buttonColor={SessionButtonColor.Danger}
-                  text={window.i18n('unblock')}
+                  text={window.i18n('blockUnblock')}
                   onClick={unBlockThoseUsers}
                   dataTestId="unblock-button-settings-screen"
                 />
@@ -157,9 +158,9 @@ export const BlockedContactsList = () => {
             addToSelected={addToSelected}
             removeFromSelected={removeFromSelected}
           />
-          <SpacerLG />
+          <SpacerSM />
         </>
       ) : null}
-    </BlockedContactsSection>
+    </SessionSettingsItemWrapper>
   );
 };

@@ -10,11 +10,10 @@ import {
 } from 'libsession_util_nodejs';
 import { from_hex } from 'libsodium-wrappers-sumo';
 import { isArray, isEmpty, isEqual } from 'lodash';
-import { OpenGroupV2Room } from '../data/opengroups';
-import { OpenGroupRequestCommonType } from '../session/apis/open_group_api/opengroupV2/ApiUtil';
 import { DisappearingMessageConversationModeType } from '../session/disappearing_messages/types';
 import { fromHexToArray, toHex } from '../session/utils/String';
 import { ConfigWrapperObjectTypesMeta } from '../webworker/workers/browser/libsession_worker_functions';
+import { OpenGroupRequestCommonType, OpenGroupV2Room } from '../data/types';
 
 /**
  * This wrapper can be used to make a function type not async, asynced.

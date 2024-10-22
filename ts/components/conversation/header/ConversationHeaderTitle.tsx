@@ -1,5 +1,5 @@
 import { isEmpty } from 'lodash';
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { useDisappearingMessageSettingText } from '../../../hooks/useParamSelector';
 import { useIsRightPanelShowing } from '../../../hooks/useUI';
@@ -30,12 +30,30 @@ export type SubtitleStringsType = keyof Pick<
   'notifications' | 'members' | 'disappearingMessages'
 >;
 
-export const ConversationHeaderTitle = () => {
+type ConversationHeaderTitleProps = {
+  showSubtitle?: boolean;
+};
+
+function useLocalizedNotificationText() {
+  const currentNotificationSetting = useSelectedNotificationSetting();
+  switch (currentNotificationSetting) {
+    case 'mentions_only':
+      return window.i18n('notificationsHeaderMentionsOnly');
+    case 'disabled':
+      return window.i18n('notificationsHeaderMute');
+    case 'all':
+    default:
+      return window.i18n('notificationsHeaderAllMessages');
+  }
+}
+
+export const ConversationHeaderTitle = (props: ConversationHeaderTitleProps) => {
+  const { showSubtitle = true } = props;
+
   const dispatch = useDispatch();
   const convoId = useSelectedConversationKey();
   const convoName = useSelectedNicknameOrProfileNameOrShortenedPubkey();
 
-  const notificationSetting = useSelectedNotificationSetting();
   const isRightPanelOn = useIsRightPanelShowing();
   const subscriberCount = useSelectedSubscriberCount();
 
@@ -59,24 +77,20 @@ export const ConversationHeaderTitle = () => {
 
   const { i18n } = window;
 
-  const notificationSubtitle = useMemo(
-    () => (notificationSetting ? i18n('notificationSubtitle', [notificationSetting]) : null),
-    [i18n, notificationSetting]
-  );
+  const notificationSubtitle = useLocalizedNotificationText();
 
   const memberCountSubtitle = useMemo(() => {
-    let memberCount = 0;
+    let count = 0;
     if (isGroup) {
       if (isPublic) {
-        memberCount = subscriberCount || 0;
+        count = subscriberCount || 0;
       } else {
-        memberCount = selectedMembersCount;
+        count = selectedMembersCount;
       }
     }
 
-    if (isGroup && memberCount > 0 && !isKickedFromGroup) {
-      const count = String(memberCount);
-      return isPublic ? i18n('activeMembers', [count]) : i18n('members', [count]);
+    if (isGroup && count > 0 && !isKickedFromGroup) {
+      return isPublic ? i18n('membersActive', { count }) : i18n('members', { count });
     }
 
     return null;
@@ -163,7 +177,7 @@ export const ConversationHeaderTitle = () => {
               {convoName}
             </span>
           )}
-          {subtitleArray.indexOf(visibleSubtitle) > -1 && (
+          {showSubtitle && subtitleArray.indexOf(visibleSubtitle) > -1 && (
             <ConversationHeaderSubtitle
               currentSubtitle={visibleSubtitle}
               setCurrentSubtitle={setVisibleSubtitle}

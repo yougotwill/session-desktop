@@ -4,8 +4,8 @@ import { UserUtils } from '.';
 import { Data } from '../../data/data';
 import { SessionKeyPair } from '../../receiver/keypairs';
 import { LokiProfile } from '../../types/Message';
-import { getOurPubKeyStrFromStorage } from '../../util/storage';
 import { ConvoHub } from '../conversations';
+import { getOurPubKeyStrFromStorage } from '../../util/storage';
 import { PubKey } from '../types';
 import { fromHexToArray, toHex } from './String';
 

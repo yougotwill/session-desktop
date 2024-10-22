@@ -1,14 +1,16 @@
 import _, { isEmpty, sample, shuffle } from 'lodash';
 import pRetry from 'p-retry';
 
-import { Data, Snode } from '../../../data/data';
+import { Data } from '../../../data/data';
+import { Snode } from '../../../data/types';
 
-import { Onions } from '.';
 import { OnionPaths } from '../../onions';
 import { SeedNodeAPI } from '../seed_node_api';
 import { ServiceNodesList } from './getServiceNodesList';
 import { requestSnodesForPubkeyFromNetwork } from './getSwarmFor';
+import { Onions } from '.';
 import { ed25519Str } from '../../utils/String';
+import { minimumGuardCount, ONION_REQUEST_HOPS } from '../../onions/onionPath';
 
 /**
  * If we get less than this snode in a swarm, we fetch new snodes for this pubkey
@@ -19,7 +21,8 @@ const minSwarmSnodeCount = 3;
  * If we get less than minSnodePoolCount we consider that we need to fetch the new snode pool from a seed node
  * and not from those snodes.
  */
-const minSnodePoolCount = 12;
+
+export const minSnodePoolCount = minimumGuardCount * (ONION_REQUEST_HOPS + 1) * 2;
 
 /**
  * If we get less than this amount of snodes (24), lets try to get an updated list from those while we can
@@ -54,7 +57,7 @@ async function dropSnodeFromSnodePool(snodeEd25519: string) {
   if (exists) {
     _.remove(randomSnodePool, x => x.pubkey_ed25519 === snodeEd25519);
     window?.log?.warn(
-      `Droppping ${ed25519Str(snodeEd25519)} from snode pool. ${
+      `Dropping ${ed25519Str(snodeEd25519)} from snode pool. ${
         randomSnodePool.length
       } snodes remaining in randomPool`
     );
@@ -178,9 +181,9 @@ async function getRandomSnodePool(): Promise<Array<Snode>> {
 }
 
 /**
- * This function tries to fetch snodes list from seednodes and handle retries.
+ * This function tries to fetch snodes list from seed nodes and handle retries.
  * It will write the updated snode list to the db once it succeeded.
- * It also resets the onionpaths failure count and snode failure count.
+ * It also resets the onion paths failure count and snode failure count.
  * This function does not throw.
  */
 
@@ -349,7 +352,7 @@ async function getNodeFromSwarmOrThrow(pubkey: string): Promise<Snode> {
 }
 
 /**
- * Force a request to be made to the network to fetch the swarm of the specificied pubkey, and cache the result.
+ * Force a request to be made to the network to fetch the swarm of the specified pubkey, and cache the result.
  * Note: should not be called directly unless you know what you are doing. Use the cached `getSwarmFor()` function instead
  * @param pubkey the pubkey to request the swarm for
  * @returns the fresh swarm, shuffled
@@ -370,19 +373,19 @@ async function getSwarmFromNetworkAndSave(pubkey: string) {
 }
 
 export const SnodePool = {
-  // consts
+  // constants
   minSnodePoolCount,
   minSnodePoolCountBeforeRefreshFromSnodes,
   requiredSnodesForAgreement,
 
-  // snode pool mgmt
+  // snode pool
   dropSnodeFromSnodePool,
   forceRefreshRandomSnodePool,
   getRandomSnode,
   getRandomSnodePool,
   getSnodePoolFromDBOrFetchFromSeed,
 
-  // swarm mgmt
+  // swarm
   dropSnodeFromSwarmIfNeeded,
   updateSwarmFor,
   getSwarmFromCacheOrDb,

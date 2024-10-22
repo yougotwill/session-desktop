@@ -17,14 +17,13 @@ import {
   uniqBy,
 } from 'lodash';
 import { v4 } from 'uuid';
-import { Data, Snode } from '../../../data/data';
+import { Data } from '../../../data/data';
 import { SignalService } from '../../../protobuf';
 import * as Receiver from '../../../receiver/receiver';
 import { PubKey } from '../../types';
 import { ERROR_CODE_NO_CONNECT } from './SNodeAPI';
 
 import { ConversationModel } from '../../../models/conversation';
-import { ConversationTypeEnum } from '../../../models/conversationAttributes';
 import { LibsessionMessageHandler } from '../../../receiver/libsession/handleLibSessionMessage';
 import { EnvelopePlus } from '../../../receiver/types';
 import { updateIsOnline } from '../../../state/ducks/onion';
@@ -32,6 +31,7 @@ import { assertUnreachable } from '../../../types/sqlSharedTypes';
 import {
   GenericWrapperActions,
   MetaGroupWrapperActions,
+  UserConfigWrapperActions,
   UserGroupsWrapperActions,
 } from '../../../webworker/workers/browser/libsession_worker_interface';
 import { DURATION, SWARM_POLLING_TIMEOUT } from '../../constants';
@@ -40,7 +40,7 @@ import { getSodiumRenderer } from '../../crypto';
 import { StringUtils, UserUtils } from '../../utils';
 import { sleepFor } from '../../utils/Promise';
 import { ed25519Str, fromBase64ToArray, fromHexToArray } from '../../utils/String';
-import { PreConditionFailed } from '../../utils/errors';
+import { NotFoundError, PreConditionFailed } from '../../utils/errors';
 import { LibSessionUtil } from '../../utils/libsession/libsession_utils';
 import { MultiEncryptUtils } from '../../utils/libsession/libsession_utils_multi_encrypt';
 import { SnodeNamespace, SnodeNamespaces, SnodeNamespacesUserConfig } from './namespaces';
@@ -53,12 +53,23 @@ import {
   RetrieveMessageItem,
   RetrieveMessageItemWithNamespace,
   RetrieveMessagesResultsBatched,
+
   RetrieveRequestResult,
 } from './types';
+import { ConversationTypeEnum } from '../../../models/types';
+import { Snode } from '../../../data/types';
 
 const minMsgCountShouldRetry = 95;
 
-export function extractWebSocketContent(message: string): null | Uint8Array {
+
+
+function extractWebSocketContent(
+  message: string,
+  messageHash: string
+): null | {
+  body: Uint8Array;
+  messageHash: string;
+} {
   try {
     const dataPlaintext = new Uint8Array(StringUtils.encode(message, 'base64'));
     const messageBuf = SignalService.WebSocketMessage.decode(dataPlaintext);
@@ -66,16 +77,17 @@ export function extractWebSocketContent(message: string): null | Uint8Array {
       messageBuf.type === SignalService.WebSocketMessage.Type.REQUEST &&
       messageBuf.request?.body?.length
     ) {
-      return messageBuf.request.body;
+      return {
+        body: messageBuf.request.body,
+        messageHash,
+      };
     }
-
     return null;
   } catch (error) {
     window?.log?.warn('extractWebSocketContent from message failed with:', error.message);
     return null;
   }
 }
-
 let instance: SwarmPolling | undefined;
 const timeouts: Array<NodeJS.Timeout> = [];
 
@@ -128,17 +140,6 @@ export class SwarmPolling {
     }
   }
 
-  // TODO[epic=ses-50] this is a temporary solution until onboarding is merged
-  public stop(e: Error) {
-    window.log.error(`[swarmPolling] stopped polling due to error: ${e.message || e}`);
-
-    for (let i = 0; i < timeouts.length; i++) {
-      clearTimeout(timeouts[i]);
-      window.log.debug(`[swarmPolling] cleared timeout ${timeouts[i]} `);
-    }
-    this.resetSwarmPolling();
-  }
-
   /**
    * Used for testing only
    */
@@ -146,6 +147,16 @@ export class SwarmPolling {
     this.groupPolling = [];
     this.hasStarted = false;
   }
+
+  public stop(e?: Error) {
+    window.log.info('[swarmPolling] stopped swarm polling', e?.message || e || '');
+
+    for (let i = 0; i < timeouts.length; i++) {
+      clearTimeout(timeouts[i]);
+    }
+    this.resetSwarmPolling();
+  }
+
 
   public forcePolledTimestamp(pubkey: string, lastPoll: number) {
     const foundAt = this.groupPolling.findIndex(group => {
@@ -217,7 +228,7 @@ export class SwarmPolling {
   }
 
   public async getPollingDetails(pollingEntries: Array<GroupPollingEntry>) {
-    // Note: all of those checks are explicitely made only based on the libsession wrappers data, and NOT the DB.
+    // Note: all of those checks are explicitly made only based on the libsession wrappers data, and NOT the DB.
     // Eventually, we want to get rid of the duplication between the DB and libsession wrappers.
     // If you need to add a check based on the DB, this is code smell.
     let toPollDetails: Array<PollForUs | PollForLegacy | PollForGroup> = [];
@@ -254,7 +265,7 @@ export class SwarmPolling {
 
     const allLegacyGroupsTracked = legacyGroups
       .filter(m => this.shouldPollByTimeout(m)) // should we poll from it depending on this group activity?
-      .filter(m => allGroupsLegacyInWrapper.some(w => w.pubkeyHex === m.pubkey.key)) // we don't poll from legacygroups which are not in the usergroup wrapper
+      .filter(m => allGroupsLegacyInWrapper.some(w => w.pubkeyHex === m.pubkey.key)) // we don't poll from legacy groups which are not in the user group wrapper
       .map(m => m.pubkey.key) // extract the pubkey
       .map(m => [m, ConversationTypeEnum.GROUP] as PollForLegacy); //
     toPollDetails = concat(toPollDetails, allLegacyGroupsTracked);
@@ -262,7 +273,7 @@ export class SwarmPolling {
     const allGroupsTracked = groups
       .filter(m => this.shouldPollByTimeout(m)) // should we poll from it depending on this group activity?
       .filter(m => {
-        // We don't poll from groups which are not in the usergroup wrapper, and for those which are not marked as accepted
+        // We don't poll from groups which are not in the user group wrapper, and for those which are not marked as accepted
         // We don't want to leave them, we just don't want to poll from them.
         const found = allGroupsInWrapper.find(w => w.pubkeyHex === m.pubkey.key);
         return found && !found.invitePending;
@@ -446,6 +457,9 @@ export class SwarmPolling {
       type,
       resultsFromAllNamespaces
     );
+    window.log.debug(
+      `received confMessages:${confMessages?.length ||0}, revokedMessages:${revokedMessages?.length ||0}, `
+    );
     // We always handle the config messages first (for groups 03 or our own messages)
     await this.handleUserOrGroupConfMessages({ confMessages, pubkey, type });
     await this.handleRevokedMessages({ revokedMessages, groupPk: pubkey, type });
@@ -453,7 +467,7 @@ export class SwarmPolling {
     // Merge results into one list of unique messages
     const uniqOtherMsgs = uniqBy(otherMessages, x => x.hash);
     if (uniqOtherMsgs.length) {
-      window.log.debug(`received otherMessages: ${otherMessages.length} for type: ${type}`);
+      window.log.debug(`received uniqOtherMsgs: ${uniqOtherMsgs.length} for type: ${type}`);
     }
     await this.updateLastPollTimestampForPubkey({
       countMessages: uniqOtherMsgs.length,
@@ -494,16 +508,16 @@ export class SwarmPolling {
     await this.updateSeenMessages(newMessages);
     // trigger the handling of all the other messages, not shared config related and not groupv2 encrypted
     newMessages.forEach(m => {
-      const content = extractWebSocketContent(m.data);
+      const extracted = extractWebSocketContent(m.data, m.hash);
 
-      if (!content) {
+      if (!extracted || isEmpty(extracted)) {
         return;
       }
 
       Receiver.handleRequest(
-        content,
+        extracted.body,
         type === ConversationTypeEnum.GROUP ? pubkey : null,
-        m.hash,
+        extracted.messageHash,
         m.expiration
       );
     });
@@ -791,6 +805,109 @@ export class SwarmPolling {
     }
     // return the cached value
     return this.lastHashes[nodeEdKey][pubkey][namespace];
+  }
+
+  public async pollOnceForOurDisplayName(abortSignal?: AbortSignal): Promise<string> {
+    if (abortSignal?.aborted) {
+      throw new NotFoundError('[pollOnceForOurDisplayName] aborted right away');
+    }
+
+    const pubkey = UserUtils.getOurPubKeyFromCache();
+
+    const swarmSnodes = await SnodePool.getSwarmFor(pubkey.key);
+    const toPollFrom = sample(swarmSnodes);
+
+    if (!toPollFrom) {
+      throw new Error(
+        `[pollOnceForOurDisplayName] no snode in swarm for ${ed25519Str(pubkey.key)}`
+      );
+    }
+
+    if (abortSignal?.aborted) {
+      throw new NotFoundError(
+        '[pollOnceForOurDisplayName] aborted after selecting nodes to poll from'
+      );
+    }
+
+    // Note: always print something so we know if the polling is hanging
+    window.log.info(
+      `[onboarding] about to pollOnceForOurDisplayName of ${ed25519Str(pubkey.key)} from snode: ${ed25519Str(toPollFrom.pubkey_ed25519)} namespaces: ${[SnodeNamespaces.UserProfile]} `
+    );
+
+    const resultsFromUserProfile = await SnodeAPIRetrieve.retrieveNextMessagesNoRetries(
+      toPollFrom,
+      pubkey.key,
+      [{lastHash: '',namespace: SnodeNamespaces.UserProfile}],
+      pubkey.key,
+      null, false
+    );
+
+    // Note: always print something so we know if the polling is hanging
+    window.log.info(
+      `[onboarding] pollOnceForOurDisplayName of ${ed25519Str(pubkey.key)} from snode: ${ed25519Str(toPollFrom.pubkey_ed25519)} namespaces: ${[SnodeNamespaces.UserProfile]} returned: ${resultsFromUserProfile?.length}`
+    );
+
+    // check if we just fetched the details from the config namespaces.
+    // If yes, merge them together and exclude them from the rest of the messages.
+    if (!resultsFromUserProfile?.length) {
+      throw new NotFoundError('[pollOnceForOurDisplayName] resultsFromUserProfile is empty');
+    }
+
+    if (abortSignal?.aborted) {
+      throw new NotFoundError(
+        '[pollOnceForOurDisplayName] aborted after retrieving user profile config messages'
+      );
+    }
+
+    const userConfigMessagesWithNamespace: Array<Array<RetrieveMessageItemWithNamespace>> =
+      resultsFromUserProfile.map(r => {
+        return (r.messages.messages || []).map(m => {
+          return { ...m, namespace: SnodeNamespaces.UserProfile};
+        });
+      });
+
+    const userConfigMessagesMerged = flatten(compact(userConfigMessagesWithNamespace));
+    if (!userConfigMessagesMerged.length) {
+      throw new NotFoundError(
+        '[pollOnceForOurDisplayName] after merging there are no user config messages'
+      );
+    }
+    let displayNameFound: string | undefined;
+    try {
+      const keypair = await UserUtils.getUserED25519KeyPairBytes();
+      if (!keypair || !keypair.privKeyBytes) {
+        throw new Error('edkeypair not found for current user');
+      }
+
+      const privateKeyEd25519 = keypair.privKeyBytes;
+
+      // we take the latest config message to create the wrapper in memory
+      const incomingConfigMessages = userConfigMessagesMerged.map(m => ({
+        data: StringUtils.fromBase64ToArray(m.data),
+        hash: m.hash,
+      }));
+
+      await UserConfigWrapperActions.init(privateKeyEd25519, null);
+      await UserConfigWrapperActions.merge(incomingConfigMessages);
+
+      const foundName  = await UserConfigWrapperActions.getName();
+      if (!foundName) {
+        throw new Error('UserInfo not found or name is empty');
+      }
+      displayNameFound =foundName
+    } catch (e) {
+      window.log.warn('LibSessionUtil.initializeLibSessionUtilWrappers failed with', e.message);
+    } finally {
+      await UserConfigWrapperActions.free();
+    }
+
+    if (!displayNameFound || isEmpty(displayNameFound)) {
+      throw new NotFoundError(
+        '[pollOnceForOurDisplayName] Got a config message from network but without a displayName...'
+      );
+    }
+
+    return displayNameFound;
   }
 }
 

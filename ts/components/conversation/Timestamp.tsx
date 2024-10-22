@@ -1,14 +1,16 @@
-import React from 'react';
-import moment from 'moment';
-
 import useInterval from 'react-use/lib/useInterval';
-import styled from 'styled-components';
 import useUpdate from 'react-use/lib/useUpdate';
+import styled from 'styled-components';
+import { CONVERSATION } from '../../session/constants';
+import { getConversationItemString } from '../../util/i18n/formatting/conversationItemTimestamp';
+import { formatFullDate } from '../../util/i18n/formatting/generics';
 
 type Props = {
   timestamp?: number;
-  isConversationListItem?: boolean;
-  momentFromNow: boolean;
+  /**
+   * We display the timestamp differently (UI) when displaying a search result
+   */
+  isConversationSearchResult: boolean;
 };
 
 const UPDATE_FREQUENCY = 60 * 1000;
@@ -34,21 +36,22 @@ export const Timestamp = (props: Props) => {
   const update = useUpdate();
   useInterval(update, UPDATE_FREQUENCY);
 
-  const { timestamp, momentFromNow } = props;
+  const { timestamp, isConversationSearchResult } = props;
 
   if (timestamp === null || timestamp === undefined) {
     return null;
   }
 
-  const momentValue = moment(timestamp);
-  // this is a hack to make the date string shorter, looks like moment does not have a localized way of doing this for now.
+  let title = '';
+  let dateString = '';
 
-  const dateString = momentFromNow
-    ? momentValue.fromNow().replace('minutes', 'mins').replace('minute', 'min')
-    : momentValue.format('lll');
+  if (timestamp !== CONVERSATION.LAST_JOINED_FALLBACK_TIMESTAMP) {
+    dateString = getConversationItemString(new Date(timestamp));
 
-  const title = moment(timestamp).format('llll');
-  if (props.isConversationListItem) {
+    title = formatFullDate(new Date(timestamp));
+  }
+
+  if (isConversationSearchResult) {
     return <TimestampContainerListItem title={title}>{dateString}</TimestampContainerListItem>;
   }
   return <TimestampContainerNotListItem title={title}>{dateString}</TimestampContainerNotListItem>;

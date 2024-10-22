@@ -1,10 +1,9 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import useKey from 'react-use/lib/useKey';
 
 import { PubkeyType } from 'libsession_util_nodejs';
 import _, { difference, uniq } from 'lodash';
 import { useDispatch } from 'react-redux';
-import { ConversationTypeEnum } from '../../models/conversationAttributes';
 import { VALIDATION } from '../../session/constants';
 import { ConvoHub } from '../../session/conversations';
 import { ToastUtils, UserUtils } from '../../session/utils';
@@ -12,11 +11,10 @@ import { updateInviteContactModal } from '../../state/ducks/modalDialog';
 import { SpacerLG } from '../basic/Text';
 
 import {
-  useConversationUsername,
   useIsPrivate,
   useIsPublic,
   useSortedGroupMembers,
-  useZombies,
+  useZombies
 } from '../../hooks/useParamSelector';
 import { useSet } from '../../hooks/useSet';
 import { ClosedGroup } from '../../session/group/closed-group';
@@ -29,10 +27,12 @@ import { useSelectedIsGroupV2 } from '../../state/selectors/selectedConversation
 import { MemberListItem } from '../MemberListItem';
 import { SessionWrapperModal } from '../SessionWrapperModal';
 import { SessionButton, SessionButtonColor, SessionButtonType } from '../basic/SessionButton';
-import { SessionSpinner } from '../basic/SessionSpinner';
+import { SessionSpinner } from '../loading';
 import { SessionToggle } from '../basic/SessionToggle';
 import { GroupInviteRequiredVersionBanner } from '../NoticeBanner';
 import { isDevProd } from '../../shared/env_vars';
+import { ConversationTypeEnum } from '../../models/types';
+import { Localizer } from '../basic/Localizer';
 
 type Props = {
   conversationId: string;
@@ -124,7 +124,6 @@ const InviteContactsDialogInner = (props: Props) => {
   const isPublic = useIsPublic(conversationId);
   const membersFromRedux = useSortedGroupMembers(conversationId) || [];
   const zombiesFromRedux = useZombies(conversationId) || [];
-  const displayName = useConversationUsername(conversationId);
   const isGroupV2 = useSelectedIsGroupV2();
   const [shareHistory, setShareHistory] = useState(false);
 
@@ -139,8 +138,6 @@ const InviteContactsDialogInner = (props: Props) => {
   const validContactsForInvite = isPublic
     ? privateContactPubkeys
     : difference(privateContactPubkeys, zombiesAndMembers);
-
-  const chatName = displayName || window.i18n('unknown');
 
   const closeDialog = () => {
     dispatch(updateInviteContactModal(null));
@@ -178,11 +175,9 @@ const InviteContactsDialogInner = (props: Props) => {
     return event.key === 'Esc' || event.key === 'Escape';
   }, closeDialog);
 
-  const unknown = window.i18n('unknown');
-
-  const titleText = `${window.i18n('addingContacts', [chatName || unknown])}`;
+  const titleText = window.i18n('membersInvite');
   const cancelText = window.i18n('cancel');
-  const okText = window.i18n('ok');
+  const okText = window.i18n('okay');
 
   const hasContacts = validContactsForInvite.length > 0;
 
@@ -205,7 +200,7 @@ const InviteContactsDialogInner = (props: Props) => {
         {hasContacts ? (
           validContactsForInvite.map((member: string) => (
             <MemberListItem
-              key={member}
+              key={`contacts-list-${member}`}
               pubkey={member}
               isSelected={selectedContacts.includes(member)}
               onSelect={addTo}
@@ -216,7 +211,9 @@ const InviteContactsDialogInner = (props: Props) => {
         ) : (
           <>
             <SpacerLG />
-            <p className="no-contacts">{window.i18n('noContactsToAdd')}</p>
+            <p className="no-contacts">
+              <Localizer token="contactNone" />
+            </p>
             <SpacerLG />
           </>
         )}

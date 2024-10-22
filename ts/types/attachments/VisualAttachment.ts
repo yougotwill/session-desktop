@@ -2,15 +2,15 @@
 /* global document, URL, Blob */
 
 import { blobToArrayBuffer, dataURLToBlob } from 'blob-util';
-import moment from 'moment';
 import { toLogFormat } from './Errors';
 
 import { DecryptedAttachmentsManager } from '../../session/crypto/DecryptedAttachmentsManager';
 import { ToastUtils } from '../../session/utils';
-import { isTestIntegration } from '../../shared/env_vars';
 import { GoogleChrome } from '../../util';
 import { autoScaleForAvatar, autoScaleForThumbnail } from '../../util/attachmentsUtil';
 import { isAudio } from '../MIME';
+import { formatTimeDurationMs } from '../../util/i18n/formatting/generics';
+import { isTestIntegration } from '../../shared/env_vars';
 
 export const THUMBNAIL_SIDE = 200;
 export const THUMBNAIL_CONTENT_TYPE = 'image/png';
@@ -119,9 +119,8 @@ export async function getVideoDuration({
     const video = document.createElement('video');
 
     video.addEventListener('loadedmetadata', () => {
-      const duration = moment.duration(video.duration, 'seconds');
-      const durationString = moment.utc(duration.asMilliseconds()).format('m:ss');
-      resolve(durationString);
+      const duration = formatTimeDurationMs(video.duration * 1000, { unit: 'second' });
+      resolve(duration);
     });
 
     video.addEventListener('error', error => {
@@ -153,9 +152,8 @@ export async function getAudioDuration({
     const audio = document.createElement('audio');
 
     audio.addEventListener('loadedmetadata', () => {
-      const duration = moment.duration(audio.duration, 'seconds');
-      const durationString = moment.utc(duration.asMilliseconds()).format('m:ss');
-      resolve(durationString);
+      const duration = formatTimeDurationMs(audio.duration * 1000, { unit: 'second' });
+      resolve(duration);
     });
 
     audio.addEventListener('error', error => {
@@ -206,7 +204,7 @@ export async function autoScaleAvatarBlob(file: File) {
  */
 export async function pickFileForAvatar(): Promise<string | null> {
   if (isTestIntegration()) {
-    window.log.info(
+    window.log.warn(
       'shorting pickFileForAvatar as it does not work in playwright/notsending the filechooser event'
     );
 

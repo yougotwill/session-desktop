@@ -1,5 +1,5 @@
-import React, { useRef, useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import { ChangeEvent, useRef, useState } from 'react';
+import { useDispatch } from 'react-redux';
 
 import { useFocusMount } from '../../hooks/useFocusMount';
 import { useConversationUsername } from '../../hooks/useParamSelector';
@@ -12,13 +12,13 @@ import { ConvoHub } from '../../session/conversations/ConversationController';
 import { PubKey } from '../../session/types';
 import { ToastUtils } from '../../session/utils';
 import { BanType, updateBanOrUnbanUserModal } from '../../state/ducks/modalDialog';
-import { isDarkTheme } from '../../state/selectors/theme';
+import { useIsDarkTheme } from '../../state/selectors/theme';
 import { SessionHeaderSearchInput } from '../SessionHeaderSearchInput';
 import { SessionWrapperModal } from '../SessionWrapperModal';
 import { Flex } from '../basic/Flex';
 import { SessionButton, SessionButtonColor, SessionButtonType } from '../basic/SessionButton';
-import { SessionSpinner } from '../basic/SessionSpinner';
 import { SpacerSM } from '../basic/Text';
+import { SessionSpinner } from '../loading';
 
 async function banOrUnBanUserCall(
   convo: ConversationModel,
@@ -68,7 +68,7 @@ export const BanOrUnBanUserDialog = (props: {
   const { i18n } = window;
   const isBan = banType === 'ban';
   const dispatch = useDispatch();
-  const darkMode = useSelector(isDarkTheme);
+  const isDarkTheme = useIsDarkTheme();
   const convo = ConvoHub.use().get(conversationId);
   const inputRef = useRef(null);
 
@@ -102,10 +102,9 @@ export const BanOrUnBanUserDialog = (props: {
     setInProgress(false);
   };
 
-  const chatName = convo.getNicknameOrRealUsernameOrPlaceholder();
-  const title = `${isBan ? window.i18n('banUser') : window.i18n('unbanUser')}: ${chatName}`;
+  const title = isBan ? window.i18n('banUser') : window.i18n('banUnbanUser');
 
-  const onPubkeyBoxChanges = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const onPubkeyBoxChanges = (e: ChangeEvent<HTMLInputElement>) => {
     setInputBoxValue(e.target.value?.trim() || '');
   };
 
@@ -116,7 +115,7 @@ export const BanOrUnBanUserDialog = (props: {
     await banOrUnBanUser(true);
   };
 
-  const buttonText = isBan ? i18n('banUser') : i18n('unbanUser');
+  const buttonText = isBan ? i18n('banUser') : i18n('banUnbanUser');
 
   return (
     <SessionWrapperModal
@@ -130,8 +129,8 @@ export const BanOrUnBanUserDialog = (props: {
         <SessionHeaderSearchInput
           ref={inputRef}
           type="text"
-          darkMode={darkMode}
-          placeholder={i18n('enterSessionID')}
+          isDarkTheme={isDarkTheme}
+          placeholder={i18n('accountIdEnter')}
           dir="auto"
           onChange={onPubkeyBoxChanges}
           disabled={inProgress || !!pubkey}
@@ -151,7 +150,7 @@ export const BanOrUnBanUserDialog = (props: {
                 buttonType={SessionButtonType.Simple}
                 buttonColor={SessionButtonColor.Danger}
                 onClick={startBanAndDeleteAllSequence}
-                text={i18n('banUserAndDeleteAll')}
+                text={i18n('banDeleteAll')}
                 disabled={inProgress}
               />
             </>

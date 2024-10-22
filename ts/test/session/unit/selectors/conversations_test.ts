@@ -1,19 +1,26 @@
 import { assert } from 'chai';
-import {
-  CONVERSATION_PRIORITIES,
-  ConversationTypeEnum,
-} from '../../../../models/conversationAttributes';
 
+import Sinon from 'sinon';
+import { CONVERSATION_PRIORITIES, ConversationTypeEnum } from '../../../../models/types';
 import { ConversationLookupType } from '../../../../state/ducks/conversations';
 import {
   _getConversationComparator,
   _getSortedConversations,
 } from '../../../../state/selectors/conversations';
+import { TestUtils } from '../../../test-utils';
+import { resetLocaleAndTranslationDict } from '../../../../util/i18n/shared';
 
 describe('state/selectors/conversations', () => {
+  beforeEach(() => {
+    TestUtils.stubWindowLog();
+    TestUtils.stubI18n();
+  });
+  afterEach(() => {
+    resetLocaleAndTranslationDict();
+    Sinon.restore();
+  });
   describe('#getSortedConversationsList', () => {
     it('sorts conversations based on timestamp then by intl-friendly title', () => {
-      const i18n = (key: string) => key;
       const data: ConversationLookupType = {
         id1: {
           id: 'id1',
@@ -127,7 +134,7 @@ describe('state/selectors/conversations', () => {
           priority: CONVERSATION_PRIORITIES.default,
         },
       };
-      const comparator = _getConversationComparator(i18n);
+      const comparator = _getConversationComparator();
       const conversations = _getSortedConversations(data, comparator);
 
       assert.strictEqual(conversations[0].displayNameInProfile, 'First!');
@@ -139,7 +146,6 @@ describe('state/selectors/conversations', () => {
 
   describe('#getSortedConversationsWithPinned', () => {
     it('sorts conversations based on pin, timestamp then by intl-friendly title', () => {
-      const i18n = (key: string) => key;
       const data: ConversationLookupType = {
         id1: {
           id: 'id1',
@@ -262,7 +268,7 @@ describe('state/selectors/conversations', () => {
           isPublic: false,
         },
       };
-      const comparator = _getConversationComparator(i18n);
+      const comparator = _getConversationComparator();
       const conversations = _getSortedConversations(data, comparator);
 
       assert.strictEqual(conversations[0].displayNameInProfile, 'Á');

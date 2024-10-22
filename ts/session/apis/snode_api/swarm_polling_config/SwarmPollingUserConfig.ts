@@ -16,9 +16,9 @@ async function handleUserSharedConfigMessages(
         );
         await ConfigMessageHandler.handleUserConfigMessagesViaLibSession(userConfigMessagesMerged);
       } catch (e) {
-        const allMessageHases = userConfigMessagesMerged.map(m => m.hash).join(',');
+        const allMessageHashes = userConfigMessagesMerged.map(m => m.hash).join(',');
         window.log.warn(
-          `failed to handle messages hashes "${allMessageHases}" with libsession. Error: "${e.message}"`
+          `failed to handle messages hashes "${allMessageHashes}" with libsession. Error: "${e.message}"`
         );
       }
     }

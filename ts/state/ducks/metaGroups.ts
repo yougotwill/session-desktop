@@ -13,7 +13,6 @@ import {
 import { intersection, isEmpty, uniq } from 'lodash';
 import { ConfigDumpData } from '../../data/configDump/configDump';
 import { ConversationModel } from '../../models/conversation';
-import { ConversationTypeEnum } from '../../models/conversationAttributes';
 import { HexString } from '../../node/hexStrings';
 import { SignalService } from '../../protobuf';
 import { getSwarmPollingInstance } from '../../session/apis/snode_api';
@@ -53,6 +52,7 @@ import {
 import { StateType } from '../reducer';
 import { openConversationWithMessages } from './conversations';
 import { resetLeftOverlayMode } from './section';
+import { ConversationTypeEnum } from '../../models/types';
 
 type WithFromMemberLeftMessage = { fromMemberLeftMessage: boolean }; // there are some changes we want to skip when doing changes triggered from a memberLeft message.
 export type GroupState = {
@@ -134,17 +134,17 @@ const initNewGroupInWrapper = createAsyncThunk(
       newGroup.name = groupName; // this will be used by the linked devices until they fetch the info from the groups swarm
       // the `GroupSync` below will need the secretKey of the group to be saved in the wrapper. So save it!
       await UserGroupsWrapperActions.setGroup(newGroup);
-      const ourEd25519KeypairBytes = await UserUtils.getUserED25519KeyPairBytes();
-      if (!ourEd25519KeypairBytes) {
+      const ourEd25519KeyPairBytes = await UserUtils.getUserED25519KeyPairBytes();
+      if (!ourEd25519KeyPairBytes) {
         throw new Error('Current user has no priv ed25519 key?');
       }
-      const userEd25519Secretkey = ourEd25519KeypairBytes.privKeyBytes;
+      const userEd25519SecretKey = ourEd25519KeyPairBytes.privKeyBytes;
       const groupEd2519Pk = HexString.fromHexString(groupPk).slice(1); // remove the 03 prefix (single byte once in hex form)
 
       // dump is always empty when creating a new groupInfo
       await MetaGroupWrapperActions.init(groupPk, {
         metaDumped: null,
-        userEd25519Secretkey: toFixedUint8ArrayOfLength(userEd25519Secretkey, 64).buffer,
+        userEd25519Secretkey: toFixedUint8ArrayOfLength(userEd25519SecretKey, 64).buffer,
         groupEd25519Secretkey: newGroup.secretKey,
         groupEd25519Pubkey: toFixedUint8ArrayOfLength(groupEd2519Pk, 32).buffer,
       });
@@ -167,7 +167,7 @@ const initNewGroupInWrapper = createAsyncThunk(
         });
 
         if (member === us) {
-          // we need to excplicitely mark us as having accepted the promotion
+          // we need to explicitly mark us as having accepted the promotion
           await MetaGroupWrapperActions.memberSetPromotionAccepted(groupPk, member);
         }
       }
@@ -242,7 +242,7 @@ const initNewGroupInWrapper = createAsyncThunk(
       // Everything is setup for this group, we now need to send the invites to each members,
       // privately and asynchronously, and gracefully handle errors with toasts.
       // Let's do all of this part of a job to handle app crashes and make sure we
-      //  can update the groupwrapper with a failed state if a message fails to be sent.
+      //  can update the group wrapper with a failed state if a message fails to be sent.
       for (let index = 0; index < membersFromWrapper.length; index++) {
         const member = membersFromWrapper[index];
         await GroupInvite.addJob({ member: member.pubkeyHex, groupPk });
@@ -252,7 +252,7 @@ const initNewGroupInWrapper = createAsyncThunk(
 
       return { groupPk: newGroup.pubkeyHex, infos, members: membersFromWrapper };
     } catch (e) {
-      window.log.warn('group creation failed. Deleting already saved datas: ', e.message);
+      window.log.warn('group creation failed. Deleting already saved data: ', e.message);
       await UserGroupsWrapperActions.eraseGroup(groupPk);
       await MetaGroupWrapperActions.infoDestroy(groupPk);
       const foundConvo = ConvoHub.use().get(groupPk);
@@ -290,23 +290,23 @@ const handleUserGroupUpdate = createAsyncThunk(
       };
     }
 
-    const ourEd25519KeypairBytes = await UserUtils.getUserED25519KeyPairBytes();
-    if (!ourEd25519KeypairBytes) {
+    const ourEd25519KeyPairBytes = await UserUtils.getUserED25519KeyPairBytes();
+    if (!ourEd25519KeyPairBytes) {
       throw new Error('Current user has no priv ed25519 key?');
     }
-    const userEd25519Secretkey = ourEd25519KeypairBytes.privKeyBytes;
+    const userEd25519SecretKey = ourEd25519KeyPairBytes.privKeyBytes;
     const groupEd2519Pk = HexString.fromHexString(groupPk).slice(1); // remove the 03 prefix (single byte once in hex form)
 
     // dump is always empty when creating a new groupInfo
     try {
       await MetaGroupWrapperActions.init(groupPk, {
         metaDumped: null,
-        userEd25519Secretkey: toFixedUint8ArrayOfLength(userEd25519Secretkey, 64).buffer,
+        userEd25519Secretkey: toFixedUint8ArrayOfLength(userEd25519SecretKey, 64).buffer,
         groupEd25519Secretkey: userGroup.secretKey,
         groupEd25519Pubkey: toFixedUint8ArrayOfLength(groupEd2519Pk, 32).buffer,
       });
     } catch (e) {
-      window.log.warn(`failed to init metawrapper ${groupPk}`);
+      window.log.warn(`failed to init meta wrapper ${groupPk}`);
     }
 
     const convo = await ConvoHub.use().getOrCreateAndWait(groupPk, ConversationTypeEnum.GROUPV2);
@@ -375,7 +375,7 @@ const loadMetaDumpsFromDB = createAsyncThunk(
       }
 
       try {
-        window.log.debug('loadMetaDumpsFromDB initing from metagroup dump', variant);
+        window.log.debug('loadMetaDumpsFromDB init from meta group dump', variant);
 
         await MetaGroupWrapperActions.init(groupPk, {
           groupEd25519Pubkey: toFixedUint8ArrayOfLength(groupEd25519Pubkey, 32).buffer,
@@ -390,7 +390,7 @@ const loadMetaDumpsFromDB = createAsyncThunk(
 
         toReturn.push({ groupPk, infos, members });
       } catch (e) {
-        // Note: Don't retrow here, we want to load everything we can
+        // Note: Don't re trow here, we want to load everything we can
         window.log.error(
           `initGroup of Group wrapper of variant ${variant} failed with ${e.message} `
         );
@@ -442,7 +442,7 @@ function validateMemberAddChange({
   const withoutHistory = uniq(addMembersWithoutHistory);
   const convo = ConvoHub.use().get(groupPk);
   if (!convo) {
-    throw new PreConditionFailed('currentDeviceGroupMembersChange convo not present in convohub');
+    throw new PreConditionFailed('currentDeviceGroupMembersChange convo not present in convo hub');
   }
   if (intersection(withHistory, withoutHistory).length) {
     throw new Error(
@@ -467,7 +467,7 @@ function validateMemberRemoveChange({
   const removed = uniq(removeMembers);
   const convo = ConvoHub.use().get(groupPk);
   if (!convo) {
-    throw new PreConditionFailed('currentDeviceGroupMembersChange convo not present in convohub');
+    throw new PreConditionFailed('currentDeviceGroupMembersChange convo not present in convo hub');
   }
 
   return { removed, us, convo };
@@ -485,7 +485,7 @@ function validateNameChange({
 
   const convo = ConvoHub.use().get(groupPk);
   if (!convo) {
-    throw new PreConditionFailed('validateNameChange convo not present in convohub');
+    throw new PreConditionFailed('validateNameChange convo not present in convo hub');
   }
   if (newName === currentName) {
     throw new PreConditionFailed('validateNameChange no name change detected');
@@ -592,7 +592,7 @@ async function getRemovedControlMessage({
     createAtNetworkTimestamp,
     secretKey: adminSecretKey,
     sodium,
-    ...DisappearingMessages.getExpireDetailsForOutgoingMesssage(convo, createAtNetworkTimestamp),
+    ...DisappearingMessages.getExpireDetailsForOutgoingMessage(convo, createAtNetworkTimestamp),
   });
 }
 
@@ -624,7 +624,7 @@ async function getWithoutHistoryControlMessage({
     createAtNetworkTimestamp,
     secretKey: adminSecretKey,
     sodium,
-    ...DisappearingMessages.getExpireDetailsForOutgoingMesssage(convo, createAtNetworkTimestamp),
+    ...DisappearingMessages.getExpireDetailsForOutgoingMessage(convo, createAtNetworkTimestamp),
   });
 }
 
@@ -656,7 +656,7 @@ async function getWithHistoryControlMessage({
     createAtNetworkTimestamp,
     secretKey: adminSecretKey,
     sodium,
-    ...DisappearingMessages.getExpireDetailsForOutgoingMesssage(convo, createAtNetworkTimestamp),
+    ...DisappearingMessages.getExpireDetailsForOutgoingMessage(convo, createAtNetworkTimestamp),
   });
 }
 
@@ -706,7 +706,7 @@ async function handleMemberAddedFromUI({
 
   await LibSessionUtil.saveDumpsToDb(groupPk);
 
-  const expireDetails = DisappearingMessages.getExpireDetailsForOutgoingMesssage(
+  const expireDetails = DisappearingMessages.getExpireDetailsForOutgoingMessage(
     convo,
     createAtNetworkTimestamp
   );
@@ -785,7 +785,7 @@ async function handleMemberAddedFromUI({
 
 /**
  * This function is called in two cases:
- * - to udpate the state when kicking a member from the group from the UI
+ * - to update the state when kicking a member from the group from the UI
  * - to update the state when handling a MEMBER_LEFT message
  */
 async function handleMemberRemovedFromUI({
@@ -832,13 +832,13 @@ async function handleMemberRemovedFromUI({
 
   // Build a GroupUpdateMessage to be sent if that member was kicked by us.
   const createAtNetworkTimestamp = GetNetworkTime.now();
-  const expiringDetails = DisappearingMessages.getExpireDetailsForOutgoingMesssage(
+  const expiringDetails = DisappearingMessages.getExpireDetailsForOutgoingMessage(
     convo,
     createAtNetworkTimestamp
   );
   let removedControlMessage: GroupUpdateMemberChangeMessage | null = null;
 
-  // We only add/send a message if that user didn't leave but was explicitely kicked.
+  // We only add/send a message if that user didn't leave but was explicitly kicked.
   // When we leaves by himself, he sends a GroupUpdateMessage.
   if (!fromMemberLeftMessage) {
     const msgModel = await ClosedGroup.addUpdateMessage({
@@ -928,7 +928,7 @@ async function handleNameChangeFromUI({
     diff: { type: 'name', newName },
     sender: us,
     sentAt: createAtNetworkTimestamp,
-    expireUpdate: DisappearingMessages.getExpireDetailsForOutgoingMesssage(
+    expireUpdate: DisappearingMessages.getExpireDetailsForOutgoingMessage(
       convo,
       createAtNetworkTimestamp
     ),
@@ -944,7 +944,7 @@ async function handleNameChangeFromUI({
     createAtNetworkTimestamp,
     secretKey: group.secretKey,
     sodium: await getSodiumRenderer(),
-    ...DisappearingMessages.getExpireDetailsForOutgoingMesssage(convo, createAtNetworkTimestamp),
+    ...DisappearingMessages.getExpireDetailsForOutgoingMessage(convo, createAtNetworkTimestamp),
   });
 
   const extraStoreRequests = await StoreGroupRequestFactory.makeGroupMessageSubRequest(
@@ -974,7 +974,7 @@ async function handleNameChangeFromUI({
 /**
  * This action is used to trigger a change when the local user does a change to a group v2 members list.
  * GroupV2 added members can be added two ways: with and without the history of messages.
- * GroupV2 removed members have their subaccount token revoked on the server side so they cannot poll anymore from the group's swarm.
+ * GroupV2 removed members have their sub account token revoked on the server side so they cannot poll anymore from the group's swarm.
  */
 const currentDeviceGroupMembersChange = createAsyncThunk(
   'group/currentDeviceGroupMembersChange',
@@ -1042,7 +1042,7 @@ const triggerFakeAvatarUpdate = createAsyncThunk(
     }
 
     const createAtNetworkTimestamp = GetNetworkTime.now();
-    const expireUpdate = DisappearingMessages.getExpireDetailsForOutgoingMesssage(
+    const expireUpdate = DisappearingMessages.getExpireDetailsForOutgoingMessage(
       convo,
       createAtNetworkTimestamp
     );
@@ -1085,7 +1085,7 @@ const triggerFakeAvatarUpdate = createAsyncThunk(
 /**
  * This action is used to trigger a change when the local user does a change to a group v2 members list.
  * GroupV2 added members can be added two ways: with and without the history of messages.
- * GroupV2 removed members have their subaccount token revoked on the server side so they cannot poll anymore from the group's swarm.
+ * GroupV2 removed members have their sub account token revoked on the server side so they cannot poll anymore from the group's swarm.
  */
 const handleMemberLeftMessage = createAsyncThunk(
   'group/handleMemberLeftMessage',
@@ -1228,7 +1228,7 @@ function refreshConvosModelProps(convoIds: Array<string>) {
    * This is not ideal, but some fields stored in this slice are ALSO stored in the conversation slice. Things like admins,members, groupName, kicked, etc...
    * So, anytime a change is made in this metaGroup slice, we need to make sure the conversation slice is updated too.
    * The way to update the conversation slice is to call `triggerUIRefresh` on the corresponding conversation object.
-   * Eventually, we will have a centralized state with libsession used accross the app, and those slices will only expose data from the libsession state.
+   * Eventually, we will have a centralized state with libsession used across the app, and those slices will only expose data from the libsession state.
    *
    */
   setTimeout(() => {
@@ -1279,7 +1279,7 @@ const metaGroupSlice = createSlice({
       window.log.error('a initNewGroupInWrapper was rejected', action.error);
       state.creationFromUIPending = false;
       return state;
-      // FIXME delete the wrapper completely & corresponding dumps, and usergroups entry?
+      // FIXME delete the wrapper completely & corresponding dumps, and user groups entry?
     });
     builder.addCase(initNewGroupInWrapper.pending, (state, _action) => {
       state.creationFromUIPending = true;

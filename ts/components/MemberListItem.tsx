@@ -1,8 +1,6 @@
-import React from 'react';
 import styled from 'styled-components';
 
 import { GroupPubkeyType, PubkeyType } from 'libsession_util_nodejs';
-import { useNicknameOrProfileNameOrShortenedPubkey } from '../hooks/useParamSelector';
 import { PubKey } from '../session/types';
 import { UserUtils } from '../session/utils';
 import { GroupInvite } from '../session/utils/job_runners/jobs/GroupInviteJob';
@@ -15,7 +13,6 @@ import {
   useMemberPromotionFailed,
   useMemberPromotionSent,
 } from '../state/selectors/groups';
-import { Avatar, AvatarSize, CrownIcon } from './avatar/Avatar';
 import { Flex } from './basic/Flex';
 import {
   SessionButton,
@@ -23,6 +20,8 @@ import {
   SessionButtonShape,
   SessionButtonType,
 } from './basic/SessionButton';
+import { useNicknameOrProfileNameOrShortenedPubkey } from '../hooks/useParamSelector';
+import { Avatar, AvatarSize, CrownIcon } from './avatar/Avatar';
 import { SessionRadio } from './basic/SessionRadio';
 import { hasClosedGroupV2QAButtons } from '../shared/env_vars';
 
@@ -45,13 +44,13 @@ const StyledSessionMemberItem = styled.button<{
   zombie?: boolean;
   selected?: boolean;
   disableBg?: boolean;
+  withBorder?: boolean;
 }>`
-  cursor: pointer;
+  cursor: ${props => (props.disabled ? 'not-allowed' : 'pointer')};
   display: flex;
   align-items: center;
   justify-content: space-between;
   flex-shrink: 0;
-  flex-grow: 1;
   font-family: var(--font-default);
   padding: 0px var(--margins-sm);
   height: ${props => (props.inMentions ? '40px' : '50px')};
@@ -63,8 +62,15 @@ const StyledSessionMemberItem = styled.button<{
       ? 'var(--conversation-tab-background-selected-color) !important'
       : null};
 
-  :not(:last-child) {
+  ${props => props.inMentions && 'max-width: 300px;'}
+  ${props =>
+    props.withBorder &&
+    `&:not(button:last-child) {
     border-bottom: 1px solid var(--border-color);
+  }`}
+
+  &:hover {
+    background-color: var(--conversation-tab-background-hover-color);
   }
 `;
 
@@ -74,11 +80,12 @@ const StyledInfo = styled.div`
   min-width: 0;
 `;
 
-const StyledName = styled.span`
+const StyledName = styled.span<{ maxName?: string }>`
   font-weight: bold;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  ${props => props.maxName && `max-width: ${props.maxName};`}
 `;
 
 const StyledCheckContainer = styled.div`
@@ -93,12 +100,15 @@ type MemberListItemProps = {
   isZombie?: boolean;
   inMentions?: boolean; // set to true if we are rendering members but in the Mentions picker
   disableBg?: boolean;
+  withBorder?: boolean;
+  maxNameWidth?: string;
   isAdmin?: boolean; // if true,  we add a small crown on top of their avatar
   onSelect?: (pubkey: string) => void;
   onUnselect?: (pubkey: string) => void;
   dataTestId?: React.SessionDataTestId;
   displayGroupStatus?: boolean;
   groupPk?: string;
+  disabled?: boolean;
 };
 
 const ResendContainer = ({
@@ -150,17 +160,17 @@ const GroupStatusText = ({ groupPk, pubkey }: { pubkey: PubkeyType; groupPk: Gro
    * If we were to have the "failed" checks first, we'd hide the "sending" state when we are retrying.
    */
   const statusText = groupInviteSending
-    ? window.i18n('inviteSending')
+    ? window.i18n('groupInviteSending')
     : groupPromotionSending
-      ? window.i18n('promotionSending')
+      ? window.i18n('adminSendingPromotion')
       : groupPromotionFailed
-        ? window.i18n('promotionFailed')
+        ? window.i18n('adminPromotionFailed')
         : groupInviteFailed
-          ? window.i18n('inviteFailed')
+          ? window.i18n('groupInviteFailed')
           : groupInviteSent
-            ? window.i18n('inviteSent')
+            ? window.i18n('groupInviteSent')
             : groupPromotionSent
-              ? window.i18n('promotionSent')
+              ? window.i18n('adminPromotionSent')
               : null;
 
   if (!statusText) {
@@ -256,6 +266,9 @@ export const MemberListItem = ({
   onSelect,
   onUnselect,
   groupPk,
+  disabled,
+  withBorder,
+  maxNameWidth,
 }: MemberListItemProps) => {
   const memberName = useNicknameOrProfileNameOrShortenedPubkey(pubkey);
 
@@ -265,18 +278,13 @@ export const MemberListItem = ({
         // eslint-disable-next-line no-unused-expressions
         isSelected ? onUnselect?.(pubkey) : onSelect?.(pubkey);
       }}
-      style={
-        !inMentions && !disableBg
-          ? {
-              backgroundColor: 'var(--background-primary-color)',
-            }
-          : {}
-      }
       data-testid={dataTestId}
       zombie={isZombie}
       inMentions={inMentions}
       selected={isSelected}
       disableBg={disableBg}
+      withBorder={withBorder}
+      disabled={disabled}
     >
       <StyledInfo>
         <AvatarItem memberPubkey={pubkey} isAdmin={isAdmin || false} />
@@ -286,13 +294,13 @@ export const MemberListItem = ({
           margin="0 var(--margins-md)"
           alignItems="flex-start"
         >
-          <StyledName data-testid={'group-member-name'}>{memberName}</StyledName>
+          <StyledName data-testid={'group-member-name'} maxName={maxNameWidth}>{memberName}</StyledName>
           <GroupStatusContainer
             pubkey={pubkey}
             displayGroupStatus={displayGroupStatus}
             groupPk={groupPk}
           />
-        </Flex>
+          </Flex>
       </StyledInfo>
 
       <ResendContainer pubkey={pubkey} displayGroupStatus={displayGroupStatus} groupPk={groupPk} />

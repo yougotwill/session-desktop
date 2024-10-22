@@ -9,6 +9,7 @@ import { OpenGroupData } from '../../../data/opengroups';
 import { TestUtils } from '..';
 import { SnodePool } from '../../../session/apis/snode_api/snodePool';
 import { BlockedNumberController } from '../../../util';
+import { loadLocalizedDictionary } from '../../../node/locale';
 import * as libsessionWorker from '../../../webworker/workers/browser/libsession_worker_interface';
 import * as utilWorker from '../../../webworker/workers/browser/util_worker_interface';
 
@@ -94,6 +95,16 @@ export function stubWindow<K extends keyof Window>(fn: K, value: WindowValue<K>)
   };
 }
 
+/**
+ * Resolves "SVGElement is undefined error" in motion components by making JSDOM treat SVG elements as regular DOM elements
+ * @link https://github.com/jsdom/jsdom/issues/2734#issuecomment-569416871
+ * */
+export function stubSVGElement() {
+  if (!globalAny.SVGElement) {
+    globalAny.SVGElement = globalAny.Element;
+  }
+}
+
 export const enableLogRedirect = false;
 
 export const stubWindowLog = () => {
@@ -107,6 +118,23 @@ export const stubWindowLog = () => {
 
 export const stubWindowFeatureFlags = () => {
   stubWindow('sessionFeatureFlags', { debug: {} } as any);
+};
+
+export const stubWindowWhisper = () => {
+  stubWindow('Whisper', {
+    events: {
+      on: (name: string, callback: (param1?: any, param2?: any) => void) => {
+        if (enableLogRedirect) {
+          console.info(`Whisper Event registered ${name} ${callback}`);
+        }
+        callback();
+      },
+      trigger: (name: string, param1?: any, param2?: any) =>
+        enableLogRedirect
+          ? console.info(`Whisper Event triggered ${name} ${param1} ${param2}`)
+          : {},
+    },
+  });
 };
 
 export async function expectAsyncToThrow(toAwait: () => Promise<any>, errorMessageToCatch: string) {
@@ -134,3 +162,9 @@ export function stubValidSnodeSwarm() {
 
   return { snodes, swarm };
 }
+
+/** You must call stubWindowLog() before using */
+export const stubI18n = () => {
+  const { i18n } = loadLocalizedDictionary({ appLocale: 'en', logger: window.log });
+  stubWindow('i18n', i18n);
+};

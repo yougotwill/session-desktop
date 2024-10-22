@@ -10,7 +10,6 @@
  *
  */
 import path from 'path';
-import { reject } from 'lodash';
 
 import * as fse from 'fs-extra';
 
@@ -93,6 +92,8 @@ const getDecryptedMediaUrl = async (
     // we consider the file is encrypted.
     // if it's not, the hook caller has to fallback to setting the img src as an url to the file instead and load it
     if (urlToDecryptedBlobMap.has(url)) {
+      // typescript does not realize that the `has()` above makes sure the `get()` is not undefined
+
       // refresh the last access timestamp so we keep the one being currently in use
       const existing = urlToDecryptedBlobMap.get(url);
       const existingObjUrl = existing?.decrypted as string;
@@ -102,7 +103,6 @@ const getDecryptedMediaUrl = async (
         lastAccessTimestamp: Date.now(),
         forceRetain: existing?.forceRetain || false,
       });
-      // typescript does not realize that the has above makes sure the get is not undefined
 
       return existingObjUrl;
     }
@@ -113,7 +113,7 @@ const getDecryptedMediaUrl = async (
 
     urlToDecryptingPromise.set(
       url,
-      new Promise(async resolve => {
+      new Promise(async (resolve, reject) => {
         // window.log.debug('about to read and decrypt file :', url, path.isAbsolute(url));
         try {
           const absUrl = path.isAbsolute(url) ? url : getAbsoluteAttachmentPath(url);
@@ -148,7 +148,6 @@ const getDecryptedMediaUrl = async (
         }
       })
     );
-
     return urlToDecryptingPromise.get(url) as Promise<string>;
   }
   // Not sure what we got here. Just return the file.

@@ -1,6 +1,6 @@
 import classNames from 'classnames';
 import { isEqual } from 'lodash';
-import React, { SessionDataTestId, useState } from 'react';
+import { memo, SessionDataTestId, useState } from 'react';
 import { useSelector } from 'react-redux';
 import styled from 'styled-components';
 
@@ -54,7 +54,6 @@ const CrownWrapper = styled.div`
   height: 18px;
   width: 18px;
   transform: translate(20%, 20%); // getting over 23% creates a glitch
-  color: #f7c347;
   background: var(--background-primary-color);
   border-radius: 50%;
 `;
@@ -62,12 +61,17 @@ const CrownWrapper = styled.div`
 export const CrownIcon = () => {
   return (
     <CrownWrapper>
-      <SessionIcon iconSize={'small'} iconType="crown" iconPadding="1px 0 0 0 " />
+      <SessionIcon
+        iconColor="#f7c347"
+        iconSize={'small'}
+        iconType="crown"
+        iconPadding="1px 0 0 0 "
+      />
     </CrownWrapper>
   );
 };
 
-const NoImage = React.memo(
+const NoImage = memo(
   (
     props: Pick<Props, 'forcedName' | 'size' | 'pubkey' | 'onAvatarClick'> & {
       isClosedGroup: boolean;
@@ -187,4 +191,4 @@ const AvatarInner = (props: Props) => {
   );
 };
 
-export const Avatar = React.memo(AvatarInner, isEqual);
+export const Avatar = memo(AvatarInner, isEqual);

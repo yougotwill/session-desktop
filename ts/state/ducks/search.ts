@@ -4,10 +4,9 @@ import { Data } from '../../data/data';
 import { AdvancedSearchOptions, SearchOptions } from '../../types/Search';
 import { cleanSearchTerm } from '../../util/cleanSearchTerm';
 
-import { MessageResultProps } from '../../components/search/MessageSearchResults';
-import { ConversationTypeEnum } from '../../models/conversationAttributes';
 import { PubKey } from '../../session/types';
 import { UserUtils } from '../../session/utils';
+import { MessageResultProps } from '../../types/message';
 import { ReduxConversationType } from './conversations';
 
 // State
@@ -69,7 +68,10 @@ export function search(query: string): SearchResultsKickoffActionType {
 
 async function doSearch(query: string): Promise<SearchResultsPayloadType> {
   const options: SearchOptions = {
-    noteToSelf: window.i18n('noteToSelf').toLowerCase(),
+    noteToSelf: [
+      window.i18n('noteToSelf').toLowerCase(),
+      window.i18n.inEnglish('noteToSelf').toLowerCase(),
+    ],
     savedMessages: window.i18n('savedMessages').toLowerCase(),
     ourNumber: UserUtils.getOurPubKeyStrFromCache(),
   };
@@ -77,12 +79,10 @@ async function doSearch(query: string): Promise<SearchResultsPayloadType> {
   const processedQuery = advancedSearchOptions.query;
   // const isAdvancedQuery = query !== processedQuery;
 
-  const [discussions, messages] = await Promise.all([
-    queryConversationsAndContacts(processedQuery, options),
+  const [contactsAndGroups, messages] = await Promise.all([
+    queryContactsAndGroups(processedQuery, options),
     queryMessages(processedQuery),
   ]);
-  const { conversations, contacts } = discussions;
-  const contactsAndGroups = _.uniq([...conversations, ...contacts]);
   const filteredMessages = _.compact(messages);
 
   return {
@@ -92,12 +92,14 @@ async function doSearch(query: string): Promise<SearchResultsPayloadType> {
     messages: filteredMessages,
   };
 }
+
 export function clearSearch(): ClearSearchActionType {
   return {
     type: 'SEARCH_CLEAR',
     payload: null,
   };
 }
+
 export function updateSearchTerm(query: string): UpdateSearchTermActionType {
   return {
     type: 'SEARCH_UPDATE',
@@ -190,6 +192,7 @@ function getAdvancedSearchOptionsFromQuery(query: string): AdvancedSearchOptions
 async function queryMessages(query: string): Promise<Array<MessageResultProps>> {
   try {
     const trimmedQuery = query.trim();
+    // we clean the search term to avoid special characters since the query is referenced in the SQL query directly
     const normalized = cleanSearchTerm(trimmedQuery);
     // 200 on a large database is already pretty slow
     const limit = Math.min((trimmedQuery.length || 2) * 50, 200);
@@ -200,43 +203,26 @@ async function queryMessages(query: string): Promise<Array<MessageResultProps>> 
   }
 }
 
-async function queryConversationsAndContacts(providedQuery: string, options: SearchOptions) {
+async function queryContactsAndGroups(providedQuery: string, options: SearchOptions) {
   const { ourNumber, noteToSelf, savedMessages } = options;
+  // we don't need to use cleanSearchTerm here because the query is wrapped as a wild card and is not referenced in the SQL query directly
   const query = providedQuery.replace(/[+-.()]*/g, '');
-
   const searchResults: Array<ReduxConversationType> = await Data.searchConversations(query);
 
-  // Split into two groups - active conversations and items just from address book
-  let conversations: Array<string> = [];
-  let contacts: Array<string> = [];
-  const max = searchResults.length;
-  for (let i = 0; i < max; i += 1) {
-    const conversation = searchResults[i];
+  let contactsAndGroups: Array<string> = searchResults.map(conversation => conversation.id);
 
-    if (conversation.id && conversation.activeAt) {
-      if (conversation.id === ourNumber) {
-        conversations.push(ourNumber);
-      } else {
-        conversations.push(conversation.id);
-      }
-    } else if (conversation.type === ConversationTypeEnum.PRIVATE) {
-      contacts.push(conversation.id);
-    } else {
-      conversations.push(conversation.id);
-    }
-  }
-
-  const queryLowered = providedQuery.toLowerCase();
-  // Inject synthetic Note to Self entry if query matches localized 'Note to Self'
-  if (noteToSelf.includes(queryLowered) || savedMessages.includes(queryLowered)) {
+  const queryLowered = query.toLowerCase();
+  if (
+    noteToSelf.some(str => str.includes(query) || str.includes(queryLowered)) ||
+    savedMessages.includes(query) ||
+    savedMessages.includes(queryLowered)
+  ) {
     // Ensure that we don't have duplicates in our results
-    contacts = contacts.filter(id => id !== ourNumber);
-    conversations = conversations.filter(id => id !== ourNumber);
-
-    contacts.unshift(ourNumber);
+    contactsAndGroups = contactsAndGroups.filter(id => id !== ourNumber);
+    contactsAndGroups.unshift(ourNumber);
   }
 
-  return { conversations, contacts };
+  return contactsAndGroups;
 }
 
 // Reducer

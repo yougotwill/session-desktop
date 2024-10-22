@@ -1,8 +1,8 @@
 import { isEmpty } from 'lodash';
 import { UserUtils } from '..';
 import { SettingsKey } from '../../../data/settings-key';
-import { CONVERSATION_PRIORITIES } from '../../../models/conversationAttributes';
-import { stringify, toFixedUint8ArrayOfLength } from '../../../types/sqlSharedTypes';
+import { CONVERSATION_PRIORITIES } from '../../../models/types';
+import { stringify } from '../../../types/sqlSharedTypes';
 import { Storage } from '../../../util/storage';
 import { UserConfigWrapperActions } from '../../../webworker/workers/browser/libsession_worker_interface';
 import { ConvoHub } from '../../conversations';
@@ -32,17 +32,16 @@ async function insertUserProfileIntoWrapper(convoId: string) {
       { url: dbProfileUrl, key: stringify(dbProfileKey) }
     )}, settings: ${JSON.stringify({ areBlindedMsgRequestEnabled, expirySeconds })}`
   );
-  if (dbProfileUrl && !isEmpty(dbProfileKey)) {
-    if (dbProfileKey.length === 32) {
-      const fixedLen = toFixedUint8ArrayOfLength(dbProfileKey, 32);
-      await UserConfigWrapperActions.setUserInfo(dbName, priority, {
-        url: dbProfileUrl,
-        key: fixedLen.buffer, // TODO make this use the fixed length array
-      });
-    }
+
+  // we don't want to throw if somehow our display name in the DB is too long here, so we use the truncated version.
+  await UserConfigWrapperActions.setNameTruncated(dbName);
+  await UserConfigWrapperActions.setPriority(priority);
+  if (dbProfileUrl && !isEmpty(dbProfileKey) && dbProfileKey.length === 32) {
+    await UserConfigWrapperActions.setProfilePic({ key: dbProfileKey, url: dbProfileUrl });
   } else {
-    await UserConfigWrapperActions.setUserInfo(dbName, priority, null);
+    await UserConfigWrapperActions.setProfilePic({ key: null, url: null });
   }
+
   await UserConfigWrapperActions.setEnableBlindedMsgRequest(areBlindedMsgRequestEnabled);
   await UserConfigWrapperActions.setNoteToSelfExpiry(expirySeconds);
 

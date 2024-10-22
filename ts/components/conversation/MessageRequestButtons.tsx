@@ -1,6 +1,5 @@
-import React from 'react';
 import styled from 'styled-components';
-import { useIsIncomingRequest } from '../../hooks/useParamSelector';
+import { useIsIncomingRequest, useIsOutgoingRequest } from '../../hooks/useParamSelector';
 import {
   declineConversationWithConfirm,
   handleAcceptConversationRequest,
@@ -13,7 +12,11 @@ import {
 } from '../../state/selectors/selectedConversation';
 import { useLibGroupInvitePending } from '../../state/selectors/userGroups';
 import { SessionButton, SessionButtonColor } from '../basic/SessionButton';
-import { InvitedToGroupControlMessage, MessageRequestExplanation } from './SubtleNotification';
+import {
+  ConversationIncomingRequestExplanation,
+  ConversationOutgoingRequestExplanation,
+  InvitedToGroupControlMessage,
+} from './SubtleNotification';
 
 const MessageRequestContainer = styled.div`
   display: flex;
@@ -21,7 +24,7 @@ const MessageRequestContainer = styled.div`
   justify-content: center;
   padding: var(--margins-lg);
   gap: var(--margins-lg);
-  background-color: var(--background-secondary-color);
+  text-align: center;
 `;
 
 const ConversationBannerRow = styled.div`
@@ -78,6 +81,7 @@ export const ConversationMessageRequestButtons = () => {
   const isPrivateAndFriend = useSelectedIsPrivateFriend();
   const isGroupPendingInvite = useLibGroupInvitePending(selectedConvoId);
   const convoOrigin = useSelectedConversationIdOrigin() ?? null;
+  const isOutgoingRequest = useIsOutgoingRequest(selectedConvoId);
 
   if (
     !selectedConvoId ||
@@ -94,35 +98,44 @@ export const ConversationMessageRequestButtons = () => {
   return (
     <MessageRequestContainer>
       <InvitedToGroupControlMessage />
-      <ConversationBannerRow>
-        <SessionButton
-          onClick={() => {
-            void handleAcceptConversationRequest({ convoId: selectedConvoId });
-          }}
-          text={window.i18n('accept')}
-          dataTestId="accept-message-request"
-        />
-        <SessionButton
-          buttonColor={SessionButtonColor.Danger}
-          text={window.i18n('delete')}
-          onClick={() => {
-            handleDeclineConversationRequest(selectedConvoId, selectedConvoId, convoOrigin);
-          }}
-          dataTestId="decline-message-request"
-        />
-      </ConversationBannerRow>
-      <MessageRequestExplanation />
-
-      {(isGroupV2 && !!convoOrigin) || !isGroupV2 ? (
-        <StyledBlockUserText
-          onClick={() => {
-            handleDeclineAndBlockConversationRequest(selectedConvoId, selectedConvoId, convoOrigin);
-          }}
-          data-testid="decline-and-block-message-request"
-        >
-          {window.i18n('block')}
-        </StyledBlockUserText>
-      ) : null}
+      {isOutgoingRequest ? (
+        <ConversationOutgoingRequestExplanation />
+      ) : (
+        <>
+          {(isGroupV2 && !!convoOrigin) || !isGroupV2 ? (
+            <StyledBlockUserText
+              onClick={() => {
+                handleDeclineAndBlockConversationRequest(
+                  selectedConvoId,
+                  selectedConvoId,
+                  convoOrigin
+                );
+              }}
+              data-testid="decline-and-block-message-request"
+            >
+              {window.i18n('block')}
+            </StyledBlockUserText>
+          ) : null}
+          <ConversationIncomingRequestExplanation />
+          <ConversationBannerRow>
+            <SessionButton
+              onClick={() => {
+                void handleAcceptConversationRequest({ convoId: selectedConvoId });
+              }}
+              text={window.i18n('accept')}
+              dataTestId="accept-message-request"
+            />
+            <SessionButton
+              buttonColor={SessionButtonColor.Danger}
+              text={window.i18n('delete')}
+              onClick={() => {
+                handleDeclineConversationRequest(selectedConvoId, selectedConvoId, convoOrigin);
+              }}
+              dataTestId="decline-message-request"
+            />
+          </ConversationBannerRow>
+        </>
+      )}
     </MessageRequestContainer>
   );
 };

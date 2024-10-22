@@ -1,12 +1,13 @@
 import { compact } from 'lodash';
 
-import { OpenGroupData, OpenGroupV2Room } from '../../../../data/opengroups';
 import { getSodiumRenderer } from '../../../crypto';
+import { OpenGroupData } from '../../../../data/opengroups';
 import { UserUtils } from '../../../utils';
 import { fromHexToArray } from '../../../utils/String';
 import { GetNetworkTime } from '../../snode_api/getNetworkTime';
 import { SogsBlinding } from '../sogsv3/sogsBlinding';
 import { OpenGroupMessageV2 } from './OpenGroupMessageV2';
+import { OpenGroupV2Room } from '../../../../data/types';
 
 export type OpenGroupRequestHeaders = {
   'X-SOGS-Pubkey': string;
@@ -82,7 +83,7 @@ const getAllValidRoomInfos = (
 
         return fetchedInfo;
       } catch (e) {
-        window?.log?.warn('failed to fetch roominfos for room', roomId);
+        window?.log?.warn('failed to fetch room infos for room', roomId);
         return null;
       }
     })

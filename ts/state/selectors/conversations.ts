@@ -24,18 +24,18 @@ import { MessageContentSelectorProps } from '../../components/conversation/messa
 import { MessageContentWithStatusSelectorProps } from '../../components/conversation/message/message-content/MessageContentWithStatus';
 import { MessageTextSelectorProps } from '../../components/conversation/message/message-content/MessageText';
 import { GenericReadableMessageSelectorProps } from '../../components/conversation/message/message-item/GenericReadableMessage';
-import { LightBoxOptions } from '../../components/conversation/SessionConversation';
 import { hasValidIncomingRequestValues } from '../../models/conversation';
-import { CONVERSATION_PRIORITIES, isOpenOrClosedGroup } from '../../models/conversationAttributes';
+import { isOpenOrClosedGroup } from '../../models/conversationAttributes';
 import { ConvoHub } from '../../session/conversations';
+
 import { UserUtils } from '../../session/utils';
-import { LocalizerType } from '../../types/Util';
 import { BlockedNumberController } from '../../util';
 import { Storage } from '../../util/storage';
 import { getIntl } from './user';
 
 import { MessageReactsSelectorProps } from '../../components/conversation/message/message-content/MessageReactions';
 import { processQuoteAttachment } from '../../models/message';
+import { CONVERSATION_PRIORITIES } from '../../models/types';
 import { isUsAnySogsFromCache } from '../../session/apis/open_group_api/sogsv3/knownBlindedkeys';
 import { PubKey } from '../../session/types';
 import { UserGroupsWrapperActions } from '../../webworker/workers/browser/libsession_worker_interface';
@@ -230,23 +230,20 @@ export const getSortedMessagesTypesOfSelectedConversation = createSelector(
   }
 );
 
-function getConversationTitle(
-  conversation: ReduxConversationType,
-  testingi18n?: LocalizerType
-): string {
+function getConversationTitle(conversation: ReduxConversationType): string {
   if (conversation.displayNameInProfile) {
     return conversation.displayNameInProfile;
   }
 
   if (isOpenOrClosedGroup(conversation.type)) {
-    return (testingi18n || window.i18n)('unknown');
+    return window.i18n('unknown');
   }
   return conversation.id;
 }
 
 const collator = new Intl.Collator();
 
-export const _getConversationComparator = (testingi18n?: LocalizerType) => {
+export const _getConversationComparator = () => {
   return (left: ReduxConversationType, right: ReduxConversationType): number => {
     // Pin is the first criteria to check
     const leftPriority = left.priority || 0;
@@ -269,8 +266,8 @@ export const _getConversationComparator = (testingi18n?: LocalizerType) => {
     if (leftActiveAt && rightActiveAt && leftActiveAt !== rightActiveAt) {
       return rightActiveAt - leftActiveAt;
     }
-    const leftTitle = getConversationTitle(left, testingi18n).toLowerCase();
-    const rightTitle = getConversationTitle(right, testingi18n).toLowerCase();
+    const leftTitle = getConversationTitle(left).toLowerCase();
+    const rightTitle = getConversationTitle(right).toLowerCase();
 
     return collator.compare(leftTitle, rightTitle);
   };
@@ -314,6 +311,15 @@ const _getLeftPaneConversationIds = (
     .map(m => m.id);
 };
 
+const _getContacts = (
+  sortedConversations: Array<ReduxConversationType>
+): Array<ReduxConversationType> => {
+  return sortedConversations.filter(convo => {
+    // a private conversation not approved is a message request. Include them in the list of contacts
+    return !convo.isBlocked && convo.isPrivate && !convo.isMe;
+  });
+};
+
 const _getGlobalUnreadCount = (sortedConversations: Array<ReduxConversationType>): number => {
   let globalUnreadCount = 0;
   for (const conversation of sortedConversations) {
@@ -333,7 +339,7 @@ const _getGlobalUnreadCount = (sortedConversations: Array<ReduxConversationType>
       conversation.priority &&
       conversation.priority <= CONVERSATION_PRIORITIES.default
     ) {
-      // dont increase unread counter, don't push to convo list.
+      // don't increase unread counter, don't push to convo list.
       continue;
     }
 
@@ -359,7 +365,7 @@ export const _getSortedConversations = (
   const sortedConversations: Array<ReduxConversationType> = [];
 
   for (const conversation of sorted) {
-    // Remove all invalid conversations and conversatons of devices associated
+    // Remove all invalid conversations and conversations of devices associated
     //  with cancelled attempted links
     if (!conversation.isPublic && !conversation.activeAt) {
       continue;
@@ -440,38 +446,34 @@ export const getUnreadConversationRequests = createSelector(
  * - approved (or message requests are disabled)
  * - active_at is set to something truthy
  */
-
 export const getLeftPaneConversationIds = createSelector(
   getSortedConversations,
   _getLeftPaneConversationIds
 );
 
-const getPrivateFriendsConversations = (
-  sortedConversations: Array<ReduxConversationType>
-): Array<ReduxConversationType> => {
-  return sortedConversations.filter(convo => {
-    return (
-      convo.isPrivate &&
-      !convo.isMe &&
-      !convo.isBlocked &&
-      convo.isApproved &&
-      (window.sessionFeatureFlags.useClosedGroupV2 || convo.didApproveMe) && // with groupv2, we can invite contacts which did not approve us yet
-      convo.activeAt !== undefined
-    );
-  });
-};
 
-const getDirectContacts = createSelector(getSortedConversations, getPrivateFriendsConversations);
-
-const getPrivateContactsPubkeys = createSelector(getDirectContacts, state => state.map(m => m.id));
 
 export const useContactsToInviteToGroup = () => {
   const contacts = useSelector(getPrivateContactsPubkeys);
   return contacts;
 };
+export const getLeftPaneConversationIdsCount = createSelector(
+  getLeftPaneConversationIds,
+  (convoIds: Array<string>) => {
+    return convoIds.length;
+  }
+);
 
-export const getDirectContactsCount = createSelector(
-  getDirectContacts,
+/**
+ * Returns all the conversation ids of contacts which are
+ * - private
+ * - not me
+ * - not blocked
+ */
+const getContacts = createSelector(getSortedConversations, _getContacts);
+
+export const getContactsCount = createSelector(
+  getContacts,
   (contacts: Array<ReduxConversationType>) => contacts.length
 );
 
@@ -481,8 +483,8 @@ export type DirectContactsByNameType = {
 };
 
 // make sure that createSelector is called here so this function is memoized
-export const getDirectContactsByName = createSelector(
-  getDirectContacts,
+export const getSortedContacts = createSelector(
+  getContacts,
   (contacts: Array<ReduxConversationType>): Array<DirectContactsByNameType> => {
     const us = UserUtils.getOurPubKeyStrFromCache();
     const extractedContacts = contacts
@@ -493,17 +495,62 @@ export const getDirectContactsByName = createSelector(
           displayName: m.nickname || m.displayNameInProfile,
         };
       });
-    const extractedContactsNoDisplayName = sortBy(
-      extractedContacts.filter(m => !m.displayName),
-      'id'
-    );
-    const extractedContactsWithDisplayName = sortBy(
-      extractedContacts.filter(m => Boolean(m.displayName)),
-      'displayName'
+
+    const contactsStartingWithANumber = sortBy(
+      extractedContacts.filter(
+        m => !m.displayName || (m.displayName && m.displayName[0].match(/^[0-9]+$/))
+      ),
+      m => m.displayName || m.id
     );
 
-    return [...extractedContactsWithDisplayName, ...extractedContactsNoDisplayName];
+    const contactsWithDisplayName = sortBy(
+      extractedContacts.filter(m => !!m.displayName && !m.displayName[0].match(/^[0-9]+$/)),
+      m => m.displayName?.toLowerCase()
+    );
+
+    return [...contactsWithDisplayName, ...contactsStartingWithANumber];
   }
+);
+
+export const getSortedContactsWithBreaks = createSelector(
+  getSortedContacts,
+  (contacts: Array<DirectContactsByNameType>): Array<DirectContactsByNameType | string> => {
+    // add a break wherever needed
+    const unknownSection = 'unknown';
+    let currentChar = '';
+    // if the item is a string we consider it to be a break of that string
+    const contactsWithBreaks: Array<DirectContactsByNameType | string> = [];
+
+    contacts.forEach(m => {
+      if (
+        !!m.displayName &&
+        m.displayName[0].toLowerCase() !== currentChar &&
+        !m.displayName[0].match(/^[0-9]+$/)
+      ) {
+        currentChar = m.displayName[0].toLowerCase();
+        contactsWithBreaks.push(currentChar.toUpperCase());
+      } else if (
+        ((m.displayName && m.displayName[0].match(/^[0-9]+$/)) || !m.displayName) &&
+        currentChar !== unknownSection
+      ) {
+        currentChar = unknownSection;
+        contactsWithBreaks.push('#');
+      }
+
+      contactsWithBreaks.push(m);
+    });
+
+    contactsWithBreaks.unshift({
+      id: UserUtils.getOurPubKeyStrFromCache(),
+      displayName: window.i18n('noteToSelf'),
+    });
+
+    return contactsWithBreaks;
+  }
+);
+
+export const getPrivateContactsPubkeys = createSelector(getSortedContacts, state =>
+  state.map(m => m.id)
 );
 
 export const getGlobalUnreadMessageCount = createSelector(
@@ -524,9 +571,6 @@ export const getSelectedMessageIds = (state: StateType): Array<string> =>
 
 export const getIsMessageSelectionMode = (state: StateType): boolean =>
   Boolean(getSelectedMessageIds(state).length);
-
-export const getLightBoxOptions = (state: StateType): LightBoxOptions | undefined =>
-  state.conversations.lightBox;
 
 export const getQuotedMessage = (state: StateType): ReplyingToMessageProps | undefined =>
   state.conversations.quotedMessage;

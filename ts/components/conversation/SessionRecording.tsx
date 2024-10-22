@@ -1,15 +1,16 @@
 /* eslint-disable @typescript-eslint/no-misused-promises */
-import React from 'react';
+
 import classNames from 'classnames';
-import moment from 'moment';
 
 import autoBind from 'auto-bind';
 import MicRecorder from 'mic-recorder-to-mp3';
-import styled from 'styled-components';
-import { SessionIconButton } from '../icon';
+import { Component } from 'react';
+import styled, { keyframes } from 'styled-components';
 import { Constants } from '../../session';
-import { ToastUtils } from '../../session/utils';
 import { MAX_ATTACHMENT_FILESIZE_BYTES } from '../../session/constants';
+import { ToastUtils } from '../../session/utils';
+import { SessionIconButton } from '../icon';
+import { useFormattedDuration } from '../../hooks/useFormattedDuration';
 
 interface Props {
   onExitVoiceNoteView: () => void;
@@ -36,6 +37,32 @@ interface StyledFlexWrapperProps {
   marginHorizontal: string;
 }
 
+const pulseColorAnimation = keyframes`
+    0% {
+      transform: scale(0.95);
+      box-shadow: 0 0 0 0 rgba(var(--session-recording-pulse-color), 0.7);
+    }
+
+    70% {
+      transform: scale(1);
+      box-shadow: 0 0 0 10px rgba(var(--session-recording-pulse-color), 0);
+    }
+
+    100% {
+      transform: scale(0.95);
+      box-shadow: 0 0 0 0 rgba(var(--session-recording-pulse-color), 0);
+    }
+`;
+
+const StyledRecordTimerLight = styled.div`
+  height: var(--margins-sm);
+  width: var(--margins-sm);
+  border-radius: 50%;
+  background-color: rgb(var(--session-recording-pulse-color));
+  margin: 0 var(--margins-sm);
+  animation: ${pulseColorAnimation} var(--duration-pulse) infinite;
+`;
+
 /**
  * Generic wrapper for quickly passing in theme constant values.
  */
@@ -49,7 +76,37 @@ const StyledFlexWrapper = styled.div<StyledFlexWrapperProps>`
   }
 `;
 
-export class SessionRecording extends React.Component<Props, State> {
+function RecordingDurations({
+  isRecording,
+  displaySeconds,
+  remainingSeconds,
+}: {
+  isRecording: boolean;
+  displaySeconds: number;
+  remainingSeconds: number;
+}) {
+  const displayTimeString = useFormattedDuration(displaySeconds, { forceHours: false });
+  const remainingTimeString = useFormattedDuration(remainingSeconds, { forceHours: false });
+
+  return (
+    <div className={classNames('session-recording--timer', !isRecording && 'playback-timer')}>
+      {displayTimeString + (remainingTimeString ? ` / ${remainingTimeString}` : '')}
+    </div>
+  );
+}
+
+function RecordingTimer({ displaySeconds }: { displaySeconds: number }) {
+  const displayTimeString = useFormattedDuration(displaySeconds, { forceHours: false });
+
+  return (
+    <div className={classNames('session-recording--timer')}>
+      {displayTimeString}
+      <StyledRecordTimerLight />
+    </div>
+  );
+}
+
+export class SessionRecording extends Component<Props, State> {
   private recorder?: any;
   private audioBlobMp3?: Blob;
   private audioElement?: HTMLAudioElement | null;
@@ -107,13 +164,7 @@ export class SessionRecording extends React.Component<Props, State> {
           (this.audioElement.currentTime * 1000 || this.audioElement?.duration)) ||
         0;
 
-    const displayTimeString = moment.utc(displayTimeMs).format('m:ss');
     const recordingDurationMs = this.audioElement?.duration ? this.audioElement.duration * 1000 : 1;
-
-    let remainingTimeString = '';
-    if (recordingDurationMs !== undefined) {
-      remainingTimeString = ` / ${moment.utc(recordingDurationMs).format('m:ss')}`;
-    }
 
     const actionPauseFn = isPlaying ? this.pauseAudio : this.stopRecordingStream;
 
@@ -149,25 +200,17 @@ export class SessionRecording extends React.Component<Props, State> {
         </div>
 
         {hasRecording && !isRecording ? (
-          <div className={classNames('session-recording--timer', !isRecording && 'playback-timer')}>
-            {displayTimeString + remainingTimeString}
-          </div>
+          <RecordingDurations
+            isRecording={isRecording}
+            displaySeconds={Math.floor(displayTimeMs / 1000)}
+            remainingSeconds={Math.floor(recordingDurationMs / 1000)}
+          />
         ) : null}
 
-        {isRecording ? (
-          <div className={classNames('session-recording--timer')}>
-            {displayTimeString}
-            <div className="session-recording--timer-light" />
-          </div>
-        ) : null}
+        {isRecording ? <RecordingTimer displaySeconds={Math.floor(displayTimeMs / 1000)} /> : null}
 
         {!isRecording && (
-          <div
-            className={classNames(
-              'send-message-button',
-              hasRecording && 'send-message-button---scale'
-            )}
-          >
+          <div>
             <SessionIconButton
               iconType="send"
               iconSize={'large'}
@@ -269,7 +312,7 @@ export class SessionRecording extends React.Component<Props, State> {
 
     // Is the audio file > attachment filesize limit
     if (this.audioBlobMp3.size > MAX_ATTACHMENT_FILESIZE_BYTES) {
-      ToastUtils.pushFileSizeErrorAsByte(MAX_ATTACHMENT_FILESIZE_BYTES);
+      ToastUtils.pushFileSizeErrorAsByte();
       return;
     }
 

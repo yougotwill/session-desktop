@@ -17,6 +17,19 @@ export const DURATION = {
   WEEKS: days * 7,
 };
 
+export const DURATION_SECONDS = {
+  /** 1s */
+  SECONDS: Math.floor(DURATION.SECONDS / 1000),
+  /** 60s */
+  MINUTES: Math.floor(DURATION.MINUTES / 1000),
+  /** 60 * 60 = 3,600s */
+  HOURS: Math.floor(DURATION.HOURS / 1000),
+  /** 24 * 60 * 60 = 86,400s */
+  DAYS: Math.floor(DURATION.DAYS / 1000),
+  /** 7 * 24 * 60 * 60  = 604,800s */
+  WEEKS: Math.floor(DURATION.WEEKS / 1000),
+};
+
 export const FILESIZE = {
   /** 1KB */
   KB: 1024,
@@ -62,6 +75,8 @@ export const CONVERSATION = {
   MAX_VOICE_MESSAGE_DURATION: 300,
   MAX_CONVO_UNREAD_COUNT: 999,
   MAX_GLOBAL_UNREAD_COUNT: 99, // the global one does not look good with 4 digits (999+) so we have a smaller one for it
+  /** NOTE some existing groups might not have joinedAtSeconds and we need a fallback value that is not falsy in order to poll and show up in the conversations list */
+  LAST_JOINED_FALLBACK_TIMESTAMP: 1,
 } as const;
 
 /**
@@ -71,7 +86,6 @@ export const CONVERSATION = {
 export const MAX_ATTACHMENT_FILESIZE_BYTES = 10 * 1000 * 1000;
 
 export const VALIDATION = {
-  MAX_GROUP_NAME_LENGTH: 30,
   CLOSED_GROUP_SIZE_LIMIT: 100,
 };
 
@@ -85,4 +99,24 @@ export const UPDATER_INTERVAL_MS = 10 * DURATION.MINUTES;
 export const FEATURE_RELEASE_TIMESTAMPS = {
   DISAPPEARING_MESSAGES_V2: 1710284400000, // 13/03/2024 10:00 Melbourne time
   USER_CONFIG: 1690761600000, // Monday July 31st at 10am Melbourne time
+};
+
+export const ONBOARDING_TIMES = {
+  /** 15 seconds */
+  RECOVERY_TIMEOUT: 15 * DURATION.SECONDS,
+  /** 0.3 seconds */
+  RECOVERY_FINISHING: 0.3 * DURATION.SECONDS,
+  /** 0.2 seconds */
+  RECOVERY_FINISHED: 0.2 * DURATION.SECONDS,
+};
+
+export const PASSWORD_LENGTH = {
+  /**
+   * 6 chars
+   */
+  MIN_PASSWORD_LEN: 6,
+  /**
+   * 64 chars
+   */
+  MAX_PASSWORD_LEN: 64,
 };

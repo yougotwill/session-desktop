@@ -1,11 +1,11 @@
 import { joinOpenGroupV2WithUIEvents } from '../session/apis/open_group_api/opengroupV2/JoinOpenGroupV2';
 import {
-  sogsV3AddAdmin,
-  sogsV3RemoveAdmins,
+    sogsV3AddAdmin,
+    sogsV3RemoveAdmins,
 } from '../session/apis/open_group_api/sogsv3/sogsV3AddRemoveMods';
 import {
-  isOpenGroupV2,
-  openGroupV2CompleteURLRegex,
+    isOpenGroupV2,
+    openGroupV2CompleteURLRegex,
 } from '../session/apis/open_group_api/utils/OpenGroupUtils';
 import { ConvoHub } from '../session/conversations';
 import { PubKey } from '../session/types';
@@ -69,15 +69,19 @@ export async function removeSenderFromModerator(sender: string, convoId: string)
     const pubKeyToRemove = PubKey.cast(sender);
     const convo = ConvoHub.use().getOrThrow(convoId);
 
+    const userDisplayName =
+      ConvoHub.use().get(sender)?.getNicknameOrRealUsernameOrPlaceholder() ||
+      window.i18n('unknown');
+
     const roomInfo = convo.toOpenGroupV2();
     const res = await sogsV3RemoveAdmins([pubKeyToRemove], roomInfo);
     if (!res) {
       window?.log?.warn('failed to remove moderator:', res);
 
-      ToastUtils.pushFailedToRemoveFromModerator();
+      ToastUtils.pushFailedToRemoveFromModerator([userDisplayName]);
     } else {
       window?.log?.info(`${pubKeyToRemove.key} removed from moderators...`);
-      ToastUtils.pushUserRemovedFromModerators();
+      ToastUtils.pushUserRemovedFromModerators([userDisplayName]);
     }
   } catch (e) {
     window?.log?.error('Got error while removing moderator:', e);
@@ -97,7 +101,10 @@ export async function addSenderAsModerator(sender: string, convoId: string) {
       ToastUtils.pushFailedToAddAsModerator();
     } else {
       window?.log?.info(`${pubKeyToAdd.key} added to moderators...`);
-      ToastUtils.pushUserAddedToModerators();
+      const userDisplayName =
+        ConvoHub.use().get(sender)?.getNicknameOrRealUsernameOrPlaceholder() ||
+        window.i18n('unknown');
+      ToastUtils.pushUserAddedToModerators(userDisplayName);
     }
   } catch (e) {
     window?.log?.error('Got error while adding moderator:', e);
@@ -111,17 +118,19 @@ const acceptOpenGroupInvitationV2 = (completeUrl: string, roomName?: string) => 
 
   window.inboxStore?.dispatch(
     updateConfirmModal({
-      title: window.i18n('joinOpenGroupAfterInvitationConfirmationTitle', [
-        roomName || window.i18n('unknown'),
-      ]),
-      message: window.i18n('joinOpenGroupAfterInvitationConfirmationDesc', [
-        roomName || window.i18n('unknown'),
-      ]),
+      title: window.i18n('communityJoin'),
+      i18nMessage: {
+        token: 'communityJoinDescription',
+        args: {
+          community_name: roomName || window.i18n('unknown'),
+        },
+      },
       onClickOk: async () => {
         await joinOpenGroupV2WithUIEvents(completeUrl, true, false);
       },
 
       onClickClose,
+      okText: window.i18n('join'),
     })
   );
   // this function does not throw, and will showToasts if anything happens

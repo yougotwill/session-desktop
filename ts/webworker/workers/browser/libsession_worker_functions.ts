@@ -1,5 +1,6 @@
-import {
+import type {
   BaseConfigActions,
+  BlindingActionsType,
   ContactsConfigActionsType,
   ConvoInfoVolatileConfigActionsType,
   GroupPubkeyType,
@@ -17,9 +18,11 @@ export type ConvoInfoVolatileConfig = 'ConvoInfoVolatileConfig';
 
 export const MetaGroupConfigValue = 'MetaGroupConfig-';
 export const MultiEncryptConfigValue = 'MultiEncrypt';
+export const BlindedConfigValue = 'Blinding';
 type MetaGroupConfigType = typeof MetaGroupConfigValue;
 export type MetaGroupConfig = `${MetaGroupConfigType}${GroupPubkeyType}`;
 export type MultiEncryptConfig = typeof MultiEncryptConfigValue;
+export type BlindingConfig = typeof BlindedConfigValue;
 
 export type ConfigWrapperUser =
   | UserConfig
@@ -32,7 +35,8 @@ export type ConfigWrapperGroup = MetaGroupConfig;
 export type ConfigWrapperObjectTypesMeta =
   | ConfigWrapperUser
   | ConfigWrapperGroup
-  | MultiEncryptConfig;
+  | MultiEncryptConfig
+  | BlindingConfig;
 
 export type ConfigWrapperGroupDetailed = 'GroupInfo' | 'GroupMember' | 'GroupKeys';
 
@@ -50,6 +54,7 @@ type UserGroupsConfigFunctions =
 type ConvoInfoVolatileConfigFunctions =
   | [ConvoInfoVolatileConfig, ...BaseConfigActions]
   | [ConvoInfoVolatileConfig, ...ConvoInfoVolatileConfigActionsType];
+type BlindingFunctions = ['Blinding', ...BlindingActionsType];
 
 // Group-related calls
 type MetaGroupFunctions = [MetaGroupConfig, ...MetaGroupActionsType];
@@ -62,6 +67,7 @@ export type LibSessionWorkerFunctions =
   | UserGroupsConfigFunctions
   | ConvoInfoVolatileConfigFunctions
   | MetaGroupFunctions
+  | BlindingFunctions
   | MultiEncryptFunctions;
 
 export function isUserConfigWrapperType(
@@ -83,6 +89,12 @@ export function isMultiEncryptWrapperType(
   config: ConfigWrapperObjectTypesMeta
 ): config is MultiEncryptConfig {
   return config === 'MultiEncrypt';
+}
+
+export function isBlindingWrapperType(
+  config: ConfigWrapperObjectTypesMeta
+): config is BlindingConfig {
+  return config === 'Blinding';
 }
 
 export function getGroupPubkeyFromWrapperType(type: ConfigWrapperGroup): GroupPubkeyType {

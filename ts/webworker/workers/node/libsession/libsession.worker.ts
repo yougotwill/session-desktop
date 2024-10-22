@@ -2,6 +2,7 @@
 /* eslint-disable no-case-declarations */
 import {
   BaseConfigWrapperNode,
+  BlindingWrapperNode,
   ContactsConfigWrapperNode,
   ConvoInfoVolatileWrapperNode,
   GroupPubkeyType,
@@ -14,11 +15,13 @@ import {
 import { isEmpty, isNull } from 'lodash';
 
 import {
+  BlindingConfig,
   ConfigWrapperGroup,
   ConfigWrapperObjectTypesMeta,
   ConfigWrapperUser,
   MetaGroupConfig,
   MultiEncryptConfig,
+  isBlindingWrapperType,
   isMetaWrapperType,
   isMultiEncryptWrapperType,
   isUserConfigWrapperType,
@@ -69,11 +72,12 @@ function getGroupWrapper(type: ConfigWrapperGroup): MetaGroupWrapperNode | undef
 
   if (isMetaWrapperType(type)) {
     const pk = getGroupPubkeyFromWrapperType(type);
+
     return metaGroupWrappers.get(pk);
   }
-
   assertUnreachable(type, `getGroupWrapper: Missing case error "${type}"`);
 }
+
 
 function getCorrespondingUserWrapper(wrapperType: ConfigWrapperUser): BaseConfigWrapperNode {
   if (isUserConfigWrapperType(wrapperType)) {
@@ -121,6 +125,14 @@ function getMultiEncryptWrapper(wrapperType: MultiEncryptConfig): MultiEncryptWr
   }
   assertUnreachable(wrapperType, `getMultiEncrypt missing global handling for "${wrapperType}"`);
 }
+
+function getBlindingWrapper(wrapperType: BlindingConfig): BlindingWrapperNode {
+  if (isBlindingWrapperType(wrapperType)) {
+    return BlindingWrapperNode;
+  }
+  assertUnreachable(wrapperType, `getBlindingWrapper missing global handling for "${wrapperType}"`);
+}
+
 
 function isUInt8Array(value: any) {
   return value.constructor === Uint8Array;
@@ -181,6 +193,37 @@ function initUserWrapper(options: Array<any>, wrapperType: ConfigWrapperUser) {
 }
 
 /**
+ *  * This function is used to free wrappers from memory only
+ *
+ * NOTE only use this function for wrappers that have not been saved to the database.
+ *
+ * EXAMPLE When restoring an account and fetching the display name of a user. We want to fetch a UserProfile config message and make a temporary wrapper for it in order to look up the display name.
+ */
+function freeUserWrapper(wrapperType: ConfigWrapperObjectTypesMeta) {
+  const userWrapperType = assertUserWrapperType(wrapperType);
+
+  switch (userWrapperType) {
+    case 'UserConfig':
+      userProfileWrapper = undefined;
+      break;
+    case 'ContactsConfig':
+      contactsConfigWrapper = undefined;
+      break;
+    case 'UserGroupsConfig':
+      userGroupsConfigWrapper = undefined;
+      break;
+    case 'ConvoInfoVolatileConfig':
+      convoInfoVolatileConfigWrapper = undefined;
+      break;
+    default:
+      assertUnreachable(
+        userWrapperType,
+        `freeUserWrapper: Missing case error "${userWrapperType}"`
+      );
+  }
+}
+
+/*
  * This function can be used to initialize a group wrapper
  */
 function initGroupWrapper(options: Array<any>, wrapperType: ConfigWrapperGroup) {
@@ -219,11 +262,18 @@ function initGroupWrapper(options: Array<any>, wrapperType: ConfigWrapperGroup) 
   assertUnreachable(groupType, `initGroupWrapper: Missing case error "${groupType}"`);
 }
 
-onmessage = async (e: { data: [number, ConfigWrapperObjectTypesMeta, string, ...any] }) => {
+onmessage = async (e: { data: [number, ConfigWrapperObjectTypesMeta| 'Blinding', string, ...any] }) => {
+
   const [jobId, config, action, ...args] = e.data;
 
   try {
+
     if (action === 'init') {
+      if (config === 'Blinding' || config === 'MultiEncrypt') {
+        // nothing to do for the blinding/multiEncrypt wrapper, all functions are static
+        postMessage([jobId, null, null]);
+        return;
+      }
       if (isUserConfigWrapperType(config)) {
         initUserWrapper(args, config);
         postMessage([jobId, null, null]);
@@ -234,17 +284,26 @@ onmessage = async (e: { data: [number, ConfigWrapperObjectTypesMeta, string, ...
         postMessage([jobId, null, null]);
         return;
       }
-      throw new Error(`Unhandled init wrapper type: ${config}`);
+      assertUnreachable(config, `Unhandled init wrapper type: ${config}`)
     }
     if (action === 'free') {
+      if (config === 'Blinding' || config === 'MultiEncrypt') {
+        // nothing to do for the blinding/multiEncrypt wrapper, all functions are static
+        postMessage([jobId, null, null]);
+        return;
+      }
+      if (isUserConfigWrapperType(config)) {
+        freeUserWrapper(config);
+        postMessage([jobId, null, null]);
+        return;
+      }
       if (isMetaWrapperType(config)) {
         const pk = getGroupPubkeyFromWrapperType(config);
         metaGroupWrappers.delete(pk);
         postMessage([jobId, null, null]);
         return;
       }
-      // We will need to merge onboarding's code to handle the other type of wrappers
-      throw new Error(`Unhandled init wrapper type: ${config}`);
+      assertUnreachable(config, `Unhandled free wrapper type: ${config}`)
     }
 
     const wrapper = isUserConfigWrapperType(config)
@@ -253,18 +312,21 @@ onmessage = async (e: { data: [number, ConfigWrapperObjectTypesMeta, string, ...
         ? getCorrespondingGroupWrapper(config)
         : isMultiEncryptWrapperType(config)
           ? getMultiEncryptWrapper(config)
-          : undefined;
+          : isBlindingWrapperType(config) ? getBlindingWrapper(config) : undefined;
     if (!wrapper) {
-      throw new Error(`did not find an already built wrapper for config: "${config}"`);
+      throw new Error(`did not find an already built (or static) wrapper for config: "${config}"`);
     }
     const fn = (wrapper as any)[action];
 
-    if (!fn) {
-      throw new Error(
-        `Worker: job "${jobId}" did not find function "${action}" on config "${config}"`
-      );
-    }
-    const result = await (wrapper as any)[action](...args);
+
+
+      if (!fn) {
+        throw new Error(
+          `Worker: job "${jobId}" did not find function "${action}" on config "${config}"`
+        );
+      }
+      const result = await (wrapper as any)[action](...args);
+
     postMessage([jobId, null, result]);
   } catch (error) {
     const errorForDisplay = prepareErrorForPostMessage(error);

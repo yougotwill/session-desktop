@@ -1,11 +1,10 @@
 import Backbone from 'backbone';
 import _, { toPairs } from 'lodash';
-import ReactDOM from 'react-dom';
+import { createRoot } from 'react-dom/client';
 
 import nativeEmojiData from '@emoji-mart/data';
 import { ipcRenderer } from 'electron';
 // eslint-disable-next-line import/no-named-default
-import { default as React } from 'react';
 
 import { isMacOS } from '../OS';
 import { SessionInboxView } from '../components/SessionInboxView';
@@ -14,7 +13,6 @@ import { Data } from '../data/data';
 import { OpenGroupData } from '../data/opengroups';
 import { SettingsKey } from '../data/settings-key';
 import { MessageModel } from '../models/message';
-import { deleteAllLogs } from '../node/logs';
 import { queueAllCached } from '../receiver/receiver';
 import { loadKnownBlindedKeys } from '../session/apis/open_group_api/sogsv3/knownBlindedkeys';
 import { ConvoHub } from '../session/conversations';
@@ -31,6 +29,8 @@ import { Notifications } from '../util/notifications';
 import { Registration } from '../util/registration';
 import { Storage, isSignInByLinking } from '../util/storage';
 import { getOppositeTheme, isThemeMismatched } from '../util/theme';
+import { getCrowdinLocale } from '../util/i18n/shared';
+import { rtlLocales } from '../localization/constants';
 
 // Globally disable drag and drop
 document.body.addEventListener(
@@ -52,6 +52,7 @@ document.body.addEventListener(
 
 // Load these images now to ensure that they don't flicker on first use
 const images = [];
+
 function preload(list: Array<string>) {
   for (let index = 0, max = list.length; index < max; index += 1) {
     const image = new Image();
@@ -59,6 +60,7 @@ function preload(list: Array<string>) {
     images.push(image);
   }
 }
+
 preload([
   'alert-outline.svg',
   'check.svg',
@@ -113,6 +115,7 @@ function mapOldThemeToNew(theme: string) {
       return theme;
   }
 }
+
 // using __unused as lodash is imported using _
 ipcRenderer.on('native-theme-update', (__unused, shouldUseDarkColors) => {
   const shouldFollowSystemTheme = window.getSettingValue(SettingsKey.hasFollowSystemThemeEnabled);
@@ -187,7 +190,7 @@ Storage.onready(async () => {
       // Stop background processing
       AttachmentDownloads.stop();
       // Stop processing incoming messages
-      // TODOLATER stop polling opengroupv2 and swarm nodes
+      // TODOLATER stop polling opengroup v2 and swarm nodes
 
       // Shut down the data interface cleanly
       await Data.shutdown();
@@ -201,7 +204,7 @@ Storage.onready(async () => {
 
   if (newVersion) {
     window.log.info(`New version detected: ${currentVersion}; previous: ${lastVersion}`);
-    await deleteAllLogs();
+    await Data.cleanupOrphanedAttachments();
   }
 
   const themeSetting = window.Events.getThemeSetting();
@@ -281,17 +284,13 @@ async function start() {
   window.log.info('Cleanup: complete');
 
   window.log.info('listening for registration events');
-  // eslint-disable-next-line @typescript-eslint/no-misused-promises
-  WhisperEvents.on('registration_done', async () => {
-    window.log.info('handling registration event');
-
-    await connect();
+  WhisperEvents.on('registration_done', () => {
+    window.log.info('[onboarding] handling registration event');
+    void connect();
   });
 
   function switchBodyToRtlIfNeeded() {
-    const rtlLocales = ['fa', 'ar', 'he'];
-
-    const loc = (window.i18n as any).getLocale();
+    const loc = getCrowdinLocale();
     if (rtlLocales.includes(loc) && !document.getElementById('body')?.classList.contains('rtl')) {
       document.getElementById('body')?.classList.add('rtl');
     }
@@ -306,14 +305,19 @@ async function start() {
     void ConvoHub.use()
       .loadPromise()
       ?.then(() => {
-        ReactDOM.render(<SessionInboxView />, document.getElementById('root'));
+        const container = document.getElementById('root');
+        const root = createRoot(container!);
+        root.render(<SessionInboxView />);
       });
   }
 
   function showRegistrationView() {
-    ReactDOM.render(<SessionRegistrationView />, document.getElementById('root'));
+    const container = document.getElementById('root');
+    const root = createRoot(container!);
+    root.render(<SessionRegistrationView />);
     switchBodyToRtlIfNeeded();
   }
+
   DisappearingMessages.initExpiringMessageListener();
 
   if (Registration.isDone() && !isSignInByLinking()) {
@@ -400,7 +404,10 @@ async function start() {
     window.showWindow();
     if (conversationKey) {
       // do not put the messageId here so the conversation is loaded on the last unread instead
-      await window.openConversationWithMessages({ conversationKey, messageId: null });
+      await window.openConversationWithMessages({
+        conversationKey,
+        messageId: null,
+      });
     } else {
       openInbox();
     }
@@ -420,6 +427,7 @@ async function start() {
 }
 
 let disconnectTimer: NodeJS.Timeout | null = null;
+
 function onOffline() {
   window.log.info('offline');
   window.globalOnlineStatus = false;
@@ -463,6 +471,7 @@ function disconnect() {
 }
 
 let connectCount = 0;
+
 async function connect() {
   window.log.info('connect');
 
@@ -502,90 +511,3 @@ function onEmpty() {
 
   Notifications.enable();
 }
-
-class TextScramble {
-  private frame: any;
-  private queue: any;
-  private readonly el: any;
-  private readonly chars: any;
-  private resolve: any;
-  private frameRequest: any;
-
-  constructor(el: any) {
-    this.el = el;
-    this.chars = '0123456789abcdef';
-    this.update = this.update.bind(this);
-  }
-
-  public async setText(newText: string) {
-    const oldText = this.el.value;
-    const length = Math.max(oldText.length, newText.length);
-    // eslint-disable-next-line no-return-assign, no-promise-executor-return
-    const promise = new Promise(resolve => (this.resolve = resolve));
-    this.queue = [];
-
-    for (let i = 0; i < length; i++) {
-      const from = oldText[i] || '';
-      const to = newText[i] || '';
-      const startNumber = Math.floor(Math.random() * 40);
-      const end = startNumber + Math.floor(Math.random() * 40);
-      this.queue.push({
-        from,
-        to,
-        start: startNumber,
-        end,
-      });
-    }
-
-    cancelAnimationFrame(this.frameRequest);
-    this.frame = 0;
-    this.update();
-    return promise;
-  }
-
-  public update() {
-    let output = '';
-    let complete = 0;
-
-    for (let i = 0, n = this.queue.length; i < n; i++) {
-      const { from, to, start: startNumber, end } = this.queue[i];
-      let { char } = this.queue[i];
-
-      if (this.frame >= end) {
-        complete++;
-        output += to;
-      } else if (this.frame >= startNumber) {
-        if (!char || Math.random() < 0.28) {
-          char = this.randomChar();
-          this.queue[i].char = char;
-        }
-        output += char;
-      } else {
-        output += from;
-      }
-    }
-
-    this.el.value = output;
-
-    if (complete === this.queue.length) {
-      this.resolve();
-    } else {
-      this.frameRequest = requestAnimationFrame(this.update);
-      this.frame++;
-    }
-  }
-
-  public randomChar() {
-    return this.chars[Math.floor(Math.random() * this.chars.length)];
-  }
-}
-window.Session = window.Session || {};
-
-window.Session.setNewSessionID = (sessionID: string) => {
-  const el = document.querySelector('.session-id-editable-textarea');
-  const fx = new TextScramble(el);
-  if (el) {
-    (el as any).value = sessionID;
-  }
-  void fx.setText(sessionID);
-};

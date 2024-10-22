@@ -20,6 +20,7 @@ import {
 
 import crypto from 'crypto';
 import fs from 'fs';
+import { copyFile, appendFile } from 'node:fs/promises';
 import os from 'os';
 import path, { join } from 'path';
 import { platform as osPlatform } from 'process';
@@ -76,7 +77,7 @@ import { initAttachmentsChannel } from '../node/attachment_channel';
 import * as updater from '../updater/index'; // checked - only node
 
 import { ephemeralConfig } from '../node/config/ephemeral_config'; // checked - only node
-import { getLogger, initializeLogger } from '../node/logging'; // checked - only node
+import { getLoggerFilePath, getLogger, initializeLogger } from '../node/logging'; // checked - only node
 import { createTemplate } from '../node/menu'; // checked - only node
 import { installPermissionsHandler } from '../node/permissions'; // checked - only node
 import { installFileHandler, installWebHandler } from '../node/protocol_filter'; // checked - only node
@@ -156,14 +157,21 @@ if (windowFromUserConfig) {
 
 import { readFile } from 'fs-extra';
 import { getAppRootPath } from '../node/getRootPath';
-import { setLastestRelease } from '../node/latest_desktop_release';
-import { load as loadLocale, LocaleMessagesWithNameType } from '../node/locale';
+import { setLatestRelease } from '../node/latest_desktop_release';
 import { isDevProd, isTestIntegration } from '../shared/env_vars';
 import { classicDark } from '../themes';
+import type { SetupI18nReturnType } from '../types/localizer';
+
+import {
+  isSessionLocaleSet,
+  getTranslationDictionary,
+  getCrowdinLocale,
+} from '../util/i18n/shared';
+import { loadLocalizedDictionary } from '../node/locale';
 
 // Both of these will be set after app fires the 'ready' event
 let logger: Logger | null = null;
-let locale: LocaleMessagesWithNameType;
+let i18n: SetupI18nReturnType;
 
 function assertLogger(): Logger {
   if (!logger) {
@@ -179,7 +187,7 @@ function prepareURL(pathSegments: Array<string>, moreKeys?: { theme: any }) {
     slashes: true,
     query: {
       name: packageJson.productName,
-      locale: locale.name,
+      locale: getCrowdinLocale(),
       version: app.getVersion(),
       commitHash: config.get('commitHash'),
       environment: (config as any).environment,
@@ -341,7 +349,8 @@ async function createWindow() {
 
   // Create the browser window.
   mainWindow = new BrowserWindow(windowOptions);
-  setupSpellChecker(mainWindow, locale.messages);
+
+  setupSpellChecker(mainWindow, i18n);
 
   const setWindowFocus = () => {
     if (!mainWindow) {
@@ -486,10 +495,11 @@ ipc.on('show-window', () => {
 });
 
 ipc.on('set-release-from-file-server', (_event, releaseGotFromFileServer) => {
-  setLastestRelease(releaseGotFromFileServer);
+  setLatestRelease(releaseGotFromFileServer);
 });
 
 let isReadyForUpdates = false;
+
 async function readyForUpdates() {
   console.log('[updater] isReadyForUpdates', isReadyForUpdates);
   if (isReadyForUpdates) {
@@ -501,12 +511,13 @@ async function readyForUpdates() {
   // Second, start checking for app updates
   try {
     // if the user disabled auto updates, this will actually not start the updater
-    await updater.start(getMainWindow, userConfig, locale.messages, logger);
+    await updater.start(getMainWindow, userConfig, i18n, logger);
   } catch (error) {
     const log = logger || console;
     log.error('Error starting update checks:', error && error.stack ? error.stack : error);
   }
 }
+
 ipc.once('ready-for-updates', readyForUpdates);
 
 // Forcefully call readyForUpdates after 10 minutes.
@@ -525,6 +536,7 @@ function openSupportPage() {
 }
 
 let passwordWindow: BrowserWindow | null = null;
+
 async function showPasswordWindow() {
   if (passwordWindow) {
     passwordWindow.show();
@@ -611,8 +623,8 @@ async function showAbout() {
   const options = {
     width: 500,
     height: 500,
-    resizable: true,
-    title: locale.messages.about,
+    resizeable: true,
+    title: i18n('about'),
     autoHideMenuBar: true,
     backgroundColor: classicDark['--background-primary-color'],
     show: false,
@@ -647,79 +659,37 @@ async function showAbout() {
   aboutWindow?.show();
 }
 
-let debugLogWindow: BrowserWindow | null = null;
-async function showDebugLogWindow() {
-  if (debugLogWindow) {
-    debugLogWindow.show();
-    return;
-  }
-
-  if (!mainWindow) {
-    console.info('debug log needs mainwindow size to open');
-    return;
-  }
-
-  const theme = await getThemeFromMainWindow();
-  const size = mainWindow.getSize();
-  const options = {
-    width: Math.max(size[0] - 100, getDefaultWindowSize().minWidth),
-    height: Math.max(size[1] - 100, getDefaultWindowSize().minHeight),
-    resizable: true,
-    title: locale.messages.debugLog,
-    autoHideMenuBar: true,
-    backgroundColor: classicDark['--background-primary-color'],
-    shadow: true,
-    show: false,
-    modal: true,
-    webPreferences: {
-      nodeIntegration: true,
-      nodeIntegrationInWorker: false,
-      contextIsolation: false,
-      preload: path.join(getAppRootPath(), 'debug_log_preload.js'),
-      nativeWindowOpen: true,
-    },
-    parent: mainWindow,
-  };
-
-  debugLogWindow = new BrowserWindow(options);
-
-  captureClicks(debugLogWindow);
-
-  await debugLogWindow.loadURL(prepareURL([getAppRootPath(), 'debug_log.html'], { theme }));
-
-  debugLogWindow.on('closed', () => {
-    debugLogWindow = null;
-  });
-
-  debugLogWindow.once('ready-to-show', () => {
-    debugLogWindow?.setBackgroundColor(classicDark['--background-primary-color']);
-  });
-
-  // see above: looks like sometimes ready-to-show is not fired by electron
-  debugLogWindow?.show();
-}
-
-async function saveDebugLog(_event: any, logText: any) {
+async function saveDebugLog(_event: any, additionalInfo?: string) {
   const options: Electron.SaveDialogOptions = {
     title: 'Save debug log',
-    defaultPath: path.join(app.getPath('desktop'), `session_debug_${Date.now()}.txt`),
+    defaultPath: path.join(
+      app.getPath('desktop'),
+      `session_debug_${new Date().toISOString().replace(/:/g, '_')}.txt`
+    ),
     properties: ['createDirectory'],
   };
 
   try {
     const result = await dialog.showSaveDialog(options);
     const outputPath = result.filePath;
-    console.info(`Trying to save logs to ${outputPath}`);
+    console.info(`[log] Trying to save logs to ${outputPath}`);
     if (result === undefined || outputPath === undefined || outputPath === '') {
       throw Error("User clicked Save button but didn't create a file");
     }
 
-    fs.writeFile(outputPath, logText, err => {
-      if (err) {
-        throw Error(`${err}`);
-      }
-      console.info(`Saved log - ${outputPath}`);
-    });
+    const loggerFilePath = getLoggerFilePath();
+    if (!loggerFilePath) {
+      throw Error('No logger file path');
+    }
+
+    await copyFile(loggerFilePath, outputPath);
+    console.info(`[log] Copied logs to ${outputPath} from ${loggerFilePath}`);
+
+    // append any additional info
+    if (additionalInfo) {
+      await appendFile(outputPath, additionalInfo, { encoding: 'utf-8' });
+      console.info(`[log] Saved additional info to logs ${outputPath} from ${loggerFilePath}`);
+    }
   } catch (err) {
     console.error('Error saving debug log', err);
   }
@@ -749,10 +719,12 @@ app.on('ready', async () => {
   logger = getLogger();
   assertLogger().info('app ready');
   assertLogger().info(`starting version ${packageJson.version}`);
-  if (!locale) {
+  if (!isSessionLocaleSet()) {
     const appLocale = process.env.LANGUAGE || app.getLocale() || 'en';
-    locale = loadLocale({ appLocale, logger });
-    assertLogger().info(`locale is ${appLocale}`);
+    const loadedLocale = loadLocalizedDictionary({ appLocale, logger });
+    i18n = loadedLocale.i18n;
+    assertLogger().info(`appLocale is ${appLocale}`);
+    assertLogger().info(`crowdin locale is ${loadedLocale.crowdinLocale}`);
   }
 
   const key = getDefaultSQLKey();
@@ -813,7 +785,7 @@ async function showMainWindow(sqlKey: string, passwordAttempt = false) {
   await sqlNode.initializeSql({
     configDir: userDataPath,
     key: sqlKey,
-    messages: locale.messages,
+    i18n,
     passwordAttempt,
   });
   appStartInitialSpellcheckSetting = await getSpellCheckSetting();
@@ -828,7 +800,7 @@ async function showMainWindow(sqlKey: string, passwordAttempt = false) {
   await createWindow();
 
   if (getStartInTray().usingTrayIcon) {
-    tray = createTrayIcon(getMainWindow, locale.messages);
+    tray = createTrayIcon(getMainWindow, i18n);
   }
 
   setupMenu();
@@ -838,14 +810,14 @@ function setupMenu() {
   const { platform } = process;
   const menuOptions = {
     development,
-    showDebugLog: showDebugLogWindow,
+    saveDebugLog,
     showWindow,
     showAbout,
     openReleaseNotes,
     openSupportPage,
     platform,
   };
-  const template = createTemplate(menuOptions, locale.messages);
+  const template = createTemplate(menuOptions, i18n);
   const menu = Menu.buildFromTemplate(template);
   Menu.setApplicationMenu(menu);
 }
@@ -936,7 +908,10 @@ app.on('web-contents-created', (_createEvent, contents) => {
 // Ingested in preload.js via a sendSync call
 ipc.on('locale-data', event => {
   // eslint-disable-next-line no-param-reassign
-  event.returnValue = locale.messages;
+  event.returnValue = {
+    dictionary: getTranslationDictionary(),
+    crowdinLocale: getCrowdinLocale(),
+  };
 });
 
 ipc.on('draw-attention', () => {
@@ -988,7 +963,28 @@ ipc.on('password-window-login', async (event, passPhrase) => {
     await showMainWindow(passPhrase, passwordAttempt);
     sendResponse(undefined);
   } catch (e) {
-    const localisedError = locale.messages.removePasswordInvalid;
+    sendResponse(i18n('passwordIncorrect'));
+  }
+});
+
+ipc.on('password-recovery-phrase', async (event, passPhrase) => {
+  const sendResponse = (e: string | undefined) => {
+    event.sender.send('password-recovery-phrase-response', e);
+  };
+
+  try {
+    // Check if the hash we have stored matches the given password.
+    const hash = sqlNode.getPasswordHash();
+
+    const hashMatches = passPhrase && PasswordUtil.matchesHash(passPhrase, hash);
+    if (hash && !hashMatches) {
+      throw new Error('Invalid password');
+    }
+    // no issues. send back undefined, meaning OK
+    sendResponse(undefined);
+  } catch (e) {
+    const localisedError = getTranslationDictionary().passwordIncorrect;
+    // send back the error
     sendResponse(localisedError);
   }
 });
@@ -998,7 +994,7 @@ ipc.on('start-in-tray-on-start', (event, newValue) => {
     userConfig.set('startInTray', newValue);
     if (newValue) {
       if (!tray) {
-        tray = createTrayIcon(getMainWindow, locale.messages);
+        tray = createTrayIcon(getMainWindow, i18n);
       }
     } else {
       // destroy is not working for a lot of desktop env. So for simplicity, we don't destroy it here but just
@@ -1050,40 +1046,30 @@ ipc.on('set-password', async (event, passPhrase, oldPhrase) => {
 
     const hashMatches = oldPhrase && PasswordUtil.matchesHash(oldPhrase, hash);
     if (hash && !hashMatches) {
-      const incorrectOldPassword = locale.messages.invalidOldPassword;
-      sendResponse(
-        incorrectOldPassword || 'Failed to set password: Old password provided is invalid'
-      );
+      sendResponse(i18n('passwordCurrentIncorrect'));
       return;
     }
 
-    if (_.isEmpty(passPhrase)) {
+    if (isEmpty(passPhrase)) {
       const defaultKey = getDefaultSQLKey();
       sqlNode.setSQLPassword(defaultKey);
       sqlNode.removePasswordHash();
       userConfig.set('dbHasPassword', false);
+      sendResponse(undefined);
     } else {
       sqlNode.setSQLPassword(passPhrase);
       const newHash = PasswordUtil.generateHash(passPhrase);
       sqlNode.savePasswordHash(newHash);
+      const updatedHash = sqlNode.getPasswordHash();
       userConfig.set('dbHasPassword', true);
+      sendResponse(updatedHash);
     }
-
-    sendResponse(undefined);
   } catch (e) {
-    const localisedError = locale.messages.setPasswordFail;
-    sendResponse(localisedError || 'Failed to set password');
+    sendResponse(i18n('passwordFailed'));
   }
 });
 
 // Debug Log-related IPC calls
-
-ipc.on('show-debug-log', showDebugLogWindow);
-ipc.on('close-debug-log', () => {
-  if (debugLogWindow) {
-    debugLogWindow.close();
-  }
-});
 ipc.on('save-debug-log', saveDebugLog);
 ipc.on('load-maxmind-data', async (event: IpcMainEvent) => {
   try {

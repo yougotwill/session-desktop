@@ -12,7 +12,7 @@ import {
   DeleteHashesFromUserNodeSubRequest,
   StoreUserConfigSubRequest,
 } from '../../../apis/snode_api/SnodeRequestTypes';
-import { TTL_DEFAULT } from '../../../constants';
+import { DURATION, TTL_DEFAULT } from '../../../constants';
 import { ConvoHub } from '../../../conversations';
 import { MessageSender } from '../../../sending/MessageSender';
 import { allowOnlyOneAtATime } from '../../Promise';
@@ -25,12 +25,12 @@ import {
   UserSyncPersistedData,
 } from '../PersistedJob';
 
-const defaultMsBetweenRetries = 15000; // a long time between retries, to avoid running multiple jobs at the same time, when one was postponed at the same time as one already planned (5s)
+const defaultMsBetweenRetries = 5 * DURATION.SECONDS; // a long time between retries, to avoid running multiple jobs at the same time, when one was postponed at the same time as one already planned (5s)
 const defaultMaxAttempts = 2;
 
 /**
  * We want to run each of those jobs at least 3 seconds apart.
- * So every time one of that job finishes, update this timestamp, so we know when adding a new job, what is the next minimun date to run it.
+ * So every time one of that job finishes, update this timestamp, so we know when adding a new job, what is the next minimum date to run it.
  */
 let lastRunConfigSyncJobTimestamp: number | null = null;
 
@@ -104,7 +104,7 @@ async function pushChangesToUserSwarmIfNeeded() {
 
       window.log.info(
         `pushChangesToUserSwarmIfNeeded: current dumps: ${variant}:`,
-        to_hex(await GenericWrapperActions.dump(variant))
+        to_hex(await GenericWrapperActions.makeDump(variant))
       );
     }
   }
@@ -235,18 +235,18 @@ async function queueNewJobIfNeeded() {
     !lastRunConfigSyncJobTimestamp ||
     lastRunConfigSyncJobTimestamp < Date.now() - defaultMsBetweenRetries
   ) {
-    // window.log.debug('Scheduling ConfSyncJob: ASAP');
-    // we postpone by 1000ms to make sure whoever is adding this job is done with what is needs to do first
+    // Note: we postpone by 3s for two reasons:
+    // - to make sure whoever is adding this job is done with what is needs to do first
+    // - to allow a recently created device to process incoming config messages before pushing a new one
     // this call will make sure that there is only one configuration sync job at all times
     await runners.userSyncRunner.addJob(
-      new UserSyncJob({ nextAttemptTimestamp: Date.now() + 1000 })
+      new UserSyncJob({ nextAttemptTimestamp: Date.now() + 3 * DURATION.SECONDS })
     );
   } else {
     // if we did run at t=100, and it is currently t=110, the difference is 10
     const diff = Math.max(Date.now() - lastRunConfigSyncJobTimestamp, 0);
     // but we want to run every 30, so what we need is actually `30-10` from now = 20
-    const leftBeforeNextTick = Math.max(defaultMsBetweenRetries - diff, 1000);
-    // window.log.debug('Scheduling ConfSyncJob: LATER');
+    const leftBeforeNextTick = Math.max(defaultMsBetweenRetries - diff, 1 * DURATION.SECONDS);
 
     await runners.userSyncRunner.addJob(
       new UserSyncJob({ nextAttemptTimestamp: Date.now() + leftBeforeNextTick })

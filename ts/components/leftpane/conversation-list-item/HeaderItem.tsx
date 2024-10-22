@@ -1,5 +1,6 @@
 import classNames from 'classnames';
-import React from 'react';
+
+import { MouseEvent } from 'react';
 import { useSelector } from 'react-redux';
 import styled from 'styled-components';
 import { useConvoIdFromContext } from '../../../contexts/ConvoIdContext';
@@ -18,7 +19,7 @@ import {
   openConversationToSpecificMessage,
   openConversationWithMessages,
 } from '../../../state/ducks/conversations';
-import { isSearching } from '../../../state/selectors/search';
+import { useIsSearching } from '../../../state/selectors/search';
 import { getIsMessageSection } from '../../../state/selectors/section';
 import { Timestamp } from '../../conversation/Timestamp';
 import { SessionIcon } from '../../icon';
@@ -107,7 +108,7 @@ const MentionAtSymbol = styled.span`
   border-radius: 8px;
   cursor: pointer;
 
-  :hover {
+  &:hover {
     filter: grayscale(0.7);
   }
 `;
@@ -115,10 +116,7 @@ const MentionAtSymbol = styled.span`
 /**
  * When clicking on the `@` symbol of a conversation, we open the conversation to the first unread message tagging us (with the @pubkey syntax)
  */
-async function openConvoToLastMention(
-  e: React.MouseEvent<HTMLSpanElement>,
-  conversationId: string
-) {
+async function openConvoToLastMention(e: MouseEvent<HTMLSpanElement>, conversationId: string) {
   e.stopPropagation();
   e.preventDefault();
 
@@ -175,7 +173,7 @@ const UnreadCount = ({ convoId }: { convoId: string }) => {
 export const ConversationListItemHeaderItem = () => {
   const conversationId = useConvoIdFromContext();
 
-  const isSearchingMode = useSelector(isSearching);
+  const isSearching = useIsSearching();
 
   const hasUnread = useHasUnread(conversationId);
   const activeAt = useActiveAt(conversationId);
@@ -195,14 +193,14 @@ export const ConversationListItemHeaderItem = () => {
       <UnreadCount convoId={conversationId} />
       <AtSymbol convoId={conversationId} />
 
-      {!isSearchingMode && (
+      {!isSearching && (
         <div
           className={classNames(
             'module-conversation-list-item__header__date',
             hasUnread ? 'module-conversation-list-item__header__date--has-unread' : null
           )}
         >
-          <Timestamp timestamp={activeAt} isConversationListItem={true} momentFromNow={true} />
+          <Timestamp timestamp={activeAt} isConversationSearchResult={false} />
         </div>
       )}
     </div>

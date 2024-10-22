@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-misused-promises */
-import React, { useState } from 'react';
+import { useState } from 'react';
 
+import { motion } from 'framer-motion';
 import { useDispatch } from 'react-redux';
 import useKey from 'react-use/lib/useKey';
 import styled from 'styled-components';
@@ -9,16 +10,24 @@ import { ConvoHub } from '../../session/conversations';
 import { ClosedGroup } from '../../session/group/closed-group';
 import { initiateOpenGroupUpdate } from '../../session/group/open-group';
 import { PubKey } from '../../session/types';
+import LIBSESSION_CONSTANTS from '../../session/utils/libsession/libsession_constants';
 import { groupInfoActions } from '../../state/ducks/metaGroups';
 import { updateGroupNameModal } from '../../state/ducks/modalDialog';
 import { useGroupNameChangeFromUIPending } from '../../state/selectors/groups';
+import { THEME_GLOBALS } from '../../themes/globals';
 import { pickFileForAvatar } from '../../types/attachments/VisualAttachment';
 import { SessionWrapperModal } from '../SessionWrapperModal';
 import { Avatar, AvatarSize } from '../avatar/Avatar';
 import { SessionButton, SessionButtonColor, SessionButtonType } from '../basic/SessionButton';
-import { SessionSpinner } from '../basic/SessionSpinner';
 import { SpacerMD } from '../basic/Text';
-import { Constants } from '../../session';
+import { SessionSpinner } from '../loading';
+
+const StyledErrorMessage = styled(motion.p)`
+  text-align: center;
+  color: var(--danger-color);
+  display: block;
+  user-select: none;
+`;
 
 function GroupAvatar({
   isPublic,
@@ -51,17 +60,11 @@ function GroupAvatar({
   );
 }
 
-const StyledError = styled.p`
-  text-align: center;
-  color: var(--danger-color);
-  display: block;
-  user-select: none;
-`;
-
 export function UpdateGroupNameDialog(props: { conversationId: string }) {
   const dispatch = useDispatch();
   const { conversationId } = props;
   const [errorMsg, setErrorMsg] = useState('');
+  const [errorDisplayed, setErrorDisplayed] = useState(false);
   const [newAvatarObjecturl, setNewAvatarObjecturl] = useState<string | null>(null);
   const isCommunity = useIsPublic(conversationId);
   const isClosedGroup = useIsClosedGroup(conversationId);
@@ -85,6 +88,11 @@ export function UpdateGroupNameDialog(props: { conversationId: string }) {
       return;
     }
     setErrorMsg(msg);
+    setErrorDisplayed(true);
+
+    setTimeout(() => {
+      setErrorDisplayed(false);
+    }, 3000);
   }
 
   async function fireInputEvent() {
@@ -100,12 +108,13 @@ export function UpdateGroupNameDialog(props: { conversationId: string }) {
     }
     const trimmedGroupName = newGroupName?.trim();
     if (!trimmedGroupName) {
-      onShowError(window.i18n('emptyGroupNameError'));
+      onShowError(window.i18n('groupNameEnterPlease'));
 
       return;
     }
-    if (trimmedGroupName.length > Constants.VALIDATION.MAX_GROUP_NAME_LENGTH) {
-      onShowError(window.i18n('invalidGroupNameTooLong'));
+
+    if (trimmedGroupName.length > LIBSESSION_CONSTANTS.BASE_GROUP_MAX_NAME_LENGTH) {
+      onShowError(window.i18n('groupNameEnterShorter'));
 
       return;
     }
@@ -124,10 +133,8 @@ export function UpdateGroupNameDialog(props: { conversationId: string }) {
             newName: trimmedGroupName,
           });
           dispatch(updateNameAction as any);
-
           return; // keeping the dialog open until the async thunk is done (via isNameChangePending)
         }
-
         void ClosedGroup.initiateClosedGroupUpdate(conversationId, trimmedGroupName, null);
         closeDialog();
       }
@@ -142,25 +149,29 @@ export function UpdateGroupNameDialog(props: { conversationId: string }) {
     throw new Error('groupNameUpdate dialog only works for communities and closed groups');
   }
 
-  const okText = window.i18n('ok');
+  const okText = window.i18n('okay');
   const cancelText = window.i18n('cancel');
-  const titleText = window.i18n('updateGroupDialogTitle', [
-    originalGroupName || window.i18n('unknown'),
-  ]);
 
   const isAdmin = !isCommunity;
   // return null;
 
   return (
     <SessionWrapperModal
-      title={titleText}
+      title={window.i18n('groupName')}
       onClose={() => closeDialog()}
       additionalClassName="update-group-dialog"
     >
       {errorMsg ? (
         <>
           <SpacerMD />
-          <StyledError>{errorMsg}</StyledError>
+          <StyledErrorMessage
+            initial={{ opacity: 0 }}
+            animate={{ opacity: errorDisplayed ? 1 : 0 }}
+            transition={{ duration: THEME_GLOBALS['--duration-modal-error-shown'] }}
+            style={{ marginTop: errorDisplayed ? '0' : '-5px' }}
+          >
+            {errorMsg}
+          </StyledErrorMessage>
           <SpacerMD />
         </>
       ) : null}
@@ -177,15 +188,14 @@ export function UpdateGroupNameDialog(props: { conversationId: string }) {
       {isAdmin ? (
         <input
           type="text"
-          className="profile-name-input"
           value={newGroupName}
-          placeholder={window.i18n('groupNamePlaceholder')}
+          placeholder={window.i18n('groupNameEnter')}
           onChange={e => setNewGroupName(e.target.value)}
           tabIndex={0}
           required={true}
           aria-required={true}
           autoFocus={true}
-          maxLength={Constants.VALIDATION.MAX_GROUP_NAME_LENGTH}
+          maxLength={LIBSESSION_CONSTANTS.BASE_GROUP_MAX_NAME_LENGTH}
           data-testid="group-name-input"
         />
       ) : null}

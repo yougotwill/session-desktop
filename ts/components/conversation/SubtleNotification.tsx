@@ -1,12 +1,14 @@
-import React, { SessionDataTestId } from 'react';
+import { SessionDataTestId } from 'react';
 import { useSelector } from 'react-redux';
 import styled from 'styled-components';
+import { useIsIncomingRequest, useIsOutgoingRequest } from '../../hooks/useParamSelector';
+import { SessionUtilContact } from '../../session/utils/libsession/libsession_utils_contacts';
 import {
-  useIsIncomingRequest,
-  useNicknameOrProfileNameOrShortenedPubkey,
+  useNicknameOrProfileNameOrShortenedPubkey
 } from '../../hooks/useParamSelector';
 import { PubKey } from '../../session/types';
 import {
+  hasSelectedConversationIncomingMessages,
   hasSelectedConversationOutgoingMessages,
   useSelectedHasMessages,
 } from '../../state/selectors/conversations';
@@ -27,8 +29,8 @@ import {
   useLibGroupKicked,
   useLibGroupWeHaveSecretKey,
 } from '../../state/selectors/userGroups';
-import { LocalizerKeys } from '../../types/LocalizerKeys';
 import { SessionHtmlRenderer } from '../basic/SessionHTMLRenderer';
+import { localize } from '../../util/i18n/localizedString';
 
 const Container = styled.div<{ noExtraPadding: boolean }>`
   display: flex;
@@ -62,13 +64,46 @@ function TextNotification({
   );
 }
 
-export const MessageRequestExplanation = () => {
-  const isGroupV2 = useSelectedIsGroupV2();
 
-  return isGroupV2 ? <GroupRequestExplanation /> : <ConversationRequestExplanation />;
+
+/**
+ * This component is used to display a warning when the user is sending a message request.
+ *
+ */
+export const ConversationOutgoingRequestExplanation = () => {
+  const selectedConversation = useSelectedConversationKey();
+  const isOutgoingMessageRequest = useIsOutgoingRequest(selectedConversation);
+  // FIXME: we shouldn't need to rely on incoming messages being present (they can be deleted, expire, etc)
+  const hasIncomingMessages = useSelector(hasSelectedConversationIncomingMessages);
+
+  const showMsgRequestUI = selectedConversation && isOutgoingMessageRequest;
+
+  const selectedIsPrivate = useSelectedIsPrivate();
+
+  if (!showMsgRequestUI || hasIncomingMessages || !selectedIsPrivate) {
+    return null;
+  }
+  const contactFromLibsession = SessionUtilContact.getContactCached(selectedConversation);
+  // Note: we want to display this description when the conversation is private (or blinded) AND
+  // - the conversation is brand new (and not saved yet in libsession: transient conversation),
+  // - the conversation exists in libsession but we are not approved yet.
+  // This works because a blinded conversation is not saved in libsession currently, and will only be once approved_me is true
+  if (!contactFromLibsession || !contactFromLibsession.approvedMe) {
+    return (
+      <Container data-testid={'empty-conversation-notification'} style={{ padding: 0 }} noExtraPadding={true}>
+        <TextInner>{window.i18n('messageRequestPendingDescription')}</TextInner>
+      </Container>
+    );
+  }
+  return null;
 };
 
-const ConversationRequestExplanation = () => {
+
+/**
+ * This component is used to display a warning when the user is responding to a message request.
+ *
+ */
+export const ConversationIncomingRequestExplanation = () => {
   const selectedConversation = useSelectedConversationKey();
   const isIncomingMessageRequest = useIsIncomingRequest(selectedConversation);
 
@@ -82,7 +117,7 @@ const ConversationRequestExplanation = () => {
   return (
     <TextNotification
       dataTestId="conversation-request-explanation"
-      html={window.i18n('respondingToRequestWarning')}
+      html={window.i18n('messageRequestsAcceptDescription')}
       noExtraPadding={true} // in this case, `TextNotification` is part of a bigger component spacing each already
     />
   );
@@ -103,7 +138,7 @@ const GroupRequestExplanation = () => {
   return (
     <TextNotification
       dataTestId="group-request-explanation"
-      html={window.i18n('respondingToGroupRequestWarning')}
+      html={window.i18n('messageRequestGroupInviteDescription')}
       noExtraPadding={true} // in this case, `TextNotification` is part of a bigger component spacing each already
     />
   );
@@ -135,11 +170,11 @@ export const InvitedToGroupControlMessage = () => {
   // when restoring from seed we might not have the pubkey of who invited us, in that case, we just use a fallback
   const html = conversationOrigin
     ? weHaveSecretKey
-      ? window.i18n('userInvitedYouToGroupAsAdmin', [adminNameInvitedUs, groupName])
-      : window.i18n('userInvitedYouToGroup', [adminNameInvitedUs, groupName])
+      ? window.i18n('userInvitedYouToGroupAsAdmin',  {group_name: groupName, name: adminNameInvitedUs}])
+      : window.i18n('messageRequestGroupInvite', {group_name: groupName, name: adminNameInvitedUs})
     : weHaveSecretKey
-      ? window.i18n('youWereInvitedToGroupAsAdmin', [groupName])
-      : window.i18n('youWereInvitedToGroup', [groupName]);
+      ? window.i18n('youWereInvitedToGroupAsAdmin', {group_name: groupName})
+      : window.i18n('groupInviteYou');
 
   return (
     <TextNotification
@@ -152,49 +187,56 @@ export const InvitedToGroupControlMessage = () => {
 
 export const NoMessageInConversation = () => {
   const selectedConversation = useSelectedConversationKey();
-
-  const hasMessage = useSelectedHasMessages();
+  const hasMessages = useSelectedHasMessages();
   const isGroupV2 = useSelectedIsGroupV2();
   const isInvitePending = useLibGroupInvitePending(selectedConversation);
 
   const isMe = useSelectedIsNoteToSelf();
   const canWrite = useSelector(getSelectedCanWrite);
   const privateBlindedAndBlockingMsgReqs = useSelectedHasDisabledBlindedMsgRequests();
-  // TODOLATER use this selector accross the whole application (left pane excluded)
-  const nameToRender = useSelectedNicknameOrProfileNameOrShortenedPubkey() || '';
-  const isPrivate = useSelectedIsPrivate();
-  const isIncomingRequest = useIsIncomingRequest(selectedConversation);
-  const isKickedFromGroup = useLibGroupKicked(selectedConversation);
 
-  // groupV2 use its own invite logic as part of <GroupRequestExplanation />
-  if (
-    !selectedConversation ||
-    hasMessage ||
-    (isGroupV2 && isInvitePending) ||
-    (isPrivate && isIncomingRequest)
-  ) {
-    return null;
-  }
-  let localizedKey: LocalizerKeys = 'noMessagesInEverythingElse';
-  if (!canWrite) {
-    if (privateBlindedAndBlockingMsgReqs) {
-      localizedKey = 'noMessagesInBlindedDisabledMsgRequests';
-    } else {
-      localizedKey = 'thereAreNoMessagesIn';
+const isPrivate = useSelectedIsPrivate();
+const isIncomingRequest = useIsIncomingRequest(selectedConversation);
+const isKickedFromGroup = useLibGroupKicked(selectedConversation);
+  const name = useSelectedNicknameOrProfileNameOrShortenedPubkey();
+
+  const getHtmlToRender = () => {
+    if (isMe) {
+      return localize("noteToSelfEmpty").toString();
     }
-  } else if (isMe) {
-    localizedKey = 'noMessagesInNoteToSelf';
-  }
-  let dataTestId: SessionDataTestId = 'empty-conversation-notification';
-  if (isGroupV2 && isKickedFromGroup) {
-    localizedKey = 'youWereRemovedFrom';
-    dataTestId = 'group-control-message';
-  }
+
+    if (canWrite) {
+      return localize("groupNoMessages").withArgs({ group_name: name }).toString();
+    }
+
+    if (privateBlindedAndBlockingMsgReqs) {
+      return localize("messageRequestsTurnedOff").withArgs({ name }).toString();
+    }
+
+    if (isGroupV2 && isKickedFromGroup) {
+      return localize("groupRemovedYou").withArgs({group_name: name}).toString();
+    }
+    return localize("conversationsEmpty").withArgs({conversation_name: name}).toString();
+  };
+
+
+    // groupV2 use its own invite logic as part of <GroupRequestExplanation />
+    if (
+      !selectedConversation ||
+      hasMessages ||
+      (isGroupV2 && isInvitePending) ||
+      (isPrivate && isIncomingRequest)
+    ) {
+      return null;
+    }
+
+  const dataTestId: SessionDataTestId = isGroupV2 && isKickedFromGroup ? 'empty-conversation-notification' : 'group-control-message';
+
 
   return (
     <TextNotification
       dataTestId={dataTestId}
-      html={window.i18n(localizedKey, [nameToRender])}
+      html={getHtmlToRender()}
       noExtraPadding={false} // in this case, `TextNotification` is **not** part of a bigger component so we need to add some spacing
     />
   );

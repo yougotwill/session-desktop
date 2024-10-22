@@ -1,9 +1,9 @@
-import React, { SessionDataTestId } from 'react';
+import { SessionDataTestId } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import styled from 'styled-components';
 
 import { resetConversationExternal } from '../../state/ducks/conversations';
-import { recoveryPhraseModal, updateDeleteAccountModal } from '../../state/ducks/modalDialog';
+import { updateDeleteAccountModal } from '../../state/ducks/modalDialog';
 import {
   SectionType,
   setLeftOverlayMode,
@@ -11,91 +11,103 @@ import {
   showSettingsSection,
 } from '../../state/ducks/section';
 import { getFocusedSettingsSection } from '../../state/selectors/section';
-import { SessionIcon } from '../icon';
-import { LeftPaneSectionHeader } from './LeftPaneSectionHeader';
+import { useHideRecoveryPasswordEnabled } from '../../state/selectors/settings';
 import type { SessionSettingCategory } from '../../types/ReduxTypes';
+import { Flex } from '../basic/Flex';
+import { SessionIcon, SessionIconType } from '../icon';
+import { LeftPaneSectionHeader } from './LeftPaneSectionHeader';
 
-const StyledSettingsSectionTitle = styled.strong`
-  font-family: var(--font-accent), var(--font-default);
+const StyledSettingsSectionTitle = styled.span`
   font-size: var(--font-size-md);
+  font-weight: 500;
+  flex-grow: 1;
 `;
 
-const StyledSettingsListItem = styled.div<{ active: boolean }>`
+const StyledSettingsListItem = styled(Flex)<{ active: boolean }>`
   background-color: ${props =>
     props.active
       ? 'var(--settings-tab-background-selected-color)'
       : 'var(--settings-tab-background-color)'};
   color: var(--settings-tab-text-color);
-  display: flex;
-  flex-direction: row;
-  justify-content: space-between;
-  align-items: center;
   height: 74px;
-  line-height: 1.4;
-  padding: 0px var(--margins-md);
-  flex-shrink: 0;
+  line-height: 1;
   cursor: pointer;
   transition: var(--default-duration) !important;
 
-  :hover {
+  &:hover {
     background: var(--settings-tab-background-hover-color);
   }
 `;
 
-const getCategories = (): Array<{
+const StyledIconContainer = styled.div`
+  width: 38px;
+`;
+
+
+type Categories = {
   id: SessionSettingCategory;
   title: string;
-  dataTestId: SessionDataTestId;
-}> => {
+  dataTestId: SessionDataTestId
+  icon: {
+    type: SessionIconType;
+    size: number;
+    color?: string;
+  };
+};
+
+const getCategories = (): Array<Categories> => {
+  const forcedSize = { size: 19 };
   return [
     {
       id: 'privacy' as const,
-      title: window.i18n('privacySettingsTitle'),
+      title: window.i18n('sessionPrivacy'),
+      icon: { type: 'padlock' as const, ...forcedSize } ,
     },
     {
       id: 'notifications' as const,
-      title: window.i18n('notificationsSettingsTitle'),
+      title: window.i18n('sessionNotifications'),
+      icon: { type: 'speaker' as const, ...forcedSize },
     },
     {
       id: 'conversations' as const,
-      title: window.i18n('conversationsSettingsTitle'),
+      title: window.i18n('sessionConversations'),
+      icon: { type: 'chatBubble' as const, ...forcedSize },
     },
     {
       id: 'messageRequests' as const,
-      title: window.i18n('openMessageRequestInbox'),
+      title: window.i18n('sessionMessageRequests'),
+      icon: { type: 'messageRequest' as const, ...forcedSize },
     },
     {
       id: 'appearance' as const,
-      title: window.i18n('appearanceSettingsTitle'),
+      title: window.i18n('sessionAppearance'),
+      icon: { type: 'paintbrush'as const, ...forcedSize },
     },
     {
       id: 'permissions' as const,
-      title: window.i18n('permissionsSettingsTitle'),
+      title: window.i18n('sessionPermissions'),
+      icon: { type: 'checkCircle'as const, ...forcedSize },
     },
     {
       id: 'help' as const,
-      title: window.i18n('helpSettingsTitle'),
+      title: window.i18n('sessionHelp'),
+      icon: { type: 'question'as const, ...forcedSize },
     },
     {
-      id: 'recoveryPhrase' as const,
-      title: window.i18n('recoveryPhrase'),
+      id: 'recoveryPassword' as const,
+      title: window.i18n('sessionRecoveryPassword'),
+      icon: { type: 'recoveryPasswordFill'as const, ...forcedSize },
     },
     {
       id: 'clearData' as const,
-      title: window.i18n('clearDataSettingsTitle'),
+      title: window.i18n('sessionClearData'),
+      icon: { type: 'delete'as const, ...forcedSize, color: 'var(--danger-color)' },
     },
   ].map(m => ({ ...m, dataTestId: `${m.id}-settings-menu-item` as const }));
 };
 
-const LeftPaneSettingsCategoryRow = (props: {
-  item: {
-    id: SessionSettingCategory;
-    title: string;
-    dataTestId: SessionDataTestId;
-  };
-}) => {
-  const { item } = props;
-  const { id, title } = item;
+const LeftPaneSettingsCategoryRow = ({item}: { item: Categories }) => {
+  const { id, title, icon,dataTestId } = item;
   const dispatch = useDispatch();
   const focusedSettingsSection = useSelector(getFocusedSettingsSection);
 
@@ -103,19 +115,21 @@ const LeftPaneSettingsCategoryRow = (props: {
 
   return (
     <StyledSettingsListItem
-      data-testid={item.dataTestId}
       key={id}
       active={id === focusedSettingsSection}
       role="link"
+      container={true}
+      flexDirection={'row'}
+      justifyContent={'flex-start'}
+      alignItems={'center'}
+      flexShrink={0}
+      padding={'0px var(--margins-md) 0 var(--margins-sm)'}
       onClick={() => {
         switch (id) {
           case 'messageRequests':
             dispatch(showLeftPaneSection(SectionType.Message));
             dispatch(setLeftOverlayMode('message-requests'));
             dispatch(resetConversationExternal());
-            break;
-          case 'recoveryPhrase':
-            dispatch(recoveryPhraseModal({}));
             break;
           case 'clearData':
             dispatch(updateDeleteAccountModal({}));
@@ -124,20 +138,39 @@ const LeftPaneSettingsCategoryRow = (props: {
             dispatch(showSettingsSection(id));
         }
       }}
+      data-testid={dataTestId}
     >
+      <StyledIconContainer>
+        <SessionIcon
+          iconType={icon.type}
+          iconSize={icon.size}
+          sizeIsWidth={true}
+          iconColor={icon.color || 'var(--text-primary-color)'}
+        />
+      </StyledIconContainer>
       <StyledSettingsSectionTitle style={{ color: isClearData ? 'var(--danger-color)' : 'unset' }}>
         {title}
       </StyledSettingsSectionTitle>
 
       {id === focusedSettingsSection && (
-        <SessionIcon iconSize="medium" iconType="chevron" iconRotation={270} />
+        <SessionIcon
+          iconSize={'medium'}
+          iconType="chevron"
+          iconColor={'var(--text-primary-color)'}
+          iconRotation={270}
+        />
       )}
     </StyledSettingsListItem>
   );
 };
 
 const LeftPaneSettingsCategories = () => {
-  const categories = getCategories();
+  let categories = getCategories();
+  const hideRecoveryPassword = useHideRecoveryPasswordEnabled();
+
+  if (hideRecoveryPassword) {
+    categories = categories.filter(category => category.id !== 'recoveryPassword');
+  }
 
   return (
     <>

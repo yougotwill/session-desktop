@@ -1,5 +1,5 @@
 import _, { difference } from 'lodash';
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import useKey from 'react-use/lib/useKey';
 import styled from 'styled-components';
@@ -14,12 +14,11 @@ import { SessionButton, SessionButtonColor, SessionButtonType } from '../basic/S
 import { SpacerLG } from '../basic/Text';
 
 import {
-  useConversationUsername,
   useGroupAdmins,
   useIsPrivate,
   useIsPublic,
   useSortedGroupMembers,
-  useWeAreAdmin,
+  useWeAreAdmin
 } from '../../hooks/useParamSelector';
 
 import { useSet } from '../../hooks/useSet';
@@ -30,7 +29,7 @@ import { hasClosedGroupV2QAButtons } from '../../shared/env_vars';
 import { groupInfoActions } from '../../state/ducks/metaGroups';
 import { useMemberGroupChangePending } from '../../state/selectors/groups';
 import { useSelectedIsGroupV2 } from '../../state/selectors/selectedConversation';
-import { SessionSpinner } from '../basic/SessionSpinner';
+import { SessionSpinner } from '../loading';
 import { SessionToggle } from '../basic/SessionToggle';
 
 type Props = {
@@ -71,11 +70,11 @@ const ClassicMemberList = (props: {
 
         return (
           <MemberListItem
+            key={`classic-member-list-${member}`}
             pubkey={member}
             isSelected={isSelected}
             onSelect={onSelect}
             onUnselect={onUnselect}
-            key={member}
             isAdmin={isAdmin}
             disableBg={true}
             displayGroupStatus={isV2Group && weAreAdmin}
@@ -148,7 +147,6 @@ export const UpdateGroupMembersDialog = (props: Props) => {
   const isPublic = useIsPublic(conversationId);
   const weAreAdmin = useWeAreAdmin(conversationId);
   const existingMembers = useSortedGroupMembers(conversationId) || [];
-  const displayName = useConversationUsername(conversationId);
   const groupAdmins = useGroupAdmins(conversationId);
   const isProcessingUIChange = useMemberGroupChangePending();
   const [alsoRemoveMessages, setAlsoRemoveMessages] = useState(false);
@@ -194,7 +192,7 @@ export const UpdateGroupMembersDialog = (props: Props) => {
 
   const onAdd = (member: string) => {
     if (!weAreAdmin) {
-      ToastUtils.pushOnlyAdminCanRemove();
+      window?.log?.warn('Only group admin can add members!');
       return;
     }
 
@@ -204,13 +202,10 @@ export const UpdateGroupMembersDialog = (props: Props) => {
   const onRemove = (member: string) => {
     if (!weAreAdmin) {
       window?.log?.warn('Only group admin can remove members!');
-
-      ToastUtils.pushOnlyAdminCanRemove();
       return;
     }
     if (groupAdmins?.includes(member)) {
       if (PubKey.is03Pubkey(conversationId)) {
-        ToastUtils.pushCannotRemoveAdminFromGroup();
         window?.log?.warn(`User ${member} cannot be removed as they are adn admin.`);
         return;
       }
@@ -225,13 +220,14 @@ export const UpdateGroupMembersDialog = (props: Props) => {
   };
 
   const showNoMembersMessage = existingMembers.length === 0;
-  const okText = window.i18n('ok');
+  const okText = window.i18n('okay');
   const cancelText = window.i18n('cancel');
-  const titleText = window.i18n('updateGroupDialogTitle', [displayName || '']);
+
+  const titleText = window.i18n('groupMembers');
 
   return (
     <SessionWrapperModal title={titleText} onClose={closeDialog}>
-      {hasClosedGroupV2QAButtons() && weAreAdmin ? (
+    {hasClosedGroupV2QAButtons() && weAreAdmin ? (
         <>
           Also remove messages:
           <SessionToggle
@@ -242,7 +238,7 @@ export const UpdateGroupMembersDialog = (props: Props) => {
           />
         </>
       ) : null}
-      <StyledClassicMemberList className="group-member-list__selection">
+      <StyledClassicMemberList className="contact-selection-list">
         <ClassicMemberList
           convoId={conversationId}
           onSelect={onAdd}
@@ -250,7 +246,7 @@ export const UpdateGroupMembersDialog = (props: Props) => {
           selectedMembers={membersToKeepWithUpdate}
         />
       </StyledClassicMemberList>
-      {showNoMembersMessage && <p>{window.i18n('noMembersInThisGroup')}</p>}
+      {showNoMembersMessage && <p>{window.i18n('groupMembersNone')}</p>}
 
       <SpacerLG />
       <SessionSpinner loading={isProcessingUIChange} />

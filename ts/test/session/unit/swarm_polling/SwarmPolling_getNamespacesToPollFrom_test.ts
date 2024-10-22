@@ -1,10 +1,10 @@
 import { expect } from 'chai';
 import Sinon from 'sinon';
-import { ConversationTypeEnum } from '../../../../models/conversationAttributes';
 import { getSwarmPollingInstance } from '../../../../session/apis/snode_api';
 import { SnodeNamespaces } from '../../../../session/apis/snode_api/namespaces';
 import { SwarmPolling } from '../../../../session/apis/snode_api/swarmPolling';
 import { TestUtils } from '../../../test-utils';
+import { ConversationTypeEnum } from '../../../../models/types';
 
 describe('SwarmPolling:getNamespacesToPollFrom', () => {
   let swarmPolling: SwarmPolling;
