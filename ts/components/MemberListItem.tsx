@@ -160,9 +160,9 @@ const GroupStatusText = ({ groupPk, pubkey }: { pubkey: PubkeyType; groupPk: Gro
    * If we were to have the "failed" checks first, we'd hide the "sending" state when we are retrying.
    */
   const statusText = groupInviteSending
-    ? window.i18n('groupInviteSending')
+    ? window.i18n('groupInviteSending', { count: 1 })
     : groupPromotionSending
-      ? window.i18n('adminSendingPromotion')
+      ? window.i18n('adminSendingPromotion', { count: 1 })
       : groupPromotionFailed
         ? window.i18n('adminPromotionFailed')
         : groupInviteFailed
@@ -294,13 +294,15 @@ export const MemberListItem = ({
           margin="0 var(--margins-md)"
           alignItems="flex-start"
         >
-          <StyledName data-testid={'group-member-name'} maxName={maxNameWidth}>{memberName}</StyledName>
+          <StyledName data-testid={'group-member-name'} maxName={maxNameWidth}>
+            {memberName}
+          </StyledName>
           <GroupStatusContainer
             pubkey={pubkey}
             displayGroupStatus={displayGroupStatus}
             groupPk={groupPk}
           />
-          </Flex>
+        </Flex>
       </StyledInfo>
 
       <ResendContainer pubkey={pubkey} displayGroupStatus={displayGroupStatus} groupPk={groupPk} />

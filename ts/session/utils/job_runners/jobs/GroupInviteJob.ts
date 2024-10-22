@@ -20,6 +20,7 @@ import {
 } from '../PersistedJob';
 import { LibSessionUtil } from '../../libsession/libsession_utils';
 import { showUpdateGroupMembersByConvoId } from '../../../../interactions/conversationInteractions';
+import { ConvoHub } from '../../../conversations';
 
 const defaultMsBetweenRetries = 10000;
 const defaultMaxAttempts = 1;
@@ -77,29 +78,40 @@ function displayFailedInvitesForGroup(groupPk: GroupPubkeyType) {
     void showUpdateGroupMembersByConvoId(groupPk);
   };
   const count = thisGroupFailures.failedMembers.length;
+  const groupName = ConvoHub.use().get(groupPk)?.getRealSessionUsername() || window.i18n('unknown');
+  const firstUserName =
+    ConvoHub.use().get(thisGroupFailures.failedMembers?.[0])?.getRealSessionUsername() ||
+    window.i18n('unknown');
+  const secondUserName =
+    ConvoHub.use().get(thisGroupFailures.failedMembers?.[1])?.getRealSessionUsername() ||
+    window.i18n('unknown');
   switch (count) {
     case 1:
       ToastUtils.pushToastWarning(
         `invite-failed${groupPk}`,
-        window.i18n('groupInviteFailedUser', [...thisGroupFailures.failedMembers, groupPk]),
+        window.i18n('groupInviteFailedUser', { group_name: groupName, name: firstUserName }),
         onToastClick
       );
       break;
     case 2:
       ToastUtils.pushToastWarning(
         `invite-failed${groupPk}`,
-        window.i18n('groupInviteFailedTwo', [...thisGroupFailures.failedMembers, groupPk]),
+        window.i18n('groupInviteFailedTwo', {
+          group_name: groupName,
+          name: firstUserName,
+          other_name: secondUserName,
+        }),
         onToastClick
       );
       break;
     default:
       ToastUtils.pushToastWarning(
         `invite-failed${groupPk}`,
-        window.i18n('groupInviteFailedMultiple', [
-          thisGroupFailures.failedMembers[0],
-          `${thisGroupFailures.failedMembers.length - 1}`,
-          groupPk,
-        ]),
+        window.i18n('groupInviteFailedMultiple', {
+          group_name: groupName,
+          name: firstUserName,
+          count: thisGroupFailures.failedMembers.length - 1,
+        }),
         onToastClick
       );
   }

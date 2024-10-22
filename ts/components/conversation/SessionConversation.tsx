@@ -632,8 +632,8 @@ function OutdatedClientBanner(props: {
   const bannerText =
     selectedConversation.hasOutdatedClient &&
     selectedConversation.hasOutdatedClient !== ourDisplayNameInProfile
-      ? window.i18n('deleteAfterGroupFirstReleaseConfigOutdated', [selectedConversation.hasOutdatedClient])
-      : window.i18n('disappearingMessagesLegacy');
+      ? window.i18n('disappearingMessagesLegacy', { name: selectedConversation.hasOutdatedClient })
+      : window.i18n('deleteAfterGroupFirstReleaseConfigOutdated');
 
   return selectedConversation.hasOutdatedClient?.length ? (
     <NoticeBanner
@@ -662,7 +662,7 @@ function OutdatedLegacyGroupBanner(props: {
 
   return isLegacyGroup ? (
     <NoticeBanner
-      text={window.i18n('groupLegacyBanner')}
+      text={window.i18n('groupLegacyBanner', { date: 'FIXME AUDRIC' })}
       onButtonClick={() => {
         showLinkVisitWarningDialog('', dispatch);
         throw new Error('TODO'); // fixme audric

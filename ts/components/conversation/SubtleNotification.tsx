@@ -172,7 +172,7 @@ export const InvitedToGroupControlMessage = () => {
   // when restoring from seed we might not have the pubkey of who invited us, in that case, we just use a fallback
   const html = conversationOrigin
     ? weHaveSecretKey
-      ? window.i18n('userInvitedYouToGroupAsAdmin', {
+      ? window.i18n('groupInviteReinvite', {
           group_name: groupName,
           name: adminNameInvitedUs,
         })
@@ -181,7 +181,7 @@ export const InvitedToGroupControlMessage = () => {
           name: adminNameInvitedUs,
         })
     : weHaveSecretKey
-      ? window.i18n('youWereInvitedToGroupAsAdmin', { group_name: groupName })
+      ? window.i18n('groupInviteReinviteYou', { group_name: groupName })
       : window.i18n('groupInviteYou');
 
   return (

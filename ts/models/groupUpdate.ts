@@ -17,9 +17,7 @@ export function getKickedGroupUpdateStr(
   groupName: string
 ): LocalizerComponentPropsObject {
   const { others, us } = usAndXOthers(kicked);
-  const othersNames = others.map(
-    ConvoHub.use().getContactProfileNameOrShortenedPubKey
-  );
+  const othersNames = others.map(ConvoHub.use().getContactProfileNameOrShortenedPubKey);
 
   if (us) {
     switch (others.length) {
@@ -58,13 +56,11 @@ export function getKickedGroupUpdateStr(
 
 export function getGroupNameChangeStr(newName: string): LocalizerComponentPropsObject {
   return newName
-    ? { token: 'groupNameNew',  args: { group_name: newName }}
+    ? { token: 'groupNameNew', args: { group_name: newName } }
     : { token: 'groupNameUpdated' };
 }
 
-export function getLeftGroupUpdateChangeStr(
-  left: Array<string>,
-):LocalizerComponentPropsObject {
+export function getLeftGroupUpdateChangeStr(left: Array<string>): LocalizerComponentPropsObject {
   const { others, us } = usAndXOthers(left);
 
   if (left.length !== 1) {
@@ -78,7 +74,7 @@ export function getLeftGroupUpdateChangeStr(
         args: {
           name: ConvoHub.use().getContactProfileNameOrShortenedPubKey(others[0]),
         },
-      } ;
+      };
 }
 
 export function getJoinedGroupUpdateChangeStr(
@@ -88,32 +84,42 @@ export function getJoinedGroupUpdateChangeStr(
   _groupName: string
 ): LocalizerComponentPropsObject {
   const { others, us } = usAndXOthers(joined);
-  const othersNames = others.map(
-    ConvoHub.use().getContactProfileNameOrShortenedPubKey
-  );
+  const othersNames = others.map(ConvoHub.use().getContactProfileNameOrShortenedPubKey);
 
   if (groupv2) {
     if (us) {
       switch (othersNames.length) {
         case 0:
-          return  { token: addedWithHistory ? 'groupMemberNewYou' : 'groupInviteYou' } ;
+          return { token: addedWithHistory ? 'groupInviteYouHistory' : 'groupInviteYou' };
         case 1:
-          return addedWithHistory ? { token:  'groupMemberNewYouHistoryTwo', args: { name: othersNames[0] } } : {token: 'legacyGroupMemberNewYouOther', args: {other_name: othersNames[0]}};
+          return addedWithHistory
+            ? { token: 'groupMemberNewYouHistoryTwo', args: { name: othersNames[0] } }
+            : { token: 'legacyGroupMemberNewYouOther', args: { other_name: othersNames[0] } };
         default:
-          return addedWithHistory ? { token:  'groupMemberNewYouHistoryMultiple', args: { count: othersNames.length } } : {token: 'groupInviteYouAndMoreNew', args: {count: othersNames.length}};
+          return addedWithHistory
+            ? { token: 'groupMemberNewYouHistoryMultiple', args: { count: othersNames.length } }
+            : { token: 'groupInviteYouAndMoreNew', args: { count: othersNames.length } };
       }
     }
     switch (othersNames.length) {
       case 0:
-        return  { token: addedWithHistory ? 'groupInviteYouHistory' : 'groupInviteYou' } ;
+        return { token: addedWithHistory ? 'groupInviteYouHistory' : 'groupInviteYou' };
       case 1:
-        return addedWithHistory ? { token:  'groupMemberNewYouHistoryTwo', args: { name: othersNames[0] } } : {token: 'legacyGroupMemberNewYouOther', args: {other_name: othersNames[0]}};
+        return addedWithHistory
+          ? { token: 'groupMemberNewYouHistoryTwo', args: { name: othersNames[0] } }
+          : { token: 'legacyGroupMemberNewYouOther', args: { other_name: othersNames[0] } };
       default:
-        return addedWithHistory ? { token:  'groupMemberNewHistoryMultiple', args: { name: othersNames[0], count: othersNames.length -1 } } : {token: 'groupMemberNewMultiple', args: { name: othersNames[0], count: othersNames.length -1 }};
+        return addedWithHistory
+          ? {
+              token: 'groupMemberNewHistoryMultiple',
+              args: { name: othersNames[0], count: othersNames.length - 1 },
+            }
+          : {
+              token: 'groupMemberNewMultiple',
+              args: { name: othersNames[0], count: othersNames.length - 1 },
+            };
     }
-
   }
-
 
   if (us) {
     switch (othersNames.length) {
@@ -149,14 +155,11 @@ export function getJoinedGroupUpdateChangeStr(
   }
 }
 
-
 export function getPromotedGroupUpdateChangeStr(
-  joined: Array<string>,
+  joined: Array<string>
 ): LocalizerComponentPropsObject {
   const { others, us } = usAndXOthers(joined);
-  const othersNames = others.map(
-    ConvoHub.use().getContactProfileNameOrShortenedPubKey
-  );
+  const othersNames = others.map(ConvoHub.use().getContactProfileNameOrShortenedPubKey);
 
   if (us) {
     switch (othersNames.length) {

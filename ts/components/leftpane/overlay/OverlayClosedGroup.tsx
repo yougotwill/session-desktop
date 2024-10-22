@@ -8,8 +8,6 @@ import { concat, isEmpty } from 'lodash';
 import useUpdate from 'react-use/lib/useUpdate';
 import { MemberListItem } from '../../MemberListItem';
 import { SessionButton } from '../../basic/SessionButton';
-import { SessionIdEditable } from '../../basic/SessionIdEditable';
-
 
 import { useSet } from '../../../hooks/useSet';
 import { VALIDATION } from '../../../session/constants';
@@ -35,9 +33,8 @@ import { Localizer } from '../../basic/Localizer';
 import { SessionToggle } from '../../basic/SessionToggle';
 import { SpacerLG, SpacerMD } from '../../basic/Text';
 import { SessionInput } from '../../inputs';
-import { StyledLeftPaneOverlay } from './OverlayMessage';
-import { Header } from '../../conversation/right-panel/overlay/components';
 import { SessionSpinner } from '../../loading';
+import { StyledLeftPaneOverlay } from './OverlayMessage';
 
 const StyledMemberListNoContacts = styled.div`
   text-align: center;
@@ -170,10 +167,6 @@ export const OverlayClosedGroupV2 = () => {
 
   useKey('Escape', closeOverlay);
 
-  const title = window.i18n('groupCreate');
-  const buttonText = window.i18n('create');
-  const subtitle = window.i18n('createClosedGroupNamePrompt');
-
   const noContactsForClosedGroup = privateContactsPubkeys.length === 0;
 
   const contactsToRender = isSearch ? searchResultContactsOnly : privateContactsPubkeys;
@@ -182,17 +175,22 @@ export const OverlayClosedGroupV2 = () => {
 
   return (
     <div className="module-left-pane-overlay">
-      <Header title={title} subtitle={subtitle} />
       <div className="create-group-name-input">
-        <SessionIdEditable
-          editable={!noContactsForClosedGroup}
+        <SessionInput
+          autoFocus={true}
+          type="text"
           placeholder={window.i18n('groupNameEnter')}
           value={groupName}
-          isGroup={true}
+          onValueChanged={setGroupName}
+          onEnterPressed={onEnterPressed}
+          // error={groupNameError} // TODO fix error handling with new groups (we are deprecating that UI soon)
           maxLength={LIBSESSION_CONSTANTS.BASE_GROUP_MAX_NAME_LENGTH}
-          onChange={setGroupName}
-          onPressEnter={onEnterPressed}
-          dataTestId="new-closed-group-name"
+          textSize="md"
+          centerText={true}
+          monospaced={true}
+          isTextArea={true}
+          inputDataTestId="new-closed-group-name"
+          editable={!noContactsForClosedGroup}
         />
       </div>
       <SessionSpinner loading={isCreatingGroup} />
@@ -200,7 +198,7 @@ export const OverlayClosedGroupV2 = () => {
       {isDevProd() && (
         <>
           <span style={{ display: 'flex', alignItems: 'center' }}>
-            Invite as admin?{'  '}
+            Invite as admin Plop?{'  '}
             <SessionToggle
               active={window.sessionFeatureFlags.useGroupV2InviteAsAdmin}
               onClick={() => {
@@ -222,23 +220,21 @@ export const OverlayClosedGroupV2 = () => {
         {noContactsForClosedGroup ? (
           <NoContacts />
         ) : (
-          <StyledGroupMemberList className="group-member-list__selection">
-            {contactsToRender.map((memberPubkey: string) => (
-              <MemberListItem
-                pubkey={memberPubkey}
-                isSelected={members.some(m => m === memberPubkey)}
-                key={memberPubkey}
-                onSelect={addToSelected}
-                onUnselect={removeFromSelected}
-                disableBg={true}
-              />
-            ))}
-          </StyledGroupMemberList>
+          contactsToRender.map((memberPubkey: string) => (
+            <MemberListItem
+              pubkey={memberPubkey}
+              isSelected={members.some(m => m === memberPubkey)}
+              key={memberPubkey}
+              onSelect={addToSelected}
+              onUnselect={removeFromSelected}
+              disableBg={true}
+            />
+          ))
         )}
       </StyledGroupMemberListContainer>
       <SpacerLG style={{ flexShrink: 0 }} />
       <SessionButton
-        text={buttonText}
+        text={window.i18n('create')}
         disabled={disableCreateButton}
         onClick={onEnterPressed}
         dataTestId="next-button"
