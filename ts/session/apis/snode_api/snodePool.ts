@@ -10,32 +10,8 @@ import { ServiceNodesList } from './getServiceNodesList';
 import { requestSnodesForPubkeyFromNetwork } from './getSwarmFor';
 import { Onions } from '.';
 import { ed25519Str } from '../../utils/String';
-import { minimumGuardCount, ONION_REQUEST_HOPS } from '../../onions/onionPath';
+import { SnodePoolConstants } from './snodePoolConstants';
 
-/**
- * If we get less than this snode in a swarm, we fetch new snodes for this pubkey
- */
-const minSwarmSnodeCount = 3;
-
-/**
- * If we get less than minSnodePoolCount we consider that we need to fetch the new snode pool from a seed node
- * and not from those snodes.
- */
-
-export const minSnodePoolCount = minimumGuardCount * (ONION_REQUEST_HOPS + 1) * 2;
-
-/**
- * If we get less than this amount of snodes (24), lets try to get an updated list from those while we can
- */
-const minSnodePoolCountBeforeRefreshFromSnodes = minSnodePoolCount * 2;
-
-/**
- * If we do a request to fetch nodes from snodes and they don't return at least
- * the same `requiredSnodesForAgreement` snodes we consider that this is not a valid return.
- *
- * Too many nodes are not shared for this call to be trustworthy
- */
-const requiredSnodesForAgreement = 24;
 
 let randomSnodePool: Array<Snode> = [];
 
@@ -72,7 +48,8 @@ async function dropSnodeFromSnodePool(snodeEd25519: string) {
  */
 async function getRandomSnode(excludingEd25519Snode?: Array<string>): Promise<Snode> {
   // make sure we have a few snodes in the pool excluding the one passed as args
-  const requiredCount = SnodePool.minSnodePoolCount + (excludingEd25519Snode?.length || 0);
+  const requiredCount = SnodePoolConstants.minSnodePoolCount + (excludingEd25519Snode?.length || 0);
+  debugger;
   if (randomSnodePool.length < requiredCount) {
     await SnodePool.getSnodePoolFromDBOrFetchFromSeed(excludingEd25519Snode?.length);
 
@@ -88,7 +65,12 @@ async function getRandomSnode(excludingEd25519Snode?: Array<string>): Promise<Sn
   }
   // We know the pool can't be empty at this point
   if (!excludingEd25519Snode) {
-    return _.sample(randomSnodePool) as Snode;
+    const snodePicked = sample(randomSnodePool);
+    if (!snodePicked) {
+      console.warn('randomSnodePool', randomSnodePool);
+      throw new Error('getRandomSnode failed as sample returned none ');
+    }
+    return snodePicked;
   }
 
   // we have to double check even after removing the nodes to exclude we still have some nodes in the list
@@ -99,7 +81,11 @@ async function getRandomSnode(excludingEd25519Snode?: Array<string>): Promise<Sn
     // used for tests
     throw new Error(`Not enough snodes with excluding length ${excludingEd25519Snode.length}`);
   }
-  return _.sample(snodePoolExcluding) as Snode;
+  const snodePicked = sample(snodePoolExcluding);
+  if (!snodePicked) {
+    throw new Error('getRandomSnode failed as sample returned none ');
+  }
+  return snodePicked;
 }
 
 /**
@@ -116,7 +102,7 @@ async function forceRefreshRandomSnodePool(): Promise<Array<Snode>> {
 
     // this function throws if it does not have enough snodes to do it
     await tryToGetConsensusWithSnodesWithRetries();
-    if (randomSnodePool.length < SnodePool.minSnodePoolCountBeforeRefreshFromSnodes) {
+    if (randomSnodePool.length < SnodePoolConstants.minSnodePoolCountBeforeRefreshFromSnodes) {
       throw new Error('forceRefreshRandomSnodePool still too small after refetching from snodes');
     }
   } catch (e) {
@@ -148,7 +134,7 @@ async function getSnodePoolFromDBOrFetchFromSeed(
 ): Promise<Array<Snode>> {
   if (
     randomSnodePool &&
-    randomSnodePool.length > SnodePool.minSnodePoolCount + countToAddToRequirement
+    randomSnodePool.length > SnodePoolConstants.minSnodePoolCount + countToAddToRequirement
   ) {
     return randomSnodePool;
   }
@@ -156,7 +142,7 @@ async function getSnodePoolFromDBOrFetchFromSeed(
 
   if (
     !fetchedFromDb ||
-    fetchedFromDb.length <= SnodePool.minSnodePoolCount + countToAddToRequirement
+    fetchedFromDb.length <= SnodePoolConstants.minSnodePoolCount + countToAddToRequirement
   ) {
     window?.log?.warn(
       `getSnodePoolFromDBOrFetchFromSeed: not enough snodes in db (${fetchedFromDb?.length}), Fetching from seed node instead... `
@@ -174,7 +160,7 @@ async function getSnodePoolFromDBOrFetchFromSeed(
 }
 
 async function getRandomSnodePool(): Promise<Array<Snode>> {
-  if (randomSnodePool.length <= SnodePool.minSnodePoolCount) {
+  if (randomSnodePool.length <= SnodePoolConstants.minSnodePoolCount) {
     await SnodePool.getSnodePoolFromDBOrFetchFromSeed();
   }
   return randomSnodePool;
@@ -238,7 +224,7 @@ async function tryToGetConsensusWithSnodesWithRetries() {
     async () => {
       const commonNodes = await ServiceNodesList.getSnodePoolFromSnodes();
 
-      if (!commonNodes || commonNodes.length < SnodePool.requiredSnodesForAgreement) {
+      if (!commonNodes || commonNodes.length < SnodePoolConstants.requiredSnodesForAgreement) {
         // throwing makes trigger a retry if we have some left.
         window?.log?.info(
           `tryToGetConsensusWithSnodesWithRetries: Not enough common nodes ${commonNodes?.length}`
@@ -329,7 +315,7 @@ async function getSwarmFor(pubkey: string): Promise<Array<Snode>> {
   // See how many are actually still reachable
   // the nodes still reachable are the one still present in the snode pool
   const goodNodes = randomSnodePool.filter((n: Snode) => nodes.indexOf(n.pubkey_ed25519) !== -1);
-  if (goodNodes.length >= minSwarmSnodeCount) {
+  if (goodNodes.length >= SnodePoolConstants.minSwarmSnodeCount) {
     return goodNodes;
   }
 
@@ -373,11 +359,6 @@ async function getSwarmFromNetworkAndSave(pubkey: string) {
 }
 
 export const SnodePool = {
-  // constants
-  minSnodePoolCount,
-  minSnodePoolCountBeforeRefreshFromSnodes,
-  requiredSnodesForAgreement,
-
   // snode pool
   dropSnodeFromSnodePool,
   forceRefreshRandomSnodePool,

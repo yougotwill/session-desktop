@@ -20,7 +20,6 @@ import {
 import { DisappearingMessageConversationModeType } from 'libsession_util_nodejs';
 import { v4 } from 'uuid';
 import { SignalService } from '../protobuf';
-import { getMessageQueue } from '../session';
 import { ConvoHub } from '../session/conversations';
 import {
   ClosedGroupV2VisibleMessage,
@@ -139,6 +138,7 @@ import { markAttributesAsReadIfNeeded } from './messageFactory';
 import { StoreGroupRequestFactory } from '../session/apis/snode_api/factories/StoreGroupRequestFactory';
 import { OpenGroupRequestCommonType } from '../data/types';
 import { ConversationTypeEnum, CONVERSATION_PRIORITIES } from './types';
+import { getMessageQueue } from '../session/sending';
 
 type InMemoryConvoInfos = {
   mentionedUs: boolean;
@@ -921,14 +921,14 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
      * - ignores a off setting for a legacy group (as we can get a setting from restored from configMessage, and a new group can still be in the swarm when linking a device
      */
     const shouldAddExpireUpdateMsgLegacyGroup =
-    fromCurrentDevice || (
-      isLegacyGroup &&
-      !fromConfigMessage &&
-      (expirationMode !== this.get('expirationMode') || expireTimer !== this.get('expireTimer')) &&
-      expirationMode !== 'off');
+      fromCurrentDevice ||
+      (isLegacyGroup &&
+        !fromConfigMessage &&
+        (expirationMode !== this.get('expirationMode') ||
+          expireTimer !== this.get('expireTimer')) &&
+        expirationMode !== 'off');
 
     const shouldAddExpireUpdateMsgGroupV2 = this.isClosedGroupV2() && !fromConfigMessage;
-
 
     const shouldAddExpireUpdateMessage =
       shouldAddExpireUpdateMsgPrivate ||

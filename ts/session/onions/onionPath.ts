@@ -13,16 +13,13 @@ import { APPLICATION_JSON } from '../../types/MIME';
 import { ERROR_CODE_NO_CONNECT } from '../apis/snode_api/SNodeAPI';
 import { Onions, snodeHttpsAgent } from '../apis/snode_api/onions';
 
-
 import { DURATION } from '../constants';
 import { UserUtils } from '../utils';
 import { allowOnlyOneAtATime } from '../utils/Promise';
 import { ed25519Str } from '../utils/String';
 import { SnodePool } from '../apis/snode_api/snodePool';
-
-export const desiredGuardCount = 2;
-export const minimumGuardCount = 1;
-export const ONION_REQUEST_HOPS = 3;
+import { SnodePoolConstants } from '../apis/snode_api/snodePoolConstants';
+import { desiredGuardCount, minimumGuardCount, ONION_REQUEST_HOPS } from './onionPathConstants';
 
 export function getOnionPathMinTimeout() {
   return DURATION.SECONDS;
@@ -345,7 +342,7 @@ export async function selectGuardNodes(): Promise<Array<Snode>> {
   const nodePool = await SnodePool.getSnodePoolFromDBOrFetchFromSeed();
 
   window.log.info(`selectGuardNodes snodePool length: ${nodePool.length}`);
-  if (nodePool.length < SnodePool.minSnodePoolCount) {
+  if (nodePool.length < SnodePoolConstants.minSnodePoolCount) {
     window?.log?.error(
       `Could not select guard nodes. Not enough nodes in the pool: ${nodePool.length}`
     );
@@ -451,7 +448,7 @@ async function buildNewOnionPathsWorker() {
       // get an up to date list of snodes from cache, from db, or from the a seed node.
       let allNodes = await SnodePool.getSnodePoolFromDBOrFetchFromSeed();
 
-      if (allNodes.length <= SnodePool.minSnodePoolCount) {
+      if (allNodes.length <= SnodePoolConstants.minSnodePoolCount) {
         throw new Error(`Cannot rebuild path as we do not have enough snodes: ${allNodes.length}`);
       }
 
@@ -465,7 +462,7 @@ async function buildNewOnionPathsWorker() {
         `SessionSnodeAPI::buildNewOnionPaths, snodePool length: ${allNodes.length}`
       );
       // get all snodes minus the selected guardNodes
-      if (allNodes.length <= SnodePool.minSnodePoolCount) {
+      if (allNodes.length <= SnodePoolConstants.minSnodePoolCount) {
         throw new Error('Too few nodes to build an onion path. Even after fetching from seed.');
       }
 
@@ -479,7 +476,7 @@ async function buildNewOnionPathsWorker() {
           return _.fill(Array(group.length), _.sample(group) as Snode);
         })
       );
-      if (oneNodeForEachSubnet24KeepingRatio.length <= SnodePool.minSnodePoolCount) {
+      if (oneNodeForEachSubnet24KeepingRatio.length <= SnodePoolConstants.minSnodePoolCount) {
         throw new Error(
           'Too few nodes "unique by ip" to build an onion path. Even after fetching from seed.'
         );

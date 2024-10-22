@@ -4,6 +4,7 @@ import { GetNetworkTime } from './getNetworkTime';
 import { SnodePool } from './snodePool';
 import { Snode } from '../../../data/types';
 import { GetServiceNodesSubRequest } from './SnodeRequestTypes';
+import { SnodePoolConstants } from './snodePoolConstants';
 
 /**
  * Returns a list of unique snodes got from the specified targetNode.
@@ -64,7 +65,7 @@ async function getSnodePoolFromSnode(targetNode: Snode): Promise<Array<Snode>> {
  */
 async function getSnodePoolFromSnodes() {
   const existingSnodePool = await SnodePool.getSnodePoolFromDBOrFetchFromSeed();
-  if (existingSnodePool.length <= SnodePool.minSnodePoolCount) {
+  if (existingSnodePool.length <= SnodePoolConstants.minSnodePoolCount) {
     window?.log?.warn(
       'getSnodePoolFromSnodes: Cannot get snodes list from snodes; not enough snodes',
       existingSnodePool.length
@@ -101,9 +102,9 @@ async function getSnodePoolFromSnodes() {
     }
   );
   // We want the snodes to agree on at least this many snodes
-  if (commonSnodes.length < SnodePool.requiredSnodesForAgreement) {
+  if (commonSnodes.length < SnodePoolConstants.requiredSnodesForAgreement) {
     throw new Error(
-      `Inconsistent snode pools. We did not get at least ${SnodePool.requiredSnodesForAgreement} in common`
+      `Inconsistent snode pools. We did not get at least ${SnodePoolConstants.requiredSnodesForAgreement} in common`
     );
   }
   return commonSnodes;

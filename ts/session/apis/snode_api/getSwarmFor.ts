@@ -7,8 +7,6 @@ import { SnodePool } from './snodePool';
 import { Snode } from '../../../data/types';
 import { SwarmForSubRequest } from './SnodeRequestTypes';
 
-
-
 /**
  * get snodes for pubkey from random snode. Uses an existing snode
  */
@@ -96,6 +94,10 @@ async function requestSnodesForPubkeyRetryable(pubKey: string): Promise<Array<Sn
   return pRetry(
     async () => {
       const targetNode = await SnodePool.getRandomSnode();
+
+      if (!targetNode) {
+        debugger;
+      }
 
       return requestSnodesForPubkeyWithTargetNode(pubKey, targetNode);
     },

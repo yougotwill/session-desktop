@@ -5,7 +5,7 @@ import Sinon, * as sinon from 'sinon';
 
 import { TestUtils } from '../../../test-utils';
 import { Onions } from '../../../../session/apis/snode_api/';
-import { minSnodePoolCount, SnodePool } from '../../../../session/apis/snode_api/snodePool';
+import {  SnodePool } from '../../../../session/apis/snode_api/snodePool';
 
 import { SeedNodeAPI } from '../../../../session/apis/seed_node_api';
 import * as OnionPaths from '../../../../session/onions/onionPath';
@@ -15,6 +15,7 @@ import {
   stubData,
 } from '../../../test-utils/utils';
 import { Snode } from '../../../../data/types';
+import { SnodePoolConstants } from '../../../../session/apis/snode_api/snodePoolConstants';
 
 chai.use(chaiAsPromised as any);
 chai.should();
@@ -172,7 +173,7 @@ describe('GuardNodes', () => {
     });
 
     it('throws if we have to fetch from seed, fetch from seed but not have enough fetched snodes', async () => {
-      const invalidLength = minSnodePoolCount - 1;
+      const invalidLength = SnodePoolConstants.minSnodePoolCount - 1;
       const invalidSnodePool = fakeSnodePool.slice(0, invalidLength);
       stubData('getSnodePoolFromDb').resolves(invalidSnodePool);
       TestUtils.stubWindow('getSeedNodeList', () => [{ url: 'whatever' }]);
