@@ -11,10 +11,10 @@ import {
   verifyExpireMsgsResponseSignature,
   verifyExpireMsgsResponseSignatureProps,
 } from '../../../../session/apis/snode_api/expireRequest';
-import { GetNetworkTime } from '../../../../session/apis/snode_api/getNetworkTime';
 import { UserUtils } from '../../../../session/utils';
 import { isValidUnixTimestamp } from '../../../../session/utils/Timestamps';
 import { generateFakeSnode } from '../../../test-utils/utils';
+import { NetworkTime } from '../../../../util/NetworkTime';
 
 chai.use(chaiAsPromised as any);
 
@@ -29,7 +29,7 @@ describe('ExpireRequest', () => {
   };
 
   beforeEach(() => {
-    Sinon.stub(GetNetworkTime, 'getLatestTimestampOffset').returns(getLatestTimestampOffset);
+    Sinon.stub(NetworkTime, 'getLatestTimestampOffset').returns(getLatestTimestampOffset);
     Sinon.stub(UserUtils, 'getOurPubKeyStrFromCache').returns(ourNumber);
     Sinon.stub(UserUtils, 'getUserED25519KeyPair').resolves(ourUserEd25516Keypair);
   });

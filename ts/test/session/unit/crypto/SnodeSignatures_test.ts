@@ -4,7 +4,6 @@ import { UserGroupsGet } from 'libsession_util_nodejs';
 import Sinon from 'sinon';
 import { HexString } from '../../../../node/hexStrings';
 import { getSodiumNode } from '../../../../node/sodiumNode';
-import { GetNetworkTime } from '../../../../session/apis/snode_api/getNetworkTime';
 import { SnodeNamespaces } from '../../../../session/apis/snode_api/namespaces';
 import { SnodeGroupSignature } from '../../../../session/apis/snode_api/signature/groupSignature';
 import { SnodeSignature } from '../../../../session/apis/snode_api/signature/snodeSignatures';
@@ -12,6 +11,7 @@ import { WithSignature } from '../../../../session/apis/snode_api/types';
 import { concatUInt8Array } from '../../../../session/crypto';
 import { UserUtils } from '../../../../session/utils';
 import { fromBase64ToArray, fromHexToArray } from '../../../../session/utils/String';
+import { NetworkTime } from '../../../../util/NetworkTime';
 
 use(chaiAsPromised);
 
@@ -71,7 +71,7 @@ describe('SnodeSignature', () => {
 
   describe('getSnodeGroupAdminSignatureParams', () => {
     beforeEach(() => {
-      Sinon.stub(GetNetworkTime, 'now').returns(hardcodedTimestamp);
+      Sinon.stub(NetworkTime, 'now').returns(hardcodedTimestamp);
     });
 
     describe('retrieve', () => {
@@ -183,7 +183,7 @@ describe('SnodeSignature', () => {
 
   describe('getGroupSignatureByHashesParams', () => {
     beforeEach(() => {
-      Sinon.stub(GetNetworkTime, 'now').returns(hardcodedTimestamp);
+      Sinon.stub(NetworkTime, 'now').returns(hardcodedTimestamp);
     });
 
     describe('delete', () => {
@@ -270,7 +270,7 @@ describe('SnodeSignature', () => {
       );
     });
 
-    it('works with valid pubkey and privkey', async () => {
+    it('works with valid pubkey and priv key', async () => {
       const hashes = ['hash4321', 'hash4221'];
       const expiryMs = hardcodedTimestamp;
       const shortenOrExtend = '';
@@ -318,9 +318,9 @@ describe('SnodeSignature', () => {
 
       expect(ret.pubkey).to.be.eq(validGroupPk);
 
-      const overridenHash = hashes.slice();
-      overridenHash[0] = '1111';
-      const verificationData = `expire${shortenOrExtend}${expiryMs}${overridenHash.join('')}`;
+      const overriddenHash = hashes.slice();
+      overriddenHash[0] = '1111';
+      const verificationData = `expire${shortenOrExtend}${expiryMs}${overriddenHash.join('')}`;
       const func = async () => verifySig(ret, verificationData);
       await expect(func()).rejectedWith('sig failed to be verified');
     });
@@ -338,8 +338,8 @@ describe('SnodeSignature', () => {
 
       expect(ret.pubkey).to.be.eq(validGroupPk);
 
-      const overridenHash = [hashes[0]];
-      const verificationData = `expire${shortenOrExtend}${expiryMs}${overridenHash.join('')}`;
+      const overriddenHash = [hashes[0]];
+      const verificationData = `expire${shortenOrExtend}${expiryMs}${overriddenHash.join('')}`;
       const func = async () => verifySig(ret, verificationData);
       await expect(func()).rejectedWith('sig failed to be verified');
     });
@@ -374,8 +374,8 @@ describe('SnodeSignature', () => {
         shortenOrExtend,
         timestamp: hardcodedTimestamp,
       });
-      const overridenHash = [hashes[0]];
-      const verificationData = `expire${shortenOrExtend}${hardcodedTimestamp}${overridenHash.join(
+      const overriddenHash = [hashes[0]];
+      const verificationData = `expire${shortenOrExtend}${hardcodedTimestamp}${overriddenHash.join(
         ''
       )}`;
 
@@ -403,7 +403,7 @@ describe('SnodeSignature', () => {
       await expect(func()).to.be.rejectedWith('sig failed to be verified');
     });
 
-    it('works with valid pubkey and privkey', async () => {
+    it('works with valid pubkey and priv key', async () => {
       Sinon.stub(UserUtils, 'getUserED25519KeyPair').resolves(userEd25519Keypair);
 
       const hashes = ['hash4321', 'hash4221'];

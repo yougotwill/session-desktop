@@ -32,7 +32,7 @@ export function getKickedGroupUpdateStr(
 
   switch (othersNames.length) {
     case 0:
-      throw new Error('kicked without anyone in it.');
+      return { token: 'groupUpdated' }
     case 1:
       return { token: 'groupRemoved', args: { name: othersNames[0] } };
     case 2:
@@ -52,12 +52,6 @@ export function getKickedGroupUpdateStr(
         },
       };
   }
-}
-
-export function getGroupNameChangeStr(newName: string): LocalizerComponentPropsObject {
-  return newName
-    ? { token: 'groupNameNew', args: { group_name: newName } }
-    : { token: 'groupNameUpdated' };
 }
 
 export function getLeftGroupUpdateChangeStr(left: Array<string>): LocalizerComponentPropsObject {
@@ -133,7 +127,7 @@ export function getJoinedGroupUpdateChangeStr(
   }
   switch (othersNames.length) {
     case 0:
-      throw new Error('joined without anyone in it.');
+      return { token: 'groupUpdated' }
     case 1:
       return { token: 'legacyGroupMemberNew', args: { name: othersNames[0] } };
     case 2:
@@ -173,7 +167,7 @@ export function getPromotedGroupUpdateChangeStr(
   }
   switch (othersNames.length) {
     case 0:
-      throw new Error('joined without anyone in it.');
+      return { token: 'groupUpdated' }
     case 1:
       return { token: 'adminPromotedToAdmin', args: { name: othersNames[0] } };
     case 2:
@@ -193,4 +187,14 @@ export function getPromotedGroupUpdateChangeStr(
         },
       };
   }
+}
+
+export function getGroupNameChangeStr(newName: string | undefined): LocalizerComponentPropsObject {
+  return newName
+    ? { token: 'groupNameNew', args: { group_name: newName } }
+    : { token: 'groupNameUpdated' };
+}
+
+export function getGroupDisplayPictureChangeStr(): LocalizerComponentPropsObject {
+  return { token: 'groupDisplayPictureUpdated' };
 }

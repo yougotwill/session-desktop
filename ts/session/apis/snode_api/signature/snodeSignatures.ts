@@ -11,7 +11,6 @@ import { PubKey } from '../../../types';
 import { StringUtils, UserUtils } from '../../../utils';
 import { fromHexToArray, fromUInt8ArrayToBase64 } from '../../../utils/String';
 import { PreConditionFailed } from '../../../utils/errors';
-import { GetNetworkTime } from '../getNetworkTime';
 import {
   SignedHashesParams,
   WithMessagesHashes,
@@ -19,6 +18,7 @@ import {
   WithSignature,
   WithTimestamp,
 } from '../types';
+import { NetworkTime } from '../../../../util/NetworkTime';
 
 export type SnodeSignatureResult = WithSignature &
   WithTimestamp & {
@@ -90,7 +90,7 @@ function isSigParamsForGroupAdmin(
 }
 
 function getVerificationData(params: SnodeSigParamsShared) {
-  const signatureTimestamp = GetNetworkTime.now();
+  const signatureTimestamp = NetworkTime.now();
   const verificationData = StringUtils.encode(
     `${params.method}${params.namespace === 0 ? '' : params.namespace}${signatureTimestamp}`,
     'utf8'

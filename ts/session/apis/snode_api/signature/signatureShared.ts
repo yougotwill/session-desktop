@@ -4,7 +4,7 @@ import { getSodiumRenderer } from '../../../crypto';
 import { PubKey } from '../../../types';
 import { StringUtils } from '../../../utils';
 import { fromUInt8ArrayToBase64 } from '../../../utils/String';
-import { GetNetworkTime } from '../getNetworkTime';
+import { NetworkTime } from '../../../../util/NetworkTime';
 
 export type SnodeSigParamsShared = {
   namespace: number | null | 'all'; // 'all' can be used to clear all namespaces (during account deletion)
@@ -27,7 +27,7 @@ export type SnodeSigParamsUs = SnodeSigParamsShared & {
 };
 
 function getVerificationDataForStoreRetrieve(params: SnodeSigParamsShared) {
-  const signatureTimestamp = GetNetworkTime.now();
+  const signatureTimestamp = NetworkTime.now();
   const verificationString = `${params.method}${
     params.namespace === 0 ? '' : params.namespace
   }${signatureTimestamp}`;

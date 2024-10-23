@@ -5,7 +5,6 @@ import Long from 'long';
 import Sinon from 'sinon';
 import { getSodiumNode } from '../../../../../../node/sodiumNode';
 import { NotEmptyArrayOfBatchResults } from '../../../../../../session/apis/snode_api/SnodeRequestTypes';
-import { GetNetworkTime } from '../../../../../../session/apis/snode_api/getNetworkTime';
 import {
   SnodeNamespaces,
   SnodeNamespacesUserConfig,
@@ -26,6 +25,7 @@ import {
 import { GenericWrapperActions } from '../../../../../../webworker/workers/browser/libsession_worker_interface';
 import { TestUtils } from '../../../../../test-utils';
 import { TypedStub, stubConfigDumpData } from '../../../../../test-utils/utils';
+import { NetworkTime } from '../../../../../../util/NetworkTime';
 
 function userChange(
   sodium: LibSodiumWrappers,
@@ -281,7 +281,7 @@ describe('UserSyncJob pushChangesToUserSwarmIfNeeded', () => {
     const contact = userChange(sodium, SnodeNamespaces.UserContacts, 123);
     const networkTimestamp = 4444;
     const ttl = TTL_DEFAULT.CONFIG_MESSAGE;
-    Sinon.stub(GetNetworkTime, 'now').returns(networkTimestamp);
+    Sinon.stub(NetworkTime, 'now').returns(networkTimestamp);
 
     pendingChangesForUsStub.resolves({
       messages: [profile, contact],

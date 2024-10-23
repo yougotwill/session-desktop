@@ -4,13 +4,13 @@ import Sinon from 'sinon';
 
 import { ConversationModel } from '../../../../models/conversation';
 import { ConversationAttributes } from '../../../../models/conversationAttributes';
-import { GetNetworkTime } from '../../../../session/apis/snode_api/getNetworkTime';
 import { ConvoHub } from '../../../../session/conversations';
 import { UserUtils } from '../../../../session/utils';
 import { SessionUtilUserProfile } from '../../../../session/utils/libsession/libsession_utils_user_profile';
 import { TestUtils } from '../../../test-utils';
 import { stubWindowLog } from '../../../test-utils/utils';
 import { ConversationTypeEnum } from '../../../../models/types';
+import { NetworkTime } from '../../../../util/NetworkTime';
 
 describe('libsession_user_profile', () => {
   stubWindowLog();
@@ -26,7 +26,7 @@ describe('libsession_user_profile', () => {
   } as ConversationAttributes;
 
   beforeEach(() => {
-    Sinon.stub(GetNetworkTime, 'getLatestTimestampOffset').returns(getLatestTimestampOffset);
+    Sinon.stub(NetworkTime, 'getLatestTimestampOffset').returns(getLatestTimestampOffset);
     Sinon.stub(UserUtils, 'getOurPubKeyStrFromCache').returns(ourNumber);
     TestUtils.stubLibSessionWorker(undefined);
   });

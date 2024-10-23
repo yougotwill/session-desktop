@@ -9,7 +9,6 @@ import { MessageModel } from '../../models/message';
 import { SignalService } from '../../protobuf';
 import { ReleasedFeatures } from '../../util/releaseFeature';
 import { ExpiringDetails, expireMessagesOnSnode } from '../apis/snode_api/expireRequest';
-import { GetNetworkTime } from '../apis/snode_api/getNetworkTime';
 import { ConvoHub } from '../conversations';
 import { isValidUnixTimestamp } from '../utils/Timestamps';
 import { UpdateMsgExpirySwarm } from '../utils/job_runners/jobs/UpdateMsgExpirySwarmJob';
@@ -25,6 +24,7 @@ import {
   ReadyToDisappearMsgUpdate,
 } from './types';
 import { PubKey } from '../types';
+import { NetworkTime } from '../../util/NetworkTime';
 
 export async function destroyMessagesAndUpdateRedux(
   messages: Array<{
@@ -172,7 +172,7 @@ function setExpirationStartTimestamp(
   callLocation?: string,
   messageId?: string
 ): number | undefined {
-  let expirationStartTimestamp: number | undefined = GetNetworkTime.now();
+  let expirationStartTimestamp: number | undefined = NetworkTime.now();
 
   if (callLocation) {
     // window.log.debug(
@@ -549,7 +549,7 @@ function getMessageReadyToDisappear(
      * The way we do it, is by checking that the swarm expiration is before (now + expireTimer).
      * If it looks like this expiration was not updated yet, we need to trigger a UpdateExpiryJob for that message.
      */
-    const now = GetNetworkTime.now();
+    const now = NetworkTime.now();
     const expirationNowPlusTimer = now + expireTimer * 1000;
     const msgExpirationWasAlreadyUpdated = messageExpirationFromRetrieve <= expirationNowPlusTimer;
     // Note: a message might be added even when it expired, but the periodic cleaning of expired message will pick it up and remove it soon enough

@@ -57,6 +57,7 @@ import { MessageSentHandler } from './MessageSentHandler';
 import { MessageWrapper } from './MessageWrapper';
 import { stringify } from '../../types/sqlSharedTypes';
 import { OpenGroupRequestCommonType } from '../../data/types';
+import { NetworkTime } from '../../util/NetworkTime';
 
 // ================ SNODE STORE ================
 
@@ -660,7 +661,7 @@ async function sendToOpenGroupV2(
   // we agreed to pad message for opengroup v2
   const paddedBody = addMessagePadding(rawMessage.plainTextBuffer());
   const v2Message = new OpenGroupMessageV2({
-    sentTimestamp: GetNetworkTime.now(),
+    sentTimestamp: NetworkTime.now(),
     base64EncodedData: fromUInt8ArrayToBase64(paddedBody),
     filesToLink,
   });
@@ -685,7 +686,7 @@ async function sendToOpenGroupV2BlindedRequest(
   recipientBlindedId: string
 ): Promise<{ serverId: number; serverTimestamp: number }> {
   const v2Message = new OpenGroupMessageV2({
-    sentTimestamp: GetNetworkTime.now(),
+    sentTimestamp: NetworkTime.now(),
     base64EncodedData: fromUInt8ArrayToBase64(encryptedContent),
   });
 
@@ -757,7 +758,7 @@ async function handleBatchResultWithSubRequests({
         isNumber(storedAt)
       ) {
         seenHashes.push({
-          expiresAt: GetNetworkTime.now() + TTL_DEFAULT.CONTENT_MESSAGE, // non config msg expire at CONTENT_MESSAGE at most
+          expiresAt: NetworkTime.now() + TTL_DEFAULT.CONTENT_MESSAGE, // non config msg expire at CONTENT_MESSAGE at most
           hash: storedHash,
         });
 

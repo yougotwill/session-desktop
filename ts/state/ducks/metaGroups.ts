@@ -17,7 +17,6 @@ import { HexString } from '../../node/hexStrings';
 import { SignalService } from '../../protobuf';
 import { getSwarmPollingInstance } from '../../session/apis/snode_api';
 import { StoreGroupRequestFactory } from '../../session/apis/snode_api/factories/StoreGroupRequestFactory';
-import { GetNetworkTime } from '../../session/apis/snode_api/getNetworkTime';
 import { ConvoHub } from '../../session/conversations';
 import { getSodiumRenderer } from '../../session/crypto';
 import { DisappearingMessages } from '../../session/disappearing_messages';
@@ -53,6 +52,7 @@ import { StateType } from '../reducer';
 import { openConversationWithMessages } from './conversations';
 import { resetLeftOverlayMode } from './section';
 import { ConversationTypeEnum } from '../../models/types';
+import { NetworkTime } from '../../util/NetworkTime';
 
 type WithFromMemberLeftMessage = { fromMemberLeftMessage: boolean }; // there are some changes we want to skip when doing changes triggered from a memberLeft message.
 export type GroupState = {
@@ -196,7 +196,7 @@ const initNewGroupInWrapper = createAsyncThunk(
       // push one group change message were initial members are added to the group
       if (membersFromWrapper.length) {
         const membersHex = uniq(membersFromWrapper.map(m => m.pubkeyHex));
-        const sentAt = GetNetworkTime.now();
+        const sentAt = NetworkTime.now();
         const msgModel = await ClosedGroup.addUpdateMessage({
           diff: { type: 'add', added: membersHex, withHistory: false },
           expireUpdate: null,
@@ -702,7 +702,7 @@ async function handleMemberAddedFromUI({
   // then handle the addition without history of messages (full rotation of keys).
   // this adds them to the members wrapper etc
   await handleWithoutHistoryMembers({ groupPk, withoutHistory });
-  const createAtNetworkTimestamp = GetNetworkTime.now();
+  const createAtNetworkTimestamp = NetworkTime.now();
 
   await LibSessionUtil.saveDumpsToDb(groupPk);
 
@@ -831,7 +831,7 @@ async function handleMemberRemovedFromUI({
   await GroupPendingRemovals.addJob({ groupPk });
 
   // Build a GroupUpdateMessage to be sent if that member was kicked by us.
-  const createAtNetworkTimestamp = GetNetworkTime.now();
+  const createAtNetworkTimestamp = NetworkTime.now();
   const expiringDetails = DisappearingMessages.getExpireDetailsForOutgoingMessage(
     convo,
     createAtNetworkTimestamp
@@ -920,7 +920,7 @@ async function handleNameChangeFromUI({
   infos.name = newName;
   await UserGroupsWrapperActions.setGroup(group);
   await MetaGroupWrapperActions.infoSet(groupPk, infos);
-  const createAtNetworkTimestamp = GetNetworkTime.now();
+  const createAtNetworkTimestamp = NetworkTime.now();
 
   // we want to add an update message even if the change was done remotely
   const msg = await ClosedGroup.addUpdateMessage({
@@ -1041,7 +1041,7 @@ const triggerFakeAvatarUpdate = createAsyncThunk(
       );
     }
 
-    const createAtNetworkTimestamp = GetNetworkTime.now();
+    const createAtNetworkTimestamp = NetworkTime.now();
     const expireUpdate = DisappearingMessages.getExpireDetailsForOutgoingMessage(
       convo,
       createAtNetworkTimestamp

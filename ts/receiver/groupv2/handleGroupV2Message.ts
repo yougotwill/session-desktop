@@ -6,14 +6,11 @@ import { deleteMessagesFromSwarmOnly } from '../../interactions/conversations/un
 import { ConversationTypeEnum } from '../../models/types';
 import { HexString } from '../../node/hexStrings';
 import { SignalService } from '../../protobuf';
-import { getMessageQueue } from '../../session';
 import { getSwarmPollingInstance } from '../../session/apis/snode_api';
-import { GetNetworkTime } from '../../session/apis/snode_api/getNetworkTime';
 import { ConvoHub } from '../../session/conversations';
 import { getSodiumRenderer } from '../../session/crypto';
 import { WithDisappearingMessageUpdate } from '../../session/disappearing_messages/types';
 import { ClosedGroup } from '../../session/group/closed-group';
-import { GroupUpdateInviteResponseMessage } from '../../session/messages/outgoing/controlMessage/group_v2/to_group/GroupUpdateInviteResponseMessage';
 import { PubKey } from '../../session/types';
 import { WithMessageHash } from '../../session/types/with';
 import { UserUtils } from '../../session/utils';
@@ -31,6 +28,7 @@ import {
   MetaGroupWrapperActions,
   UserGroupsWrapperActions,
 } from '../../webworker/workers/browser/libsession_worker_interface';
+import { sendInviteResponseToGroup } from '../../session/sending/group/GroupInviteResponse';
 
 type WithSignatureTimestamp = { signatureTimestamp: number };
 type WithAuthor = { author: PubkeyType };
@@ -53,25 +51,6 @@ type GroupUpdateGeneric<T> = {
 type GroupUpdateDetails = {
   updateMessage: SignalService.GroupUpdateMessage;
 } & WithSignatureTimestamp;
-
-/**
- * Send the invite response to the group's swarm. An admin will handle it and update our invite pending state to not pending.
- * NOTE:
- *  This message can only be sent once we got the keys for the group, through a poll of the swarm.
- */
-async function sendInviteResponseToGroup({ groupPk }: { groupPk: GroupPubkeyType }) {
-  window.log.info(`sendInviteResponseToGroup for group ${ed25519Str(groupPk)}`);
-
-  await getMessageQueue().sendToGroupV2({
-    message: new GroupUpdateInviteResponseMessage({
-      groupPk,
-      isApproved: true,
-      createAtNetworkTimestamp: GetNetworkTime.now(),
-      expirationType: 'unknown', // an invite response should not expire
-      expireTimer: 0,
-    }),
-  });
-}
 
 async function handleGroupUpdateInviteMessage({
   inviteMessage,
@@ -734,6 +713,5 @@ async function handleGroupUpdateMessage(
 
 export const GroupV2Receiver = {
   handleGroupUpdateMessage,
-  sendInviteResponseToGroup,
   handleGroupUpdateInviteResponseMessage,
 };

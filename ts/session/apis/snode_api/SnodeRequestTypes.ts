@@ -7,7 +7,6 @@ import { concatUInt8Array } from '../../crypto';
 import { PubKey } from '../../types';
 import { StringUtils, UserUtils } from '../../utils';
 import { ed25519Str } from '../../utils/String';
-import { GetNetworkTime } from './getNetworkTime';
 import {
   SnodeNamespace,
   SnodeNamespaces,
@@ -26,6 +25,7 @@ import {
   WithTimestamp,
 } from './types';
 import { TTL_DEFAULT } from '../../constants';
+import { NetworkTime } from '../../../util/NetworkTime';
 
 type WithMaxSize = { max_size?: number };
 export type WithShortenOrExtend = { shortenOrExtend: 'shorten' | 'extend' | '' };
@@ -468,7 +468,7 @@ export class GetExpiriesFromNodeSubRequest extends SnodeAPISubRequest {
    * For Revoke/unrevoke, this needs an admin signature
    */
   public async build() {
-    const timestamp = GetNetworkTime.now();
+    const timestamp = NetworkTime.now();
 
     const ourPubKey = UserUtils.getOurPubKeyStrFromCache();
     if (!ourPubKey) {
@@ -1147,7 +1147,7 @@ export class StoreUserMessageSubRequest extends SnodeAPISubRequest {
       method: this.method,
       params: {
         pubkey: this.destination,
-        timestamp: GetNetworkTime.now(),
+        timestamp: NetworkTime.now(),
         namespace: this.namespace,
         ttl: this.ttlMs,
         data: encryptedDataBase64,
@@ -1211,7 +1211,7 @@ export class StoreLegacyGroupMessageSubRequest extends SnodeAPISubRequest {
       params: {
         // no signature required for a legacy group retrieve/store of message to namespace -10
         pubkey: this.destination,
-        timestamp: GetNetworkTime.now(),
+        timestamp: NetworkTime.now(),
         namespace: this.namespace,
         ttl: this.ttlMs,
         data: encryptedDataBase64,

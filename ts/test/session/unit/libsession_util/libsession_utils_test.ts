@@ -4,7 +4,6 @@ import { randombytes_buf } from 'libsodium-wrappers-sumo';
 import Long from 'long';
 import Sinon from 'sinon';
 import { ConfigDumpData } from '../../../../data/configDump/configDump';
-import { GetNetworkTime } from '../../../../session/apis/snode_api/getNetworkTime';
 import { SnodeNamespaces } from '../../../../session/apis/snode_api/namespaces';
 import { UserUtils } from '../../../../session/utils';
 import { LibSessionUtil } from '../../../../session/utils/libsession/libsession_utils';
@@ -13,6 +12,7 @@ import {
   MetaGroupWrapperActions,
 } from '../../../../webworker/workers/browser/libsession_worker_interface';
 import { TestUtils } from '../../../test-utils';
+import { NetworkTime } from '../../../../util/NetworkTime';
 
 describe('LibSessionUtil saveDumpsToDb', () => {
   describe('for group', () => {
@@ -164,7 +164,7 @@ describe('LibSessionUtil pendingChangesForGroup', () => {
     };
     Sinon.stub(MetaGroupWrapperActions, 'needsPush').resolves(true);
     Sinon.stub(MetaGroupWrapperActions, 'push').resolves(pushResults);
-    Sinon.stub(GetNetworkTime, 'now').returns(1234);
+    Sinon.stub(NetworkTime, 'now').returns(1234);
     const result = await LibSessionUtil.pendingChangesForGroup(groupPk);
     expect(result.allOldHashes.size).to.be.equal(4);
     // check that all of the hashes are there
@@ -245,7 +245,7 @@ describe('LibSessionUtil pendingChangesForUs', () => {
       .withArgs('ConvoInfoVolatileConfig')
       .resolves(pushResultsConvo);
 
-    Sinon.stub(GetNetworkTime, 'now').returns(1234);
+    Sinon.stub(NetworkTime, 'now').returns(1234);
     const result = await LibSessionUtil.pendingChangesForUs();
     expect(needsPush.callCount).to.be.eq(4);
     expect(needsPush.getCalls().map(m => m.args)).to.be.deep.eq([
@@ -313,7 +313,7 @@ describe('LibSessionUtil pendingChangesForUs', () => {
       .withArgs('ConvoInfoVolatileConfig')
       .resolves(pushConvo);
 
-    Sinon.stub(GetNetworkTime, 'now').returns(1234);
+    Sinon.stub(NetworkTime, 'now').returns(1234);
     const result = await LibSessionUtil.pendingChangesForUs();
     expect(needsPush.callCount).to.be.eq(4);
     expect(needsPush.getCalls().map(m => m.args)).to.be.deep.eq([

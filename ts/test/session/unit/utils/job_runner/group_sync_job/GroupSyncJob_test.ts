@@ -5,7 +5,6 @@ import Long from 'long';
 import Sinon from 'sinon';
 import { getSodiumNode } from '../../../../../../node/sodiumNode';
 import { NotEmptyArrayOfBatchResults } from '../../../../../../session/apis/snode_api/SnodeRequestTypes';
-import { GetNetworkTime } from '../../../../../../session/apis/snode_api/getNetworkTime';
 import { SnodeNamespaces } from '../../../../../../session/apis/snode_api/namespaces';
 import { TTL_DEFAULT } from '../../../../../../session/constants';
 import { ConvoHub } from '../../../../../../session/conversations';
@@ -23,6 +22,7 @@ import {
 import { MetaGroupWrapperActions } from '../../../../../../webworker/workers/browser/libsession_worker_interface';
 import { TestUtils } from '../../../../../test-utils';
 import { TypedStub } from '../../../../../test-utils/utils';
+import { NetworkTime } from '../../../../../../util/NetworkTime';
 
 function validInfo(sodium: LibSodiumWrappers) {
   return {
@@ -291,7 +291,7 @@ describe('GroupSyncJob pushChangesToGroupSwarmIfNeeded', () => {
     const member = validMembers(sodium);
     const networkTimestamp = 4444;
     const ttl = TTL_DEFAULT.CONFIG_MESSAGE;
-    Sinon.stub(GetNetworkTime, 'now').returns(networkTimestamp);
+    Sinon.stub(NetworkTime, 'now').returns(networkTimestamp);
     pendingChangesForGroupStub.resolves({
       messages: [info, member],
       allOldHashes: new Set('123'),

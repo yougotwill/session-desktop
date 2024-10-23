@@ -10,12 +10,12 @@ import {
   UpdateExpiryOnNodeGroupSubRequest,
   UpdateExpiryOnNodeUserSubRequest,
 } from '../../../../session/apis/snode_api/SnodeRequestTypes';
-import { GetNetworkTime } from '../../../../session/apis/snode_api/getNetworkTime';
 import { SnodeNamespaces } from '../../../../session/apis/snode_api/namespaces';
 import { SnodeAPIRetrieve } from '../../../../session/apis/snode_api/retrieveRequest';
 import { WithShortenOrExtend } from '../../../../session/apis/snode_api/types';
 import { TestUtils } from '../../../test-utils';
 import { expectAsyncToThrow, stubLibSessionWorker } from '../../../test-utils/utils';
+import { NetworkTime } from '../../../../util/NetworkTime';
 
 const { expect } = chai;
 
@@ -45,8 +45,8 @@ function expectExpireWith({
 } & WithShortenOrExtend) {
   expect(request.messageHashes).to.be.deep.eq(hashes);
   expect(request.shortenOrExtend).to.be.eq(shortenOrExtend);
-  expect(request.expiryMs).to.be.above(GetNetworkTime.now() + 14 * 24 * 3600 * 1000 - 100);
-  expect(request.expiryMs).to.be.above(GetNetworkTime.now() + 14 * 24 * 3600 * 1000 + 100);
+  expect(request.expiryMs).to.be.above(NetworkTime.now() + 14 * 24 * 3600 * 1000 - 100);
+  expect(request.expiryMs).to.be.above(NetworkTime.now() + 14 * 24 * 3600 * 1000 + 100);
 }
 
 describe('SnodeAPI:buildRetrieveRequest', () => {

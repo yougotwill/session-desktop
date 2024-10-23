@@ -10,12 +10,12 @@ import {
   GetExpiriesRequestResponseResults,
   processGetExpiriesRequestResponse,
 } from '../../../../session/apis/snode_api/getExpiriesRequest';
-import { GetNetworkTime } from '../../../../session/apis/snode_api/getNetworkTime';
 import { SnodeSignature } from '../../../../session/apis/snode_api/signature/snodeSignatures';
 import { WithMessagesHashes } from '../../../../session/apis/snode_api/types';
 import { UserUtils } from '../../../../session/utils';
 import { isValidUnixTimestamp } from '../../../../session/utils/Timestamps';
 import { TypedStub, generateFakeSnode, stubWindowLog } from '../../../test-utils/utils';
+import { NetworkTime } from '../../../../util/NetworkTime';
 
 chai.use(chaiAsPromised as any);
 
@@ -34,7 +34,7 @@ describe('GetExpiriesRequest', () => {
   let getOurPubKeyStrFromCacheStub: TypedStub<typeof UserUtils, 'getOurPubKeyStrFromCache'>;
 
   beforeEach(() => {
-    Sinon.stub(GetNetworkTime, 'getLatestTimestampOffset').returns(getLatestTimestampOffset);
+    Sinon.stub(NetworkTime, 'getLatestTimestampOffset').returns(getLatestTimestampOffset);
     getOurPubKeyStrFromCacheStub = Sinon.stub(UserUtils, 'getOurPubKeyStrFromCache').returns(
       ourNumber
     );

@@ -8,7 +8,6 @@ import { OpenGroupMessageV2 } from '../../../../session/apis/open_group_api/open
 import { OpenGroupPollingUtils } from '../../../../session/apis/open_group_api/opengroupV2/OpenGroupPollingUtils';
 import { SogsBlinding } from '../../../../session/apis/open_group_api/sogsv3/sogsBlinding';
 import { BatchRequests } from '../../../../session/apis/snode_api/batchRequest';
-import { GetNetworkTime } from '../../../../session/apis/snode_api/getNetworkTime';
 import { SnodeNamespaces } from '../../../../session/apis/snode_api/namespaces';
 import { Onions } from '../../../../session/apis/snode_api/onions';
 import { ConvoHub } from '../../../../session/conversations/ConversationController';
@@ -29,6 +28,7 @@ import {
 } from '../../../test-utils/utils';
 import { TEST_identityKeyPair } from '../crypto/MessageEncrypter_test';
 import { MessageEncrypter } from '../../../../session/crypto/MessageEncrypter';
+import { NetworkTime } from '../../../../util/NetworkTime';
 
 describe('MessageSender', () => {
   afterEach(() => {
@@ -195,7 +195,7 @@ describe('MessageSender', () => {
           SnodeNamespaces.Default
         );
         const offset = 200000;
-        Sinon.stub(GetNetworkTime, 'getLatestTimestampOffset').returns(offset);
+        Sinon.stub(NetworkTime, 'getLatestTimestampOffset').returns(offset);
         await MessageSender.sendSingleMessage({
           message: rawMessage,
           attempts: 3,

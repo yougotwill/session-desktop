@@ -1,7 +1,7 @@
-import { GetNetworkTime } from '../session/apis/snode_api/getNetworkTime';
 import { FEATURE_RELEASE_TIMESTAMPS } from '../session/constants';
 import { UserSync } from '../session/utils/job_runners/jobs/UserSyncJob';
 import { assertUnreachable } from '../types/sqlSharedTypes';
+import { NetworkTime } from './NetworkTime';
 import { Storage } from './storage';
 
 let isDisappearingMessageFeatureReleased: boolean | undefined;
@@ -77,7 +77,7 @@ async function checkIsFeatureReleased(featureName: FeatureNameTracked): Promise<
   const featureAlreadyReleased = await getIsFeatureReleased(featureName);
 
   // Is it time to release the feature based on the network timestamp?
-  if (!featureAlreadyReleased && GetNetworkTime.now() >= getFeatureReleaseTimestamp(featureName)) {
+  if (!featureAlreadyReleased && NetworkTime.now() >= getFeatureReleaseTimestamp(featureName)) {
     window.log.info(`[releaseFeature]: It is time to release ${featureName}. Releasing it now`);
     await Storage.put(featureStorageItemId(featureName), true);
     setIsFeatureReleasedCached(featureName, true);

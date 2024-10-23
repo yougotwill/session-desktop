@@ -1,14 +1,14 @@
 import { v4 as uuid } from 'uuid';
 
-import { getMessageQueue } from '../../..';
 import { SignalService } from '../../../../protobuf';
-import { GetNetworkTime } from '../../../apis/snode_api/getNetworkTime';
 import { SnodeNamespaces } from '../../../apis/snode_api/namespaces';
 import { ConvoHub } from '../../../conversations';
 import { DisappearingMessages } from '../../../disappearing_messages';
 import { PubKey } from '../../../types';
 import { UserUtils } from '../../../utils';
 import { ExpirableMessage, ExpirableMessageParams } from '../ExpirableMessage';
+import { NetworkTime } from '../../../../util/NetworkTime';
+import { MessageQueue } from '../../../sending';
 
 interface DataExtractionNotificationMessageParams extends ExpirableMessageParams {
   referencedAttachmentTimestamp: number;
@@ -65,7 +65,7 @@ export const sendDataExtractionNotification = async (
   const dataExtractionNotificationMessage = new DataExtractionNotificationMessage({
     referencedAttachmentTimestamp,
     identifier: uuid(),
-    createAtNetworkTimestamp: GetNetworkTime.now(),
+    createAtNetworkTimestamp: NetworkTime.now(),
     expirationType,
     expireTimer,
   });
@@ -76,7 +76,7 @@ export const sendDataExtractionNotification = async (
   );
 
   try {
-    await getMessageQueue().sendTo1o1NonDurably({
+    await MessageQueue.use().sendTo1o1NonDurably({
       pubkey,
       message: dataExtractionNotificationMessage,
       namespace: SnodeNamespaces.Default,

@@ -5,7 +5,6 @@ import filesize from 'filesize';
 import { GroupPubkeyType, PubkeyType } from 'libsession_util_nodejs';
 import { cloneDeep, debounce, isEmpty, size as lodashSize, partition, pick, uniq } from 'lodash';
 import { SignalService } from '../protobuf';
-import { getMessageQueue } from '../session';
 import { ConvoHub } from '../session/conversations';
 import { ContentMessage } from '../session/messages/outgoing';
 import {
@@ -34,7 +33,6 @@ import { Data } from '../data/data';
 import { OpenGroupData } from '../data/opengroups';
 import { SettingsKey } from '../data/settings-key';
 import { isUsAnySogsFromCache } from '../session/apis/open_group_api/sogsv3/knownBlindedkeys';
-import { GetNetworkTime } from '../session/apis/snode_api/getNetworkTime';
 import { SnodeNamespaces } from '../session/apis/snode_api/namespaces';
 import { DURATION } from '../session/constants';
 import { DisappearingMessages } from '../session/disappearing_messages';
@@ -91,7 +89,16 @@ import { READ_MESSAGE_STATE } from './conversationAttributes';
 import { ConversationInteractionStatus, ConversationInteractionType } from '../interactions/types';
 import { LastMessageStatusType } from '../state/ducks/types';
 import { GetMessageArgs, LocalizerToken } from '../types/localizer';
-import { getGroupNameChangeStr } from './groupUpdate';
+import {
+  getGroupDisplayPictureChangeStr,
+  getGroupNameChangeStr,
+  getJoinedGroupUpdateChangeStr,
+  getKickedGroupUpdateStr,
+  getLeftGroupUpdateChangeStr,
+  getPromotedGroupUpdateChangeStr,
+} from './groupUpdate';
+import { NetworkTime } from '../util/NetworkTime';
+import { MessageQueue } from '../session/sending';
 
 // tslint:disable: cyclomatic-complexity
 
@@ -253,92 +260,10 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
     return this.get('interactionNotification');
   }
 
-  public getNotificationText() {
+  public getNotificationText(): string {
     const groupUpdate = this.getGroupUpdateAsArray();
-    // FIXME this needs to deal with group v2 messages too
-    console.error('FormatNotifications.formatGroupUpdateNotification');
-    /**
-     *
-function formatGroupUpdateNotification(groupUpdate: MessageGroupUpdate) {
-  const us = UserUtils.getOurPubKeyStrFromCache();
-  if (groupUpdate.name) {
-    return window.i18n('titleIsNow', [groupUpdate.name]);
-  }
-  if (groupUpdate.avatarChange) {
-    return window.i18n('groupAvatarChange');
-  }
-  if (groupUpdate.left) {
-    if (groupUpdate.left.length !== 1) {
-      return null;
-    }
-    if (arrayContainsUsOnly(groupUpdate.left)) {
-      return window.i18n('youLeftTheGroup');
-    }
-    // no more than one can send a leave message at a time
-    return window.i18n('leftTheGroup', [
-      ConvoHub.use().getContactProfileNameOrShortenedPubKey(groupUpdate.left[0]),
-    ]);
-  }
-
-  if (groupUpdate.joined) {
-    if (!groupUpdate.joined.length) {
-      return null;
-    }
-    return changeOfMembersV2({
-      type: 'added',
-      us,
-      changedWithNames: mapIdsWithNames(
-        groupUpdate.joined,
-        groupUpdate.joined.map(usernameForQuoteOrFullPkOutsideRedux)
-      ),
-    });
-  }
-  if (groupUpdate.joinedWithHistory) {
-    if (!groupUpdate.joinedWithHistory.length) {
-      return null;
-    }
-    return changeOfMembersV2({
-      type: 'addedWithHistory',
-      us,
-      changedWithNames: mapIdsWithNames(
-        groupUpdate.joinedWithHistory,
-        groupUpdate.joinedWithHistory.map(usernameForQuoteOrFullPkOutsideRedux)
-      ),
-    });
-  }
-  if (groupUpdate.kicked) {
-    if (!groupUpdate.kicked.length) {
-      return null;
-    }
-    if (arrayContainsUsOnly(groupUpdate.kicked)) {
-      return window.i18n('youGotKickedFromGroup');
-    }
-    return changeOfMembersV2({
-      type: 'removed',
-      us,
-      changedWithNames: mapIdsWithNames(
-        groupUpdate.kicked,
-        groupUpdate.kicked.map(usernameForQuoteOrFullPkOutsideRedux)
-      ),
-    });
-  }
-  if (groupUpdate.promoted) {
-    if (!groupUpdate.promoted.length) {
-      return null;
-    }
-    return changeOfMembersV2({
-      type: 'promoted',
-      us,
-      changedWithNames: mapIdsWithNames(
-        groupUpdate.promoted,
-        groupUpdate.promoted.map(usernameForQuoteOrFullPkOutsideRedux)
-      ),
-    });
-  }
-  throw new Error('group_update getDescription() case not taken care of');
-}
-     */
     if (groupUpdate) {
+      const isGroupV2 = PubKey.is03Pubkey(this.get('conversationId'));
       const groupName =
         this.getConversation()?.getNicknameOrRealUsernameOrPlaceholder() || window.i18n('unknown');
 
@@ -360,9 +285,31 @@ function formatGroupUpdateNotification(groupUpdate: MessageGroupUpdate) {
         return window.i18n.stripped(...([result.token] as GetMessageArgs<LocalizerToken>));
       }
 
+      if (groupUpdate.avatarChange) {
+        const result = getGroupDisplayPictureChangeStr();
+        return window.i18n.stripped(...([result.token] as GetMessageArgs<LocalizerToken>));
+      }
+
       if (groupUpdate.joined?.length) {
         // @ts-expect-error -- TODO: Fix by using new i18n builder
-        const { token, args } = getJoinedGroupUpdateChangeStr(groupUpdate.joined, groupName);
+        const { token, args } = getJoinedGroupUpdateChangeStr(
+          groupUpdate.joined,
+          isGroupV2,
+          false,
+          groupName
+        );
+        // TODO: clean up this typing
+        return window.i18n.stripped(...([token, args] as GetMessageArgs<LocalizerToken>));
+      }
+
+      if (groupUpdate.joinedWithHistory?.length) {
+        // @ts-expect-error -- TODO: Fix by using new i18n builder
+        const { token, args } = getJoinedGroupUpdateChangeStr(
+          groupUpdate.joinedWithHistory,
+          true,
+          true,
+          groupName
+        );
         // TODO: clean up this typing
         return window.i18n.stripped(...([token, args] as GetMessageArgs<LocalizerToken>));
       }
@@ -370,6 +317,12 @@ function formatGroupUpdateNotification(groupUpdate: MessageGroupUpdate) {
       if (groupUpdate.kicked?.length) {
         // @ts-expect-error -- TODO: Fix by using new i18n builder
         const { token, args } = getKickedGroupUpdateStr(groupUpdate.kicked, groupName);
+        // TODO: clean up this typing
+        return window.i18n.stripped(...([token, args] as GetMessageArgs<LocalizerToken>));
+      }
+      if (groupUpdate.promoted) {
+        // @ts-expect-error -- TODO: Fix by using new i18n builder
+        const { token, args } = getPromotedGroupUpdateChangeStr(groupUpdate.kicked, groupName);
         // TODO: clean up this typing
         return window.i18n.stripped(...([token, args] as GetMessageArgs<LocalizerToken>));
       }
@@ -1093,7 +1046,7 @@ function formatGroupUpdateNotification(groupUpdate: MessageGroupUpdate) {
       if (conversation.isPublic()) {
         const openGroupParams: OpenGroupVisibleMessageParams = {
           identifier: this.id,
-          createAtNetworkTimestamp: GetNetworkTime.now(),
+          createAtNetworkTimestamp: NetworkTime.now(),
           lokiProfile: UserUtils.getOurProfile(),
           body,
           attachments,
@@ -1108,7 +1061,7 @@ function formatGroupUpdateNotification(groupUpdate: MessageGroupUpdate) {
         const openGroupMessage = new OpenGroupVisibleMessage(openGroupParams);
         const openGroup = OpenGroupData.getV2OpenGroupRoom(conversation.id);
 
-        return getMessageQueue().sendToOpenGroupV2({
+        return MessageQueue.use().sendToOpenGroupV2({
           message: openGroupMessage,
           roomInfos,
           blinded: roomHasBlindEnabled(openGroup),
@@ -1116,7 +1069,7 @@ function formatGroupUpdateNotification(groupUpdate: MessageGroupUpdate) {
         });
       }
 
-      const createAtNetworkTimestamp = GetNetworkTime.now();
+      const createAtNetworkTimestamp = NetworkTime.now();
 
       const chatParams: VisibleMessageParams = {
         identifier: this.id,
@@ -1143,7 +1096,7 @@ function formatGroupUpdateNotification(groupUpdate: MessageGroupUpdate) {
       }
 
       if (conversation.isPrivate()) {
-        return getMessageQueue().sendToPubKey(
+        return MessageQueue.use().sendToPubKey(
           PubKey.cast(conversation.id),
           chatMessage,
           SnodeNamespaces.Default
@@ -1165,7 +1118,7 @@ function formatGroupUpdateNotification(groupUpdate: MessageGroupUpdate) {
           chatMessage,
         });
         // we need the return await so that errors are caught in the catch {}
-        return await getMessageQueue().sendToGroupV2({
+        return await MessageQueue.use().sendToGroupV2({
           message: groupV2VisibleMessage,
         });
       }
@@ -1175,7 +1128,7 @@ function formatGroupUpdateNotification(groupUpdate: MessageGroupUpdate) {
         chatMessage,
       });
 
-      return getMessageQueue().sendToGroup({
+      return MessageQueue.use().sendToGroup({
         message: closedGroupVisibleMessage,
         namespace: SnodeNamespaces.LegacyClosedGroup,
       });
@@ -1249,7 +1202,7 @@ function formatGroupUpdateNotification(groupUpdate: MessageGroupUpdate) {
   }
 
   public async sendSyncMessageOnly(contentMessage: ContentMessage) {
-    const now = GetNetworkTime.now();
+    const now = NetworkTime.now();
 
     this.set({
       sent_to: [UserUtils.getOurPubKeyStrFromCache()],
@@ -1295,7 +1248,7 @@ function formatGroupUpdateNotification(groupUpdate: MessageGroupUpdate) {
       );
 
       if (syncMessage) {
-        await getMessageQueue().sendSyncMessage({
+        await MessageQueue.use().sendSyncMessage({
           namespace: SnodeNamespaces.Default,
           message: syncMessage,
         });

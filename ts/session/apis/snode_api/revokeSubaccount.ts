@@ -2,7 +2,7 @@ import { GroupPubkeyType } from 'libsession_util_nodejs';
 
 import { PubKey } from '../../types';
 import { SubaccountRevokeSubRequest, SubaccountUnrevokeSubRequest } from './SnodeRequestTypes';
-import { GetNetworkTime } from './getNetworkTime';
+import { NetworkTime } from '../../../util/NetworkTime';
 
 export type RevokeChanges = Array<{
   action: 'revoke_subaccount' | 'unrevoke_subaccount';
@@ -25,7 +25,7 @@ async function getRevokeSubaccountParams(
     ? new SubaccountRevokeSubRequest({
         groupPk,
         revokeTokenHex: revokeChanges.map(m => m.tokenToRevokeHex),
-        timestamp: GetNetworkTime.now(),
+        timestamp: NetworkTime.now(),
         secretKey,
       })
     : undefined;
@@ -33,7 +33,7 @@ async function getRevokeSubaccountParams(
     ? new SubaccountUnrevokeSubRequest({
         groupPk,
         revokeTokenHex: unrevokeChanges.map(m => m.tokenToRevokeHex),
-        timestamp: GetNetworkTime.now(),
+        timestamp: NetworkTime.now(),
         secretKey,
       })
     : undefined;

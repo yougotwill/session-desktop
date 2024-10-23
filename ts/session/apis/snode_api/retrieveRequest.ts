@@ -19,6 +19,7 @@ import {
 import { BatchRequests } from './batchRequest';
 import { RetrieveMessagesResultsBatched, RetrieveMessagesResultsContent } from './types';
 import { ed25519Str } from '../../utils/String';
+import { NetworkTime } from '../../../util/NetworkTime';
 
 type RetrieveParams = {
   pubkey: string;
@@ -129,7 +130,7 @@ async function buildRetrieveRequest(
 ) {
   const isUs = pubkey === ourPubkey;
   const maxSizeMap = SnodeNamespace.maxSizeMap(namespacesAndLastHashes.map(m => m.namespace));
-  const now = GetNetworkTime.now();
+  const now = NetworkTime.now();
 
   const retrieveRequestsParams: Array<RetrieveSubRequestType> = await Promise.all(
     namespacesAndLastHashes.map(async ({ lastHash, namespace }) => {
@@ -159,7 +160,7 @@ async function buildRetrieveRequest(
     })
   );
 
-  const expiryMs = GetNetworkTime.now() + TTL_DEFAULT.CONFIG_MESSAGE;
+  const expiryMs = NetworkTime.now() + TTL_DEFAULT.CONFIG_MESSAGE;
 
   if (configHashesToBump?.length && isUs) {
     const request = new UpdateExpiryOnNodeUserSubRequest({
@@ -248,12 +249,12 @@ async function retrieveNextMessagesNoRetries(
     }
 
     // the +1 is to take care of the extra `expire` method added once user config is released
-  if (
-    results.length !== namespacesAndLastHashes.length &&
-    results.length !== namespacesAndLastHashes.length + 1
-  ) {
+    if (
+      results.length !== namespacesAndLastHashes.length &&
+      results.length !== namespacesAndLastHashes.length + 1
+    ) {
       throw new Error(
-      `We asked for updates about ${namespacesAndLastHashes.length} messages but got results of length ${results.length}`
+        `We asked for updates about ${namespacesAndLastHashes.length} messages but got results of length ${results.length}`
       );
     }
 
@@ -266,15 +267,15 @@ async function retrieveNextMessagesNoRetries(
         `_retrieveNextMessages - retrieve result is not 200 with ${targetNode.ip}:${targetNode.port} but ${firstResult.code}`
       );
     }
-  if (configHashesToBump?.length) {
-    const lastResult = results[results.length - 1];
-    if (lastResult?.code !== 200) {
-      // the update expiry of our config messages didn't work.
-      window.log.warn(
-        `the update expiry of our tracked config hashes didn't work: ${JSON.stringify(lastResult)}`
-      );
+    if (configHashesToBump?.length) {
+      const lastResult = results[results.length - 1];
+      if (lastResult?.code !== 200) {
+        // the update expiry of our config messages didn't work.
+        window.log.warn(
+          `the update expiry of our tracked config hashes didn't work: ${JSON.stringify(lastResult)}`
+        );
+      }
     }
-  }
 
     // we rely on the code of the first one to check for online status
     const bodyFirstResult = firstResult.body;

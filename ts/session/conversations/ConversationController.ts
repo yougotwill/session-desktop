@@ -14,7 +14,6 @@ import { BlockedNumberController } from '../../util';
 import { getOpenGroupManager } from '../apis/open_group_api/opengroupV2/OpenGroupManagerV2';
 import { PubKey } from '../types';
 
-import { getMessageQueue } from '..';
 import { ConfigDumpData } from '../../data/configDump/configDump';
 import { deleteAllMessagesByConvoIdNoConfirmation } from '../../interactions/conversationInteractions';
 import { removeAllClosedGroupEncryptionKeyPairs } from '../../receiver/closedGroups';
@@ -28,12 +27,11 @@ import {
 import { OpenGroupUtils } from '../apis/open_group_api/utils';
 import { getSwarmPollingInstance } from '../apis/snode_api';
 import { DeleteAllFromGroupMsgNodeSubRequest } from '../apis/snode_api/SnodeRequestTypes';
-import { GetNetworkTime } from '../apis/snode_api/getNetworkTime';
 import { SnodeNamespaces } from '../apis/snode_api/namespaces';
 import { ClosedGroupMemberLeftMessage } from '../messages/outgoing/controlMessage/group/ClosedGroupMemberLeftMessage';
 import { GroupUpdateMemberLeftMessage } from '../messages/outgoing/controlMessage/group_v2/to_group/GroupUpdateMemberLeftMessage';
 import { GroupUpdateMemberLeftNotificationMessage } from '../messages/outgoing/controlMessage/group_v2/to_group/GroupUpdateMemberLeftNotificationMessage';
-import { MessageSender } from '../sending';
+import { MessageQueue, MessageSender } from '../sending';
 import { UserUtils } from '../utils';
 import { ed25519Str } from '../utils/String';
 import { PreConditionFailed } from '../utils/errors';
@@ -47,6 +45,7 @@ import { SessionUtilUserGroups } from '../utils/libsession/libsession_utils_user
 import { DisappearingMessages } from '../disappearing_messages';
 import { StoreGroupRequestFactory } from '../apis/snode_api/factories/StoreGroupRequestFactory';
 import { CONVERSATION_PRIORITIES, ConversationTypeEnum } from '../../models/types';
+import { NetworkTime } from '../../util/NetworkTime';
 
 let instance: ConvoController | null;
 
@@ -639,7 +638,7 @@ async function leaveClosedGroup(groupPk: PubkeyType | GroupPubkeyType, fromSyncM
     if (!group || (!group.secretKey && !group.authData)) {
       throw new Error('leaveClosedGroup: group from UserGroupsWrapperActions is null ');
     }
-    const createAtNetworkTimestamp = GetNetworkTime.now();
+    const createAtNetworkTimestamp = NetworkTime.now();
     // Send the update to the 03 group
     const ourLeavingMessage = new GroupUpdateMemberLeftMessage({
       createAtNetworkTimestamp,
@@ -701,7 +700,7 @@ async function leaveClosedGroup(groupPk: PubkeyType | GroupPubkeyType, fromSyncM
 
   // Send the update to the group
   const ourLeavingMessage = new ClosedGroupMemberLeftMessage({
-    createAtNetworkTimestamp: GetNetworkTime.now(),
+    createAtNetworkTimestamp: NetworkTime.now(),
     groupId: groupPk,
     expirationType: null, // we keep that one **not** expiring
     expireTimer: null,
@@ -710,7 +709,7 @@ async function leaveClosedGroup(groupPk: PubkeyType | GroupPubkeyType, fromSyncM
   window?.log?.info(`We are leaving the legacy group ${groupPk}. Sending our leaving message.`);
 
   // if we do not have a keyPair for that group, we can't send our leave message, so just skip the message sending part
-  const wasSent = await getMessageQueue().sendToLegacyGroupNonDurably({
+  const wasSent = await MessageQueue.use().sendToLegacyGroupNonDurably({
     message: ourLeavingMessage,
     namespace: SnodeNamespaces.LegacyClosedGroup,
     destination: groupPk,

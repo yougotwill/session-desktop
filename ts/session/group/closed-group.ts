@@ -1,7 +1,6 @@
 import _ from 'lodash';
 import { v4 as uuidv4 } from 'uuid';
 
-import { getMessageQueue } from '..';
 import { Data } from '../../data/data';
 import { ConversationModel } from '../../models/conversation';
 import { ConversationAttributes } from '../../models/conversationAttributes';
@@ -14,7 +13,6 @@ import {
 } from '../../receiver/closedGroups';
 import { ECKeyPair } from '../../receiver/keypairs';
 import { PropsForGroupUpdateType } from '../../state/ducks/conversations';
-import { GetNetworkTime } from '../apis/snode_api/getNetworkTime';
 import { SnodeNamespaces } from '../apis/snode_api/namespaces';
 import { ConvoHub } from '../conversations';
 import { generateCurve25519KeyPairWithoutPrefix } from '../crypto';
@@ -34,6 +32,8 @@ import { UserUtils } from '../utils';
 import { fromHexToArray, toHex } from '../utils/String';
 import { PreConditionFailed } from '../utils/errors';
 import { ConversationTypeEnum } from '../../models/types';
+import { NetworkTime } from '../../util/NetworkTime';
+import { MessageQueue } from '../sending';
 
 export type GroupInfo = {
   id: string;
@@ -303,14 +303,14 @@ async function sendNewName(convo: ConversationModel, name: string, messageId: st
 
   // Send the update to the group
   const nameChangeMessage = new ClosedGroupNameChangeMessage({
-    createAtNetworkTimestamp: GetNetworkTime.now(),
+    createAtNetworkTimestamp: NetworkTime.now(),
     groupId,
     identifier: messageId,
     name,
     expirationType: null, // we keep that one **not** expiring
     expireTimer: 0,
   });
-  await getMessageQueue().sendToGroup({
+  await MessageQueue.use().sendToGroup({
     message: nameChangeMessage,
     namespace: SnodeNamespaces.LegacyClosedGroup,
   });
@@ -339,21 +339,21 @@ async function sendAddedMembers(
   const encryptionKeyPair = ECKeyPair.fromHexKeyPair(hexEncryptionKeyPair);
   // Send the Added Members message to the group (only members already in the group will get it)
   const closedGroupControlMessage = new ClosedGroupAddedMembersMessage({
-    createAtNetworkTimestamp: GetNetworkTime.now(),
+    createAtNetworkTimestamp: NetworkTime.now(),
     groupId,
     addedMembers,
     identifier: messageId,
     expirationType: null, // we keep that one **not** expiring
     expireTimer: 0,
   });
-  await getMessageQueue().sendToGroup({
+  await MessageQueue.use().sendToGroup({
     message: closedGroupControlMessage,
     namespace: SnodeNamespaces.LegacyClosedGroup,
   });
 
   // Send closed group update messages to any new members individually
   const newClosedGroupUpdate = new ClosedGroupNewMessage({
-    createAtNetworkTimestamp: GetNetworkTime.now(),
+    createAtNetworkTimestamp: NetworkTime.now(),
     name: groupName,
     groupId,
     admins,
@@ -367,7 +367,7 @@ async function sendAddedMembers(
   const promises = addedMembers.map(async m => {
     await ConvoHub.use().getOrCreateAndWait(m, ConversationTypeEnum.PRIVATE);
     const memberPubKey = PubKey.cast(m);
-    await getMessageQueue().sendToPubKey(
+    await MessageQueue.use().sendToPubKey(
       memberPubKey,
       newClosedGroupUpdate,
       SnodeNamespaces.Default
@@ -400,7 +400,7 @@ async function sendRemovedMembers(
   }
   // Send the update to the group and generate + distribute a new encryption key pair if needed
   const mainClosedGroupControlMessage = new ClosedGroupRemovedMembersMessage({
-    createAtNetworkTimestamp: GetNetworkTime.now(),
+    createAtNetworkTimestamp: NetworkTime.now(),
     groupId,
     removedMembers,
     identifier: messageId,
@@ -408,7 +408,7 @@ async function sendRemovedMembers(
     expireTimer: 0,
   });
   // Send the group update, and only once sent, generate and distribute a new encryption key pair if needed
-  await getMessageQueue().sendToGroup({
+  await MessageQueue.use().sendToGroup({
     message: mainClosedGroupControlMessage,
     namespace: SnodeNamespaces.LegacyClosedGroup,
     sentCb: async () => {
@@ -464,7 +464,7 @@ async function generateAndSendNewEncryptionKeyPair(
 
   const keypairsMessage = new ClosedGroupEncryptionPairMessage({
     groupId: toHex(groupId),
-    createAtNetworkTimestamp: GetNetworkTime.now(),
+    createAtNetworkTimestamp: NetworkTime.now(),
     encryptedKeyPairs: wrappers,
     expirationType: null, // we keep that one **not** expiring
     expireTimer: 0,
@@ -484,7 +484,7 @@ async function generateAndSendNewEncryptionKeyPair(
   };
 
   // this is to be sent to the group pubkey address
-  await getMessageQueue().sendToGroup({
+  await MessageQueue.use().sendToGroup({
     message: keypairsMessage,
     namespace: SnodeNamespaces.LegacyClosedGroup,
     sentCb: messageSentCallback,

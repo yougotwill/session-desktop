@@ -44,7 +44,7 @@ import { OpenGroupRequestCommonType } from '../../data/types';
 
 // ClosedGroupEncryptionPairReplyMessage must be sent to a user pubkey. Not a group.
 
-export class MessageQueue {
+export class MessageQueueCl {
   private readonly jobQueues: Map<string, JobQueue> = new Map();
   private readonly pendingMessageCache: PendingMessageCache;
 
@@ -261,7 +261,7 @@ export class MessageQueue {
     destination: PubkeyType;
   }) {
     if (!destination || !PubKey.is05Pubkey(destination)) {
-      throw new Error('Invalid legacygroup message passed in sendToLegacyGroupNonDurably.');
+      throw new Error('Invalid legacy group message passed in sendToLegacyGroupNonDurably.');
     }
 
     return this.sendToPubKeyNonDurably({
@@ -396,7 +396,7 @@ export class MessageQueue {
   }
 
   /**
-   * This method should be called when the app is started and the user loggedin to fetch
+   * This method should be called when the app is started and the user logged in to fetch
    * existing message waiting to be sent in the cache of message
    */
   public async processAllPending() {
@@ -446,11 +446,15 @@ export class MessageQueue {
   }
 }
 
-let messageQueue: MessageQueue;
+let messageQueueSingleton: MessageQueueCl;
 
-export function getMessageQueue(): MessageQueue {
-  if (!messageQueue) {
-    messageQueue = new MessageQueue();
+function use(): MessageQueueCl {
+  if (!messageQueueSingleton) {
+    messageQueueSingleton = new MessageQueueCl();
   }
-  return messageQueue;
+  return messageQueueSingleton;
 }
+
+export const MessageQueue = {
+  use,
+};

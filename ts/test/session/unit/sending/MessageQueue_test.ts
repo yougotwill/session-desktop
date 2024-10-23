@@ -17,7 +17,7 @@ import { PubkeyType } from 'libsession_util_nodejs';
 import { ContentMessage } from '../../../../session/messages/outgoing';
 import { ClosedGroupMessage } from '../../../../session/messages/outgoing/controlMessage/group/ClosedGroupMessage';
 import { MessageSender } from '../../../../session/sending';
-import { MessageQueue } from '../../../../session/sending/MessageQueue';
+import { MessageQueueCl } from '../../../../session/sending/MessageQueue';
 import { PubKey } from '../../../../session/types';
 import { PromiseUtils, UserUtils } from '../../../../session/utils';
 import { TestUtils } from '../../../test-utils';
@@ -56,7 +56,7 @@ describe('MessageQueue', () => {
     'handlePublicMessageSentFailure'
   >;
 
-  let messageQueueStub: MessageQueue;
+  let messageQueueStub: MessageQueueCl;
 
   // Message Sender Stubs
   let sendStub: sinon.SinonStub;
@@ -86,7 +86,7 @@ describe('MessageQueue', () => {
 
     // Init Queue
     pendingMessageCache = new PendingMessageCacheStub();
-    messageQueueStub = new MessageQueue(pendingMessageCache);
+    messageQueueStub = new MessageQueueCl(pendingMessageCache);
     TestUtils.stubWindowLog();
   });
 

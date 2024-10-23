@@ -4,10 +4,8 @@ import { SessionButtonColor } from '../../components/basic/SessionButton';
 import { Data } from '../../data/data';
 import { ConversationModel } from '../../models/conversation';
 import { MessageModel } from '../../models/message';
-import { getMessageQueue } from '../../session';
 import { deleteSogsMessageByServerIds } from '../../session/apis/open_group_api/sogsv3/sogsV3DeleteMessages';
 import { SnodeAPI } from '../../session/apis/snode_api/SNodeAPI';
-import { GetNetworkTime } from '../../session/apis/snode_api/getNetworkTime';
 import { SnodeNamespaces } from '../../session/apis/snode_api/namespaces';
 import { ConvoHub } from '../../session/conversations';
 import { getSodiumRenderer } from '../../session/crypto';
@@ -21,6 +19,8 @@ import { resetRightOverlayMode } from '../../state/ducks/section';
 import { ed25519Str } from '../../session/utils/String';
 
 import { UserGroupsWrapperActions } from '../../webworker/workers/browser/libsession_worker_interface';
+import { NetworkTime } from '../../util/NetworkTime';
+import { MessageQueue } from '../../session/sending';
 
 async function unsendMessagesForEveryone1o1AndLegacy(
   conversation: ConversationModel,
@@ -37,14 +37,14 @@ async function unsendMessagesForEveryone1o1AndLegacy(
     // sending to recipient all the messages separately for now
     await Promise.all(
       unsendMsgObjects.map(unsendObject =>
-        getMessageQueue()
+        MessageQueue.use()
           .sendToPubKey(new PubKey(destination), unsendObject, SnodeNamespaces.Default)
           .catch(window?.log?.error)
       )
     );
     await Promise.all(
       unsendMsgObjects.map(unsendObject =>
-        getMessageQueue()
+        MessageQueue.use()
           .sendSyncMessage({ namespace: SnodeNamespaces.Default, message: unsendObject })
           .catch(window?.log?.error)
       )
@@ -55,7 +55,7 @@ async function unsendMessagesForEveryone1o1AndLegacy(
     // sending to recipient all the messages separately for now
     await Promise.all(
       unsendMsgObjects.map(unsendObject => {
-        return getMessageQueue()
+        return MessageQueue.use()
           .sendToGroup({
             message: unsendObject,
             namespace: SnodeNamespaces.LegacyClosedGroup,
@@ -84,9 +84,9 @@ export async function unsendMessagesForEveryoneGroupV2({
     return;
   }
 
-  await getMessageQueue().sendToGroupV2NonDurably({
+  await MessageQueue.use().sendToGroupV2NonDurably({
     message: new GroupUpdateDeleteMemberContentMessage({
-      createAtNetworkTimestamp: GetNetworkTime.now(),
+      createAtNetworkTimestamp: NetworkTime.now(),
       expirationType: 'unknown', // GroupUpdateDeleteMemberContentMessage is not displayed so not expiring.
       expireTimer: 0,
       groupPk,
@@ -352,7 +352,7 @@ async function unsendMessageJustForThisUser(
   // sending to our other devices all the messages separately for now
   await Promise.all(
     unsendMsgObjects.map(unsendObject =>
-      getMessageQueue()
+      MessageQueue.use()
         .sendSyncMessage({ namespace: SnodeNamespaces.Default, message: unsendObject })
         .catch(window?.log?.error)
     )
@@ -513,9 +513,13 @@ export async function deleteMessagesByIdForEveryone(
 
   window.inboxStore?.dispatch(
     updateConfirmModal({
-      title: isMe ? window.i18n('deleteMessageDevicesAll') :  window.i18n('clearMessagesForEveryone'),
+      title: isMe
+        ? window.i18n('deleteMessageDevicesAll')
+        : window.i18n('clearMessagesForEveryone'),
       i18nMessage: { token: 'deleteMessage', args: { count: selectedMessages.length } },
-      okText: isMe ? window.i18n('deleteMessageDevicesAll') :window.i18n('clearMessagesForEveryone'),
+      okText: isMe
+        ? window.i18n('deleteMessageDevicesAll')
+        : window.i18n('clearMessagesForEveryone'),
       okTheme: SessionButtonColor.Danger,
       onClickOk: async () => {
         await doDeleteSelectedMessages({ selectedMessages, conversation, deleteForEveryone: true });

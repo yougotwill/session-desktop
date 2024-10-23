@@ -9,12 +9,10 @@ import { SessionButtonColor } from '../components/basic/SessionButton';
 import { getCallMediaPermissionsSettings } from '../components/settings/SessionSettings';
 import { Data } from '../data/data';
 import { SettingsKey } from '../data/settings-key';
-import { GroupV2Receiver } from '../receiver/groupv2/handleGroupV2Message';
 import { ConversationTypeEnum } from '../models/types';
 import { uploadFileToFsWithOnionV4 } from '../session/apis/file_server_api/FileServerApi';
 import { OpenGroupUtils } from '../session/apis/open_group_api/utils';
 import { getSwarmPollingInstance } from '../session/apis/snode_api';
-import { GetNetworkTime } from '../session/apis/snode_api/getNetworkTime';
 import { ConvoHub } from '../session/conversations';
 import { getSodiumRenderer } from '../session/crypto';
 import { DecryptedAttachmentsManager } from '../session/crypto/DecryptedAttachmentsManager';
@@ -53,6 +51,8 @@ import { UserGroupsWrapperActions } from '../webworker/workers/browser/libsessio
 import { ConversationInteractionStatus, ConversationInteractionType } from './types';
 import { BlockedNumberController } from '../util';
 import { LocalizerComponentProps, LocalizerToken } from '../types/localizer';
+import { sendInviteResponseToGroup } from '../session/sending/group/GroupInviteResponse';
+import { NetworkTime } from '../util/NetworkTime';
 
 export async function copyPublicKeyByConvoId(convoId: string) {
   if (OpenGroupUtils.isOpenGroupV2(convoId)) {
@@ -130,7 +130,7 @@ export const handleAcceptConversationRequest = async ({ convoId }: { convoId: st
         // this is pretty hacky, but also an admin seeing a message from that user in the group will mark it as not pending anymore
         await sleepFor(2000);
         if (!previousIsApproved) {
-          await GroupV2Receiver.sendInviteResponseToGroup({ groupPk: convoId });
+          await sendInviteResponseToGroup({ groupPk: convoId });
         }
         window.log.info(
           `handleAcceptConversationRequest: first poll for group ${ed25519Str(convoId)} happened, we should have encryption keys now`
@@ -243,17 +243,15 @@ export const declineConversationWithConfirm = ({
       ? ConvoHub.use().get(conversationIdOrigin)?.getContactProfileNameOrShortenedPubKey()
       : null;
 
- const convoName =
-    ConvoHub.use().get(conversationId)?.getNicknameOrRealUsernameOrPlaceholder();
+  const convoName = ConvoHub.use().get(conversationId)?.getNicknameOrRealUsernameOrPlaceholder();
 
-const i18nMessage: LocalizerComponentProps<LocalizerToken> = isGroupV2
-		? alsoBlock && originNameToBlock
-			? { token: 'blockDescription', args: { name: originNameToBlock }}: // groupv2, and blocking by sender name
-			{ token: 'groupInviteDelete' } // groupv2, and no info about the sender, falling back to delete only
-		: alsoBlock
-        		? { token: 'blockDescription', args: { name: convoName } }
-        		: { token: 'messageRequestsDelete' };
-
+  const i18nMessage: LocalizerComponentProps<LocalizerToken> = isGroupV2
+    ? alsoBlock && originNameToBlock
+      ? { token: 'blockDescription', args: { name: originNameToBlock } } // groupv2, and blocking by sender name
+      : { token: 'groupInviteDelete' } // groupv2, and no info about the sender, falling back to delete only
+    : alsoBlock
+      ? { token: 'blockDescription', args: { name: convoName } }
+      : { token: 'messageRequestsDelete' };
 
   window?.inboxStore?.dispatch(
     updateConfirmModal({
@@ -943,7 +941,7 @@ async function saveConversationInteractionErrorAsMessage({
 
   // Add an error message to the database so we can view it in the message history
   await conversation?.addSingleIncomingMessage({
-    source: GetNetworkTime.now().toString(),
+    source: NetworkTime.now().toString(),
     sent_at: Date.now(),
     interactionNotification: {
       interactionType,

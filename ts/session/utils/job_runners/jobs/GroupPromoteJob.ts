@@ -9,7 +9,6 @@ import {
 } from '../../../../webworker/workers/browser/libsession_worker_interface';
 import { SnodeNamespaces } from '../../../apis/snode_api/namespaces';
 import { SnodeGroupSignature } from '../../../apis/snode_api/signature/groupSignature';
-import { getMessageQueue } from '../../../sending';
 import { PubKey } from '../../../types';
 import { runners } from '../JobRunner';
 import {
@@ -18,6 +17,7 @@ import {
   PersistedJob,
   RunJobResult,
 } from '../PersistedJob';
+import { MessageQueue } from '../../../sending';
 
 const defaultMsBetweenRetries = 10000;
 const defaultMaxAttemps = 1;
@@ -105,7 +105,7 @@ class GroupPromoteJob extends PersistedJob<GroupPromotePersistedData> {
         groupName: group.name,
       });
 
-      const storedAt = await getMessageQueue().sendTo1o1NonDurably({
+      const storedAt = await MessageQueue.use().sendTo1o1NonDurably({
         message,
         namespace: SnodeNamespaces.Default,
         pubkey: PubKey.cast(member),

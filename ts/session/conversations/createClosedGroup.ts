@@ -4,7 +4,6 @@ import { ECKeyPair } from '../../receiver/keypairs';
 import { openConversationWithMessages } from '../../state/ducks/conversations';
 import { updateConfirmModal } from '../../state/ducks/modalDialog';
 import { getSwarmPollingInstance } from '../apis/snode_api';
-import { GetNetworkTime } from '../apis/snode_api/getNetworkTime';
 import { SnodeNamespaces } from '../apis/snode_api/namespaces';
 import { generateClosedGroupPublicKey, generateCurve25519KeyPairWithoutPrefix } from '../crypto';
 import { ClosedGroup, GroupInfo } from '../group/closed-group';
@@ -17,7 +16,8 @@ import { UserUtils } from '../utils';
 import { forceSyncConfigurationNowIfNeeded } from '../utils/sync/syncUtils';
 import { ConvoHub } from './ConversationController';
 import { ConversationTypeEnum } from '../../models/types';
-import { getMessageQueue } from '../sending';
+import { NetworkTime } from '../../util/NetworkTime';
+import { MessageQueue } from '../sending';
 
 /**
  * Creates a brand new closed group from user supplied details. This function generates a new identityKeyPair so cannot be used to restore a closed group.
@@ -179,9 +179,7 @@ async function sendToGroupMembers(
     }
   });
   const namesOfMembersToResend = membersToResend.map(
-    m =>
-      ConvoHub.use().get(m)?.getNicknameOrRealUsernameOrPlaceholder() ||
-      window.i18n('unknown')
+    m => ConvoHub.use().get(m)?.getNicknameOrRealUsernameOrPlaceholder() || window.i18n('unknown')
   );
 
   if (membersToResend.length < 1) {
@@ -222,7 +220,7 @@ function createInvitePromises(
   admins: Array<string>,
   encryptionKeyPair: ECKeyPair
 ) {
-  const createAtNetworkTimestamp = GetNetworkTime.now();
+  const createAtNetworkTimestamp = NetworkTime.now();
 
   return listOfMembers.map(async m => {
     const messageParams: ClosedGroupNewMessageParams = {
@@ -236,7 +234,7 @@ function createInvitePromises(
       expireTimer: 0,
     };
     const message = new ClosedGroupNewMessage(messageParams);
-    return getMessageQueue().sendTo1o1NonDurably({
+    return MessageQueue.use().sendTo1o1NonDurably({
       pubkey: PubKey.cast(m),
       message,
       namespace: SnodeNamespaces.Default,

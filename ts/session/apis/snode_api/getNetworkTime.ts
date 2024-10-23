@@ -9,7 +9,7 @@ import { isNumber } from 'lodash';
 import { BatchRequests } from './batchRequest';
 import { Snode } from '../../../data/types';
 import { NetworkTimeSubRequest } from './SnodeRequestTypes';
-
+import { NetworkTime } from '../../../util/NetworkTime';
 
 const getNetworkTime = async (snode: Snode): Promise<string | number> => {
   const subRequest = new NetworkTimeSubRequest();
@@ -41,48 +41,15 @@ const getNetworkTime = async (snode: Snode): Promise<string | number> => {
   return timestamp;
 };
 
-let latestTimestampOffset = Number.MAX_SAFE_INTEGER;
-
 function handleTimestampOffsetFromNetwork(_request: string, snodeTimestamp: number) {
   if (snodeTimestamp && isNumber(snodeTimestamp) && snodeTimestamp > 1609419600 * 1000) {
     // first january 2021. Arbitrary, just want to make sure the return timestamp is somehow valid and not some crazy low value
     const clockTime = Date.now();
-    if (latestTimestampOffset === Number.MAX_SAFE_INTEGER) {
-      window?.log?.info(`first timestamp offset received:  ${clockTime - snodeTimestamp}ms`);
-    }
-    latestTimestampOffset = clockTime - snodeTimestamp;
+    NetworkTime.setLatestTimestampOffset(clockTime - snodeTimestamp)
   }
-}
-
-/**
- * This function has no use to be called except during tests.
- * @returns the current offset we have with the rest of the network.
- */
-function getLatestTimestampOffset() {
-  if (latestTimestampOffset === Number.MAX_SAFE_INTEGER) {
-    window.log.debug('latestTimestampOffset is not set yet');
-    return 0;
-  }
-  // window.log.info('latestTimestampOffset is ', latestTimestampOffset);
-
-  return latestTimestampOffset;
-}
-
-function now() {
-  // make sure to call exports here, as we stub the exported one for testing.
-  return Date.now() - GetNetworkTime.getLatestTimestampOffset();
-}
-
-function getNowWithNetworkOffsetSeconds() {
-  // make sure to call exports here, as we stub the exported one for testing.
-
-  return Math.floor(GetNetworkTime.now() / 1000);
 }
 
 export const GetNetworkTime = {
   getNetworkTime,
   handleTimestampOffsetFromNetwork,
-  getNowWithNetworkOffsetSeconds,
-  getLatestTimestampOffset,
-  now,
 };

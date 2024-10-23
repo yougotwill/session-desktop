@@ -7,7 +7,6 @@ import useTimeoutFn from 'react-use/lib/useTimeoutFn';
 
 import { Data } from '../../data/data';
 import { ConvoHub } from '../../session/conversations';
-import { getMessageQueue } from '../../session/sending';
 
 import { clearSearch } from '../../state/ducks/search';
 import { resetLeftOverlayMode, SectionType, showLeftPaneSection } from '../../state/ducks/section';
@@ -47,6 +46,7 @@ import { useHotkey } from '../../hooks/useHotkey';
 import { getIsModalVisible } from '../../state/selectors/modal';
 
 import { ReleasedFeatures } from '../../util/releaseFeature';
+import { MessageQueue } from '../../session/sending';
 
 const Section = (props: { type: SectionType }) => {
   const ourNumber = useSelector(getOurNumber);
@@ -207,7 +207,7 @@ const doAppStartUp = async () => {
   global.setTimeout(() => {
     // init the messageQueue. In the constructor, we add all not send messages
     // this call does nothing except calling the constructor, which will continue sending message in the pipeline
-    void getMessageQueue().processAllPending();
+    void MessageQueue.use().processAllPending();
   }, 3000);
 
   global.setTimeout(() => {

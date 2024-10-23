@@ -5,7 +5,6 @@ import { describe } from 'mocha';
 import Sinon from 'sinon';
 import { ConversationModel } from '../../../../models/conversation';
 import { ConversationAttributes } from '../../../../models/conversationAttributes';
-import { GetNetworkTime } from '../../../../session/apis/snode_api/getNetworkTime';
 import { ConvoHub } from '../../../../session/conversations';
 import { UserUtils } from '../../../../session/utils';
 import { toHex } from '../../../../session/utils/String';
@@ -13,6 +12,7 @@ import { SessionUtilUserGroups } from '../../../../session/utils/libsession/libs
 import { TestUtils } from '../../../test-utils';
 import { generateFakeECKeyPair, stubWindowLog } from '../../../test-utils/utils';
 import { CONVERSATION_PRIORITIES, ConversationTypeEnum } from '../../../../models/types';
+import { NetworkTime } from '../../../../util/NetworkTime';
 
 describe('libsession_user_groups', () => {
   stubWindowLog();
@@ -27,7 +27,7 @@ describe('libsession_user_groups', () => {
   } as ConversationAttributes;
 
   beforeEach(() => {
-    Sinon.stub(GetNetworkTime, 'getLatestTimestampOffset').returns(getLatestTimestampOffset);
+    Sinon.stub(NetworkTime, 'getLatestTimestampOffset').returns(getLatestTimestampOffset);
     Sinon.stub(UserUtils, 'getOurPubKeyStrFromCache').returns(ourNumber);
     TestUtils.stubLibSessionWorker(undefined);
   });

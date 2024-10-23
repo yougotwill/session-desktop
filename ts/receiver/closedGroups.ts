@@ -2,7 +2,6 @@ import _, { isEmpty, isNumber, toNumber } from 'lodash';
 
 import { Data } from '../data/data';
 import { SignalService } from '../protobuf';
-import { getMessageQueue } from '../session';
 import { ConvoHub } from '../session/conversations';
 import { PubKey } from '../session/types';
 import { toHex } from '../session/utils/String';
@@ -13,7 +12,6 @@ import { EnvelopePlus } from './types';
 import { ConversationModel } from '../models/conversation';
 
 import { getSwarmPollingInstance } from '../session/apis/snode_api';
-import { GetNetworkTime } from '../session/apis/snode_api/getNetworkTime';
 import { SnodeNamespaces } from '../session/apis/snode_api/namespaces';
 import { DisappearingMessageUpdate } from '../session/disappearing_messages/types';
 import { ClosedGroupEncryptionPairReplyMessage } from '../session/messages/outgoing/controlMessage/group/ClosedGroupEncryptionPairReplyMessage';
@@ -30,6 +28,8 @@ import { getSettingsKeyFromLibsessionWrapper } from './configMessage';
 import { ECKeyPair, HexKeyPair } from './keypairs';
 import { queueAllCachedFromSource } from './receiver';
 import { ConversationTypeEnum } from '../models/types';
+import { NetworkTime } from '../util/NetworkTime';
+import { MessageQueue } from '../session/sending';
 
 export const distributingClosedGroupEncryptionKeyPairs = new Map<string, ECKeyPair>();
 
@@ -323,7 +323,7 @@ export async function handleNewClosedGroup(
               : 'legacy',
         providedExpireTimer: expireTimer,
         providedSource: sender,
-        sentAt: GetNetworkTime.now(),
+        sentAt: NetworkTime.now(),
         fromSync: false,
         fromCurrentDevice: false,
         fromConfigMessage: false,
@@ -973,14 +973,14 @@ async function sendLatestKeyPairToUsers(
 
       const keypairsMessage = new ClosedGroupEncryptionPairReplyMessage({
         groupId: groupPubKey,
-        createAtNetworkTimestamp: GetNetworkTime.now(),
+        createAtNetworkTimestamp: NetworkTime.now(),
         encryptedKeyPairs: wrappers,
         expirationType: null, // we keep that one **not** expiring (not rendered in the clients, and we need it to be as available as possible on the swarm)
         expireTimer: null,
       });
 
       // the encryption keypair is sent using established channels
-      await getMessageQueue().sendToPubKey(
+      await MessageQueue.use().sendToPubKey(
         PubKey.cast(member),
         keypairsMessage,
         SnodeNamespaces.Default

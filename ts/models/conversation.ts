@@ -66,7 +66,6 @@ import {
 } from '../session/apis/open_group_api/sogsv3/knownBlindedkeys';
 import { SogsBlinding } from '../session/apis/open_group_api/sogsv3/sogsBlinding';
 import { sogsV3FetchPreviewAndSaveIt } from '../session/apis/open_group_api/sogsv3/sogsV3FetchFile';
-import { GetNetworkTime } from '../session/apis/snode_api/getNetworkTime';
 import { SnodeNamespaces } from '../session/apis/snode_api/namespaces';
 import { getSodiumRenderer } from '../session/crypto';
 import { addMessagePadding } from '../session/crypto/BufferPadding';
@@ -138,7 +137,8 @@ import { markAttributesAsReadIfNeeded } from './messageFactory';
 import { StoreGroupRequestFactory } from '../session/apis/snode_api/factories/StoreGroupRequestFactory';
 import { OpenGroupRequestCommonType } from '../data/types';
 import { ConversationTypeEnum, CONVERSATION_PRIORITIES } from './types';
-import { getMessageQueue } from '../session/sending';
+import { NetworkTime } from '../util/NetworkTime';
+import { MessageQueue } from '../session/sending';
 
 type InMemoryConvoInfos = {
   mentionedUs: boolean;
@@ -606,7 +606,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       const chatMessageParams: VisibleMessageParams = {
         body: '',
         // we need to use a new timestamp here, otherwise android&iOS will consider this message as a duplicate and drop the synced reaction
-        createAtNetworkTimestamp: GetNetworkTime.now(),
+        createAtNetworkTimestamp: NetworkTime.now(),
         reaction,
         lokiProfile: UserUtils.getOurProfile(),
         expirationType,
@@ -638,7 +638,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
         const blinded = Boolean(roomHasBlindEnabled(openGroup));
 
         // send with blinding if we need to
-        await getMessageQueue().sendToOpenGroupV2({
+        await MessageQueue.use().sendToOpenGroupV2({
           message: chatMessageOpenGroupV2,
           roomInfos,
           blinded,
@@ -654,14 +654,14 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
           ...chatMessageParams,
           syncTarget: this.id,
         });
-        await getMessageQueue().sendSyncMessage({
+        await MessageQueue.use().sendSyncMessage({
           namespace: SnodeNamespaces.Default,
           message: chatMessageMe,
         });
 
         const chatMessagePrivate = new VisibleMessage(chatMessageParams);
 
-        await getMessageQueue().sendToPubKey(
+        await MessageQueue.use().sendToPubKey(
           destinationPubkey,
           chatMessagePrivate,
           SnodeNamespaces.Default
@@ -680,7 +680,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
           groupId: destinationPubkey.key,
         });
         // we need the return await so that errors are caught in the catch {}
-        await getMessageQueue().sendToGroup({
+        await MessageQueue.use().sendToGroup({
           message: closedGroupVisibleMessage,
           namespace: SnodeNamespaces.LegacyClosedGroup,
         });
@@ -778,13 +778,13 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     }
 
     const messageRequestResponseParams: MessageRequestResponseParams = {
-      createAtNetworkTimestamp: GetNetworkTime.now(),
+      createAtNetworkTimestamp: NetworkTime.now(),
       lokiProfile: UserUtils.getOurProfile(),
     };
 
     const messageRequestResponse = new MessageRequestResponse(messageRequestResponseParams);
     const pubkeyForSending = new PubKey(this.id);
-    await getMessageQueue()
+    await MessageQueue.use()
       .sendToPubKey(pubkeyForSending, messageRequestResponse, SnodeNamespaces.Default)
       .catch(window?.log?.error);
   }
@@ -792,7 +792,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
   public async sendMessage(msg: SendMessageType) {
     const { attachments, body, groupInvitation, preview, quote } = msg;
     this.clearTypingTimers();
-    const networkTimestamp = GetNetworkTime.now();
+    const networkTimestamp = NetworkTime.now();
 
     window?.log?.info(
       'Sending message to conversation',
@@ -937,7 +937,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
 
     // When we add a disappearing messages notification to the conversation, we want it
     // to be above the message that initiated that change, hence the subtraction.
-    const createAtNetworkTimestamp = (sentAt || GetNetworkTime.now()) - 1;
+    const createAtNetworkTimestamp = (sentAt || NetworkTime.now()) - 1;
 
     // NOTE when we turn the disappearing setting to off, we don't want it to expire with the previous expiration anymore
     const isV2DisappearReleased = ReleasedFeatures.isDisappearMessageV2FeatureReleasedCached();
@@ -1095,7 +1095,11 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       const expirationTimerMessage = new ExpirationTimerUpdateMessage(expireUpdate);
 
       const pubkey = new PubKey(this.get('id'));
-      await getMessageQueue().sendToPubKey(pubkey, expirationTimerMessage, SnodeNamespaces.Default);
+      await MessageQueue.use().sendToPubKey(
+        pubkey,
+        expirationTimerMessage,
+        SnodeNamespaces.Default
+      );
       return true;
     }
 
@@ -1148,7 +1152,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
 
         const expirationTimerMessage = new ExpirationTimerUpdateMessage(expireUpdateForGroup);
 
-        await getMessageQueue().sendToGroup({
+        await MessageQueue.use().sendToGroup({
           message: expirationTimerMessage,
           namespace: SnodeNamespaces.LegacyClosedGroup,
         });
@@ -1298,12 +1302,12 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     window?.log?.info(`Sending ${timestamps.length} read receipts.`);
 
     const receiptMessage = new ReadReceiptMessage({
-      createAtNetworkTimestamp: GetNetworkTime.now(),
+      createAtNetworkTimestamp: NetworkTime.now(),
       timestamps,
     });
 
     const device = new PubKey(this.id);
-    await getMessageQueue().sendToPubKey(device, receiptMessage, SnodeNamespaces.Default);
+    await MessageQueue.use().sendToPubKey(device, receiptMessage, SnodeNamespaces.Default);
   }
 
   public async setNickname(nickname: string | null, shouldCommit = false) {
@@ -2065,7 +2069,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       if (!sentAt) {
         throw new Error('sendMessageJob() sent_at is not set.');
       }
-      const networkTimestamp = GetNetworkTime.now();
+      const networkTimestamp = NetworkTime.now();
 
       // we are trying to send a message to someone. Make sure this convo is not hidden
       await this.unhideIfNeeded(true);
@@ -2103,7 +2107,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
         }
         const openGroup = OpenGroupData.getV2OpenGroupRoom(this.id);
         // send with blinding if we need to
-        await getMessageQueue().sendToOpenGroupV2({
+        await MessageQueue.use().sendToOpenGroupV2({
           message: chatMessageOpenGroupV2,
           roomInfos,
           blinded: Boolean(roomHasBlindEnabled(openGroup)),
@@ -2122,7 +2126,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
           chatMessageParams.syncTarget = this.id;
           const chatMessageMe = new VisibleMessage(chatMessageParams);
 
-          await getMessageQueue().sendSyncMessage({
+          await MessageQueue.use().sendSyncMessage({
             namespace: SnodeNamespaces.Default,
             message: chatMessageMe,
           });
@@ -2141,7 +2145,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
             expireTimer: chatMessageParams.expireTimer,
           });
           // we need the return await so that errors are caught in the catch {}
-          await getMessageQueue().sendToPubKey(
+          await MessageQueue.use().sendToPubKey(
             destinationPubkey,
             groupInviteMessage,
             SnodeNamespaces.Default
@@ -2149,7 +2153,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
           return;
         }
         const chatMessagePrivate = new VisibleMessage(chatMessageParams);
-        await getMessageQueue().sendToPubKey(
+        await MessageQueue.use().sendToPubKey(
           destinationPubkey,
           chatMessagePrivate,
           SnodeNamespaces.Default
@@ -2175,7 +2179,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
         });
 
         // we need the return await so that errors are caught in the catch {}
-        await getMessageQueue().sendToGroup({
+        await MessageQueue.use().sendToGroup({
           message: closedGroupVisibleMessage,
           namespace: SnodeNamespaces.LegacyClosedGroup,
         });
@@ -2199,7 +2203,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     });
 
     // we need the return await so that errors are caught in the catch {}
-    await getMessageQueue().sendToGroupV2({
+    await MessageQueue.use().sendToGroupV2({
       message: groupVisibleMessage,
     });
   }
@@ -2258,7 +2262,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
 
     this.set({ active_at: Date.now(), isApproved: true });
     // TODO we need to add support for sending blinded25 message request in addition to the legacy blinded15
-    await getMessageQueue().sendToOpenGroupV2BlindedRequest({
+    await MessageQueue.use().sendToOpenGroupV2BlindedRequest({
       encryptedContent: encryptedMsg,
       roomInfos: roomInfo,
       message: sogsVisibleMessage,
@@ -2544,14 +2548,14 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     }
 
     const typingParams = {
-      createAtNetworkTimestamp: GetNetworkTime.now(),
+      createAtNetworkTimestamp: NetworkTime.now(),
       isTyping,
-      typingTimestamp: GetNetworkTime.now(),
+      typingTimestamp: NetworkTime.now(),
     };
     const typingMessage = new TypingMessage(typingParams);
 
     const pubkey = new PubKey(recipientId);
-    void getMessageQueue()
+    void MessageQueue.use()
       .sendTo1o1NonDurably({
         pubkey,
         message: typingMessage,

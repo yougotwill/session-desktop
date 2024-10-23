@@ -9,7 +9,6 @@ import {
 } from '../../../../webworker/workers/browser/libsession_worker_interface';
 import { SnodeNamespaces } from '../../../apis/snode_api/namespaces';
 import { SnodeGroupSignature } from '../../../apis/snode_api/signature/groupSignature';
-import { getMessageQueue } from '../../../sending';
 import { PubKey } from '../../../types';
 import { runners } from '../JobRunner';
 import {
@@ -21,6 +20,7 @@ import {
 import { LibSessionUtil } from '../../libsession/libsession_utils';
 import { showUpdateGroupMembersByConvoId } from '../../../../interactions/conversationInteractions';
 import { ConvoHub } from '../../../conversations';
+import { MessageQueue } from '../../../sending';
 
 const defaultMsBetweenRetries = 10000;
 const defaultMaxAttempts = 1;
@@ -181,7 +181,7 @@ class GroupInviteJob extends PersistedJob<GroupInvitePersistedData> {
             groupPk,
           });
 
-      const storedAt = await getMessageQueue().sendTo1o1NonDurably({
+      const storedAt = await MessageQueue.use().sendTo1o1NonDurably({
         message: inviteDetails,
         namespace: SnodeNamespaces.Default,
         pubkey: PubKey.cast(member),

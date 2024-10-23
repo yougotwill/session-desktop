@@ -16,7 +16,6 @@ import {
   StoreGroupRevokedRetrievableSubRequest,
 } from '../../../apis/snode_api/SnodeRequestTypes';
 import { StoreGroupRequestFactory } from '../../../apis/snode_api/factories/StoreGroupRequestFactory';
-import { GetNetworkTime } from '../../../apis/snode_api/getNetworkTime';
 import { RevokeChanges, SnodeAPIRevoke } from '../../../apis/snode_api/revokeSubaccount';
 import { WithSecretKey } from '../../../apis/snode_api/types';
 import { concatUInt8Array, getSodiumRenderer } from '../../../crypto';
@@ -31,6 +30,7 @@ import {
   RunJobResult,
 } from '../PersistedJob';
 import { GroupSync } from './GroupSyncJob';
+import { NetworkTime } from '../../../../util/NetworkTime';
 
 export type WithAddWithoutHistoryMembers = { withoutHistory: Array<PubkeyType> };
 export type WithAddWithHistoryMembers = { withHistory: Array<PubkeyType> };
@@ -172,7 +172,7 @@ class GroupPendingRemovalsJob extends PersistedJob<GroupPendingRemovalsPersisted
       let storeRequests: Array<StoreGroupMessageSubRequest> = [];
       if (deleteMessagesOfMembers.length) {
         const deleteContentMsg = new GroupUpdateDeleteMemberContentMessage({
-          createAtNetworkTimestamp: GetNetworkTime.now(),
+          createAtNetworkTimestamp: NetworkTime.now(),
           expirationType: 'unknown', // GroupUpdateDeleteMemberContentMessage this is not displayed so not expiring.
           expireTimer: 0,
           groupPk,
@@ -215,7 +215,7 @@ class GroupPendingRemovalsJob extends PersistedJob<GroupPendingRemovalsPersisted
             await Data.deleteAllMessageFromSendersInConversation({
               groupPk,
               toRemove: deleteMessagesOfMembers,
-              signatureTimestamp: GetNetworkTime.now(),
+              signatureTimestamp: NetworkTime.now(),
             });
 
           if (msgHashesToDeleteOnGroupSwarm.messageHashes.length) {

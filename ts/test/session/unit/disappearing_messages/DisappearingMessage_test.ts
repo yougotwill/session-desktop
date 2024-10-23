@@ -3,7 +3,6 @@ import chaiAsPromised from 'chai-as-promised';
 import Sinon from 'sinon';
 import { Conversation, ConversationModel } from '../../../../models/conversation';
 import { ConversationAttributes } from '../../../../models/conversationAttributes';
-import { GetNetworkTime } from '../../../../session/apis/snode_api/getNetworkTime';
 import { DisappearingMessages } from '../../../../session/disappearing_messages';
 import {
   DisappearingMessageConversationModeType,
@@ -21,6 +20,7 @@ import {
   generateVisibleMessage,
 } from '../../../test-utils/utils';
 import { ConversationTypeEnum } from '../../../../models/types';
+import { NetworkTime } from '../../../../util/NetworkTime';
 
 chai.use(chaiAsPromised as any);
 
@@ -38,7 +38,7 @@ describe('DisappearingMessage', () => {
   } as ConversationAttributes;
 
   beforeEach(() => {
-    Sinon.stub(GetNetworkTime, 'getLatestTimestampOffset').returns(getLatestTimestampOffset);
+    Sinon.stub(NetworkTime, 'getLatestTimestampOffset').returns(getLatestTimestampOffset);
     Sinon.stub(UserUtils, 'getOurPubKeyStrFromCache').returns(ourNumber);
   });
 
@@ -465,7 +465,7 @@ describe('DisappearingMessage', () => {
       message.set({
         expirationType: 'deleteAfterRead',
         expireTimer: 300,
-        sent_at: GetNetworkTime.now(),
+        sent_at: NetworkTime.now(),
       });
       Sinon.stub(message, 'getConversation').returns(conversation);
 
@@ -488,7 +488,7 @@ describe('DisappearingMessage', () => {
       const message = generateFakeOutgoingPrivateMessage(conversation.get('id'));
       message.set({
         expirationType: 'deleteAfterRead',
-        sent_at: GetNetworkTime.now(),
+        sent_at: NetworkTime.now(),
       });
       Sinon.stub(message, 'getConversation').returns(conversation);
 
@@ -504,7 +504,7 @@ describe('DisappearingMessage', () => {
       const message = generateFakeOutgoingPrivateMessage(conversation.get('id'));
       message.set({
         expireTimer: 300,
-        sent_at: GetNetworkTime.now(),
+        sent_at: NetworkTime.now(),
       });
       Sinon.stub(message, 'getConversation').returns(conversation);
 
@@ -513,7 +513,7 @@ describe('DisappearingMessage', () => {
       expect(message.getExpirationStartTimestamp(), 'it should be undefined').to.be.undefined;
     });
     it('if expirationStartTimestamp is already defined then it should not have changed', async () => {
-      const now = GetNetworkTime.now();
+      const now = NetworkTime.now();
       const conversation = new ConversationModel({
         ...conversationArgs,
         id: ourNumber,
@@ -605,7 +605,7 @@ describe('DisappearingMessage', () => {
           providedDisappearingMode: 'deleteAfterSend',
           providedExpireTimer: 600,
           providedSource: testPubkey,
-          sentAt: GetNetworkTime.now(),
+          sentAt: NetworkTime.now(),
           fromSync: true,
           shouldCommitConvo: false,
           existingMessage: undefined,

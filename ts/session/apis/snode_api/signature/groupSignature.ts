@@ -13,12 +13,12 @@ import { GroupUpdatePromoteMessage } from '../../../messages/outgoing/controlMes
 import { StringUtils, UserUtils } from '../../../utils';
 import { fromUInt8ArrayToBase64, stringToUint8Array } from '../../../utils/String';
 import { PreConditionFailed } from '../../../utils/errors';
-import { GetNetworkTime } from '../getNetworkTime';
 import { SnodeNamespacesGroup } from '../namespaces';
 import { SignedGroupHashesParams, WithMessagesHashes, WithShortenOrExtend } from '../types';
 import { SignatureShared } from './signatureShared';
 import { SnodeSignatureResult } from './snodeSignatures';
 import { getSodiumRenderer } from '../../../crypto';
+import { NetworkTime } from '../../../../util/NetworkTime';
 
 async function getGroupInviteMessage({
   groupName,
@@ -32,7 +32,7 @@ async function getGroupInviteMessage({
   groupPk: GroupPubkeyType;
 }) {
   const sodium = await getSodiumRenderer();
-  const createAtNetworkTimestamp = GetNetworkTime.now();
+  const createAtNetworkTimestamp = NetworkTime.now();
 
   if (UserUtils.isUsFromCache(member)) {
     throw new Error('getGroupInviteMessage: we cannot invite ourselves');
@@ -68,7 +68,7 @@ async function getGroupPromoteMessage({
   groupPk: GroupPubkeyType;
   groupName: string;
 }) {
-  const createAtNetworkTimestamp = GetNetworkTime.now();
+  const createAtNetworkTimestamp = NetworkTime.now();
 
   if (UserUtils.isUsFromCache(member)) {
     throw new Error('getGroupPromoteMessage: we cannot promote ourselves');
@@ -293,7 +293,7 @@ async function getGroupSignatureByHashesParams({
   }): Promise<SignedGroupHashesParams> {
   const verificationString = `${method}${messagesHashes.join('')}`;
   const message = new Uint8Array(StringUtils.encode(verificationString, 'utf8'));
-  const signatureTimestamp = GetNetworkTime.now();
+  const signatureTimestamp = NetworkTime.now();
 
   const sodium = await getSodiumRenderer();
   try {
