@@ -49,7 +49,6 @@ async function dropSnodeFromSnodePool(snodeEd25519: string) {
 async function getRandomSnode(excludingEd25519Snode?: Array<string>): Promise<Snode> {
   // make sure we have a few snodes in the pool excluding the one passed as args
   const requiredCount = SnodePoolConstants.minSnodePoolCount + (excludingEd25519Snode?.length || 0);
-  debugger;
   if (randomSnodePool.length < requiredCount) {
     await SnodePool.getSnodePoolFromDBOrFetchFromSeed(excludingEd25519Snode?.length);
 
@@ -67,7 +66,6 @@ async function getRandomSnode(excludingEd25519Snode?: Array<string>): Promise<Sn
   if (!excludingEd25519Snode) {
     const snodePicked = sample(randomSnodePool);
     if (!snodePicked) {
-      console.warn('randomSnodePool', randomSnodePool);
       throw new Error('getRandomSnode failed as sample returned none ');
     }
     return snodePicked;

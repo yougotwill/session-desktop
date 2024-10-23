@@ -64,16 +64,11 @@ describe('DecryptedAttachmentsManager', () => {
         TestUtils.stubCreateObjectUrl();
       });
 
-      it('url starts with attachment path but is not already decrypted', () => {
-        expect(
-          DecryptedAttachmentsManager.getAlreadyDecryptedMediaUrl('/local/attachment/attachment1')
-        ).to.be.eq(null);
-      });
-
       it('url starts with attachment path but is not already decrypted', async () => {
         expect(
           DecryptedAttachmentsManager.getAlreadyDecryptedMediaUrl('/local/attachment/attachment1')
         ).to.be.eq(null);
+
 
         expect(readFileContent.callCount).to.be.eq(0);
         expect(decryptAttachmentBufferNode.callCount).to.be.eq(0);

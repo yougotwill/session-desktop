@@ -169,6 +169,7 @@ describe('libsession_metagroup', () => {
     });
 
     it('can add member by setting its promoted state, both ok and nok', () => {
+      metaGroupWrapper.memberConstructAndSet(member);
       metaGroupWrapper.memberSetPromotionSent(member);
       expect(metaGroupWrapper.memberGetAll().length).to.be.deep.eq(1);
       expect(metaGroupWrapper.memberGetAll()[0]).to.be.deep.eq({

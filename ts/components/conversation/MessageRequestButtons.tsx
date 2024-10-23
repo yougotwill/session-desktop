@@ -98,6 +98,25 @@ export const ConversationMessageRequestButtons = () => {
   return (
     <MessageRequestContainer>
       <InvitedToGroupControlMessage />
+      <ConversationBannerRow>
+        <SessionButton
+          onClick={() => {
+            void handleAcceptConversationRequest({ convoId: selectedConvoId });
+          }}
+          text={window.i18n('accept')}
+          dataTestId="accept-message-request"
+        />
+        <SessionButton
+          buttonColor={SessionButtonColor.Danger}
+          text={window.i18n('delete')}
+          onClick={() => {
+            handleDeclineConversationRequest(selectedConvoId, selectedConvoId, convoOrigin);
+          }}
+          dataTestId="decline-message-request"
+        />
+      </ConversationBannerRow>
+      <ConversationIncomingRequestExplanation />
+
       {isOutgoingRequest ? (
         <ConversationOutgoingRequestExplanation />
       ) : (
@@ -116,24 +135,6 @@ export const ConversationMessageRequestButtons = () => {
               {window.i18n('block')}
             </StyledBlockUserText>
           ) : null}
-          <ConversationIncomingRequestExplanation />
-          <ConversationBannerRow>
-            <SessionButton
-              onClick={() => {
-                void handleAcceptConversationRequest({ convoId: selectedConvoId });
-              }}
-              text={window.i18n('accept')}
-              dataTestId="accept-message-request"
-            />
-            <SessionButton
-              buttonColor={SessionButtonColor.Danger}
-              text={window.i18n('delete')}
-              onClick={() => {
-                handleDeclineConversationRequest(selectedConvoId, selectedConvoId, convoOrigin);
-              }}
-              dataTestId="decline-message-request"
-            />
-          </ConversationBannerRow>
         </>
       )}
     </MessageRequestContainer>

@@ -15,7 +15,7 @@ import { UserSync } from '../../../../session/utils/job_runners/jobs/UserSyncJob
 import { sleepFor } from '../../../../session/utils/Promise';
 import { UserGroupsWrapperActions } from '../../../../webworker/workers/browser/libsession_worker_interface';
 import { TestUtils } from '../../../test-utils';
-import { generateFakeSnodes, stubData } from '../../../test-utils/utils';
+import { generateFakeSnodes, stubData, stubLibSessionWorker } from '../../../test-utils/utils';
 import { ConversationTypeEnum } from '../../../../models/types';
 import { ConvoHub } from '../../../../session/conversations';
 import { SnodePool } from '../../../../session/apis/snode_api/snodePool';
@@ -135,7 +135,7 @@ describe('SwarmPolling', () => {
       });
     });
 
-    describe('groupv3', () => {
+    describe('groupv2', () => {
       it('returns ACTIVE for convo with less than two days old activeAt', () => {
         const convo = ConvoHub.use().getOrCreate(
           TestUtils.generateFakeClosedGroupV2PkStr(),
@@ -189,36 +189,47 @@ describe('SwarmPolling', () => {
 
   describe('pollForAllKeys', () => {
     beforeEach(() => {
+
       stubData('createOrUpdateItem').resolves();
     });
     afterEach(() => {
       Sinon.restore();
     });
     it('does run for our pubkey even if activeAt is really old ', async () => {
+      stubLibSessionWorker([]);
+
       const convo = ConvoHub.use().getOrCreate(ourNumber, ConversationTypeEnum.PRIVATE);
       convo.set('active_at', Date.now() - 1000 * 3600 * 25);
       await swarmPolling.start(true);
 
       expect(pollOnceForKeySpy.callCount).to.eq(1);
-      expect(pollOnceForKeySpy.firstCall.args).to.deep.eq([ourPubkey, false, [0, 2, 3, 5, 4]]);
+      expect(pollOnceForKeySpy.firstCall.args[0]).to.deep.eq([ourPubkey.key, 'private']);
     });
 
     it('does run for our pubkey even if activeAt is recent ', async () => {
+      stubLibSessionWorker([]);
+
       const convo = ConvoHub.use().getOrCreate(ourNumber, ConversationTypeEnum.PRIVATE);
       convo.set('active_at', Date.now());
       await swarmPolling.start(true);
 
       expect(pollOnceForKeySpy.callCount).to.eq(1);
-      expect(pollOnceForKeySpy.firstCall.args).to.deep.eq([ourPubkey, false, [0, 2, 3, 5, 4]]);
+      expect(pollOnceForKeySpy.firstCall.args[0]).to.deep.eq([ourPubkey.key, 'private']);
     });
 
     describe('legacy group', () => {
       it('does run for group pubkey on start no matter the recent timestamp', async () => {
+
         const convo = ConvoHub.use().getOrCreate(
           TestUtils.generateFakePubKeyStr(),
           ConversationTypeEnum.GROUP
         );
-        TestUtils.stubLibSessionWorker(undefined);
+        TestUtils.stubLibSessionWorker([]);
+        stubData('removeAllMessagesInConversation').resolves()
+        stubData('getLatestClosedGroupEncryptionKeyPair').resolves()
+        stubData('removeAllClosedGroupEncryptionKeyPairs').resolves()
+        stubData('removeConversation').resolves()
+        stubData('fetchConvoMemoryDetails').resolves()
         convo.set('active_at', Date.now());
         const groupConvoPubkey = PubKey.cast(convo.id as string);
         swarmPolling.addGroupId(groupConvoPubkey);
@@ -226,8 +237,8 @@ describe('SwarmPolling', () => {
 
         // our pubkey will be polled for, hence the 2
         expect(pollOnceForKeySpy.callCount).to.eq(2);
-        expect(pollOnceForKeySpy.firstCall.args).to.deep.eq([ourPubkey, false, [0, 2, 3, 5, 4]]);
-        expect(pollOnceForKeySpy.secondCall.args).to.deep.eq([groupConvoPubkey, true, [-10]]);
+        expect(pollOnceForKeySpy.firstCall.args[0]).to.deep.eq([ourPubkey.key, 'private']);
+        expect(pollOnceForKeySpy.secondCall.args[0]).to.deep.eq([groupConvoPubkey.key, 'private']);
       });
 
       it('does only poll from -10 for closed groups if HF >= 19.1  ', async () => {

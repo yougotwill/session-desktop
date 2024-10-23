@@ -647,6 +647,10 @@ export class SwarmPolling {
         })
       );
 
+      if (!window.inboxStore?.getState().onionPaths.isOnline) {
+        window.inboxStore?.dispatch(updateIsOnline(true));
+      }
+
       return results;
     } catch (e) {
       if (e.message === ERROR_CODE_NO_CONNECT) {

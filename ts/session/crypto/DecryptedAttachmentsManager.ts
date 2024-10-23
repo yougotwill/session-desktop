@@ -117,10 +117,11 @@ const getDecryptedMediaUrl = async (
         // window.log.debug('about to read and decrypt file :', url, path.isAbsolute(url));
         try {
           const absUrl = path.isAbsolute(url) ? url : getAbsoluteAttachmentPath(url);
-          const encryptedFileContent = await readFileContent(absUrl);
+          const encryptedFileContent = await DecryptedAttachmentsManager.readFileContent(absUrl);
           const decryptedContent = await decryptAttachmentBufferRenderer(
             encryptedFileContent.buffer
           );
+
           if (decryptedContent?.length) {
             const arrayBuffer = decryptedContent.buffer;
             const obj = makeObjectUrl(arrayBuffer, contentType);

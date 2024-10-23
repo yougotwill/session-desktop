@@ -112,6 +112,12 @@ export const ConversationIncomingRequestExplanation = () => {
   const showMsgRequestUI = selectedConversation && isIncomingMessageRequest;
   const hasOutgoingMessages = useSelector(hasSelectedConversationOutgoingMessages);
 
+  const isGroupV2 = useSelectedIsGroupV2()
+
+  if (isGroupV2) {
+    return <GroupRequestExplanation />
+  }
+
   if (!showMsgRequestUI || hasOutgoingMessages) {
     return null;
   }

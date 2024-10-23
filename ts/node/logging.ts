@@ -197,6 +197,7 @@ async function fetchLogFile(logFile: string) {
 }
 
 function logAtLevel(level: string, ...args: any) {
+
   if (logger) {
     // To avoid [Object object] in our log since console.log handles non-strings smoothly
     const str = args.map((item: any) => {
