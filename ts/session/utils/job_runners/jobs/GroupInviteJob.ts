@@ -28,6 +28,7 @@ const defaultMaxAttempts = 1;
 type JobExtraArgs = {
   groupPk: GroupPubkeyType;
   member: PubkeyType;
+  inviteAsAdmin: boolean;
 };
 
 export function shouldAddJob(args: JobExtraArgs) {
@@ -46,11 +47,12 @@ const invitesFailed = new Map<
   }
 >();
 
-async function addJob({ groupPk, member }: JobExtraArgs) {
-  if (shouldAddJob({ groupPk, member })) {
+async function addJob({ groupPk, member, inviteAsAdmin }: JobExtraArgs) {
+  if (shouldAddJob({ groupPk, member, inviteAsAdmin })) {
     const groupInviteJob = new GroupInviteJob({
       groupPk,
       member,
+      inviteAsAdmin,
       nextAttemptTimestamp: Date.now(),
     });
     window.log.debug(`addGroupInviteJob: adding group invite for ${groupPk}:${member} `);
@@ -123,11 +125,12 @@ class GroupInviteJob extends PersistedJob<GroupInvitePersistedData> {
   constructor({
     groupPk,
     member,
+    inviteAsAdmin,
     nextAttemptTimestamp,
     maxAttempts,
     currentRetry,
     identifier,
-  }: Pick<GroupInvitePersistedData, 'groupPk' | 'member'> &
+  }: Pick<GroupInvitePersistedData, 'groupPk' | 'member' | 'inviteAsAdmin'> &
     Partial<
       Pick<
         GroupInvitePersistedData,
@@ -143,6 +146,7 @@ class GroupInviteJob extends PersistedJob<GroupInvitePersistedData> {
       identifier: identifier || v4(),
       member,
       groupPk,
+      inviteAsAdmin,
       delayBetweenRetries: defaultMsBetweenRetries,
       maxAttempts: isNumber(maxAttempts) ? maxAttempts : defaultMaxAttempts,
       nextAttemptTimestamp: nextAttemptTimestamp || Date.now() + defaultMsBetweenRetries,
@@ -151,10 +155,10 @@ class GroupInviteJob extends PersistedJob<GroupInvitePersistedData> {
   }
 
   public async run(): Promise<RunJobResult> {
-    const { groupPk, member, jobType, identifier } = this.persistedData;
+    const { groupPk, member, inviteAsAdmin, jobType, identifier } = this.persistedData;
 
     window.log.info(
-      `running job ${jobType} with groupPk:"${groupPk}" member: ${member} id:"${identifier}" `
+      `running job ${jobType} with groupPk:"${groupPk}" member:${member} inviteAsAdmin:${inviteAsAdmin} id:"${identifier}" `
     );
     const group = await UserGroupsWrapperActions.getGroup(groupPk);
     if (!group || !group.secretKey || !group.name) {
@@ -167,7 +171,7 @@ class GroupInviteJob extends PersistedJob<GroupInvitePersistedData> {
     }
     let failed = true;
     try {
-      const inviteDetails = window.sessionFeatureFlags.useGroupV2InviteAsAdmin
+      const inviteDetails = inviteAsAdmin
         ? await SnodeGroupSignature.getGroupPromoteMessage({
             groupName: group.name,
             member,
@@ -200,6 +204,16 @@ class GroupInviteJob extends PersistedJob<GroupInvitePersistedData> {
       );
       try {
         await MetaGroupWrapperActions.memberSetInvited(groupPk, member, failed);
+        // Depending on this field, we either send an invite or an invite-as-admin message.
+        // When we do send an invite-as-admin we also need to update the promoted state, so that the invited members
+        // knows he needs to accept the promotion when accepting the invite
+        if (inviteAsAdmin) {
+          if (failed) {
+            await MetaGroupWrapperActions.memberSetPromotionFailed(groupPk, member);
+          } else {
+            await MetaGroupWrapperActions.memberSetPromotionSent(groupPk, member);
+          }
+        }
       } catch (e) {
         window.log.warn('GroupInviteJob memberSetInvited failed with', e.message);
       }

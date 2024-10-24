@@ -206,7 +206,7 @@ export const UpdateGroupMembersDialog = (props: Props) => {
     }
     if (groupAdmins?.includes(member)) {
       if (PubKey.is03Pubkey(conversationId)) {
-        window?.log?.warn(`User ${member} cannot be removed as they are adn admin.`);
+        window?.log?.warn(`User ${member} cannot be removed as they are an admin.`);
         return;
       }
       ToastUtils.pushCannotRemoveCreatorFromGroup();

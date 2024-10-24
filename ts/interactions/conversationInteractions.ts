@@ -1,4 +1,4 @@
-import { isEmpty, isNil } from 'lodash';
+import { isNil } from 'lodash';
 import {
   ConversationNotificationSettingType,
   READ_MESSAGE_STATE,
@@ -47,16 +47,12 @@ import { urlToBlob } from '../types/attachments/VisualAttachment';
 import { encryptProfile } from '../util/crypto/profileEncrypter';
 import { ReleasedFeatures } from '../util/releaseFeature';
 import { Storage, setLastProfileUpdateTimestamp } from '../util/storage';
-import {
-  MetaGroupWrapperActions,
-  UserGroupsWrapperActions,
-} from '../webworker/workers/browser/libsession_worker_interface';
+import { UserGroupsWrapperActions } from '../webworker/workers/browser/libsession_worker_interface';
 import { ConversationInteractionStatus, ConversationInteractionType } from './types';
 import { BlockedNumberController } from '../util';
 import { LocalizerComponentProps, LocalizerToken } from '../types/localizer';
 import { sendInviteResponseToGroup } from '../session/sending/group/GroupInviteResponse';
 import { NetworkTime } from '../util/NetworkTime';
-import { GroupSync } from '../session/utils/job_runners/jobs/GroupSyncJob';
 
 export async function copyPublicKeyByConvoId(convoId: string) {
   if (OpenGroupUtils.isOpenGroupV2(convoId)) {
@@ -135,17 +131,6 @@ export const handleAcceptConversationRequest = async ({ convoId }: { convoId: st
         await sleepFor(2000);
         if (!previousIsApproved) {
           await sendInviteResponseToGroup({ groupPk: convoId });
-        }
-        const refreshed = await UserGroupsWrapperActions.getGroup(convoId);
-
-        // if we are admin, we also need to accept it and mark ourselves as such
-        const weAreAdmin = refreshed && !isEmpty(refreshed.secretKey);
-        if (weAreAdmin) {
-          await MetaGroupWrapperActions.memberSetPromotionAccepted(
-            convoId,
-            UserUtils.getOurPubKeyStrFromCache()
-          );
-          await GroupSync.queueNewJobIfNeeded(convoId);
         }
 
         window.log.info(

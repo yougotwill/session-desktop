@@ -42,6 +42,7 @@ export interface GroupInvitePersistedData extends PersistedJobData {
   jobType: 'GroupInviteJobType';
   groupPk: GroupPubkeyType;
   member: PubkeyType;
+  inviteAsAdmin: boolean;
 }
 
 export interface GroupPromotePersistedData extends PersistedJobData {

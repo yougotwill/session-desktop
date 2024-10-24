@@ -245,7 +245,11 @@ const initNewGroupInWrapper = createAsyncThunk(
       //  can update the group wrapper with a failed state if a message fails to be sent.
       for (let index = 0; index < membersFromWrapper.length; index++) {
         const member = membersFromWrapper[index];
-        await GroupInvite.addJob({ member: member.pubkeyHex, groupPk });
+        await GroupInvite.addJob({
+          member: member.pubkeyHex,
+          groupPk,
+          inviteAsAdmin: window.sessionFeatureFlags.useGroupV2InviteAsAdmin,
+        });
       }
 
       await openConversationWithMessages({ conversationKey: groupPk, messageId: null });
@@ -773,7 +777,12 @@ async function handleMemberAddedFromUI({
   }
 
   // schedule send invite details, auth signature, etc. to the new users
-  await scheduleGroupInviteJobs(groupPk, withHistory, withoutHistory);
+  await scheduleGroupInviteJobs(
+    groupPk,
+    withHistory,
+    withoutHistory,
+    window.sessionFeatureFlags.useGroupV2InviteAsAdmin
+  );
   await LibSessionUtil.saveDumpsToDb(groupPk);
 
   convo.set({
@@ -1444,14 +1453,15 @@ export const groupReducer = metaGroupSlice.reducer;
 async function scheduleGroupInviteJobs(
   groupPk: GroupPubkeyType,
   withHistory: Array<PubkeyType>,
-  withoutHistory: Array<PubkeyType>
+  withoutHistory: Array<PubkeyType>,
+  inviteAsAdmin: boolean
 ) {
   for (let index = 0; index < withoutHistory.length; index++) {
     const member = withoutHistory[index];
-    await GroupInvite.addJob({ groupPk, member });
+    await GroupInvite.addJob({ groupPk, member, inviteAsAdmin });
   }
   for (let index = 0; index < withHistory.length; index++) {
     const member = withHistory[index];
-    await GroupInvite.addJob({ groupPk, member });
+    await GroupInvite.addJob({ groupPk, member, inviteAsAdmin });
   }
 }

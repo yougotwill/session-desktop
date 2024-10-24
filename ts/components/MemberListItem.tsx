@@ -224,7 +224,11 @@ const ResendInviteButton = ({
       buttonType={SessionButtonType.Solid}
       text={window.i18n('resend')}
       onClick={() => {
-        void GroupInvite.addJob({ groupPk, member: pubkey });
+        void GroupInvite.addJob({
+          groupPk,
+          member: pubkey,
+          inviteAsAdmin: window.sessionFeatureFlags.useGroupV2InviteAsAdmin,
+        });
       }}
     />
   );
