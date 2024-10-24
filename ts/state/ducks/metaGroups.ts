@@ -53,6 +53,7 @@ import { openConversationWithMessages } from './conversations';
 import { resetLeftOverlayMode } from './section';
 import { ConversationTypeEnum } from '../../models/types';
 import { NetworkTime } from '../../util/NetworkTime';
+import { from_hex } from 'libsodium-wrappers-sumo';
 
 type WithFromMemberLeftMessage = { fromMemberLeftMessage: boolean }; // there are some changes we want to skip when doing changes triggered from a memberLeft message.
 export type GroupState = {
@@ -1152,6 +1153,27 @@ const inviteResponseReceived = createAsyncThunk(
       await checkWeAreAdminOrThrow(groupPk, 'inviteResponseReceived');
 
       await MetaGroupWrapperActions.memberSetAccepted(groupPk, member);
+      try {
+        const memberConvo = ConvoHub.use().get(member);
+        if (memberConvo) {
+          const memberName = memberConvo.getRealSessionUsername();
+          if (memberName) {
+            await MetaGroupWrapperActions.memberSetNameTruncated(groupPk, member, memberName);
+          }
+          const profilePicUrl = memberConvo.getAvatarPointer();
+          const profilePicKey = memberConvo.getProfileKey();
+          if (profilePicUrl && profilePicKey) {
+            await MetaGroupWrapperActions.memberSetProfilePicture(groupPk, member, {
+              key: from_hex(profilePicKey),
+              url: profilePicUrl,
+            });
+          }
+        }
+      } catch (eMemberUpdate) {
+        window.log.warn(
+          `failed to update member details on inviteResponse received in group:${ed25519Str(groupPk)}, member:${ed25519Str(member)}, error:${eMemberUpdate.message}`
+        );
+      }
       await GroupSync.queueNewJobIfNeeded(groupPk);
     } catch (e) {
       window.log.info('inviteResponseReceived failed with', e.message);

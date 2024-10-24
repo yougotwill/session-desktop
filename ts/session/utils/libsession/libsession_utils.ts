@@ -33,8 +33,6 @@ const requiredUserVariants: Array<ConfigWrapperUser> = [
   'ConvoInfoVolatileConfig',
 ];
 
-
-
 /**
  * Initializes the libsession wrappers for the required user variants if the dumps are not already in the database. It will use an empty dump if the dump is not found.
  */
