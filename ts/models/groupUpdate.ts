@@ -32,7 +32,7 @@ export function getKickedGroupUpdateStr(
 
   switch (othersNames.length) {
     case 0:
-      return { token: 'groupUpdated' }
+      return { token: 'groupUpdated' };
     case 1:
       return { token: 'groupRemoved', args: { name: othersNames[0] } };
     case 2:
@@ -88,7 +88,7 @@ export function getJoinedGroupUpdateChangeStr(
         case 1:
           return addedWithHistory
             ? { token: 'groupMemberNewYouHistoryTwo', args: { name: othersNames[0] } }
-            : { token: 'legacyGroupMemberNewYouOther', args: { other_name: othersNames[0] } };
+            : { token: 'groupInviteYouAndOtherNew', args: { other_name: othersNames[0] } };
         default:
           return addedWithHistory
             ? { token: 'groupMemberNewYouHistoryMultiple', args: { count: othersNames.length } }
@@ -97,11 +97,15 @@ export function getJoinedGroupUpdateChangeStr(
     }
     switch (othersNames.length) {
       case 0:
-        return { token: addedWithHistory ? 'groupInviteYouHistory' : 'groupInviteYou' };
+        return { token: 'groupUpdated' }; // this is an invalid case, but well.
       case 1:
         return addedWithHistory
-          ? { token: 'groupMemberNewYouHistoryTwo', args: { name: othersNames[0] } }
-          : { token: 'legacyGroupMemberNewYouOther', args: { other_name: othersNames[0] } };
+          ? { token: 'groupMemberNewHistory', args: { name: othersNames[0] } }
+          : { token: 'groupMemberNew', args: { name: othersNames[0] } };
+      case 2:
+        return addedWithHistory
+          ? { token: 'groupMemberNewHistoryTwo', args: { name: othersNames[0], other_name: othersNames[1]  } }
+          : { token: 'groupMemberNewTwo', args: { name: othersNames[0], other_name: othersNames[1] } };
       default:
         return addedWithHistory
           ? {
@@ -115,6 +119,7 @@ export function getJoinedGroupUpdateChangeStr(
     }
   }
 
+  // legacy groups
   if (us) {
     switch (othersNames.length) {
       case 0:
@@ -127,7 +132,7 @@ export function getJoinedGroupUpdateChangeStr(
   }
   switch (othersNames.length) {
     case 0:
-      return { token: 'groupUpdated' }
+      return { token: 'groupUpdated' };
     case 1:
       return { token: 'legacyGroupMemberNew', args: { name: othersNames[0] } };
     case 2:
@@ -167,7 +172,7 @@ export function getPromotedGroupUpdateChangeStr(
   }
   switch (othersNames.length) {
     case 0:
-      return { token: 'groupUpdated' }
+      return { token: 'groupUpdated' };
     case 1:
       return { token: 'adminPromotedToAdmin', args: { name: othersNames[0] } };
     case 2:
