@@ -95,10 +95,6 @@ async function requestSnodesForPubkeyRetryable(pubKey: string): Promise<Array<Sn
     async () => {
       const targetNode = await SnodePool.getRandomSnode();
 
-      if (!targetNode) {
-        debugger;
-      }
-
       return requestSnodesForPubkeyWithTargetNode(pubKey, targetNode);
     },
     {

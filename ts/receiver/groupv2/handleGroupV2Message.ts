@@ -52,6 +52,55 @@ type GroupUpdateDetails = {
   updateMessage: SignalService.GroupUpdateMessage;
 } & WithSignatureTimestamp;
 
+async function getInitializedGroupObject({
+  groupPk,
+  groupName,
+  inviterIsApproved,
+  groupSecretKey,
+}: {
+  groupPk: GroupPubkeyType;
+  groupName: string;
+  inviterIsApproved: boolean;
+  groupSecretKey: Uint8Array | null;
+}) {
+  let found = await UserGroupsWrapperActions.getGroup(groupPk);
+  const wasKicked = found?.kicked || false;
+
+  if (!found) {
+    found = {
+      authData: null,
+      joinedAtSeconds: Date.now(),
+      name: groupName,
+      priority: 0,
+      pubkeyHex: groupPk,
+      secretKey: null,
+      kicked: false,
+      invitePending: true,
+    };
+  }
+
+  found.kicked = false;
+  found.name = groupName;
+  if (groupSecretKey && !isEmpty(groupSecretKey)) {
+    found.secretKey = groupSecretKey;
+  }
+
+  if (inviterIsApproved) {
+    // pre approve invite to groups when we've already approved the person who invited us
+    found.invitePending = false;
+  } else if (wasKicked) {
+    // when we were kicked and reinvited by someone we do not trust, this conversation should go in the message request.
+    found.invitePending = true;
+  }
+
+  if (found.invitePending) {
+    // we also need to update the DB model, because we like duplicating things
+    await ConvoHub.use().get(groupPk)?.setIsApproved(false, true);
+  }
+
+  return { found, wasKicked };
+}
+
 async function handleGroupUpdateInviteMessage({
   inviteMessage,
   author,
@@ -103,27 +152,13 @@ async function handleGroupUpdateInviteMessage({
   }
   const userEd25519Secretkey = (await UserUtils.getUserED25519KeyPairBytes()).privKeyBytes;
 
-  let found = await UserGroupsWrapperActions.getGroup(groupPk);
-  const wasKicked = found?.kicked || false;
-  if (!found) {
-    found = {
-      authData: null,
-      joinedAtSeconds: Date.now(),
-      name: inviteMessage.name,
-      priority: 0,
-      pubkeyHex: groupPk,
-      secretKey: null,
-      kicked: false,
-      invitePending: true,
-    };
-  } else {
-    found.kicked = false;
-    found.name = inviteMessage.name;
-  }
-  if (authorIsApproved) {
-    // pre approve invite to groups when we've already approved the person who invited us
-    found.invitePending = false;
-  }
+  const { found, wasKicked } = await getInitializedGroupObject({
+    groupPk,
+    groupName: inviteMessage.name,
+    groupSecretKey: null,
+    inviterIsApproved: authorIsApproved,
+  });
+
   // not sure if we should drop it, or set it again? They should be the same anyway
   found.authData = inviteMessage.memberAuthData;
 
@@ -523,29 +558,12 @@ async function handleGroupUpdatePromoteMessage({
   }
   const userEd25519Secretkey = (await UserUtils.getUserED25519KeyPairBytes()).privKeyBytes;
 
-  let found = await UserGroupsWrapperActions.getGroup(groupPk);
-  const wasKicked = found?.kicked || false;
-
-  if (!found) {
-    found = {
-      authData: null,
-      joinedAtSeconds: Date.now(),
-      name: change.name,
-      priority: 0,
-      pubkeyHex: groupPk,
-      secretKey: groupKeypair.privateKey,
-      kicked: false,
-      invitePending: true,
-    };
-  } else {
-    found.kicked = false;
-    found.name = change.name;
-    found.secretKey = groupKeypair.privateKey;
-  }
-  if (authorIsApproved) {
-    // pre approve invite to groups when we've already approved the person who invited us
-    found.invitePending = false;
-  }
+  const { found, wasKicked } = await getInitializedGroupObject({
+    groupPk,
+    groupName: change.name,
+    groupSecretKey: groupKeypair.privateKey,
+    inviterIsApproved: authorIsApproved,
+  });
 
   await UserGroupsWrapperActions.setGroup(found);
   // force markedAsUnread to be true so it shows the unread banner (we only show the banner if there are unread messages on at least one msg/group request)
