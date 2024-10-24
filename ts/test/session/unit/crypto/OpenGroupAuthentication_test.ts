@@ -299,7 +299,6 @@ const decryptBlindedMessage = async (
 
   const version = data[0];
   if (version !== 0) {
-    console.warn('decryptBlindedMessage - Dropping message due to unsupported encryption version');
     return undefined;
   }
 

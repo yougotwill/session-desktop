@@ -198,7 +198,7 @@ export const OverlayClosedGroupV2 = () => {
       {isDevProd() && (
         <>
           <span style={{ display: 'flex', alignItems: 'center' }}>
-            Invite as admin Plop?{'  '}
+            Invite as admin?{'  '}
             <SessionToggle
               active={window.sessionFeatureFlags.useGroupV2InviteAsAdmin}
               onClick={() => {

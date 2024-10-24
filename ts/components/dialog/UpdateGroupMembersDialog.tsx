@@ -18,7 +18,7 @@ import {
   useIsPrivate,
   useIsPublic,
   useSortedGroupMembers,
-  useWeAreAdmin
+  useWeAreAdmin,
 } from '../../hooks/useParamSelector';
 
 import { useSet } from '../../hooks/useSet';
@@ -151,11 +151,7 @@ export const UpdateGroupMembersDialog = (props: Props) => {
   const isProcessingUIChange = useMemberGroupChangePending();
   const [alsoRemoveMessages, setAlsoRemoveMessages] = useState(false);
 
-  const {
-    addTo,
-    removeFrom,
-    uniqueValues: membersToKeepWithUpdate,
-  } = useSet<string>(existingMembers);
+  const { addTo, removeFrom, uniqueValues: membersToRemove } = useSet<string>([]);
 
   const dispatch = useDispatch();
 
@@ -173,7 +169,7 @@ export const UpdateGroupMembersDialog = (props: Props) => {
         groupPk: conversationId,
         addMembersWithHistory: [],
         addMembersWithoutHistory: [],
-        removeMembers: difference(existingMembers, membersToKeepWithUpdate) as Array<PubkeyType>,
+        removeMembers: membersToRemove as Array<PubkeyType>,
         alsoRemoveMessages,
       });
       dispatch(groupv2Action as any);
@@ -181,7 +177,10 @@ export const UpdateGroupMembersDialog = (props: Props) => {
       return; // keeping the dialog open until the async thunk is done
     }
 
-    await onSubmit(conversationId, membersToKeepWithUpdate);
+    await onSubmit(
+      conversationId,
+      difference(existingMembers, membersToRemove) as Array<PubkeyType>
+    );
 
     closeDialog();
   };
@@ -190,29 +189,30 @@ export const UpdateGroupMembersDialog = (props: Props) => {
     return event.key === 'Esc' || event.key === 'Escape';
   }, closeDialog);
 
-  const onAdd = (member: string) => {
+  const onSelect = (member: string) => {
     if (!weAreAdmin) {
-      window?.log?.warn('Only group admin can add members!');
+      window?.log?.warn('Only group admin can select!');
+      return;
+    }
+
+    if (groupAdmins?.includes(member)) {
+      if (PubKey.is03Pubkey(conversationId)) {
+        window?.log?.warn(`User ${member} cannot be selected as they are an admin.`);
+        return;
+      }
+      ToastUtils.pushCannotRemoveCreatorFromGroup();
+      window?.log?.warn(
+        `User ${member} cannot be selected as they are the creator of the closed group.`
+      );
       return;
     }
 
     addTo(member);
   };
 
-  const onRemove = (member: string) => {
+  const onUnselect = (member: string) => {
     if (!weAreAdmin) {
-      window?.log?.warn('Only group admin can remove members!');
-      return;
-    }
-    if (groupAdmins?.includes(member)) {
-      if (PubKey.is03Pubkey(conversationId)) {
-        window?.log?.warn(`User ${member} cannot be removed as they are an admin.`);
-        return;
-      }
-      ToastUtils.pushCannotRemoveCreatorFromGroup();
-      window?.log?.warn(
-        `User ${member} cannot be removed as they are the creator of the closed group.`
-      );
+      window?.log?.warn('Only group admin can unselect members!');
       return;
     }
 
@@ -220,14 +220,10 @@ export const UpdateGroupMembersDialog = (props: Props) => {
   };
 
   const showNoMembersMessage = existingMembers.length === 0;
-  const okText = window.i18n('okay');
-  const cancelText = window.i18n('cancel');
-
-  const titleText = window.i18n('groupMembers');
 
   return (
-    <SessionWrapperModal title={titleText} onClose={closeDialog}>
-    {hasClosedGroupV2QAButtons() && weAreAdmin ? (
+    <SessionWrapperModal title={window.i18n('groupMembers')} onClose={closeDialog}>
+      {hasClosedGroupV2QAButtons() && weAreAdmin ? (
         <>
           Also remove messages:
           <SessionToggle
@@ -241,9 +237,9 @@ export const UpdateGroupMembersDialog = (props: Props) => {
       <StyledClassicMemberList className="contact-selection-list">
         <ClassicMemberList
           convoId={conversationId}
-          onSelect={onAdd}
-          onUnselect={onRemove}
-          selectedMembers={membersToKeepWithUpdate}
+          onSelect={onSelect}
+          onUnselect={onUnselect}
+          selectedMembers={membersToRemove}
         />
       </StyledClassicMemberList>
       {showNoMembersMessage && <p>{window.i18n('groupMembersNone')}</p>}
@@ -255,16 +251,16 @@ export const UpdateGroupMembersDialog = (props: Props) => {
       <div className="session-modal__button-group">
         {weAreAdmin && (
           <SessionButton
-            text={okText}
+            text={window.i18n('remove')}
             onClick={onClickOK}
             buttonType={SessionButtonType.Simple}
+            buttonColor={SessionButtonColor.Danger}
             disabled={isProcessingUIChange}
             dataTestId="session-confirm-ok-button"
           />
         )}
         <SessionButton
-          text={cancelText}
-          buttonColor={weAreAdmin ? SessionButtonColor.Danger : undefined}
+          text={window.i18n('cancel')}
           buttonType={SessionButtonType.Simple}
           onClick={closeDialog}
           disabled={isProcessingUIChange}
