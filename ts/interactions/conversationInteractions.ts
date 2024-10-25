@@ -220,6 +220,14 @@ export async function declineConversationWithoutConfirm({
 
   if (PubKey.is03Pubkey(conversationId)) {
     await UserGroupsWrapperActions.eraseGroup(conversationId);
+    // when deleting a 03 group message request, we also need to remove the conversation altogether
+    await ConvoHub.use().deleteGroup(conversationId, {
+      deleteAllMessagesOnSwarm: false,
+      emptyGroupButKeepAsKicked: false,
+      forceDestroyForAllMembers: false,
+      fromSyncMessage: false,
+      sendLeaveMessage: false,
+    });
   }
 
   if (syncToDevices) {

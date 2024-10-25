@@ -250,7 +250,7 @@ const ResendPromoteButton = ({
       buttonShape={SessionButtonShape.Square}
       buttonType={SessionButtonType.Solid}
       buttonColor={SessionButtonColor.Danger}
-      text="PrOmOtE"
+      text="PrOmOtE" // TODO DO NOT MERGE Remove after QA
       onClick={() => {
         void promoteUsersInGroup({
           groupPk,
