@@ -12,9 +12,12 @@ const StyledNoticeBanner = styled(Flex)`
   padding: var(--margins-xs) var(--margins-sm);
   text-align: center;
   flex-shrink: 0;
+  cursor: pointer;
+
   .session-icon-button {
     position: absolute;
     right: var(--margins-sm);
+    pointer-events: none;
   }
 `;
 
@@ -25,12 +28,12 @@ const StyledText = styled.span`
 type NoticeBannerProps = {
   text: string;
   icon: SessionIconType;
-  onButtonClick: () => void;
+  onBannerClick: () => void;
   dataTestId: SessionDataTestId;
 };
 
 export const NoticeBanner = (props: NoticeBannerProps) => {
-  const { text, onButtonClick, icon, dataTestId } = props;
+  const { text, onBannerClick, icon, dataTestId } = props;
 
   return (
     <StyledNoticeBanner
@@ -39,17 +42,13 @@ export const NoticeBanner = (props: NoticeBannerProps) => {
       justifyContent={'center'}
       alignItems={'center'}
       data-testid={dataTestId}
+      onClick={event => {
+        event?.preventDefault();
+        onBannerClick();
+      }}
     >
       <StyledText>{text}</StyledText>
-      <SessionIconButton
-        iconType={icon}
-        iconColor="inherit"
-        iconSize="small"
-        onClick={event => {
-          event?.preventDefault();
-          onButtonClick();
-        }}
-      />
+      <SessionIconButton iconType={icon} iconColor="inherit" iconSize="small" />
     </StyledNoticeBanner>
   );
 };

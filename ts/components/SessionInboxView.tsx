@@ -128,7 +128,7 @@ const SomeDeviceOutdatedSyncingNotice = () => {
   return (
     <NoticeBanner
       text={window.i18n('deleteAfterGroupFirstReleaseConfigOutdated')}
-      onButtonClick={dismiss}
+      onBannerClick={dismiss}
       icon="exit"
       dataTestId="some-of-your-devices-outdated-inbox"
     />

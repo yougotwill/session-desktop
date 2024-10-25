@@ -638,7 +638,7 @@ function OutdatedClientBanner(props: {
   return selectedConversation.hasOutdatedClient?.length ? (
     <NoticeBanner
       text={bannerText}
-      onButtonClick={() => {
+      onBannerClick={() => {
         const conversation = ConvoHub.use().get(selectedConversation.id);
         conversation.set({ hasOutdatedClient: undefined });
         void conversation.commit();
@@ -662,8 +662,8 @@ function OutdatedLegacyGroupBanner(props: {
 
   return isLegacyGroup ? (
     <NoticeBanner
-      text={window.i18n('groupLegacyBanner', { date: 'FIXME AUDRIC' })}
-      onButtonClick={() => {
+      text={window.i18n('groupLegacyBanner', { date: 'FIXME AUDRIC' })} // Remove after QA
+      onBannerClick={() => {
         showLinkVisitWarningDialog('', dispatch);
         throw new Error('TODO'); // fixme audric
       }}

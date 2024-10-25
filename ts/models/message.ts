@@ -99,6 +99,8 @@ import {
 } from './groupUpdate';
 import { NetworkTime } from '../util/NetworkTime';
 import { MessageQueue } from '../session/sending';
+import { getTimerNotificationStr } from './timerNotifications';
+import { ExpirationTimerUpdate } from '../session/disappearing_messages/types';
 
 // tslint:disable: cyclomatic-complexity
 
@@ -408,8 +410,8 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
       }
     }
     if (this.isExpirationTimerUpdate()) {
-      const expireTimerUpdate = this.getExpirationTimerUpdate();
-      const expireTimer = expireTimerUpdate?.expireTimer;
+      const expireTimerUpdate = this.getExpirationTimerUpdate() as ExpirationTimerUpdate; // the isExpirationTimerUpdate above enforces this
+      const expireTimer = expireTimerUpdate.expireTimer;
       const convo = this.getConversation();
       if (!convo) {
         return '';
@@ -422,39 +424,21 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
       );
 
       const source = expireTimerUpdate?.source;
-      const isUs = UserUtils.isUsFromCache(source);
-
-      const authorName =
-        ConvoHub.use()
-          .get(source || '')
-          ?.getNicknameOrRealUsernameOrPlaceholder() || window.i18n.stripped('unknown');
-
-      if (!expireTimerUpdate || expirationMode === 'off' || !expireTimer || expireTimer === 0) {
-        if (isUs) {
-          return window.i18n.stripped('disappearingMessagesTurnedOffYou');
-        }
-        return window.i18n.stripped('disappearingMessagesTurnedOff', {
-          name: authorName,
-        });
-      }
-
-      const localizedMode =
-        expirationMode === 'deleteAfterRead'
-          ? window.i18n.stripped('disappearingMessagesTypeRead')
-          : window.i18n.stripped('disappearingMessagesTypeSent');
-
-      if (isUs) {
-        return window.i18n.stripped('disappearingMessagesSetYou', {
-          time: TimerOptions.getAbbreviated(expireTimerUpdate.expireTimer || 0),
-          disappearing_messages_type: localizedMode,
-        });
-      }
-
-      return window.i18n.stripped('disappearingMessagesSet', {
-        time: TimerOptions.getAbbreviated(expireTimerUpdate.expireTimer || 0),
-        name: authorName,
-        disappearing_messages_type: localizedMode,
+      const i18nProps = getTimerNotificationStr({
+        convoId: convo.id,
+        author: source as PubkeyType,
+        expirationMode,
+        isGroup: convo.isGroup(),
+        timespanSeconds: expireTimer,
       });
+
+      if ('args' in i18nProps) {
+        return window.i18n.stripped(
+          ...([i18nProps.token, i18nProps.args] as GetMessageArgs<LocalizerToken>)
+        );
+      }
+      return window.i18n.stripped(...([i18nProps.token] as GetMessageArgs<LocalizerToken>));
+
     }
     const body = this.get('body');
     if (body) {
