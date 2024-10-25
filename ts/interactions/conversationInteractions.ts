@@ -1,4 +1,5 @@
-import { isNil } from 'lodash';
+import { isEmpty, isNil, uniq } from 'lodash';
+import { PubkeyType, WithGroupPubkey } from 'libsession_util_nodejs';
 import {
   ConversationNotificationSettingType,
   READ_MESSAGE_STATE,
@@ -53,6 +54,11 @@ import { BlockedNumberController } from '../util';
 import { LocalizerComponentProps, LocalizerToken } from '../types/localizer';
 import { sendInviteResponseToGroup } from '../session/sending/group/GroupInviteResponse';
 import { NetworkTime } from '../util/NetworkTime';
+import { ClosedGroup } from '../session';
+import { GroupUpdateMessageFactory } from '../session/messages/message_factory/group/groupUpdateMessageFactory';
+import { GroupPromote } from '../session/utils/job_runners/jobs/GroupPromoteJob';
+import { MessageSender } from '../session/sending';
+import { StoreGroupRequestFactory } from '../session/apis/snode_api/factories/StoreGroupRequestFactory';
 
 export async function copyPublicKeyByConvoId(convoId: string) {
   if (OpenGroupUtils.isOpenGroupV2(convoId)) {
@@ -114,7 +120,7 @@ export const handleAcceptConversationRequest = async ({ convoId }: { convoId: st
   if (PubKey.is03Pubkey(convoId)) {
     const found = await UserGroupsWrapperActions.getGroup(convoId);
     if (!found) {
-      window.log.warn('cannot approve a non existing group in usergroup');
+      window.log.warn('cannot approve a non existing group in user group');
       return null;
     }
     // this updates the wrapper and refresh the redux slice
@@ -307,7 +313,7 @@ export async function showUpdateGroupMembersByConvoId(conversationId: string) {
   window.inboxStore?.dispatch(updateGroupMembersModal({ conversationId }));
 }
 
-export function showLeavePrivateConversationbyConvoId(conversationId: string) {
+export function showLeavePrivateConversationByConvoId(conversationId: string) {
   const conversation = ConvoHub.use().get(conversationId);
   const isMe = conversation.isMe();
 
@@ -334,7 +340,7 @@ export function showLeavePrivateConversationbyConvoId(conversationId: string) {
       });
       await clearConversationInteractionState({ conversationId });
     } catch (err) {
-      window.log.warn(`showLeavePrivateConversationbyConvoId error: ${err}`);
+      window.log.warn(`showLeavePrivateConversationByConvoId error: ${err}`);
       await saveConversationInteractionErrorAsMessage({
         conversationId,
         interactionType: isMe
@@ -953,4 +959,74 @@ async function saveConversationInteractionErrorAsMessage({
   });
 
   conversation.updateLastMessage();
+}
+
+export async function promoteUsersInGroup({
+  groupPk,
+  toPromote,
+}: { toPromote: Array<PubkeyType> } & WithGroupPubkey) {
+  if (!toPromote.length) {
+    window.log.debug('promoteUsersInGroup: no users to promote');
+    return;
+  }
+
+  const convo = ConvoHub.use().get(groupPk);
+  if (!convo) {
+    window.log.debug('promoteUsersInGroup: group convo not found');
+    return;
+  }
+
+  const groupInWrapper = await UserGroupsWrapperActions.getGroup(groupPk);
+  if (!groupInWrapper || !groupInWrapper.secretKey || isEmpty(groupInWrapper.secretKey)) {
+    window.log.debug('promoteUsersInGroup: groupInWrapper not found or no secretkey');
+    return;
+  }
+
+  // push one group change message were initial members are added to the group
+  const membersHex = uniq(toPromote);
+  const sentAt = NetworkTime.now();
+  const us = UserUtils.getOurPubKeyStrFromCache();
+  const msgModel = await ClosedGroup.addUpdateMessage({
+    diff: { type: 'promoted', promoted: membersHex },
+    expireUpdate: null,
+    sender: us,
+    sentAt,
+    convo,
+    markAlreadySent: false, // the store below will mark the message as sent with dbMsgIdentifier
+  });
+  const groupMemberChange = await GroupUpdateMessageFactory.getPromotedControlMessage({
+    adminSecretKey: groupInWrapper.secretKey,
+    convo,
+    groupPk,
+    promoted: membersHex,
+    createAtNetworkTimestamp: sentAt,
+    dbMsgIdentifier: msgModel.id,
+  });
+
+  if (!groupMemberChange) {
+    window.log.warn('promoteUsersInGroup: failed to build group change');
+    throw new Error('promoteUsersInGroup: failed to build group change');
+  }
+
+  const storeRequests = await StoreGroupRequestFactory.makeGroupMessageSubRequest(
+    [groupMemberChange],
+    groupInWrapper
+  );
+
+  const result = await MessageSender.sendEncryptedDataToSnode({
+    destination: groupPk,
+    method: 'batch',
+    sortedSubRequests: storeRequests,
+  });
+
+  if (result?.[0].code !== 200) {
+    window.log.warn('promoteUsersInGroup: failed to store change');
+    throw new Error('promoteUsersInGroup: failed to store change');
+  }
+
+  for (let index = 0; index < membersHex.length; index++) {
+    const member = membersHex[index];
+    // eslint-disable-next-line no-await-in-loop
+    await GroupPromote.addJob({ groupPk, member });
+  }
 }

@@ -7,11 +7,11 @@ import { getSodiumNode } from '../../../../node/sodiumNode';
 import { SnodeNamespaces } from '../../../../session/apis/snode_api/namespaces';
 import { SnodeGroupSignature } from '../../../../session/apis/snode_api/signature/groupSignature';
 import { SnodeSignature } from '../../../../session/apis/snode_api/signature/snodeSignatures';
-import { WithSignature } from '../../../../session/apis/snode_api/types';
 import { concatUInt8Array } from '../../../../session/crypto';
 import { UserUtils } from '../../../../session/utils';
 import { fromBase64ToArray, fromHexToArray } from '../../../../session/utils/String';
 import { NetworkTime } from '../../../../util/NetworkTime';
+import { WithSignature } from '../../../../session/types/with';
 
 use(chaiAsPromised);
 

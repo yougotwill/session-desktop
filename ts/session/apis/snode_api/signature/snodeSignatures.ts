@@ -11,14 +11,9 @@ import { PubKey } from '../../../types';
 import { StringUtils, UserUtils } from '../../../utils';
 import { fromHexToArray, fromUInt8ArrayToBase64 } from '../../../utils/String';
 import { PreConditionFailed } from '../../../utils/errors';
-import {
-  SignedHashesParams,
-  WithMessagesHashes,
-  WithShortenOrExtend,
-  WithSignature,
-  WithTimestamp,
-} from '../types';
+import { SignedHashesParams, WithMessagesHashes, WithShortenOrExtend } from '../types';
 import { NetworkTime } from '../../../../util/NetworkTime';
+import { WithSignature, WithTimestamp } from '../../../types/with';
 
 export type SnodeSignatureResult = WithSignature &
   WithTimestamp & {

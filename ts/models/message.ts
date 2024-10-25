@@ -320,9 +320,9 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
         // TODO: clean up this typing
         return window.i18n.stripped(...([token, args] as GetMessageArgs<LocalizerToken>));
       }
-      if (groupUpdate.promoted) {
+      if (groupUpdate.promoted?.length) {
         // @ts-expect-error -- TODO: Fix by using new i18n builder
-        const { token, args } = getPromotedGroupUpdateChangeStr(groupUpdate.kicked, groupName);
+        const { token, args } = getPromotedGroupUpdateChangeStr(groupUpdate.promoted, groupName);
         // TODO: clean up this typing
         return window.i18n.stripped(...([token, args] as GetMessageArgs<LocalizerToken>));
       }
@@ -1453,6 +1453,12 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
       ? groupUpdate.kicked
       : groupUpdate.kicked
         ? [groupUpdate.kicked]
+        : undefined;
+
+    forcedArrayUpdate.promoted = Array.isArray(groupUpdate.promoted)
+      ? groupUpdate.promoted
+      : groupUpdate.promoted
+        ? [groupUpdate.promoted]
         : undefined;
 
     forcedArrayUpdate.left = Array.isArray(groupUpdate.left)

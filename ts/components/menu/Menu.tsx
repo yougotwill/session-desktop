@@ -32,7 +32,7 @@ import {
   showBanUserByConvoId,
   showInviteContactByConvoId,
   showLeaveGroupByConvoId,
-  showLeavePrivateConversationbyConvoId,
+  showLeavePrivateConversationByConvoId,
   showRemoveModeratorsByConvoId,
   showUnbanUserByConvoId,
   showUpdateGroupNameByConvoId,
@@ -58,7 +58,10 @@ import { useSelectedConversationKey } from '../../state/selectors/selectedConver
 import type { LocalizerToken } from '../../types/localizer';
 import { SessionButtonColor } from '../basic/SessionButton';
 import { ItemWithDataTestId } from './items/MenuItemWithDataTestId';
-import { ConversationInteractionStatus, ConversationInteractionType } from '../../interactions/types';
+import {
+  ConversationInteractionStatus,
+  ConversationInteractionType,
+} from '../../interactions/types';
 
 /** Menu items standardized */
 
@@ -420,7 +423,7 @@ export const DeletePrivateConversationMenuItem = () => {
   return (
     <ItemWithDataTestId
       onClick={() => {
-        showLeavePrivateConversationbyConvoId(convoId);
+        showLeavePrivateConversationByConvoId(convoId);
       }}
     >
       {isMe ? window.i18n('noteToSelfHide') : window.i18n('conversationsDelete')}

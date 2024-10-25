@@ -120,7 +120,7 @@ async function pushChangesToGroupSwarmIfNeeded({
   if (window.sessionFeatureFlags.debug.debugLibsessionDumps) {
     const dumps = await MetaGroupWrapperActions.metaMakeDump(groupPk);
     window.log.info(
-      `pushChangesToGroupSwarmIfNeeded: current metadump: ${ed25519Str(groupPk)}:`,
+      `pushChangesToGroupSwarmIfNeeded: current meta dump: ${ed25519Str(groupPk)}:`,
       to_hex(dumps)
     );
   }
@@ -166,10 +166,10 @@ async function pushChangesToGroupSwarmIfNeeded({
   });
 
   const expectedReplyLength =
-    (supplementalKeysSubRequest ? 1 : 0) + // we are sending all the supplemental keys as a single subrequest
-    pendingConfigRequests.length + // each of those are sent as a subrequest
-    extraStoreRequests.length + // each of those are sent as a subrequest
-    extraRequestWithExpectedResults.length; // each of those are sent as a subrequest, but they don't all return something...
+    (supplementalKeysSubRequest ? 1 : 0) + // we are sending all the supplemental keys as a single sub request
+    pendingConfigRequests.length + // each of those are sent as a sub request
+    extraStoreRequests.length + // each of those are sent as a sub request
+    extraRequestWithExpectedResults.length; // each of those are sent as a sub request, but they don't all return something...
 
   // we do a sequence call here. If we do not have the right expected number of results, consider it a failure
   if (!isArray(result) || result.length !== expectedReplyLength) {
@@ -184,6 +184,7 @@ async function pushChangesToGroupSwarmIfNeeded({
   const changes = LibSessionUtil.batchResultsToGroupSuccessfulChange(result, {
     allOldHashes,
     messages: pendingConfigData,
+
   });
 
   if (isEmpty(changes)) {

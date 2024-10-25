@@ -17,15 +17,10 @@ import {
 } from './namespaces';
 import { GroupDetailsNeededForSignature, SnodeGroupSignature } from './signature/groupSignature';
 import { SnodeSignature } from './signature/snodeSignatures';
-import {
-  ShortenOrExtend,
-  WithMessagesHashes,
-  WithSecretKey,
-  WithSignature,
-  WithTimestamp,
-} from './types';
+import { ShortenOrExtend, WithMessagesHashes } from './types';
 import { TTL_DEFAULT } from '../../constants';
 import { NetworkTime } from '../../../util/NetworkTime';
+import { WithSecretKey, WithSignature, WithTimestamp } from '../../types/with';
 
 type WithMaxSize = { max_size?: number };
 export type WithShortenOrExtend = { shortenOrExtend: 'shorten' | 'extend' | '' };

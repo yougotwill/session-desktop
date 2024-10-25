@@ -187,7 +187,7 @@ const InviteContactsDialogInner = (props: Props) => {
 
       <SpacerLG />
 
-      {/* TODO: localize those strings once out releasing those buttons for real */}
+      {/* TODO: localize those strings once out releasing those buttons for real Remove after QA */}
       {isGroupV2 && isDevProd() && (
         <>
           <span style={{ display: 'flex', alignItems: 'center' }}>

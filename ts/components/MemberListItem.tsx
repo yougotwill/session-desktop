@@ -1,10 +1,12 @@
 import styled from 'styled-components';
 
 import { GroupPubkeyType, PubkeyType } from 'libsession_util_nodejs';
+import { useNicknameOrProfileNameOrShortenedPubkey } from '../hooks/useParamSelector';
+import { promoteUsersInGroup } from '../interactions/conversationInteractions';
 import { PubKey } from '../session/types';
 import { UserUtils } from '../session/utils';
 import { GroupInvite } from '../session/utils/job_runners/jobs/GroupInviteJob';
-import { GroupPromote } from '../session/utils/job_runners/jobs/GroupPromoteJob';
+import { hasClosedGroupV2QAButtons } from '../shared/env_vars';
 import {
   useMemberInviteFailed,
   useMemberInviteSending,
@@ -13,6 +15,7 @@ import {
   useMemberPromotionFailed,
   useMemberPromotionSent,
 } from '../state/selectors/groups';
+import { Avatar, AvatarSize, CrownIcon } from './avatar/Avatar';
 import { Flex } from './basic/Flex';
 import {
   SessionButton,
@@ -20,10 +23,7 @@ import {
   SessionButtonShape,
   SessionButtonType,
 } from './basic/SessionButton';
-import { useNicknameOrProfileNameOrShortenedPubkey } from '../hooks/useParamSelector';
-import { Avatar, AvatarSize, CrownIcon } from './avatar/Avatar';
 import { SessionRadio } from './basic/SessionRadio';
-import { hasClosedGroupV2QAButtons } from '../shared/env_vars';
 
 const AvatarContainer = styled.div`
   position: relative;
@@ -252,7 +252,10 @@ const ResendPromoteButton = ({
       buttonColor={SessionButtonColor.Danger}
       text="PrOmOtE"
       onClick={() => {
-        void GroupPromote.addJob({ groupPk, member: pubkey });
+        void promoteUsersInGroup({
+          groupPk,
+          toPromote: [pubkey],
+        });
       }}
     />
   );

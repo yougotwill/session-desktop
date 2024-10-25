@@ -1,5 +1,5 @@
 /* eslint-disable no-await-in-loop */
-import { PubkeyType, WithGroupPubkey } from 'libsession_util_nodejs';
+import { WithGroupPubkey } from 'libsession_util_nodejs';
 import { compact, isEmpty, isNumber } from 'lodash';
 import { v4 } from 'uuid';
 import { StringUtils } from '../..';
@@ -17,7 +17,6 @@ import {
 } from '../../../apis/snode_api/SnodeRequestTypes';
 import { StoreGroupRequestFactory } from '../../../apis/snode_api/factories/StoreGroupRequestFactory';
 import { RevokeChanges, SnodeAPIRevoke } from '../../../apis/snode_api/revokeSubaccount';
-import { WithSecretKey } from '../../../apis/snode_api/types';
 import { concatUInt8Array, getSodiumRenderer } from '../../../crypto';
 import { GroupUpdateDeleteMemberContentMessage } from '../../../messages/outgoing/controlMessage/group_v2/to_group/GroupUpdateDeleteMemberContentMessage';
 import { MessageSender } from '../../../sending';
@@ -31,10 +30,12 @@ import {
 } from '../PersistedJob';
 import { GroupSync } from './GroupSyncJob';
 import { NetworkTime } from '../../../../util/NetworkTime';
-
-export type WithAddWithoutHistoryMembers = { withoutHistory: Array<PubkeyType> };
-export type WithAddWithHistoryMembers = { withHistory: Array<PubkeyType> };
-export type WithRemoveMembers = { removed: Array<PubkeyType> };
+import {
+  WithAddWithHistoryMembers,
+  WithAddWithoutHistoryMembers,
+  WithRemoveMembers,
+  WithSecretKey,
+} from '../../../types/with';
 
 const defaultMsBetweenRetries = 10000;
 const defaultMaxAttempts = 1;

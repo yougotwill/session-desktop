@@ -284,7 +284,6 @@ function batchResultsToGroupSuccessfulChange(
    * As it is a sequence, the delete might have failed but the new config message might still be posted.
    * So we need to check which request failed, and if it is the delete by hashes, we need to add the hash of the posted message to the list of hashes
    */
-
   if (!result?.length) {
     return successfulChanges;
   }

@@ -2,6 +2,7 @@ import { GroupPubkeyType, PubkeyType } from 'libsession_util_nodejs';
 
 import { SnodeNamespaces } from './namespaces';
 import { SubaccountRevokeSubRequest, SubaccountUnrevokeSubRequest } from './SnodeRequestTypes';
+import { WithSignature, WithTimestamp } from '../../types/with';
 
 export type RetrieveMessageItem = {
   hash: string;
@@ -10,10 +11,9 @@ export type RetrieveMessageItem = {
   storedAt: number; // **not** the envelope timestamp, but when the message was effectively stored on the snode
 };
 
-
 export type RetrieveMessageItemWithNamespace = RetrieveMessageItem & {
   namespace: SnodeNamespaces; // the namespace from which this message was fetched
-}
+};
 
 export type RetrieveMessagesResultsContent = {
   hf?: Array<number>;
@@ -31,9 +31,6 @@ export type WithMessagesHashes = { messagesHashes: Array<string> };
 
 export type RetrieveMessagesResultsBatched = Array<RetrieveRequestResult>;
 
-export type WithTimestamp = { timestamp: number };
-export type WithSignature = { signature: string };
-export type WithSecretKey = { secretKey: Uint8Array };
 export type ShortenOrExtend = 'extend' | 'shorten' | '';
 export type WithShortenOrExtend = { shortenOrExtend: ShortenOrExtend };
 

@@ -5,14 +5,13 @@ import {
   GroupMemberGet,
   GroupPubkeyType,
   PubkeyType,
-  Uint8ArrayLen64,
   UserGroupsGet,
   WithGroupPubkey,
   WithPubkey,
 } from 'libsession_util_nodejs';
 import { intersection, isEmpty, uniq } from 'lodash';
+import { from_hex } from 'libsodium-wrappers-sumo';
 import { ConfigDumpData } from '../../data/configDump/configDump';
-import { ConversationModel } from '../../models/conversation';
 import { HexString } from '../../node/hexStrings';
 import { SignalService } from '../../protobuf';
 import { getSwarmPollingInstance } from '../../session/apis/snode_api';
@@ -27,12 +26,7 @@ import { PubKey } from '../../session/types';
 import { UserUtils } from '../../session/utils';
 import { PreConditionFailed } from '../../session/utils/errors';
 import { GroupInvite } from '../../session/utils/job_runners/jobs/GroupInviteJob';
-import {
-  GroupPendingRemovals,
-  WithAddWithHistoryMembers,
-  WithAddWithoutHistoryMembers,
-  WithRemoveMembers,
-} from '../../session/utils/job_runners/jobs/GroupPendingRemovalsJob';
+import { GroupPendingRemovals } from '../../session/utils/job_runners/jobs/GroupPendingRemovalsJob';
 import { GroupSync } from '../../session/utils/job_runners/jobs/GroupSyncJob';
 import { UserSync } from '../../session/utils/job_runners/jobs/UserSyncJob';
 import { RunJobResult } from '../../session/utils/job_runners/PersistedJob';
@@ -53,9 +47,14 @@ import { openConversationWithMessages } from './conversations';
 import { resetLeftOverlayMode } from './section';
 import { ConversationTypeEnum } from '../../models/types';
 import { NetworkTime } from '../../util/NetworkTime';
-import { from_hex } from 'libsodium-wrappers-sumo';
+import { GroupUpdateMessageFactory } from '../../session/messages/message_factory/group/groupUpdateMessageFactory';
+import {
+  WithAddWithHistoryMembers,
+  WithAddWithoutHistoryMembers,
+  WithFromMemberLeftMessage,
+  WithRemoveMembers,
+} from '../../session/types/with';
 
-type WithFromMemberLeftMessage = { fromMemberLeftMessage: boolean }; // there are some changes we want to skip when doing changes triggered from a memberLeft message.
 export type GroupState = {
   infos: Record<GroupPubkeyType, GroupInfoGet>;
   members: Record<GroupPubkeyType, Array<GroupMemberGet>>;
@@ -206,7 +205,7 @@ const initNewGroupInWrapper = createAsyncThunk(
           convo,
           markAlreadySent: false, // the store below will mark the message as sent with dbMsgIdentifier
         });
-        groupMemberChange = await getWithoutHistoryControlMessage({
+        groupMemberChange = await GroupUpdateMessageFactory.getWithoutHistoryControlMessage({
           adminSecretKey: groupSecretKey,
           convo,
           groupPk,
@@ -343,7 +342,7 @@ const handleUserGroupUpdate = createAsyncThunk(
 
 /**
  * Called only when the app just loaded the SessionInbox (i.e. user logged in and fully loaded).
- * This function populates the slice with any meta-dumps we have in the DB, if they also are part of what is the usergroup wrapper tracking.
+ * This function populates the slice with any meta-dumps we have in the DB, if they also are part of what is the user group wrapper tracking.
  *
  */
 const loadMetaDumpsFromDB = createAsyncThunk(
@@ -562,109 +561,6 @@ async function handleWithoutHistoryMembers({
   }
 }
 
-/**
- * Return the control messages to be pushed to the group's swarm.
- * Those are not going to change the state, they are just here as a "notification".
- * i.e. "Alice was removed from the group"
- */
-async function getRemovedControlMessage({
-  convo,
-  groupPk,
-  removed,
-  adminSecretKey,
-  createAtNetworkTimestamp,
-  fromMemberLeftMessage,
-  dbMsgIdentifier,
-}: WithFromMemberLeftMessage &
-  WithRemoveMembers &
-  WithGroupPubkey & {
-    convo: ConversationModel;
-    adminSecretKey: Uint8ArrayLen64;
-    createAtNetworkTimestamp: number;
-    dbMsgIdentifier: string;
-  }) {
-  const sodium = await getSodiumRenderer();
-
-  if (fromMemberLeftMessage || !removed.length) {
-    return null;
-  }
-
-  return new GroupUpdateMemberChangeMessage({
-    identifier: dbMsgIdentifier,
-    removed,
-    groupPk,
-    typeOfChange: 'removed',
-    createAtNetworkTimestamp,
-    secretKey: adminSecretKey,
-    sodium,
-    ...DisappearingMessages.getExpireDetailsForOutgoingMessage(convo, createAtNetworkTimestamp),
-  });
-}
-
-async function getWithoutHistoryControlMessage({
-  convo,
-  withoutHistory,
-  groupPk,
-  adminSecretKey,
-  createAtNetworkTimestamp,
-  dbMsgIdentifier,
-}: WithAddWithoutHistoryMembers &
-  WithGroupPubkey & {
-    dbMsgIdentifier: string;
-    convo: ConversationModel;
-    adminSecretKey: Uint8ArrayLen64;
-    createAtNetworkTimestamp: number;
-  }) {
-  const sodium = await getSodiumRenderer();
-
-  if (!withoutHistory.length) {
-    return null;
-  }
-
-  return new GroupUpdateMemberChangeMessage({
-    identifier: dbMsgIdentifier,
-    added: withoutHistory,
-    groupPk,
-    typeOfChange: 'added',
-    createAtNetworkTimestamp,
-    secretKey: adminSecretKey,
-    sodium,
-    ...DisappearingMessages.getExpireDetailsForOutgoingMessage(convo, createAtNetworkTimestamp),
-  });
-}
-
-async function getWithHistoryControlMessage({
-  convo,
-  withHistory,
-  groupPk,
-  adminSecretKey,
-  createAtNetworkTimestamp,
-  dbMsgIdentifier,
-}: WithAddWithHistoryMembers &
-  WithGroupPubkey & {
-    dbMsgIdentifier: string;
-    convo: ConversationModel;
-    adminSecretKey: Uint8ArrayLen64;
-    createAtNetworkTimestamp: number;
-  }) {
-  const sodium = await getSodiumRenderer();
-
-  if (!withHistory.length) {
-    return null;
-  }
-
-  return new GroupUpdateMemberChangeMessage({
-    identifier: dbMsgIdentifier,
-    added: withHistory,
-    groupPk,
-    typeOfChange: 'addedWithHistory',
-    createAtNetworkTimestamp,
-    secretKey: adminSecretKey,
-    sodium,
-    ...DisappearingMessages.getExpireDetailsForOutgoingMessage(convo, createAtNetworkTimestamp),
-  });
-}
-
 async function handleMemberAddedFromUI({
   addMembersWithHistory,
   addMembersWithoutHistory,
@@ -728,7 +624,7 @@ async function handleMemberAddedFromUI({
       diff: { type: 'add', added: withHistory, withHistory: true },
       ...shared,
     });
-    const groupChange = await getWithHistoryControlMessage({
+    const groupChange = await GroupUpdateMessageFactory.getWithHistoryControlMessage({
       adminSecretKey: group.secretKey,
       convo,
       groupPk,
@@ -745,7 +641,7 @@ async function handleMemberAddedFromUI({
       diff: { type: 'add', added: withoutHistory, withHistory: false },
       ...shared,
     });
-    const groupChange = await getWithoutHistoryControlMessage({
+    const groupChange = await GroupUpdateMessageFactory.getWithoutHistoryControlMessage({
       adminSecretKey: group.secretKey,
       convo,
       groupPk,
@@ -866,7 +762,7 @@ async function handleMemberRemovedFromUI({
       },
       markAlreadySent: false, // the store below will mark the message as sent using dbMsgIdentifier
     });
-    removedControlMessage = await getRemovedControlMessage({
+    removedControlMessage = await GroupUpdateMessageFactory.getRemovedControlMessage({
       adminSecretKey: group.secretKey,
       convo,
       groupPk,

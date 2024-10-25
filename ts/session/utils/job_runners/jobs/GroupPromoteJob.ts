@@ -20,7 +20,7 @@ import {
 import { MessageQueue } from '../../../sending';
 
 const defaultMsBetweenRetries = 10000;
-const defaultMaxAttemps = 1;
+const defaultMaxAttempts = 1;
 
 type JobExtraArgs = {
   groupPk: GroupPubkeyType;
@@ -75,7 +75,7 @@ class GroupPromoteJob extends PersistedJob<GroupPromotePersistedData> {
       member,
       groupPk,
       delayBetweenRetries: defaultMsBetweenRetries,
-      maxAttempts: isNumber(maxAttempts) ? maxAttempts : defaultMaxAttemps,
+      maxAttempts: isNumber(maxAttempts) ? maxAttempts : defaultMaxAttempts,
       nextAttemptTimestamp: nextAttemptTimestamp || Date.now() + defaultMsBetweenRetries,
       currentRetry: isNumber(currentRetry) ? currentRetry : 0,
     });
