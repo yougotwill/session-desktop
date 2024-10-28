@@ -342,19 +342,53 @@ export const OverlayRightPanelSettings = () => {
           )}
 
           {hasClosedGroupV2QAButtons() && isGroupV2 ? (
-            <PanelIconButton
-              iconType={'group'}
-              text={'trigger avatar message'}
-              onClick={() => {
-                if (!PubKey.is03Pubkey(selectedConvoKey)) {
-                  throw new Error('triggerFakeAvatarUpdate needs a 03 pubkey');
-                }
-                window.inboxStore?.dispatch(
-                  groupInfoActions.triggerFakeAvatarUpdate({ groupPk: selectedConvoKey }) as any
-                );
-              }}
-              dataTestId="edit-group-name"
-            />
+            <>
+              <PanelIconButton
+                iconType={'group'}
+                text={'trigger avatar message'}
+                onClick={() => {
+                  if (!PubKey.is03Pubkey(selectedConvoKey)) {
+                    throw new Error('triggerFakeAvatarUpdate needs a 03 pubkey');
+                  }
+                  window.inboxStore?.dispatch(
+                    groupInfoActions.triggerFakeAvatarUpdate({ groupPk: selectedConvoKey }) as any
+                  );
+                }}
+                dataTestId="edit-group-name"
+              />
+              <PanelIconButton
+                iconType={'group'}
+                text={'trigger delete message before now'}
+                onClick={() => {
+                  if (!PubKey.is03Pubkey(selectedConvoKey)) {
+                    throw new Error('We need a 03 pubkey');
+                  }
+                  window.inboxStore?.dispatch(
+                    groupInfoActions.triggerFakeDeleteMsgBeforeNow({
+                      groupPk: selectedConvoKey,
+                      messagesWithAttachmentsOnly: false,
+                    }) as any
+                  );
+                }}
+                dataTestId="edit-group-name"
+              />
+              <PanelIconButton
+                iconType={'group'}
+                text={'delete message with attachments before now'}
+                onClick={() => {
+                  if (!PubKey.is03Pubkey(selectedConvoKey)) {
+                    throw new Error('We need a 03 pubkey');
+                  }
+                  window.inboxStore?.dispatch(
+                    groupInfoActions.triggerFakeDeleteMsgBeforeNow({
+                      groupPk: selectedConvoKey,
+                      messagesWithAttachmentsOnly: true,
+                    }) as any
+                  );
+                }}
+                dataTestId="edit-group-name"
+              />
+            </>
           ) : null}
 
           {showAddRemoveModeratorsButton && (

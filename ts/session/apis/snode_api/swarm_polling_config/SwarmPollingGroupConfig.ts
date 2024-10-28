@@ -17,6 +17,7 @@ import { ConvoHub } from '../../../conversations';
 import { ProfileManager } from '../../../profile_manager/ProfileManager';
 import { UserUtils } from '../../../utils';
 import { GroupSync } from '../../../utils/job_runners/jobs/GroupSyncJob';
+import { destroyMessagesAndUpdateRedux } from '../../../disappearing_messages';
 
 /**
  * This is a basic optimization to avoid running the logic when the `deleteBeforeSeconds`
@@ -52,8 +53,7 @@ async function handleMetaMergeResults(groupPk: GroupPubkeyType) {
       isNumber(infos.deleteBeforeSeconds) &&
       isFinite(infos.deleteBeforeSeconds) &&
       infos.deleteBeforeSeconds > 0 &&
-      (lastAppliedRemoveMsgSentBeforeSeconds.get(groupPk) || Number.MAX_SAFE_INTEGER) >
-        infos.deleteBeforeSeconds
+      (lastAppliedRemoveMsgSentBeforeSeconds.get(groupPk) || 0) < infos.deleteBeforeSeconds
     ) {
       // delete any messages in this conversation sent before that timestamp (in seconds)
       const deletedMsgIds = await Data.removeAllMessagesInConversationSentBefore({
@@ -74,7 +74,7 @@ async function handleMetaMergeResults(groupPk: GroupPubkeyType) {
       isNumber(infos.deleteAttachBeforeSeconds) &&
       isFinite(infos.deleteAttachBeforeSeconds) &&
       infos.deleteAttachBeforeSeconds > 0 &&
-      (lastAppliedRemoveAttachmentSentBeforeSeconds.get(groupPk) || Number.MAX_SAFE_INTEGER) >
+      (lastAppliedRemoveAttachmentSentBeforeSeconds.get(groupPk) || 0) <
         infos.deleteAttachBeforeSeconds
     ) {
       // delete any attachments in this conversation sent before that timestamp (in seconds)
@@ -87,12 +87,10 @@ async function handleMetaMergeResults(groupPk: GroupPubkeyType) {
         impactedMsgModels.map(m => m.id)
       );
 
-      for (let index = 0; index < impactedMsgModels.length; index++) {
-        const msg = impactedMsgModels[index];
+      await destroyMessagesAndUpdateRedux(
+        impactedMsgModels.map(m => ({ conversationKey: groupPk, messageId: m.id }))
+      );
 
-        // eslint-disable-next-line no-await-in-loop
-        await msg?.cleanup();
-      }
       lastAppliedRemoveAttachmentSentBeforeSeconds.set(groupPk, infos.deleteAttachBeforeSeconds);
     }
   }
@@ -239,7 +237,7 @@ async function handleGroupSharedConfigMessages(
     window.inboxStore?.dispatch(
       groupInfoActions.refreshGroupDetailsFromWrapper({
         groupPk,
-      })as any
+      }) as any
     );
   } catch (e) {
     window.log.warn(

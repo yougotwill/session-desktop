@@ -988,6 +988,57 @@ const triggerFakeAvatarUpdate = createAsyncThunk(
   }
 );
 
+const triggerFakeDeleteMsgBeforeNow = createAsyncThunk(
+  'group/triggerFakeDeleteMsgBeforeNow',
+  async (
+    {
+      groupPk,
+      messagesWithAttachmentsOnly,
+    }: {
+      groupPk: GroupPubkeyType;
+      messagesWithAttachmentsOnly: boolean;
+    },
+    payloadCreator
+  ): Promise<void> => {
+    const state = payloadCreator.getState() as StateType;
+    if (!state.groups.infos[groupPk]) {
+      throw new PreConditionFailed(
+        'triggerFakeDeleteMsgBeforeNow group not present in redux slice'
+      );
+    }
+    const convo = ConvoHub.use().get(groupPk);
+    const group = await UserGroupsWrapperActions.getGroup(groupPk);
+    if (!convo || !group || !group.secretKey || isEmpty(group.secretKey)) {
+      throw new Error(
+        'triggerFakeDeleteMsgBeforeNow: tried to make change to group but we do not have the admin secret key'
+      );
+    }
+
+    const nowSeconds = Math.floor(NetworkTime.now() / 1000);
+    const infoGet = await MetaGroupWrapperActions.infoGet(groupPk);
+    if (messagesWithAttachmentsOnly) {
+      infoGet.deleteAttachBeforeSeconds = nowSeconds;
+    } else {
+      infoGet.deleteBeforeSeconds = nowSeconds;
+    }
+
+    await MetaGroupWrapperActions.infoSet(groupPk, infoGet);
+
+    const extraStoreRequests = await StoreGroupRequestFactory.makeGroupMessageSubRequest([], group);
+
+    const batchResult = await GroupSync.pushChangesToGroupSwarmIfNeeded({
+      groupPk,
+      extraStoreRequests,
+    });
+    if (!batchResult) {
+      window.log.warn(
+        `failed to send deleteBeforeSeconds/deleteAttachBeforeSeconds message for group ${ed25519Str(groupPk)}`
+      );
+      throw new Error('failed to send deleteBeforeSeconds/deleteAttachBeforeSeconds message');
+    }
+  }
+);
+
 /**
  * This action is used to trigger a change when the local user does a change to a group v2 members list.
  * GroupV2 added members can be added two ways: with and without the history of messages.
@@ -1363,6 +1414,7 @@ export const groupInfoActions = {
   handleMemberLeftMessage,
   currentDeviceGroupNameChange,
   triggerFakeAvatarUpdate,
+  triggerFakeDeleteMsgBeforeNow,
 
   ...metaGroupSlice.actions,
 };
