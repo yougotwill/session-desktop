@@ -8,6 +8,7 @@ import { ConvoHub } from '../session/conversations';
 import { Quote } from './types';
 
 import { MessageDirection } from '../models/messageType';
+import { ConversationTypeEnum } from '../models/types';
 import { SignalService } from '../protobuf';
 import { DisappearingMessages } from '../session/disappearing_messages';
 import { ProfileManager } from '../session/profile_manager/ProfileManager';
@@ -24,7 +25,6 @@ import { getHideMessageRequestBannerOutsideRedux } from '../state/selectors/user
 import { GoogleChrome } from '../util';
 import { LinkPreviews } from '../util/linkPreviews';
 import { GroupV2Receiver } from './groupv2/handleGroupV2Message';
-import { ConversationTypeEnum } from '../models/types';
 
 function contentTypeSupported(type: string): boolean {
   const Chrome = GoogleChrome;
@@ -422,6 +422,7 @@ export async function handleMessageJob(
     source,
     ConversationTypeEnum.PRIVATE
   );
+
   try {
     messageModel.set({ flags: regularDataMessage.flags });
 

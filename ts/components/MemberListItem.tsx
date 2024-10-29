@@ -24,6 +24,15 @@ import {
   SessionButtonType,
 } from './basic/SessionButton';
 import { SessionRadio } from './basic/SessionRadio';
+import { GroupSync } from '../session/utils/job_runners/jobs/GroupSyncJob';
+import { RunJobResult } from '../session/utils/job_runners/PersistedJob';
+import { SubaccountUnrevokeSubRequest } from '../session/apis/snode_api/SnodeRequestTypes';
+import { NetworkTime } from '../util/NetworkTime';
+import {
+  MetaGroupWrapperActions,
+  UserGroupsWrapperActions,
+} from '../webworker/workers/browser/libsession_worker_interface';
+import { isEmpty } from 'lodash';
 
 const AvatarContainer = styled.div`
   position: relative;
@@ -223,11 +232,35 @@ const ResendInviteButton = ({
       buttonShape={SessionButtonShape.Square}
       buttonType={SessionButtonType.Solid}
       text={window.i18n('resend')}
-      onClick={() => {
-        void GroupInvite.addJob({
+      onClick={async () => {
+        const group = await UserGroupsWrapperActions.getGroup(groupPk);
+        const member = await MetaGroupWrapperActions.memberGet(groupPk, pubkey);
+        if (!group || !group.secretKey || isEmpty(group.secretKey) || !member) {
+          window.log.warn('tried to resend invite but we do not have correct details');
+          return;
+        }
+        const unrevokeSubRequest = new SubaccountUnrevokeSubRequest({
+          groupPk,
+          revokeTokenHex: [pubkey],
+          timestamp: NetworkTime.now(),
+          secretKey: group.secretKey,
+        });
+        const sequenceResult = await GroupSync.pushChangesToGroupSwarmIfNeeded({
+          groupPk,
+          unrevokeSubRequest,
+          extraStoreRequests: [],
+        });
+        if (sequenceResult !== RunJobResult.Success) {
+          throw new Error('resend invite: pushChangesToGroupSwarmIfNeeded did not return success');
+        }
+
+        // if we tried to invite that member as admin right away, let's retry it as such.
+        const inviteAsAdmin =
+          member.promotionNotSent || member.promotionFailed || member.promotionPending;
+        await GroupInvite.addJob({
           groupPk,
           member: pubkey,
-          inviteAsAdmin: window.sessionFeatureFlags.useGroupV2InviteAsAdmin,
+          inviteAsAdmin,
         });
       }}
     />
@@ -250,7 +283,7 @@ const ResendPromoteButton = ({
       buttonShape={SessionButtonShape.Square}
       buttonType={SessionButtonType.Solid}
       buttonColor={SessionButtonColor.Danger}
-      text="PrOmOtE" // TODO DO NOT MERGE Remove after QA
+      text={window.i18n('promote')} // TODO DO NOT MERGE Remove after QA
       onClick={() => {
         void promoteUsersInGroup({
           groupPk,

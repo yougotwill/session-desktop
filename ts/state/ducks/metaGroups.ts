@@ -9,7 +9,7 @@ import {
   WithGroupPubkey,
   WithPubkey,
 } from 'libsession_util_nodejs';
-import { intersection, isEmpty, uniq } from 'lodash';
+import { concat, intersection, isEmpty, uniq } from 'lodash';
 import { from_hex } from 'libsodium-wrappers-sumo';
 import { ConfigDumpData } from '../../data/configDump/configDump';
 import { HexString } from '../../node/hexStrings';
@@ -1426,12 +1426,9 @@ async function scheduleGroupInviteJobs(
   withoutHistory: Array<PubkeyType>,
   inviteAsAdmin: boolean
 ) {
-  for (let index = 0; index < withoutHistory.length; index++) {
-    const member = withoutHistory[index];
-    await GroupInvite.addJob({ groupPk, member, inviteAsAdmin });
-  }
-  for (let index = 0; index < withHistory.length; index++) {
-    const member = withHistory[index];
+  const merged = uniq(concat(withHistory, withoutHistory));
+  for (let index = 0; index < merged.length; index++) {
+    const member = merged[index];
     await GroupInvite.addJob({ groupPk, member, inviteAsAdmin });
   }
 }
