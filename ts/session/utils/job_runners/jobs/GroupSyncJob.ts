@@ -184,10 +184,9 @@ async function pushChangesToGroupSwarmIfNeeded({
   const changes = LibSessionUtil.batchResultsToGroupSuccessfulChange(result, {
     allOldHashes,
     messages: pendingConfigData,
-
   });
 
-  if (isEmpty(changes)) {
+  if ((allOldHashes.size || pendingConfigData.length) && isEmpty(changes)) {
     return RunJobResult.RetryJobIfPossible;
   }
 

@@ -64,9 +64,15 @@ async function addJob({ groupPk, member, inviteAsAdmin }: JobExtraArgs) {
 
     await runners.groupInviteJobRunner.addJob(groupInviteJob);
 
-    window?.inboxStore?.dispatch(
-      groupInfoActions.setInvitePending({ groupPk, pubkey: member, sending: true })
-    );
+    if (inviteAsAdmin) {
+      window?.inboxStore?.dispatch(
+        groupInfoActions.setPromotionPending({ groupPk, pubkey: member, sending: true })
+      );
+    } else {
+      window?.inboxStore?.dispatch(
+        groupInfoActions.setInvitePending({ groupPk, pubkey: member, sending: true })
+      );
+    }
   }
 }
 
@@ -219,9 +225,16 @@ class GroupInviteJob extends PersistedJob<GroupInvitePersistedData> {
       }
 
       updateFailedStateForMember(groupPk, member, failed);
-      window?.inboxStore?.dispatch(
-        groupInfoActions.setInvitePending({ groupPk, pubkey: member, sending: false })
-      );
+
+      if (inviteAsAdmin) {
+        window?.inboxStore?.dispatch(
+          groupInfoActions.setPromotionPending({ groupPk, pubkey: member, sending: false })
+        );
+      } else {
+        window?.inboxStore?.dispatch(
+          groupInfoActions.setInvitePending({ groupPk, pubkey: member, sending: true })
+        );
+      }
       window?.inboxStore?.dispatch(
         groupInfoActions.refreshGroupDetailsFromWrapper({ groupPk }) as any
       );

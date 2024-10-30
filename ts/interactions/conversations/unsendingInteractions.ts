@@ -547,8 +547,7 @@ export async function deleteMessagesById(messageIds: Array<string>, conversation
 
   window.inboxStore?.dispatch(
     updateConfirmModal({
-      title: window.i18n('clearMessagesForMe'),
-      i18nMessage: { token: 'deleteMessage', args: { count: selectedMessages.length } },
+      title: window.i18n('deleteMessage', { count: selectedMessages.length }),
       radioOptions: !isMe
         ? [
             {

@@ -60,7 +60,6 @@ export function pushLoadAttachmentFailure(message?: string) {
 
 // TODOLATER pushToast functions should take I18nArgs and then run strip in the function itself.
 
-
 export function pushFileSizeErrorAsByte() {
   pushToastError('fileSizeWarning', window.i18n.stripped('attachmentsErrorSize'));
 }
@@ -114,7 +113,6 @@ export function pushMessageDeleteForbidden() {
 
 export function pushUnableToCall() {
   pushToastError('unableToCall', window.i18n.stripped('callsCannotStart'));
-
 }
 
 export function pushedMissedCall(userName: string) {
@@ -184,7 +182,7 @@ export function pushDeleted(count: number) {
   pushToastSuccess('deleted', window.i18n.stripped('deleteMessageDeleted', { count }));
 }
 
-export function pushCannotRemoveCreatorFromGroup() {
+export function pushCannotRemoveGroupAdmin() {
   pushToastWarning('adminCannotBeRemoved', window.i18n.stripped('adminCannotBeRemoved'));
 }
 

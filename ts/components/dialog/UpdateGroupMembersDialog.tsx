@@ -76,6 +76,7 @@ const ClassicMemberList = (props: {
             onSelect={onSelect}
             onUnselect={onUnselect}
             isAdmin={isAdmin}
+            hideRadioButton={isAdmin} // we want to hide the toggle for admins are they are not selectable
             disableBg={true}
             displayGroupStatus={isV2Group && weAreAdmin}
             groupPk={convoId}
@@ -196,14 +197,9 @@ export const UpdateGroupMembersDialog = (props: Props) => {
     }
 
     if (groupAdmins?.includes(member)) {
-      if (PubKey.is03Pubkey(conversationId)) {
-        window?.log?.warn(`User ${member} cannot be selected as they are an admin.`);
-        return;
-      }
-      ToastUtils.pushCannotRemoveCreatorFromGroup();
-      window?.log?.warn(
-        `User ${member} cannot be selected as they are the creator of the closed group.`
-      );
+      ToastUtils.pushCannotRemoveGroupAdmin();
+      window?.log?.warn(`User ${member} cannot be selected as they are an admin.`);
+
       return;
     }
 

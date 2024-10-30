@@ -8,11 +8,14 @@ import { UserUtils } from '../session/utils';
 import { GroupInvite } from '../session/utils/job_runners/jobs/GroupInviteJob';
 import { hasClosedGroupV2QAButtons } from '../shared/env_vars';
 import {
+  useMemberHasAcceptedInvite,
   useMemberInviteFailed,
   useMemberInviteSending,
   useMemberInviteSent,
+  useMemberIsPromoted,
   useMemberPromoteSending,
   useMemberPromotionFailed,
+  useMemberPromotionNotSent,
   useMemberPromotionSent,
 } from '../state/selectors/groups';
 import { Avatar, AvatarSize, CrownIcon } from './avatar/Avatar';
@@ -118,6 +121,7 @@ type MemberListItemProps = {
   displayGroupStatus?: boolean;
   groupPk?: string;
   disabled?: boolean;
+  hideRadioButton?: boolean;
 };
 
 const ResendContainer = ({
@@ -139,8 +143,8 @@ const ResendContainer = ({
         padding="0 var(--margins-lg)"
         gap="var(--margins-sm)"
       >
-        <ResendInviteButton groupPk={groupPk} pubkey={pubkey} />
-        <ResendPromoteButton groupPk={groupPk} pubkey={pubkey} />
+        <ResendButton groupPk={groupPk} pubkey={pubkey} />
+        <PromoteButton groupPk={groupPk} pubkey={pubkey} />
       </Flex>
     );
   }
@@ -215,15 +219,24 @@ const GroupStatusContainer = ({
   return null;
 };
 
-const ResendInviteButton = ({
-  groupPk,
-  pubkey,
-}: {
-  pubkey: PubkeyType;
-  groupPk: GroupPubkeyType;
-}) => {
-  const inviteFailed = useMemberInviteFailed(pubkey, groupPk);
-  if (!inviteFailed) {
+const ResendButton = ({ groupPk, pubkey }: { pubkey: PubkeyType; groupPk: GroupPubkeyType }) => {
+  const acceptedInvite = useMemberHasAcceptedInvite(pubkey, groupPk);
+  const promotionFailed = useMemberPromotionFailed(pubkey, groupPk);
+  const promotionSent = useMemberPromotionSent(pubkey, groupPk);
+  const promotionNotSent = useMemberPromotionNotSent(pubkey, groupPk);
+  const promoted = useMemberIsPromoted(pubkey, groupPk);
+
+  // as soon as the `admin` flag is set in the group for that member, we should be able to resend a promote as we cannot remove an admin.
+  const canResendPromotion =
+    hasClosedGroupV2QAButtons() &&
+    (promotionFailed || promotionSent || promotionNotSent || promoted);
+
+  // we can always remove/and readd a non-admin member. So we consider that a member who accepted the invite cannot be resent an invite.
+  const canResendInvite = !acceptedInvite;
+
+  const shouldShowResendButton = canResendInvite || canResendPromotion;
+
+  if (!shouldShowResendButton) {
     return null;
   }
   return (
@@ -239,9 +252,10 @@ const ResendInviteButton = ({
           window.log.warn('tried to resend invite but we do not have correct details');
           return;
         }
+        const token = await MetaGroupWrapperActions.swarmSubAccountToken(groupPk, pubkey);
         const unrevokeSubRequest = new SubaccountUnrevokeSubRequest({
           groupPk,
-          revokeTokenHex: [pubkey],
+          revokeTokenHex: [token],
           timestamp: NetworkTime.now(),
           secretKey: group.secretKey,
         });
@@ -256,7 +270,10 @@ const ResendInviteButton = ({
 
         // if we tried to invite that member as admin right away, let's retry it as such.
         const inviteAsAdmin =
-          member.promotionNotSent || member.promotionFailed || member.promotionPending;
+          member.promotionNotSent ||
+          member.promotionFailed ||
+          member.promotionPending ||
+          member.promoted;
         await GroupInvite.addJob({
           groupPk,
           member: pubkey,
@@ -267,14 +284,13 @@ const ResendInviteButton = ({
   );
 };
 
-const ResendPromoteButton = ({
-  groupPk,
-  pubkey,
-}: {
-  pubkey: PubkeyType;
-  groupPk: GroupPubkeyType;
-}) => {
-  if (!hasClosedGroupV2QAButtons()) {
+const PromoteButton = ({ groupPk, pubkey }: { pubkey: PubkeyType; groupPk: GroupPubkeyType }) => {
+  const memberAcceptedInvite = useMemberHasAcceptedInvite(pubkey, groupPk);
+  const memberIsPromoted = useMemberIsPromoted(pubkey, groupPk);
+  // When invite-as-admin was used to invite that member, the resend button is available to resend the promote message.
+  // We want to show that button only to promote a normal member who accepted a normal invite but wasn't promoted yet.
+  // ^ this is only the case for testing. The UI will be different once we release the promotion process
+  if (!hasClosedGroupV2QAButtons() || !memberAcceptedInvite || memberIsPromoted) {
     return null;
   }
   return (
@@ -309,8 +325,11 @@ export const MemberListItem = ({
   disabled,
   withBorder,
   maxNameWidth,
+  hideRadioButton,
 }: MemberListItemProps) => {
   const memberName = useNicknameOrProfileNameOrShortenedPubkey(pubkey);
+  const isUs = UserUtils.isUsFromCache(pubkey);
+  const ourName = isUs ? window.i18n('you') : null;
 
   return (
     <StyledSessionMemberItem
@@ -335,7 +354,7 @@ export const MemberListItem = ({
           alignItems="flex-start"
         >
           <StyledName data-testid={'group-member-name'} maxName={maxNameWidth}>
-            {memberName}
+            {ourName || memberName}
           </StyledName>
           <GroupStatusContainer
             pubkey={pubkey}
@@ -347,7 +366,7 @@ export const MemberListItem = ({
 
       <ResendContainer pubkey={pubkey} displayGroupStatus={displayGroupStatus} groupPk={groupPk} />
 
-      {!inMentions && (
+      {!inMentions && !hideRadioButton && (
         <StyledCheckContainer>
           <SessionRadio active={isSelected} value={pubkey} inputName={pubkey} label="" />
         </StyledCheckContainer>

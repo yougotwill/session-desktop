@@ -52,6 +52,11 @@ function getMemberInviteFailed(state: StateType, pubkey: PubkeyType, convo?: Gro
   return findMemberInMembers(members, pubkey)?.inviteFailed || false;
 }
 
+function getMemberInviteNotSent(state: StateType, pubkey: PubkeyType, convo?: GroupPubkeyType) {
+  const members = getMembersOfGroup(state, convo);
+  return findMemberInMembers(members, pubkey)?.inviteNotSent || false;
+}
+
 function getMemberInviteSent(state: StateType, pubkey: PubkeyType, convo?: GroupPubkeyType) {
   const members = getMembersOfGroup(state, convo);
 
@@ -63,6 +68,11 @@ function getMemberIsPromoted(state: StateType, pubkey: PubkeyType, convo?: Group
   return findMemberInMembers(members, pubkey)?.promoted || false;
 }
 
+function getMemberHasAcceptedInvite(state: StateType, pubkey: PubkeyType, convo?: GroupPubkeyType) {
+  const members = getMembersOfGroup(state, convo);
+  return findMemberInMembers(members, pubkey)?.inviteAccepted || false;
+}
+
 function getMemberPromotionFailed(state: StateType, pubkey: PubkeyType, convo?: GroupPubkeyType) {
   const members = getMembersOfGroup(state, convo);
   return findMemberInMembers(members, pubkey)?.promotionFailed || false;
@@ -71,6 +81,11 @@ function getMemberPromotionFailed(state: StateType, pubkey: PubkeyType, convo?: 
 function getMemberPromotionSent(state: StateType, pubkey: PubkeyType, convo?: GroupPubkeyType) {
   const members = getMembersOfGroup(state, convo);
   return findMemberInMembers(members, pubkey)?.promotionPending || false;
+}
+
+function getMemberPromotionNotSent(state: StateType, pubkey: PubkeyType, convo?: GroupPubkeyType) {
+  const members = getMembersOfGroup(state, convo);
+  return findMemberInMembers(members, pubkey)?.promotionNotSent || false;
 }
 
 export function getLibMembersCount(state: StateType, convo?: GroupPubkeyType): Array<string> {
@@ -136,8 +151,15 @@ export function useMemberInviteSent(member: PubkeyType, groupPk: GroupPubkeyType
   return useSelector((state: StateType) => getMemberInviteSent(state, member, groupPk));
 }
 
+export function useMemberInviteNotSent(member: PubkeyType, groupPk: GroupPubkeyType) {
+  return useSelector((state: StateType) => getMemberInviteNotSent(state, member, groupPk));
+}
+
 export function useMemberIsPromoted(member: PubkeyType, groupPk: GroupPubkeyType) {
   return useSelector((state: StateType) => getMemberIsPromoted(state, member, groupPk));
+}
+export function useMemberHasAcceptedInvite(member: PubkeyType, groupPk: GroupPubkeyType) {
+  return useSelector((state: StateType) => getMemberHasAcceptedInvite(state, member, groupPk));
 }
 
 export function useMemberPromotionFailed(member: PubkeyType, groupPk: GroupPubkeyType) {
@@ -146,6 +168,10 @@ export function useMemberPromotionFailed(member: PubkeyType, groupPk: GroupPubke
 
 export function useMemberPromotionSent(member: PubkeyType, groupPk: GroupPubkeyType) {
   return useSelector((state: StateType) => getMemberPromotionSent(state, member, groupPk));
+}
+
+export function useMemberPromotionNotSent(member: PubkeyType, groupPk: GroupPubkeyType) {
+  return useSelector((state: StateType) => getMemberPromotionNotSent(state, member, groupPk));
 }
 
 export function useMemberGroupChangePending() {
