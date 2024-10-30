@@ -72,7 +72,7 @@ const StyledGroupInviteBanner = styled(Flex)`
 
 export const GroupInviteRequiredVersionBanner = () => {
   return (
-    <StyledGroupInviteBanner data-testid="invite-warning">
+    <StyledGroupInviteBanner data-testid="version-warning">
       {window.i18n('groupInviteVersion')}
     </StyledGroupInviteBanner>
   );

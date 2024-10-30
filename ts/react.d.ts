@@ -172,6 +172,11 @@ declare module 'react' {
     // to sort
     | 'restore-using-recovery'
     | 'link-device'
+    | 'select-contact'
+    | 'contact' // this is way too generic
+    | 'contact-status'
+    | 'version-warning'
+    | 'open-url-confirm-button'
     | 'continue-session-button'
     | 'next-new-conversation-button'
     | 'reveal-recovery-phrase'

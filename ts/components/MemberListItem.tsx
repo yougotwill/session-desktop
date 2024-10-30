@@ -1,6 +1,7 @@
 import styled from 'styled-components';
 
 import { GroupPubkeyType, PubkeyType } from 'libsession_util_nodejs';
+import { isEmpty } from 'lodash';
 import { useNicknameOrProfileNameOrShortenedPubkey } from '../hooks/useParamSelector';
 import { promoteUsersInGroup } from '../interactions/conversationInteractions';
 import { PubKey } from '../session/types';
@@ -35,7 +36,6 @@ import {
   MetaGroupWrapperActions,
   UserGroupsWrapperActions,
 } from '../webworker/workers/browser/libsession_worker_interface';
-import { isEmpty } from 'lodash';
 
 const AvatarContainer = styled.div`
   position: relative;
@@ -191,7 +191,7 @@ const GroupStatusText = ({ groupPk, pubkey }: { pubkey: PubkeyType; groupPk: Gro
   }
   return (
     <StyledGroupStatusText
-      data-testid={'group-member-status-text'}
+      data-testid={'contact-status'}
       isFailure={
         (groupPromotionFailed && !groupPromotionSending) ||
         (groupInviteFailed && !groupInviteSending)
@@ -353,7 +353,7 @@ export const MemberListItem = ({
           margin="0 var(--margins-md)"
           alignItems="flex-start"
         >
-          <StyledName data-testid={'group-member-name'} maxName={maxNameWidth}>
+          <StyledName data-testid={'contact'} maxName={maxNameWidth}>
             {ourName || memberName}
           </StyledName>
           <GroupStatusContainer
@@ -368,7 +368,13 @@ export const MemberListItem = ({
 
       {!inMentions && !hideRadioButton && (
         <StyledCheckContainer>
-          <SessionRadio active={isSelected} value={pubkey} inputName={pubkey} label="" />
+          <SessionRadio
+            active={isSelected}
+            value={pubkey}
+            inputName={pubkey}
+            label=""
+            inputDataTestId="select-contact"
+          />
         </StyledCheckContainer>
       )}
     </StyledSessionMemberItem>

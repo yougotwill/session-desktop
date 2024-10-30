@@ -14,7 +14,7 @@ import {
   useIsPrivate,
   useIsPublic,
   useSortedGroupMembers,
-  useZombies
+  useZombies,
 } from '../../hooks/useParamSelector';
 import { useSet } from '../../hooks/useSet';
 import { ClosedGroup } from '../../session/group/closed-group';
