@@ -444,6 +444,9 @@ export async function showLeaveGroupByConvoId(conversationId: string, name: stri
   const admins = conversation.getGroupAdmins();
   const isAdmin = admins.includes(UserUtils.getOurPubKeyStrFromCache());
   const showOnlyGroupAdminWarning = isClosedGroup && isAdmin;
+  const weAreLastAdmin =
+    PubKey.is05Pubkey(conversationId) ||
+    (PubKey.is03Pubkey(conversationId) && isAdmin && admins.length === 1);
   const lastMessageInteractionType = conversation.get('lastMessageInteractionType');
   const lastMessageInteractionStatus = conversation.get('lastMessageInteractionStatus');
 
@@ -466,7 +469,7 @@ export async function showLeaveGroupByConvoId(conversationId: string, name: stri
     await leaveGroupOrCommunityByConvoId({
       conversationId,
       isPublic,
-      sendLeaveMessage: true,
+      sendLeaveMessage: !weAreLastAdmin, // we don't need to send a leave message when we are the last admin: the group is removed.
       onClickClose,
     });
   };

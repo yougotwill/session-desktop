@@ -232,7 +232,7 @@ class GroupInviteJob extends PersistedJob<GroupInvitePersistedData> {
         );
       } else {
         window?.inboxStore?.dispatch(
-          groupInfoActions.setInvitePending({ groupPk, pubkey: member, sending: true })
+          groupInfoActions.setInvitePending({ groupPk, pubkey: member, sending: false })
         );
       }
       window?.inboxStore?.dispatch(

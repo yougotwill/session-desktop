@@ -284,7 +284,11 @@ class ConvoController {
     // send the leave message before we delete everything for this group (including the key!)
     // Note: if we were kicked, we already lost the authData/secretKey for it, so no need to try to send our message.
     if (sendLeaveMessage && !groupInUserGroup?.kicked) {
-      await leaveClosedGroup(groupPk, fromSyncMessage);
+      const failedToSendLeaveMessage = await leaveClosedGroup(groupPk, fromSyncMessage);
+      if (PubKey.is03Pubkey(groupPk) && failedToSendLeaveMessage) {
+        // this is caught and is adding an interaction notification message
+        throw new Error('Failed to send our leaving message to 03 group');
+      }
     }
     // a group 03 can be removed fully or kept empty as kicked.
     // when it was pendingInvite, we delete it fully,
@@ -595,13 +599,15 @@ class ConvoController {
  *
  * Note: `fromSyncMessage` is used to know if we need to send a leave group message to the group first.
  * So if the user made the action on this device, fromSyncMessage should be false, but if it happened from a linked device polled update, set this to true.
+ *
+ * @returns true if the message failed to be sent.
  */
 async function leaveClosedGroup(groupPk: PubkeyType | GroupPubkeyType, fromSyncMessage: boolean) {
   const convo = ConvoHub.use().get(groupPk);
 
   if (!convo || !convo.isClosedGroup()) {
     window?.log?.error('Cannot leave non-existing group');
-    return;
+    return false;
   }
 
   const ourNumber = UserUtils.getOurPubKeyStrFromCache();
@@ -630,7 +636,7 @@ async function leaveClosedGroup(groupPk: PubkeyType | GroupPubkeyType, fromSyncM
 
   if (fromSyncMessage) {
     // no need to send our leave message as our other device should already have sent it.
-    return;
+    return false;
   }
 
   if (PubKey.is03Pubkey(groupPk)) {
@@ -656,6 +662,7 @@ async function leaveClosedGroup(groupPk: PubkeyType | GroupPubkeyType, fromSyncM
     window?.log?.info(
       `We are leaving the group ${ed25519Str(groupPk)}. Sending our leaving messages.`
     );
+    let failedToSent03LeaveMessage = false;
     // We might not be able to send our leaving messages (no encryption key pair, we were already removed, no network, etc).
     // If that happens, we should just remove everything from our current user.
     try {
@@ -683,11 +690,12 @@ async function leaveClosedGroup(groupPk: PubkeyType | GroupPubkeyType, fromSyncM
       window?.log?.warn(
         `failed to send our leaving messages for ${ed25519Str(groupPk)}:${e.message}`
       );
+      failedToSent03LeaveMessage = true;
     }
 
     // the rest of the cleaning of that conversation is done in the `deleteClosedGroup()`
 
-    return;
+    return failedToSent03LeaveMessage;
   }
 
   // TODO remove legacy group support
@@ -695,7 +703,7 @@ async function leaveClosedGroup(groupPk: PubkeyType | GroupPubkeyType, fromSyncM
   if (!keyPair || isEmpty(keyPair) || isEmpty(keyPair.publicHex) || isEmpty(keyPair.privateHex)) {
     // if we do not have a keyPair, we won't be able to send our leaving message neither, so just skip sending it.
     // this can happen when getting a group from a broken libsession user group wrapper, but not only.
-    return;
+    return false;
   }
 
   // Send the update to the group
@@ -727,6 +735,7 @@ async function leaveClosedGroup(groupPk: PubkeyType | GroupPubkeyType, fromSyncM
       )}. But still removing everything related to this group....`
     );
   }
+  return wasSent;
 }
 
 async function removeLegacyGroupFromWrappers(groupId: string) {
