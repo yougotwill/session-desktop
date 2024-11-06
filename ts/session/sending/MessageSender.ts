@@ -124,8 +124,11 @@ async function messageToRequest05({
     createdAtNetworkTimestamp: networkTimestamp,
     plainTextBuffer,
   };
-  if (namespace === SnodeNamespaces.Default || namespace === SnodeNamespaces.LegacyClosedGroup) {
+  if (namespace === SnodeNamespaces.Default) {
     return new StoreUserMessageSubRequest(shared05Arguments);
+  }
+  if (namespace === SnodeNamespaces.LegacyClosedGroup) {
+    return new StoreLegacyGroupMessageSubRequest(shared05Arguments);
   }
   if (SnodeNamespace.isUserConfigNamespace(namespace)) {
     return new StoreUserConfigSubRequest(shared05Arguments);

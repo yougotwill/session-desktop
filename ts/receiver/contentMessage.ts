@@ -10,8 +10,8 @@ import { IncomingMessageCache } from './cache';
 import { Data } from '../data/data';
 import { SettingsKey } from '../data/settings-key';
 import {
-    deleteMessagesFromSwarmAndCompletelyLocally,
-    deleteMessagesFromSwarmAndMarkAsDeletedLocally,
+  deleteMessagesFromSwarmAndCompletelyLocally,
+  deleteMessagesFromSwarmAndMarkAsDeletedLocally,
 } from '../interactions/conversations/unsendingInteractions';
 import { findCachedBlindedMatchOrLookupOnAllServers } from '../session/apis/open_group_api/sogsv3/knownBlindedkeys';
 import { ConvoHub } from '../session/conversations';
@@ -29,8 +29,8 @@ import { BlockedNumberController } from '../util';
 import { ReadReceipts } from '../util/readReceipts';
 import { Storage } from '../util/storage';
 import {
-    ContactsWrapperActions,
-    MetaGroupWrapperActions,
+  ContactsWrapperActions,
+  MetaGroupWrapperActions,
 } from '../webworker/workers/browser/libsession_worker_interface';
 import { handleCallMessage } from './callMessage';
 import { getAllCachedECKeyPair, sentAtMoreRecentThanWrapper } from './closedGroups';
@@ -103,6 +103,8 @@ async function decryptForClosedGroup(
           true
         );
         if (res?.decryptedContent.byteLength) {
+          decryptedContent = res.decryptedContent;
+
           break;
         }
         decryptedContent = res.decryptedContent;

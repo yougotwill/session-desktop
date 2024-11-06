@@ -219,7 +219,7 @@ export const UpdateGroupMembersDialog = (props: Props) => {
 
   return (
     <SessionWrapperModal title={window.i18n('groupMembers')} onClose={closeDialog}>
-      {hasClosedGroupV2QAButtons() && weAreAdmin ? (
+      {hasClosedGroupV2QAButtons() && weAreAdmin && PubKey.is03Pubkey(conversationId) ? (
         <>
           Also remove messages:
           <SessionToggle

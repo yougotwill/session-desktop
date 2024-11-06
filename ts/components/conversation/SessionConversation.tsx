@@ -662,10 +662,9 @@ function OutdatedLegacyGroupBanner(props: {
 
   return isLegacyGroup ? (
     <NoticeBanner
-      text={window.i18n('groupLegacyBanner', { date: 'FIXME AUDRIC' })} // Remove after QA
+      text={window.i18n('groupLegacyBanner', { date: '[Date]' })} // Remove after QA
       onBannerClick={() => {
-        showLinkVisitWarningDialog('', dispatch);
-        throw new Error('TODO'); // fixme audric
+        showLinkVisitWarningDialog('https://getsession.org/blog/session-groups-v2', dispatch);
       }}
       icon="externalLink"
       dataTestId="legacy-group-banner"

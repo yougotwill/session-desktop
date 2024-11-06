@@ -454,7 +454,7 @@ export class SwarmPolling {
       resultsFromAllNamespaces
     );
     window.log.debug(
-      `received confMessages:${confMessages?.length || 0}, revokedMessages:${revokedMessages?.length || 0}, `
+      `received confMessages:${confMessages?.length || 0}, revokedMessages:${revokedMessages?.length || 0}, , otherMessages:${otherMessages?.length || 0}, `
     );
     // We always handle the config messages first (for groups 03 or our own messages)
     await this.handleUserOrGroupConfMessages({ confMessages, pubkey, type });

@@ -2169,7 +2169,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
 
       if (this.isClosedGroup()) {
         if (this.matchesDisappearingMode('deleteAfterRead')) {
-          throw new Error('Group disappearing messages must be deleteAterSend');
+          throw new Error('Group disappearing messages must be deleteAfterSend');
         }
         const chatMessageMediumGroup = new VisibleMessage(chatMessageParams);
         const closedGroupVisibleMessage = new ClosedGroupVisibleMessage({
