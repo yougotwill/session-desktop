@@ -223,7 +223,7 @@ export async function declineConversationWithoutConfirm({
     // when deleting a 03 group message request, we also need to remove the conversation altogether
     await ConvoHub.use().deleteGroup(conversationId, {
       deleteAllMessagesOnSwarm: false,
-      emptyGroupButKeepAsKicked: false,
+      deletionType: 'doNotKeep',
       forceDestroyForAllMembers: false,
       fromSyncMessage: false,
       sendLeaveMessage: false,
@@ -418,7 +418,7 @@ async function leaveGroupOrCommunityByConvoId({
         fromSyncMessage: false,
         sendLeaveMessage,
         deleteAllMessagesOnSwarm: false,
-        emptyGroupButKeepAsKicked: false,
+        deletionType: 'doNotKeep',
         forceDestroyForAllMembers: false,
       });
     }

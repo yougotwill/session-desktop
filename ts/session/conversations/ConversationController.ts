@@ -253,12 +253,12 @@ class ConvoController {
     {
       sendLeaveMessage,
       fromSyncMessage,
-      emptyGroupButKeepAsKicked,
+      deletionType,
       deleteAllMessagesOnSwarm,
       forceDestroyForAllMembers,
     }: DeleteOptions & {
       sendLeaveMessage: boolean;
-      emptyGroupButKeepAsKicked: boolean;
+      deletionType: 'doNotKeep' | 'keepAsKicked' | 'keepAsDestroyed';
       deleteAllMessagesOnSwarm: boolean;
       forceDestroyForAllMembers: boolean;
     }
@@ -268,7 +268,7 @@ class ConvoController {
     }
 
     window.log.info(
-      `deleteGroup: ${ed25519Str(groupPk)}, sendLeaveMessage:${sendLeaveMessage}, fromSyncMessage:${fromSyncMessage}, emptyGroupButKeepAsKicked:${emptyGroupButKeepAsKicked}, deleteAllMessagesOnSwarm:${deleteAllMessagesOnSwarm}, forceDestroyForAllMembers:${forceDestroyForAllMembers}`
+      `deleteGroup: ${ed25519Str(groupPk)}, sendLeaveMessage:${sendLeaveMessage}, fromSyncMessage:${fromSyncMessage}, deletionType:${deletionType}, deleteAllMessagesOnSwarm:${deleteAllMessagesOnSwarm}, forceDestroyForAllMembers:${forceDestroyForAllMembers}`
     );
 
     // this deletes all messages in the conversation
@@ -294,13 +294,13 @@ class ConvoController {
     // when it was pendingInvite, we delete it fully,
     // when it was not, we empty the group but keep it with the "you have been kicked" message
     // Note: the pendingInvite=true case cannot really happen as we wouldn't be polling from that group (and so, not get the message kicking us)
-    if (emptyGroupButKeepAsKicked) {
+    if (deletionType === 'keepAsKicked' || deletionType === 'keepAsDestroyed') {
       // delete the secretKey/authData if we had it. If we need it for something, it has to be done before this call.
       if (groupInUserGroup) {
         groupInUserGroup.authData = null;
         groupInUserGroup.secretKey = null;
         groupInUserGroup.disappearingTimerSeconds = undefined;
-        groupInUserGroup.kicked = true;
+
         // we want to update the groupName in user group with whatever is in the groupInfo,
         // so even if the group is not polled anymore, we have an up to date name on restore.
         let nameInMetaGroup: string | undefined;
@@ -316,6 +316,11 @@ class ConvoController {
           groupInUserGroup.name = nameInMetaGroup;
         }
         await UserGroupsWrapperActions.setGroup(groupInUserGroup);
+        if (deletionType === 'keepAsKicked') {
+          await UserGroupsWrapperActions.setGroupKicked(groupPk);
+        } else {
+          await UserGroupsWrapperActions.setGroupDestroyed(groupPk);
+        }
       }
     } else {
       try {

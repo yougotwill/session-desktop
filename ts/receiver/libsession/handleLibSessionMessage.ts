@@ -54,7 +54,7 @@ async function handleLibSessionKickedMessage({
   await ConvoHub.use().deleteGroup(groupPk, {
     sendLeaveMessage: false,
     fromSyncMessage: false,
-    emptyGroupButKeepAsKicked: !inviteWasPending,
+    deletionType: inviteWasPending ? 'doNotKeep' : 'keepAsKicked',
     deleteAllMessagesOnSwarm: false,
     forceDestroyForAllMembers: false,
   });

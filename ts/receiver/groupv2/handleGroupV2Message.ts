@@ -76,6 +76,7 @@ async function getInitializedGroupObject({
       secretKey: null,
       kicked: false,
       invitePending: true,
+      destroyed: false,
     };
   }
 

@@ -43,6 +43,7 @@ function getEmptyUserGroup() {
     name: '1243',
     priority: 0,
     pubkeyHex: validGroupPk,
+    destroyed: false,
   } as UserGroupsGet;
 }
 

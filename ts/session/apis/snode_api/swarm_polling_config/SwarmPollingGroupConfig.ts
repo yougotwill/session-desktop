@@ -44,7 +44,7 @@ async function handleMetaMergeResults(groupPk: GroupPubkeyType) {
     await ConvoHub.use().deleteGroup(groupPk, {
       sendLeaveMessage: false,
       fromSyncMessage: false,
-      emptyGroupButKeepAsKicked: true, // we just got something from the group's swarm, so it is not pendingInvite
+      deletionType: 'keepAsDestroyed', // we just got something from the group's swarm, so it is not pendingInvite
       deleteAllMessagesOnSwarm: false,
       forceDestroyForAllMembers: false,
     });

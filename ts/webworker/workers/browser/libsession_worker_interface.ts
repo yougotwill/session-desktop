@@ -62,7 +62,7 @@ type GenericWrapperActionsCalls = {
     ed25519Key: Uint8Array,
     dump: Uint8Array | null
   ) => Promise<void>;
-  free: (    wrapperId: ConfigWrapperUser  ) => Promise<void>;
+  free: (wrapperId: ConfigWrapperUser) => Promise<void>;
   confirmPushed: GenericWrapperActionsCall<ConfigWrapperUser, 'confirmPushed'>;
   dump: GenericWrapperActionsCall<ConfigWrapperUser, 'dump'>;
   makeDump: GenericWrapperActionsCall<ConfigWrapperUser, 'makeDump'>;
@@ -82,7 +82,6 @@ export const GenericWrapperActions: GenericWrapperActionsCalls = {
     callLibSessionWorker([wrapperId, 'init', ed25519Key, dump]) as ReturnType<
       GenericWrapperActionsCalls['init']
     >,
-
 
   /** This function is used to free wrappers from memory only.
    *
@@ -341,6 +340,28 @@ export const UserGroupsWrapperActions: UserGroupsWrapperActionsCalls & {
     const group = (await callLibSessionWorker(['UserGroupsConfig', 'setGroup', info])) as Awaited<
       ReturnType<UserGroupsWrapperActionsCalls['setGroup']>
     >;
+    groups.set(group.pubkeyHex, group);
+    dispatchCachedGroupsToRedux();
+    return cloneDeep(group);
+  },
+
+  setGroupKicked: async (pubkeyHex: GroupPubkeyType) => {
+    const group = (await callLibSessionWorker([
+      'UserGroupsConfig',
+      'setGroupKicked',
+      pubkeyHex,
+    ])) as Awaited<ReturnType<UserGroupsWrapperActionsCalls['setGroupKicked']>>;
+    groups.set(group.pubkeyHex, group);
+    dispatchCachedGroupsToRedux();
+    return cloneDeep(group);
+  },
+
+  setGroupDestroyed: async (pubkeyHex: GroupPubkeyType) => {
+    const group = (await callLibSessionWorker([
+      'UserGroupsConfig',
+      'setGroupDestroyed',
+      pubkeyHex,
+    ])) as Awaited<ReturnType<UserGroupsWrapperActionsCalls['setGroupDestroyed']>>;
     groups.set(group.pubkeyHex, group);
     dispatchCachedGroupsToRedux();
     return cloneDeep(group);

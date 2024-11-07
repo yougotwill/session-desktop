@@ -681,7 +681,7 @@ export class SwarmPolling {
       await ConvoHub.use().deleteGroup(pubkey, {
         fromSyncMessage: true,
         sendLeaveMessage: false,
-        emptyGroupButKeepAsKicked: false,
+        deletionType: 'doNotKeep',
         deleteAllMessagesOnSwarm: false,
         forceDestroyForAllMembers: false,
       });

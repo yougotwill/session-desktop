@@ -220,7 +220,7 @@ const DestroyGroupForAllMembersButton = () => {
               onClickOk: () => {
                 void ConvoHub.use().deleteGroup(groupPk, {
                   deleteAllMessagesOnSwarm: true,
-                  emptyGroupButKeepAsKicked: false,
+                  deletionType: 'doNotKeep',
                   fromSyncMessage: false,
                   sendLeaveMessage: false,
                   forceDestroyForAllMembers: true,

@@ -264,7 +264,7 @@ const initNewGroupInWrapper = createAsyncThunk(
         await ConvoHub.use().deleteGroup(groupPk, {
           fromSyncMessage: false,
           sendLeaveMessage: false,
-          emptyGroupButKeepAsKicked: false,
+          deletionType: 'doNotKeep',
           deleteAllMessagesOnSwarm: false,
           forceDestroyForAllMembers: false,
         });

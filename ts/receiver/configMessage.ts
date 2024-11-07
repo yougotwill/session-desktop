@@ -756,7 +756,7 @@ async function handleSingleGroupUpdateToLeave(toLeave: GroupPubkeyType) {
     await ConvoHub.use().deleteGroup(toLeave, {
       fromSyncMessage: true,
       sendLeaveMessage: false,
-      emptyGroupButKeepAsKicked: false,
+      deletionType: 'doNotKeep',
       deleteAllMessagesOnSwarm: false,
       forceDestroyForAllMembers: false,
     });
