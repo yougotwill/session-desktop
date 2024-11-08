@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import useInterval from 'react-use/lib/useInterval';
 import useTimeoutFn from 'react-use/lib/useTimeoutFn';
+import { useThrottleFn } from 'react-use';
 
 import { Data } from '../../data/data';
 import { getConversationController } from '../../session/conversations';
@@ -243,11 +244,15 @@ export const ActionsPanel = () => {
   const unreadToShow = globalUnreadMessageCount;
 
   // Reuse the unreadToShow from the global state to update the badge count
-  useEffect(() => {
-    if (unreadToShow !== undefined) {
-      ipcRenderer.send('update-badge-count', unreadToShow);
-    }
-  }, [unreadToShow]);
+  useThrottleFn(
+    () => {
+      if (unreadToShow !== undefined) {
+        ipcRenderer.send('update-badge-count', unreadToShow);
+      }
+    },
+    2000,
+    []
+  );
 
   useInterval(cleanUpOldDecryptedMedias, startCleanUpMedia ? cleanUpMediasInterval : null);
 
