@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import useInterval from 'react-use/lib/useInterval';
 import useTimeoutFn from 'react-use/lib/useTimeoutFn';
-import { useThrottleFn } from 'react-use';
+import useThrottleFn from 'react-use/lib/useThrottleFn';
 
 import { Data } from '../../data/data';
 import { getConversationController } from '../../session/conversations';
