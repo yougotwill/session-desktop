@@ -241,13 +241,12 @@ export const ActionsPanel = () => {
   }, []);
 
   const globalUnreadMessageCount = useSelector(getGlobalUnreadMessageCount);
-  const unreadToShow = globalUnreadMessageCount;
 
   // Reuse the unreadToShow from the global state to update the badge count
   useThrottleFn(
     () => {
-      if (unreadToShow !== undefined) {
-        ipcRenderer.send('update-badge-count', unreadToShow);
+      if (globalUnreadMessageCount !== undefined) {
+        ipcRenderer.send('update-badge-count', globalUnreadMessageCount);
       }
     },
     2000,
