@@ -1026,7 +1026,9 @@ ipc.on('get-start-in-tray', event => {
 
 ipcMain.on('update-badge-count', (_event, count) => {
   if (app.isReady()) {
-      app.setBadgeCount(isNumber(count) && isFinite(count) && count >= 0 ? count : 0); 
+    app.setBadgeCount(
+      typeof count === 'number' && Number.isFinite(count) && count >= 0 ? count : 0
+    );
   }
 });
 
