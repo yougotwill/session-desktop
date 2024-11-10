@@ -27,7 +27,7 @@ import { platform as osPlatform } from 'process';
 import url from 'url';
 
 import Logger from 'bunyan';
-import _, { isEmpty } from 'lodash';
+import _, { isEmpty, isNumber, isFinite } from 'lodash';
 import pify from 'pify';
 
 import { setupGlobalErrorHandler } from '../node/global_errors'; // checked - only node
@@ -1027,7 +1027,7 @@ ipc.on('get-start-in-tray', event => {
 ipcMain.on('update-badge-count', (_event, count) => {
   if (app.isReady()) {
     app.setBadgeCount(
-      typeof count === 'number' && Number.isFinite(count) && count >= 0 ? count : 0
+     isNumber(count) && isFinite(count) && count >= 0 ? count : 0 
     );
   }
 });
