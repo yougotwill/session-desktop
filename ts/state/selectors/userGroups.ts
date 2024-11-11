@@ -39,3 +39,11 @@ export function getLibGroupKickedOutsideRedux(convoId?: string) {
 
   return state ? getLibGroupKicked(state, convoId) : undefined;
 }
+
+export function getLibGroupDestroyed(state: StateType, convoId?: string) {
+  return getGroupById(state, convoId)?.destroyed;
+}
+
+export function useLibGroupDestroyed(convoId?: string) {
+  return useSelector((state: StateType) => getLibGroupDestroyed(state, convoId));
+}

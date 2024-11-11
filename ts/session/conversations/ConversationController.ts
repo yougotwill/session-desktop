@@ -317,9 +317,9 @@ class ConvoController {
         }
         await UserGroupsWrapperActions.setGroup(groupInUserGroup);
         if (deletionType === 'keepAsKicked') {
-          await UserGroupsWrapperActions.setGroupKicked(groupPk);
+          await UserGroupsWrapperActions.markGroupKicked(groupPk);
         } else {
-          await UserGroupsWrapperActions.setGroupDestroyed(groupPk);
+          await UserGroupsWrapperActions.markGroupDestroyed(groupPk);
         }
       }
     } else {

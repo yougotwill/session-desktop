@@ -1,5 +1,5 @@
 import { GroupPubkeyType, PubkeyType, WithGroupPubkey } from 'libsession_util_nodejs';
-import { compact, isEmpty, isFinite, isNumber } from 'lodash';
+import { isEmpty, isFinite, isNumber } from 'lodash';
 import { Data } from '../../data/data';
 import { deleteAllMessagesByConvoIdNoConfirmation } from '../../interactions/conversationInteractions';
 import { deleteMessagesFromSwarmOnly } from '../../interactions/conversations/unsendingInteractions';
@@ -20,7 +20,6 @@ import { PreConditionFailed } from '../../session/utils/errors';
 import { UserSync } from '../../session/utils/job_runners/jobs/UserSyncJob';
 import { LibSessionUtil } from '../../session/utils/libsession/libsession_utils';
 import { SessionUtilConvoInfoVolatile } from '../../session/utils/libsession/libsession_utils_convo_info_volatile';
-import { messageHashesExpired, messagesExpired } from '../../state/ducks/conversations';
 import { groupInfoActions } from '../../state/ducks/metaGroups';
 import { toFixedUint8ArrayOfLength } from '../../types/sqlSharedTypes';
 import { BlockedNumberController } from '../../util';
@@ -80,7 +79,6 @@ async function getInitializedGroupObject({
     };
   }
 
-  found.kicked = false;
   found.name = groupName;
   if (groupSecretKey && !isEmpty(groupSecretKey)) {
     found.secretKey = groupSecretKey;
@@ -164,6 +162,7 @@ async function handleGroupUpdateInviteMessage({
   found.authData = inviteMessage.memberAuthData;
 
   await UserGroupsWrapperActions.setGroup(found);
+  await UserGroupsWrapperActions.markGroupInvited(groupPk);
   // force markedAsUnread to be true so it shows the unread banner (we only show the banner if there are unread messages on at least one msg/group request)
   await convo.markAsUnread(true, false);
   await convo.commit();
@@ -427,34 +426,44 @@ async function handleGroupDeleteMemberContentMessage({
    * When `adminSignature` is not empty and valid,
    *   2. we delete all the messages in the group sent by any of change.memberSessionIds AND
    *   3. we delete all the messageHashes in the conversation matching the change.messageHashes (even if not from the right sender)
+   *
+   * Note: we never fully delete those messages locally, but only empty them and mark them as deleted with the
+   * "This message was deleted" placeholder.
+   * Eventually, we will be able to delete those "deleted by kept locally" messages with placeholders.
    */
 
-  if (isEmpty(change.adminSignature)) {
+  // no adminSignature: this was sent by a non-admin user
+  if (!change.adminSignature || isEmpty(change.adminSignature)) {
     // this is step 1.
-    const { msgIdsDeleted, msgHashesDeleted } =
-      await Data.deleteAllMessageHashesInConversationMatchingAuthor({
-        author,
-        groupPk,
-        messageHashes: change.messageHashes,
-        signatureTimestamp,
-      });
+    const messageModels = await Data.findAllMessageHashesInConversationMatchingAuthor({
+      author,
+      groupPk,
+      messageHashes: change.messageHashes,
+      signatureTimestamp,
+    });
 
-    window.inboxStore?.dispatch(
-      messagesExpired(msgIdsDeleted.map(m => ({ conversationKey: groupPk, messageId: m })))
-    );
-
-    if (msgIdsDeleted.length) {
-      // Note: we `void` it because we don't want to hang while
-      // processing the handleGroupDeleteMemberContentMessage itself
-      // (we are running on the receiving pipeline here)
-      void deleteMessagesFromSwarmOnly(msgHashesDeleted, groupPk).catch(e => {
-        // we retry a bunch of times already, so if it still fails, there is not much we can do.
-        window.log.warn('deleteMessagesFromSwarmOnly failed with', e.message);
-      });
+    // we don't want to hang while for too long here
+    // processing the handleGroupDeleteMemberContentMessage itself
+    // (we are running on the receiving pipeline here)
+    // so network calls are not allowed.
+    for (let index = 0; index < messageModels.length; index++) {
+      const messageModel = messageModels[index];
+      try {
+        // eslint-disable-next-line no-await-in-loop
+        await messageModel.markAsDeleted();
+      } catch (e) {
+        window.log.warn(
+          `handleGroupDeleteMemberContentMessage markAsDeleted non-admin of ${messageModel.getMessageHash()} failed with`,
+          e.message
+        );
+      }
     }
     convo.updateLastMessage();
+
     return;
   }
+
+  // else case: we have an admin signature to verify
 
   const sigValid = await verifySig({
     pubKey: HexString.fromHexStringNoPrefix(groupPk),
@@ -471,26 +480,36 @@ async function handleGroupDeleteMemberContentMessage({
 
   const toRemove = change.memberSessionIds.filter(PubKey.is05Pubkey);
 
-  const deletedBySenders = await Data.deleteAllMessageFromSendersInConversation({
+  const modelsBySenders = await Data.findAllMessageFromSendersInConversation({
     groupPk,
     toRemove,
     signatureTimestamp,
   }); // this is step 2.
-  const deletedByHashes = await Data.deleteAllMessageHashesInConversation({
+  const modelsByHashes = await Data.findAllMessageHashesInConversation({
     groupPk,
     messageHashes: change.messageHashes,
     signatureTimestamp,
   }); // this is step 3.
 
-  window.inboxStore?.dispatch(
-    messageHashesExpired(
-      compact([...deletedByHashes.messageHashes, ...deletedBySenders.messageHashes]).map(m => ({
-        conversationKey: groupPk,
-        messageHash: m,
-      }))
-    )
-  );
+  // we don't want to hang while for too long here
+  // processing the handleGroupDeleteMemberContentMessage itself
+  // (we are running on the receiving pipeline here)
+  // so network calls are not allowed.
+  const mergedModels = modelsByHashes.concat(modelsBySenders);
+  for (let index = 0; index < mergedModels.length; index++) {
+    const messageModel = mergedModels[index];
+    try {
+      // eslint-disable-next-line no-await-in-loop
+      await messageModel.markAsDeleted();
+    } catch (e) {
+      window.log.warn(
+        `handleGroupDeleteMemberContentMessage markAsDeleted non-admin of ${messageModel.getMessageHash()} failed with`,
+        e.message
+      );
+    }
+  }
   convo.updateLastMessage();
+
 }
 
 async function handleGroupUpdateInviteResponseMessage({

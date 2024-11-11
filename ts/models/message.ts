@@ -438,7 +438,6 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
         );
       }
       return window.i18n.stripped(...([i18nProps.token] as GetMessageArgs<LocalizerToken>));
-
     }
     const body = this.get('body');
     if (body) {
@@ -986,7 +985,7 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
   public async markAsDeleted() {
     this.set({
       isDeleted: true,
-      body: window.i18n('deleteMessageDeleted', { count: 1 }),
+      body: window.i18n('deleteMessageDeletedGlobally'),
       quote: undefined,
       groupInvitation: undefined,
       dataExtractionNotification: undefined,
@@ -997,6 +996,11 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
       preview: undefined,
       reacts: undefined,
       reactsIndex: undefined,
+      flags: undefined,
+      callNotificationType: undefined,
+      interactionNotification: undefined,
+      reaction: undefined,
+      messageRequestResponse: undefined,
     });
     // we can ignore the result of that markMessageReadNoCommit as it would only be used
     // to refresh the expiry of it(but it is already marked as "deleted", so we don't care)

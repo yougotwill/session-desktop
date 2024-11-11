@@ -25,6 +25,7 @@ import {
   useSelectedNicknameOrProfileNameOrShortenedPubkey,
 } from '../../state/selectors/selectedConversation';
 import {
+  useLibGroupDestroyed,
   useLibGroupInviteGroupName,
   useLibGroupInvitePending,
   useLibGroupKicked,
@@ -112,10 +113,10 @@ export const ConversationIncomingRequestExplanation = () => {
   const showMsgRequestUI = selectedConversation && isIncomingMessageRequest;
   const hasOutgoingMessages = useSelector(hasSelectedConversationOutgoingMessages);
 
-  const isGroupV2 = useSelectedIsGroupV2()
+  const isGroupV2 = useSelectedIsGroupV2();
 
   if (isGroupV2) {
-    return <GroupRequestExplanation />
+    return <GroupRequestExplanation />;
   }
 
   if (!showMsgRequestUI || hasOutgoingMessages) {
@@ -212,6 +213,7 @@ export const NoMessageInConversation = () => {
   const isPrivate = useSelectedIsPrivate();
   const isIncomingRequest = useIsIncomingRequest(selectedConversation);
   const isKickedFromGroup = useLibGroupKicked(selectedConversation);
+  const isGroupDestroyed = useLibGroupDestroyed(selectedConversation);
   const name = useSelectedNicknameOrProfileNameOrShortenedPubkey();
 
   const getHtmlToRender = () => {
@@ -225,6 +227,10 @@ export const NoMessageInConversation = () => {
 
     if (privateBlindedAndBlockingMsgReqs) {
       return localize('messageRequestsTurnedOff').withArgs({ name }).toString();
+    }
+
+    if (isGroupV2 && isGroupDestroyed) {
+      return localize('groupDeletedMemberDescription').withArgs({ group_name: name }).toString();
     }
 
     if (isGroupV2 && isKickedFromGroup) {

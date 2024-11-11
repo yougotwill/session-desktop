@@ -17,6 +17,7 @@ import {
 } from './conversations';
 import { getLibMembersPubkeys, useLibGroupName } from './groups';
 import { getCanWrite, getModerators, getSubscriberCount } from './sogsRoomInfo';
+import { getLibGroupDestroyed, useLibGroupDestroyed } from './userGroups';
 
 const getIsSelectedPrivate = (state: StateType): boolean => {
   return Boolean(getSelectedConversation(state)?.isPrivate) || false;
@@ -57,6 +58,7 @@ export const getSelectedConversationIsPublic = (state: StateType): boolean => {
  */
 export function getSelectedCanWrite(state: StateType) {
   const selectedConvoPubkey = getSelectedConversationKey(state);
+  const isSelectedGroupDestroyed = getLibGroupDestroyed(state, selectedConvoPubkey);
   if (!selectedConvoPubkey) {
     return false;
   }
@@ -69,9 +71,15 @@ export function getSelectedCanWrite(state: StateType) {
 
   const readOnlySogs = isPublic && !canWriteSogs;
 
-  const isBlindedAndDisabledMsgRequests = getSelectedBlindedDisabledMsgRequests(state); // true if isPrivate, blinded and explicitely disabled msgreq
+  const isBlindedAndDisabledMsgRequests = getSelectedBlindedDisabledMsgRequests(state); // true if isPrivate, blinded and explicitly disabled msgreq
 
-  return !(isBlocked || isKickedFromGroup || readOnlySogs || isBlindedAndDisabledMsgRequests);
+  return !(
+    isBlocked ||
+    isKickedFromGroup ||
+    isSelectedGroupDestroyed ||
+    readOnlySogs ||
+    isBlindedAndDisabledMsgRequests
+  );
 }
 
 function getSelectedBlindedDisabledMsgRequests(state: StateType) {
@@ -326,6 +334,11 @@ export function useSelectedIsKickedFromGroup() {
   return useSelector(
     (state: StateType) => Boolean(getSelectedConversation(state)?.isKickedFromGroup) || false
   );
+}
+
+export function useSelectedIsGroupDestroyed() {
+  const convoKey = useSelectedConversationKey();
+  return useLibGroupDestroyed(convoKey);
 }
 
 export function useSelectedExpireTimer(): number | undefined {

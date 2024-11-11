@@ -244,7 +244,8 @@ class GroupSyncJob extends PersistedJob<GroupSyncPersistedData> {
 
       // eslint-disable-next-line no-useless-catch
     } catch (e) {
-      throw e;
+      window.log.warn('GroupSyncJob failed with', e.message);
+      return RunJobResult.RetryJobIfPossible;
     } finally {
       window.log.debug(
         `GroupSyncJob ${ed25519Str(thisJobDestination)} run() took ${Date.now() - start}ms`

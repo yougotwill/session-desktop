@@ -27,10 +27,9 @@ import * as dataInit from './dataInit';
 import { cleanData } from './dataUtils';
 import { SNODE_POOL_ITEM_ID } from './settings-key';
 import {
-  DataCallArgs,
-  DeleteAllMessageFromSendersInConversationType,
-  DeleteAllMessageHashesInConversationMatchingAuthorType,
-  DeleteAllMessageHashesInConversationType,
+  FindAllMessageFromSendersInConversationTypeArgs,
+  FindAllMessageHashesInConversationMatchingAuthorTypeArgs,
+  FindAllMessageHashesInConversationTypeArgs,
 } from './sharedDataTypes';
 import { GuardNode, Snode } from './types';
 
@@ -574,22 +573,40 @@ async function removeAllMessagesInConversation(conversationId: string): Promise<
   );
 }
 
-async function deleteAllMessageFromSendersInConversation(
-  args: DataCallArgs<DeleteAllMessageFromSendersInConversationType>
-): ReturnType<DeleteAllMessageFromSendersInConversationType> {
-  return channels.deleteAllMessageFromSendersInConversation(args);
+async function findAllMessageFromSendersInConversation(
+  args: FindAllMessageFromSendersInConversationTypeArgs
+): Promise<Array<MessageModel>> {
+  const msgAttrs = await channels.findAllMessageFromSendersInConversation(args);
+
+  if (!msgAttrs || isEmpty(msgAttrs)) {
+    return [];
+  }
+
+  return msgAttrs.map((msg: any) => new MessageModel(msg));
 }
 
-async function deleteAllMessageHashesInConversation(
-  args: DataCallArgs<DeleteAllMessageHashesInConversationType>
-): ReturnType<DeleteAllMessageHashesInConversationType> {
-  return channels.deleteAllMessageHashesInConversation(args);
+async function findAllMessageHashesInConversation(
+  args: FindAllMessageHashesInConversationTypeArgs
+): Promise<Array<MessageModel>> {
+  const msgAttrs = await channels.findAllMessageHashesInConversation(args);
+
+  if (!msgAttrs || isEmpty(msgAttrs)) {
+    return [];
+  }
+
+  return msgAttrs.map((msg: any) => new MessageModel(msg));
 }
 
-async function deleteAllMessageHashesInConversationMatchingAuthor(
-  args: DataCallArgs<DeleteAllMessageHashesInConversationMatchingAuthorType>
-): ReturnType<DeleteAllMessageHashesInConversationMatchingAuthorType> {
-  return channels.deleteAllMessageHashesInConversationMatchingAuthor(args);
+async function findAllMessageHashesInConversationMatchingAuthor(
+  args: FindAllMessageHashesInConversationMatchingAuthorTypeArgs
+): Promise<Array<MessageModel>> {
+  const msgAttrs = await channels.findAllMessageHashesInConversationMatchingAuthor(args);
+
+  if (!msgAttrs || isEmpty(msgAttrs)) {
+    return [];
+  }
+
+  return msgAttrs.map((msg: any) => new MessageModel(msg));
 }
 
 async function getMessagesBySentAt(sentAt: number): Promise<MessageCollection> {
@@ -873,9 +890,9 @@ export const Data = {
   getLastHashBySnode,
   getSeenMessagesByHashList,
   removeAllMessagesInConversation,
-  deleteAllMessageFromSendersInConversation,
-  deleteAllMessageHashesInConversation,
-  deleteAllMessageHashesInConversationMatchingAuthor,
+  findAllMessageFromSendersInConversation,
+  findAllMessageHashesInConversation,
+  findAllMessageHashesInConversationMatchingAuthor,
   getMessagesBySentAt,
   getExpiredMessages,
   getOutgoingWithoutExpiresAt,

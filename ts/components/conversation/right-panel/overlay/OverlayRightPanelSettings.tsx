@@ -21,18 +21,17 @@ import {
   showUpdateGroupNameByConvoId,
 } from '../../../../interactions/conversationInteractions';
 import { Constants } from '../../../../session';
-import { ConvoHub } from '../../../../session/conversations';
 import { PubKey } from '../../../../session/types';
 import { hasClosedGroupV2QAButtons } from '../../../../shared/env_vars';
 import { closeRightPanel } from '../../../../state/ducks/conversations';
 import { groupInfoActions } from '../../../../state/ducks/metaGroups';
-import { updateConfirmModal } from '../../../../state/ducks/modalDialog';
 import { resetRightOverlayMode, setRightOverlayMode } from '../../../../state/ducks/section';
 import {
   useSelectedConversationKey,
   useSelectedDisplayNameInProfile,
   useSelectedIsActive,
   useSelectedIsBlocked,
+  useSelectedIsGroupDestroyed,
   useSelectedIsGroupOrCommunity,
   useSelectedIsGroupV2,
   useSelectedIsKickedFromGroup,
@@ -45,7 +44,6 @@ import { AttachmentTypeWithPath } from '../../../../types/Attachment';
 import { getAbsoluteAttachmentPath } from '../../../../types/MessageAttachment';
 import { Avatar, AvatarSize } from '../../../avatar/Avatar';
 import { Flex } from '../../../basic/Flex';
-import { SessionButtonColor } from '../../../basic/SessionButton';
 import { SpacerLG, SpacerMD, SpacerXL } from '../../../basic/Text';
 import { PanelButtonGroup, PanelIconButton } from '../../../buttons';
 import { MediaItemType } from '../../../lightbox/LightboxGallery';
@@ -134,6 +132,7 @@ const HeaderItem = () => {
   const dispatch = useDispatch();
   const isBlocked = useSelectedIsBlocked();
   const isKickedFromGroup = useSelectedIsKickedFromGroup();
+  const isGroupDestroyed = useSelectedIsGroupDestroyed();
   const isGroup = useSelectedIsGroupOrCommunity();
   const isGroupV2 = useSelectedIsGroupV2();
   const isPublic = useSelectedIsPublic();
@@ -146,7 +145,8 @@ const HeaderItem = () => {
 
   const showInviteLegacyGroup =
     !isPublic && !isGroupV2 && isGroup && !isKickedFromGroup && !isBlocked;
-  const showInviteGroupV2 = isGroupV2 && !isKickedFromGroup && !isBlocked && weAreAdmin;
+  const showInviteGroupV2 =
+    isGroupV2 && !isKickedFromGroup && !isBlocked && weAreAdmin && !isGroupDestroyed;
   const showInviteContacts = isPublic || showInviteLegacyGroup || showInviteGroupV2;
   const showMemberCount = !!(subscriberCount && subscriberCount > 0);
 
@@ -198,43 +198,6 @@ const StyledName = styled.h4`
   padding-inline: var(--margins-md);
   font-size: var(--font-size-md);
 `;
-
-const DestroyGroupForAllMembersButton = () => {
-  const dispatch = useDispatch();
-  const groupPk = useSelectedConversationKey();
-  if (groupPk && PubKey.is03Pubkey(groupPk) && hasClosedGroupV2QAButtons()) {
-    return (
-      <PanelIconButton
-        dataTestId="delete-group-button"
-        iconType="delete"
-        color={'var(--danger-color)'}
-        text={window.i18n('groupDelete')}
-        onClick={() => {
-          dispatch(
-            // TODO build the right UI for this (just adding buttons for QA for now)
-            updateConfirmModal({
-              okText: window.i18n('delete'),
-              okTheme: SessionButtonColor.Danger,
-              title: window.i18n('groupDelete'),
-              conversationId: groupPk,
-              onClickOk: () => {
-                void ConvoHub.use().deleteGroup(groupPk, {
-                  deleteAllMessagesOnSwarm: true,
-                  deletionType: 'doNotKeep',
-                  fromSyncMessage: false,
-                  sendLeaveMessage: false,
-                  forceDestroyForAllMembers: true,
-                });
-              },
-            })
-          );
-        }}
-      />
-    );
-  }
-
-  return null;
-};
 
 export const OverlayRightPanelSettings = () => {
   const [documents, setDocuments] = useState<Array<MediaItemType>>([]);
@@ -447,7 +410,6 @@ export const OverlayRightPanelSettings = () => {
                 color={'var(--danger-color)'}
                 iconType={'delete'}
               />
-              <DestroyGroupForAllMembersButton />
             </>
           )}
         </PanelButtonGroup>

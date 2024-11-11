@@ -3,6 +3,7 @@ import { Mention, MentionsInput } from 'react-mentions';
 import {
   useSelectedConversationKey,
   useSelectedIsBlocked,
+  useSelectedIsGroupDestroyed,
   useSelectedIsKickedFromGroup,
   useSelectedNicknameOrProfileNameOrShortenedPubkey,
 } from '../../../state/selectors/selectedConversation';
@@ -55,6 +56,7 @@ export const CompositionTextArea = (props: Props) => {
   const selectedConversationKey = useSelectedConversationKey();
   const htmlDirection = useHTMLDirection();
   const isKickedFromGroup = useSelectedIsKickedFromGroup();
+  const isGroupDestroyed = useSelectedIsGroupDestroyed();
   const isBlocked = useSelectedIsBlocked();
   const groupName = useSelectedNicknameOrProfileNameOrShortenedPubkey();
 
@@ -63,6 +65,9 @@ export const CompositionTextArea = (props: Props) => {
   }
 
   const makeMessagePlaceHolderText = () => {
+    if (isGroupDestroyed) {
+      return window.i18n('groupDeletedMemberDescription', { group_name: groupName });
+    }
     if (isKickedFromGroup) {
       return window.i18n('groupRemovedYou', { group_name: groupName });
     }

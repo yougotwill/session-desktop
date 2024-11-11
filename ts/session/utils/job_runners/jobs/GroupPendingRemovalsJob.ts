@@ -5,7 +5,6 @@ import { v4 } from 'uuid';
 import { StringUtils } from '../..';
 import { Data } from '../../../../data/data';
 import { deleteMessagesFromSwarmOnly } from '../../../../interactions/conversations/unsendingInteractions';
-import { messageHashesExpired } from '../../../../state/ducks/conversations';
 import {
   MetaGroupWrapperActions,
   MultiEncryptWrapperActions,
@@ -212,26 +211,27 @@ class GroupPendingRemovalsJob extends PersistedJob<GroupPendingRemovalsPersisted
 
       try {
         if (deleteMessagesOfMembers.length) {
-          const msgHashesToDeleteOnGroupSwarm =
-            await Data.deleteAllMessageFromSendersInConversation({
-              groupPk,
-              toRemove: deleteMessagesOfMembers,
-              signatureTimestamp: NetworkTime.now(),
-            });
+          debugger;
+          const models = await Data.findAllMessageFromSendersInConversation({
+            groupPk,
+            toRemove: deleteMessagesOfMembers,
+            signatureTimestamp: NetworkTime.now(),
+          });
 
-          if (msgHashesToDeleteOnGroupSwarm.messageHashes.length) {
-            const deleted = await deleteMessagesFromSwarmOnly(
-              msgHashesToDeleteOnGroupSwarm.messageHashes,
-              groupPk
-            );
-            if (deleted) {
-              window.inboxStore?.dispatch(
-                messageHashesExpired(
-                  msgHashesToDeleteOnGroupSwarm.messageHashes.map(messageHash => ({
-                    conversationKey: groupPk,
-                    messageHash,
-                  }))
-                )
+          const messageHashes = compact(models.map(m => m.getMessageHash()));
+
+          if (messageHashes.length) {
+            await deleteMessagesFromSwarmOnly(messageHashes, groupPk);
+          }
+          for (let index = 0; index < models.length; index++) {
+            const messageModel = models[index];
+            try {
+              // eslint-disable-next-line no-await-in-loop
+              await messageModel.markAsDeleted();
+            } catch (e) {
+              window.log.warn(
+                `GroupPendingRemoval markAsDeleted of ${messageModel.getMessageHash()} failed with`,
+                e.message
               );
             }
           }

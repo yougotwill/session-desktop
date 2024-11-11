@@ -62,6 +62,7 @@ import {
   ConversationInteractionStatus,
   ConversationInteractionType,
 } from '../../interactions/types';
+import { useLibGroupDestroyed } from '../../state/selectors/userGroups';
 
 /** Menu items standardized */
 
@@ -213,9 +214,10 @@ export const ShowUserDetailsMenuItem = () => {
 export const UpdateGroupNameMenuItem = () => {
   const convoId = useConvoIdFromContext();
   const isKickedFromGroup = useIsKickedFromGroup(convoId);
+  const isDestroyed = useLibGroupDestroyed(convoId);
   const weAreAdmin = useWeAreAdmin(convoId);
 
-  if (!isKickedFromGroup && weAreAdmin) {
+  if (!isKickedFromGroup && weAreAdmin && !isDestroyed) {
     return (
       <ItemWithDataTestId
         onClick={() => {
@@ -232,6 +234,7 @@ export const UpdateGroupNameMenuItem = () => {
 export const RemoveModeratorsMenuItem = (): JSX.Element | null => {
   const convoId = useConvoIdFromContext();
   const isPublic = useIsPublic(convoId);
+
   const isKickedFromGroup = useIsKickedFromGroup(convoId);
   const weAreAdmin = useWeAreAdmin(convoId);
 
@@ -517,6 +520,8 @@ export const NotificationForConvoMenuItem = (): JSX.Element | null => {
   const isBlocked = useIsBlocked(convoId);
   const isActive = useIsActive(convoId);
   const isKickedFromGroup = useIsKickedFromGroup(convoId);
+  const isGroupDestroyed = useLibGroupDestroyed(convoId);
+
   const isFriend = useIsPrivateAndFriend(convoId);
   const isPrivate = useIsPrivate(convoId);
   const isMessageRequestShown = useSelector(getIsMessageRequestOverlayShown);
@@ -525,6 +530,7 @@ export const NotificationForConvoMenuItem = (): JSX.Element | null => {
     !convoId ||
     isMessageRequestShown ||
     isKickedFromGroup ||
+    isGroupDestroyed ||
     isBlocked ||
     !isActive ||
     (isPrivate && !isFriend)

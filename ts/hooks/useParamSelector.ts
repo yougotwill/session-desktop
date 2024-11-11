@@ -21,7 +21,11 @@ import {
 import { useLibGroupAdmins, useLibGroupMembers, useLibGroupName } from '../state/selectors/groups';
 import { isPrivateAndFriend } from '../state/selectors/selectedConversation';
 import { useOurPkStr } from '../state/selectors/user';
-import { useLibGroupInvitePending, useLibGroupKicked } from '../state/selectors/userGroups';
+import {
+  useLibGroupDestroyed,
+  useLibGroupInvitePending,
+  useLibGroupKicked,
+} from '../state/selectors/userGroups';
 
 export function useAvatarPath(convoId: string | undefined) {
   const convoProps = useConversationPropsById(convoId);
@@ -215,6 +219,14 @@ export function useIsKickedFromGroup(convoId?: string) {
     return libIsKicked;
   }
   return Boolean(convoProps && (convoProps.isKickedFromGroup || libIsKicked)); // not ideal, but until we trust what we get from libsession for all cases, we have to either trust what we have in the DB
+}
+
+export function useIsGroupDestroyed(convoId?: string) {
+  const libIsDestroyed = useLibGroupDestroyed(convoId);
+  if (convoId && PubKey.is03Pubkey(convoId)) {
+    return libIsDestroyed;
+  }
+  return false;
 }
 
 export function useWeAreAdmin(convoId?: string) {

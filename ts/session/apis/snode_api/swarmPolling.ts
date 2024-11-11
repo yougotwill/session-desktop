@@ -57,6 +57,7 @@ import {
 } from './types';
 import { ConversationTypeEnum } from '../../../models/types';
 import { Snode } from '../../../data/types';
+import { isDevProd } from '../../../shared/env_vars';
 
 const minMsgCountShouldRetry = 95;
 
@@ -289,7 +290,9 @@ export class SwarmPolling {
     if (!window.getGlobalOnlineStatus()) {
       window?.log?.error('pollForAllKeys: offline');
       // Very important to set up a new polling call so we do retry at some point
-      timeouts.push(setTimeout(this.pollForAllKeys.bind(this), SWARM_POLLING_TIMEOUT.ACTIVE));
+      timeouts.push(
+        setTimeout(this.pollForAllKeys.bind(this), isDevProd() ? 500 : SWARM_POLLING_TIMEOUT.ACTIVE)
+      );
       return;
     }
 
@@ -309,7 +312,9 @@ export class SwarmPolling {
       window?.log?.warn('pollForAllKeys exception: ', e);
       throw e;
     } finally {
-      timeouts.push(setTimeout(this.pollForAllKeys.bind(this), SWARM_POLLING_TIMEOUT.ACTIVE));
+      timeouts.push(
+        setTimeout(this.pollForAllKeys.bind(this), isDevProd() ? 500 : SWARM_POLLING_TIMEOUT.ACTIVE)
+      );
     }
   }
 

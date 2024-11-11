@@ -54,7 +54,6 @@ import type { SetupI18nReturnType } from '../types/localizer'; // checked - only
 import { StorageItem } from './storage_item'; // checked - only node
 
 import {
-  AwaitedReturn,
   CONFIG_DUMP_TABLE,
   MsgDuplicateSearchOpenGroup,
   roomHasBlindEnabled,
@@ -66,10 +65,9 @@ import {
 
 import { KNOWN_BLINDED_KEYS_ITEM, SettingsKey } from '../data/settings-key';
 import {
-  DataCallArgs,
-  DeleteAllMessageFromSendersInConversationType,
-  DeleteAllMessageHashesInConversationMatchingAuthorType,
-  DeleteAllMessageHashesInConversationType,
+  FindAllMessageFromSendersInConversationTypeArgs,
+  FindAllMessageHashesInConversationMatchingAuthorTypeArgs,
+  FindAllMessageHashesInConversationTypeArgs,
 } from '../data/sharedDataTypes';
 import { MessageAttributes } from '../models/messageType';
 import { SignalService } from '../protobuf';
@@ -1097,72 +1095,68 @@ function removeAllMessagesInConversation(
     .run({ conversationId });
 }
 
-function deleteAllMessageFromSendersInConversation(
-  {
-    groupPk,
-    toRemove,
-    signatureTimestamp,
-  }: DataCallArgs<DeleteAllMessageFromSendersInConversationType>,
+function findAllMessageFromSendersInConversation(
+  { groupPk, toRemove, signatureTimestamp }: FindAllMessageFromSendersInConversationTypeArgs,
   instance?: BetterSqlite3.Database
-): AwaitedReturn<DeleteAllMessageFromSendersInConversationType> {
+) {
   if (!groupPk || !toRemove.length) {
     return { messageHashes: [] };
   }
-  const messageHashes = compact(
-    assertGlobalInstanceOrInstance(instance)
-      .prepare(
-        `DELETE FROM ${MESSAGES_TABLE} WHERE conversationId = ? AND sent_at <= ? AND source IN ( ${toRemove.map(() => '?').join(', ')} ) RETURNING messageHash`
-      )
-      .all(groupPk, signatureTimestamp, ...toRemove)
-      .map(m => m.messageHash)
-  );
-  return { messageHashes };
+  const rows = assertGlobalInstanceOrInstance(instance)
+    .prepare(
+      `SELECT json FROM ${MESSAGES_TABLE} WHERE conversationId = ? AND sent_at <= ? AND source IN ( ${toRemove.map(() => '?').join(', ')} )`
+    )
+    .all(groupPk, signatureTimestamp, ...toRemove);
+
+  if (!rows || isEmpty(rows)) {
+    return [];
+  }
+  return map(rows, row => jsonToObject(row.json));
 }
 
-function deleteAllMessageHashesInConversation(
-  {
-    groupPk,
-    messageHashes,
-    signatureTimestamp,
-  }: DataCallArgs<DeleteAllMessageHashesInConversationType>,
+function findAllMessageHashesInConversation(
+  { groupPk, messageHashes, signatureTimestamp }: FindAllMessageHashesInConversationTypeArgs,
   instance?: BetterSqlite3.Database
-): AwaitedReturn<DeleteAllMessageHashesInConversationType> {
+) {
   if (!groupPk || !messageHashes.length) {
-    return { messageHashes: [] };
+    return [];
   }
-  const deletedMessageHashes = compact(
+  const rows = compact(
     assertGlobalInstanceOrInstance(instance)
       .prepare(
-        `DELETE FROM ${MESSAGES_TABLE} WHERE conversationId = ? AND sent_at <= ? AND messageHash IN ( ${messageHashes.map(() => '?').join(', ')} ) RETURNING messageHash`
+        `SELECT json FROM ${MESSAGES_TABLE} WHERE conversationId = ? AND sent_at <= ? AND messageHash IN ( ${messageHashes.map(() => '?').join(', ')} )`
       )
       .all(groupPk, signatureTimestamp, ...messageHashes)
-      .map(m => m.messageHash)
   );
-  return { messageHashes: deletedMessageHashes };
+
+  if (!rows || isEmpty(rows)) {
+    return [];
+  }
+  return map(rows, row => jsonToObject(row.json));
 }
 
-function deleteAllMessageHashesInConversationMatchingAuthor(
+function findAllMessageHashesInConversationMatchingAuthor(
   {
     author,
     groupPk,
     messageHashes,
     signatureTimestamp,
-  }: DataCallArgs<DeleteAllMessageHashesInConversationMatchingAuthorType>,
+  }: FindAllMessageHashesInConversationMatchingAuthorTypeArgs,
   instance?: BetterSqlite3.Database
-): AwaitedReturn<DeleteAllMessageHashesInConversationMatchingAuthorType> {
+) {
   if (!groupPk || !author || !messageHashes.length) {
     return { msgHashesDeleted: [], msgIdsDeleted: [] };
   }
-  const results = assertGlobalInstanceOrInstance(instance)
+  const rows = assertGlobalInstanceOrInstance(instance)
     .prepare(
-      `DELETE FROM ${MESSAGES_TABLE} WHERE conversationId = ? AND source = ? AND sent_at <= ? AND messageHash IN ( ${messageHashes.map(() => '?').join(', ')} ) RETURNING id, messageHash;`
+      `SELECT json FROM ${MESSAGES_TABLE} WHERE conversationId = ? AND source = ? AND sent_at <= ? AND messageHash IN ( ${messageHashes.map(() => '?').join(', ')} );`
     )
     .all(groupPk, author, signatureTimestamp, ...messageHashes);
 
-  return {
-    msgHashesDeleted: results.map(m => m.messageHash),
-    msgIdsDeleted: results.map(m => m.id),
-  };
+  if (!rows || isEmpty(rows)) {
+    return null;
+  }
+  return map(rows, row => jsonToObject(row.json));
 }
 
 function cleanUpExpirationTimerUpdateHistory(
@@ -2661,9 +2655,9 @@ export const sqlNode = {
   getAllMessagesWithAttachmentsInConversationSentBefore,
   cleanUpExpirationTimerUpdateHistory,
   removeAllMessagesInConversation,
-  deleteAllMessageFromSendersInConversation,
-  deleteAllMessageHashesInConversation,
-  deleteAllMessageHashesInConversationMatchingAuthor,
+  findAllMessageFromSendersInConversation,
+  findAllMessageHashesInConversation,
+  findAllMessageHashesInConversationMatchingAuthor,
   getUnreadByConversation,
   getUnreadDisappearingByConversation,
   markAllAsReadByConversationNoExpiration,

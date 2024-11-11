@@ -341,28 +341,42 @@ export const UserGroupsWrapperActions: UserGroupsWrapperActionsCalls & {
       ReturnType<UserGroupsWrapperActionsCalls['setGroup']>
     >;
     groups.set(group.pubkeyHex, group);
+
     dispatchCachedGroupsToRedux();
     return cloneDeep(group);
   },
 
-  setGroupKicked: async (pubkeyHex: GroupPubkeyType) => {
+  markGroupKicked: async (pubkeyHex: GroupPubkeyType) => {
     const group = (await callLibSessionWorker([
       'UserGroupsConfig',
-      'setGroupKicked',
+      'markGroupKicked',
       pubkeyHex,
-    ])) as Awaited<ReturnType<UserGroupsWrapperActionsCalls['setGroupKicked']>>;
+    ])) as Awaited<ReturnType<UserGroupsWrapperActionsCalls['markGroupKicked']>>;
     groups.set(group.pubkeyHex, group);
     dispatchCachedGroupsToRedux();
     return cloneDeep(group);
   },
 
-  setGroupDestroyed: async (pubkeyHex: GroupPubkeyType) => {
+  markGroupInvited: async (pubkeyHex: GroupPubkeyType) => {
     const group = (await callLibSessionWorker([
       'UserGroupsConfig',
-      'setGroupDestroyed',
+      'markGroupInvited',
       pubkeyHex,
-    ])) as Awaited<ReturnType<UserGroupsWrapperActionsCalls['setGroupDestroyed']>>;
+    ])) as Awaited<ReturnType<UserGroupsWrapperActionsCalls['markGroupInvited']>>;
     groups.set(group.pubkeyHex, group);
+
+    dispatchCachedGroupsToRedux();
+    return cloneDeep(group);
+  },
+
+  markGroupDestroyed: async (pubkeyHex: GroupPubkeyType) => {
+    const group = (await callLibSessionWorker([
+      'UserGroupsConfig',
+      'markGroupDestroyed',
+      pubkeyHex,
+    ])) as Awaited<ReturnType<UserGroupsWrapperActionsCalls['markGroupDestroyed']>>;
+    groups.set(group.pubkeyHex, group);
+
     dispatchCachedGroupsToRedux();
     return cloneDeep(group);
   },

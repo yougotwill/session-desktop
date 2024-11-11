@@ -40,7 +40,7 @@ window.saveLog = additionalText => ipc.send('save-debug-log', additionalText);
 window.sessionFeatureFlags = {
   useOnionRequests: true,
   useTestNet: isTestNet() || isTestIntegration(),
-  useClosedGroupV2: false, // TODO DO NOT MERGE Remove after QA
+  useClosedGroupV2: true, // TODO DO NOT MERGE Remove after QA
   useClosedGroupV2QAButtons: true, // TODO DO NOT MERGE Remove after QA
   replaceLocalizedStringsWithKeys: false,
   debug: {
@@ -260,7 +260,6 @@ data.initData();
 
 const { ConvoHub } = require('./ts/session/conversations/ConversationController');
 window.getConversationController = ConvoHub.use;
-
 
 // Linux seems to periodically let the event loop stop, so this is a global workaround
 setInterval(() => {

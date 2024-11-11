@@ -280,17 +280,6 @@ export async function deleteMessagesFromSwarmAndMarkAsDeletedLocally(
     );
     return;
   }
-  if (conversation.isClosedGroupV2() && PubKey.is03Pubkey(conversation.id)) {
-    window.log.info(
-      'Cannot delete messages from a legacy closed group swarm, so we just markDeleted.'
-    );
-    await Promise.all(
-      messages.map(async message => {
-        return deleteMessageLocallyOnly({ conversation, message, deletionType: 'markDeleted' });
-      })
-    );
-    return;
-  }
 
   // we can only delete messages on the swarm when they are on our own swarm, or it is a groupv2 that we are the admin off
   const pubkeyToDeleteFrom = PubKey.is03Pubkey(conversation.id)

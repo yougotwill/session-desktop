@@ -445,7 +445,7 @@ export async function showLeaveGroupByConvoId(conversationId: string, name: stri
   const isAdmin = admins.includes(UserUtils.getOurPubKeyStrFromCache());
   const showOnlyGroupAdminWarning = isClosedGroup && isAdmin;
   const weAreLastAdmin =
-    PubKey.is05Pubkey(conversationId) ||
+    (PubKey.is05Pubkey(conversationId) && isAdmin && admins.length === 1) ||
     (PubKey.is03Pubkey(conversationId) && isAdmin && admins.length === 1);
   const lastMessageInteractionType = conversation.get('lastMessageInteractionType');
   const lastMessageInteractionStatus = conversation.get('lastMessageInteractionStatus');

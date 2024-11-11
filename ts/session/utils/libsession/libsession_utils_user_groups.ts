@@ -173,7 +173,6 @@ async function insertGroupsFromDBIntoWrapperAndRefresh(
         joinedAtSeconds: null, // no need to update this one except when we process an invite, maybe
         name: null, // not updated except when we process an invite/create a group
         secretKey: null, // not updated except when we process an promote/create a group
-        kicked: foundConvo.isKickedFromGroup() ?? null,
         priority: foundConvo.getPriority() ?? null, // for 03 group, the priority is only tracked with libsession, so this is fine
       };
       try {
