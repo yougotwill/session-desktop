@@ -87,7 +87,7 @@ async function checkWeAreAdmin(groupPk: GroupPubkeyType) {
   const usInGroup = await MetaGroupWrapperActions.memberGet(groupPk, us);
   const inUserGroup = await UserGroupsWrapperActions.getGroup(groupPk);
   // if the secretKey is not empty AND we are a member of the group, we are a current admin
-  return Boolean(!isEmpty(inUserGroup?.secretKey) && usInGroup?.promoted);
+  return Boolean(!isEmpty(inUserGroup?.secretKey) && usInGroup?.nominatedAdmin);
 }
 
 async function checkWeAreAdminOrThrow(groupPk: GroupPubkeyType, context: string) {
@@ -243,14 +243,12 @@ const initNewGroupInWrapper = createAsyncThunk(
       // privately and asynchronously, and gracefully handle errors with toasts.
       // Let's do all of this part of a job to handle app crashes and make sure we
       //  can update the group wrapper with a failed state if a message fails to be sent.
-      for (let index = 0; index < membersFromWrapper.length; index++) {
-        const member = membersFromWrapper[index];
-        await GroupInvite.addJob({
-          member: member.pubkeyHex,
-          groupPk,
-          inviteAsAdmin: window.sessionFeatureFlags.useGroupV2InviteAsAdmin,
-        });
-      }
+      await scheduleGroupInviteJobs(
+        groupPk,
+        membersFromWrapper.map(m => m.pubkeyHex),
+        [],
+        window.sessionFeatureFlags.useGroupV2InviteAsAdmin
+      );
 
       await openConversationWithMessages({ conversationKey: groupPk, messageId: null });
 
@@ -1429,6 +1427,8 @@ async function scheduleGroupInviteJobs(
   const merged = uniq(concat(withHistory, withoutHistory));
   for (let index = 0; index < merged.length; index++) {
     const member = merged[index];
-    await GroupInvite.addJob({ groupPk, member, inviteAsAdmin });
+    // Note: forceUnrevoke is false, because `scheduleGroupInviteJobs` is always called after we've done
+    // a batch unrevoke of all the members' pk
+    await GroupInvite.addJob({ groupPk, member, inviteAsAdmin, forceUnrevoke: false });
   }
 }

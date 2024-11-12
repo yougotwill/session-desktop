@@ -125,11 +125,11 @@ async function handleMetaMergeResults(groupPk: GroupPubkeyType) {
     }
   }
   // mark ourselves as accepting the invite if needed
-  if (usMember?.invitePending && keysAlreadyHaveAdmin) {
+  if (usMember?.memberStatus === 'INVITE_SENT' && keysAlreadyHaveAdmin) {
     await MetaGroupWrapperActions.memberSetAccepted(groupPk, us);
   }
   // mark ourselves as accepting the promotion if needed
-  if (usMember?.promotionPending && keysAlreadyHaveAdmin) {
+  if (usMember?.memberStatus === 'PROMOTION_SENT' && keysAlreadyHaveAdmin) {
     await MetaGroupWrapperActions.memberSetPromotionAccepted(groupPk, us);
   }
   // this won't do anything if there is no need for a sync, so we can safely plan one

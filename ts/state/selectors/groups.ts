@@ -1,8 +1,17 @@
-import { GroupMemberGet, GroupPubkeyType, PubkeyType } from 'libsession_util_nodejs';
+import {
+  GroupMemberGet,
+  GroupPubkeyType,
+  MemberStateGroupV2,
+  PubkeyType,
+} from 'libsession_util_nodejs';
 import { useSelector } from 'react-redux';
+import { compact, concat, differenceBy, sortBy, uniqBy } from 'lodash';
 import { PubKey } from '../../session/types';
 import { GroupState } from '../ducks/metaGroups';
 import { StateType } from '../reducer';
+import { assertUnreachable } from '../../types/sqlSharedTypes';
+import { UserUtils } from '../../session/utils';
+import { useConversationsNicknameRealNameOrShortenPubkey } from '../../hooks/useParamSelector';
 
 const getLibGroupsState = (state: StateType): GroupState => state.groups;
 const getInviteSendingState = (state: StateType) => getLibGroupsState(state).membersInviteSending;
@@ -44,48 +53,57 @@ function getGroupNameChangeFromUIPending(state: StateType): boolean {
 
 export function getLibAdminsPubkeys(state: StateType, convo?: string): Array<string> {
   const members = getMembersOfGroup(state, convo);
-  return members.filter(m => m.promoted).map(m => m.pubkeyHex);
+  return members.filter(m => m.nominatedAdmin).map(m => m.pubkeyHex);
 }
 
 function getMemberInviteFailed(state: StateType, pubkey: PubkeyType, convo?: GroupPubkeyType) {
   const members = getMembersOfGroup(state, convo);
-  return findMemberInMembers(members, pubkey)?.inviteFailed || false;
+  return findMemberInMembers(members, pubkey)?.memberStatus === 'INVITE_FAILED' || false;
 }
 
 function getMemberInviteNotSent(state: StateType, pubkey: PubkeyType, convo?: GroupPubkeyType) {
   const members = getMembersOfGroup(state, convo);
-  return findMemberInMembers(members, pubkey)?.inviteNotSent || false;
+  return findMemberInMembers(members, pubkey)?.memberStatus === 'INVITE_NOT_SENT' || false;
 }
 
 function getMemberInviteSent(state: StateType, pubkey: PubkeyType, convo?: GroupPubkeyType) {
   const members = getMembersOfGroup(state, convo);
 
-  return findMemberInMembers(members, pubkey)?.invitePending || false;
+  return findMemberInMembers(members, pubkey)?.memberStatus === 'INVITE_SENT' || false;
 }
 
-function getMemberIsPromoted(state: StateType, pubkey: PubkeyType, convo?: GroupPubkeyType) {
+function getMemberHasAcceptedPromotion(
+  state: StateType,
+  pubkey: PubkeyType,
+  convo?: GroupPubkeyType
+) {
   const members = getMembersOfGroup(state, convo);
-  return findMemberInMembers(members, pubkey)?.promoted || false;
+  return findMemberInMembers(members, pubkey)?.memberStatus === 'PROMOTION_ACCEPTED' || false;
+}
+
+function getMemberIsNominatedAdmin(state: StateType, pubkey: PubkeyType, convo?: GroupPubkeyType) {
+  const members = getMembersOfGroup(state, convo);
+  return findMemberInMembers(members, pubkey)?.nominatedAdmin || false;
 }
 
 function getMemberHasAcceptedInvite(state: StateType, pubkey: PubkeyType, convo?: GroupPubkeyType) {
   const members = getMembersOfGroup(state, convo);
-  return findMemberInMembers(members, pubkey)?.inviteAccepted || false;
+  return findMemberInMembers(members, pubkey)?.memberStatus === 'INVITE_ACCEPTED' || false;
 }
 
 function getMemberPromotionFailed(state: StateType, pubkey: PubkeyType, convo?: GroupPubkeyType) {
   const members = getMembersOfGroup(state, convo);
-  return findMemberInMembers(members, pubkey)?.promotionFailed || false;
+  return findMemberInMembers(members, pubkey)?.memberStatus === 'PROMOTION_FAILED' || false;
 }
 
 function getMemberPromotionSent(state: StateType, pubkey: PubkeyType, convo?: GroupPubkeyType) {
   const members = getMembersOfGroup(state, convo);
-  return findMemberInMembers(members, pubkey)?.promotionPending || false;
+  return findMemberInMembers(members, pubkey)?.memberStatus === 'PROMOTION_SENT' || false;
 }
 
 function getMemberPromotionNotSent(state: StateType, pubkey: PubkeyType, convo?: GroupPubkeyType) {
   const members = getMembersOfGroup(state, convo);
-  return findMemberInMembers(members, pubkey)?.promotionNotSent || false;
+  return findMemberInMembers(members, pubkey)?.memberStatus === 'PROMOTION_NOT_SENT' || false;
 }
 
 export function getLibMembersCount(state: StateType, convo?: GroupPubkeyType): Array<string> {
@@ -155,9 +173,14 @@ export function useMemberInviteNotSent(member: PubkeyType, groupPk: GroupPubkeyT
   return useSelector((state: StateType) => getMemberInviteNotSent(state, member, groupPk));
 }
 
-export function useMemberIsPromoted(member: PubkeyType, groupPk: GroupPubkeyType) {
-  return useSelector((state: StateType) => getMemberIsPromoted(state, member, groupPk));
+export function useMemberHasAcceptedPromotion(member: PubkeyType, groupPk: GroupPubkeyType) {
+  return useSelector((state: StateType) => getMemberHasAcceptedPromotion(state, member, groupPk));
 }
+
+export function useMemberIsNominatedAdmin(member: PubkeyType, groupPk: GroupPubkeyType) {
+  return useSelector((state: StateType) => getMemberIsNominatedAdmin(state, member, groupPk));
+}
+
 export function useMemberHasAcceptedInvite(member: PubkeyType, groupPk: GroupPubkeyType) {
   return useSelector((state: StateType) => getMemberHasAcceptedInvite(state, member, groupPk));
 }
@@ -188,18 +211,128 @@ export function useGroupNameChangeFromUIPending() {
  * An example is the "sending invite" or "sending promote" state of a member in a group.
  */
 
-function useMembersInviteSending(groupPk: GroupPubkeyType) {
-  return useSelector((state: StateType) => getInviteSendingState(state)[groupPk] || []);
+function useMembersInviteSending(groupPk?: string) {
+  return useSelector((state: StateType) =>
+    groupPk && PubKey.is03Pubkey(groupPk) ? getInviteSendingState(state)[groupPk] || [] : []
+  );
 }
 
 export function useMemberInviteSending(groupPk: GroupPubkeyType, memberPk: PubkeyType) {
   return useMembersInviteSending(groupPk).includes(memberPk);
 }
 
-function useMembersPromoteSending(groupPk: GroupPubkeyType) {
-  return useSelector((state: StateType) => getPromoteSendingState(state)[groupPk] || []);
+function useMembersPromoteSending(groupPk?: string) {
+  return useSelector((state: StateType) =>
+    groupPk && PubKey.is03Pubkey(groupPk) ? getPromoteSendingState(state)[groupPk] || [] : []
+  );
 }
 
 export function useMemberPromoteSending(groupPk: GroupPubkeyType, memberPk: PubkeyType) {
   return useMembersPromoteSending(groupPk).includes(memberPk);
+}
+
+type MemberStateGroupV2WithSending = MemberStateGroupV2 | 'INVITE_SENDING' | 'PROMOTION_SENDING';
+
+export function useStateOf03GroupMembers(convoId?: string) {
+  const us = UserUtils.getOurPubKeyStrFromCache();
+  let unsortedMembers = useSelector((state: StateType) => getMembersOfGroup(state, convoId));
+  const invitesSendingPk = useMembersInviteSending(convoId);
+  const promotionsSendingPk = useMembersPromoteSending(convoId);
+  let invitesSending = compact(
+    invitesSendingPk.map(sending => unsortedMembers.find(m => m.pubkeyHex === sending))
+  );
+  const promotionSending = compact(
+    promotionsSendingPk.map(sending => unsortedMembers.find(m => m.pubkeyHex === sending))
+  );
+
+  // promotionSending has priority against invitesSending, so removing anything in invitesSending found in promotionSending
+  invitesSending = differenceBy(invitesSending, promotionSending, value => value.pubkeyHex);
+
+  const bothSending = concat(promotionSending, invitesSending);
+
+  // promotionSending and invitesSending has priority against anything else, so remove anything found in one of those two
+  // from the unsorted list of members
+  unsortedMembers = differenceBy(unsortedMembers, bothSending, value => value.pubkeyHex);
+
+  // at this point, merging invitesSending, promotionSending and unsortedMembers should create an array of unique members
+  const sortedByPriorities = concat(bothSending, unsortedMembers);
+  if (sortedByPriorities.length !== uniqBy(sortedByPriorities, m => m.pubkeyHex).length) {
+    throw new Error(
+      'merging invitesSending, promotionSending and unsortedMembers should create an array of unique members'
+    );
+  }
+
+  // This could have been done now with a `sortedByPriorities.map()` call,
+  // but we don't want the order as sorted by `sortedByPriorities`, **only** to respect the priorities from it.
+  // What that means is that a member with a state as inviteSending, should have that state, but not be sorted first.
+
+  // The order we (for now) want is:
+  // - (Invite failed + Invite Not Sent) merged together, sorted as NameSortingOrder
+  // - Sending invite, sorted as NameSortingOrder
+  // - Invite sent, sorted as NameSortingOrder
+  // - (Promotion failed + Promotion Not Sent) merged together, sorted as NameSortingOrder
+  // - Sending invite, sorted as NameSortingOrder
+  // - Invite sent, sorted as NameSortingOrder
+  // - Admin, sorted as NameSortingOrder
+  // - Accepted Member, sorted as NameSortingOrder
+  // NameSortingOrder: You first, then "nickname || name || pubkey -> aA-zZ"
+
+  const unsortedWithStatuses: Array<
+    Pick<GroupMemberGet, 'pubkeyHex'> & { memberStatus: MemberStateGroupV2WithSending }
+  > = [];
+  unsortedWithStatuses.push(...promotionSending);
+  unsortedWithStatuses.push(...differenceBy(invitesSending, promotionSending));
+  unsortedWithStatuses.push(...differenceBy(unsortedMembers, invitesSending, promotionSending));
+
+  const names = useConversationsNicknameRealNameOrShortenPubkey(
+    unsortedWithStatuses.map(m => m.pubkeyHex)
+  );
+
+  // needing an index like this outside of lodash is not pretty,
+  // but sortBy doesn't provide the index in the callback
+  let index = 0;
+
+  const sorted = sortBy(unsortedWithStatuses, item => {
+    let stateSortingOrder = 0;
+    switch (item.memberStatus) {
+      case 'INVITE_FAILED':
+      case 'INVITE_NOT_SENT':
+        stateSortingOrder = -5;
+        break;
+      case 'INVITE_SENDING':
+        stateSortingOrder = -4;
+        break;
+      case 'INVITE_SENT':
+        stateSortingOrder = -3;
+        break;
+      case 'PROMOTION_FAILED':
+      case 'PROMOTION_NOT_SENT':
+        stateSortingOrder = -2;
+        break;
+      case 'PROMOTION_SENDING':
+        stateSortingOrder = -1;
+        break;
+      case 'PROMOTION_SENT':
+        stateSortingOrder = 0;
+        break;
+      case 'PROMOTION_ACCEPTED':
+        stateSortingOrder = 1;
+        break;
+      case 'INVITE_ACCEPTED':
+        stateSortingOrder = 2;
+        break;
+
+      default:
+        assertUnreachable(item.memberStatus, 'Unhandled switch case');
+    }
+    const sortingOrder = [
+      stateSortingOrder,
+      // per section, we want "us first", then "nickname || displayName || pubkey"
+      item.pubkeyHex === us ? -1 : names[index]?.toLocaleLowerCase(),
+    ];
+    index++;
+    return sortingOrder;
+  });
+
+  return sorted;
 }

@@ -21,6 +21,9 @@ import { LibSessionUtil } from '../../libsession/libsession_utils';
 import { showUpdateGroupMembersByConvoId } from '../../../../interactions/conversationInteractions';
 import { ConvoHub } from '../../../conversations';
 import { MessageQueue } from '../../../sending';
+import { NetworkTime } from '../../../../util/NetworkTime';
+import { SubaccountUnrevokeSubRequest } from '../../../apis/snode_api/SnodeRequestTypes';
+import { GroupSync } from './GroupSyncJob';
 
 const defaultMsBetweenRetries = 10000;
 const defaultMaxAttempts = 1;
@@ -29,6 +32,12 @@ type JobExtraArgs = {
   groupPk: GroupPubkeyType;
   member: PubkeyType;
   inviteAsAdmin: boolean;
+  /**
+   * When inviting a member, we usually only want to sent a message to his swarm.
+   * In the case of a invitation resend process though, we also want to make sure his token is unrevoked from the group's swarm.
+   *
+   */
+  forceUnrevoke: boolean;
 };
 
 export function shouldAddJob(args: JobExtraArgs) {
@@ -47,12 +56,13 @@ const invitesFailed = new Map<
   }
 >();
 
-async function addJob({ groupPk, member, inviteAsAdmin }: JobExtraArgs) {
-  if (shouldAddJob({ groupPk, member, inviteAsAdmin })) {
+async function addJob({ groupPk, member, inviteAsAdmin, forceUnrevoke }: JobExtraArgs) {
+  if (shouldAddJob({ groupPk, member, inviteAsAdmin, forceUnrevoke })) {
     const groupInviteJob = new GroupInviteJob({
       groupPk,
       member,
       inviteAsAdmin,
+      forceUnrevoke,
       nextAttemptTimestamp: Date.now(),
     });
     window.log.debug(`addGroupInviteJob: adding group invite for ${groupPk}:${member} `);
@@ -135,8 +145,9 @@ class GroupInviteJob extends PersistedJob<GroupInvitePersistedData> {
     nextAttemptTimestamp,
     maxAttempts,
     currentRetry,
+    forceUnrevoke,
     identifier,
-  }: Pick<GroupInvitePersistedData, 'groupPk' | 'member' | 'inviteAsAdmin'> &
+  }: Pick<GroupInvitePersistedData, 'groupPk' | 'member' | 'inviteAsAdmin' | 'forceUnrevoke'> &
     Partial<
       Pick<
         GroupInvitePersistedData,
@@ -153,6 +164,7 @@ class GroupInviteJob extends PersistedJob<GroupInvitePersistedData> {
       member,
       groupPk,
       inviteAsAdmin,
+      forceUnrevoke,
       delayBetweenRetries: defaultMsBetweenRetries,
       maxAttempts: isNumber(maxAttempts) ? maxAttempts : defaultMaxAttempts,
       nextAttemptTimestamp: nextAttemptTimestamp || Date.now() + defaultMsBetweenRetries,
@@ -177,6 +189,26 @@ class GroupInviteJob extends PersistedJob<GroupInvitePersistedData> {
     }
     let failed = true;
     try {
+      if (this.persistedData.forceUnrevoke) {
+        const token = await MetaGroupWrapperActions.swarmSubAccountToken(groupPk, member);
+        const unrevokeSubRequest = new SubaccountUnrevokeSubRequest({
+          groupPk,
+          revokeTokenHex: [token],
+          timestamp: NetworkTime.now(),
+          secretKey: group.secretKey,
+        });
+        const sequenceResult = await GroupSync.pushChangesToGroupSwarmIfNeeded({
+          groupPk,
+          unrevokeSubRequest,
+          extraStoreRequests: [],
+        });
+        if (sequenceResult !== RunJobResult.Success) {
+          throw new Error(
+            'GroupInviteJob: SubaccountUnrevokeSubRequest push() did not return success'
+          );
+        }
+      }
+
       const inviteDetails = inviteAsAdmin
         ? await SnodeGroupSignature.getGroupPromoteMessage({
             groupName: group.name,

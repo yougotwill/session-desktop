@@ -18,20 +18,14 @@ function profilePicture() {
 
 function emptyMember(pubkeyHex: PubkeyType): GroupMemberGet {
   return {
-    inviteFailed: false,
-    invitePending: false,
+    memberStatus: 'INVITE_NOT_SENT',
     name: '',
     profilePicture: {
       key: null,
       url: null,
     },
-    promoted: false,
-    promotionFailed: false,
-    promotionPending: false,
-    inviteAccepted: false,
-    inviteNotSent: false,
     isRemoved: false,
-    promotionNotSent: false,
+    nominatedAdmin: false,
     shouldRemoveMessages: false,
     pubkeyHex,
   };
@@ -271,10 +265,8 @@ describe('libsession_metagroup', () => {
       expect(metaGroupWrapper.memberGetAll().length).to.be.deep.eq(1);
       const expected: GroupMemberGet = {
         ...emptyMember(member),
-        promoted: true,
-        promotionFailed: false,
-        promotionPending: false,
-        promotionNotSent: false,
+        nominatedAdmin: true,
+        memberStatus: 'PROMOTION_ACCEPTED',
       };
 
       expect(metaGroupWrapper.memberGetAll()[0]).to.be.deep.eq(expected);

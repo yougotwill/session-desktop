@@ -13,11 +13,10 @@ import {
   useMemberInviteFailed,
   useMemberInviteSending,
   useMemberInviteSent,
-  useMemberIsPromoted,
   useMemberPromoteSending,
   useMemberPromotionFailed,
-  useMemberPromotionNotSent,
   useMemberPromotionSent,
+  useMemberIsNominatedAdmin,
 } from '../state/selectors/groups';
 import { Avatar, AvatarSize, CrownIcon } from './avatar/Avatar';
 import { Flex } from './basic/Flex';
@@ -28,10 +27,6 @@ import {
   SessionButtonType,
 } from './basic/SessionButton';
 import { SessionRadio } from './basic/SessionRadio';
-import { GroupSync } from '../session/utils/job_runners/jobs/GroupSyncJob';
-import { RunJobResult } from '../session/utils/job_runners/PersistedJob';
-import { SubaccountUnrevokeSubRequest } from '../session/apis/snode_api/SnodeRequestTypes';
-import { NetworkTime } from '../util/NetworkTime';
 import {
   MetaGroupWrapperActions,
   UserGroupsWrapperActions,
@@ -221,15 +216,10 @@ const GroupStatusContainer = ({
 
 const ResendButton = ({ groupPk, pubkey }: { pubkey: PubkeyType; groupPk: GroupPubkeyType }) => {
   const acceptedInvite = useMemberHasAcceptedInvite(pubkey, groupPk);
-  const promotionFailed = useMemberPromotionFailed(pubkey, groupPk);
-  const promotionSent = useMemberPromotionSent(pubkey, groupPk);
-  const promotionNotSent = useMemberPromotionNotSent(pubkey, groupPk);
-  const promoted = useMemberIsPromoted(pubkey, groupPk);
+  const nominatedAdmin = useMemberIsNominatedAdmin(pubkey, groupPk);
 
   // as soon as the `admin` flag is set in the group for that member, we should be able to resend a promote as we cannot remove an admin.
-  const canResendPromotion =
-    hasClosedGroupV2QAButtons() &&
-    (promotionFailed || promotionSent || promotionNotSent || promoted);
+  const canResendPromotion = hasClosedGroupV2QAButtons() && nominatedAdmin;
 
   // we can always remove/and readd a non-admin member. So we consider that a member who accepted the invite cannot be resent an invite.
   const canResendInvite = !acceptedInvite;
@@ -252,32 +242,13 @@ const ResendButton = ({ groupPk, pubkey }: { pubkey: PubkeyType; groupPk: GroupP
           window.log.warn('tried to resend invite but we do not have correct details');
           return;
         }
-        const token = await MetaGroupWrapperActions.swarmSubAccountToken(groupPk, pubkey);
-        const unrevokeSubRequest = new SubaccountUnrevokeSubRequest({
-          groupPk,
-          revokeTokenHex: [token],
-          timestamp: NetworkTime.now(),
-          secretKey: group.secretKey,
-        });
-        const sequenceResult = await GroupSync.pushChangesToGroupSwarmIfNeeded({
-          groupPk,
-          unrevokeSubRequest,
-          extraStoreRequests: [],
-        });
-        if (sequenceResult !== RunJobResult.Success) {
-          throw new Error('resend invite: pushChangesToGroupSwarmIfNeeded did not return success');
-        }
-
         // if we tried to invite that member as admin right away, let's retry it as such.
-        const inviteAsAdmin =
-          member.promotionNotSent ||
-          member.promotionFailed ||
-          member.promotionPending ||
-          member.promoted;
+        const inviteAsAdmin = member.nominatedAdmin;
         await GroupInvite.addJob({
           groupPk,
           member: pubkey,
           inviteAsAdmin,
+          forceUnrevoke: true,
         });
       }}
     />
@@ -286,11 +257,11 @@ const ResendButton = ({ groupPk, pubkey }: { pubkey: PubkeyType; groupPk: GroupP
 
 const PromoteButton = ({ groupPk, pubkey }: { pubkey: PubkeyType; groupPk: GroupPubkeyType }) => {
   const memberAcceptedInvite = useMemberHasAcceptedInvite(pubkey, groupPk);
-  const memberIsPromoted = useMemberIsPromoted(pubkey, groupPk);
+  const memberIsNominatedAdmin = useMemberIsNominatedAdmin(pubkey, groupPk);
   // When invite-as-admin was used to invite that member, the resend button is available to resend the promote message.
   // We want to show that button only to promote a normal member who accepted a normal invite but wasn't promoted yet.
   // ^ this is only the case for testing. The UI will be different once we release the promotion process
-  if (!hasClosedGroupV2QAButtons() || !memberAcceptedInvite || memberIsPromoted) {
+  if (!hasClosedGroupV2QAButtons() || !memberAcceptedInvite || memberIsNominatedAdmin) {
     return null;
   }
   return (

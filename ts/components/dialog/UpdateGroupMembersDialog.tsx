@@ -27,7 +27,10 @@ import { ClosedGroup } from '../../session/group/closed-group';
 import { PubKey } from '../../session/types';
 import { hasClosedGroupV2QAButtons } from '../../shared/env_vars';
 import { groupInfoActions } from '../../state/ducks/metaGroups';
-import { useMemberGroupChangePending } from '../../state/selectors/groups';
+import {
+  useMemberGroupChangePending,
+  useStateOf03GroupMembers,
+} from '../../state/selectors/groups';
 import { useSelectedIsGroupV2 } from '../../state/selectors/selectedConversation';
 import { SessionSpinner } from '../loading';
 import { SessionToggle } from '../basic/SessionToggle';
@@ -36,7 +39,7 @@ type Props = {
   conversationId: string;
 };
 
-const StyledClassicMemberList = styled.div`
+const StyledMemberList = styled.div`
   max-height: 240px;
 `;
 
@@ -44,7 +47,7 @@ const StyledClassicMemberList = styled.div`
  * Admins are always put first in the list of group members.
  * Also, admins have a little crown on their avatar.
  */
-const ClassicMemberList = (props: {
+const MemberList = (props: {
   convoId: string;
   selectedMembers: Array<string>;
   onSelect: (m: string) => void;
@@ -56,11 +59,14 @@ const ClassicMemberList = (props: {
 
   const groupAdmins = useGroupAdmins(convoId);
   const groupMembers = useSortedGroupMembers(convoId);
+  const groupMembers03Group = useStateOf03GroupMembers(convoId);
 
-  const sortedMembers = useMemo(
+  const sortedMembersNon03 = useMemo(
     () => [...groupMembers].sort(m => (groupAdmins?.includes(m) ? -1 : 0)),
     [groupMembers, groupAdmins]
   );
+
+  const sortedMembers = isV2Group ? groupMembers03Group.map(m => m.pubkeyHex) : sortedMembersNon03;
 
   return (
     <>
@@ -230,14 +236,14 @@ export const UpdateGroupMembersDialog = (props: Props) => {
           />
         </>
       ) : null}
-      <StyledClassicMemberList className="contact-selection-list">
-        <ClassicMemberList
+      <StyledMemberList className="contact-selection-list">
+        <MemberList
           convoId={conversationId}
           onSelect={onSelect}
           onUnselect={onUnselect}
           selectedMembers={membersToRemove}
         />
-      </StyledClassicMemberList>
+      </StyledMemberList>
       {showNoMembersMessage && <p>{window.i18n('groupMembersNone')}</p>}
 
       <SpacerLG />
