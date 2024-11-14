@@ -78,7 +78,6 @@ function getGroupWrapper(type: ConfigWrapperGroup): MetaGroupWrapperNode | undef
   assertUnreachable(type, `getGroupWrapper: Missing case error "${type}"`);
 }
 
-
 function getCorrespondingUserWrapper(wrapperType: ConfigWrapperUser): BaseConfigWrapperNode {
   if (isUserConfigWrapperType(wrapperType)) {
     switch (wrapperType) {
@@ -132,7 +131,6 @@ function getBlindingWrapper(wrapperType: BlindingConfig): BlindingWrapperNode {
   }
   assertUnreachable(wrapperType, `getBlindingWrapper missing global handling for "${wrapperType}"`);
 }
-
 
 function isUInt8Array(value: any) {
   return value.constructor === Uint8Array;
@@ -262,12 +260,12 @@ function initGroupWrapper(options: Array<any>, wrapperType: ConfigWrapperGroup) 
   assertUnreachable(groupType, `initGroupWrapper: Missing case error "${groupType}"`);
 }
 
-onmessage = async (e: { data: [number, ConfigWrapperObjectTypesMeta| 'Blinding', string, ...any] }) => {
-
+onmessage = async (e: {
+  data: [number, ConfigWrapperObjectTypesMeta | 'Blinding', string, ...any];
+}) => {
   const [jobId, config, action, ...args] = e.data;
 
   try {
-
     if (action === 'init') {
       if (config === 'Blinding' || config === 'MultiEncrypt') {
         // nothing to do for the blinding/multiEncrypt wrapper, all functions are static
@@ -284,7 +282,7 @@ onmessage = async (e: { data: [number, ConfigWrapperObjectTypesMeta| 'Blinding',
         postMessage([jobId, null, null]);
         return;
       }
-      assertUnreachable(config, `Unhandled init wrapper type: ${config}`)
+      assertUnreachable(config, `Unhandled init wrapper type: ${config}`);
     }
     if (action === 'free') {
       if (config === 'Blinding' || config === 'MultiEncrypt') {
@@ -303,7 +301,7 @@ onmessage = async (e: { data: [number, ConfigWrapperObjectTypesMeta| 'Blinding',
         postMessage([jobId, null, null]);
         return;
       }
-      assertUnreachable(config, `Unhandled free wrapper type: ${config}`)
+      assertUnreachable(config, `Unhandled free wrapper type: ${config}`);
     }
 
     const wrapper = isUserConfigWrapperType(config)
@@ -312,20 +310,20 @@ onmessage = async (e: { data: [number, ConfigWrapperObjectTypesMeta| 'Blinding',
         ? getCorrespondingGroupWrapper(config)
         : isMultiEncryptWrapperType(config)
           ? getMultiEncryptWrapper(config)
-          : isBlindingWrapperType(config) ? getBlindingWrapper(config) : undefined;
+          : isBlindingWrapperType(config)
+            ? getBlindingWrapper(config)
+            : undefined;
     if (!wrapper) {
       throw new Error(`did not find an already built (or static) wrapper for config: "${config}"`);
     }
     const fn = (wrapper as any)[action];
 
-
-
-      if (!fn) {
-        throw new Error(
-          `Worker: job "${jobId}" did not find function "${action}" on config "${config}"`
-        );
-      }
-      const result = await (wrapper as any)[action](...args);
+    if (!fn) {
+      throw new Error(
+        `Worker: job "${jobId}" did not find function "${action}" on config "${config}"`
+      );
+    }
+    const result = await (wrapper as any)[action](...args);
 
     postMessage([jobId, null, result]);
   } catch (error) {

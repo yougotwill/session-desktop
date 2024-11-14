@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-misused-promises */
 
-
 import autoBind from 'auto-bind';
 import { isEmpty } from 'lodash';
 import { Component } from 'react';

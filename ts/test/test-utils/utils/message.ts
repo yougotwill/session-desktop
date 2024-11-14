@@ -20,7 +20,7 @@ import { OpenGroupReaction } from '../../../types/Reaction';
 import { generateFakePubKeyStr } from './pubkey';
 import { OpenGroupRequestCommonType } from '../../../data/types';
 
-const loremIpsum = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit'
+const loremIpsum = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit';
 
 export function generateVisibleMessage({
   identifier,

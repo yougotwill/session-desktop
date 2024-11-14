@@ -509,7 +509,6 @@ async function handleGroupDeleteMemberContentMessage({
     }
   }
   convo.updateLastMessage();
-
 }
 
 async function handleGroupUpdateInviteResponseMessage({

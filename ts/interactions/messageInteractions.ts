@@ -1,11 +1,11 @@
 import { joinOpenGroupV2WithUIEvents } from '../session/apis/open_group_api/opengroupV2/JoinOpenGroupV2';
 import {
-    sogsV3AddAdmin,
-    sogsV3RemoveAdmins,
+  sogsV3AddAdmin,
+  sogsV3RemoveAdmins,
 } from '../session/apis/open_group_api/sogsv3/sogsV3AddRemoveMods';
 import {
-    isOpenGroupV2,
-    openGroupV2CompleteURLRegex,
+  isOpenGroupV2,
+  openGroupV2CompleteURLRegex,
 } from '../session/apis/open_group_api/utils/OpenGroupUtils';
 import { ConvoHub } from '../session/conversations';
 import { PubKey } from '../session/types';

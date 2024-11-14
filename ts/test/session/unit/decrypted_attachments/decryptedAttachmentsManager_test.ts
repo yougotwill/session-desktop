@@ -69,7 +69,6 @@ describe('DecryptedAttachmentsManager', () => {
           DecryptedAttachmentsManager.getAlreadyDecryptedMediaUrl('/local/attachment/attachment1')
         ).to.be.eq(null);
 
-
         expect(readFileContent.callCount).to.be.eq(0);
         expect(decryptAttachmentBufferNode.callCount).to.be.eq(0);
         expect(getItemById.callCount).to.be.eq(0);

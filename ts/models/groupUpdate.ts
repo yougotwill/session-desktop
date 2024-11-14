@@ -104,8 +104,14 @@ export function getJoinedGroupUpdateChangeStr(
           : { token: 'groupMemberNew', args: { name: othersNames[0] } };
       case 2:
         return addedWithHistory
-          ? { token: 'groupMemberNewHistoryTwo', args: { name: othersNames[0], other_name: othersNames[1]  } }
-          : { token: 'groupMemberNewTwo', args: { name: othersNames[0], other_name: othersNames[1] } };
+          ? {
+              token: 'groupMemberNewHistoryTwo',
+              args: { name: othersNames[0], other_name: othersNames[1] },
+            }
+          : {
+              token: 'groupMemberNewTwo',
+              args: { name: othersNames[0], other_name: othersNames[1] },
+            };
       default:
         return addedWithHistory
           ? {

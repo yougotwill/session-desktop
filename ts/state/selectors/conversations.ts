@@ -451,8 +451,6 @@ export const getLeftPaneConversationIds = createSelector(
   _getLeftPaneConversationIds
 );
 
-
-
 export const useContactsToInviteToGroup = () => {
   const contacts = useSelector(getPrivateContactsPubkeys);
   return contacts;

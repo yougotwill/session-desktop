@@ -1,4 +1,3 @@
-
 /**
  * Private chats have always the type `Private`
  * Open groups have always the type `Group`

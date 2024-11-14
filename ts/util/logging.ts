@@ -113,7 +113,7 @@ function logAtLevel(level: string, prefix: string, ...args: any) {
   // when unit testing with mocha, we just log whatever we get to the console.log
   if (typeof (global as any).it === 'function') {
     (console as any)._log(prefix, now(), ...args);
-    return
+    return;
   }
 
   if (prefix === 'DEBUG' && !window.sessionFeatureFlags.debug.debugLogging) {

@@ -7,11 +7,7 @@ import { PubKey } from '../../session/types';
 import { ToastUtils } from '../../session/utils';
 import { Flex } from '../basic/Flex';
 
-import {
-  useGroupAdmins,
-  useIsPublic,
-  useWeAreAdmin
-} from '../../hooks/useParamSelector';
+import { useGroupAdmins, useIsPublic, useWeAreAdmin } from '../../hooks/useParamSelector';
 import { sogsV3RemoveAdmins } from '../../session/apis/open_group_api/sogsv3/sogsV3AddRemoveMods';
 import { updateRemoveModeratorsModal } from '../../state/ducks/modalDialog';
 import { MemberListItem } from '../MemberListItem';
@@ -33,8 +29,7 @@ async function removeMods(convoId: string, modsToRemove: Array<string>) {
   const modsToRemovePubkey = compact(modsToRemove.map(m => PubKey.from(m)));
   const modsToRemoveNames = modsToRemovePubkey.map(
     m =>
-      ConvoHub.use().get(m.key)?.getNicknameOrRealUsernameOrPlaceholder() ||
-      window.i18n('unknown')
+      ConvoHub.use().get(m.key)?.getNicknameOrRealUsernameOrPlaceholder() || window.i18n('unknown')
   );
   try {
     const convo = ConvoHub.use().get(convoId);

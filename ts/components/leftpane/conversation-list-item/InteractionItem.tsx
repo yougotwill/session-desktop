@@ -60,9 +60,7 @@ export const InteractionItem = (props: InteractionItemProps) => {
   let text = storedLastMessageText || '';
   let errorText = '';
 
-  const name = ConvoHub.use()
-    .get(conversationId)
-    ?.getNicknameOrRealUsernameOrPlaceholder();
+  const name = ConvoHub.use().get(conversationId)?.getNicknameOrRealUsernameOrPlaceholder();
 
   switch (interactionType) {
     case ConversationInteractionType.Hide:

@@ -43,11 +43,10 @@ const StyledIconContainer = styled.div`
   width: 38px;
 `;
 
-
 type Categories = {
   id: SessionSettingCategory;
   title: string;
-  dataTestId: SessionDataTestId
+  dataTestId: SessionDataTestId;
   icon: {
     type: SessionIconType;
     size: number;
@@ -61,7 +60,7 @@ const getCategories = (): Array<Categories> => {
     {
       id: 'privacy' as const,
       title: window.i18n('sessionPrivacy'),
-      icon: { type: 'padlock' as const, ...forcedSize } ,
+      icon: { type: 'padlock' as const, ...forcedSize },
     },
     {
       id: 'notifications' as const,
@@ -81,33 +80,33 @@ const getCategories = (): Array<Categories> => {
     {
       id: 'appearance' as const,
       title: window.i18n('sessionAppearance'),
-      icon: { type: 'paintbrush'as const, ...forcedSize },
+      icon: { type: 'paintbrush' as const, ...forcedSize },
     },
     {
       id: 'permissions' as const,
       title: window.i18n('sessionPermissions'),
-      icon: { type: 'checkCircle'as const, ...forcedSize },
+      icon: { type: 'checkCircle' as const, ...forcedSize },
     },
     {
       id: 'help' as const,
       title: window.i18n('sessionHelp'),
-      icon: { type: 'question'as const, ...forcedSize },
+      icon: { type: 'question' as const, ...forcedSize },
     },
     {
       id: 'recoveryPassword' as const,
       title: window.i18n('sessionRecoveryPassword'),
-      icon: { type: 'recoveryPasswordFill'as const, ...forcedSize },
+      icon: { type: 'recoveryPasswordFill' as const, ...forcedSize },
     },
     {
       id: 'clearData' as const,
       title: window.i18n('sessionClearData'),
-      icon: { type: 'delete'as const, ...forcedSize, color: 'var(--danger-color)' },
+      icon: { type: 'delete' as const, ...forcedSize, color: 'var(--danger-color)' },
     },
   ].map(m => ({ ...m, dataTestId: `${m.id}-settings-menu-item` as const }));
 };
 
-const LeftPaneSettingsCategoryRow = ({item}: { item: Categories }) => {
-  const { id, title, icon,dataTestId } = item;
+const LeftPaneSettingsCategoryRow = ({ item }: { item: Categories }) => {
+  const { id, title, icon, dataTestId } = item;
   const dispatch = useDispatch();
   const focusedSettingsSection = useSelector(getFocusedSettingsSection);
 

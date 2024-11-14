@@ -211,7 +211,6 @@ class GroupPendingRemovalsJob extends PersistedJob<GroupPendingRemovalsPersisted
 
       try {
         if (deleteMessagesOfMembers.length) {
-          debugger;
           const models = await Data.findAllMessageFromSendersInConversation({
             groupPk,
             toRemove: deleteMessagesOfMembers,

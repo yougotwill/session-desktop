@@ -1952,7 +1952,6 @@ function updateToSessionSchemaVersion36(currentVersion: number, db: BetterSqlite
   console.log(`updateToSessionSchemaVersion${targetVersion}: success!`);
 }
 
-
 function updateToSessionSchemaVersion37(currentVersion: number, db: BetterSqlite3.Database) {
   const targetVersion = 37;
   if (currentVersion >= targetVersion) {

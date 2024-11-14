@@ -4,8 +4,8 @@ import { describe } from 'mocha';
 import Sinon, * as sinon from 'sinon';
 
 import { TestUtils } from '../../../test-utils';
-import { Onions } from '../../../../session/apis/snode_api/';
-import {  SnodePool } from '../../../../session/apis/snode_api/snodePool';
+import { Onions } from '../../../../session/apis/snode_api';
+import { SnodePool } from '../../../../session/apis/snode_api/snodePool';
 
 import { SeedNodeAPI } from '../../../../session/apis/seed_node_api';
 import * as OnionPaths from '../../../../session/onions/onionPath';

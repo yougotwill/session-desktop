@@ -12,7 +12,6 @@ import { Onions } from '.';
 import { ed25519Str } from '../../utils/String';
 import { SnodePoolConstants } from './snodePoolConstants';
 
-
 let randomSnodePool: Array<Snode> = [];
 
 function TEST_resetState(snodePoolForTest: Array<Snode> = []) {

@@ -518,7 +518,7 @@ class CompositionBoxInner extends Component<Props, State> {
     const allMembers = allPubKeys.map(pubKey => {
       const convo = ConvoHub.use().get(pubKey);
       const profileName =
-      convo?.getNicknameOrRealUsernameOrPlaceholder() || window.i18n('anonymous');
+        convo?.getNicknameOrRealUsernameOrPlaceholder() || window.i18n('anonymous');
 
       return {
         id: pubKey,
@@ -826,9 +826,7 @@ class CompositionBoxInner extends Component<Props, State> {
       return;
     }
 
-    if (
-      !selectedConversation.isPrivate && selectedConversation.isKickedFromGroup
-    ) {
+    if (!selectedConversation.isPrivate && selectedConversation.isKickedFromGroup) {
       ToastUtils.pushYouLeftTheGroup();
       return;
     }

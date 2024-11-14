@@ -71,8 +71,8 @@ class BaseError extends Error {
   constructor(message: string) {
     super(message);
     this.name = this.constructor.name;
-     // restore prototype chain
-     Object.setPrototypeOf(this, SnodeResponseError.prototype);
+    // restore prototype chain
+    Object.setPrototypeOf(this, SnodeResponseError.prototype);
   }
 }
 

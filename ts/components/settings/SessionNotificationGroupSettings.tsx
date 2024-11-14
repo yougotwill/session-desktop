@@ -32,9 +32,15 @@ export const SessionNotificationGroupSettings = () => {
     initialNotificationEnabled && initialNotificationEnabled !== NotificationType.off;
 
   const options = [
-    { label: window.i18n('notificationsContentShowNameAndContent'), value: NotificationType.message },
+    {
+      label: window.i18n('notificationsContentShowNameAndContent'),
+      value: NotificationType.message,
+    },
     { label: window.i18n('notificationsContentShowNameOnly'), value: NotificationType.name },
-    { label: window.i18n('notificationsContentShowNoNameOrContent'), value: NotificationType.count },
+    {
+      label: window.i18n('notificationsContentShowNoNameOrContent'),
+      value: NotificationType.count,
+    },
   ] as const;
 
   const items: SessionRadioItems = options.map(m => ({

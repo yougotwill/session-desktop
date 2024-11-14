@@ -30,7 +30,11 @@ export const useEncryptedFileFetch = (
 
       try {
         perfStart(`getDecryptedMediaUrl-${mediaUrl}-${timestamp}`);
-        const decryptedUrl = await DecryptedAttachmentsManager.getDecryptedMediaUrl(mediaUrl, contentType, isAvatar);
+        const decryptedUrl = await DecryptedAttachmentsManager.getDecryptedMediaUrl(
+          mediaUrl,
+          contentType,
+          isAvatar
+        );
         perfEnd(
           `getDecryptedMediaUrl-${mediaUrl}-${timestamp}`,
           `getDecryptedMediaUrl-${mediaUrl}-${timestamp}`

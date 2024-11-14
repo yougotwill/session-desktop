@@ -189,7 +189,6 @@ describe('SwarmPolling', () => {
 
   describe('pollForAllKeys', () => {
     beforeEach(() => {
-
       stubData('createOrUpdateItem').resolves();
     });
     afterEach(() => {
@@ -219,17 +218,16 @@ describe('SwarmPolling', () => {
 
     describe('legacy group', () => {
       it('does run for group pubkey on start no matter the recent timestamp', async () => {
-
         const convo = ConvoHub.use().getOrCreate(
           TestUtils.generateFakePubKeyStr(),
           ConversationTypeEnum.GROUP
         );
         TestUtils.stubLibSessionWorker([]);
-        stubData('removeAllMessagesInConversation').resolves()
-        stubData('getLatestClosedGroupEncryptionKeyPair').resolves()
-        stubData('removeAllClosedGroupEncryptionKeyPairs').resolves()
-        stubData('removeConversation').resolves()
-        stubData('fetchConvoMemoryDetails').resolves()
+        stubData('removeAllMessagesInConversation').resolves();
+        stubData('getLatestClosedGroupEncryptionKeyPair').resolves();
+        stubData('removeAllClosedGroupEncryptionKeyPairs').resolves();
+        stubData('removeConversation').resolves();
+        stubData('fetchConvoMemoryDetails').resolves();
         convo.set('active_at', Date.now());
         const groupConvoPubkey = PubKey.cast(convo.id as string);
         swarmPolling.addGroupId(groupConvoPubkey);
