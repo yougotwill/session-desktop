@@ -51,7 +51,7 @@ import { Storage, setLastProfileUpdateTimestamp } from '../util/storage';
 import { UserGroupsWrapperActions } from '../webworker/workers/browser/libsession_worker_interface';
 import { ConversationInteractionStatus, ConversationInteractionType } from './types';
 import { BlockedNumberController } from '../util';
-import { LocalizerComponentProps, LocalizerToken } from '../types/localizer';
+import type { LocalizerComponentProps, LocalizerToken } from '../types/localizer';
 import { sendInviteResponseToGroup } from '../session/sending/group/GroupInviteResponse';
 import { NetworkTime } from '../util/NetworkTime';
 import { ClosedGroup } from '../session';

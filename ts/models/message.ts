@@ -88,7 +88,7 @@ import { ConversationModel } from './conversation';
 import { READ_MESSAGE_STATE } from './conversationAttributes';
 import { ConversationInteractionStatus, ConversationInteractionType } from '../interactions/types';
 import { LastMessageStatusType } from '../state/ducks/types';
-import { GetMessageArgs, LocalizerToken } from '../types/localizer';
+import type { GetMessageArgs, LocalizerToken } from '../types/localizer';
 import {
   getGroupDisplayPictureChangeStr,
   getGroupNameChangeStr,
