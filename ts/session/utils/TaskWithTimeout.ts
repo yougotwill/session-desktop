@@ -16,10 +16,7 @@ export const createTaskWithTimeout = (task: any, id: string, givenTimeout?: numb
 
           window?.log?.error(message);
           reject(new Error(message));
-          return;
         }
-
-        return;
       }, timeout);
       const clearTimer = () => {
         try {
@@ -41,13 +38,11 @@ export const createTaskWithTimeout = (task: any, id: string, givenTimeout?: numb
         clearTimer();
         complete = true;
         resolve(result);
-        return;
       };
       const failure = (error: any) => {
         clearTimer();
         complete = true;
         reject(error);
-        return;
       };
 
       let promise;

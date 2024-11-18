@@ -257,7 +257,6 @@ async function sendSingleMessage({
         },
       ]);
 
-
       // make sure to update the local sent_at timestamp, because sometimes, we will get the just pushed message in the receiver side
       // before we return from the await below.
       // and the isDuplicate messages relies on sent_at timestamp to be valid.
@@ -305,7 +304,6 @@ async function sendSingleMessage({
       retries: Math.max(attempts - 1, 0),
       factor: 1,
       minTimeout: retryMinTimeout || MessageSender.getMinRetryTimeout(),
-
     }
   );
 }
@@ -641,7 +639,6 @@ async function handleBatchResultWithSubRequests({
         isString(storedHash) &&
         isNumber(storedAt)
       ) {
-
         seenHashes.push({
           expiresAt: NetworkTime.now() + TTL_DEFAULT.CONTENT_MESSAGE, // non config msg expire at CONTENT_MESSAGE at most
           hash: storedHash,
