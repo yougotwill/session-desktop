@@ -551,10 +551,11 @@ export const getPrivateContactsPubkeys = createSelector(getSortedContacts, state
   state.map(m => m.id)
 );
 
-export const getGlobalUnreadMessageCount = createSelector(
-  getSortedConversations,
-  _getGlobalUnreadCount
-);
+const getGlobalUnreadMessageCount = createSelector(getSortedConversations, _getGlobalUnreadCount);
+
+export function useGlobalUnreadMessageCount() {
+  return useSelector(getGlobalUnreadMessageCount);
+}
 
 export const getMessageInfoId = (state: StateType) => state.conversations.messageInfoId;
 

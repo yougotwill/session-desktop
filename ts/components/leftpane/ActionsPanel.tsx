@@ -1,9 +1,11 @@
+import { ipcRenderer } from 'electron';
 import { debounce } from 'lodash';
 import { useEffect, useRef, useState } from 'react';
 
 import { useDispatch, useSelector } from 'react-redux';
 import useInterval from 'react-use/lib/useInterval';
 import useTimeoutFn from 'react-use/lib/useTimeoutFn';
+import useThrottleFn from 'react-use/lib/useThrottleFn';
 
 import { Data } from '../../data/data';
 import { ConvoHub } from '../../session/conversations';
@@ -11,8 +13,8 @@ import { ConvoHub } from '../../session/conversations';
 import { clearSearch } from '../../state/ducks/search';
 import { resetLeftOverlayMode, SectionType, showLeftPaneSection } from '../../state/ducks/section';
 import {
-  getGlobalUnreadMessageCount,
   getOurPrimaryConversation,
+  useGlobalUnreadMessageCount,
 } from '../../state/selectors/conversations';
 import { getFocusedSection } from '../../state/selectors/section';
 import { getOurNumber } from '../../state/selectors/user';
@@ -38,11 +40,11 @@ import { SnodePool } from '../../session/apis/snode_api/snodePool';
 import { UserSync } from '../../session/utils/job_runners/jobs/UserSyncJob';
 import { forceSyncConfigurationNowIfNeeded } from '../../session/utils/sync/syncUtils';
 import { useFetchLatestReleaseFromFileServer } from '../../hooks/useFetchLatestReleaseFromFileServer';
+import { useHotkey } from '../../hooks/useHotkey';
 import { useIsDarkTheme } from '../../state/selectors/theme';
 import { switchThemeTo } from '../../themes/switchTheme';
 import { getOppositeTheme } from '../../util/theme';
 import { SessionNotificationCount } from '../icon/SessionNotificationCount';
-import { useHotkey } from '../../hooks/useHotkey';
 import { getIsModalVisible } from '../../state/selectors/modal';
 
 import { ReleasedFeatures } from '../../util/releaseFeature';
@@ -50,7 +52,7 @@ import { MessageQueue } from '../../session/sending';
 
 const Section = (props: { type: SectionType }) => {
   const ourNumber = useSelector(getOurNumber);
-  const globalUnreadMessageCount = useSelector(getGlobalUnreadMessageCount);
+  const globalUnreadMessageCount = useGlobalUnreadMessageCount();
   const dispatch = useDispatch();
   const { type } = props;
 
@@ -216,6 +218,21 @@ const doAppStartUp = async () => {
   }, 20000);
 };
 
+function useUpdateBadgeCount() {
+  const globalUnreadMessageCount = useGlobalUnreadMessageCount();
+
+  // Reuse the unreadToShow from the global state to update the badge count
+  useThrottleFn(
+    (unreadCount: number) => {
+      if (globalUnreadMessageCount !== undefined) {
+        ipcRenderer.send('update-badge-count', unreadCount);
+      }
+    },
+    2000,
+    [globalUnreadMessageCount]
+  );
+}
+
 /**
  * ActionsPanel is the far left banner (not the left pane).
  * The panel with buttons to switch between the message/contact/settings/theme views
@@ -237,6 +254,8 @@ export const ActionsPanel = () => {
 
     return () => clearTimeout(timeout);
   }, []);
+
+  useUpdateBadgeCount();
 
   useInterval(
     DecryptedAttachmentsManager.cleanUpOldDecryptedMedias,

@@ -72,16 +72,38 @@ export function getBrowserLocale() {
   // supportedLocalesOf will throw if the locales has a '_' instead of a '-' in it.
   const userLocaleDashed = browserLocale.replaceAll('_', '-');
 
-  const matchingLocales = Intl.DateTimeFormat.supportedLocalesOf(userLocaleDashed);
+  try {
+    let matchingLocales: Array<string> = [];
+    try {
+      matchingLocales = Intl.DateTimeFormat.supportedLocalesOf(userLocaleDashed);
+    } catch (innerError) {
+      // some users have a locale setup with a ':' in it.
+      // see https://github.com/oxen-io/session-desktop/issues/3221
+      const semiColonIndex = userLocaleDashed.indexOf(':');
+      if (semiColonIndex > -1) {
+        matchingLocales = Intl.DateTimeFormat.supportedLocalesOf(
+          userLocaleDashed.substring(0, semiColonIndex)
+        );
+      }
+    }
 
-  const mappingTo = matchingLocales?.[0] || 'en';
+    const mappingTo = matchingLocales?.[0] || 'en';
 
-  if (!mappedBrowserLocaleDisplayed) {
-    mappedBrowserLocaleDisplayed = true;
-    i18nLog(`userLocaleDashed: '${userLocaleDashed}', mapping to browser locale: ${mappingTo}`);
+    if (!mappedBrowserLocaleDisplayed) {
+      mappedBrowserLocaleDisplayed = true;
+      i18nLog(`userLocaleDashed: '${userLocaleDashed}', mapping to browser locale: ${mappingTo}`);
+    }
+
+    return mappingTo;
+  } catch (e) {
+    if (!mappedBrowserLocaleDisplayed) {
+      mappedBrowserLocaleDisplayed = true;
+      i18nLog(
+        `userLocaleDashed: '${userLocaleDashed}' was an invalid locale for supportedLocalesOf(). Falling back to 'en'. Error:${e.message} `
+      );
+    }
+    return 'en';
   }
-
-  return mappingTo;
 }
 
 export function setInitialLocale(crowdinLocaleArg: CrowdinLocale, dictionary: LocalizerDictionary) {
