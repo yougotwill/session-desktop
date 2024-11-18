@@ -321,6 +321,9 @@ export function useStateOf03GroupMembers(convoId?: string) {
       case 'INVITE_ACCEPTED':
         stateSortingOrder = 2;
         break;
+      case 'UNKNOWN':
+        stateSortingOrder = 5; // just a fallback, hopefully won't happen in production
+        break;
 
       default:
         assertUnreachable(item.memberStatus, 'Unhandled switch case');

@@ -1,4 +1,74 @@
 import { SignalService } from '../../protobuf';
+import { ConvoHub } from '../conversations';
+import { MessageEncrypter } from '../crypto/MessageEncrypter';
+import { PubKey } from '../types';
+
+function encryptionBasedOnConversation(destination: PubKey) {
+  if (ConvoHub.use().get(destination.key)?.isClosedGroup()) {
+    return SignalService.Envelope.Type.CLOSED_GROUP_MESSAGE;
+  }
+  return SignalService.Envelope.Type.SESSION_MESSAGE;
+}
+
+type SharedEncryptAndWrap = {
+  ttl: number;
+  identifier: string;
+  isSyncMessage: boolean;
+  plainTextBuffer: Uint8Array;
+};
+
+type EncryptAndWrapMessage = {
+  destination: string;
+  namespace: number;
+  networkTimestamp: number;
+} & SharedEncryptAndWrap;
+
+export type EncryptAndWrapMessageResults = {
+  networkTimestamp: number;
+  encryptedAndWrappedData: Uint8Array;
+  namespace: number;
+} & SharedEncryptAndWrap;
+
+async function encryptForGroupV2(
+  params: EncryptAndWrapMessage
+): Promise<EncryptAndWrapMessageResults> {
+  // Group v2 encryption works a bit differently: we encrypt the envelope itself through libsession.
+  // We essentially need to do the opposite of the usual encryption which is send envelope unencrypted with content encrypted.
+  const {
+    destination,
+    identifier,
+    isSyncMessage: syncMessage,
+    namespace,
+    plainTextBuffer,
+    ttl,
+    networkTimestamp,
+  } = params;
+
+  const envelope = MessageWrapper.wrapContentIntoEnvelope(
+    SignalService.Envelope.Type.CLOSED_GROUP_MESSAGE,
+    destination,
+    networkTimestamp,
+    plainTextBuffer
+  );
+
+  const recipient = PubKey.cast(destination);
+
+  const { cipherText } = await MessageEncrypter.encrypt(
+    recipient,
+    SignalService.Envelope.encode(envelope).finish(),
+    encryptionBasedOnConversation(recipient)
+  );
+
+  return {
+    networkTimestamp,
+    encryptedAndWrappedData: cipherText,
+    namespace,
+    ttl,
+    identifier,
+    isSyncMessage: syncMessage,
+    plainTextBuffer,
+  };
+}
 
 function wrapContentIntoEnvelope(
   type: SignalService.Envelope.Type,
@@ -38,4 +108,60 @@ function wrapEnvelopeInWebSocketMessage(envelope: SignalService.Envelope): Uint8
   return SignalService.WebSocketMessage.encode(websocket).finish();
 }
 
-export const MessageWrapper = { wrapEnvelopeInWebSocketMessage, wrapContentIntoEnvelope };
+async function encryptMessageAndWrap(
+  params: EncryptAndWrapMessage
+): Promise<EncryptAndWrapMessageResults> {
+  const {
+    destination,
+    identifier,
+    isSyncMessage: syncMessage,
+    namespace,
+    plainTextBuffer,
+    ttl,
+    networkTimestamp,
+  } = params;
+
+  if (PubKey.is03Pubkey(destination)) {
+    return encryptForGroupV2(params);
+  }
+
+  // can only be legacy group or 1o1 chats here
+
+  const recipient = PubKey.cast(destination);
+
+  const { envelopeType, cipherText } = await MessageEncrypter.encrypt(
+    recipient,
+    plainTextBuffer,
+    encryptionBasedOnConversation(recipient)
+  );
+
+  const envelope = MessageWrapper.wrapContentIntoEnvelope(
+    envelopeType,
+    recipient.key,
+    networkTimestamp,
+    cipherText
+  );
+  const data = MessageWrapper.wrapEnvelopeInWebSocketMessage(envelope);
+
+  return {
+    encryptedAndWrappedData: data,
+    networkTimestamp,
+    namespace,
+    ttl,
+    identifier,
+    isSyncMessage: syncMessage,
+    plainTextBuffer,
+  };
+}
+
+async function encryptMessagesAndWrap(
+  messages: Array<EncryptAndWrapMessage>
+): Promise<Array<EncryptAndWrapMessageResults>> {
+  return Promise.all(messages.map(encryptMessageAndWrap));
+}
+
+export const MessageWrapper = {
+  wrapEnvelopeInWebSocketMessage,
+  wrapContentIntoEnvelope,
+  encryptMessagesAndWrap,
+};

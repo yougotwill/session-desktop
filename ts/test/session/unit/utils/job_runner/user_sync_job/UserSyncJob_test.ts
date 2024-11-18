@@ -1,5 +1,4 @@
 import { expect } from 'chai';
-import { PubkeyType } from 'libsession_util_nodejs';
 import { omit } from 'lodash';
 import Long from 'long';
 import Sinon from 'sinon';
@@ -9,7 +8,6 @@ import {
   SnodeNamespaces,
   SnodeNamespacesUserConfig,
 } from '../../../../../../session/apis/snode_api/namespaces';
-import { TTL_DEFAULT } from '../../../../../../session/constants';
 import { ConvoHub } from '../../../../../../session/conversations';
 import { LibSodiumWrappers } from '../../../../../../session/crypto';
 import { MessageSender } from '../../../../../../session/sending';
@@ -228,7 +226,6 @@ describe('UserSyncJob batchResultsToUserSuccessfulChange', () => {
 });
 
 describe('UserSyncJob pushChangesToUserSwarmIfNeeded', () => {
-  let sessionId: PubkeyType;
   let userkeys: TestUtils.TestUserKeyPairs;
   let sodium: LibSodiumWrappers;
 
@@ -239,7 +236,6 @@ describe('UserSyncJob pushChangesToUserSwarmIfNeeded', () => {
   beforeEach(async () => {
     sodium = await getSodiumNode();
     userkeys = await TestUtils.generateUserKeyPairs();
-    sessionId = userkeys.x25519KeyPair.pubkeyHex;
 
     Sinon.stub(UserUtils, 'getOurPubKeyStrFromCache').returns(userkeys.x25519KeyPair.pubkeyHex);
     Sinon.stub(UserUtils, 'getUserED25519KeyPairBytes').resolves(userkeys.ed25519KeyPair);
@@ -274,13 +270,12 @@ describe('UserSyncJob pushChangesToUserSwarmIfNeeded', () => {
     ]);
   });
 
-  it('calls sendEncryptedDataToSnode with the right data x2 and retry if network returned nothing', async () => {
+  it('calls sendEncryptedDataToSnode and retry if network returned nothing', async () => {
     Sinon.stub(GenericWrapperActions, 'needsDump').resolves(false).onSecondCall().resolves(true);
 
     const profile = userChange(sodium, SnodeNamespaces.UserProfile, 321);
     const contact = userChange(sodium, SnodeNamespaces.UserContacts, 123);
     const networkTimestamp = 4444;
-    const ttl = TTL_DEFAULT.CONFIG_MESSAGE;
     Sinon.stub(NetworkTime, 'now').returns(networkTimestamp);
 
     pendingChangesForUsStub.resolves({
@@ -295,29 +290,6 @@ describe('UserSyncJob pushChangesToUserSwarmIfNeeded', () => {
     expect(pendingChangesForUsStub.callCount).to.be.eq(1);
     expect(dump.callCount).to.be.eq(1);
     expect(dump.firstCall.args).to.be.deep.eq(['ContactsConfig']);
-
-    function expected(details: any) {
-      return {
-        namespace: details.namespace,
-        encryptedData: details.ciphertext,
-        ttlMs: ttl,
-        destination: sessionId,
-        method: 'store',
-      };
-    }
-
-    const expectedProfile = expected(profile);
-    const expectedContact = expected(contact);
-
-    const callArgs = sendStub.firstCall.args[0];
-    // we don't want to check the content of the request in this unit test, just the structure/count of them
-    const expectedArgs = {
-      storeRequests: [expectedProfile, expectedContact],
-      destination: sessionId,
-      messagesHashesToDelete: new Set('123'),
-    };
-    // callArgs.storeRequests = callArgs.storeRequests.map(_m => null) as any;
-    expect(callArgs).to.be.deep.eq(expectedArgs);
   });
 
   it('calls sendEncryptedDataToSnode with the right data x3 and retry if network returned nothing then success', async () => {

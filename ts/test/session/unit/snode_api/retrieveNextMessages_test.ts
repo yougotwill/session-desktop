@@ -2,7 +2,7 @@ import chai from 'chai';
 import { beforeEach, describe } from 'mocha';
 import Sinon from 'sinon';
 
-import { GroupPubkeyType, PubkeyType } from 'libsession_util_nodejs';
+import { GroupPubkeyType, PubkeyType, UserGroupsGet } from 'libsession_util_nodejs';
 import {
   RetrieveGroupSubRequest,
   RetrieveLegacyClosedGroupSubRequest,
@@ -297,6 +297,8 @@ describe('SnodeAPI:buildRetrieveRequest', () => {
       stubLibSessionWorker({});
     });
     it('with single namespace and lasthash, no hashesToBump ', async () => {
+      TestUtils.stubUserGroupWrapper('getGroup', { whatever: '' } as any as UserGroupsGet);
+
       const requests = await SnodeAPIRetrieve.buildRetrieveRequest(
         [{ lastHash: 'lasthash', namespace: SnodeNamespaces.ClosedGroupInfo }],
         groupPk,
@@ -318,6 +320,8 @@ describe('SnodeAPI:buildRetrieveRequest', () => {
     });
 
     it('with two namespace and lasthashes, no hashesToBump ', async () => {
+      TestUtils.stubUserGroupWrapper('getGroup', { whatever: '' } as any as UserGroupsGet);
+
       const requests = await SnodeAPIRetrieve.buildRetrieveRequest(
         [
           { lastHash: 'lasthash1', namespace: SnodeNamespaces.ClosedGroupInfo },
@@ -351,6 +355,7 @@ describe('SnodeAPI:buildRetrieveRequest', () => {
     });
 
     it('with two namespace and lasthashes, 2 hashesToBump ', async () => {
+      TestUtils.stubUserGroupWrapper('getGroup', { whatever: '' } as any as UserGroupsGet);
       const requests = await SnodeAPIRetrieve.buildRetrieveRequest(
         [
           { lastHash: 'lasthash1', namespace: SnodeNamespaces.ClosedGroupInfo },

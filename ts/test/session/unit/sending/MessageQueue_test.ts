@@ -6,7 +6,6 @@
 /* eslint-disable no-await-in-loop */
 /* eslint-disable no-unreachable-loop */
 /* eslint-disable no-restricted-syntax */
-import { randomBytes } from 'crypto';
 
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
@@ -14,6 +13,7 @@ import { describe } from 'mocha';
 import Sinon, * as sinon from 'sinon';
 
 import { PubkeyType } from 'libsession_util_nodejs';
+import { randombytes_buf } from 'libsodium-wrappers-sumo';
 import { ContentMessage } from '../../../../session/messages/outgoing';
 import { ClosedGroupMessage } from '../../../../session/messages/outgoing/controlMessage/group/ClosedGroupMessage';
 import { MessageSender } from '../../../../session/sending';
@@ -25,7 +25,10 @@ import { PendingMessageCacheStub } from '../../../test-utils/stubs';
 
 import { SnodeNamespaces } from '../../../../session/apis/snode_api/namespaces';
 import { MessageSentHandler } from '../../../../session/sending/MessageSentHandler';
-import { TypedStub, stubData } from '../../../test-utils/utils';
+import { TypedStub, generateFakeSnode, stubData } from '../../../test-utils/utils';
+import { MessageWrapper } from '../../../../session/sending/MessageWrapper';
+import { SnodePool } from '../../../../session/apis/snode_api/snodePool';
+import { BatchRequests } from '../../../../session/apis/snode_api/batchRequest';
 
 chai.use(chaiAsPromised as any);
 chai.should();
@@ -144,11 +147,32 @@ describe('MessageQueue', () => {
     describe('events', () => {
       it('should send a success event if message was sent', done => {
         stubData('getMessageById').resolves();
+        TestUtils.stubWindowLog();
         const message = TestUtils.generateVisibleMessage();
 
-        sendStub.resolves({ effectiveTimestamp: Date.now(), wrappedEnvelope: randomBytes(10) });
+        sendStub.restore();
         const device = TestUtils.generateFakePubKey();
+        stubData('saveSeenMessageHashes').resolves();
         Sinon.stub(MessageSender, 'getMinRetryTimeout').returns(10);
+        Sinon.stub(MessageSender, 'destinationIsClosedGroup').returns(false);
+        Sinon.stub(SnodePool, 'getNodeFromSwarmOrThrow').resolves(generateFakeSnode());
+        Sinon.stub(BatchRequests, 'doUnsignedSnodeBatchRequestNoRetries').resolves([
+          {
+            body: { t: message.createAtNetworkTimestamp, hash: 'whatever', code: 200 },
+            code: 200,
+          },
+        ]);
+        Sinon.stub(MessageWrapper, 'encryptMessagesAndWrap').resolves([
+          {
+            encryptedAndWrappedData: randombytes_buf(100),
+            identifier: message.identifier,
+            isSyncMessage: false,
+            namespace: SnodeNamespaces.Default,
+            networkTimestamp: message.createAtNetworkTimestamp,
+            plainTextBuffer: message.plainTextBuffer(),
+            ttl: message.ttl(),
+          },
+        ]);
         const waitForMessageSentEvent = async () =>
           new Promise<void>(resolve => {
             resolve();
@@ -159,6 +183,7 @@ describe('MessageQueue', () => {
               );
               done();
             } catch (e) {
+              console.warn('messageSentHandlerSuccessStub was not called, but should have been');
               done(e);
             }
           });

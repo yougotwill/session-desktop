@@ -5,7 +5,6 @@ import { GroupPubkeyType, PubkeyType } from 'libsession_util_nodejs';
 import { isArray, isEmpty, isNumber, isString } from 'lodash';
 import pRetry from 'p-retry';
 import { Data, SeenMessageHashes } from '../../data/data';
-import { SignalService } from '../../protobuf';
 import { UserGroupsWrapperActions } from '../../webworker/workers/browser/libsession_worker_interface';
 import { OpenGroupMessageV2 } from '../apis/open_group_api/opengroupV2/OpenGroupMessageV2';
 import {
@@ -44,7 +43,6 @@ import { SnodePool } from '../apis/snode_api/snodePool';
 import { TTL_DEFAULT } from '../constants';
 import { ConvoHub } from '../conversations';
 import { addMessagePadding } from '../crypto/BufferPadding';
-import { MessageEncrypter } from '../crypto/MessageEncrypter';
 import { ContentMessage } from '../messages/outgoing';
 import { UnsendMessage } from '../messages/outgoing/controlMessage/UnsendMessage';
 import { ClosedGroupNewMessage } from '../messages/outgoing/controlMessage/group/ClosedGroupNewMessage';
@@ -54,7 +52,7 @@ import { OutgoingRawMessage } from '../types/RawMessage';
 import { UserUtils } from '../utils';
 import { ed25519Str, fromUInt8ArrayToBase64 } from '../utils/String';
 import { MessageSentHandler } from './MessageSentHandler';
-import { MessageWrapper } from './MessageWrapper';
+import { EncryptAndWrapMessageResults, MessageWrapper } from './MessageWrapper';
 import { stringify } from '../../types/sqlSharedTypes';
 import { OpenGroupRequestCommonType } from '../../data/types';
 import { NetworkTime } from '../../util/NetworkTime';
@@ -246,9 +244,8 @@ async function sendSingleMessage({
   return pRetry(
     async () => {
       const recipient = PubKey.cast(message.device);
-
       // we can only have a single message in this send function for now
-      const [encryptedAndWrapped] = await encryptMessagesAndWrap([
+      const [encryptedAndWrapped] = await MessageWrapper.encryptMessagesAndWrap([
         {
           destination: message.device,
           plainTextBuffer: message.plainTextBuffer,
@@ -259,6 +256,7 @@ async function sendSingleMessage({
           isSyncMessage: Boolean(isSyncMessage),
         },
       ]);
+
 
       // make sure to update the local sent_at timestamp, because sometimes, we will get the just pushed message in the receiver side
       // before we return from the await below.
@@ -297,9 +295,7 @@ async function sendSingleMessage({
         destination,
         false
       );
-
       await handleBatchResultWithSubRequests({ batchResult, subRequests, destination });
-
       return {
         wrappedEnvelope: encryptedAndWrapped.encryptedAndWrappedData,
         effectiveTimestamp: encryptedAndWrapped.networkTimestamp,
@@ -309,6 +305,7 @@ async function sendSingleMessage({
       retries: Math.max(attempts - 1, 0),
       factor: 1,
       minTimeout: retryMinTimeout || MessageSender.getMinRetryTimeout(),
+
     }
   );
 }
@@ -486,125 +483,6 @@ async function sendMessagesDataToSnode<T extends PubkeyType | GroupPubkeyType>({
   }
 }
 
-function encryptionBasedOnConversation(destination: PubKey) {
-  if (ConvoHub.use().get(destination.key)?.isClosedGroup()) {
-    return SignalService.Envelope.Type.CLOSED_GROUP_MESSAGE;
-  }
-  return SignalService.Envelope.Type.SESSION_MESSAGE;
-}
-
-type SharedEncryptAndWrap = {
-  ttl: number;
-  identifier: string;
-  isSyncMessage: boolean;
-  plainTextBuffer: Uint8Array;
-};
-
-type EncryptAndWrapMessage = {
-  destination: string;
-  namespace: number;
-  networkTimestamp: number;
-} & SharedEncryptAndWrap;
-
-type EncryptAndWrapMessageResults = {
-  networkTimestamp: number;
-  encryptedAndWrappedData: Uint8Array;
-  namespace: number;
-} & SharedEncryptAndWrap;
-
-async function encryptForGroupV2(
-  params: EncryptAndWrapMessage
-): Promise<EncryptAndWrapMessageResults> {
-  // Group v2 encryption works a bit differently: we encrypt the envelope itself through libsession.
-  // We essentially need to do the opposite of the usual encryption which is send envelope unencrypted with content encrypted.
-  const {
-    destination,
-    identifier,
-    isSyncMessage: syncMessage,
-    namespace,
-    plainTextBuffer,
-    ttl,
-    networkTimestamp,
-  } = params;
-
-  const envelope = MessageWrapper.wrapContentIntoEnvelope(
-    SignalService.Envelope.Type.CLOSED_GROUP_MESSAGE,
-    destination,
-    networkTimestamp,
-    plainTextBuffer
-  );
-
-  const recipient = PubKey.cast(destination);
-
-  const { cipherText } = await MessageEncrypter.encrypt(
-    recipient,
-    SignalService.Envelope.encode(envelope).finish(),
-    encryptionBasedOnConversation(recipient)
-  );
-
-  return {
-    networkTimestamp,
-    encryptedAndWrappedData: cipherText,
-    namespace,
-    ttl,
-    identifier,
-    isSyncMessage: syncMessage,
-    plainTextBuffer,
-  };
-}
-
-async function encryptMessageAndWrap(
-  params: EncryptAndWrapMessage
-): Promise<EncryptAndWrapMessageResults> {
-  const {
-    destination,
-    identifier,
-    isSyncMessage: syncMessage,
-    namespace,
-    plainTextBuffer,
-    ttl,
-    networkTimestamp,
-  } = params;
-
-  if (PubKey.is03Pubkey(destination)) {
-    return encryptForGroupV2(params);
-  }
-
-  // can only be legacy group or 1o1 chats here
-
-  const recipient = PubKey.cast(destination);
-
-  const { envelopeType, cipherText } = await MessageEncrypter.encrypt(
-    recipient,
-    plainTextBuffer,
-    encryptionBasedOnConversation(recipient)
-  );
-
-  const envelope = MessageWrapper.wrapContentIntoEnvelope(
-    envelopeType,
-    recipient.key,
-    networkTimestamp,
-    cipherText
-  );
-  const data = MessageWrapper.wrapEnvelopeInWebSocketMessage(envelope);
-
-  return {
-    encryptedAndWrappedData: data,
-    networkTimestamp,
-    namespace,
-    ttl,
-    identifier,
-    isSyncMessage: syncMessage,
-    plainTextBuffer,
-  };
-}
-
-async function encryptMessagesAndWrap(
-  messages: Array<EncryptAndWrapMessage>
-): Promise<Array<EncryptAndWrapMessageResults>> {
-  return Promise.all(messages.map(encryptMessageAndWrap));
-}
-
 /**
  * Send an array of pre-encrypted data to the corresponding swarm.
  * Note: also handles the result of each sub requests with `handleBatchResultWithSubRequests`
@@ -714,9 +592,13 @@ export const MessageSender = {
   isContentSyncMessage,
   getSignatureParamsFromNamespace,
   signSubRequests,
-  encryptMessagesAndWrap,
   messagesToRequests,
+  destinationIsClosedGroup,
 };
+
+function destinationIsClosedGroup(destination: string) {
+  return ConvoHub.use().get(destination)?.isClosedGroup();
+}
 
 /**
  * Note: this function does not handle the syncing logic of messages yet.
@@ -731,13 +613,13 @@ async function handleBatchResultWithSubRequests({
   subRequests: Array<RawSnodeSubRequests>;
   destination: string;
 }) {
-  const isDestinationClosedGroup = ConvoHub.use().get(destination)?.isClosedGroup();
   if (!batchResult || !isArray(batchResult) || isEmpty(batchResult)) {
     window.log.error('handleBatchResultWithSubRequests: invalid batch result ');
     return;
   }
 
   const seenHashes: Array<SeenMessageHashes> = [];
+
   for (let index = 0; index < subRequests.length; index++) {
     const subRequest = subRequests[index];
 
@@ -753,13 +635,13 @@ async function handleBatchResultWithSubRequests({
       const subRequestStatusCode = batchResult?.[index]?.code;
       // TODO: the expiration is due to be returned by the storage server on "store" soon, we will then be able to use it instead of doing the storedAt + ttl logic below
       // if we have a hash and a storedAt, mark it as seen so we don't reprocess it on the next retrieve
-
       if (
         subRequestStatusCode === 200 &&
         !isEmpty(storedHash) &&
         isString(storedHash) &&
         isNumber(storedAt)
       ) {
+
         seenHashes.push({
           expiresAt: NetworkTime.now() + TTL_DEFAULT.CONTENT_MESSAGE, // non config msg expire at CONTENT_MESSAGE at most
           hash: storedHash,
@@ -772,7 +654,7 @@ async function handleBatchResultWithSubRequests({
           await MessageSentHandler.handleSwarmMessageSentSuccess(
             {
               device: subRequest.destination,
-              isDestinationClosedGroup,
+              isDestinationClosedGroup: MessageSender.destinationIsClosedGroup(destination),
               identifier: subRequest.dbMessageIdentifier,
               plainTextBuffer:
                 subRequest instanceof StoreUserMessageSubRequest

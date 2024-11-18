@@ -24,9 +24,8 @@ function emptyMember(pubkeyHex: PubkeyType): GroupMemberGet {
       key: null,
       url: null,
     },
-    isRemoved: false,
     nominatedAdmin: false,
-    shouldRemoveMessages: false,
+    removedStatus: 'NOT_REMOVED',
     pubkeyHex,
   };
 }
@@ -157,7 +156,7 @@ describe('libsession_metagroup', () => {
       const memberCreated = metaGroupWrapper.memberGetOrConstruct(member);
       console.info('Object.keys(memberCreated) ', JSON.stringify(Object.keys(memberCreated)));
       expect(Object.keys(memberCreated).length).to.be.eq(
-        10, // if you change this value, also make sure you add a test, testing that new field, below
+        6, // if you change this value, also make sure you add a test, testing that new field, below
         'this test is designed to fail if you need to add tests to test a new field of libsession'
       );
     });
@@ -165,73 +164,85 @@ describe('libsession_metagroup', () => {
     it('can add member by setting its promoted state, both ok and nok', () => {
       metaGroupWrapper.memberConstructAndSet(member);
       metaGroupWrapper.memberSetPromotionSent(member);
-      expect(metaGroupWrapper.memberGetAll().length).to.be.deep.eq(1);
-      expect(metaGroupWrapper.memberGetAll()[0]).to.be.deep.eq({
-        ...emptyMember(member),
-        promoted: true,
-        promotionPending: true,
-        promotionFailed: false,
-        admin: false,
-      });
+      expect(metaGroupWrapper.memberGetAll()).to.be.deep.eq([
+        {
+          ...emptyMember(member),
+          nominatedAdmin: true,
+          memberStatus: 'PROMOTION_SENT',
+        },
+      ]);
 
+      metaGroupWrapper.memberConstructAndSet(member2);
       metaGroupWrapper.memberSetPromotionFailed(member2);
       expect(metaGroupWrapper.memberGetAll().length).to.be.deep.eq(2);
       // the list is sorted by member pk, which means that index based test do not work
       expect(metaGroupWrapper.memberGet(member2)).to.be.deep.eq({
         ...emptyMember(member2),
-        promoted: true,
-        promotionFailed: true,
-        promotionPending: true,
-        admin: false,
+        nominatedAdmin: true,
+        memberStatus: 'PROMOTION_FAILED',
       });
 
       // we test the admin: true case below
     });
 
     it('can add member by setting its invited state, both ok and nok', () => {
+      metaGroupWrapper.memberConstructAndSet(member);
+
       metaGroupWrapper.memberSetInvited(member, false); // with invite success
       expect(metaGroupWrapper.memberGetAll().length).to.be.deep.eq(1);
-      expect(metaGroupWrapper.memberGetAll()[0]).to.be.deep.eq({
-        ...emptyMember(member),
-        invitePending: true,
-        inviteFailed: false,
-      });
+      expect(metaGroupWrapper.memberGetAll()).to.be.deep.eq([
+        {
+          ...emptyMember(member),
+          memberStatus: 'INVITE_SENT',
+        },
+      ]);
+
+      metaGroupWrapper.memberConstructAndSet(member2);
 
       metaGroupWrapper.memberSetInvited(member2, true); // with invite failed
       expect(metaGroupWrapper.memberGetAll().length).to.be.deep.eq(2);
       expect(metaGroupWrapper.memberGet(member2)).to.be.deep.eq({
         ...emptyMember(member2),
-        invitePending: true,
-        inviteFailed: true,
+        memberStatus: 'INVITE_FAILED',
       });
     });
 
     it('can add member by setting its accepted state', () => {
+      metaGroupWrapper.memberConstructAndSet(member);
+
       metaGroupWrapper.memberSetAccepted(member);
       expect(metaGroupWrapper.memberGetAll().length).to.be.deep.eq(1);
       expect(metaGroupWrapper.memberGetAll()[0]).to.be.deep.eq({
         ...emptyMember(member),
+        memberStatus: 'INVITE_ACCEPTED',
       });
+
+      metaGroupWrapper.memberConstructAndSet(member2);
 
       metaGroupWrapper.memberSetAccepted(member2);
       expect(metaGroupWrapper.memberGetAll().length).to.be.deep.eq(2);
       expect(metaGroupWrapper.memberGet(member2)).to.be.deep.eq({
         ...emptyMember(member2),
+        memberStatus: 'INVITE_ACCEPTED',
       });
     });
 
     it('can erase member', () => {
+      metaGroupWrapper.memberConstructAndSet(member);
+      metaGroupWrapper.memberConstructAndSet(member2);
+
       metaGroupWrapper.memberSetAccepted(member);
       metaGroupWrapper.memberSetPromoted(member2);
       expect(metaGroupWrapper.memberGetAll().length).to.be.deep.eq(2);
 
       expect(metaGroupWrapper.memberGet(member)).to.be.deep.eq({
         ...emptyMember(member),
+        memberStatus: 'INVITE_ACCEPTED',
       });
       expect(metaGroupWrapper.memberGet(member2)).to.be.deep.eq({
         ...emptyMember(member2),
-        promoted: true,
-        promotionPending: true,
+        memberStatus: 'PROMOTION_SENT',
+        nominatedAdmin: true,
       });
 
       const rekeyed = metaGroupWrapper.memberEraseAndRekey([member2]);
@@ -239,10 +250,12 @@ describe('libsession_metagroup', () => {
       expect(metaGroupWrapper.memberGetAll().length).to.be.deep.eq(1);
       expect(metaGroupWrapper.memberGetAll()[0]).to.be.deep.eq({
         ...emptyMember(member),
+        memberStatus: 'INVITE_ACCEPTED',
       });
     });
 
     it('can add via name set', () => {
+      metaGroupWrapper.memberConstructAndSet(member);
       metaGroupWrapper.memberSetNameTruncated(member, 'member name');
       expect(metaGroupWrapper.memberGetAll().length).to.be.deep.eq(1);
       expect(metaGroupWrapper.memberGetAll()[0]).to.be.deep.eq({
@@ -253,6 +266,7 @@ describe('libsession_metagroup', () => {
 
     it('can add via profile picture set', () => {
       const pic = profilePicture();
+      metaGroupWrapper.memberConstructAndSet(member);
       metaGroupWrapper.memberSetProfilePicture(member, pic);
       expect(metaGroupWrapper.memberGetAll().length).to.be.deep.eq(1);
       const expected = { ...emptyMember(member), profilePicture: pic };
@@ -261,6 +275,7 @@ describe('libsession_metagroup', () => {
     });
 
     it('can add via admin set', () => {
+      metaGroupWrapper.memberConstructAndSet(member);
       metaGroupWrapper.memberSetPromotionAccepted(member);
       expect(metaGroupWrapper.memberGetAll().length).to.be.deep.eq(1);
       const expected: GroupMemberGet = {
@@ -272,28 +287,35 @@ describe('libsession_metagroup', () => {
       expect(metaGroupWrapper.memberGetAll()[0]).to.be.deep.eq(expected);
     });
 
+    it('can simply add, and has the correct default', () => {
+      expect(metaGroupWrapper.memberGetAll().length).to.be.deep.eq(0);
+      metaGroupWrapper.memberConstructAndSet(member);
+      expect(metaGroupWrapper.memberGetAll()).to.be.deep.eq([emptyMember(member)]);
+    });
+
     it('can mark as removed with messages', () => {
+      metaGroupWrapper.memberConstructAndSet(member);
       metaGroupWrapper.membersMarkPendingRemoval([member], true);
       expect(metaGroupWrapper.memberGetAll().length).to.be.deep.eq(1);
       const expected: GroupMemberGet = {
         ...emptyMember(member),
-        shouldRemoveMessages: true,
-        isRemoved: true,
+        removedStatus: 'REMOVED_MEMBER_AND_MESSAGES',
+        memberStatus: 'INVITE_ACCEPTED', // marking a member as pending removal auto-marks him as accepted (so we don't retry sending an invite)
       };
       expect(metaGroupWrapper.memberGetAll().length).to.be.deep.eq(1);
       expect(metaGroupWrapper.memberGetAll()[0]).to.be.deep.eq(expected);
     });
 
     it('can mark as removed without messages', () => {
+      metaGroupWrapper.memberConstructAndSet(member);
       metaGroupWrapper.membersMarkPendingRemoval([member], false);
       expect(metaGroupWrapper.memberGetAll().length).to.be.deep.eq(1);
       const expected: GroupMemberGet = {
         ...emptyMember(member),
-        shouldRemoveMessages: false,
-        isRemoved: true,
+        removedStatus: 'REMOVED_MEMBER',
+        memberStatus: 'INVITE_ACCEPTED', // marking a member as pending removal auto-marks him as accepted (so we don't retry sending an invite)
       };
-      expect(metaGroupWrapper.memberGetAll().length).to.be.deep.eq(1);
-      expect(metaGroupWrapper.memberGetAll()[0]).to.be.deep.eq(expected);
+      expect(metaGroupWrapper.memberGetAll()).to.be.deep.eq([expected]);
     });
   });
 

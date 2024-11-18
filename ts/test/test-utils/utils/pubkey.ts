@@ -129,7 +129,7 @@ export function generateFakeSnodes(amount: number): Array<Snode> {
 }
 
 /**
- * this function can be used to setup unit test which relies on fetching a snodepool
+ * this function can be used to setup unit test which relies on fetching a snode pool
  */
 export function setupTestWithSending() {
   const snodes = generateFakeSnodes(20);
