@@ -274,6 +274,7 @@
   "deleteAfterLegacyGroupsGroupUpdateErrorTitle": "Misslyckades att uppdatera grupp",
   "deleteAfterMessageDeletionStandardisationMessageDeletionForbidden": "Du har inte behörighet att ta bort andras meddelanden",
   "deleteMessage": "{count, plural, one [Radera meddelande] other [Radera meddelanden]}",
+  "deleteMessageConfirm": "{count, plural, one [Är du säker på att du vill radera detta meddelande?] other [Är du säker på att du vill radera dessa meddelanden?]}",
   "deleteMessageDeleted": "{count, plural, one [Meddelande raderat] other [Meddelanden raderade]}",
   "deleteMessageDeletedGlobally": "Detta meddelande har raderats",
   "deleteMessageDeletedLocally": "Detta meddelande har tagits bort på denna enhet",
