@@ -1,7 +1,7 @@
 // eslint:disable: no-require-imports no-var-requires one-variable-per-declaration no-void-expression function-name
 
 import { GroupPubkeyType } from 'libsession_util_nodejs';
-import _, { isEmpty } from 'lodash';
+import _, { isArray, isEmpty } from 'lodash';
 import { ConversationModel } from '../models/conversation';
 import { ConversationAttributes } from '../models/conversationAttributes';
 import { MessageCollection, MessageModel } from '../models/message';
@@ -285,6 +285,9 @@ async function getAllMessagesWithAttachmentsInConversationSentBefore(args: {
 }): Promise<Array<MessageModel>> {
   const msgAttrs = await channels.getAllMessagesWithAttachmentsInConversationSentBefore(args);
 
+  if (!msgAttrs || isEmpty(msgAttrs) || !isArray(msgAttrs)) {
+    return [];
+  }
   return msgAttrs.map((msg: any) => new MessageModel(msg));
 }
 
@@ -578,7 +581,7 @@ async function findAllMessageFromSendersInConversation(
 ): Promise<Array<MessageModel>> {
   const msgAttrs = await channels.findAllMessageFromSendersInConversation(args);
 
-  if (!msgAttrs || isEmpty(msgAttrs)) {
+  if (!msgAttrs || isEmpty(msgAttrs) || !isArray(msgAttrs)) {
     return [];
   }
 
@@ -590,7 +593,7 @@ async function findAllMessageHashesInConversation(
 ): Promise<Array<MessageModel>> {
   const msgAttrs = await channels.findAllMessageHashesInConversation(args);
 
-  if (!msgAttrs || isEmpty(msgAttrs)) {
+  if (!msgAttrs || isEmpty(msgAttrs) || !isArray(msgAttrs)) {
     return [];
   }
 
@@ -602,7 +605,7 @@ async function findAllMessageHashesInConversationMatchingAuthor(
 ): Promise<Array<MessageModel>> {
   const msgAttrs = await channels.findAllMessageHashesInConversationMatchingAuthor(args);
 
-  if (!msgAttrs || isEmpty(msgAttrs)) {
+  if (!msgAttrs || isEmpty(msgAttrs) || !isArray(msgAttrs)) {
     return [];
   }
 

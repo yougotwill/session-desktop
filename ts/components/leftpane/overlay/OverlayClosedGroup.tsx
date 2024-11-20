@@ -228,6 +228,7 @@ export const OverlayClosedGroupV2 = () => {
               onSelect={addToSelected}
               onUnselect={removeFromSelected}
               disableBg={true}
+              maxNameWidth="100%"
             />
           ))
         )}
@@ -345,6 +346,7 @@ export const OverlayLegacyClosedGroup = () => {
               onUnselect={removeFromSelected}
               withBorder={false}
               disabled={loading}
+              maxNameWidth="100%"
             />
           ))
         )}

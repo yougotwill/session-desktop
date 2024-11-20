@@ -316,7 +316,8 @@ const _getContacts = (
 ): Array<ReduxConversationType> => {
   return sortedConversations.filter(convo => {
     // a private conversation not approved is a message request. Include them in the list of contacts
-    return !convo.isBlocked && convo.isPrivate && !convo.isMe;
+    // Note: we filter out non 05-pubkeys as we don't want blinded message request to be part of this list
+    return !convo.isBlocked && convo.isPrivate && !convo.isMe && PubKey.is05Pubkey(convo.id);
   });
 };
 
@@ -481,7 +482,7 @@ export type DirectContactsByNameType = {
 };
 
 // make sure that createSelector is called here so this function is memoized
-export const getSortedContacts = createSelector(
+const getSortedContacts = createSelector(
   getContacts,
   (contacts: Array<ReduxConversationType>): Array<DirectContactsByNameType> => {
     const us = UserUtils.getOurPubKeyStrFromCache();

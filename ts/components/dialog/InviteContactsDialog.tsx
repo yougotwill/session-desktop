@@ -206,6 +206,7 @@ const InviteContactsDialogInner = (props: Props) => {
               onSelect={addTo}
               onUnselect={removeFrom}
               disableBg={true}
+              maxNameWidth="100%"
             />
           ))
         ) : (

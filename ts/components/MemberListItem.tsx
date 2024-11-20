@@ -323,6 +323,7 @@ export const MemberListItem = ({
           flexDirection="column"
           margin="0 var(--margins-md)"
           alignItems="flex-start"
+          minWidth="0"
         >
           <StyledName data-testid={'contact'} maxName={maxNameWidth}>
             {ourName || memberName}

@@ -104,6 +104,7 @@ export const RemoveModeratorsDialog = (props: Props) => {
                   setModsToRemove(updatedList);
                 }}
                 disableBg={true}
+                maxNameWidth="100%"
               />
             ))}
           </div>

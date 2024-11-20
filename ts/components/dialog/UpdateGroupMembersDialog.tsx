@@ -86,6 +86,7 @@ const MemberList = (props: {
             disableBg={true}
             displayGroupStatus={isV2Group && weAreAdmin}
             groupPk={convoId}
+            maxNameWidth="100%"
           />
         );
       })}

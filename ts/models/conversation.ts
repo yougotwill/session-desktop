@@ -673,6 +673,18 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
         });
         return;
       }
+
+      if (this.isClosedGroupV2()) {
+        // we need the return await so that errors are caught in the catch {}
+        await this.sendMessageToGroupV2(chatMessageParams);
+        await Reactions.handleMessageReaction({
+          reaction,
+          sender: UserUtils.getOurPubKeyStrFromCache(),
+          you: true,
+        });
+        return;
+      }
+
       if (this.isClosedGroup()) {
         const chatMessageMediumGroup = new VisibleMessage(chatMessageParams);
         const closedGroupVisibleMessage = new ClosedGroupVisibleMessage({

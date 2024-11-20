@@ -232,18 +232,27 @@ export function useMemberPromoteSending(groupPk: GroupPubkeyType, memberPk: Pubk
 }
 
 type MemberStateGroupV2WithSending = MemberStateGroupV2 | 'INVITE_SENDING' | 'PROMOTION_SENDING';
+type MemberWithV2Sending = Pick<GroupMemberGet, 'pubkeyHex'> & {
+  memberStatus: MemberStateGroupV2WithSending;
+};
 
 export function useStateOf03GroupMembers(convoId?: string) {
   const us = UserUtils.getOurPubKeyStrFromCache();
   let unsortedMembers = useSelector((state: StateType) => getMembersOfGroup(state, convoId));
   const invitesSendingPk = useMembersInviteSending(convoId);
   const promotionsSendingPk = useMembersPromoteSending(convoId);
-  let invitesSending = compact(
-    invitesSendingPk.map(sending => unsortedMembers.find(m => m.pubkeyHex === sending))
+  let invitesSending: Array<MemberWithV2Sending> = compact(
+    invitesSendingPk
+      .map(sending => unsortedMembers.find(m => m.pubkeyHex === sending))
+      .map(m => {
+        return m ? { ...m, memberStatus: 'INVITE_SENDING' as const } : null;
+      })
   );
-  const promotionSending = compact(
-    promotionsSendingPk.map(sending => unsortedMembers.find(m => m.pubkeyHex === sending))
-  );
+  const promotionSending: Array<MemberWithV2Sending> = compact( promotionsSendingPk
+    .map(sending => unsortedMembers.find(m => m.pubkeyHex === sending))
+    .map(m => {
+      return m ? { ...m, memberStatus: 'PROMOTION_SENDING' as const } : null;
+    }));
 
   // promotionSending has priority against invitesSending, so removing anything in invitesSending found in promotionSending
   invitesSending = differenceBy(invitesSending, promotionSending, value => value.pubkeyHex);
@@ -283,7 +292,6 @@ export function useStateOf03GroupMembers(convoId?: string) {
   unsortedWithStatuses.push(...promotionSending);
   unsortedWithStatuses.push(...differenceBy(invitesSending, promotionSending));
   unsortedWithStatuses.push(...differenceBy(unsortedMembers, invitesSending, promotionSending));
-
   const names = useConversationsNicknameRealNameOrShortenPubkey(
     unsortedWithStatuses.map(m => m.pubkeyHex)
   );
@@ -336,6 +344,5 @@ export function useStateOf03GroupMembers(convoId?: string) {
     index++;
     return sortingOrder;
   });
-
   return sorted;
 }
