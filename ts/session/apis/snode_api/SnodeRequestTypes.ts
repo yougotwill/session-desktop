@@ -23,6 +23,7 @@ import { NetworkTime } from '../../../util/NetworkTime';
 import {
   WithCreatedAtNetworkTimestamp,
   WithMaxSize,
+  WithMethod,
   WithSecretKey,
   WithSignature,
   WithTimestamp,
@@ -32,11 +33,16 @@ import { NonEmptyArray } from '../../types/utility';
 /**
  * This is the base sub request class that every other type of request has to extend.
  */
-abstract class SnodeAPISubRequest {
-  public abstract method: string;
+abstract class SnodeAPISubRequest<T extends string> {
+  public method: T;
 
   public abstract loggingId(): string;
   public abstract getDestination(): PubkeyType | GroupPubkeyType | '<none>';
+
+  constructor({ method }: WithMethod<T>) {
+    this.method = method;
+  }
+
   /**
    * When batch sending an array of requests, we will sort them by this number (the smallest will be put in front and the largest at the end).
    * This is needed for sending and polling for 03-group keys for instance.
@@ -47,14 +53,52 @@ abstract class SnodeAPISubRequest {
   }
 }
 
+abstract class RetrieveSubRequest extends SnodeAPISubRequest<'retrieve'> {
+  public readonly last_hash: string;
+  public readonly max_size: number | undefined;
+
+  constructor({ last_hash, max_size }: WithMaxSize & { last_hash: string }) {
+    super({ method: 'retrieve' });
+    this.last_hash = last_hash;
+    this.max_size = max_size;
+  }
+}
+
+abstract class OxendSubRequest extends SnodeAPISubRequest<'oxend_request'> {
+  constructor() {
+    super({ method: 'oxend_request' });
+  }
+}
+
+abstract class DeleteAllSubRequest extends SnodeAPISubRequest<'delete_all'> {
+  constructor() {
+    super({ method: 'delete_all' });
+  }
+}
+
+abstract class DeleteSubRequest extends SnodeAPISubRequest<'delete'> {
+  constructor() {
+    super({ method: 'delete' });
+  }
+}
+
+abstract class ExpireSubRequest extends SnodeAPISubRequest<'expire'> {
+  constructor() {
+    super({ method: 'expire' });
+  }
+}
+
+abstract class StoreSubRequest extends SnodeAPISubRequest<'store'> {
+  constructor() {
+    super({ method: 'store' });
+  }
+}
+
 /**
  * Retrieve for legacy was not authenticated
  */
-export class RetrieveLegacyClosedGroupSubRequest extends SnodeAPISubRequest {
-  method = 'retrieve' as const;
+export class RetrieveLegacyClosedGroupSubRequest extends RetrieveSubRequest {
   public readonly legacyGroupPk: PubkeyType;
-  public readonly last_hash: string;
-  public readonly max_size: number | undefined;
   public readonly namespace = SnodeNamespaces.LegacyClosedGroup;
 
   constructor({
@@ -62,10 +106,8 @@ export class RetrieveLegacyClosedGroupSubRequest extends SnodeAPISubRequest {
     legacyGroupPk,
     max_size,
   }: WithMaxSize & { last_hash: string; legacyGroupPk: PubkeyType }) {
-    super();
+    super({ last_hash, max_size });
     this.legacyGroupPk = legacyGroupPk;
-    this.last_hash = last_hash;
-    this.max_size = max_size;
   }
 
   public build() {
@@ -118,10 +160,7 @@ export type GetServicesNodesFromSeedRequest = {
   params: FetchSnodeListParams;
 };
 
-export class RetrieveUserSubRequest extends SnodeAPISubRequest {
-  public method = 'retrieve' as const;
-  public readonly last_hash: string;
-  public readonly max_size: number | undefined;
+export class RetrieveUserSubRequest extends RetrieveSubRequest {
   public readonly namespace: SnodeNamespacesUser | SnodeNamespacesUserConfig;
 
   constructor({
@@ -132,9 +171,8 @@ export class RetrieveUserSubRequest extends SnodeAPISubRequest {
     last_hash: string;
     namespace: SnodeNamespacesUser | SnodeNamespacesUserConfig;
   }) {
-    super();
-    this.last_hash = last_hash;
-    this.max_size = max_size;
+    super({ last_hash, max_size });
+
     this.namespace = namespace;
   }
 
@@ -171,10 +209,7 @@ export class RetrieveUserSubRequest extends SnodeAPISubRequest {
 /**
  * Build and sign a request with either the admin key if we have it, or with our sub account details
  */
-export class RetrieveGroupSubRequest extends SnodeAPISubRequest {
-  public method = 'retrieve' as const;
-  public readonly last_hash: string;
-  public readonly max_size: number | undefined;
+export class RetrieveGroupSubRequest extends RetrieveSubRequest {
   public readonly namespace: SnodeNamespacesGroup;
   public readonly groupDetailsNeededForSignature: GroupDetailsNeededForSignature;
 
@@ -188,9 +223,7 @@ export class RetrieveGroupSubRequest extends SnodeAPISubRequest {
     namespace: SnodeNamespacesGroup;
     groupDetailsNeededForSignature: GroupDetailsNeededForSignature | null;
   }) {
-    super();
-    this.last_hash = last_hash;
-    this.max_size = max_size;
+    super({ last_hash, max_size });
     this.namespace = namespace;
     if (isEmpty(groupDetailsNeededForSignature)) {
       throw new Error('groupDetailsNeededForSignature is required');
@@ -239,8 +272,7 @@ export class RetrieveGroupSubRequest extends SnodeAPISubRequest {
   }
 }
 
-export class OnsResolveSubRequest extends SnodeAPISubRequest {
-  public method = 'oxend_request' as const;
+export class OnsResolveSubRequest extends OxendSubRequest {
   public readonly base64EncodedNameHash: string;
 
   constructor(base64EncodedNameHash: string) {
@@ -270,9 +302,7 @@ export class OnsResolveSubRequest extends SnodeAPISubRequest {
   }
 }
 
-export class GetServiceNodesSubRequest extends SnodeAPISubRequest {
-  public method = 'oxend_request' as const;
-
+export class GetServiceNodesSubRequest extends OxendSubRequest {
   public build() {
     return {
       method: this.method,
@@ -305,12 +335,11 @@ export class GetServiceNodesSubRequest extends SnodeAPISubRequest {
   }
 }
 
-export class SwarmForSubRequest extends SnodeAPISubRequest {
-  public method = 'get_swarm' as const;
+export class SwarmForSubRequest extends SnodeAPISubRequest<'get_swarm'> {
   public readonly destination;
 
   constructor(pubkey: PubkeyType | GroupPubkeyType) {
-    super();
+    super({ method: 'get_swarm' });
     this.destination = pubkey;
   }
 
@@ -341,8 +370,10 @@ export class SwarmForSubRequest extends SnodeAPISubRequest {
   }
 }
 
-export class NetworkTimeSubRequest extends SnodeAPISubRequest {
-  public method = 'info' as const;
+export class NetworkTimeSubRequest extends SnodeAPISubRequest<'info'> {
+  constructor() {
+    super({ method: 'info' });
+  }
 
   public build() {
     return {
@@ -360,7 +391,9 @@ export class NetworkTimeSubRequest extends SnodeAPISubRequest {
   }
 }
 
-abstract class AbstractRevokeSubRequest extends SnodeAPISubRequest {
+abstract class AbstractRevokeSubRequest<
+  T extends 'revoke_subaccount' | 'unrevoke_subaccount',
+> extends SnodeAPISubRequest<T> {
   public readonly destination: GroupPubkeyType;
   public readonly timestamp: number;
   public readonly revokeTokenHex: Array<string>;
@@ -371,8 +404,11 @@ abstract class AbstractRevokeSubRequest extends SnodeAPISubRequest {
     timestamp,
     revokeTokenHex,
     secretKey,
-  }: WithGroupPubkey & WithTimestamp & WithSecretKey & { revokeTokenHex: Array<string> }) {
-    super();
+    method,
+  }: WithGroupPubkey &
+    WithTimestamp &
+    WithSecretKey & { revokeTokenHex: Array<string>; method: T }) {
+    super({ method });
     this.destination = groupPk;
     this.timestamp = timestamp;
     this.revokeTokenHex = revokeTokenHex;
@@ -406,8 +442,10 @@ abstract class AbstractRevokeSubRequest extends SnodeAPISubRequest {
   }
 }
 
-export class SubaccountRevokeSubRequest extends AbstractRevokeSubRequest {
-  public method = 'revoke_subaccount' as const;
+export class SubaccountRevokeSubRequest extends AbstractRevokeSubRequest<'revoke_subaccount'> {
+  constructor(args: Omit<ConstructorParameters<typeof AbstractRevokeSubRequest>[0], 'method'>) {
+    super({ method: 'revoke_subaccount', ...args });
+  }
 
   public async build() {
     const signature = await this.signWithAdminSecretKey();
@@ -423,9 +461,10 @@ export class SubaccountRevokeSubRequest extends AbstractRevokeSubRequest {
   }
 }
 
-export class SubaccountUnrevokeSubRequest extends AbstractRevokeSubRequest {
-  public method = 'unrevoke_subaccount' as const;
-
+export class SubaccountUnrevokeSubRequest extends AbstractRevokeSubRequest<'unrevoke_subaccount'> {
+  constructor(args: Omit<ConstructorParameters<typeof AbstractRevokeSubRequest>[0], 'method'>) {
+    super({ method: 'unrevoke_subaccount', ...args });
+  }
   /**
    * For Revoke/unrevoke, this needs an admin signature
    */
@@ -452,12 +491,11 @@ export class SubaccountUnrevokeSubRequest extends AbstractRevokeSubRequest {
  * The getExpiries request can currently only be used for our own pubkey as we use it to fetch
  * the expiries updated by another of our devices.
  */
-export class GetExpiriesFromNodeSubRequest extends SnodeAPISubRequest {
-  public method = 'get_expiries' as const;
+export class GetExpiriesFromNodeSubRequest extends SnodeAPISubRequest<'get_expiries'> {
   public readonly messageHashes: Array<string>;
 
   constructor(args: WithMessagesHashes) {
-    super();
+    super({ method: 'get_expiries' });
     this.messageHashes = args.messagesHashes;
     if (this.messageHashes.length === 0) {
       window.log.warn(`GetExpiriesFromNodeSubRequest given empty list of messageHashes`);
@@ -507,8 +545,7 @@ export class GetExpiriesFromNodeSubRequest extends SnodeAPISubRequest {
 }
 
 // TODO to use where delete_all is currently manually called
-export class DeleteAllFromUserNodeSubRequest extends SnodeAPISubRequest {
-  public method = 'delete_all' as const;
+export class DeleteAllFromUserNodeSubRequest extends DeleteAllSubRequest {
   public readonly namespace = 'all'; // we can only delete_all for all namespaces currently, but the backend allows more
 
   public async build() {
@@ -547,8 +584,7 @@ export class DeleteAllFromUserNodeSubRequest extends SnodeAPISubRequest {
 /**
  * Delete all the messages and not the config messages for that group 03.
  */
-export class DeleteAllFromGroupMsgNodeSubRequest extends SnodeAPISubRequest {
-  public method = 'delete_all' as const;
+export class DeleteAllFromGroupMsgNodeSubRequest extends DeleteAllSubRequest {
   public readonly namespace = SnodeNamespaces.ClosedGroupMessages;
   public readonly adminSecretKey: Uint8Array;
   public readonly destination: GroupPubkeyType;
@@ -592,8 +628,7 @@ export class DeleteAllFromGroupMsgNodeSubRequest extends SnodeAPISubRequest {
   }
 }
 
-export class DeleteHashesFromUserNodeSubRequest extends SnodeAPISubRequest {
-  public method = 'delete' as const;
+export class DeleteHashesFromUserNodeSubRequest extends DeleteSubRequest {
   public readonly messageHashes: Array<string>;
   public readonly destination: PubkeyType;
 
@@ -642,8 +677,7 @@ export class DeleteHashesFromUserNodeSubRequest extends SnodeAPISubRequest {
   }
 }
 
-export class DeleteHashesFromGroupNodeSubRequest extends SnodeAPISubRequest {
-  public method = 'delete' as const;
+export class DeleteHashesFromGroupNodeSubRequest extends DeleteSubRequest {
   public readonly messageHashes: Array<string>;
   public readonly destination: GroupPubkeyType;
   public readonly secretKey: Uint8Array;
@@ -696,8 +730,7 @@ export class DeleteHashesFromGroupNodeSubRequest extends SnodeAPISubRequest {
   }
 }
 
-export class UpdateExpiryOnNodeUserSubRequest extends SnodeAPISubRequest {
-  public method = 'expire' as const;
+export class UpdateExpiryOnNodeUserSubRequest extends ExpireSubRequest {
   public readonly messageHashes: Array<string>;
   public readonly expiryMs: number;
   public readonly shortenOrExtend: ShortenOrExtend;
@@ -756,8 +789,7 @@ export class UpdateExpiryOnNodeUserSubRequest extends SnodeAPISubRequest {
   }
 }
 
-export class UpdateExpiryOnNodeGroupSubRequest extends SnodeAPISubRequest {
-  public method = 'expire' as const;
+export class UpdateExpiryOnNodeGroupSubRequest extends ExpireSubRequest {
   public readonly messageHashes: Array<string>;
   public readonly expiryMs: number;
   public readonly shortenOrExtend: ShortenOrExtend;
@@ -827,8 +859,7 @@ export class UpdateExpiryOnNodeGroupSubRequest extends SnodeAPISubRequest {
   }
 }
 
-export class StoreGroupMessageSubRequest extends SnodeAPISubRequest {
-  public method = 'store' as const;
+export class StoreGroupMessageSubRequest extends StoreSubRequest {
   public readonly namespace = SnodeNamespaces.ClosedGroupMessages;
   public readonly destination: GroupPubkeyType;
   public readonly ttlMs: number;
@@ -914,8 +945,7 @@ export class StoreGroupMessageSubRequest extends SnodeAPISubRequest {
 
 abstract class StoreGroupConfigSubRequest<
   T extends SnodeNamespacesGroupConfig | SnodeNamespaces.ClosedGroupRevokedRetrievableMessages,
-> extends SnodeAPISubRequest {
-  public method = 'store' as const;
+> extends StoreSubRequest {
   public readonly namespace: T;
   public readonly destination: GroupPubkeyType;
   public readonly ttlMs: number;
@@ -1025,8 +1055,7 @@ export class StoreGroupRevokedRetrievableSubRequest extends StoreGroupConfigSubR
   }
 }
 
-export class StoreUserConfigSubRequest extends SnodeAPISubRequest {
-  public method = 'store' as const;
+export class StoreUserConfigSubRequest extends StoreSubRequest {
   public readonly namespace: SnodeNamespacesUserConfig;
   public readonly ttlMs: number;
   public readonly encryptedData: Uint8Array;
@@ -1096,8 +1125,7 @@ export class StoreUserConfigSubRequest extends SnodeAPISubRequest {
 /**
  * A request to send a message to the default namespace of another user (namespace 0 is not authenticated)
  */
-export class StoreUserMessageSubRequest extends SnodeAPISubRequest {
-  public method = 'store' as const;
+export class StoreUserMessageSubRequest extends StoreSubRequest {
   public readonly ttlMs: number;
   public readonly encryptedData: Uint8Array;
   public readonly namespace = SnodeNamespaces.Default;
@@ -1170,8 +1198,7 @@ export class StoreUserMessageSubRequest extends SnodeAPISubRequest {
  *
  * TODO: this is almost an exact match of `StoreUserMessageSubRequest` due to be removed once we get rid of legacy groups.
  */
-export class StoreLegacyGroupMessageSubRequest extends SnodeAPISubRequest {
-  public method = 'store' as const;
+export class StoreLegacyGroupMessageSubRequest extends StoreSubRequest {
   public readonly ttlMs: number;
   public readonly encryptedData: Uint8Array;
   public readonly namespace = SnodeNamespaces.LegacyClosedGroup;

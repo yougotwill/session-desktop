@@ -15,3 +15,4 @@ export type WithPromotedMembers = { promoted: Array<PubkeyType> };
 export type WithMaxSize = { max_size?: number };
 export type WithShortenOrExtend = { shortenOrExtend: 'shorten' | 'extend' | '' };
 export type WithCreatedAtNetworkTimestamp = { createdAtNetworkTimestamp: number };
+export type WithMethod<T extends string> = { method: T };
