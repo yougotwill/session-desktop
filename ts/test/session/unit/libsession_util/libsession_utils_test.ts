@@ -8,7 +8,7 @@ import { SnodeNamespaces } from '../../../../session/apis/snode_api/namespaces';
 import { UserUtils } from '../../../../session/utils';
 import { LibSessionUtil } from '../../../../session/utils/libsession/libsession_utils';
 import {
-  GenericWrapperActions,
+  UserGenericWrapperActions,
   MetaGroupWrapperActions,
 } from '../../../../webworker/workers/browser/libsession_worker_interface';
 import { TestUtils } from '../../../test-utils';
@@ -70,8 +70,8 @@ describe('LibSessionUtil saveDumpsToDb', () => {
     });
 
     it('does not save to DB if all needsDump reports false', async () => {
-      Sinon.stub(GenericWrapperActions, 'needsDump').resolves(false);
-      const dump = Sinon.stub(GenericWrapperActions, 'dump').resolves(new Uint8Array());
+      Sinon.stub(UserGenericWrapperActions, 'needsDump').resolves(false);
+      const dump = Sinon.stub(UserGenericWrapperActions, 'dump').resolves(new Uint8Array());
       const saveConfigDump = Sinon.stub(ConfigDumpData, 'saveConfigDump').resolves();
       Sinon.stub(UserUtils, 'getOurPubKeyStrFromCache').returns(sessionId);
 
@@ -81,11 +81,11 @@ describe('LibSessionUtil saveDumpsToDb', () => {
     });
 
     it('does save to DB if any needsDump reports true', async () => {
-      Sinon.stub(GenericWrapperActions, 'needsDump')
+      Sinon.stub(UserGenericWrapperActions, 'needsDump')
         .resolves(false)
         .withArgs('ConvoInfoVolatileConfig')
         .resolves(true);
-      const dump = Sinon.stub(GenericWrapperActions, 'dump').resolves(new Uint8Array());
+      const dump = Sinon.stub(UserGenericWrapperActions, 'dump').resolves(new Uint8Array());
       const saveConfigDump = Sinon.stub(ConfigDumpData, 'saveConfigDump').resolves();
       Sinon.stub(UserUtils, 'getOurPubKeyStrFromCache').returns(sessionId);
 
@@ -95,9 +95,9 @@ describe('LibSessionUtil saveDumpsToDb', () => {
     });
 
     it('does save to DB if all needsDump reports true', async () => {
-      const needsDump = Sinon.stub(GenericWrapperActions, 'needsDump').resolves(true);
+      const needsDump = Sinon.stub(UserGenericWrapperActions, 'needsDump').resolves(true);
       const dumped = new Uint8Array([1, 2, 3]);
-      const dump = Sinon.stub(GenericWrapperActions, 'dump').resolves(dumped);
+      const dump = Sinon.stub(UserGenericWrapperActions, 'dump').resolves(dumped);
       const saveConfigDump = Sinon.stub(ConfigDumpData, 'saveConfigDump').resolves();
       Sinon.stub(UserUtils, 'getOurPubKeyStrFromCache').returns(sessionId);
 
@@ -223,7 +223,7 @@ describe('LibSessionUtil pendingChangesForUs', () => {
   });
 
   it('empty results if all needsPush is false', async () => {
-    Sinon.stub(GenericWrapperActions, 'needsPush').resolves(false);
+    Sinon.stub(UserGenericWrapperActions, 'needsPush').resolves(false);
     const result = await LibSessionUtil.pendingChangesForUs();
     expect(result.allOldHashes.size).to.be.equal(0);
     expect(result.messages.length).to.be.equal(0);
@@ -237,10 +237,10 @@ describe('LibSessionUtil pendingChangesForUs', () => {
       hashes: ['123'],
       namespace: SnodeNamespaces.ConvoInfoVolatile,
     };
-    const needsPush = Sinon.stub(GenericWrapperActions, 'needsPush');
+    const needsPush = Sinon.stub(UserGenericWrapperActions, 'needsPush');
     needsPush.resolves(false).withArgs('ConvoInfoVolatileConfig').resolves(true);
 
-    const push = Sinon.stub(GenericWrapperActions, 'push')
+    const push = Sinon.stub(UserGenericWrapperActions, 'push')
       .throws()
       .withArgs('ConvoInfoVolatileConfig')
       .resolves(pushResultsConvo);
@@ -298,10 +298,10 @@ describe('LibSessionUtil pendingChangesForUs', () => {
       hashes: ['111'],
       namespace: SnodeNamespaces.UserProfile,
     };
-    const needsPush = Sinon.stub(GenericWrapperActions, 'needsPush');
+    const needsPush = Sinon.stub(UserGenericWrapperActions, 'needsPush');
     needsPush.resolves(true);
 
-    const push = Sinon.stub(GenericWrapperActions, 'push');
+    const push = Sinon.stub(UserGenericWrapperActions, 'push');
     push
       .throws()
       .withArgs('ContactsConfig')

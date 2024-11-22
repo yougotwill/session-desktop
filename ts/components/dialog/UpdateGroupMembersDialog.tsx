@@ -72,7 +72,9 @@ const MemberList = (props: {
     <>
       {sortedMembers.map(member => {
         const isSelected = (weAreAdmin && selectedMembers.includes(member)) || false;
-        const isAdmin = groupAdmins?.includes(member);
+        const memberIsAdmin = groupAdmins?.includes(member);
+        // we want to hide the toggle for admins are they are not selectable
+        const showRadioButton = !memberIsAdmin && weAreAdmin;
 
         return (
           <MemberListItem
@@ -81,10 +83,10 @@ const MemberList = (props: {
             isSelected={isSelected}
             onSelect={onSelect}
             onUnselect={onUnselect}
-            isAdmin={isAdmin}
-            hideRadioButton={isAdmin} // we want to hide the toggle for admins are they are not selectable
+            isAdmin={memberIsAdmin}
+            hideRadioButton={!showRadioButton}
             disableBg={true}
-            displayGroupStatus={isV2Group && weAreAdmin}
+            displayGroupStatus={isV2Group}
             groupPk={convoId}
             maxNameWidth="100%"
           />

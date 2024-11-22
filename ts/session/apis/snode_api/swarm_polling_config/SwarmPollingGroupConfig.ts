@@ -144,14 +144,14 @@ async function handleMetaMergeResults(groupPk: GroupPubkeyType) {
       convo.set({ displayNameInProfile: refreshedInfos.name || undefined });
       changes = true;
     }
-    const expectedMode = refreshedInfos.expirySeconds ? 'deleteAfterSend' : 'off';
+    const expirationMode = refreshedInfos.expirySeconds ? 'deleteAfterSend' : 'off';
     if (
       refreshedInfos.expirySeconds !== convo.get('expireTimer') ||
-      expectedMode !== convo.get('expirationMode')
+      expirationMode !== convo.get('expirationMode')
     ) {
       convo.set({
         expireTimer: refreshedInfos.expirySeconds || undefined,
-        expirationMode: expectedMode,
+        expirationMode,
       });
       changes = true;
     }

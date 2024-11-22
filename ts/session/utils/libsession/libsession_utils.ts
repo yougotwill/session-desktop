@@ -14,7 +14,7 @@ import {
   isUserConfigWrapperType,
 } from '../../../webworker/workers/browser/libsession_worker_functions';
 import {
-  GenericWrapperActions,
+  UserGenericWrapperActions,
   MetaGroupWrapperActions,
 } from '../../../webworker/workers/browser/libsession_worker_interface';
 import { SnodeNamespaces, SnodeNamespacesUserConfig } from '../../apis/snode_api/namespaces';
@@ -63,7 +63,7 @@ async function initializeLibSessionUtilWrappers() {
     }
     window.log.debug('initializeLibSessionUtilWrappers initing from dump', variant);
     try {
-      await GenericWrapperActions.init(
+      await UserGenericWrapperActions.init(
         variant,
         privateKeyEd25519,
         dump.data.length ? dump.data : null
@@ -86,10 +86,10 @@ async function initializeLibSessionUtilWrappers() {
     window.log.warn(
       `initializeLibSessionUtilWrappers: missingRequiredVariants "${missingVariant}"`
     );
-    await GenericWrapperActions.init(missingVariant, privateKeyEd25519, null);
+    await UserGenericWrapperActions.init(missingVariant, privateKeyEd25519, null);
     // save the newly created dump to the database even if it is empty, just so we do not need to recreate one next run
 
-    const dump = await GenericWrapperActions.dump(missingVariant);
+    const dump = await UserGenericWrapperActions.dump(missingVariant);
     await ConfigDumpData.saveConfigDump({
       data: dump,
       publicKey: UserUtils.getOurPubKeyStrFromCache(),
@@ -155,12 +155,12 @@ async function pendingChangesForUs(): Promise<UserDestinationChanges> {
   for (let index = 0; index < userVariants.length; index++) {
     const variant = userVariants[index];
 
-    const needsPush = await GenericWrapperActions.needsPush(variant);
+    const needsPush = await UserGenericWrapperActions.needsPush(variant);
     if (!needsPush) {
       continue;
     }
 
-    const { data, seqno, hashes, namespace } = await GenericWrapperActions.push(variant);
+    const { data, seqno, hashes, namespace } = await UserGenericWrapperActions.push(variant);
     variantsNeedingPush.add(variant);
     results.messages.push({
       ciphertext: data,
@@ -375,12 +375,12 @@ async function saveDumpsToDb(pubkey: PubkeyType | GroupPubkeyType) {
 
   for (let i = 0; i < LibSessionUtil.requiredUserVariants.length; i++) {
     const variant = LibSessionUtil.requiredUserVariants[i];
-    const needsDump = await GenericWrapperActions.needsDump(variant);
+    const needsDump = await UserGenericWrapperActions.needsDump(variant);
 
     if (!needsDump) {
       continue;
     }
-    const dump = await GenericWrapperActions.dump(variant);
+    const dump = await UserGenericWrapperActions.dump(variant);
     await ConfigDumpData.saveConfigDump({
       data: dump,
       publicKey: pubkey,

@@ -20,7 +20,7 @@ import {
   UserDestinationChanges,
   UserSuccessfulChange,
 } from '../../../../../../session/utils/libsession/libsession_utils';
-import { GenericWrapperActions } from '../../../../../../webworker/workers/browser/libsession_worker_interface';
+import { UserGenericWrapperActions } from '../../../../../../webworker/workers/browser/libsession_worker_interface';
 import { TestUtils } from '../../../../../test-utils';
 import { TypedStub, stubConfigDumpData } from '../../../../../test-utils/utils';
 import { NetworkTime } from '../../../../../../util/NetworkTime';
@@ -231,7 +231,7 @@ describe('UserSyncJob pushChangesToUserSwarmIfNeeded', () => {
 
   let sendStub: TypedStub<typeof MessageSender, 'sendEncryptedDataToSnode'>;
   let pendingChangesForUsStub: TypedStub<typeof LibSessionUtil, 'pendingChangesForUs'>;
-  let dump: TypedStub<typeof GenericWrapperActions, 'dump'>;
+  let dump: TypedStub<typeof UserGenericWrapperActions, 'dump'>;
 
   beforeEach(async () => {
     sodium = await getSodiumNode();
@@ -246,7 +246,7 @@ describe('UserSyncJob pushChangesToUserSwarmIfNeeded', () => {
     stubConfigDumpData('saveConfigDump').resolves();
 
     pendingChangesForUsStub = Sinon.stub(LibSessionUtil, 'pendingChangesForUs');
-    dump = Sinon.stub(GenericWrapperActions, 'dump').resolves(new Uint8Array());
+    dump = Sinon.stub(UserGenericWrapperActions, 'dump').resolves(new Uint8Array());
     sendStub = Sinon.stub(MessageSender, 'sendEncryptedDataToSnode');
   });
   afterEach(() => {
@@ -254,7 +254,7 @@ describe('UserSyncJob pushChangesToUserSwarmIfNeeded', () => {
   });
 
   it('call savesDumpToDb even if no changes are required on the serverside', async () => {
-    Sinon.stub(GenericWrapperActions, 'needsDump').resolves(true);
+    Sinon.stub(UserGenericWrapperActions, 'needsDump').resolves(true);
     const result = await UserSync.pushChangesToUserSwarmIfNeeded();
 
     pendingChangesForUsStub.resolves(undefined);
@@ -271,7 +271,10 @@ describe('UserSyncJob pushChangesToUserSwarmIfNeeded', () => {
   });
 
   it('calls sendEncryptedDataToSnode and retry if network returned nothing', async () => {
-    Sinon.stub(GenericWrapperActions, 'needsDump').resolves(false).onSecondCall().resolves(true);
+    Sinon.stub(UserGenericWrapperActions, 'needsDump')
+      .resolves(false)
+      .onSecondCall()
+      .resolves(true);
 
     const profile = userChange(sodium, SnodeNamespaces.UserProfile, 321);
     const contact = userChange(sodium, SnodeNamespaces.UserContacts, 123);
@@ -316,10 +319,10 @@ describe('UserSyncJob pushChangesToUserSwarmIfNeeded', () => {
       },
     ];
     Sinon.stub(LibSessionUtil, 'batchResultsToUserSuccessfulChange').returns(changes);
-    const confirmPushed = Sinon.stub(GenericWrapperActions, 'confirmPushed').resolves();
+    const confirmPushed = Sinon.stub(UserGenericWrapperActions, 'confirmPushed').resolves();
 
     // all 4 need to be dumped
-    const needsDump = Sinon.stub(GenericWrapperActions, 'needsDump').resolves(true);
+    const needsDump = Sinon.stub(UserGenericWrapperActions, 'needsDump').resolves(true);
 
     // ============ 1st try, let's say we didn't get as much entries in the result as expected. This should be a fail
     sendStub.resolves([

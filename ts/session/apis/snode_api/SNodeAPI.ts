@@ -156,8 +156,8 @@ const forceNetworkDeletion = async (): Promise<Array<string> | null> => {
 const TEST_getMinTimeout = () => 500;
 
 /**
- * Delete the specified message hashes from the our own swarm only.
- * Note: legacy group did not support removing messages from the swarm.
+ * Delete the specified message hashes from our own swarm only.
+ * Note: legacy groups does not support this
  */
 const networkDeleteMessageOurSwarm = async (
   messagesHashes: Set<string>,
@@ -298,7 +298,7 @@ const networkDeleteMessageOurSwarm = async (
  * Returns true when the hashes have been removed successfully.
  * Returns false when
  *  - we don't have the secretKey
- *  - if one of the hash was already not present in the swarm,
+ *  - if one of the hashes was already not found in the swarm,
  *  - if the request failed too many times
  */
 const networkDeleteMessagesForGroup = async (

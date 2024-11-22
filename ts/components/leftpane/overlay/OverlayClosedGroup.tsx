@@ -91,7 +91,7 @@ async function createClosedGroupWithErrorHandling(
     return false;
   }
 
-  // >= because we add ourself as a member AFTER this. so a 10 group is already invalid as it will be 11 when we are included
+  // >= because we add ourself as a member AFTER this. so a 10 member group is already invalid as it will be 11 with us
   // the same is valid with groups count < 1
 
   if (groupMemberIds.length < 1) {
@@ -109,7 +109,7 @@ async function createClosedGroupWithErrorHandling(
   return true;
 }
 
-// duplicated form the legacy one below because this one is a lot more tightly linked with redux async thunks logic
+// duplicated from the legacy one below because this one is a lot more tightly linked with redux async thunks logic
 export const OverlayClosedGroupV2 = () => {
   const dispatch = useDispatch();
   const us = useOurPkStr();
@@ -144,7 +144,7 @@ export const OverlayClosedGroupV2 = () => {
       return;
     }
 
-    // >= because we add ourself as a member AFTER this. so a 10 group is already invalid as it will be 11 with ourself
+    // >= because we add ourself as a member AFTER this. so a 10 member group is already invalid as it will be 11 with us
     // the same is valid with groups count < 1
 
     if (members.length < 1) {

@@ -36,7 +36,7 @@ import { getUserED25519KeyPairBytes } from '../../session/utils/User';
 import { stringify, toFixedUint8ArrayOfLength } from '../../types/sqlSharedTypes';
 import {
   getGroupPubkeyFromWrapperType,
-  isMetaWrapperType,
+  isMetaGroupWrapperType,
 } from '../../webworker/workers/browser/libsession_worker_functions';
 import {
   MetaGroupWrapperActions,
@@ -356,7 +356,7 @@ const loadMetaDumpsFromDB = createAsyncThunk(
     const toReturn: Array<GroupDetailsUpdate> = [];
     for (let index = 0; index < variantsWithData.length; index++) {
       const { variant, data } = variantsWithData[index];
-      if (!isMetaWrapperType(variant)) {
+      if (!isMetaGroupWrapperType(variant)) {
         continue;
       }
       const groupPk = getGroupPubkeyFromWrapperType(variant);

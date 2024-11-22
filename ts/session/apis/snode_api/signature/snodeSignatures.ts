@@ -64,7 +64,10 @@ type SnodeSigParamsShared = {
 
 type SnodeSigParamsAdminGroup = SnodeSigParamsShared & {
   groupPk: GroupPubkeyType;
-  privKey: Uint8ArrayLen64; // len 64
+  /**
+   * privKey, length of 64 bytes
+   */
+  privKey: Uint8ArrayLen64;
 };
 
 type SnodeSigParamsSubAccount = SnodeSigParamsShared & {
@@ -73,15 +76,18 @@ type SnodeSigParamsSubAccount = SnodeSigParamsShared & {
 };
 
 type SnodeSigParamsUs = SnodeSigParamsShared & {
-  pubKey: string;
-  privKey: Uint8ArrayLen64; // len 64
+  pubKey: PubkeyType;
+  /**
+   * privKey, length of 64 bytes
+   */
+  privKey: Uint8ArrayLen64;
 };
 
 function isSigParamsForGroupAdmin(
   sigParams: SnodeSigParamsAdminGroup | SnodeSigParamsUs | SnodeSigParamsSubAccount
 ): sigParams is SnodeSigParamsAdminGroup {
-  const asGr = sigParams as SnodeSigParamsAdminGroup;
-  return PubKey.is03Pubkey(asGr.groupPk) && !isEmpty(asGr.privKey);
+  const toValidate = sigParams as SnodeSigParamsAdminGroup;
+  return PubKey.is03Pubkey(toValidate.groupPk) && !isEmpty(toValidate.privKey);
 }
 
 function getVerificationData(params: SnodeSigParamsShared) {

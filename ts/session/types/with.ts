@@ -11,3 +11,7 @@ export type WithAddWithoutHistoryMembers = { withoutHistory: Array<PubkeyType> }
 export type WithAddWithHistoryMembers = { withHistory: Array<PubkeyType> };
 export type WithRemoveMembers = { removed: Array<PubkeyType> };
 export type WithPromotedMembers = { promoted: Array<PubkeyType> };
+
+export type WithMaxSize = { max_size?: number };
+export type WithShortenOrExtend = { shortenOrExtend: 'shorten' | 'extend' | '' };
+export type WithCreatedAtNetworkTimestamp = { createdAtNetworkTimestamp: number };

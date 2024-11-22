@@ -2,7 +2,10 @@ import styled from 'styled-components';
 
 import { GroupPubkeyType, PubkeyType } from 'libsession_util_nodejs';
 import { isEmpty } from 'lodash';
-import { useNicknameOrProfileNameOrShortenedPubkey } from '../hooks/useParamSelector';
+import {
+  useNicknameOrProfileNameOrShortenedPubkey,
+  useWeAreAdmin,
+} from '../hooks/useParamSelector';
 import { promoteUsersInGroup } from '../interactions/conversationInteractions';
 import { PubKey } from '../session/types';
 import { UserUtils } from '../session/utils';
@@ -17,6 +20,7 @@ import {
   useMemberPromotionFailed,
   useMemberPromotionSent,
   useMemberIsNominatedAdmin,
+  useMemberPendingRemoval,
 } from '../state/selectors/groups';
 import { Avatar, AvatarSize, CrownIcon } from './avatar/Avatar';
 import { Flex } from './basic/Flex';
@@ -124,7 +128,10 @@ const ResendContainer = ({
   groupPk,
   pubkey,
 }: Pick<MemberListItemProps, 'displayGroupStatus' | 'pubkey' | 'groupPk'>) => {
+  const weAreAdmin = useWeAreAdmin(groupPk);
+
   if (
+    weAreAdmin &&
     displayGroupStatus &&
     groupPk &&
     PubKey.is03Pubkey(groupPk) &&
@@ -258,10 +265,16 @@ const ResendButton = ({ groupPk, pubkey }: { pubkey: PubkeyType; groupPk: GroupP
 const PromoteButton = ({ groupPk, pubkey }: { pubkey: PubkeyType; groupPk: GroupPubkeyType }) => {
   const memberAcceptedInvite = useMemberHasAcceptedInvite(pubkey, groupPk);
   const memberIsNominatedAdmin = useMemberIsNominatedAdmin(pubkey, groupPk);
+  const memberIsPendingRemoval = useMemberPendingRemoval(pubkey, groupPk);
   // When invite-as-admin was used to invite that member, the resend button is available to resend the promote message.
   // We want to show that button only to promote a normal member who accepted a normal invite but wasn't promoted yet.
   // ^ this is only the case for testing. The UI will be different once we release the promotion process
-  if (!hasClosedGroupV2QAButtons() || !memberAcceptedInvite || memberIsNominatedAdmin) {
+  if (
+    !hasClosedGroupV2QAButtons() ||
+    !memberAcceptedInvite ||
+    memberIsNominatedAdmin ||
+    memberIsPendingRemoval
+  ) {
     return null;
   }
   return (

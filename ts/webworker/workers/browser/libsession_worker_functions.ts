@@ -81,7 +81,9 @@ export function isUserConfigWrapperType(
   );
 }
 
-export function isMetaWrapperType(config: ConfigWrapperObjectTypesMeta): config is MetaGroupConfig {
+export function isMetaGroupWrapperType(
+  config: ConfigWrapperObjectTypesMeta
+): config is MetaGroupConfig {
   return config.startsWith(MetaGroupConfigValue);
 }
 

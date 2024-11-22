@@ -13,17 +13,26 @@ export type SnodeSigParamsShared = {
 
 export type SnodeSigParamsAdminGroup = SnodeSigParamsShared & {
   groupPk: GroupPubkeyType;
-  privKey: Uint8ArrayLen64; // len 64
+  /**
+   * privKey, length of 64 bytes
+   */
+  privKey: Uint8ArrayLen64;
 };
 
 export type SnodeSigParamsSubAccount = SnodeSigParamsShared & {
   groupPk: GroupPubkeyType;
-  authData: Uint8ArrayLen100; // len 100
+  /**
+   * authData, length of 100 bytes
+   */
+  authData: Uint8ArrayLen100;
 };
 
 export type SnodeSigParamsUs = SnodeSigParamsShared & {
   pubKey: string;
-  privKey: Uint8ArrayLen64; // len 64
+  /**
+   * privKey, length of 64 bytes
+   */
+  privKey: Uint8ArrayLen64;
 };
 
 function getVerificationDataForStoreRetrieve(params: SnodeSigParamsShared) {
@@ -41,8 +50,8 @@ function getVerificationDataForStoreRetrieve(params: SnodeSigParamsShared) {
 function isSigParamsForGroupAdmin(
   sigParams: SnodeSigParamsAdminGroup | SnodeSigParamsUs | SnodeSigParamsSubAccount
 ): sigParams is SnodeSigParamsAdminGroup {
-  const asGr = sigParams as SnodeSigParamsAdminGroup;
-  return PubKey.is03Pubkey(asGr.groupPk) && !isEmpty(asGr.privKey);
+  const toValidate = sigParams as SnodeSigParamsAdminGroup;
+  return PubKey.is03Pubkey(toValidate.groupPk) && !isEmpty(toValidate.privKey);
 }
 
 async function getSnodeSignatureShared(params: SnodeSigParamsAdminGroup | SnodeSigParamsUs) {

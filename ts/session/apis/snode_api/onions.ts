@@ -1,5 +1,4 @@
 import https from 'https';
-// eslint-disable import/no-named-default
 import { AbortSignal } from 'abort-controller';
 import ByteBuffer from 'bytebuffer';
 import { to_string } from 'libsodium-wrappers-sumo';
@@ -263,6 +262,9 @@ function process406Or425Error(statusCode: number) {
   }
 }
 
+/**
+ * 401 is a signature or forbidden error.
+ */
 function process401Error(statusCode: number) {
   if (statusCode === 401) {
     throw new pRetry.AbortError(
@@ -403,7 +405,7 @@ async function processAnyOtherErrorAtDestination(
   if (
     status !== 400 &&
     status !== 401 && // handled in process401Error
-    status !== 406 && // handled in process406Error
+    status !== 406 && // handled in process406Or425Error
     status !== 421 // handled in process421Error
   ) {
     window?.log?.warn(`[path] Got status at destination: ${status}`);

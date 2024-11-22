@@ -57,6 +57,8 @@ export const SWARM_POLLING_TIMEOUT = {
   MEDIUM_ACTIVE: DURATION.SECONDS * 60,
   /** 2 minutes */
   INACTIVE: DURATION.SECONDS * 120,
+  /** 500 milliseconds */
+  ACTIVE_DEV: 500,
 };
 
 export const PROTOCOLS = {

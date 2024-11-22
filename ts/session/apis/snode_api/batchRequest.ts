@@ -88,7 +88,7 @@ async function doSnodeBatchRequestNoRetries(
 }
 
 /**
- * This function can be called to make the sign the subrequests and then call doSnodeBatchRequestNoRetries with the signed requests.
+ * This function can be called to sign subrequests and then call doSnodeBatchRequestNoRetries with them.
  *
  * Note: this function does not retry.
  *
@@ -123,7 +123,6 @@ async function doUnsignedSnodeBatchRequestNoRetries(
  */
 function decodeBatchRequest(snodeResponse: SnodeResponse): NotEmptyArrayOfBatchResults {
   try {
-    // console.error('decodeBatch: ', snodeResponse);
     if (snodeResponse.status !== 200) {
       throw new Error(`decodeBatchRequest invalid status code: ${snodeResponse.status}`);
     }
@@ -142,7 +141,6 @@ function decodeBatchRequest(snodeResponse: SnodeResponse): NotEmptyArrayOfBatchR
     window.log.error('decodeBatchRequest failed with ', e.message);
     throw e;
   }
-  // "{"results":[{"body":"retrieve signature verification failed","code":401}]}"
 }
 
 export const BatchRequests = {

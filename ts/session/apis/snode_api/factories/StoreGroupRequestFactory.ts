@@ -42,7 +42,7 @@ async function makeGroupMessageSubRequest(
     const wrapped = MessageWrapper.wrapContentIntoEnvelope(
       SignalService.Envelope.Type.SESSION_MESSAGE,
       undefined,
-      updateMessage.createAtNetworkTimestamp, // message is signed with this timestmap
+      updateMessage.createAtNetworkTimestamp, // message is signed with this timestamp
       updateMessage.plainTextBuffer()
     );
 

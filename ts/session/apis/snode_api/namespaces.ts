@@ -42,17 +42,17 @@ export enum SnodeNamespaces {
   ClosedGroupMessages = 11,
 
   /**
-   * This is the namespace used to sync the closed group details for each closed group
+   * This is the namespace used to sync the keys for each closed group
    */
   ClosedGroupKeys = 12,
 
   /**
-   * This is the namespace used to sync the members for each closed group
+   * This is the namespace used to sync the closed group details for each closed group
    */
   ClosedGroupInfo = 13,
 
   /**
-   * This is the namespace used to sync the keys for each closed group
+   * This is the namespace used to sync the members for each closed group
    */
   ClosedGroupMembers = 14,
 }
@@ -105,7 +105,7 @@ function isUserConfigNamespace(namespace: SnodeNamespaces): namespace is SnodeNa
     case SnodeNamespaces.LegacyClosedGroup:
     case SnodeNamespaces.ClosedGroupRevokedRetrievableMessages:
     case SnodeNamespaces.Default:
-      // user messages is not hosting config based messages
+      // user messages are not hosting config based messages
       return false;
 
     default:

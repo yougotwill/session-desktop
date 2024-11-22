@@ -29,7 +29,7 @@ import { EnvelopePlus } from '../../../receiver/types';
 import { updateIsOnline } from '../../../state/ducks/onion';
 import { assertUnreachable } from '../../../types/sqlSharedTypes';
 import {
-  GenericWrapperActions,
+  UserGenericWrapperActions,
   MetaGroupWrapperActions,
   UserConfigWrapperActions,
   UserGroupsWrapperActions,
@@ -147,7 +147,7 @@ export class SwarmPolling {
   }
 
   public stop(e?: Error) {
-    window.log.info('[swarmPolling] stopped swarm polling', e?.message || e || '');
+    window.log.info('SwarmPolling: stopped swarm polling', e?.message || e || '');
 
     for (let i = 0; i < timeouts.length; i++) {
       clearTimeout(timeouts[i]);
@@ -168,7 +168,9 @@ export class SwarmPolling {
   public addGroupId(pubkey: PubKey | string, callbackFirstPoll?: () => Promise<void>) {
     const pk = PubKey.cast(pubkey);
     if (this.groupPolling.findIndex(m => m.pubkey.key === pk.key) === -1) {
-      window?.log?.info('Swarm addGroupId: adding pubkey to polling', pk.key);
+      window?.log?.info(
+        `SwarmPolling: Swarm addGroupId: adding pubkey ${ed25519Str(pk.key)} to polling`
+      );
       this.groupPolling.push({ pubkey: pk, lastPolledTimestamp: 0, callbackFirstPoll });
     } else if (callbackFirstPoll) {
       // group is already polled. Hopefully we already have keys for it to decrypt messages?
@@ -288,10 +290,13 @@ export class SwarmPolling {
    */
   public async pollForAllKeys() {
     if (!window.getGlobalOnlineStatus()) {
-      window?.log?.error('pollForAllKeys: offline');
+      window?.log?.error('SwarmPolling: pollForAllKeys: offline');
       // Very important to set up a new polling call so we do retry at some point
       timeouts.push(
-        setTimeout(this.pollForAllKeys.bind(this), isDevProd() ? 500 : SWARM_POLLING_TIMEOUT.ACTIVE)
+        setTimeout(
+          this.pollForAllKeys.bind(this),
+          isDevProd() ? SWARM_POLLING_TIMEOUT.ACTIVE_DEV : SWARM_POLLING_TIMEOUT.ACTIVE
+        )
       );
       return;
     }
@@ -309,11 +314,14 @@ export class SwarmPolling {
     try {
       await Promise.all(toPollDetails.map(toPoll => this.pollOnceForKey(toPoll)));
     } catch (e) {
-      window?.log?.warn('pollForAllKeys exception: ', e);
+      window?.log?.warn('SwarmPolling: pollForAllKeys exception: ', e);
       throw e;
     } finally {
       timeouts.push(
-        setTimeout(this.pollForAllKeys.bind(this), isDevProd() ? 500 : SWARM_POLLING_TIMEOUT.ACTIVE)
+        setTimeout(
+          this.pollForAllKeys.bind(this),
+          isDevProd() ? SWARM_POLLING_TIMEOUT.ACTIVE_DEV : SWARM_POLLING_TIMEOUT.ACTIVE
+        )
       );
     }
   }
@@ -330,7 +338,7 @@ export class SwarmPolling {
     // if all snodes returned an error (null), no need to update the lastPolledTimestamp
     if (type === ConversationTypeEnum.GROUP || type === ConversationTypeEnum.GROUPV2) {
       window?.log?.debug(
-        `Polled for group${ed25519Str(pubkey)} got ${countMessages} messages back.`
+        `SwarmPolling: Polled for group${ed25519Str(pubkey)} got ${countMessages} messages back.`
       );
       let lastPolledTimestamp = Date.now();
       if (countMessages >= minMsgCountShouldRetry) {
@@ -404,7 +412,7 @@ export class SwarmPolling {
               sodium,
             });
           } catch (e) {
-            window.log.warn('handleLibSessionMessage failed with:', e.message);
+            window.log.warn('SwarmPolling: handleLibSessionMessage failed with:', e.message);
           }
         }
       }
@@ -425,21 +433,23 @@ export class SwarmPolling {
       toPollFrom = sample(swarmSnodes);
 
       if (!toPollFrom) {
-        throw new Error(`pollOnceForKey: no snode in swarm for ${ed25519Str(pubkey)}`);
+        throw new Error(
+          `SwarmPolling: pollOnceForKey: no snode in swarm for ${ed25519Str(pubkey)}`
+        );
       }
       // Note: always print something so we know if the polling is hanging
       window.log.info(
-        `about to pollNodeForKey of ${ed25519Str(pubkey)} from snode: ${ed25519Str(toPollFrom.pubkey_ed25519)} namespaces: ${namespaces} `
+        `SwarmPolling: about to pollNodeForKey of ${ed25519Str(pubkey)} from snode: ${ed25519Str(toPollFrom.pubkey_ed25519)} namespaces: ${namespaces} `
       );
       resultsFromAllNamespaces = await this.pollNodeForKey(toPollFrom, pubkey, namespaces, type);
 
       // Note: always print something so we know if the polling is hanging
       window.log.info(
-        `pollNodeForKey of ${ed25519Str(pubkey)} from snode: ${ed25519Str(toPollFrom.pubkey_ed25519)} namespaces: ${namespaces} returned: ${resultsFromAllNamespaces?.length}`
+        `SwarmPolling: pollNodeForKey of ${ed25519Str(pubkey)} from snode: ${ed25519Str(toPollFrom.pubkey_ed25519)} namespaces: ${namespaces} returned: ${resultsFromAllNamespaces?.length}`
       );
     } catch (e) {
       window.log.warn(
-        `pollNodeForKey of ${pubkey} namespaces: ${namespaces} failed with: ${e.message}`
+        `SwarmPolling: pollNodeForKey of ${pubkey} namespaces: ${namespaces} failed with: ${e.message}`
       );
       resultsFromAllNamespaces = null;
     }
@@ -459,7 +469,7 @@ export class SwarmPolling {
       resultsFromAllNamespaces
     );
     window.log.debug(
-      `received confMessages:${confMessages?.length || 0}, revokedMessages:${revokedMessages?.length || 0}, , otherMessages:${otherMessages?.length || 0}, `
+      `SwarmPolling: received confMessages:${confMessages?.length || 0}, revokedMessages:${revokedMessages?.length || 0}, , otherMessages:${otherMessages?.length || 0}, `
     );
     // We always handle the config messages first (for groups 03 or our own messages)
     await this.handleUserOrGroupConfMessages({ confMessages, pubkey, type });
@@ -468,7 +478,9 @@ export class SwarmPolling {
     // Merge results into one list of unique messages
     const uniqOtherMsgs = uniqBy(otherMessages, x => x.hash);
     if (uniqOtherMsgs.length) {
-      window.log.debug(`received uniqOtherMsgs: ${uniqOtherMsgs.length} for type: ${type}`);
+      window.log.debug(
+        `SwarmPolling: received uniqOtherMsgs: ${uniqOtherMsgs.length} for type: ${type}`
+      );
     }
     await this.updateLastPollTimestampForPubkey({
       countMessages: uniqOtherMsgs.length,
@@ -479,7 +491,7 @@ export class SwarmPolling {
     const shouldDiscardMessages = await this.shouldLeaveNotPolledGroup({ type, pubkey });
     if (shouldDiscardMessages) {
       window.log.info(
-        `polled a pk which should not be polled anymore: ${ed25519Str(
+        `SwarmPolling: polled a pk which should not be polled anymore: ${ed25519Str(
           pubkey
         )}. Discarding polling result`
       );
@@ -488,7 +500,7 @@ export class SwarmPolling {
 
     const newMessages = await this.handleSeenMessages(uniqOtherMsgs);
     window.log.info(
-      `handleSeenMessages: ${newMessages.length} out of ${uniqOtherMsgs.length} are not seen yet. snode: ${toPollFrom ? ed25519Str(toPollFrom.pubkey_ed25519) : 'undefined'}`
+      `SwarmPolling: handleSeenMessages: ${newMessages.length} out of ${uniqOtherMsgs.length} are not seen yet. snode: ${toPollFrom ? ed25519Str(toPollFrom.pubkey_ed25519) : 'undefined'}`
     );
     if (type === ConversationTypeEnum.GROUPV2) {
       if (!PubKey.is03Pubkey(pubkey)) {
@@ -569,21 +581,25 @@ export class SwarmPolling {
       for (let index = 0; index < LibSessionUtil.requiredUserVariants.length; index++) {
         const variant = LibSessionUtil.requiredUserVariants[index];
         try {
-          const toBump = await GenericWrapperActions.currentHashes(variant);
+          const toBump = await UserGenericWrapperActions.currentHashes(variant);
 
           if (toBump?.length) {
             configHashesToBump.push(...toBump);
           }
         } catch (e) {
-          window.log.warn(`failed to get currentHashes for user variant ${variant}`);
+          window.log.warn(`SwarmPolling: failed to get currentHashes for user variant ${variant}`);
         }
       }
-      window.log.debug(`configHashesToBump private count: ${configHashesToBump.length}`);
+      window.log.debug(
+        `SwarmPolling: configHashesToBump private count: ${configHashesToBump.length}`
+      );
       return configHashesToBump;
     }
     if (type === ConversationTypeEnum.GROUPV2 && PubKey.is03Pubkey(pubkey)) {
       const toBump = await MetaGroupWrapperActions.currentHashes(pubkey);
-      window.log.debug(`configHashesToBump group(${ed25519Str(pubkey)}) count: ${toBump.length}`);
+      window.log.debug(
+        `SwarmPolling: configHashesToBump group(${ed25519Str(pubkey)}) count: ${toBump.length}`
+      );
       return toBump;
     }
     return [];
@@ -599,7 +615,9 @@ export class SwarmPolling {
   ): Promise<RetrieveMessagesResultsBatched | null> {
     const namespaceLength = namespaces.length;
     if (namespaceLength <= 0) {
-      throw new Error(`invalid number of retrieve namespace provided: ${namespaceLength}`);
+      throw new Error(
+        `SwarmPolling: invalid number of retrieve namespace provided: ${namespaceLength}`
+      );
     }
     const snodeEdkey = node.pubkey_ed25519;
 
@@ -635,7 +653,7 @@ export class SwarmPolling {
       });
 
       window.log.info(
-        `updating last hashes for ${ed25519Str(pubkey)}: ${ed25519Str(snodeEdkey)}  ${namespacesWithNewLastHashes.join(', ')}`
+        `SwarmPolling: updating last hashes for ${ed25519Str(pubkey)}: ${ed25519Str(snodeEdkey)}  ${namespacesWithNewLastHashes.join(', ')}`
       );
       await Promise.all(
         lastMessages.map(async (lastMessage, index) => {
@@ -665,7 +683,7 @@ export class SwarmPolling {
       } else if (!window.inboxStore?.getState().onionPaths.isOnline) {
         window.inboxStore?.dispatch(updateIsOnline(true));
       }
-      window?.log?.info('pollNodeForKey failed with:', e.message);
+      window?.log?.info('SwarmPolling: pollNodeForKey failed with:', e.message);
       return null;
     }
   }
@@ -675,7 +693,7 @@ export class SwarmPolling {
       return;
     }
     window.log.debug(
-      `notPollingForGroupAsNotInWrapper ${ed25519Str(pubkey)} with reason:"${reason}"`
+      `SwarmPolling: notPollingForGroupAsNotInWrapper ${ed25519Str(pubkey)} with reason:"${reason}"`
     );
     if (PubKey.is05Pubkey(pubkey)) {
       await ConvoHub.use().deleteLegacyGroup(pubkey, {
@@ -922,10 +940,10 @@ export class SwarmPolling {
 
 // zod schema for retrieve items as returned by the snodes
 const retrieveItemSchema = z.object({
-  hash: z.string(),
-  data: z.string(),
-  expiration: z.number(),
-  timestamp: z.number(),
+  hash: z.string().base64('retrieveItemSchema: hash was not base64'),
+  data: z.string().base64('retrieveItemSchema: data was not base64'),
+  expiration: z.number().finite(),
+  timestamp: z.number().finite().positive(),
 });
 
 function retrieveItemWithNamespace(
@@ -1015,7 +1033,7 @@ async function decryptForGroupV2(retrieveResult: {
   groupPk: string;
   content: Uint8Array;
 }): Promise<EnvelopePlus | null> {
-  window?.log?.info('received closed group message v2');
+  window?.log?.debug('SwarmPolling: received closed group message v2');
   try {
     const groupPk = retrieveResult.groupPk;
     if (!PubKey.is03Pubkey(groupPk)) {
@@ -1040,7 +1058,7 @@ async function decryptForGroupV2(retrieveResult: {
       timestamp: parsedEnvelope.timestamp,
     };
   } catch (e) {
-    window.log.warn('failed to decrypt message with error: ', e.message);
+    window.log.warn('SwarmPolling: failed to decrypt message with error: ', e.message);
     return null;
   }
 }
@@ -1071,7 +1089,10 @@ async function handleMessagesForGroupV2(
         messageExpirationFromRetrieve: msg.expiration,
       });
     } catch (e) {
-      window.log.warn('failed to handle groupv2 otherMessage because of: ', e.message);
+      window.log.warn(
+        'SwarmPolling: failed to handle groupv2 otherMessage because of: ',
+        e.message
+      );
     } finally {
       // that message was processed, add it to the seen messages list
       try {
@@ -1082,7 +1103,7 @@ async function handleMessagesForGroupV2(
           },
         ]);
       } catch (e) {
-        window.log.warn('failed saveSeenMessageHashes: ', e.message);
+        window.log.warn('SwarmPolling: failed saveSeenMessageHashes: ', e.message);
       }
     }
   }

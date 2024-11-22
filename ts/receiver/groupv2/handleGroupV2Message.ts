@@ -131,7 +131,9 @@ async function handleGroupUpdateInviteMessage({
   });
 
   if (!sigValid) {
-    window.log.warn('received group invite with invalid signature. dropping');
+    window.log.warn(
+      `received group invite ${ed25519Str(groupPk)} with invalid signature. dropping`
+    );
     return;
   }
 
@@ -289,6 +291,7 @@ async function handleGroupInfoChangeMessage({
   convo.set({
     active_at: signatureTimestamp,
   });
+  await convo.commit();
 }
 
 async function handleGroupMemberChangeMessage({

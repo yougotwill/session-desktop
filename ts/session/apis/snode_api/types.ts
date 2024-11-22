@@ -5,10 +5,22 @@ import { SubaccountRevokeSubRequest, SubaccountUnrevokeSubRequest } from './Snod
 import { WithSignature, WithTimestamp } from '../../types/with';
 
 export type RetrieveMessageItem = {
+  /**
+   * The message hash as stored on the snode
+   */
   hash: string;
+  /**
+   * When the message is set to expire on the snode.
+   */
   expiration: number;
-  data: string; // base64 encrypted content of the message
-  storedAt: number; // **not** the envelope timestamp, but when the message was effectively stored on the snode
+  /**
+   * base64 encrypted content of the message
+   */
+  data: string;
+  /**
+   * **not** the envelope timestamp, but when the message was effectively stored on the snode
+   */
+  storedAt: number;
 };
 
 export type RetrieveMessageItemWithNamespace = RetrieveMessageItem & {
@@ -51,16 +63,17 @@ export type SignedGroupHashesParams = WithTimestamp &
     messages: Array<string>;
   };
 
-/** inherits from  https://api.oxen.io/storage-rpc/#/recursive?id=recursive but we only care about these values */
+/** Inherits from  https://api.oxen.io/storage-rpc/#/recursive?id=recursive but we only care about these values
+ *
+ * The signature uses the node's ed25519 pubkey.
+ *( PUBKEY_HEX || EXPIRY || RMSGs... || UMSGs... || CMSG_EXPs... )
+ * where RMSGs are the requested expiry hashes,
+ * UMSGs are the actual updated hashes, and
+ * CMSG_EXPs are (HASH || EXPIRY) values, ascii-sorted by hash, for the unchanged message hashes included in the "unchanged" field.
+ */
 export type ExpireMessageResultItem = WithSignature & {
   /** the expiry timestamp that was applied (which might be different from the request expiry */
   expiry: number;
-  /** ( PUBKEY_HEX || EXPIRY || RMSGs... || UMSGs... || CMSG_EXPs... )
-  where RMSGs are the requested expiry hashes,
-  UMSGs are the actual updated hashes, and
-  CMSG_EXPs are (HASH || EXPIRY) values, ascii-sorted by hash, for the unchanged message hashes included in the "unchanged" field.
-  The signature uses the node's ed25519 pubkey.
-  */
   /** Record of <found hashes, current expiries>, but did not get updated due to "shorten"/"extend" in the request. This field is only included when "shorten /extend" is explicitly given. */
   unchanged?: Record<string, number>;
   /** ascii-sorted list of hashes that had their expiries changed (messages that were not found, and messages excluded by the shorten/extend options, are not included) */

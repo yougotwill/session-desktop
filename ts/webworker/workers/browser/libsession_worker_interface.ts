@@ -5,7 +5,7 @@ import {
   ContactInfoSet,
   ContactsWrapperActionsCalls,
   ConvoInfoVolatileWrapperActionsCalls,
-  GenericWrapperActionsCall,
+  GenericWrapperActionsCall as UserGenericWrapperActionsCall,
   GroupInfoSet,
   GroupPubkeyType,
   GroupWrapperConstructor,
@@ -56,31 +56,30 @@ const internalCallLibSessionWorker = async ([
   return result;
 };
 
-type GenericWrapperActionsCalls = {
+type UserGenericWrapperActionsCalls = {
   init: (
     wrapperId: ConfigWrapperUser,
     ed25519Key: Uint8Array,
     dump: Uint8Array | null
   ) => Promise<void>;
   free: (wrapperId: ConfigWrapperUser) => Promise<void>;
-  confirmPushed: GenericWrapperActionsCall<ConfigWrapperUser, 'confirmPushed'>;
-  dump: GenericWrapperActionsCall<ConfigWrapperUser, 'dump'>;
-  makeDump: GenericWrapperActionsCall<ConfigWrapperUser, 'makeDump'>;
-  merge: GenericWrapperActionsCall<ConfigWrapperUser, 'merge'>;
-  needsDump: GenericWrapperActionsCall<ConfigWrapperUser, 'needsDump'>;
-  needsPush: GenericWrapperActionsCall<ConfigWrapperUser, 'needsPush'>;
-  push: GenericWrapperActionsCall<ConfigWrapperUser, 'push'>;
-  currentHashes: GenericWrapperActionsCall<ConfigWrapperUser, 'currentHashes'>;
-  storageNamespace: GenericWrapperActionsCall<ConfigWrapperUser, 'storageNamespace'>;
+  confirmPushed: UserGenericWrapperActionsCall<ConfigWrapperUser, 'confirmPushed'>;
+  dump: UserGenericWrapperActionsCall<ConfigWrapperUser, 'dump'>;
+  makeDump: UserGenericWrapperActionsCall<ConfigWrapperUser, 'makeDump'>;
+  merge: UserGenericWrapperActionsCall<ConfigWrapperUser, 'merge'>;
+  needsDump: UserGenericWrapperActionsCall<ConfigWrapperUser, 'needsDump'>;
+  needsPush: UserGenericWrapperActionsCall<ConfigWrapperUser, 'needsPush'>;
+  push: UserGenericWrapperActionsCall<ConfigWrapperUser, 'push'>;
+  currentHashes: UserGenericWrapperActionsCall<ConfigWrapperUser, 'currentHashes'>;
+  storageNamespace: UserGenericWrapperActionsCall<ConfigWrapperUser, 'storageNamespace'>;
 };
 
-// TODO rename this to a UserWrapperActions or UserGenericWrapperActions as those actions are only used for User Wrappers now
-export const GenericWrapperActions: GenericWrapperActionsCalls = {
+export const UserGenericWrapperActions: UserGenericWrapperActionsCalls = {
   /** base wrapper generic actions */
 
   init: async (wrapperId: ConfigWrapperUser, ed25519Key: Uint8Array, dump: Uint8Array | null) =>
     callLibSessionWorker([wrapperId, 'init', ed25519Key, dump]) as ReturnType<
-      GenericWrapperActionsCalls['init']
+      UserGenericWrapperActionsCalls['init']
     >,
 
   /** This function is used to free wrappers from memory only.
@@ -90,59 +89,60 @@ export const GenericWrapperActions: GenericWrapperActionsCalls = {
     callLibSessionWorker([wrapperId, 'free']) as Promise<void>,
   confirmPushed: async (wrapperId: ConfigWrapperUser, seqno: number, hash: string) =>
     callLibSessionWorker([wrapperId, 'confirmPushed', seqno, hash]) as ReturnType<
-      GenericWrapperActionsCalls['confirmPushed']
+      UserGenericWrapperActionsCalls['confirmPushed']
     >,
   dump: async (wrapperId: ConfigWrapperUser) =>
-    callLibSessionWorker([wrapperId, 'dump']) as ReturnType<GenericWrapperActionsCalls['dump']>,
+    callLibSessionWorker([wrapperId, 'dump']) as ReturnType<UserGenericWrapperActionsCalls['dump']>,
   makeDump: async (wrapperId: ConfigWrapperUser) =>
     callLibSessionWorker([wrapperId, 'makeDump']) as ReturnType<
-      GenericWrapperActionsCalls['makeDump']
+      UserGenericWrapperActionsCalls['makeDump']
     >,
   merge: async (wrapperId: ConfigWrapperUser, toMerge: Array<MergeSingle>) =>
     callLibSessionWorker([wrapperId, 'merge', toMerge]) as ReturnType<
-      GenericWrapperActionsCalls['merge']
+      UserGenericWrapperActionsCalls['merge']
     >,
   needsDump: async (wrapperId: ConfigWrapperUser) =>
     callLibSessionWorker([wrapperId, 'needsDump']) as ReturnType<
-      GenericWrapperActionsCalls['needsDump']
+      UserGenericWrapperActionsCalls['needsDump']
     >,
   needsPush: async (wrapperId: ConfigWrapperUser) =>
     callLibSessionWorker([wrapperId, 'needsPush']) as ReturnType<
-      GenericWrapperActionsCalls['needsPush']
+      UserGenericWrapperActionsCalls['needsPush']
     >,
   push: async (wrapperId: ConfigWrapperUser) =>
-    callLibSessionWorker([wrapperId, 'push']) as ReturnType<GenericWrapperActionsCalls['push']>,
+    callLibSessionWorker([wrapperId, 'push']) as ReturnType<UserGenericWrapperActionsCalls['push']>,
   currentHashes: async (wrapperId: ConfigWrapperUser) =>
     callLibSessionWorker([wrapperId, 'currentHashes']) as ReturnType<
-      GenericWrapperActionsCalls['currentHashes']
+      UserGenericWrapperActionsCalls['currentHashes']
     >,
   storageNamespace: async (wrapperId: ConfigWrapperUser) =>
     callLibSessionWorker([wrapperId, 'storageNamespace']) as ReturnType<
-      GenericWrapperActionsCalls['storageNamespace']
+      UserGenericWrapperActionsCalls['storageNamespace']
     >,
 };
 
 function createBaseActionsFor(wrapperType: ConfigWrapperUser) {
   return {
-    /* Reuse the GenericWrapperActions with the UserConfig argument */
+    /* Reuse the UserConfigWrapperActions with the UserConfig argument */
     init: async (ed25519Key: Uint8Array, dump: Uint8Array | null) =>
-      GenericWrapperActions.init(wrapperType, ed25519Key, dump),
-    free: async () => GenericWrapperActions.free(wrapperType),
+      UserGenericWrapperActions.init(wrapperType, ed25519Key, dump),
+    free: async () => UserGenericWrapperActions.free(wrapperType),
     confirmPushed: async (seqno: number, hash: string) =>
-      GenericWrapperActions.confirmPushed(wrapperType, seqno, hash),
-    dump: async () => GenericWrapperActions.dump(wrapperType),
-    makeDump: async () => GenericWrapperActions.makeDump(wrapperType),
-    needsDump: async () => GenericWrapperActions.needsDump(wrapperType),
-    needsPush: async () => GenericWrapperActions.needsPush(wrapperType),
-    push: async () => GenericWrapperActions.push(wrapperType),
-    currentHashes: async () => GenericWrapperActions.currentHashes(wrapperType),
-    merge: async (toMerge: Array<MergeSingle>) => GenericWrapperActions.merge(wrapperType, toMerge),
-    storageNamespace: async () => GenericWrapperActions.storageNamespace(wrapperType),
+      UserGenericWrapperActions.confirmPushed(wrapperType, seqno, hash),
+    dump: async () => UserGenericWrapperActions.dump(wrapperType),
+    makeDump: async () => UserGenericWrapperActions.makeDump(wrapperType),
+    needsDump: async () => UserGenericWrapperActions.needsDump(wrapperType),
+    needsPush: async () => UserGenericWrapperActions.needsPush(wrapperType),
+    push: async () => UserGenericWrapperActions.push(wrapperType),
+    currentHashes: async () => UserGenericWrapperActions.currentHashes(wrapperType),
+    merge: async (toMerge: Array<MergeSingle>) =>
+      UserGenericWrapperActions.merge(wrapperType, toMerge),
+    storageNamespace: async () => UserGenericWrapperActions.storageNamespace(wrapperType),
   };
 }
 
 export const UserConfigWrapperActions: UserConfigWrapperActionsCalls = {
-  /* Reuse the GenericWrapperActions with the UserConfig argument */
+  /* Reuse the UserConfigWrapperActions with the UserConfig argument */
   ...createBaseActionsFor('UserConfig'),
 
   /** UserConfig wrapper specific actions */
@@ -195,7 +195,7 @@ export const UserConfigWrapperActions: UserConfigWrapperActionsCalls = {
 };
 
 export const ContactsWrapperActions: ContactsWrapperActionsCalls = {
-  /* Reuse the GenericWrapperActions with the ContactConfig argument */
+  /* Reuse the UserConfigWrapperActions with the ContactConfig argument */
   ...createBaseActionsFor('ContactsConfig'),
 
   /** ContactsConfig wrapper specific actions */
@@ -231,11 +231,11 @@ function dispatchCachedGroupsToRedux() {
 export const UserGroupsWrapperActions: UserGroupsWrapperActionsCalls & {
   getCachedGroup: (pubkeyHex: GroupPubkeyType) => UserGroupsGet | undefined;
 } = {
-  /* Reuse the GenericWrapperActions with the UserGroupsConfig argument */
+  /* Reuse the UserConfigWrapperActions with the UserGroupsConfig argument */
   ...createBaseActionsFor('UserGroupsConfig'),
   // override the merge() as we need to refresh the cached groups
   merge: async (toMerge: Array<MergeSingle>) => {
-    const mergeRet = await GenericWrapperActions.merge('UserGroupsConfig', toMerge);
+    const mergeRet = await UserGenericWrapperActions.merge('UserGroupsConfig', toMerge);
     await UserGroupsWrapperActions.getAllGroups(); // this refreshes the cached data after merge
     return mergeRet;
   },
@@ -395,7 +395,7 @@ export const UserGroupsWrapperActions: UserGroupsWrapperActionsCalls & {
 };
 
 export const ConvoInfoVolatileWrapperActions: ConvoInfoVolatileWrapperActionsCalls = {
-  /* Reuse the GenericWrapperActions with the ConvoInfoVolatileConfig argument */
+  /* Reuse the UserConfigWrapperActions with the ConvoInfoVolatileConfig argument */
   ...createBaseActionsFor('ConvoInfoVolatileConfig'),
 
   /** ConvoInfoVolatile wrapper specific actions */
@@ -579,7 +579,6 @@ export const MetaGroupWrapperActions: MetaGroupWrapperActionsCalls = {
       'memberConstructAndSet',
       pubkeyHex,
     ]) as Promise<ReturnType<MetaGroupWrapperActionsCalls['memberConstructAndSet']>>,
-
   memberGetAll: async (groupPk: GroupPubkeyType) =>
     callLibSessionWorker([`MetaGroupConfig-${groupPk}`, 'memberGetAll']) as Promise<
       ReturnType<MetaGroupWrapperActionsCalls['memberGetAll']>
@@ -657,7 +656,6 @@ export const MetaGroupWrapperActions: MetaGroupWrapperActionsCalls = {
     ]) as Promise<ReturnType<MetaGroupWrapperActionsCalls['memberSetProfilePicture']>>,
 
   /** GroupKeys wrapper specific actions */
-
   keyRekey: async (groupPk: GroupPubkeyType) =>
     callLibSessionWorker([`MetaGroupConfig-${groupPk}`, 'keyRekey']) as Promise<
       ReturnType<MetaGroupWrapperActionsCalls['keyRekey']>
@@ -674,7 +672,6 @@ export const MetaGroupWrapperActions: MetaGroupWrapperActionsCalls = {
     callLibSessionWorker([`MetaGroupConfig-${groupPk}`, 'currentHashes']) as Promise<
       ReturnType<MetaGroupWrapperActionsCalls['currentHashes']>
     >,
-
   loadKeyMessage: async (
     groupPk: GroupPubkeyType,
     hash: string,
@@ -727,7 +724,6 @@ export const MetaGroupWrapperActions: MetaGroupWrapperActionsCalls = {
       message,
       authData,
     ]) as Promise<ReturnType<MetaGroupWrapperActionsCalls['swarmSubaccountSign']>>,
-
   swarmSubAccountToken: async (groupPk: GroupPubkeyType, memberPk: PubkeyType) =>
     callLibSessionWorker([
       `MetaGroupConfig-${groupPk}`,
@@ -748,7 +744,7 @@ export const MetaGroupWrapperActions: MetaGroupWrapperActionsCalls = {
 };
 
 export const MultiEncryptWrapperActions: MultiEncryptActionsCalls = {
-  /* Reuse the GenericWrapperActions with the UserConfig argument */
+  /* Reuse the UserConfigWrapperActions with the UserConfig argument */
   ...createBaseActionsFor('UserConfig'),
 
   /** UserConfig wrapper specific actions */

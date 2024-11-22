@@ -12,7 +12,7 @@ import {
   UserConfigWrapperNode,
   UserGroupsWrapperNode,
 } from 'libsession_util_nodejs';
-import { isEmpty, isNull } from 'lodash';
+import { isEmpty, isNull, isObject } from 'lodash';
 
 import {
   BlindingConfig,
@@ -22,7 +22,7 @@ import {
   MetaGroupConfig,
   MultiEncryptConfig,
   isBlindingWrapperType,
-  isMetaWrapperType,
+  isMetaGroupWrapperType,
   isMultiEncryptWrapperType,
   isUserConfigWrapperType,
 } from '../../browser/libsession_worker_functions';
@@ -70,7 +70,7 @@ function getGroupPubkeyFromWrapperType(type: ConfigWrapperGroup): GroupPubkeyTyp
 function getGroupWrapper(type: ConfigWrapperGroup): MetaGroupWrapperNode | undefined {
   assertGroupWrapperType(type);
 
-  if (isMetaWrapperType(type)) {
+  if (isMetaGroupWrapperType(type)) {
     const pk = getGroupPubkeyFromWrapperType(type);
 
     return metaGroupWrappers.get(pk);
@@ -105,7 +105,7 @@ function getCorrespondingUserWrapper(wrapperType: ConfigWrapperUser): BaseConfig
 }
 
 function getCorrespondingGroupWrapper(wrapperType: MetaGroupConfig): MetaGroupWrapperNode {
-  if (isMetaWrapperType(wrapperType)) {
+  if (isMetaGroupWrapperType(wrapperType)) {
     const wrapper = getGroupWrapper(wrapperType);
     if (!wrapper) {
       throw new Error(`GroupWrapper: ${wrapperType} is not init yet`);
@@ -132,8 +132,8 @@ function getBlindingWrapper(wrapperType: BlindingConfig): BlindingWrapperNode {
   assertUnreachable(wrapperType, `getBlindingWrapper missing global handling for "${wrapperType}"`);
 }
 
-function isUInt8Array(value: any) {
-  return value.constructor === Uint8Array;
+function isUInt8Array(value: unknown): value is Uint8Array {
+  return isObject(value) && value.constructor === Uint8Array;
 }
 
 function assertUserWrapperType(wrapperType: ConfigWrapperObjectTypesMeta): ConfigWrapperUser {
@@ -144,7 +144,7 @@ function assertUserWrapperType(wrapperType: ConfigWrapperObjectTypesMeta): Confi
 }
 
 function assertGroupWrapperType(wrapperType: ConfigWrapperObjectTypesMeta): ConfigWrapperGroup {
-  if (!isMetaWrapperType(wrapperType)) {
+  if (!isMetaGroupWrapperType(wrapperType)) {
     throw new Error(`wrapperType "${wrapperType} is not of type Group"`);
   }
   return wrapperType;
@@ -153,7 +153,7 @@ function assertGroupWrapperType(wrapperType: ConfigWrapperObjectTypesMeta): Conf
 /**
  * This function can be used to initialize a wrapper which takes the private ed25519 key of the user and a dump as argument.
  */
-function initUserWrapper(options: Array<any>, wrapperType: ConfigWrapperUser) {
+function initUserWrapper(options: Array<unknown>, wrapperType: ConfigWrapperUser) {
   const userType = assertUserWrapperType(wrapperType);
 
   const wrapper = getUserWrapper(wrapperType);
@@ -245,7 +245,7 @@ function initGroupWrapper(options: Array<any>, wrapperType: ConfigWrapperGroup) 
     userEd25519Secretkey,
   }: GroupWrapperConstructor = options[0];
 
-  if (isMetaWrapperType(groupType)) {
+  if (isMetaGroupWrapperType(groupType)) {
     const pk = getGroupPubkeyFromWrapperType(groupType);
     const justCreated = new MetaGroupWrapperNode({
       groupEd25519Pubkey,
@@ -277,7 +277,7 @@ onmessage = async (e: {
         postMessage([jobId, null, null]);
         return;
       }
-      if (isMetaWrapperType(config)) {
+      if (isMetaGroupWrapperType(config)) {
         initGroupWrapper(args, config);
         postMessage([jobId, null, null]);
         return;
@@ -295,7 +295,7 @@ onmessage = async (e: {
         postMessage([jobId, null, null]);
         return;
       }
-      if (isMetaWrapperType(config)) {
+      if (isMetaGroupWrapperType(config)) {
         const pk = getGroupPubkeyFromWrapperType(config);
         metaGroupWrappers.delete(pk);
         postMessage([jobId, null, null]);
@@ -306,7 +306,7 @@ onmessage = async (e: {
 
     const wrapper = isUserConfigWrapperType(config)
       ? getCorrespondingUserWrapper(config)
-      : isMetaWrapperType(config)
+      : isMetaGroupWrapperType(config)
         ? getCorrespondingGroupWrapper(config)
         : isMultiEncryptWrapperType(config)
           ? getMultiEncryptWrapper(config)
@@ -332,7 +332,7 @@ onmessage = async (e: {
   }
 };
 
-function prepareErrorForPostMessage(error: any) {
+function prepareErrorForPostMessage(error: unknown) {
   if (!error) {
     return null;
   }
@@ -341,5 +341,7 @@ function prepareErrorForPostMessage(error: any) {
   //   return error.stack;
   // }
 
-  return error.message;
+  return isObject(error) && 'message' in error
+    ? error.message
+    : 'prepareErrorForPostMessage: unknown error';
 }

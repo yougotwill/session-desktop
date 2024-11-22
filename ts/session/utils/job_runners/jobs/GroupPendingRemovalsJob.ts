@@ -35,6 +35,7 @@ import {
   WithRemoveMembers,
   WithSecretKey,
 } from '../../../types/with';
+import { groupInfoActions } from '../../../../state/ducks/metaGroups';
 
 const defaultMsBetweenRetries = 10000;
 const defaultMaxAttempts = 1;
@@ -238,6 +239,10 @@ class GroupPendingRemovalsJob extends PersistedJob<GroupPendingRemovalsPersisted
       } catch (e) {
         window.log.warn('GroupPendingRemovalsJob allowed to fail part failed with:', e.message);
       }
+
+      window.inboxStore?.dispatch(
+        groupInfoActions.refreshGroupDetailsFromWrapper({ groupPk }) as any
+      );
 
       // return true so this job is marked as a success and we don't need to retry it
       return RunJobResult.Success;

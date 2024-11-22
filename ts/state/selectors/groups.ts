@@ -106,6 +106,12 @@ function getMemberPromotionNotSent(state: StateType, pubkey: PubkeyType, convo?:
   return findMemberInMembers(members, pubkey)?.memberStatus === 'PROMOTION_NOT_SENT' || false;
 }
 
+function getMemberPendingRemoval(state: StateType, pubkey: PubkeyType, convo?: GroupPubkeyType) {
+  const members = getMembersOfGroup(state, convo);
+  const removedStatus = findMemberInMembers(members, pubkey)?.removedStatus;
+  return removedStatus !== 'NOT_REMOVED';
+}
+
 export function getLibMembersCount(state: StateType, convo?: GroupPubkeyType): Array<string> {
   return getLibMembersPubkeys(state, convo);
 }
@@ -197,6 +203,10 @@ export function useMemberPromotionNotSent(member: PubkeyType, groupPk: GroupPubk
   return useSelector((state: StateType) => getMemberPromotionNotSent(state, member, groupPk));
 }
 
+export function useMemberPendingRemoval(member: PubkeyType, groupPk: GroupPubkeyType) {
+  return useSelector((state: StateType) => getMemberPendingRemoval(state, member, groupPk));
+}
+
 export function useMemberGroupChangePending() {
   return useSelector(getIsMemberGroupChangePendingFromUI);
 }
@@ -248,11 +258,13 @@ export function useStateOf03GroupMembers(convoId?: string) {
         return m ? { ...m, memberStatus: 'INVITE_SENDING' as const } : null;
       })
   );
-  const promotionSending: Array<MemberWithV2Sending> = compact( promotionsSendingPk
-    .map(sending => unsortedMembers.find(m => m.pubkeyHex === sending))
-    .map(m => {
-      return m ? { ...m, memberStatus: 'PROMOTION_SENDING' as const } : null;
-    }));
+  const promotionSending: Array<MemberWithV2Sending> = compact(
+    promotionsSendingPk
+      .map(sending => unsortedMembers.find(m => m.pubkeyHex === sending))
+      .map(m => {
+        return m ? { ...m, memberStatus: 'PROMOTION_SENDING' as const } : null;
+      })
+  );
 
   // promotionSending has priority against invitesSending, so removing anything in invitesSending found in promotionSending
   invitesSending = differenceBy(invitesSending, promotionSending, value => value.pubkeyHex);

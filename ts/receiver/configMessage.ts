@@ -51,7 +51,7 @@ import { ReleasedFeatures } from '../util/releaseFeature';
 import {
   ContactsWrapperActions,
   ConvoInfoVolatileWrapperActions,
-  GenericWrapperActions,
+  UserGenericWrapperActions,
   MetaGroupWrapperActions,
   UserConfigWrapperActions,
   UserGroupsWrapperActions,
@@ -94,7 +94,7 @@ function byUserNamespace(incomingConfigs: Array<RetrieveMessageItemWithNamespace
 
 async function printDumpForDebug(prefix: string, variant: ConfigWrapperObjectTypesMeta) {
   if (isUserConfigWrapperType(variant)) {
-    window.log.info(prefix, StringUtils.toHex(await GenericWrapperActions.makeDump(variant)));
+    window.log.info(prefix, StringUtils.toHex(await UserGenericWrapperActions.makeDump(variant)));
     return;
   }
   if (isMultiEncryptWrapperType(variant) || isBlindingWrapperType(variant)) {
@@ -138,10 +138,10 @@ async function mergeUserConfigsWithIncomingUpdates(
         );
       }
 
-      const hashesMerged = await GenericWrapperActions.merge(variant, toMerge);
+      const hashesMerged = await UserGenericWrapperActions.merge(variant, toMerge);
 
-      const needsDump = await GenericWrapperActions.needsDump(variant);
-      const needsPush = await GenericWrapperActions.needsPush(variant);
+      const needsDump = await UserGenericWrapperActions.needsDump(variant);
+      const needsPush = await UserGenericWrapperActions.needsPush(variant);
       const mergedTimestamps = sameVariant
         .filter(m => hashesMerged.includes(m.hash))
         .map(m => m.storedAt);
@@ -1024,7 +1024,7 @@ async function processUserMergingResults(results: Map<ConfigWrapperUser, Incomin
 
       if (incomingResult.needsDump) {
         // The config data had changes so regenerate the dump and save it
-        const dump = await GenericWrapperActions.dump(variant);
+        const dump = await UserGenericWrapperActions.dump(variant);
         await ConfigDumpData.saveConfigDump({
           data: dump,
           publicKey: incomingResult.publicKey,

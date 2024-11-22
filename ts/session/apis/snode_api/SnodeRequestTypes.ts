@@ -17,13 +17,17 @@ import {
 } from './namespaces';
 import { GroupDetailsNeededForSignature, SnodeGroupSignature } from './signature/groupSignature';
 import { SnodeSignature } from './signature/snodeSignatures';
-import { ShortenOrExtend, WithMessagesHashes } from './types';
+import { ShortenOrExtend, WithMessagesHashes, WithShortenOrExtend } from './types';
 import { TTL_DEFAULT } from '../../constants';
 import { NetworkTime } from '../../../util/NetworkTime';
-import { WithSecretKey, WithSignature, WithTimestamp } from '../../types/with';
-
-type WithMaxSize = { max_size?: number };
-export type WithShortenOrExtend = { shortenOrExtend: 'shorten' | 'extend' | '' };
+import {
+  WithCreatedAtNetworkTimestamp,
+  WithMaxSize,
+  WithSecretKey,
+  WithSignature,
+  WithTimestamp,
+} from '../../types/with';
+import { NonEmptyArray } from '../../types/utility';
 
 /**
  * This is the base sub request class that every other type of request has to extend.
@@ -68,10 +72,11 @@ export class RetrieveLegacyClosedGroupSubRequest extends SnodeAPISubRequest {
     return {
       method: this.method,
       params: {
-        namespace: this.namespace, // legacy closed groups retrieve are not authenticated because the clients do not have a shared key
+        namespace: this.namespace,
         pubkey: this.legacyGroupPk,
         last_hash: this.last_hash,
         max_size: this.max_size,
+        // legacy closed groups retrieve are not authenticated because the clients do not have a shared key
         // if we give a timestamp, a signature will be requested by the snode so this request for legacy does not take a timestamp
       },
     };
@@ -501,7 +506,7 @@ export class GetExpiriesFromNodeSubRequest extends SnodeAPISubRequest {
   }
 }
 
-// todo: to use where delete_all is currently manually called
+// TODO to use where delete_all is currently manually called
 export class DeleteAllFromUserNodeSubRequest extends SnodeAPISubRequest {
   public method = 'delete_all' as const;
   public readonly namespace = 'all'; // we can only delete_all for all namespaces currently, but the backend allows more
@@ -661,8 +666,10 @@ export class DeleteHashesFromGroupNodeSubRequest extends SnodeAPISubRequest {
     }
   }
 
+  /**
+   * This request can only be made by an admin and will be denied otherwise, so we make the secretKey mandatory in the constructor.
+   */
   public async build() {
-    // Note: this request can only be made by an admin and will be denied otherwise, so we make the secretKey mandatory in the constructor.
     const signResult = await SnodeGroupSignature.getGroupSignatureByHashesParams({
       method: this.method,
       messagesHashes: this.messageHashes,
@@ -703,7 +710,6 @@ export class UpdateExpiryOnNodeUserSubRequest extends SnodeAPISubRequest {
 
     if (this.messageHashes.length === 0) {
       window.log.warn(`UpdateExpiryOnNodeUserSubRequest given empty list of messageHashes`);
-
       throw new Error('UpdateExpiryOnNodeUserSubRequest given empty list of messageHashes');
     }
   }
@@ -820,8 +826,6 @@ export class UpdateExpiryOnNodeGroupSubRequest extends SnodeAPISubRequest {
     return this.groupDetailsNeededForSignature.pubkeyHex;
   }
 }
-
-type WithCreatedAtNetworkTimestamp = { createdAtNetworkTimestamp: number };
 
 export class StoreGroupMessageSubRequest extends SnodeAPISubRequest {
   public method = 'store' as const;
@@ -1302,7 +1306,6 @@ export function builtRequestToLoggingId(request: BuiltSnodeSubRequests): string 
     case 'info':
     case 'oxend_request':
       return `${method}`;
-
     case 'delete':
     case 'expire':
     case 'get_expiries':
@@ -1318,7 +1321,6 @@ export function builtRequestToLoggingId(request: BuiltSnodeSubRequests): string 
         isString(params.namespace) ? params.namespace : SnodeNamespace.toRole(params.namespace)
       }}`;
     }
-
     case 'retrieve':
     case 'store': {
       const isUs = UserUtils.isUsFromCache(params.pubkey);
@@ -1331,9 +1333,6 @@ export function builtRequestToLoggingId(request: BuiltSnodeSubRequests): string 
       throw new Error('should be unreachable case');
   }
 }
-
-// eslint-disable-next-line @typescript-eslint/array-type
-type NonEmptyArray<T> = [T, ...T[]];
 
 export type BatchResultEntry = {
   code: number;

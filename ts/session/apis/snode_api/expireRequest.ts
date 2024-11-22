@@ -9,12 +9,15 @@ import { SeedNodeAPI } from '../seed_node_api';
 import {
   MAX_SUBREQUESTS_COUNT,
   UpdateExpiryOnNodeUserSubRequest,
-  WithShortenOrExtend,
   fakeHash,
 } from './SnodeRequestTypes';
 import { BatchRequests } from './batchRequest';
 import { SnodePool } from './snodePool';
-import { ExpireMessageResultItem, ExpireMessagesResultsContent } from './types';
+import {
+  ExpireMessageResultItem,
+  ExpireMessagesResultsContent,
+  WithShortenOrExtend,
+} from './types';
 
 export type verifyExpireMsgsResponseSignatureProps = ExpireMessageResultItem & {
   pubkey: string;
@@ -269,8 +272,8 @@ export type ExpireMessageWithExpiryOnSnodeProps = Pick<
   };
 
 /**
- * Exported for testing for testing only. Used to shorten/extend expiries of an array of array of messagehashes.
- * @param expireDetails the subrequest to do
+ * Exported for testing for testing only. Used to shorten/extend expiries of an array of array of message hashes.
+ * @param expireDetails the sub-request to do
  * @returns
  */
 export async function buildExpireRequestBatchExpiry(

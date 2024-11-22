@@ -7,7 +7,7 @@ import { UserUtils } from '../..';
 import { ConfigDumpData } from '../../../../data/configDump/configDump';
 import { UserSyncJobDone } from '../../../../shims/events';
 import { isSignInByLinking } from '../../../../util/storage';
-import { GenericWrapperActions } from '../../../../webworker/workers/browser/libsession_worker_interface';
+import { UserGenericWrapperActions } from '../../../../webworker/workers/browser/libsession_worker_interface';
 import {
   DeleteHashesFromUserNodeSubRequest,
   StoreUserConfigSubRequest,
@@ -41,7 +41,7 @@ async function confirmPushedAndDump(
   for (let i = 0; i < changes.length; i++) {
     const change = changes[i];
     const variant = LibSessionUtil.userNamespaceToVariant(change.pushed.namespace);
-    await GenericWrapperActions.confirmPushed(
+    await UserGenericWrapperActions.confirmPushed(
       variant,
       change.pushed.seqno.toNumber(),
       change.updatedHash
@@ -51,12 +51,12 @@ async function confirmPushedAndDump(
   const { requiredUserVariants } = LibSessionUtil;
   for (let index = 0; index < requiredUserVariants.length; index++) {
     const variant = requiredUserVariants[index];
-    const needsDump = await GenericWrapperActions.needsDump(variant);
+    const needsDump = await UserGenericWrapperActions.needsDump(variant);
 
     if (!needsDump) {
       continue;
     }
-    const dump = await GenericWrapperActions.dump(variant);
+    const dump = await UserGenericWrapperActions.dump(variant);
     await ConfigDumpData.saveConfigDump({
       data: dump,
       publicKey: us,
@@ -104,7 +104,7 @@ async function pushChangesToUserSwarmIfNeeded() {
 
       window.log.info(
         `pushChangesToUserSwarmIfNeeded: current dumps: ${variant}:`,
-        to_hex(await GenericWrapperActions.makeDump(variant))
+        to_hex(await UserGenericWrapperActions.makeDump(variant))
       );
     }
   }

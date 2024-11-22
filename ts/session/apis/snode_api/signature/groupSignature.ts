@@ -28,7 +28,10 @@ async function getGroupInviteMessage({
 }: {
   member: PubkeyType;
   groupName: string;
-  secretKey: Uint8ArrayLen64; // len 64
+  /**
+   * secretKey, length of 64 bytes
+   */
+  secretKey: Uint8ArrayLen64;
   groupPk: GroupPubkeyType;
 }) {
   const sodium = await getSodiumRenderer();
@@ -64,7 +67,10 @@ async function getGroupPromoteMessage({
   groupName,
 }: {
   member: PubkeyType;
-  secretKey: Uint8ArrayLen64; // len 64
+  /**
+   * secretKey, length of 64 bytes
+   */
+  secretKey: Uint8ArrayLen64;
   groupPk: GroupPubkeyType;
   groupName: string;
 }) {
