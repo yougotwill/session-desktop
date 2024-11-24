@@ -1296,9 +1296,6 @@ type StoreOnNodeParams = StoreOnNodeNormalParams | StoreOnNodeSubAccountParams;
 
 export type MethodBatchType = 'batch' | 'sequence';
 
-// Until the next storage server release is released, we need to have at least 2 hashes in the list for the `get_expiries` AND for the `update_expiries`
-export const fakeHash = '///////////////////////////////////////////';
-
 export type RawSnodeSubRequests =
   | RetrieveLegacyClosedGroupSubRequest
   | RetrieveUserSubRequest

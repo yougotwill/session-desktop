@@ -5,7 +5,7 @@ import pRetry from 'p-retry';
 import { Snode } from '../../../data/types';
 import { UserUtils } from '../../utils';
 import { SeedNodeAPI } from '../seed_node_api';
-import { GetExpiriesFromNodeSubRequest, fakeHash } from './SnodeRequestTypes';
+import { GetExpiriesFromNodeSubRequest } from './SnodeRequestTypes';
 import { BatchRequests } from './batchRequest';
 import { SnodePool } from './snodePool';
 import { GetExpiriesResultsContent, WithMessagesHashes } from './types';
@@ -104,14 +104,9 @@ async function getExpiriesFromNodesNoRetries(
  * The returned TTLs should be assigned to the given disappearing messages.
  * @param messageHashes the hashes of the messages we want the current expiries for
  * @param timestamp the time (ms) the request was initiated, must be within ±60s of the current time so using the server time is recommended.
- * @returns an arrray of the expiry timestamps (TTL) for the given messages
+ * @returns an array of the expiry timestamps (TTL) for the given messages
  */
 export async function getExpiriesFromSnode({ messagesHashes }: WithMessagesHashes) {
-  // FIXME There is a bug in the snode code that requires at least 2 messages to be requested. Will be fixed in next storage server release
-  if (messagesHashes.length === 1) {
-    messagesHashes.push(fakeHash);
-  }
-
   const ourPubKey = UserUtils.getOurPubKeyStrFromCache();
   if (!ourPubKey) {
     window.log.error('[getExpiriesFromSnode] No pubkey found', messagesHashes);

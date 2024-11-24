@@ -2,10 +2,7 @@ import chai, { expect } from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import { PubkeyType } from 'libsession_util_nodejs';
 import Sinon from 'sinon';
-import {
-  GetExpiriesFromNodeSubRequest,
-  fakeHash,
-} from '../../../../session/apis/snode_api/SnodeRequestTypes';
+import { GetExpiriesFromNodeSubRequest } from '../../../../session/apis/snode_api/SnodeRequestTypes';
 import {
   GetExpiriesRequestResponseResults,
   processGetExpiriesRequestResponse,
@@ -110,8 +107,7 @@ describe('GetExpiriesRequest', () => {
     const props = {
       targetNode: generateFakeSnode(),
       expiries: { 'FLTUh/C/6E+sWRgNtrqWPXhQqKlIrpHVKJJtZsBMWKw': 1696983251624 },
-      // FIXME There is a bug in the snode code that requires at least 2 messages to be requested. Will be fixed in next storage server release
-      messageHashes: ['FLTUh/C/6E+sWRgNtrqWPXhQqKlIrpHVKJJtZsBMWKw', fakeHash],
+      messageHashes: ['FLTUh/C/6E+sWRgNtrqWPXhQqKlIrpHVKJJtZsBMWKw'],
     };
 
     it('returns valid results if the response is valid', async () => {

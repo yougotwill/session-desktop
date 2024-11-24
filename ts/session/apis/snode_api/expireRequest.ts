@@ -6,11 +6,7 @@ import { getSodiumRenderer } from '../../crypto';
 import { StringUtils, UserUtils } from '../../utils';
 import { fromBase64ToArray, fromHexToArray } from '../../utils/String';
 import { SeedNodeAPI } from '../seed_node_api';
-import {
-  MAX_SUBREQUESTS_COUNT,
-  UpdateExpiryOnNodeUserSubRequest,
-  fakeHash,
-} from './SnodeRequestTypes';
+import { MAX_SUBREQUESTS_COUNT, UpdateExpiryOnNodeUserSubRequest } from './SnodeRequestTypes';
 import { BatchRequests } from './batchRequest';
 import { SnodePool } from './snodePool';
 import {
@@ -224,7 +220,7 @@ async function updateExpiryOnNodesNoRetries(
 
     const hashesRequestedButNotInResults = difference(
       flatten(expireRequests.map(m => m.messageHashes)),
-      [...flatten(changesValid.map(c => c.messageHashes)), fakeHash]
+      [...flatten(changesValid.map(c => c.messageHashes))]
     );
     if (!isEmpty(hashesRequestedButNotInResults)) {
       const now = Date.now();
@@ -346,13 +342,6 @@ function groupMsgByExpiry(expiringDetails: ExpiringDetails) {
     }
     groupedBySameExpiry[expiryStr].push(messageHash);
   }
-
-  Object.keys(groupedBySameExpiry).forEach(k => {
-    if (groupedBySameExpiry[k].length === 1) {
-      // We need to have at least 2 hashes until the next storage server release
-      groupedBySameExpiry[k].push(fakeHash);
-    }
-  });
 
   return groupedBySameExpiry;
 }
