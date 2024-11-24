@@ -227,9 +227,10 @@ export async function deleteMessagesFromSwarmAndCompletelyLocally(
     throw new Error('deleteMessagesFromSwarmAndCompletelyLocally needs a 03 or 05 pk');
   }
   if (PubKey.is05Pubkey(pubkey) && pubkey !== UserUtils.getOurPubKeyStrFromCache()) {
-    throw new Error(
+    window.log.warn(
       'deleteMessagesFromSwarmAndCompletelyLocally with 05 pk can only delete for ourself'
     );
+    return;
   }
   // LEGACY GROUPS -- we cannot delete on the swarm (just unsend which is done separately)
   if (conversation.isClosedGroup() && PubKey.is05Pubkey(pubkey)) {

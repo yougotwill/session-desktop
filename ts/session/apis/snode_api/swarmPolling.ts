@@ -940,8 +940,8 @@ export class SwarmPolling {
 
 // zod schema for retrieve items as returned by the snodes
 const retrieveItemSchema = z.object({
-  hash: z.string().base64('retrieveItemSchema: hash was not base64'),
-  data: z.string().base64('retrieveItemSchema: data was not base64'),
+  hash: z.string(),
+  data: z.string(),
   expiration: z.number().finite(),
   timestamp: z.number().finite().positive(),
 });
