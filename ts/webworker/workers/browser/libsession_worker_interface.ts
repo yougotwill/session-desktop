@@ -761,13 +761,19 @@ export const MultiEncryptWrapperActions: MultiEncryptActionsCalls = {
 export const EncryptionDomains = ['SessionGroupKickedMessage'] as const;
 
 export const BlindingActions: BlindingActionsCalls = {
-  blindVersionPubkey: async (opts: { ed25519SecretKey: Uint8Array }) =>
+  blindVersionPubkey: async (opts: Parameters<BlindingActionsCalls['blindVersionPubkey']>[0]) =>
     callLibSessionWorker(['Blinding', 'blindVersionPubkey', opts]) as Promise<
       ReturnType<BlindingActionsCalls['blindVersionPubkey']>
     >,
-  blindVersionSign: async (opts: { ed25519SecretKey: Uint8Array; sigTimestampSeconds: number }) =>
+  blindVersionSign: async (opts: Parameters<BlindingActionsCalls['blindVersionSign']>[0]) =>
     callLibSessionWorker(['Blinding', 'blindVersionSign', opts]) as Promise<
       ReturnType<BlindingActionsCalls['blindVersionSign']>
+    >,
+  blindVersionSignRequest: async (
+    opts: Parameters<BlindingActionsCalls['blindVersionSignRequest']>[0]
+  ) =>
+    callLibSessionWorker(['Blinding', 'blindVersionSignRequest', opts]) as Promise<
+      ReturnType<BlindingActionsCalls['blindVersionSignRequest']>
     >,
 };
 

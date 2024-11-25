@@ -68,15 +68,15 @@ declare module 'react' {
     | 'privacy-section'
 
     // settings menu item types
-    | 'messageRequests-settings-menu-item'
-    | 'recoveryPassword-settings-menu-item'
+    | 'message-requests-settings-menu-item'
+    | 'recovery-password-settings-menu-item'
     | 'privacy-settings-menu-item'
     | 'notifications-settings-menu-item'
     | 'conversations-settings-menu-item'
     | 'appearance-settings-menu-item'
     | 'help-settings-menu-item'
     | 'permissions-settings-menu-item'
-    | 'clearData-settings-menu-item'
+    | 'clear-data-settings-menu-item'
     | 'block-menu-item'
     | 'delete-menu-item'
     | 'accept-menu-item'

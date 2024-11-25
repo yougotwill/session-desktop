@@ -73,7 +73,7 @@ const getCategories = (): Array<Categories> => {
       icon: { type: 'chatBubble' as const, ...forcedSize },
     },
     {
-      id: 'messageRequests' as const,
+      id: 'message-requests' as const,
       title: window.i18n('sessionMessageRequests'),
       icon: { type: 'messageRequest' as const, ...forcedSize },
     },
@@ -93,12 +93,12 @@ const getCategories = (): Array<Categories> => {
       icon: { type: 'question' as const, ...forcedSize },
     },
     {
-      id: 'recoveryPassword' as const,
+      id: 'recovery-password' as const,
       title: window.i18n('sessionRecoveryPassword'),
       icon: { type: 'recoveryPasswordFill' as const, ...forcedSize },
     },
     {
-      id: 'clearData' as const,
+      id: 'clear-data' as const,
       title: window.i18n('sessionClearData'),
       icon: { type: 'delete' as const, ...forcedSize, color: 'var(--danger-color)' },
     },
@@ -110,7 +110,7 @@ const LeftPaneSettingsCategoryRow = ({ item }: { item: Categories }) => {
   const dispatch = useDispatch();
   const focusedSettingsSection = useSelector(getFocusedSettingsSection);
 
-  const isClearData = id === 'clearData';
+  const isClearData = id === 'clear-data';
 
   return (
     <StyledSettingsListItem
@@ -125,12 +125,12 @@ const LeftPaneSettingsCategoryRow = ({ item }: { item: Categories }) => {
       padding={'0px var(--margins-md) 0 var(--margins-sm)'}
       onClick={() => {
         switch (id) {
-          case 'messageRequests':
+          case 'message-requests':
             dispatch(showLeftPaneSection(SectionType.Message));
             dispatch(setLeftOverlayMode('message-requests'));
             dispatch(resetConversationExternal());
             break;
-          case 'clearData':
+          case 'clear-data':
             dispatch(updateDeleteAccountModal({}));
             break;
           default:
@@ -168,7 +168,7 @@ const LeftPaneSettingsCategories = () => {
   const hideRecoveryPassword = useHideRecoveryPasswordEnabled();
 
   if (hideRecoveryPassword) {
-    categories = categories.filter(category => category.id !== 'recoveryPassword');
+    categories = categories.filter(category => category.id !== 'recovery-password');
   }
 
   return (
