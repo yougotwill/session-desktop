@@ -91,7 +91,7 @@ export const ConversationOutgoingRequestExplanation = () => {
   if (!contactFromLibsession || !contactFromLibsession.approvedMe) {
     return (
       <Container
-        data-testid={'empty-conversation-notification'}
+        data-testid={'empty-conversation-control-message'}
         style={{ padding: 0 }}
         noExtraPadding={true}
       >
@@ -249,12 +249,9 @@ export const NoMessageInConversation = () => {
     return null;
   }
 
-  const dataTestId: SessionDataTestId =
-    isGroupV2 && isKickedFromGroup ? 'empty-conversation-notification' : 'group-control-message';
-
   return (
     <TextNotification
-      dataTestId={dataTestId}
+      dataTestId={'empty-conversation-control-message'}
       html={getHtmlToRender()}
       noExtraPadding={false} // in this case, `TextNotification` is **not** part of a bigger component so we need to add some spacing
     />

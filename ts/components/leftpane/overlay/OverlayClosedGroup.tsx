@@ -238,7 +238,7 @@ export const OverlayClosedGroupV2 = () => {
         text={window.i18n('create')}
         disabled={disableCreateButton}
         onClick={onEnterPressed}
-        dataTestId="next-button"
+        dataTestId="create-group-button"
         margin="auto 0 var(--margins-lg) 0 " // just to keep that button at the bottom of the overlay (even with an empty list)
       />
     </div>
@@ -358,7 +358,7 @@ export const OverlayLegacyClosedGroup = () => {
           text={window.i18n('create')}
           disabled={disableCreateButton}
           onClick={onEnterPressed}
-          dataTestId="next-button"
+          dataTestId="create-group-button"
           margin="auto 0 0" // just to keep that button at the bottom of the overlay (even with an empty list)
         />
       </Flex>

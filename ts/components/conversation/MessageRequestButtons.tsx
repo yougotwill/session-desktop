@@ -112,7 +112,7 @@ export const ConversationMessageRequestButtons = () => {
           onClick={() => {
             handleDeclineConversationRequest(selectedConvoId, selectedConvoId, convoOrigin);
           }}
-          dataTestId="decline-message-request"
+          dataTestId="delete-message-request"
         />
       </ConversationBannerRow>
       <ConversationIncomingRequestExplanation />

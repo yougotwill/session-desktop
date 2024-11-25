@@ -228,6 +228,7 @@ const InviteContactsDialogInner = (props: Props) => {
           buttonType={SessionButtonType.Simple}
           disabled={!hasContacts || isProcessingUIChange}
           onClick={onClickOK}
+          dataTestId="session-confirm-ok-button"
         />
         <SessionButton
           text={cancelText}
@@ -235,6 +236,7 @@ const InviteContactsDialogInner = (props: Props) => {
           buttonType={SessionButtonType.Simple}
           onClick={closeDialog}
           disabled={isProcessingUIChange}
+          dataTestId="session-confirm-cancel-button"
         />
       </div>
     </SessionWrapperModal>

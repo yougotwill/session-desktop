@@ -448,6 +448,7 @@ export const AcceptMsgRequestMenuItem = () => {
             convoId,
           });
         }}
+        dataTestId="accept-menu-item"
       >
         {window.i18n('accept')}
       </ItemWithDataTestId>
@@ -474,6 +475,7 @@ export const DeclineMsgRequestMenuItem = () => {
             conversationIdOrigin: null,
           });
         }}
+        dataTestId="delete-menu-item"
       >
         {window.i18n('delete')}
       </ItemWithDataTestId>
@@ -503,6 +505,7 @@ export const DeclineAndBlockMsgRequestMenuItem = () => {
             conversationIdOrigin: convoOrigin ?? null,
           });
         }}
+        dataTestId="block-menu-item"
       >
         {window.i18n('block')}
       </ItemWithDataTestId>
