@@ -30,7 +30,7 @@ import { SessionButton, SessionButtonColor, SessionButtonType } from '../basic/S
 import { SessionSpinner } from '../loading';
 import { SessionToggle } from '../basic/SessionToggle';
 import { GroupInviteRequiredVersionBanner } from '../NoticeBanner';
-import { isDevProd } from '../../shared/env_vars';
+import { hasClosedGroupV2QAButtons } from '../../shared/env_vars';
 import { ConversationTypeEnum } from '../../models/types';
 import { Localizer } from '../basic/Localizer';
 
@@ -188,7 +188,7 @@ const InviteContactsDialogInner = (props: Props) => {
       <SpacerLG />
 
       {/* TODO: localize those strings once out releasing those buttons for real Remove after QA */}
-      {isGroupV2 && isDevProd() && (
+      {isGroupV2 && hasClosedGroupV2QAButtons() && (
         <>
           <span style={{ display: 'flex', alignItems: 'center' }}>
             Share History?{'  '}

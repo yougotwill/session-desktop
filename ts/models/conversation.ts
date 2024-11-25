@@ -622,6 +622,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       // handleAcceptConversationRequest will take care of sending response depending on the type of conversation, if needed
       await handleAcceptConversationRequest({
         convoId: this.id,
+        approvalMessageTimestamp: NetworkTime.now() - 100,
       });
 
       if (this.isOpenGroupV2()) {
@@ -2109,6 +2110,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       // handleAcceptConversationRequest will take care of sending response depending on the type of conversation
       await handleAcceptConversationRequest({
         convoId: this.id,
+        approvalMessageTimestamp: NetworkTime.now() - 100,
       });
 
       if (this.isOpenGroupV2()) {

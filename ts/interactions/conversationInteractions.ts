@@ -96,7 +96,20 @@ export async function unblockConvoById(conversationId: string) {
   );
 }
 
-export const handleAcceptConversationRequest = async ({ convoId }: { convoId: string }) => {
+/**
+ * Accept if needed the message request from this user.
+ * Note: approvalMessageTimestamp is provided to be able to insert the "You've accepted the message request" at the right place.
+ * When accepting a message request by sending a message, we need to make sure the "You've accepted the message request" is before the
+ * message we are sending to the user.
+ *
+ */
+export const handleAcceptConversationRequest = async ({
+  convoId,
+  approvalMessageTimestamp,
+}: {
+  convoId: string;
+  approvalMessageTimestamp: number;
+}) => {
   const convo = ConvoHub.use().get(convoId);
   if (!convo || (!convo.isPrivate() && !convo.isClosedGroupV2())) {
     return null;
@@ -111,7 +124,7 @@ export const handleAcceptConversationRequest = async ({ convoId }: { convoId: st
   if (convo.isPrivate()) {
     // we only need the approval message (and sending a reply) when we are accepting a message request. i.e. someone sent us a message already and we didn't accept it yet.
     if (!previousIsApproved && previousDidApprovedMe) {
-      await convo.addOutgoingApprovalMessage(Date.now());
+      await convo.addOutgoingApprovalMessage(approvalMessageTimestamp);
       await convo.sendMessageRequestResponse();
     }
 
@@ -993,7 +1006,7 @@ export async function promoteUsersInGroup({
     return;
   }
 
-  // push one group change message were initial members are added to the group
+  // push one group change message where initial members are added to the group
   const membersHex = uniq(toPromote);
   const sentAt = NetworkTime.now();
   const us = UserUtils.getOurPubKeyStrFromCache();

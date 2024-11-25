@@ -17,6 +17,7 @@ import {
   ConversationOutgoingRequestExplanation,
   InvitedToGroupControlMessage,
 } from './SubtleNotification';
+import { NetworkTime } from '../../util/NetworkTime';
 
 const MessageRequestContainer = styled.div`
   display: flex;
@@ -101,7 +102,10 @@ export const ConversationMessageRequestButtons = () => {
       <ConversationBannerRow>
         <SessionButton
           onClick={() => {
-            void handleAcceptConversationRequest({ convoId: selectedConvoId });
+            void handleAcceptConversationRequest({
+              convoId: selectedConvoId,
+              approvalMessageTimestamp: NetworkTime.now(),
+            });
           }}
           text={window.i18n('accept')}
           dataTestId="accept-message-request"

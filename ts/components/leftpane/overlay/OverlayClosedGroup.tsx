@@ -14,7 +14,6 @@ import { VALIDATION } from '../../../session/constants';
 import { createClosedGroup } from '../../../session/conversations/createClosedGroup';
 import { ToastUtils } from '../../../session/utils';
 import LIBSESSION_CONSTANTS from '../../../session/utils/libsession/libsession_constants';
-import { isDevProd } from '../../../shared/env_vars';
 import { groupInfoActions } from '../../../state/ducks/metaGroups';
 import { clearSearch } from '../../../state/ducks/search';
 import { resetLeftOverlayMode } from '../../../state/ducks/section';
@@ -35,6 +34,7 @@ import { SpacerLG, SpacerMD } from '../../basic/Text';
 import { SessionInput } from '../../inputs';
 import { SessionSpinner } from '../../loading';
 import { StyledLeftPaneOverlay } from './OverlayMessage';
+import { hasClosedGroupV2QAButtons } from '../../../shared/env_vars';
 
 const StyledMemberListNoContacts = styled.div`
   text-align: center;
@@ -195,7 +195,7 @@ export const OverlayClosedGroupV2 = () => {
       </div>
       <SessionSpinner loading={isCreatingGroup} />
       {/* TODO: localize those strings once out releasing those buttons for real Remove after QA */}
-      {isDevProd() && (
+      {hasClosedGroupV2QAButtons() && (
         <>
           <span style={{ display: 'flex', alignItems: 'center' }}>
             Invite as admin?{'  '}

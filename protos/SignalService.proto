@@ -148,7 +148,6 @@ message GroupUpdateMessage {
   optional GroupUpdateMemberLeftNotificationMessage  memberLeftNotificationMessage = 8;
 }
 
-
 message DataMessage {
 
   // 7 = timestamp unused and should not be used

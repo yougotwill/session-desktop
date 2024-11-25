@@ -21,6 +21,7 @@ import {
   UserGroupsGet,
   UserGroupsSet,
   UserGroupsWrapperActionsCalls,
+  EncryptionDomain,
 } from 'libsession_util_nodejs';
 // eslint-disable-next-line import/order
 import { join } from 'path';
@@ -758,7 +759,7 @@ export const MultiEncryptWrapperActions: MultiEncryptActionsCalls = {
     >,
 };
 
-export const EncryptionDomains = ['SessionGroupKickedMessage'] as const;
+export const allKnownEncryptionDomains: Array<EncryptionDomain> = ['SessionGroupKickedMessage'];
 
 export const BlindingActions: BlindingActionsCalls = {
   blindVersionPubkey: async (opts: Parameters<BlindingActionsCalls['blindVersionPubkey']>[0]) =>

@@ -309,7 +309,7 @@ export function useIsOutgoingRequest(convoId?: string) {
 
 /**
  * Note: NOT to be exported:
- * This selector is too generic and needs to be broken node in individual fields selectors.
+ * This selector is too generic and needs to be broken down into individual fields selectors.
  * Make sure when writing a selector that you fetch the data from libsession if needed.
  * (check useSortedGroupMembers() as an example)
  */

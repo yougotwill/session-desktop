@@ -158,7 +158,7 @@ const StyledGroupStatusText = styled.span<{ isFailure: boolean }>`
   font-size: var(--font-size-xs);
   margin-top: var(--margins-xs);
   min-width: 100px; // min-width so that the dialog does not resize when the status change to sending
-  text-align: left;
+  text-align: start;
 `;
 
 const GroupStatusText = ({ groupPk, pubkey }: { pubkey: PubkeyType; groupPk: GroupPubkeyType }) => {

@@ -526,6 +526,7 @@ async function buildNewOnionPathsWorker() {
       }
 
       window?.log?.info(`Built ${onionPaths.length} onion paths`);
+      window?.log?.debug(`onionPaths:`, JSON.stringify(onionPaths));
     },
     {
       retries: 3, // 4 total

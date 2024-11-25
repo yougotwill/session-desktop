@@ -63,6 +63,7 @@ import {
   ConversationInteractionType,
 } from '../../interactions/types';
 import { useLibGroupDestroyed } from '../../state/selectors/userGroups';
+import { NetworkTime } from '../../util/NetworkTime';
 
 /** Menu items standardized */
 
@@ -446,6 +447,7 @@ export const AcceptMsgRequestMenuItem = () => {
         onClick={async () => {
           await handleAcceptConversationRequest({
             convoId,
+            approvalMessageTimestamp: NetworkTime.now(),
           });
         }}
         dataTestId="accept-menu-item"

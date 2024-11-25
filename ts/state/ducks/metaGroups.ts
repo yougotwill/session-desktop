@@ -193,7 +193,7 @@ const initNewGroupInWrapper = createAsyncThunk(
       await convo.setIsApproved(true, false);
       await convo.commit(); // commit here too, as the poll needs it to be approved
       let groupMemberChange: GroupUpdateMemberChangeMessage | null = null;
-      // push one group change message were initial members are added to the group
+      // push one group change message where initial members are added to the group
       if (membersFromWrapper.length) {
         const membersHex = uniq(membersFromWrapper.map(m => m.pubkeyHex));
         const sentAt = NetworkTime.now();

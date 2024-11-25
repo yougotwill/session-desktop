@@ -9,12 +9,12 @@ const isHexString = (maybeHex: string) =>
 /**
  * Returns the Uint8Array corresponding to the given string.
  * Note: this is different than the libsodium.from_hex().
- * This takes a string like "0102" and converts it to an UIin8Array like [1, 2] whereare
+ * This takes a string like "0102" and converts it to an UInt8Array like [1, 2] where
  * the libsodium one returns [0, 1, 0, 2]
  *
  * Throws an error if this string is not a hex string.
  * @param hexString the string to convert from
- * @returns the Uint8Arrat
+ * @returns the Uint8Array
  */
 const fromHexString = (hexString: string): Uint8Array => {
   if (!isHexString(hexString)) {

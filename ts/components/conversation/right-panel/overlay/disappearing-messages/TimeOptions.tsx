@@ -39,7 +39,7 @@ export const TimeOptions = (props: TimerOptionsProps) => {
                 setSelected(option.value);
               }}
               disabled={disabled}
-              dataTestId={`time-option-${option.value}`} // we want  "time-option-3600", etc as accessibility id
+              dataTestId={`time-option-${option.value}-seconds`} // we want  "time-option-3600-seconds", etc as accessibility id
             />
           );
         })}

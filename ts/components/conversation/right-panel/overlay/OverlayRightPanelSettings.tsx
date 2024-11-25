@@ -401,16 +401,14 @@ export const OverlayRightPanelSettings = () => {
 
           <MediaGallery documents={documents} media={media} />
           {isGroup && (
-            <>
-              <PanelIconButton
-                text={leaveGroupString}
-                dataTestId="leave-group-button"
-                disabled={isKickedFromGroup}
-                onClick={() => void deleteConvoAction()}
-                color={'var(--danger-color)'}
-                iconType={'delete'}
-              />
-            </>
+            <PanelIconButton
+              text={leaveGroupString}
+              dataTestId="leave-group-button"
+              disabled={isKickedFromGroup}
+              onClick={() => void deleteConvoAction()}
+              color={'var(--danger-color)'}
+              iconType={'delete'}
+            />
           )}
         </PanelButtonGroup>
         <SpacerLG />

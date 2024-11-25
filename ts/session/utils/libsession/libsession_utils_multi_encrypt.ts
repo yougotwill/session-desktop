@@ -1,7 +1,7 @@
-import { EncryptionDomain } from 'libsession_util_nodejs';
-import { MultiEncryptWrapperActions } from '../../../webworker/workers/browser/libsession_worker_interface';
-
-const allKnownEncryptionDomains: Array<EncryptionDomain> = ['SessionGroupKickedMessage'];
+import {
+  allKnownEncryptionDomains,
+  MultiEncryptWrapperActions,
+} from '../../../webworker/workers/browser/libsession_worker_interface';
 
 /**
  * Try to decrypt the content with any type of encryption domains we know.

@@ -535,7 +535,10 @@ export async function USER_callRecipient(recipient: string) {
   weAreCallerOnCurrentCall = true;
 
   // initiating a call is analogous to sending a message request
-  await handleAcceptConversationRequest({ convoId: recipient });
+  await handleAcceptConversationRequest({
+    convoId: recipient,
+    approvalMessageTimestamp: NetworkTime.now() - 100,
+  });
 
   // Note: we do the sending of the preoffer manually as the sendTo1o1NonDurably rely on having a message saved to the db for MessageSentSuccess
   // which is not the case for a pre offer message (the message only exists in memory)
@@ -936,6 +939,7 @@ export async function USER_acceptIncomingCallRequest(fromSender: string) {
   // consider the conversation completely approved
   await handleAcceptConversationRequest({
     convoId: fromSender,
+    approvalMessageTimestamp: NetworkTime.now() - 100,
   });
 }
 

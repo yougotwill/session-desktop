@@ -153,7 +153,6 @@ export function UpdateGroupNameDialog(props: { conversationId: string }) {
   const cancelText = window.i18n('cancel');
 
   const isAdmin = !isCommunity;
-  // return null;
 
   return (
     <SessionWrapperModal
