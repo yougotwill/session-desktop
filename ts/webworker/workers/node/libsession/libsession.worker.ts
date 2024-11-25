@@ -6,7 +6,6 @@ import {
   ContactsConfigWrapperNode,
   ConvoInfoVolatileWrapperNode,
   GroupPubkeyType,
-  GroupWrapperConstructor,
   MetaGroupWrapperNode,
   MultiEncryptWrapperNode,
   UserConfigWrapperNode,
@@ -224,7 +223,7 @@ function freeUserWrapper(wrapperType: ConfigWrapperObjectTypesMeta) {
 /*
  * This function can be used to initialize a group wrapper
  */
-function initGroupWrapper(options: Array<any>, wrapperType: ConfigWrapperGroup) {
+function initGroupWrapper(options: Array<unknown>, wrapperType: ConfigWrapperGroup) {
   const groupType = assertGroupWrapperType(wrapperType);
 
   const wrapper = getGroupWrapper(wrapperType);
@@ -233,17 +232,33 @@ function initGroupWrapper(options: Array<any>, wrapperType: ConfigWrapperGroup) 
     return;
   }
 
-  if (options.length !== 1) {
+  if (options.length !== 1 || isObject(options[0])) {
     throw new Error(`group: "${wrapperType}" init needs 1 arguments`);
+  }
+  const firstArg = options[0];
+  if (
+    !isObject(firstArg) ||
+    !('groupEd25519Pubkey' in firstArg) ||
+    !('groupEd25519Secretkey' in firstArg) ||
+    !('metaDumped' in firstArg) ||
+    !('userEd25519Secretkey' in firstArg)
+  ) {
+    throw new Error(
+      `group: "${wrapperType}" firstArg is not obj type, or missing some keys, or not the correct keys`
+    );
   }
   // we need all the fields defined in GroupWrapperConstructor, but the function in the wrapper will throw if we don't forward what's needed
 
-  const {
-    groupEd25519Pubkey,
-    groupEd25519Secretkey,
-    metaDumped,
-    userEd25519Secretkey,
-  }: GroupWrapperConstructor = options[0];
+  const { groupEd25519Pubkey, groupEd25519Secretkey, metaDumped, userEd25519Secretkey } = firstArg;
+
+  if (
+    !isUInt8Array(groupEd25519Pubkey) ||
+    (!isUInt8Array(groupEd25519Secretkey) && !isNull(groupEd25519Secretkey)) ||
+    (!isUInt8Array(metaDumped) && !isNull(metaDumped)) ||
+    !isUInt8Array(userEd25519Secretkey)
+  ) {
+    throw new Error(`group: "${wrapperType}" type of keys is not correct`);
+  }
 
   if (isMetaGroupWrapperType(groupType)) {
     const pk = getGroupPubkeyFromWrapperType(groupType);
