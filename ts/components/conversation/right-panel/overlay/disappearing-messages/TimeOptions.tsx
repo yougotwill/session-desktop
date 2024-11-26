@@ -1,5 +1,6 @@
 import { isEmpty } from 'lodash';
 
+import { DisappearTimeOptionDataTestId } from 'react';
 import { TimerOptionsArray } from '../../../../../session/disappearing_messages/timerOptions';
 import { PanelButtonGroup, PanelLabel } from '../../../../buttons/PanelButton';
 import { PanelRadioButton } from '../../../../buttons/PanelRadioButton';
@@ -29,6 +30,8 @@ export const TimeOptions = (props: TimerOptionsProps) => {
       )}
       <PanelButtonGroup>
         {options.map(option => {
+          // we want  "time-option-3600-seconds", etc as accessibility id
+          const parentDataTestId: DisappearTimeOptionDataTestId = `time-option-${option.value}-seconds`;
           return (
             <PanelRadioButton
               key={option.name}
@@ -39,7 +42,8 @@ export const TimeOptions = (props: TimerOptionsProps) => {
                 setSelected(option.value);
               }}
               disabled={disabled}
-              dataTestId={`time-option-${option.value}-seconds`} // we want  "time-option-3600-seconds", etc as accessibility id
+              dataTestId={parentDataTestId}
+              radioInputDataTestId={`input-${parentDataTestId}`}
             />
           );
         })}

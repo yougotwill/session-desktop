@@ -1,20 +1,19 @@
-import { SessionDataTestId } from 'react';
 import { DisappearingMessageConversationModeType } from '../../../../../session/disappearing_messages/types';
 import { Localizer } from '../../../../basic/Localizer';
 import { PanelButtonGroup, PanelLabel } from '../../../../buttons/PanelButton';
 import { PanelRadioButton } from '../../../../buttons/PanelRadioButton';
 
-function toDataTestId(mode: DisappearingMessageConversationModeType): SessionDataTestId {
+function toDataTestId(mode: DisappearingMessageConversationModeType) {
   switch (mode) {
     case 'legacy':
-      return 'disappear-legacy-option';
+      return 'disappear-legacy-option' as const;
     case 'deleteAfterRead':
-      return 'disappear-after-read-option';
+      return 'disappear-after-read-option' as const;
     case 'deleteAfterSend':
-      return 'disappear-after-send-option';
+      return 'disappear-after-send-option' as const;
     case 'off':
     default:
-      return 'disappear-off-option';
+      return 'disappear-off-option' as const;
   }
 }
 
@@ -57,6 +56,7 @@ export const DisappearingModes = (props: DisappearingModesProps) => {
                 : mode === 'deleteAfterSend'
                   ? window.i18n('disappearingMessagesDisappearAfterSendDescription')
                   : undefined;
+          const parentDataTestId = toDataTestId(mode);
 
           return (
             <PanelRadioButton
@@ -69,7 +69,8 @@ export const DisappearingModes = (props: DisappearingModesProps) => {
                 setSelected(mode);
               }}
               disabled={options[mode]}
-              dataTestId={toDataTestId(mode)}
+              dataTestId={parentDataTestId}
+              radioInputDataTestId={`input-${parentDataTestId}`}
             />
           );
         })}

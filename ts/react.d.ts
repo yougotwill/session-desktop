@@ -6,6 +6,26 @@ import 'react';
  */
 
 declare module 'react' {
+  // disappear options
+  type DisappearOptionDataTestId =
+    | 'disappear-after-send-option'
+    | 'disappear-after-read-option'
+    | 'disappear-legacy-option'
+    | 'disappear-off-option';
+  type DisappearTimeOptionDataTestId =
+    | 'time-option-0-seconds'
+    | 'time-option-5-seconds'
+    | 'time-option-10-seconds'
+    | 'time-option-30-seconds'
+    | 'time-option-60-seconds'
+    | 'time-option-300-seconds'
+    | 'time-option-1800-seconds'
+    | 'time-option-3600-seconds'
+    | 'time-option-21600-seconds'
+    | 'time-option-43200-seconds'
+    | 'time-option-86400-seconds'
+    | 'time-option-604800-seconds'
+    | 'time-option-1209600-seconds';
   type SessionDataTestId =
     | 'group-member-status-text'
     | 'loading-spinner'
@@ -82,19 +102,10 @@ declare module 'react' {
     | 'accept-menu-item'
 
     // timer options
-    | 'time-option-0-seconds'
-    | 'time-option-5-seconds'
-    | 'time-option-10-seconds'
-    | 'time-option-30-seconds'
-    | 'time-option-60-seconds'
-    | 'time-option-300-seconds'
-    | 'time-option-1800-seconds'
-    | 'time-option-3600-seconds'
-    | 'time-option-21600-seconds'
-    | 'time-option-43200-seconds'
-    | 'time-option-86400-seconds'
-    | 'time-option-604800-seconds'
-    | 'time-option-1209600-seconds'
+    | DisappearTimeOptionDataTestId
+    | DisappearOptionDataTestId
+    | `input-${DisappearTimeOptionDataTestId}`
+    | `input-${DisappearOptionDataTestId}`
 
     // generic readably message (not control message)
     | 'message-content'
@@ -116,12 +127,6 @@ declare module 'react' {
     | 'call-notification-missed-call'
     | 'call-notification-started-call'
     | 'call-notification-answered-a-call'
-
-    // disappear options
-    | 'disappear-after-send-option'
-    | 'disappear-after-read-option'
-    | 'disappear-legacy-option'
-    | 'disappear-off-option'
 
     // settings toggle and buttons
     | 'remove-password-settings-button'
