@@ -154,8 +154,8 @@ describe('libsession_metagroup', () => {
     it('all fields are accounted for', () => {
       const memberCreated = metaGroupWrapper.memberGetOrConstruct(member);
       console.info('Object.keys(memberCreated) ', JSON.stringify(Object.keys(memberCreated)));
-      expect(Object.keys(memberCreated).length).to.be.eq(
-        6, // if you change this value, also make sure you add a test, testing that new field, below
+      expect(Object.keys(memberCreated).sort()).to.be.deep.eq(
+        ['pubkeyHex', 'name', 'profilePicture', 'memberStatus', 'nominatedAdmin'].sort(), // if you change this value, also make sure you add a test, testing that new field, below
         'this test is designed to fail if you need to add tests to test a new field of libsession'
       );
     });
@@ -231,7 +231,7 @@ describe('libsession_metagroup', () => {
       metaGroupWrapper.memberConstructAndSet(member2);
 
       metaGroupWrapper.memberSetAccepted(member);
-      metaGroupWrapper.memberSetPromoted(member2);
+      metaGroupWrapper.memberSetPromotionSent(member2);
       expect(metaGroupWrapper.memberGetAll().length).to.be.deep.eq(2);
 
       expect(metaGroupWrapper.memberGet(member)).to.be.deep.eq({
