@@ -5,7 +5,7 @@ import {
 
 /**
  * Try to decrypt the content with any type of encryption domains we know.
- * Does not throw, will return null if we couldn't decrypt it successfuly.
+ * Does not throw, will return null if we couldn't decrypt it successfully.
  */
 async function multiDecryptAnyEncryptionDomain({
   encoded,

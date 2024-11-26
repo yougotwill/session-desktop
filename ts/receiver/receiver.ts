@@ -167,7 +167,7 @@ async function handleRequestDetail(
   envelope.messageHash = messageHash;
 
   try {
-    // NOTE: Annoyngly we add plaintext to the cache
+    // NOTE: Annoyingly we add plaintext to the cache
     // after we've already processed some of it (thus the
     // need to handle senderIdentity separately)...
     perfStart(`addToCache-${envelope.id}`);

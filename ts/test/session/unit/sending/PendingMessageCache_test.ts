@@ -299,7 +299,7 @@ describe('PendingMessageCache', () => {
         Buffer.compare(message.plainTextBuffer, addedMessage.plainTextBuffer) === 0;
       expect(buffersCompare).to.equal(true, 'buffers were not loaded properly from database');
 
-      // Compare all other valures
+      // Compare all other values
       const trimmedAdded = _.omit(addedMessage, ['plainTextBuffer', 'plainTextBufferHex']);
       const trimmedRebuilt = _.omit(message, ['plainTextBuffer', 'plainTextBufferHex']);
 

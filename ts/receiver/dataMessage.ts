@@ -46,8 +46,7 @@ function cleanAttachments(decryptedDataMessage: SignalService.DataMessage) {
 
   // Here we go from binary to string/base64 in all AttachmentPointer digest/key fields
 
-  // we do not care about group on Session Desktop
-
+  // we do not care about the group field on Session Desktop
   decryptedDataMessage.group = null;
 
   // when receiving a message we get keys of attachment as buffer, but we override the data with the decrypted string instead.
