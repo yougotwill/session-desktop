@@ -26,6 +26,7 @@ import {
   getSelectedConversation,
 } from '../../../state/selectors/conversations';
 import {
+  getIsSelectedBlocked,
   getSelectedCanWrite,
   getSelectedConversationKey,
 } from '../../../state/selectors/selectedConversation';
@@ -102,6 +103,7 @@ interface Props {
   selectedConversationKey?: string;
   selectedConversation: ReduxConversationType | undefined;
   typingEnabled: boolean;
+  isBlocked: boolean;
   quotedMessageProps?: ReplyingToMessageProps;
   stagedAttachments: Array<StagedAttachmentType>;
   onChoseAttachments: (newAttachments: Array<File>) => void;
@@ -389,7 +391,7 @@ class CompositionBoxInner extends Component<Props, State> {
 
   private renderCompositionView() {
     const { showEmojiPanel } = this.state;
-    const { typingEnabled } = this.props;
+    const { typingEnabled, isBlocked } = this.props;
 
     // we can only send a message if the conversation allows writing in it AND
     // - we've got a message body OR
@@ -400,7 +402,9 @@ class CompositionBoxInner extends Component<Props, State> {
     /* eslint-disable @typescript-eslint/no-misused-promises */
 
     // we completely hide the composition box when typing is not enabled now.
-    if (!typingEnabled) {
+    // Actually not anymore. We want the above, except when we can't write because that user is blocked.
+    // When that user is blocked, **and only then**, we want to show the composition box, disabled with the placeholder "unblock to send".
+    if (!typingEnabled && !isBlocked) {
       return null;
     }
 
@@ -412,7 +416,7 @@ class CompositionBoxInner extends Component<Props, State> {
         alignItems={'center'}
         width={'100%'}
       >
-        <AddStagedAttachmentButton onClick={this.onChooseAttachment} />
+        {typingEnabled && <AddStagedAttachmentButton onClick={this.onChooseAttachment} />}
         <input
           className="hidden"
           placeholder="Attachment"
@@ -421,7 +425,7 @@ class CompositionBoxInner extends Component<Props, State> {
           type="file"
           onChange={this.onChoseAttachment}
         />
-        <StartRecordingButton onClick={this.onLoadVoiceNoteView} />
+        {typingEnabled && <StartRecordingButton onClick={this.onLoadVoiceNoteView} />}
         <StyledSendMessageInput
           role="main"
           dir={this.props.htmlDirection}
@@ -1027,6 +1031,7 @@ const mapStateToProps = (state: StateType) => {
     selectedConversation: getSelectedConversation(state),
     selectedConversationKey: getSelectedConversationKey(state),
     typingEnabled: getSelectedCanWrite(state),
+    isBlocked: getIsSelectedBlocked(state),
   };
 };
 

@@ -23,7 +23,7 @@ const getIsSelectedPrivate = (state: StateType): boolean => {
   return Boolean(getSelectedConversation(state)?.isPrivate) || false;
 };
 
-const getIsSelectedBlocked = (state: StateType): boolean => {
+export const getIsSelectedBlocked = (state: StateType): boolean => {
   return Boolean(getSelectedConversation(state)?.isBlocked) || false;
 };
 
