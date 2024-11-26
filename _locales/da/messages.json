@@ -251,7 +251,7 @@
   "create": "Opret",
   "cut": "Klip",
   "databaseErrorGeneric": "Der opstod en databasefejl.<br/><br/>Eksportér dine applikationslogfiler for at dele til fejlfinding. Hvis dette ikke lykkes, geninstaller {app_name} og gendan din konto.<br/><br/>Advarsel: Dette vil resultere i tab af alle beskeder, vedhæftede filer og kontodata ældre end to uger.",
-  "databaseErrorTimeout": "Vi har bemærket, at {app_name} tager lang tid at starte.<br/><br/>Du kan fortsætte med at vente, eksportere dine enhedslogfiler for at dele dem til fejlfinding eller prøve at genstarte Session.",
+  "databaseErrorTimeout": "Vi har bemærket, at {app_name} tager lang tid at starte.<br/><br/>Du kan fortsætte med at vente, eksportere dine enhedslogfiler for at dele dem til fejlfinding eller prøve at genstarte {app_name}.",
   "databaseErrorUpdate": "Din app-database er inkompatibel med denne version af {app_name}. Geninstaller appen og gendan din konto for at generere en ny database og fortsætte med at bruge {app_name}.<br/><br/>Advarsel: Dette vil resultere i tab af alle beskeder og vedhæftninger, der er ældre end to uger.",
   "databaseOptimizing": "Optimerer Database",
   "debugLog": "Debug log",

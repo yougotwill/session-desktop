@@ -251,7 +251,7 @@
   "create": "Sortu",
   "cut": "Ebaki",
   "databaseErrorGeneric": "Datu-base errorea gertatu da.<br/><br/>Aplikazioaren egunkariak esportatu arakatzean partekatzeko. Honek huts egiten badu, {app_name} berriro instalatu eta zure kontua berreskuratu.<br/><br/>Abisua: Honek bi aste baino gehiagoko mezu, fitxategi eta kontu datu guztiak galduko ditu.",
-  "databaseErrorTimeout": "{app_name} martxan jartzeko denbora gehiegi hartzen ari dela nabaritu dugu.<br/><br/>Jarrai itzazu itxaroten, esportatu zure gailu-erregistroak konpontzeko partekatzeko edo saiatu Session berrabiarazten.",
+  "databaseErrorTimeout": "{app_name} martxan jartzeko denbora gehiegi hartzen ari dela nabaritu dugu.<br/><br/>Jarrai itzazu itxaroten, esportatu zure gailu-erregistroak konpontzeko partekatzeko edo saiatu {app_name} berrabiarazten.",
   "databaseErrorUpdate": "Zure aplikazio-datubasea ez da bateragarria {app_name} bertsio honekin. Berrinstalatu aplikazioa eta leheneratu zure kontua datubase berri bat sortzeko eta {app_name} erabiltzen jarraitzeko.<br/><br/>Abisua: Honek bi astetik gorako mezu eta eranskinen galera eragingo du.",
   "databaseOptimizing": "Datu Basea Optimizatzen",
   "debugLog": "Arazketa egunkaria",

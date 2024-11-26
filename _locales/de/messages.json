@@ -277,6 +277,7 @@
   "deleteMessageDeleted": "{count, plural, one [Nachricht gelöscht] other [Nachrichten gelöscht]}",
   "deleteMessageDeletedGlobally": "Diese Nachricht wurde gelöscht",
   "deleteMessageDeletedLocally": "Diese Nachricht wurde auf diesem Gerät gelöscht",
+  "deleteMessageDescriptionDevice": "{count, plural, one [Bist du sicher, du möchtest diese Nachrichten nur von diesem Gerät löschen?] other [Möchtest du diese Nachrichten wirklich nur von diesem Gerät löschen?]}",
   "deleteMessageDescriptionEveryone": "Möchtest du diese Nachricht wirklich für alle löschen?",
   "deleteMessageDeviceOnly": "Nur auf diesem Gerät löschen",
   "deleteMessageDevicesAll": "Von allen meinen Geräten löschen",

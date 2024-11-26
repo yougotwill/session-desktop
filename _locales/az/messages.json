@@ -252,7 +252,7 @@
   "create": "Yarat",
   "cut": "Kəs",
   "databaseErrorGeneric": "Bir databaza xətası baş verdi.<br/><br/>Problemin aradan qaldırılması üçün tətbiq jurnalınızı paylaşmaq məqsədilə xaricə köçürün. Bu uğursuz olsa, {app_name} tətbiqini təkrar quraşdırıb hesabınızı bərpa edin.<br/><br/>Xəbərdarlıq: Bu, iki həftədən köhnə olan bütün mesajların, qoşmaların və hesab datasının itməsi ilə nəticələnəcək.",
-  "databaseErrorTimeout": "{app_name} tətbiqinin başladılmasının çox vaxt apardığına fikir verdik.<br/><br/>Gözləməyə davam edə, problemin aradan qaldırılması üçün cihazınızın jurnallarını xaricə köçürə və ya Session-u yenidən başlatmağa çalışa bilərsiniz.",
+  "databaseErrorTimeout": "{app_name} tətbiqinin başladılmasının çox vaxt apardığına fikir verdik.<br/><br/>Gözləməyə davam edə, problemin aradan qaldırılması üçün cihazınızın jurnallarını xaricə köçürə və ya {app_name}-u yenidən başlatmağa çalışa bilərsiniz.",
   "databaseErrorUpdate": "Tətbiqinizin databazası {app_name} tətbiqinin versiyası ilə uyumlu deyil. Yeni bir databaza yaratmaq və {app_name} istifadə etməyə davam etmək üçün tətbiqi yenidən quraşdırın və hesabınızı bərpa edin.<br/><br/>Xəbərdarlıq: Bu, iki həftədən köhnə olan bütün mesajların və qoşmaların itkisi ilə nəticələnəcək.",
   "databaseOptimizing": "Databaza optimallaşdırılır",
   "debugLog": "Sazlama jurnalı",

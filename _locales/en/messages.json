@@ -431,6 +431,7 @@
   "groupNameVisible": "Group name is visible to all group members.",
   "groupNoMessages": "You have no messages from <b>{group_name}</b>. Send a message to start the conversation!",
   "groupOnlyAdmin": "You are the only admin in <b>{group_name}</b>.<br/><br/>Group members and settings cannot be changed without an admin.",
+  "groupPendingRemoval": "Pending removal",
   "groupPromotedYou": "<b>You</b> were promoted to Admin.",
   "groupPromotedYouMultiple": "<b>You</b> and <b>{count} others</b> were promoted to Admin.",
   "groupPromotedYouTwo": "<b>You</b> and <b>{name}</b> were promoted to Admin.",

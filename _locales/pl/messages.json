@@ -463,7 +463,7 @@
   "legacyGroupMemberNewYouOther": "<b>Ty</b> oraz użytkownik <b>{other_name}</b> dołączyliście do grupy.",
   "legacyGroupMemberTwoNew": "<b>{name}</b> i <b>{other_name}</b> dołączyli do grupy.",
   "legacyGroupMemberYouNew": "<b>Dołączono</b> do grupy.",
-  "linkPreviews": "Previzualizări ale linkurilor",
+  "linkPreviews": "Podgląd linków",
   "linkPreviewsDescription": "Pokaż podglądy linków dla obsługiwanych adresów URL.",
   "linkPreviewsEnable": "Włącz podgląd linków",
   "linkPreviewsErrorLoad": "Nie można wczytać podlągu linku",

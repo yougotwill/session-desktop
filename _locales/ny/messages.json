@@ -251,7 +251,7 @@
   "create": "Yeretsani",
   "cut": "Dula",
   "databaseErrorGeneric": "Pakhala vuto la danga la data.<br/><br/>Tumizani zolembera zanu za mapulogalamu kuti mugawane ndi kukonza. Ngati izi sizichitika bwino, bwelersani {app_name} ndikubwezeretsanso akaunti yanu.<br/><br/>Chenjezo: Izi zidzakhudza kutayika kwa mauthenga onse, zolemba zomata, ndi data ya akaunti ya milungu iwiri.",
-  "databaseErrorTimeout": "Timazindikira {app_name} kutenga nthawi kuti ayambe.<br/><br/>Inu mungapitirize kudikira, kutulutsira chipangizo malipoti kuti azipeza mavuto, kapena yesani kuyambiranso Session.",
+  "databaseErrorTimeout": "Timazindikira {app_name} kutenga nthawi kuti ayambe.<br/><br/>Inu mungapitirize kudikira, kutulutsira chipangizo malipoti kuti azipeza mavuto, kapena yesani kuyambiranso {app_name}.",
   "databaseErrorUpdate": "Deta la pulogalamu yanu silikugwirizana ndi mtundu uwu wa {app_name}. Yikani pulogalamu yatsopanoyi ndikubwezerani akaunti yanu kuti mupange deta yatsopano ndikupitiriza kugwiritsa ntchito {app_name}.<br/><br/>Chenjezo: Izi zidzachititsa kuti mutaye mauthenga onse ndi zoyikapo zoposa masabata awo pafupifupi ziwiri.",
   "databaseOptimizing": "Kupanga bwino Database",
   "debugLog": "Lowani mu Debug Log",

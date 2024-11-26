@@ -251,7 +251,7 @@
   "create": "Loo",
   "cut": "Lõika",
   "databaseErrorGeneric": "Andmebaasi viga.<br/><br/>Ekspordi oma rakenduslogid, et jagada tõrkeotsinguteks. Kui see ei õnnestu, installige {app_name} uuesti ja taastage oma konto.<br/><br/>Hoiatus: Selle tulemusel kaotate kõik kaks nädalat vanemad sõnumid, manused ja kontoandmed.",
-  "databaseErrorTimeout": "Oleme märganud, et {app_name} käivitamine võtab kaua aega.<br/><br/>Võite jätkata ootamist, eksportida oma seadme logisid tõrkeotsingu eesmärgil jagamiseks või proovida Session'i taaskäivitamist.",
+  "databaseErrorTimeout": "Oleme märganud, et {app_name} käivitamine võtab kaua aega.<br/><br/>Võite jätkata ootamist, eksportida oma seadme logisid tõrkeotsingu eesmärgil jagamiseks või proovida {app_name}'i taaskäivitamist.",
   "databaseErrorUpdate": "Teie rakenduse andmebaas ei ühildu selle {app_name} versiooniga. Installige rakendus uuesti ja taastage oma konto, et luua uus andmebaas ja jätkata {app_name} kasutamist.<br/><br/>Hoiatus: See kaotab kõik vanemad kui kaks nädalat sõnumid ja manused.",
   "databaseOptimizing": "Andmebaasi optimeerimine",
   "debugLog": "Silumislogi",
