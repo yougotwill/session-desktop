@@ -232,7 +232,7 @@ function initGroupWrapper(options: Array<unknown>, wrapperType: ConfigWrapperGro
     return;
   }
 
-  if (options.length !== 1 || isObject(options[0])) {
+  if (options.length !== 1 || !isObject(options[0])) {
     throw new Error(`group: "${wrapperType}" init needs 1 arguments`);
   }
   const firstArg = options[0];
