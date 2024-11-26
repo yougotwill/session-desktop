@@ -18,14 +18,14 @@ declare module 'react' {
     | 'time-option-10-seconds'
     | 'time-option-30-seconds'
     | 'time-option-60-seconds'
-    | 'time-option-300-seconds'
-    | 'time-option-1800-seconds'
-    | 'time-option-3600-seconds'
-    | 'time-option-21600-seconds'
-    | 'time-option-43200-seconds'
-    | 'time-option-86400-seconds'
-    | 'time-option-604800-seconds'
-    | 'time-option-1209600-seconds';
+    | 'time-option-5-minutes'
+    | 'time-option-30-minutes'
+    | 'time-option-1-hours'
+    | 'time-option-6-hours'
+    | 'time-option-12-hours'
+    | 'time-option-1-days'
+    | 'time-option-7-days'
+    | 'time-option-14-days';
   type SessionDataTestId =
     | 'group-member-status-text'
     | 'loading-spinner'

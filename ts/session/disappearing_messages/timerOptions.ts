@@ -4,7 +4,7 @@ import {
   formatNonAbbreviatedExpireTimer,
 } from '../../util/i18n/formatting/expirationTimer';
 
-type TimerSeconds =
+export type TimerSeconds =
   | 0
   | 5
   | 10
