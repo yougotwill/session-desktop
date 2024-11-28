@@ -11,6 +11,7 @@ import { allowOnlyOneAtATime } from '../../../utils/Promise';
 import { OpenGroupPollingUtils } from '../opengroupV2/OpenGroupPollingUtils';
 import { getOpenGroupV2ConversationId } from '../utils/OpenGroupUtils';
 import { OpenGroupV2Room } from '../../../../data/types';
+import { DURATION } from '../../../constants';
 
 export async function fetchBinaryFromSogsWithOnionV4(sendOptions: {
   serverUrl: string;
@@ -62,7 +63,8 @@ export async function fetchBinaryFromSogsWithOnionV4(sendOptions: {
       useV4: true,
     },
     throwError,
-    abortSignal
+    abortSignal,
+    30 * DURATION.SECONDS // longer time for binary fetch
   );
 
   if (!res?.bodyBinary) {

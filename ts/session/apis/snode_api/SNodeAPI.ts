@@ -13,6 +13,7 @@ import { BatchRequests } from './batchRequest';
 import { DeleteGroupHashesFactory } from './factories/DeleteGroupHashesRequestFactory';
 import { DeleteUserHashesFactory } from './factories/DeleteUserHashesRequestFactory';
 import { SnodePool } from './snodePool';
+import { DURATION } from '../../constants';
 
 export const ERROR_CODE_NO_CONNECT = 'ENETUNREACH: No network connection.';
 
@@ -185,7 +186,7 @@ const networkDeleteMessageOurSwarm = async (
         const ret = await BatchRequests.doUnsignedSnodeBatchRequestNoRetries(
           [request],
           snodeToMakeRequestTo,
-          10000,
+          10 * DURATION.SECONDS,
           request.destination,
           false
         );
@@ -334,7 +335,7 @@ const networkDeleteMessagesForGroup = async (
         const ret = await BatchRequests.doUnsignedSnodeBatchRequestNoRetries(
           [request],
           snodeToMakeRequestTo,
-          10000,
+          10 * DURATION.SECONDS,
           request.destination,
           false
         );

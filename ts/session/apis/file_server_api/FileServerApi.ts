@@ -7,6 +7,7 @@ import {
 } from '../open_group_api/sogsv3/sogsV3BatchPoll';
 import { fromUInt8ArrayToBase64 } from '../../utils/String';
 import { NetworkTime } from '../../../util/NetworkTime';
+import { DURATION } from '../../constants';
 
 export const fileServerHost = 'filev2.getsession.org';
 export const fileServerURL = `http://${fileServerHost}`;
@@ -33,6 +34,7 @@ export const uploadFileToFsWithOnionV4 = async (
     bodyBinary: new Uint8Array(fileContent),
     endpoint: POST_GET_FILE_ENDPOINT,
     method: 'POST',
+    timeoutMs: 30 * DURATION.SECONDS, // longer time for file upload
   });
 
   if (!batchGlobalIsSuccess(result)) {
@@ -88,6 +90,7 @@ export const downloadFileFromFileServer = async (
     endpoint: urlToGet,
     method: 'GET',
     throwError: true,
+    timeoutMs: 30 * DURATION.SECONDS, // longer time for file download
   });
   if (window.sessionFeatureFlags?.debug.debugFileServerRequests) {
     window.log.info(`download fsv2: "${urlToGet} got result:`, JSON.stringify(result));
@@ -149,6 +152,7 @@ export const getLatestReleaseFromFileServer = async (
     method: 'GET',
     stringifiedBody: null,
     headers,
+    timeoutMs: 10 * DURATION.SECONDS,
   });
 
   if (!batchGlobalIsSuccess(result) || parseStatusCodeFromOnionRequestV4(result) !== 200) {

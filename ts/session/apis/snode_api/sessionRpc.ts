@@ -9,6 +9,7 @@ import { HTTPError, NotFoundError } from '../../utils/errors';
 
 import { APPLICATION_JSON } from '../../../types/MIME';
 import { ERROR_421_HANDLED_RETRY_REQUEST, Onions, snodeHttpsAgent, SnodeResponse } from './onions';
+import { WithAbortSignal, WithTimeoutMs } from './requestWith';
 
 export interface LokiFetchOptions {
   method: 'GET' | 'POST';
@@ -27,21 +28,22 @@ async function doRequestNoRetries({
   url,
   associatedWith,
   targetNode,
-  timeout,
+  timeoutMs,
   allow401s,
-}: {
-  url: string;
-  options: LokiFetchOptions;
-  targetNode?: Snode;
-  associatedWith: string | null;
-  timeout: number;
-  allow401s: boolean;
-}): Promise<undefined | SnodeResponse> {
+  abortSignal,
+}: WithTimeoutMs &
+  WithAbortSignal & {
+    url: string;
+    options: LokiFetchOptions;
+    targetNode?: Snode;
+    associatedWith: string | null;
+    allow401s: boolean;
+  }): Promise<undefined | SnodeResponse> {
   const method = options.method || 'GET';
 
   const fetchOptions = {
     ...options,
-    timeout,
+    timeoutMs,
     method,
   };
 
@@ -59,6 +61,8 @@ async function doRequestNoRetries({
         headers: fetchOptions.headers,
         associatedWith: associatedWith || undefined,
         allow401s,
+        abortSignal,
+        timeoutMs,
       });
       if (!fetchResult) {
         return undefined;
@@ -119,15 +123,16 @@ async function snodeRpcNoRetries(
     targetNode,
     associatedWith,
     allow401s,
-    timeout = 10000,
-  }: {
-    method: string;
-    params: Record<string, any> | Array<Record<string, any>>;
-    targetNode: Snode;
-    associatedWith: string | null;
-    timeout?: number;
-    allow401s: boolean;
-  } // the user pubkey this call is for. if the onion request fails, this is used to handle the error for this user swarm for instance
+    timeoutMs,
+    abortSignal,
+  }: WithTimeoutMs &
+    WithAbortSignal & {
+      method: string;
+      params: Record<string, any> | Array<Record<string, any>>;
+      targetNode: Snode;
+      associatedWith: string | null;
+      allow401s: boolean;
+    } // the user pubkey this call is for. if the onion request fails, this is used to handle the error for this user swarm for instance
 ): Promise<undefined | SnodeResponse> {
   const url = `https://${targetNode.ip}:${targetNode.port}/storage_rpc/v1`;
 
@@ -149,8 +154,9 @@ async function snodeRpcNoRetries(
     options: fetchOptions,
     targetNode,
     associatedWith,
-    timeout,
+    timeoutMs,
     allow401s,
+    abortSignal,
   });
 }
 

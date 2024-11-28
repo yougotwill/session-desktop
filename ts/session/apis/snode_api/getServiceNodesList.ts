@@ -5,6 +5,7 @@ import { SnodePool } from './snodePool';
 import { Snode } from '../../../data/types';
 import { GetServiceNodesSubRequest } from './SnodeRequestTypes';
 import { SnodePoolConstants } from './snodePoolConstants';
+import { DURATION } from '../../constants';
 
 /**
  * Returns a list of unique snodes got from the specified targetNode.
@@ -17,7 +18,7 @@ async function getSnodePoolFromSnode(targetNode: Snode): Promise<Array<Snode>> {
   const results = await BatchRequests.doUnsignedSnodeBatchRequestNoRetries(
     [subRequest],
     targetNode,
-    10000,
+    10 * DURATION.SECONDS,
     null,
     false
   );

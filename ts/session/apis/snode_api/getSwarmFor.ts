@@ -6,6 +6,7 @@ import { GetNetworkTime } from './getNetworkTime';
 import { SnodePool } from './snodePool';
 import { Snode } from '../../../data/types';
 import { SwarmForSubRequest } from './SnodeRequestTypes';
+import { DURATION } from '../../constants';
 
 /**
  * get snodes for pubkey from random snode. Uses an existing snode
@@ -22,7 +23,7 @@ async function requestSnodesForPubkeyWithTargetNodeRetryable(
   const result = await BatchRequests.doUnsignedSnodeBatchRequestNoRetries(
     [subrequest],
     targetNode,
-    10000,
+    10 * DURATION.SECONDS,
     pubkey,
     false
   );

@@ -522,7 +522,7 @@ async function handleWithHistoryMembers({
       memberPubkey: member,
       profileKeyHex,
     });
-    await MetaGroupWrapperActions.memberSetInvited(groupPk, member, false);
+    await MetaGroupWrapperActions.memberSetInviteSent(groupPk, member);
   }
   const encryptedSupplementKeys = withHistory.length
     ? await MetaGroupWrapperActions.generateSupplementKeys(groupPk, withHistory)
@@ -552,7 +552,7 @@ async function handleWithoutHistoryMembers({
       displayName,
       profileKeyHex,
     });
-    await MetaGroupWrapperActions.memberSetInvited(groupPk, member, false);
+    await MetaGroupWrapperActions.memberSetInviteSent(groupPk, member);
   }
 
   if (!isEmpty(withoutHistory)) {
@@ -1098,7 +1098,7 @@ const inviteResponseReceived = createAsyncThunk(
     try {
       await checkWeAreAdminOrThrow(groupPk, 'inviteResponseReceived');
 
-      await MetaGroupWrapperActions.memberSetAccepted(groupPk, member);
+      await MetaGroupWrapperActions.memberSetInviteAccepted(groupPk, member);
       try {
         const memberConvo = ConvoHub.use().get(member);
         if (memberConvo) {

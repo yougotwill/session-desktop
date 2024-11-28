@@ -238,7 +238,11 @@ class GroupInviteJob extends PersistedJob<GroupInvitePersistedData> {
         `${jobType} with groupPk:"${groupPk}" member: ${member} id:"${identifier}" finished. failed:${failed}`
       );
       try {
-        await MetaGroupWrapperActions.memberSetInvited(groupPk, member, failed);
+        if (failed) {
+          await MetaGroupWrapperActions.memberSetInviteFailed(groupPk, member);
+        } else {
+          await MetaGroupWrapperActions.memberSetInviteSent(groupPk, member);
+        }
         // Depending on this field, we either send an invite or an invite-as-admin message.
         // When we do send an invite-as-admin we also need to update the promoted state, so that the invited members
         // knows he needs to accept the promotion when accepting the invite
@@ -250,7 +254,10 @@ class GroupInviteJob extends PersistedJob<GroupInvitePersistedData> {
           }
         }
       } catch (e) {
-        window.log.warn('GroupInviteJob memberSetInvited failed with', e.message);
+        window.log.warn(
+          'GroupInviteJob memberSetPromotionFailed/memberSetPromotionSent failed with',
+          e.message
+        );
       }
 
       updateFailedStateForMember(groupPk, member, failed);

@@ -9,6 +9,7 @@ import { GetExpiriesFromNodeSubRequest } from './SnodeRequestTypes';
 import { BatchRequests } from './batchRequest';
 import { SnodePool } from './snodePool';
 import { GetExpiriesResultsContent, WithMessagesHashes } from './types';
+import { DURATION } from '../../constants';
 
 export type GetExpiriesRequestResponseResults = Record<string, number>;
 
@@ -49,7 +50,7 @@ async function getExpiriesFromNodesNoRetries(
     const result = await BatchRequests.doUnsignedSnodeBatchRequestNoRetries(
       [expireRequest],
       targetNode,
-      10000,
+      10 * DURATION.SECONDS,
       associatedWith,
       false,
       'batch'

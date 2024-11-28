@@ -187,7 +187,7 @@ describe('libsession_metagroup', () => {
     it('can add member by setting its invited state, both ok and nok', () => {
       metaGroupWrapper.memberConstructAndSet(member);
 
-      metaGroupWrapper.memberSetInvited(member, false); // with invite success
+      metaGroupWrapper.memberSetInviteSent(member); // with invite success
       expect(metaGroupWrapper.memberGetAll().length).to.be.deep.eq(1);
       expect(metaGroupWrapper.memberGetAll()).to.be.deep.eq([
         {
@@ -198,7 +198,7 @@ describe('libsession_metagroup', () => {
 
       metaGroupWrapper.memberConstructAndSet(member2);
 
-      metaGroupWrapper.memberSetInvited(member2, true); // with invite failed
+      metaGroupWrapper.memberSetInviteFailed(member2); // with invite failed
       expect(metaGroupWrapper.memberGetAll().length).to.be.deep.eq(2);
       expect(metaGroupWrapper.memberGet(member2)).to.be.deep.eq({
         ...emptyMember(member2),
@@ -209,7 +209,7 @@ describe('libsession_metagroup', () => {
     it('can add member by setting its accepted state', () => {
       metaGroupWrapper.memberConstructAndSet(member);
 
-      metaGroupWrapper.memberSetAccepted(member);
+      metaGroupWrapper.memberSetInviteAccepted(member);
       expect(metaGroupWrapper.memberGetAll().length).to.be.deep.eq(1);
       expect(metaGroupWrapper.memberGetAll()[0]).to.be.deep.eq({
         ...emptyMember(member),
@@ -218,7 +218,7 @@ describe('libsession_metagroup', () => {
 
       metaGroupWrapper.memberConstructAndSet(member2);
 
-      metaGroupWrapper.memberSetAccepted(member2);
+      metaGroupWrapper.memberSetInviteAccepted(member2);
       expect(metaGroupWrapper.memberGetAll().length).to.be.deep.eq(2);
       expect(metaGroupWrapper.memberGet(member2)).to.be.deep.eq({
         ...emptyMember(member2),
@@ -230,7 +230,7 @@ describe('libsession_metagroup', () => {
       metaGroupWrapper.memberConstructAndSet(member);
       metaGroupWrapper.memberConstructAndSet(member2);
 
-      metaGroupWrapper.memberSetAccepted(member);
+      metaGroupWrapper.memberSetInviteAccepted(member);
       metaGroupWrapper.memberSetPromotionSent(member2);
       expect(metaGroupWrapper.memberGetAll().length).to.be.deep.eq(2);
 
@@ -342,10 +342,10 @@ describe('libsession_metagroup', () => {
       // add 2 normal members to each of those wrappers
       const m1 = TestUtils.generateFakePubKeyStr();
       const m2 = TestUtils.generateFakePubKeyStr();
-      metaGroupWrapper.memberSetAccepted(m1);
-      metaGroupWrapper.memberSetAccepted(m2);
-      metaGroupWrapper2.memberSetAccepted(m1);
-      metaGroupWrapper2.memberSetAccepted(m2);
+      metaGroupWrapper.memberSetInviteAccepted(m1);
+      metaGroupWrapper.memberSetInviteAccepted(m2);
+      metaGroupWrapper2.memberSetInviteAccepted(m1);
+      metaGroupWrapper2.memberSetInviteAccepted(m2);
 
       expect(metaGroupWrapper.keysNeedsRekey()).to.be.eq(false);
       expect(metaGroupWrapper2.keysNeedsRekey()).to.be.eq(false);

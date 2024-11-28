@@ -603,10 +603,12 @@ export const MetaGroupWrapperActions: MetaGroupWrapperActionsCalls = {
       members,
       withMessages,
     ]) as Promise<ReturnType<MetaGroupWrapperActionsCalls['membersMarkPendingRemoval']>>,
-  memberSetAccepted: async (groupPk: GroupPubkeyType, pubkeyHex: PubkeyType) =>
-    callLibSessionWorker([`MetaGroupConfig-${groupPk}`, 'memberSetAccepted', pubkeyHex]) as Promise<
-      ReturnType<MetaGroupWrapperActionsCalls['memberSetAccepted']>
-    >,
+  memberSetInviteAccepted: async (groupPk: GroupPubkeyType, pubkeyHex: PubkeyType) =>
+    callLibSessionWorker([
+      `MetaGroupConfig-${groupPk}`,
+      'memberSetInviteAccepted',
+      pubkeyHex,
+    ]) as Promise<ReturnType<MetaGroupWrapperActionsCalls['memberSetInviteAccepted']>>,
   memberSetPromoted: async (groupPk: GroupPubkeyType, pubkeyHex: PubkeyType) =>
     callLibSessionWorker([`MetaGroupConfig-${groupPk}`, 'memberSetPromoted', pubkeyHex]) as Promise<
       ReturnType<MetaGroupWrapperActionsCalls['memberSetPromoted']>
@@ -630,13 +632,18 @@ export const MetaGroupWrapperActions: MetaGroupWrapperActionsCalls = {
       pubkeyHex,
     ]) as Promise<ReturnType<MetaGroupWrapperActionsCalls['memberSetPromotionSent']>>,
 
-  memberSetInvited: async (groupPk: GroupPubkeyType, pubkeyHex: PubkeyType, failed: boolean) =>
+  memberSetInviteSent: async (groupPk: GroupPubkeyType, pubkeyHex: PubkeyType) =>
     callLibSessionWorker([
       `MetaGroupConfig-${groupPk}`,
-      'memberSetInvited',
+      'memberSetInviteSent',
       pubkeyHex,
-      failed,
-    ]) as Promise<ReturnType<MetaGroupWrapperActionsCalls['memberSetInvited']>>,
+    ]) as Promise<ReturnType<MetaGroupWrapperActionsCalls['memberSetInviteSent']>>,
+  memberSetInviteFailed: async (groupPk: GroupPubkeyType, pubkeyHex: PubkeyType) =>
+    callLibSessionWorker([
+      `MetaGroupConfig-${groupPk}`,
+      'memberSetInviteFailed',
+      pubkeyHex,
+    ]) as Promise<ReturnType<MetaGroupWrapperActionsCalls['memberSetInviteFailed']>>,
   memberSetNameTruncated: async (groupPk: GroupPubkeyType, pubkeyHex: PubkeyType, name: string) =>
     callLibSessionWorker([
       `MetaGroupConfig-${groupPk}`,

@@ -14,6 +14,7 @@ import {
   ExpireMessagesResultsContent,
   WithShortenOrExtend,
 } from './types';
+import { DURATION } from '../../constants';
 
 export type verifyExpireMsgsResponseSignatureProps = ExpireMessageResultItem & {
   pubkey: string;
@@ -148,7 +149,7 @@ async function updateExpiryOnNodesNoRetries(
     const result = await BatchRequests.doUnsignedSnodeBatchRequestNoRetries(
       expireRequests,
       targetNode,
-      10000,
+      10 * DURATION.SECONDS,
       ourPubKey,
       false,
       'batch'

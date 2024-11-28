@@ -12,6 +12,7 @@ import { OnsResolveSubRequest } from './SnodeRequestTypes';
 import { BatchRequests } from './batchRequest';
 import { GetNetworkTime } from './getNetworkTime';
 import { SnodePool } from './snodePool';
+import { DURATION } from '../../constants';
 
 // ONS name can have [a-zA-Z0-9_-] except that - is not allowed as start or end
 // do not define a regex but rather create it on the fly to avoid https://stackoverflow.com/questions/3891641/regex-test-only-works-every-other-time
@@ -38,7 +39,7 @@ async function getSessionIDForOnsName(onsNameCase: string) {
     const results = await BatchRequests.doUnsignedSnodeBatchRequestNoRetries(
       [subRequest],
       targetNode,
-      10000,
+      10 * DURATION.SECONDS,
       null,
       false
     );

@@ -56,7 +56,8 @@ export const sogsBatchSend = async (
   roomInfos: Set<string>,
   abortSignal: AbortSignal,
   batchRequestOptions: Array<OpenGroupBatchRow>,
-  batchType: MethodBatchType
+  batchType: MethodBatchType,
+  timeoutMs: number
 ): Promise<BatchSogsResponse | null> => {
   // getting server pk for room
   const [roomId] = roomInfos;
@@ -88,7 +89,8 @@ export const sogsBatchSend = async (
     serverUrl,
     serverPublicKey,
     batchRequest,
-    abortSignal
+    abortSignal,
+    timeoutMs
   );
   if (abortSignal.aborted) {
     window.log.info('sendSogsBatchRequestOnionV4 aborted.');
@@ -396,7 +398,8 @@ const sendSogsBatchRequestOnionV4 = async (
   serverUrl: string,
   serverPubkey: string,
   request: BatchRequest,
-  abortSignal: AbortSignal
+  abortSignal: AbortSignal,
+  timeoutMs: number
 ): Promise<null | BatchSogsResponse> => {
   const { endpoint, headers, method, body } = request;
   if (!endpoint.startsWith('/')) {
@@ -415,7 +418,8 @@ const sendSogsBatchRequestOnionV4 = async (
       useV4: true,
     },
     false,
-    abortSignal
+    abortSignal,
+    timeoutMs
   );
 
   if (abortSignal.aborted) {

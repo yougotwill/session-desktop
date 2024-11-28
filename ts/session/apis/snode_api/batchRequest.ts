@@ -1,4 +1,6 @@
 import { isArray } from 'lodash';
+import { AbortController } from 'abort-controller';
+
 import { MessageSender } from '../../sending';
 import { Snode } from '../../../data/types';
 import { SnodeResponseError } from '../../utils/errors';
@@ -12,6 +14,7 @@ import {
   NotEmptyArrayOfBatchResults,
   RawSnodeSubRequests,
 } from './SnodeRequestTypes';
+import { MergedAbortSignal } from './requestWith';
 
 function logSubRequests(requests: Array<BuiltSnodeSubRequests>) {
   return `[${requests.map(builtRequestToLoggingId).join(', ')}]`;
@@ -32,9 +35,10 @@ function logSubRequests(requests: Array<BuiltSnodeSubRequests>) {
 async function doSnodeBatchRequestNoRetries(
   subRequests: Array<BuiltSnodeSubRequests>,
   targetNode: Snode,
-  timeout: number,
+  timeoutMs: number,
   associatedWith: string | null,
   allow401s: boolean,
+  abortSignal?: MergedAbortSignal,
   method: MethodBatchType = 'batch'
 ): Promise<NotEmptyArrayOfBatchResults> {
   window.log.debug(
@@ -56,7 +60,8 @@ async function doSnodeBatchRequestNoRetries(
     targetNode,
     associatedWith,
     allow401s,
-    timeout,
+    timeoutMs,
+    abortSignal: abortSignal || new AbortController().signal,
   });
 
   if (!result) {
@@ -94,7 +99,7 @@ async function doSnodeBatchRequestNoRetries(
  *
  * @param unsignedSubRequests the unsigned sub requests to make
  * @param targetNode the snode to make the request to
- * @param timeout the max timeout to wait for a reply
+ * @param timeoutMs the max timeout to wait for a reply
  * @param associatedWith the pubkey associated with this request (used to remove snode failing to reply from that users' swarm)
  * @param method the type of request to make batch or sequence
  * @returns
@@ -102,7 +107,7 @@ async function doSnodeBatchRequestNoRetries(
 async function doUnsignedSnodeBatchRequestNoRetries(
   unsignedSubRequests: Array<RawSnodeSubRequests>,
   targetNode: Snode,
-  timeout: number,
+  timeoutMs: number,
   associatedWith: string | null,
   allow401s: boolean,
   method: MethodBatchType = 'batch'
@@ -111,9 +116,10 @@ async function doUnsignedSnodeBatchRequestNoRetries(
   return BatchRequests.doSnodeBatchRequestNoRetries(
     signedSubRequests,
     targetNode,
-    timeout,
+    timeoutMs,
     associatedWith,
     allow401s,
+    undefined,
     method
   );
 }

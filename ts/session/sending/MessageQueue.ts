@@ -342,11 +342,14 @@ export class MessageQueueCl {
     rawMessage: OutgoingRawMessage;
     isSyncMessage: boolean;
   }) {
+    const start = Date.now();
+
     try {
       const { effectiveTimestamp } = await MessageSender.sendSingleMessage({
         message: rawMessage,
         isSyncMessage,
       });
+      window.log.debug('sendSingleMessage took ', Date.now() - start);
 
       const cb = this.pendingMessageCache.callbacks.get(rawMessage.identifier);
 
@@ -361,6 +364,7 @@ export class MessageQueueCl {
         'sendSingleMessageAndHandleResult: failed to send message with: ',
         error.message
       );
+
       await MessageSentHandler.handleSwarmMessageSentFailure(
         { device: rawMessage.device, identifier: rawMessage.identifier },
         error

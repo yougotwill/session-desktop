@@ -40,7 +40,7 @@ import {
 } from '../apis/snode_api/signature/groupSignature';
 import { SnodeSignature, SnodeSignatureResult } from '../apis/snode_api/signature/snodeSignatures';
 import { SnodePool } from '../apis/snode_api/snodePool';
-import { TTL_DEFAULT } from '../constants';
+import { DURATION, TTL_DEFAULT } from '../constants';
 import { ConvoHub } from '../conversations';
 import { addMessagePadding } from '../crypto/BufferPadding';
 import { ContentMessage } from '../messages/outgoing';
@@ -287,13 +287,15 @@ async function sendSingleMessage({
       });
 
       const targetNode = await SnodePool.getNodeFromSwarmOrThrow(destination);
+
       const batchResult = await BatchRequests.doUnsignedSnodeBatchRequestNoRetries(
         subRequests,
         targetNode,
-        6000,
+        10 * DURATION.SECONDS,
         destination,
         false
       );
+
       await handleBatchResultWithSubRequests({ batchResult, subRequests, destination });
       return {
         wrappedEnvelope: encryptedAndWrapped.encryptedAndWrappedData,
@@ -304,6 +306,11 @@ async function sendSingleMessage({
       retries: Math.max(attempts - 1, 0),
       factor: 1,
       minTimeout: retryMinTimeout || MessageSender.getMinRetryTimeout(),
+      onFailedAttempt: e => {
+        window?.log?.warn(
+          `[sendSingleMessage] attempt #${e.attemptNumber} failed. ${e.retriesLeft} retries left... Error: ${e.message}`
+        );
+      },
     }
   );
 }
