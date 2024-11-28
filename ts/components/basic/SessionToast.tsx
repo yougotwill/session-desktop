@@ -18,7 +18,6 @@ export enum SessionToastType {
 
 type Props = {
   description: string;
-
   id?: string;
   type?: SessionToastType;
   icon?: SessionIconType;
@@ -28,7 +27,7 @@ type Props = {
 
 const DescriptionDiv = styled.div`
   font-size: var(--font-size-sm);
-  color: var(--text-secondary-color);
+  color: var(--text-primary-color);
   text-overflow: ellipsis;
   font-family: var(--font-default);
   padding-top: var(--margins-xs);

@@ -54,6 +54,7 @@ import {
   WithFromMemberLeftMessage,
   WithRemoveMembers,
 } from '../../session/types/with';
+import { updateGroupNameModal } from './modalDialog';
 
 export type GroupState = {
   infos: Record<GroupPubkeyType, GroupInfoGet>;
@@ -1152,6 +1153,7 @@ const currentDeviceGroupNameChange = createAsyncThunk(
     await checkWeAreAdminOrThrow(groupPk, 'currentDeviceGroupNameChange');
 
     await handleNameChangeFromUI({ groupPk, ...args });
+    window.inboxStore?.dispatch(updateGroupNameModal(null));
 
     return {
       groupPk,

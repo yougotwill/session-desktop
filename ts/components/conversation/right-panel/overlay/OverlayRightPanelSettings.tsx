@@ -1,5 +1,5 @@
 import { compact, flatten, isEqual } from 'lodash';
-import { useEffect, useState } from 'react';
+import { SessionDataTestId, useEffect, useState } from 'react';
 
 import { useDispatch } from 'react-redux';
 import useInterval from 'react-use/lib/useInterval';
@@ -317,7 +317,7 @@ export const OverlayRightPanelSettings = () => {
                     groupInfoActions.triggerFakeAvatarUpdate({ groupPk: selectedConvoKey }) as any
                   );
                 }}
-                dataTestId="edit-group-name"
+                dataTestId={'' as SessionDataTestId}
               />
               <PanelIconButton
                 iconType={'group'}
@@ -333,7 +333,7 @@ export const OverlayRightPanelSettings = () => {
                     }) as any
                   );
                 }}
-                dataTestId="edit-group-name"
+                dataTestId={'' as SessionDataTestId}
               />
               <PanelIconButton
                 iconType={'group'}
@@ -349,7 +349,7 @@ export const OverlayRightPanelSettings = () => {
                     }) as any
                   );
                 }}
-                dataTestId="edit-group-name"
+                dataTestId={'' as SessionDataTestId}
               />
             </>
           ) : null}

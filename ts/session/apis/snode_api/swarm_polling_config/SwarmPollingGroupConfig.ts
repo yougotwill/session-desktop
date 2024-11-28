@@ -18,6 +18,7 @@ import { ProfileManager } from '../../../profile_manager/ProfileManager';
 import { UserUtils } from '../../../utils';
 import { GroupSync } from '../../../utils/job_runners/jobs/GroupSyncJob';
 import { destroyMessagesAndUpdateRedux } from '../../../disappearing_messages';
+import { ConversationTypeEnum } from '../../../../models/types';
 
 /**
  * This is a basic optimization to avoid running the logic when the `deleteBeforeSeconds`
@@ -163,11 +164,18 @@ async function handleMetaMergeResults(groupPk: GroupPubkeyType) {
     const member = members[index];
     // if our DB doesn't have details about this user, set them. Otherwise we don't want to overwrite our changes with those
     // because they are most likely out of date from what we get from the user himself.
-    const memberConvo = ConvoHub.use().get(member.pubkeyHex);
-    if (!memberConvo) {
+    let memberConvoInDB = ConvoHub.use().get(member.pubkeyHex);
+    if (memberConvoInDB) {
       continue;
     }
-    if (member.name && member.name !== memberConvo.getRealSessionUsername()) {
+    if (!memberConvoInDB) {
+      // eslint-disable-next-line no-await-in-loop
+      memberConvoInDB = await ConvoHub.use().getOrCreateAndWait(
+        member.pubkeyHex,
+        ConversationTypeEnum.PRIVATE
+      );
+    }
+    if (member.name && member.name !== memberConvoInDB.getRealSessionUsername()) {
       // eslint-disable-next-line no-await-in-loop
       await ProfileManager.updateProfileOfContact(
         member.pubkeyHex,

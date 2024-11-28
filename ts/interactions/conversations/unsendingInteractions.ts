@@ -222,7 +222,8 @@ export async function deleteMessagesFromSwarmAndCompletelyLocally(
   conversation: ConversationModel,
   messages: Array<MessageModel>
 ) {
-  const pubkey = conversation.id;
+  // If this is a private chat, we can only delete messages on our own swarm, so use our "side" of the conversation
+  const pubkey = conversation.isPrivate() ? UserUtils.getOurPubKeyStrFromCache() : conversation.id;
   if (!PubKey.is03Pubkey(pubkey) && !PubKey.is05Pubkey(pubkey)) {
     throw new Error('deleteMessagesFromSwarmAndCompletelyLocally needs a 03 or 05 pk');
   }

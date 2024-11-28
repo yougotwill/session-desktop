@@ -303,6 +303,7 @@ export const GroupInvite = {
   GroupInviteJob,
   addJob,
 };
+
 function updateFailedStateForMember(groupPk: GroupPubkeyType, member: PubkeyType, failed: boolean) {
   let thisGroupFailure = invitesFailed.get(groupPk);
 
