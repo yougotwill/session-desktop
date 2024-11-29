@@ -197,9 +197,11 @@ const initNewGroupInWrapper = createAsyncThunk(
       // push one group change message where initial members are added to the group
       if (membersFromWrapper.length) {
         const membersHex = uniq(membersFromWrapper.map(m => m.pubkeyHex));
+
+        const membersHexWithoutUs = membersHex.filter(m => m !== us);
         const sentAt = NetworkTime.now();
         const msgModel = await ClosedGroup.addUpdateMessage({
-          diff: { type: 'add', added: membersHex, withHistory: false },
+          diff: { type: 'add', added: membersHexWithoutUs, withHistory: false },
           expireUpdate: null,
           sender: us,
           sentAt,
@@ -210,7 +212,7 @@ const initNewGroupInWrapper = createAsyncThunk(
           adminSecretKey: groupSecretKey,
           convo,
           groupPk,
-          withoutHistory: membersHex,
+          withoutHistory: membersHexWithoutUs,
           createAtNetworkTimestamp: sentAt,
           dbMsgIdentifier: msgModel.id,
         });
