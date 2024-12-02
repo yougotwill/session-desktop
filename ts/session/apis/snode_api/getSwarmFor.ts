@@ -18,14 +18,16 @@ async function requestSnodesForPubkeyWithTargetNodeRetryable(
   if (!PubKey.is03Pubkey(pubkey) && !PubKey.is05Pubkey(pubkey)) {
     throw new Error('invalid pubkey given for swarmFor');
   }
-  const subrequest = new SwarmForSubRequest(pubkey);
+  const subRequest = new SwarmForSubRequest(pubkey);
 
   const result = await BatchRequests.doUnsignedSnodeBatchRequestNoRetries(
-    [subrequest],
+    [subRequest],
     targetNode,
     10 * DURATION.SECONDS,
     pubkey,
-    false
+    false,
+    'batch',
+    null
   );
 
   if (!result || !result.length) {

@@ -152,7 +152,8 @@ async function updateExpiryOnNodesNoRetries(
       10 * DURATION.SECONDS,
       ourPubKey,
       false,
-      'batch'
+      'batch',
+      null
     );
 
     if (!result || result.length !== expireRequests.length) {

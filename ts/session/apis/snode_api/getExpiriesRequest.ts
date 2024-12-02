@@ -53,7 +53,8 @@ async function getExpiriesFromNodesNoRetries(
       10 * DURATION.SECONDS,
       associatedWith,
       false,
-      'batch'
+      'batch',
+      null
     );
 
     if (!result || result.length !== 1) {

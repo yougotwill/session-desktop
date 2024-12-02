@@ -2,6 +2,7 @@
 /* eslint-disable no-async-promise-executor */
 /* eslint-disable @typescript-eslint/no-misused-promises */
 
+import AbortController from 'abort-controller';
 import { Snode } from '../../data/types';
 
 type SimpleFunction<T> = (arg: T) => void;
@@ -197,6 +198,26 @@ export async function timeout<T>(promise: Promise<T>, timeoutMs: number): Promis
   const timeoutPromise = new Promise<T>((_, rej) => {
     const wait = setTimeout(() => {
       clearTimeout(wait);
+      rej(new TaskTimedOutError());
+    }, timeoutMs);
+  });
+
+  return Promise.race([timeoutPromise, promise]);
+}
+
+/**
+ * Similar to timeout<T>, but will also call controller.abort() when we timeout.
+ * This can be used to make a request and if it takes longer than X ms, abort it and return the current aborted promise.
+ */
+export async function timeoutWithAbort<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  controller: AbortController
+): Promise<T> {
+  const timeoutPromise = new Promise<T>((_, rej) => {
+    const wait = setTimeout(() => {
+      clearTimeout(wait);
+      controller.abort();
       rej(new TaskTimedOutError());
     }, timeoutMs);
   });

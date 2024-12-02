@@ -1,5 +1,6 @@
 import { isEmpty, isNil, uniq } from 'lodash';
 import { PubkeyType, WithGroupPubkey } from 'libsession_util_nodejs';
+import AbortController from 'abort-controller';
 import {
   ConversationNotificationSettingType,
   READ_MESSAGE_STATE,
@@ -20,7 +21,7 @@ import { DecryptedAttachmentsManager } from '../session/crypto/DecryptedAttachme
 import { DisappearingMessageConversationModeType } from '../session/disappearing_messages/types';
 import { PubKey } from '../session/types';
 import { perfEnd, perfStart } from '../session/utils/Performance';
-import { sleepFor } from '../session/utils/Promise';
+import { sleepFor, timeoutWithAbort } from '../session/utils/Promise';
 import { ed25519Str, fromHexToArray, toHex } from '../session/utils/String';
 import { UserSync } from '../session/utils/job_runners/jobs/UserSyncJob';
 import { SessionUtilContact } from '../session/utils/libsession/libsession_utils_contacts';
@@ -59,6 +60,7 @@ import { GroupUpdateMessageFactory } from '../session/messages/message_factory/g
 import { GroupPromote } from '../session/utils/job_runners/jobs/GroupPromoteJob';
 import { MessageSender } from '../session/sending';
 import { StoreGroupRequestFactory } from '../session/apis/snode_api/factories/StoreGroupRequestFactory';
+import { DURATION } from '../session/constants';
 
 export async function copyPublicKeyByConvoId(convoId: string) {
   if (OpenGroupUtils.isOpenGroupV2(convoId)) {
@@ -1037,11 +1039,17 @@ export async function promoteUsersInGroup({
     groupInWrapper
   );
 
-  const result = await MessageSender.sendEncryptedDataToSnode({
-    destination: groupPk,
-    method: 'batch',
-    sortedSubRequests: storeRequests,
-  });
+  const controller = new AbortController();
+  const result = await timeoutWithAbort(
+    MessageSender.sendEncryptedDataToSnode({
+      destination: groupPk,
+      method: 'batch',
+      sortedSubRequests: storeRequests,
+      abortSignal: controller.signal,
+    }),
+    2 * DURATION.MINUTES,
+    controller
+  );
 
   if (result?.[0].code !== 200) {
     window.log.warn('promoteUsersInGroup: failed to store change');

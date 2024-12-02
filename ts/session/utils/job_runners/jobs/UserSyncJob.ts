@@ -3,6 +3,7 @@ import { PubkeyType } from 'libsession_util_nodejs';
 import { compact, isArray, isEmpty, isNumber, isString } from 'lodash';
 import { v4 } from 'uuid';
 import { to_hex } from 'libsodium-wrappers-sumo';
+import AbortController from 'abort-controller';
 import { UserUtils } from '../..';
 import { ConfigDumpData } from '../../../../data/configDump/configDump';
 import { UserSyncJobDone } from '../../../../shims/events';
@@ -15,7 +16,7 @@ import {
 import { DURATION, TTL_DEFAULT } from '../../../constants';
 import { ConvoHub } from '../../../conversations';
 import { MessageSender } from '../../../sending/MessageSender';
-import { allowOnlyOneAtATime } from '../../Promise';
+import { allowOnlyOneAtATime, timeoutWithAbort } from '../../Promise';
 import { LibSessionUtil, UserSuccessfulChange } from '../../libsession/libsession_utils';
 import { runners } from '../JobRunner';
 import {
@@ -115,11 +116,18 @@ async function pushChangesToUserSwarmIfNeeded() {
       })
     : undefined;
 
-  const result = await MessageSender.sendEncryptedDataToSnode({
-    sortedSubRequests: compact([...storeRequests, deleteHashesSubRequest]),
-    destination: us,
-    method: 'sequence',
-  });
+  const controller = new AbortController();
+
+  const result = await timeoutWithAbort(
+    MessageSender.sendEncryptedDataToSnode({
+      sortedSubRequests: compact([...storeRequests, deleteHashesSubRequest]),
+      destination: us,
+      method: 'sequence',
+      abortSignal: controller.signal,
+    }),
+    2 * DURATION.MINUTES,
+    controller
+  );
 
   const expectedReplyLength =
     changesToPush.messages.length + (changesToPush.allOldHashes.size ? 1 : 0);

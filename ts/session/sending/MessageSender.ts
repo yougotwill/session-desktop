@@ -56,6 +56,7 @@ import { EncryptAndWrapMessageResults, MessageWrapper } from './MessageWrapper';
 import { stringify } from '../../types/sqlSharedTypes';
 import { OpenGroupRequestCommonType } from '../../data/types';
 import { NetworkTime } from '../../util/NetworkTime';
+import { MergedAbortSignal } from '../apis/snode_api/requestWith';
 
 // ================ SNODE STORE ================
 
@@ -293,7 +294,9 @@ async function sendSingleMessage({
         targetNode,
         10 * DURATION.SECONDS,
         destination,
-        false
+        false,
+        'sequence',
+        null
       );
 
       await handleBatchResultWithSubRequests({ batchResult, subRequests, destination });
@@ -414,10 +417,12 @@ async function sendMessagesDataToSnode<T extends PubkeyType | GroupPubkeyType>({
   associatedWith,
   sortedSubRequests,
   method,
+  abortSignal,
 }: {
   sortedSubRequests: SortedSubRequestsType<T>;
   associatedWith: T;
   method: MethodBatchType;
+  abortSignal: MergedAbortSignal | null;
 }): Promise<NotEmptyArrayOfBatchResults> {
   if (!associatedWith) {
     throw new Error('sendMessagesDataToSnode first sub request pubkey needs to be set');
@@ -442,7 +447,8 @@ async function sendMessagesDataToSnode<T extends PubkeyType | GroupPubkeyType>({
       6000,
       associatedWith,
       false,
-      method
+      method,
+      abortSignal
     );
 
     if (!responses || !responses.length) {
@@ -500,10 +506,12 @@ async function sendEncryptedDataToSnode<T extends GroupPubkeyType | PubkeyType>(
   destination,
   sortedSubRequests,
   method,
+  abortSignal,
 }: {
   sortedSubRequests: SortedSubRequestsType<T>; // keeping those as an array because the order needs to be enforced for some (group keys for instance)
   destination: T;
   method: MethodBatchType;
+  abortSignal: MergedAbortSignal | null;
 }): Promise<NotEmptyArrayOfBatchResults | null> {
   try {
     const batchResults = await pRetry(
@@ -512,6 +520,7 @@ async function sendEncryptedDataToSnode<T extends GroupPubkeyType | PubkeyType>(
           sortedSubRequests,
           associatedWith: destination,
           method,
+          abortSignal,
         });
       },
       {

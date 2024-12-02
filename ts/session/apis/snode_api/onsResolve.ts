@@ -41,7 +41,9 @@ async function getSessionIDForOnsName(onsNameCase: string) {
       targetNode,
       10 * DURATION.SECONDS,
       null,
-      false
+      false,
+      'batch',
+      null
     );
     const firstResult = results[0];
     if (!firstResult || firstResult.code !== 200 || !firstResult.body) {

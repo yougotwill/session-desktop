@@ -3,6 +3,7 @@
 import { GroupPubkeyType, PubkeyType } from 'libsession_util_nodejs';
 import { compact, isEmpty } from 'lodash';
 import pRetry from 'p-retry';
+import AbortController from 'abort-controller';
 import { UserGroupsWrapperActions } from '../../../webworker/workers/browser/libsession_worker_interface';
 import { getSodiumRenderer } from '../../crypto';
 import { PubKey } from '../../types';
@@ -14,6 +15,7 @@ import { DeleteGroupHashesFactory } from './factories/DeleteGroupHashesRequestFa
 import { DeleteUserHashesFactory } from './factories/DeleteUserHashesRequestFactory';
 import { SnodePool } from './snodePool';
 import { DURATION } from '../../constants';
+import { timeoutWithAbort } from '../../utils/Promise';
 
 export const ERROR_CODE_NO_CONNECT = 'ENETUNREACH: No network connection.';
 
@@ -183,12 +185,19 @@ const networkDeleteMessageOurSwarm = async (
       async () => {
         const snodeToMakeRequestTo = await SnodePool.getNodeFromSwarmOrThrow(request.destination);
 
-        const ret = await BatchRequests.doUnsignedSnodeBatchRequestNoRetries(
-          [request],
-          snodeToMakeRequestTo,
-          10 * DURATION.SECONDS,
-          request.destination,
-          false
+        const controller = new AbortController();
+        const ret = await timeoutWithAbort(
+          BatchRequests.doUnsignedSnodeBatchRequestNoRetries(
+            [request],
+            snodeToMakeRequestTo,
+            10 * DURATION.SECONDS,
+            request.destination,
+            false,
+            'batch',
+            controller.signal
+          ),
+          30 * DURATION.SECONDS,
+          controller
         );
 
         if (!ret || !ret?.[0].body || ret[0].code !== 200) {
@@ -331,13 +340,19 @@ const networkDeleteMessagesForGroup = async (
     await pRetry(
       async () => {
         const snodeToMakeRequestTo = await SnodePool.getNodeFromSwarmOrThrow(request.destination);
-
-        const ret = await BatchRequests.doUnsignedSnodeBatchRequestNoRetries(
-          [request],
-          snodeToMakeRequestTo,
-          10 * DURATION.SECONDS,
-          request.destination,
-          false
+        const controller = new AbortController();
+        const ret = await timeoutWithAbort(
+          BatchRequests.doUnsignedSnodeBatchRequestNoRetries(
+            [request],
+            snodeToMakeRequestTo,
+            10 * DURATION.SECONDS,
+            request.destination,
+            false,
+            'batch',
+            controller.signal
+          ),
+          30 * DURATION.SECONDS,
+          controller
         );
 
         if (!ret || !ret?.[0].body || ret[0].code !== 200) {

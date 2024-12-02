@@ -3,6 +3,7 @@
 import { ConvoVolatileType, GroupPubkeyType, PubkeyType } from 'libsession_util_nodejs';
 import { isEmpty, isNil } from 'lodash';
 
+import AbortController from 'abort-controller';
 import { Data } from '../../data/data';
 import { OpenGroupData } from '../../data/opengroups';
 import { ConversationCollection, ConversationModel } from '../../models/conversation';
@@ -46,6 +47,8 @@ import { DisappearingMessages } from '../disappearing_messages';
 import { StoreGroupRequestFactory } from '../apis/snode_api/factories/StoreGroupRequestFactory';
 import { CONVERSATION_PRIORITIES, ConversationTypeEnum } from '../../models/types';
 import { NetworkTime } from '../../util/NetworkTime';
+import { timeoutWithAbort } from '../utils/Promise';
+import { DURATION } from '../constants';
 
 let instance: ConvoController | null;
 
@@ -678,11 +681,17 @@ async function leaveClosedGroup(groupPk: PubkeyType | GroupPubkeyType, fromSyncM
           secretKey: group.secretKey,
         }
       );
-      const results = await MessageSender.sendEncryptedDataToSnode({
-        destination: groupPk,
-        sortedSubRequests: storeRequests,
-        method: 'sequence',
-      });
+      const controller = new AbortController();
+      const results = await timeoutWithAbort(
+        MessageSender.sendEncryptedDataToSnode({
+          destination: groupPk,
+          sortedSubRequests: storeRequests,
+          method: 'sequence',
+          abortSignal: controller.signal,
+        }),
+        2 * DURATION.MINUTES,
+        controller
+      );
 
       if (results?.[0].code !== 200) {
         throw new Error(

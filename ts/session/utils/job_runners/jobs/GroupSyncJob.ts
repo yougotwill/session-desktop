@@ -2,6 +2,7 @@
 import { GroupPubkeyType, WithGroupPubkey } from 'libsession_util_nodejs';
 import { to_hex } from 'libsodium-wrappers-sumo';
 import { compact, isArray, isEmpty, isNumber } from 'lodash';
+import AbortController from 'abort-controller';
 import { UserUtils } from '../..';
 import { assertUnreachable } from '../../../../types/sqlSharedTypes';
 import { isSignInByLinking } from '../../../../util/storage';
@@ -24,7 +25,7 @@ import { WithRevokeSubRequest } from '../../../apis/snode_api/types';
 import { ConvoHub } from '../../../conversations';
 import { MessageSender } from '../../../sending/MessageSender';
 import { PubKey } from '../../../types';
-import { allowOnlyOneAtATime } from '../../Promise';
+import { allowOnlyOneAtATime, timeoutWithAbort } from '../../Promise';
 import { ed25519Str } from '../../String';
 import { GroupSuccessfulChange, LibSessionUtil } from '../../libsession/libsession_utils';
 import { runners } from '../JobRunner';
@@ -34,6 +35,7 @@ import {
   PersistedJob,
   RunJobResult,
 } from '../PersistedJob';
+import { DURATION } from '../../../constants';
 
 const defaultMsBetweenRetries = 15000; // a long time between retries, to avoid running multiple jobs at the same time, when one was postponed at the same time as one already planned (5s)
 const defaultMaxAttempts = 2;
@@ -156,14 +158,21 @@ async function pushChangesToGroupSwarmIfNeeded({
     ...extraRequests,
   ]);
 
-  const result = await MessageSender.sendEncryptedDataToSnode({
-    // Note: this is on purpose that supplementalKeysSubRequest is before pendingConfigRequests.
-    // This is to avoid a race condition where a device is polling while we
-    // are posting the configs (already encrypted with the new keys)
-    sortedSubRequests,
-    destination: groupPk,
-    method: 'sequence',
-  });
+  const controller = new AbortController();
+
+  const result = await timeoutWithAbort(
+    MessageSender.sendEncryptedDataToSnode({
+      // Note: this is on purpose that supplementalKeysSubRequest is before pendingConfigRequests.
+      // This is to avoid a race condition where a device is polling while we
+      // are posting the configs (already encrypted with the new keys)
+      sortedSubRequests,
+      destination: groupPk,
+      method: 'sequence',
+      abortSignal: controller.signal,
+    }),
+    2 * DURATION.MINUTES,
+    controller
+  );
 
   const expectedReplyLength =
     (supplementalKeysSubRequest ? 1 : 0) + // we are sending all the supplemental keys as a single sub request

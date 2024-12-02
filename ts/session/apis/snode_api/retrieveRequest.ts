@@ -232,7 +232,9 @@ async function retrieveNextMessagesNoRetries(
     // yes this is a long timeout for just messages, but 4s timeouts way to often...
     10 * DURATION.SECONDS,
     associatedWith,
-    allow401s
+    allow401s,
+    'batch',
+    null
   );
   try {
     if (!results || !isArray(results) || !results.length) {

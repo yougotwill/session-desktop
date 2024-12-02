@@ -20,7 +20,9 @@ async function getSnodePoolFromSnode(targetNode: Snode): Promise<Array<Snode>> {
     targetNode,
     10 * DURATION.SECONDS,
     null,
-    false
+    false,
+    'batch',
+    null
   );
 
   const firstResult = results[0];

@@ -110,7 +110,8 @@ async function doUnsignedSnodeBatchRequestNoRetries(
   timeoutMs: number,
   associatedWith: string | null,
   allow401s: boolean,
-  method: MethodBatchType = 'batch'
+  method: MethodBatchType = 'batch',
+  abortSignal: MergedAbortSignal | null
 ): Promise<NotEmptyArrayOfBatchResults> {
   const signedSubRequests = await MessageSender.signSubRequests(unsignedSubRequests);
   return BatchRequests.doSnodeBatchRequestNoRetries(
@@ -119,7 +120,7 @@ async function doUnsignedSnodeBatchRequestNoRetries(
     timeoutMs,
     associatedWith,
     allow401s,
-    undefined,
+    abortSignal || undefined,
     method
   );
 }
