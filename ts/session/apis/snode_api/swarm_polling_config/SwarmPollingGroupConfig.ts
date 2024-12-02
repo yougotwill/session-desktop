@@ -68,6 +68,7 @@ async function handleMetaMergeResults(groupPk: GroupPubkeyType) {
       window.inboxStore?.dispatch(
         messagesExpired(deletedMsgIds.map(messageId => ({ conversationKey: groupPk, messageId })))
       );
+      ConvoHub.use().get(groupPk)?.updateLastMessage();
       lastAppliedRemoveMsgSentBeforeSeconds.set(groupPk, infos.deleteBeforeSeconds);
     }
 
@@ -91,6 +92,7 @@ async function handleMetaMergeResults(groupPk: GroupPubkeyType) {
       await destroyMessagesAndUpdateRedux(
         impactedMsgModels.map(m => ({ conversationKey: groupPk, messageId: m.id }))
       );
+      ConvoHub.use().get(groupPk)?.updateLastMessage();
 
       lastAppliedRemoveAttachmentSentBeforeSeconds.set(groupPk, infos.deleteAttachBeforeSeconds);
     }
