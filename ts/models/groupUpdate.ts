@@ -14,15 +14,15 @@ function usAndXOthers(arr: Array<string>) {
 
 export function getKickedGroupUpdateStr(
   kicked: Array<string>,
-  groupName: string
+  _groupName: string
 ): LocalizerComponentPropsObject {
   const { others, us } = usAndXOthers(kicked);
-  const othersNames = others.map(ConvoHub.use().getContactProfileNameOrShortenedPubKey);
+  const othersNames = others.map(ConvoHub.use().getNicknameOrRealUsernameOrPlaceholder);
 
   if (us) {
     switch (others.length) {
       case 0:
-        return { token: 'groupRemovedYou', args: { group_name: groupName } };
+        return { token: 'groupRemovedYouGeneral' };
       case 1:
         return { token: 'groupRemovedYouTwo', args: { other_name: othersNames[0] } };
       default:
@@ -66,7 +66,7 @@ export function getLeftGroupUpdateChangeStr(left: Array<string>): LocalizerCompo
     : {
         token: 'groupMemberLeft',
         args: {
-          name: ConvoHub.use().getContactProfileNameOrShortenedPubKey(others[0]),
+          name: ConvoHub.use().getNicknameOrRealUsernameOrPlaceholder(others[0]),
         },
       };
 }
@@ -78,7 +78,7 @@ export function getJoinedGroupUpdateChangeStr(
   _groupName: string
 ): LocalizerComponentPropsObject {
   const { others, us } = usAndXOthers(joined);
-  const othersNames = others.map(ConvoHub.use().getContactProfileNameOrShortenedPubKey);
+  const othersNames = others.map(ConvoHub.use().getNicknameOrRealUsernameOrPlaceholder);
 
   if (groupv2) {
     if (us) {
@@ -164,7 +164,7 @@ export function getPromotedGroupUpdateChangeStr(
   joined: Array<string>
 ): LocalizerComponentPropsObject {
   const { others, us } = usAndXOthers(joined);
-  const othersNames = others.map(ConvoHub.use().getContactProfileNameOrShortenedPubKey);
+  const othersNames = others.map(ConvoHub.use().getNicknameOrRealUsernameOrPlaceholder);
 
   if (us) {
     switch (othersNames.length) {

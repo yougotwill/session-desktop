@@ -127,7 +127,7 @@ const InviteContactsDialogInner = (props: Props) => {
   const isGroupV2 = useSelectedIsGroupV2();
   const [shareHistory, setShareHistory] = useState(false);
 
-  const { uniqueValues: selectedContacts, addTo, removeFrom } = useSet<string>();
+  const { uniqueValues: selectedContacts, addTo, removeFrom, empty } = useSet<string>();
 
   if (isPrivate) {
     throw new Error('InviteContactsDialogInner must be a group');
@@ -144,27 +144,28 @@ const InviteContactsDialogInner = (props: Props) => {
   };
 
   const onClickOK = () => {
-    if (selectedContacts.length > 0) {
-      if (isPublic) {
-        void submitForOpenGroup(conversationId, selectedContacts);
-      } else {
-        if (PubKey.is03Pubkey(conversationId)) {
-          const forcedAsPubkeys = selectedContacts as Array<PubkeyType>;
-          const action = groupInfoActions.currentDeviceGroupMembersChange({
-            addMembersWithoutHistory: shareHistory ? [] : forcedAsPubkeys,
-            addMembersWithHistory: shareHistory ? forcedAsPubkeys : [],
-            removeMembers: [],
-            groupPk: conversationId,
-            alsoRemoveMessages: false,
-          });
-          dispatch(action as any);
-          return;
-        }
-        void submitForClosedGroup(conversationId, selectedContacts);
-      }
+    if (selectedContacts.length <= 0) {
+      closeDialog();
+      return;
     }
-
-    closeDialog();
+    if (isPublic) {
+      void submitForOpenGroup(conversationId, selectedContacts);
+      return;
+    }
+    if (PubKey.is03Pubkey(conversationId)) {
+      const forcedAsPubkeys = selectedContacts as Array<PubkeyType>;
+      const action = groupInfoActions.currentDeviceGroupMembersChange({
+        addMembersWithoutHistory: shareHistory ? [] : forcedAsPubkeys,
+        addMembersWithHistory: shareHistory ? forcedAsPubkeys : [],
+        removeMembers: [],
+        groupPk: conversationId,
+        alsoRemoveMessages: false,
+      });
+      dispatch(action as any);
+      empty();
+      return;
+    }
+    void submitForClosedGroup(conversationId, selectedContacts);
   };
 
   useKey((event: KeyboardEvent) => {
@@ -182,7 +183,7 @@ const InviteContactsDialogInner = (props: Props) => {
   const hasContacts = validContactsForInvite.length > 0;
 
   return (
-    <SessionWrapperModal title={titleText} onClose={closeDialog}>
+    <SessionWrapperModal title={titleText} onClose={closeDialog} showExitIcon={true}>
       {hasContacts && isGroupV2 && <GroupInviteRequiredVersionBanner />}
 
       <SpacerLG />

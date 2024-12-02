@@ -268,7 +268,7 @@ export const declineConversationWithConfirm = ({
   // restoring from seed we might not have the sender of that invite, so we need to take care of not having one (and not block)
   const originNameToBlock =
     alsoBlock && !!conversationIdOrigin
-      ? ConvoHub.use().get(conversationIdOrigin)?.getContactProfileNameOrShortenedPubKey()
+      ? ConvoHub.use().get(conversationIdOrigin)?.getNicknameOrRealUsernameOrPlaceholder()
       : null;
 
   const convoName = ConvoHub.use().get(conversationId)?.getNicknameOrRealUsernameOrPlaceholder();

@@ -134,7 +134,6 @@ export const OverlayClosedGroupV2 = () => {
 
   async function onEnterPressed() {
     setGroupNameError(undefined);
-    setGroupName('');
     if (isCreatingGroup) {
       window?.log?.warn('Closed group creation already in progress');
       return;

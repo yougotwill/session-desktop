@@ -160,12 +160,12 @@ class ConvoController {
     return conversation;
   }
 
-  public getContactProfileNameOrShortenedPubKey(pubKey: string): string {
+  public getNicknameOrRealUsernameOrPlaceholder(pubKey: string): string {
     const conversation = ConvoHub.use().get(pubKey);
     if (!conversation) {
       return pubKey;
     }
-    return conversation.getContactProfileNameOrShortenedPubKey();
+    return conversation.getNicknameOrRealUsernameOrPlaceholder();
   }
 
   public async getOrCreateAndWait(

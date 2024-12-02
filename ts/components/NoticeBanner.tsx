@@ -5,7 +5,6 @@ import { SessionIconButton, SessionIconType } from './icon';
 import { StyledRootDialog } from './dialog/StyledRootDialog';
 
 const StyledNoticeBanner = styled(Flex)`
-  position: relative;
   background-color: var(--primary-color);
   color: var(--black-color);
   font-size: var(--font-size-md);
@@ -15,14 +14,13 @@ const StyledNoticeBanner = styled(Flex)`
   cursor: pointer;
 
   .session-icon-button {
-    position: absolute;
     right: var(--margins-sm);
     pointer-events: none;
   }
 `;
 
 const StyledText = styled.span`
-  margin-right: var(--margins-xl);
+  margin-right: var(--margins-sm);
 `;
 
 type NoticeBannerProps = {
@@ -65,7 +63,7 @@ const StyledGroupInviteBanner = styled(Flex)`
   // when part a a dialog, invert it and make it narrower (as the dialog grows to make it fit)
   ${StyledRootDialog} & {
     background-color: unset;
-    color: var(--orange-color);
+    color: var(--text-primary-color);
     max-width: 300px;
   }
 `;

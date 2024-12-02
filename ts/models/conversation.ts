@@ -1817,9 +1817,8 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
   }
 
   /**
-   * For a private convo, returns the loki profile name if set, or a shortened
-   * version of the contact pubkey.
-   * Throws an error if called on a group convo.
+   * For a private convo, returns nickname || ('You' || userDisplayName) || shortened(pk)
+   * Throws an error if called on a no-private convo.
    *
    */
   public getContactProfileNameOrShortenedPubKey() {

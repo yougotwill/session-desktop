@@ -150,6 +150,14 @@ const initNewGroupInWrapper = createAsyncThunk(
         groupEd25519Pubkey: toFixedUint8ArrayOfLength(groupEd2519Pk, 32).buffer,
       });
 
+      const infos = await MetaGroupWrapperActions.infoGet(groupPk);
+      if (!infos) {
+        throw new Error(`getInfos of ${groupPk} returned empty result even if it was just init.`);
+      }
+      // if the name exceeds libsession-util max length for group name, the name will be saved truncated
+      infos.name = groupName;
+      await MetaGroupWrapperActions.infoSet(groupPk, infos);
+
       for (let index = 0; index < uniqMembers.length; index++) {
         const member = uniqMembers[index];
         const convoMember = ConvoHub.use().get(member);
@@ -172,13 +180,6 @@ const initNewGroupInWrapper = createAsyncThunk(
           await MetaGroupWrapperActions.memberSetPromotionAccepted(groupPk, member);
         }
       }
-
-      const infos = await MetaGroupWrapperActions.infoGet(groupPk);
-      if (!infos) {
-        throw new Error(`getInfos of ${groupPk} returned empty result even if it was just init.`);
-      }
-      infos.name = groupName;
-      await MetaGroupWrapperActions.infoSet(groupPk, infos);
 
       const membersFromWrapper = await MetaGroupWrapperActions.memberGetAll(groupPk);
       if (!membersFromWrapper || isEmpty(membersFromWrapper)) {

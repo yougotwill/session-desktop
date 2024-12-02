@@ -343,16 +343,16 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
       ) as DataExtractionNotificationMsg;
       if (dataExtraction.type === SignalService.DataExtractionNotification.Type.SCREENSHOT) {
         return window.i18n.stripped('screenshotTaken', {
-          name: ConvoHub.use().getContactProfileNameOrShortenedPubKey(dataExtraction.source),
+          name: ConvoHub.use().getNicknameOrRealUsernameOrPlaceholder(dataExtraction.source),
         });
       }
 
       return window.i18n.stripped('attachmentsMediaSaved', {
-        name: ConvoHub.use().getContactProfileNameOrShortenedPubKey(dataExtraction.source),
+        name: ConvoHub.use().getNicknameOrRealUsernameOrPlaceholder(dataExtraction.source),
       });
     }
     if (this.isCallNotification()) {
-      const name = ConvoHub.use().getContactProfileNameOrShortenedPubKey(
+      const name = ConvoHub.use().getNicknameOrRealUsernameOrPlaceholder(
         this.get('conversationId')
       );
       const callNotificationType = this.get('callNotificationType');
@@ -448,7 +448,7 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
       (pubkeysInDesc || []).forEach((pubkeyWithAt: string) => {
         const pubkey = pubkeyWithAt.slice(1);
         const isUS = isUsAnySogsFromCache(pubkey);
-        const displayName = ConvoHub.use().getContactProfileNameOrShortenedPubKey(pubkey);
+        const displayName = ConvoHub.use().getNicknameOrRealUsernameOrPlaceholder(pubkey);
         if (isUS) {
           bodyMentionsMappedToNames = bodyMentionsMappedToNames?.replace(
             pubkeyWithAt,
