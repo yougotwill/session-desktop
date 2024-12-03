@@ -69,7 +69,8 @@ async function confirmPushedAndDump(
         break;
       }
       case SnodeNamespaces.ClosedGroupKeys: {
-        // TODO chunk 2 closed group
+        // We don't need to confirm pushed keys, they are confirmed automatically
+        // when they are fetched from the group's swarm
         break;
       }
       default:
@@ -170,7 +171,7 @@ async function pushChangesToGroupSwarmIfNeeded({
       method: 'sequence',
       abortSignal: controller.signal,
     }),
-    2 * DURATION.MINUTES,
+    30 * DURATION.SECONDS,
     controller
   );
 

@@ -38,6 +38,7 @@ const channelsToMake = new Set([
   'cleanSeenMessages',
   'cleanLastHashes',
   'updateLastHash',
+  'clearLastHashesForConvoId',
   'saveSeenMessageHashes',
   'saveMessages',
   'removeMessage',

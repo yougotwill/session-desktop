@@ -125,7 +125,7 @@ async function pushChangesToUserSwarmIfNeeded() {
       method: 'sequence',
       abortSignal: controller.signal,
     }),
-    2 * DURATION.MINUTES,
+    30 * DURATION.SECONDS,
     controller
   );
 

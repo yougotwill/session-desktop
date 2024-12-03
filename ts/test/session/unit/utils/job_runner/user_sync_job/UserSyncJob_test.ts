@@ -104,10 +104,13 @@ describe('UserSyncJob batchResultsToUserSuccessfulChange', () => {
     ).to.be.deep.eq([]);
 
     expect(
-      LibSessionUtil.batchResultsToUserSuccessfulChange([] as any as NotEmptyArrayOfBatchResults, {
-        allOldHashes: new Set(),
-        messages: [],
-      })
+      LibSessionUtil.batchResultsToUserSuccessfulChange(
+        [] as unknown as NotEmptyArrayOfBatchResults,
+        {
+          allOldHashes: new Set(),
+          messages: [],
+        }
+      )
     ).to.be.deep.eq([]);
   });
 

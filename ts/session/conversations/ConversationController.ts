@@ -689,7 +689,7 @@ async function leaveClosedGroup(groupPk: PubkeyType | GroupPubkeyType, fromSyncM
           method: 'sequence',
           abortSignal: controller.signal,
         }),
-        2 * DURATION.MINUTES,
+        30 * DURATION.SECONDS,
         controller
       );
 

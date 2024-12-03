@@ -6,12 +6,12 @@ import { SessionConfirmDialogProps } from '../../components/dialog/SessionConfir
 import { MediaItemType } from '../../components/lightbox/LightboxGallery';
 import { AttachmentTypeWithPath } from '../../types/Attachment';
 import type { EditProfilePictureModalProps, PasswordAction } from '../../types/ReduxTypes';
+import { WithConvoId } from '../../session/types/with';
 
 export type BanType = 'ban' | 'unban';
 
 export type ConfirmModalState = SessionConfirmDialogProps | null;
 
-type WithConvoId = { conversationId: string };
 export type InviteContactModalState = WithConvoId | null;
 export type BanOrUnbanUserModalState =
   | (WithConvoId & {

@@ -553,7 +553,7 @@ async function sendToOpenGroupV2(
   blinded: boolean,
   filesToLink: Array<number>
 ): Promise<OpenGroupMessageV2 | boolean> {
-  // we agreed to pad message for opengroup v2
+  // we agreed to pad messages for opengroup v2
   const paddedBody = addMessagePadding(rawMessage.plainTextBuffer());
   const v2Message = new OpenGroupMessageV2({
     sentTimestamp: NetworkTime.now(),
@@ -660,7 +660,7 @@ async function handleBatchResultWithSubRequests({
           hash: storedHash,
         });
 
-        // We need to store the hash of our synced message when for a 1o1. (as this is the one stored on our swarm)
+        // We need to store the hash of our synced message for a 1o1. (as this is the one stored on our swarm)
         // For groups, we can just store that hash directly as the group's swarm is hosting all of the group messages
         if (subRequest.dbMessageIdentifier) {
           // eslint-disable-next-line no-await-in-loop

@@ -32,7 +32,7 @@ type MembersPromotedMessageParams = GroupUpdateMessageParams & {
 };
 
 /**
- * GroupUpdateInfoChangeMessage is sent to the group's swarm.
+ * GroupUpdateMemberChangeMessage is sent to the group's swarm.
  */
 export class GroupUpdateMemberChangeMessage extends GroupUpdateMessage {
   public readonly typeOfChange: 'added' | 'addedWithHistory' | 'removed' | 'promoted';

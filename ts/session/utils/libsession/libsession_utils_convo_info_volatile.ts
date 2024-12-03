@@ -190,11 +190,11 @@ async function refreshConvoVolatileCached(
 
     if (OpenGroupUtils.isOpenGroupV2(convoId)) {
       convoType = 'Community';
-    } else if (convoId.startsWith('05') && isLegacyGroup) {
+    } else if (PubKey.is05Pubkey(convoId) && isLegacyGroup) {
       convoType = 'LegacyGroup';
     } else if (PubKey.is03Pubkey(convoId)) {
       convoType = 'Group';
-    } else if (convoId.startsWith('05')) {
+    } else if (PubKey.is05Pubkey(convoId)) {
       convoType = '1o1';
     }
 

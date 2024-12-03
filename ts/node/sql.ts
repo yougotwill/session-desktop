@@ -973,6 +973,16 @@ function updateLastHash(data: UpdateLastHashType) {
     });
 }
 
+function clearLastHashesForConvoId(data: { convoId: string }) {
+  const { convoId } = data;
+  if (!isString(convoId)) {
+    throw new Error('clearLastHashesForPubkey: convoId not a string');
+  }
+  assertGlobalInstance().prepare(`DELETE FROM ${LAST_HASHES_TABLE} WHERE pubkey=$convoId;`).run({
+    convoId,
+  });
+}
+
 function saveSeenMessageHash(data: any) {
   const { expiresAt, hash } = data;
   try {
@@ -2645,6 +2655,7 @@ export const sqlNode = {
   saveMessage,
   cleanSeenMessages,
   cleanLastHashes,
+  clearLastHashesForConvoId,
   saveSeenMessageHashes,
   saveSeenMessageHash,
   updateLastHash,

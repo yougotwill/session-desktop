@@ -57,8 +57,6 @@ export const SWARM_POLLING_TIMEOUT = {
   MEDIUM_ACTIVE: DURATION.SECONDS * 60,
   /** 2 minutes */
   INACTIVE: DURATION.SECONDS * 120,
-  /** 500 milliseconds */
-  ACTIVE_DEV: 500,
 };
 
 export const PROTOCOLS = {
@@ -93,8 +91,6 @@ export const VALIDATION = {
 
 export const DEFAULT_RECENT_REACTS = ['😂', '🥰', '😢', '😡', '😮', '😈'];
 export const REACT_LIMIT = 6;
-
-export const MAX_USERNAME_BYTES = 64;
 
 export const UPDATER_INTERVAL_MS = 10 * DURATION.MINUTES;
 

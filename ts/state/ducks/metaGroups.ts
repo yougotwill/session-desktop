@@ -84,7 +84,6 @@ type GroupDetailsUpdate = {
 
 async function checkWeAreAdmin(groupPk: GroupPubkeyType) {
   const us = UserUtils.getOurPubKeyStrFromCache();
-
   const usInGroup = await MetaGroupWrapperActions.memberGet(groupPk, us);
   const inUserGroup = await UserGroupsWrapperActions.getGroup(groupPk);
   // if the secretKey is not empty AND we are a member of the group, we are a current admin
@@ -1418,7 +1417,6 @@ export const groupInfoActions = {
   currentDeviceGroupNameChange,
   triggerFakeAvatarUpdate,
   triggerFakeDeleteMsgBeforeNow,
-
   ...metaGroupSlice.actions,
 };
 export const groupReducer = metaGroupSlice.reducer;

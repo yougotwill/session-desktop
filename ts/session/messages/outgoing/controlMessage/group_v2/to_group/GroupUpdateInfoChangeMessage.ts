@@ -79,13 +79,10 @@ export class GroupUpdateInfoChangeMessage extends GroupUpdateMessage {
     switch (this.typeOfChange) {
       case SignalService.GroupUpdateInfoChangeMessage.Type.NAME:
         infoChangeMessage.updatedName = this.updatedName;
-
         break;
       case SignalService.GroupUpdateInfoChangeMessage.Type.DISAPPEARING_MESSAGES:
         infoChangeMessage.updatedExpiration = this.updatedExpirationSeconds;
-
         break;
-
       case SignalService.GroupUpdateInfoChangeMessage.Type.AVATAR:
         // nothing to do for the avatar case
         break;

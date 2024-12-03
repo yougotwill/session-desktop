@@ -224,6 +224,10 @@ async function saveSeenMessageHashes(data: Array<SeenMessageHashes>): Promise<vo
   await channels.saveSeenMessageHashes(cleanData(data));
 }
 
+async function clearLastHashesForConvoId(data: { convoId: string }): Promise<void> {
+  await channels.clearLastHashesForConvoId(cleanData(data));
+}
+
 async function updateLastHash(data: UpdateLastHashType): Promise<void> {
   await channels.updateLastHash(cleanData(data));
 }
@@ -861,6 +865,7 @@ export const Data = {
   searchMessagesInConversation,
   cleanSeenMessages,
   cleanLastHashes,
+  clearLastHashesForConvoId,
   saveSeenMessageHashes,
   updateLastHash,
   saveMessage,

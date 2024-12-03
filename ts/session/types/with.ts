@@ -16,3 +16,7 @@ export type WithMaxSize = { max_size?: number };
 export type WithShortenOrExtend = { shortenOrExtend: 'shorten' | 'extend' | '' };
 export type WithCreatedAtNetworkTimestamp = { createdAtNetworkTimestamp: number };
 export type WithMethod<T extends string> = { method: T };
+
+
+export type WithConvoId = { conversationId: string };
+export type WithMessageId = { messageId: string };

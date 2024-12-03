@@ -66,7 +66,7 @@ async function handleMetaMergeResults(groupPk: GroupPubkeyType) {
         deletedMsgIds
       );
       window.inboxStore?.dispatch(
-        messagesExpired(deletedMsgIds.map(messageId => ({ conversationKey: groupPk, messageId })))
+        messagesExpired(deletedMsgIds.map(messageId => ({ conversationId: groupPk, messageId })))
       );
       ConvoHub.use().get(groupPk)?.updateLastMessage();
       lastAppliedRemoveMsgSentBeforeSeconds.set(groupPk, infos.deleteBeforeSeconds);
