@@ -395,7 +395,7 @@ const loadMetaDumpsFromDB = createAsyncThunk(
 
         toReturn.push({ groupPk, infos, members });
       } catch (e) {
-        // Note: Don't re trow here, we want to load everything we can
+        // Note: Don't rethrow here, we want to load everything we can
         window.log.error(
           `initGroup of Group wrapper of variant ${variant} failed with ${e.message} `
         );
@@ -1217,7 +1217,7 @@ function refreshConvosModelProps(convoIds: Array<string>) {
 }
 
 /**
- * This slice is the one holding the default joinable rooms fetched once in a while from the default opengroup v2 server.
+ * This slice is representing the cached state of all our current 03-groups.
  */
 const metaGroupSlice = createSlice({
   name: 'metaGroup',

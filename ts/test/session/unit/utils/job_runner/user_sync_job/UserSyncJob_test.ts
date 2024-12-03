@@ -43,7 +43,7 @@ describe('UserSyncJob run()', () => {
   });
   it('throws if no user keys', async () => {
     const job = new UserSync.UserSyncJob({});
-
+    // Note: the run() function should never throw, at most it should return "permanent failure"
     const func = async () => job.run();
     await expect(func()).to.be.eventually.rejected;
   });
@@ -53,7 +53,7 @@ describe('UserSyncJob run()', () => {
     Sinon.stub(UserUtils, 'getOurPubKeyStrFromCache').returns({ something: false } as any);
     Sinon.stub(UserUtils, 'getUserED25519KeyPairBytes').resolves({ something: true } as any);
     Sinon.stub(ConvoHub.use(), 'get').resolves({}); // anything not falsy
-
+    // Note: the run() function should never throw, at most it should return "permanent failure"
     const func = async () => job.run();
     await expect(func()).to.be.eventually.rejected;
   });
@@ -298,7 +298,7 @@ describe('UserSyncJob pushChangesToUserSwarmIfNeeded', () => {
     expect(dump.firstCall.args).to.be.deep.eq(['ContactsConfig']);
   });
 
-  it('calls sendEncryptedDataToSnode with the right data x3 and retry if network returned nothing then success', async () => {
+  it('calls sendEncryptedDataToSnode with the right data x2 and retry if network returned nothing then success', async () => {
     const profile = userChange(sodium, SnodeNamespaces.UserProfile, 321);
     const contact = userChange(sodium, SnodeNamespaces.UserContacts, 123);
     const groups = userChange(sodium, SnodeNamespaces.UserGroups, 111);
