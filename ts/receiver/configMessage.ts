@@ -759,6 +759,7 @@ async function handleSingleGroupUpdateToLeave(toLeave: GroupPubkeyType) {
       deletionType: 'doNotKeep',
       deleteAllMessagesOnSwarm: false,
       forceDestroyForAllMembers: false,
+      clearFetchedHashes: true,
     });
   } catch (e) {
     window.log.info('Failed to deleteClosedGroup with: ', e.message);

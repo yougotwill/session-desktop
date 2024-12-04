@@ -4,7 +4,7 @@ import { AbortController } from 'abort-controller';
 import { GroupPubkeyType, PubkeyType } from 'libsession_util_nodejs';
 import { isArray, isEmpty, isNumber, isString } from 'lodash';
 import pRetry from 'p-retry';
-import { Data, SeenMessageHashes } from '../../data/data';
+import { Data } from '../../data/data';
 import { UserGroupsWrapperActions } from '../../webworker/workers/browser/libsession_worker_interface';
 import { OpenGroupMessageV2 } from '../apis/open_group_api/opengroupV2/OpenGroupMessageV2';
 import {
@@ -53,7 +53,7 @@ import { UserUtils } from '../utils';
 import { ed25519Str, fromUInt8ArrayToBase64 } from '../utils/String';
 import { MessageSentHandler } from './MessageSentHandler';
 import { EncryptAndWrapMessageResults, MessageWrapper } from './MessageWrapper';
-import { stringify } from '../../types/sqlSharedTypes';
+import { SaveSeenMessageHash, stringify } from '../../types/sqlSharedTypes';
 import { OpenGroupRequestCommonType } from '../../data/types';
 import { NetworkTime } from '../../util/NetworkTime';
 import { MergedAbortSignal } from '../apis/snode_api/requestWith';
@@ -632,7 +632,7 @@ async function handleBatchResultWithSubRequests({
     return;
   }
 
-  const seenHashes: Array<SeenMessageHashes> = [];
+  const seenHashes: Array<SaveSeenMessageHash> = [];
 
   for (let index = 0; index < subRequests.length; index++) {
     const subRequest = subRequests[index];
@@ -658,6 +658,7 @@ async function handleBatchResultWithSubRequests({
         seenHashes.push({
           expiresAt: NetworkTime.now() + TTL_DEFAULT.CONTENT_MESSAGE, // non config msg expire at CONTENT_MESSAGE at most
           hash: storedHash,
+          conversationId: destination,
         });
 
         // We need to store the hash of our synced message for a 1o1. (as this is the one stored on our swarm)

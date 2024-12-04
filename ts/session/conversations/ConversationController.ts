@@ -259,11 +259,13 @@ class ConvoController {
       deletionType,
       deleteAllMessagesOnSwarm,
       forceDestroyForAllMembers,
+      clearFetchedHashes,
     }: DeleteOptions & {
       sendLeaveMessage: boolean;
       deletionType: 'doNotKeep' | 'keepAsKicked' | 'keepAsDestroyed';
       deleteAllMessagesOnSwarm: boolean;
       forceDestroyForAllMembers: boolean;
+      clearFetchedHashes: boolean;
     }
   ) {
     if (!PubKey.is03Pubkey(groupPk)) {
@@ -271,7 +273,7 @@ class ConvoController {
     }
 
     window.log.info(
-      `deleteGroup: ${ed25519Str(groupPk)}, sendLeaveMessage:${sendLeaveMessage}, fromSyncMessage:${fromSyncMessage}, deletionType:${deletionType}, deleteAllMessagesOnSwarm:${deleteAllMessagesOnSwarm}, forceDestroyForAllMembers:${forceDestroyForAllMembers}`
+      `deleteGroup: ${ed25519Str(groupPk)}, sendLeaveMessage:${sendLeaveMessage}, fromSyncMessage:${fromSyncMessage}, deletionType:${deletionType}, deleteAllMessagesOnSwarm:${deleteAllMessagesOnSwarm}, forceDestroyForAllMembers:${forceDestroyForAllMembers}, clearFetchedHashes:${clearFetchedHashes}`
     );
 
     // this deletes all messages in the conversation
@@ -371,6 +373,14 @@ class ConvoController {
 
       // we are on the emptyGroupButKeepAsKicked=false case, so we remove it all
       await this.removeGroupOrCommunityFromDBAndRedux(groupPk);
+    }
+
+    // We want to clear the lastHash and the seenHashes of the corresponding group.
+    // We do this so that if we get reinvited to the group, we will
+    //  fetch and display all the messages from the group's swarm again.
+    if (clearFetchedHashes) {
+      await getSwarmPollingInstance().resetLastHashesForConversation(groupPk);
+      await Data.emptySeenMessageHashesForConversation(groupPk);
     }
 
     await SessionUtilConvoInfoVolatile.removeGroupFromWrapper(groupPk);

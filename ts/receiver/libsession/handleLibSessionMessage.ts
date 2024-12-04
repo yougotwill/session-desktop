@@ -57,6 +57,7 @@ async function handleLibSessionKickedMessage({
     deletionType: inviteWasPending ? 'doNotKeep' : 'keepAsKicked',
     deleteAllMessagesOnSwarm: false,
     forceDestroyForAllMembers: false,
+    clearFetchedHashes: true,
   });
 }
 

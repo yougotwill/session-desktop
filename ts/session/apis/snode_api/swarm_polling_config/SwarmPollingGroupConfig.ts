@@ -48,6 +48,7 @@ async function handleMetaMergeResults(groupPk: GroupPubkeyType) {
       deletionType: 'keepAsDestroyed', // we just got something from the group's swarm, so it is not pendingInvite
       deleteAllMessagesOnSwarm: false,
       forceDestroyForAllMembers: false,
+      clearFetchedHashes: true,
     });
   } else {
     if (

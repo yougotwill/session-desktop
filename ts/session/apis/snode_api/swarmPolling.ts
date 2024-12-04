@@ -489,7 +489,7 @@ export class SwarmPolling {
 
     const newMessages = await this.handleSeenMessages(uniqOtherMsgs);
     window.log.info(
-      `SwarmPolling: handleSeenMessages: ${newMessages.length} out of ${uniqOtherMsgs.length} are not seen yet. snode: ${toPollFrom ? ed25519Str(toPollFrom.pubkey_ed25519) : 'undefined'}`
+      `SwarmPolling: handleSeenMessages: ${newMessages.length} out of ${uniqOtherMsgs.length} are not seen yet about pk:${ed25519Str(pubkey)} snode: ${toPollFrom ? ed25519Str(toPollFrom.pubkey_ed25519) : 'undefined'}`
     );
     if (type === ConversationTypeEnum.GROUPV2) {
       if (!PubKey.is03Pubkey(pubkey)) {
@@ -510,7 +510,7 @@ export class SwarmPolling {
 
     // private and legacy groups are cached, so we can mark them as seen right away, they are still in the cache until processed correctly.
     // at some point we should get rid of the cache completely, and do the same logic as for groupv2 above
-    await this.updateSeenMessages(newMessages);
+    await this.updateSeenMessages(newMessages, pubkey);
     // trigger the handling of all the other messages, not shared config related and not groupv2 encrypted
     newMessages.forEach(m => {
       const extracted = extractWebSocketContent(m.data, m.hash);
@@ -696,6 +696,7 @@ export class SwarmPolling {
         deletionType: 'doNotKeep',
         deleteAllMessagesOnSwarm: false,
         forceDestroyForAllMembers: false,
+        clearFetchedHashes: true,
       });
     }
   }
@@ -722,19 +723,22 @@ export class SwarmPolling {
     }
 
     const incomingHashes = messages.map((m: RetrieveMessageItem) => m.hash);
-
     const dupHashes = await Data.getSeenMessagesByHashList(incomingHashes);
     const newMessages = messages.filter((m: RetrieveMessageItem) => !dupHashes.includes(m.hash));
 
     return newMessages;
   }
 
-  private async updateSeenMessages(processedMessages: Array<RetrieveMessageItem>) {
+  private async updateSeenMessages(
+    processedMessages: Array<RetrieveMessageItem>,
+    conversationId: string
+  ) {
     if (processedMessages.length) {
       const newHashes = processedMessages.map((m: RetrieveMessageItem) => ({
         // NOTE setting expiresAt will trigger the global function destroyExpiredMessages() on it's next interval
         expiresAt: m.expiration,
         hash: m.hash,
+        conversationId,
       }));
       await Data.saveSeenMessageHashes(newHashes);
     }
@@ -820,6 +824,17 @@ export class SwarmPolling {
     }
     // return the cached value
     return this.lastHashes[nodeEdKey][pubkey][namespace];
+  }
+
+  public async resetLastHashesForConversation(conversationId: string) {
+    await Data.clearLastHashesForConvoId(conversationId);
+    const snodeKeys = Object.keys(this.lastHashes);
+    for (let index = 0; index < snodeKeys.length; index++) {
+      const snodeKey = snodeKeys[index];
+      if (!isEmpty(this.lastHashes[snodeKey][conversationId])) {
+        this.lastHashes[snodeKey][conversationId] = {};
+      }
+    }
   }
 
   public async pollOnceForOurDisplayName(abortSignal?: AbortSignal): Promise<string> {
@@ -1089,6 +1104,7 @@ async function handleMessagesForGroupV2(
           {
             hash: msg.hash,
             expiresAt: msg.expiration,
+            conversationId: groupPk,
           },
         ]);
       } catch (e) {
@@ -1096,9 +1112,4 @@ async function handleMessagesForGroupV2(
       }
     }
   }
-
-  // make sure that all the message above are indeed seen (extra check as everything should already be marked as seen in the loop above)
-  await Data.saveSeenMessageHashes(
-    newMessages.map(m => ({ hash: m.hash, expiresAt: m.expiration }))
-  );
 }

@@ -268,6 +268,7 @@ const initNewGroupInWrapper = createAsyncThunk(
           deletionType: 'doNotKeep',
           deleteAllMessagesOnSwarm: false,
           forceDestroyForAllMembers: false,
+          clearFetchedHashes: true,
         });
       }
       throw e;

@@ -18,6 +18,7 @@ import {
   AsyncWrapper,
   MsgDuplicateSearchOpenGroup,
   SaveConversationReturn,
+  SaveSeenMessageHash,
   UnprocessedDataNode,
   UpdateLastHashType,
 } from '../types/sqlSharedTypes';
@@ -215,17 +216,16 @@ async function cleanLastHashes(): Promise<void> {
   await channels.cleanLastHashes();
 }
 
-export type SeenMessageHashes = {
-  expiresAt: number;
-  hash: string;
-};
-
-async function saveSeenMessageHashes(data: Array<SeenMessageHashes>): Promise<void> {
+async function saveSeenMessageHashes(data: Array<SaveSeenMessageHash>): Promise<void> {
   await channels.saveSeenMessageHashes(cleanData(data));
 }
 
-async function clearLastHashesForConvoId(data: { convoId: string }): Promise<void> {
-  await channels.clearLastHashesForConvoId(cleanData(data));
+async function clearLastHashesForConvoId(conversationId: string): Promise<void> {
+  await channels.clearLastHashesForConvoId(conversationId);
+}
+
+async function emptySeenMessageHashesForConversation(conversationId: string): Promise<void> {
+  await channels.emptySeenMessageHashesForConversation(conversationId);
 }
 
 async function updateLastHash(data: UpdateLastHashType): Promise<void> {
@@ -867,6 +867,7 @@ export const Data = {
   cleanLastHashes,
   clearLastHashesForConvoId,
   saveSeenMessageHashes,
+  emptySeenMessageHashesForConversation,
   updateLastHash,
   saveMessage,
   saveMessages,

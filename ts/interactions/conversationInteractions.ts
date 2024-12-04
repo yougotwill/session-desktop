@@ -242,6 +242,7 @@ export async function declineConversationWithoutConfirm({
       forceDestroyForAllMembers: false,
       fromSyncMessage: false,
       sendLeaveMessage: false,
+      clearFetchedHashes: false,
     });
   }
 
@@ -435,6 +436,7 @@ async function leaveGroupOrCommunityByConvoId({
         deleteAllMessagesOnSwarm: false,
         deletionType: 'doNotKeep',
         forceDestroyForAllMembers: false,
+        clearFetchedHashes: true,
       });
     }
     await clearConversationInteractionState({ conversationId });
