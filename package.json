@@ -221,6 +221,12 @@
       },
       "mmdb/GeoLite2-Country.mmdb"
     ],
+    "publish": {
+      "provider": "github",
+      "repo": "session-desktop",
+      "owner": "oxen-io",
+      "releaseType": "release"
+    },
     "mac": {
       "category": "public.app-category.social-networking",
       "icon": "build/icon-mac.icns",
