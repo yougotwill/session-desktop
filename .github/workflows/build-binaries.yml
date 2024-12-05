@@ -121,10 +121,10 @@ jobs:
     runs-on: macos-13
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      MAC_CERTIFICATE: ${{ secrets.MAC_CERTIFICATE }}
-      MAC_CERTIFICATE_PASSWORD: ${{ secrets.MAC_CERTIFICATE_PASSWORD }}
-      SIGNING_APPLE_ID: ${{ secrets.SIGNING_APPLE_ID }}
-      SIGNING_APP_PASSWORD: ${{ secrets.SIGNING_APP_PASSWORD }}
+      MAC_CERTIFICATE: ${{ secrets.MAC_CERTIFICATE_2 }}
+      MAC_CERTIFICATE_PASSWORD: ${{ secrets.MAC_CERTIFICATE_PASSWORD_2 }}
+      SIGNING_APPLE_ID: ${{ secrets.SIGNING_APPLE_ID_2 }}
+      SIGNING_APP_PASSWORD: ${{ secrets.SIGNING_APP_PASSWORD_2 }}
       SIGNING_TEAM_ID: ${{ secrets.SIGNING_TEAM_ID }}
     steps:
       - run: git config --global core.autocrlf false
