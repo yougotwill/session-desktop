@@ -40,7 +40,7 @@ async function makeGroupMessageSubRequest(
 
   const messagesToEncrypt: Array<StoreGroupExtraData> = compactedMessages.map(updateMessage => {
     const wrapped = MessageWrapper.wrapContentIntoEnvelope(
-      SignalService.Envelope.Type.SESSION_MESSAGE,
+      SignalService.Envelope.Type.CLOSED_GROUP_MESSAGE,
       undefined,
       updateMessage.createAtNetworkTimestamp, // message is signed with this timestamp
       updateMessage.plainTextBuffer()
