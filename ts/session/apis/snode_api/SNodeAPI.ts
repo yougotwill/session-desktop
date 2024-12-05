@@ -33,20 +33,21 @@ const forceNetworkDeletion = async (): Promise<Array<string> | null> => {
           window?.log?.warn('forceNetworkDeletion: we are offline.');
           return null;
         }
-        const snodeToMakeRequestTo = await SnodePool.getNodeFromSwarmOrThrow(usPk);
+        const targetNode = await SnodePool.getNodeFromSwarmOrThrow(usPk);
         const builtRequest = await request.build();
-        const ret = await BatchRequests.doSnodeBatchRequestNoRetries(
-          [builtRequest],
-          snodeToMakeRequestTo,
-          10000,
-          usPk,
-          false
-        );
+        const ret = await BatchRequests.doSnodeBatchRequestNoRetries({
+          subRequests: [builtRequest],
+          targetNode,
+          timeoutMs: 10 * DURATION.SECONDS,
+          associatedWith: usPk,
+          allow401s: false,
+          method: 'batch',
+        });
 
         if (!ret || !ret?.[0].body || ret[0].code !== 200) {
           throw new Error(
             `Empty response got for ${request.method} on snode ${ed25519Str(
-              snodeToMakeRequestTo.pubkey_ed25519
+              targetNode.pubkey_ed25519
             )}`
           );
         }
@@ -58,7 +59,7 @@ const forceNetworkDeletion = async (): Promise<Array<string> | null> => {
           if (!swarm) {
             throw new Error(
               `Invalid JSON swarm response got for ${request.method} on snode ${ed25519Str(
-                snodeToMakeRequestTo.pubkey_ed25519
+                targetNode.pubkey_ed25519
               )}, ${firstResultParsedBody}`
             );
           }
@@ -66,7 +67,7 @@ const forceNetworkDeletion = async (): Promise<Array<string> | null> => {
           if (!swarmAsArray.length) {
             throw new Error(
               `Invalid JSON swarmAsArray response got for ${request.method} on snode ${ed25519Str(
-                snodeToMakeRequestTo.pubkey_ed25519
+                targetNode.pubkey_ed25519
               )}, ${firstResultParsedBody}`
             );
           }
@@ -84,7 +85,7 @@ const forceNetworkDeletion = async (): Promise<Array<string> | null> => {
                 if (reason && statusCode) {
                   window?.log?.warn(
                     `Could not ${request.method} from ${ed25519Str(
-                      snodeToMakeRequestTo.pubkey_ed25519
+                      targetNode.pubkey_ed25519
                     )} due to error: ${reason}: ${statusCode}`
                   );
                   // if we tried to make the delete on a snode not in our swarm, just trigger a pRetry error so the outer block here finds new snodes to make the request to.
@@ -95,9 +96,7 @@ const forceNetworkDeletion = async (): Promise<Array<string> | null> => {
                   }
                 } else {
                   window?.log?.warn(
-                    `Could not ${request.method} from ${ed25519Str(
-                      snodeToMakeRequestTo.pubkey_ed25519
-                    )}`
+                    `Could not ${request.method} from ${ed25519Str(targetNode.pubkey_ed25519)}`
                   );
                 }
                 return snodePubkey;
@@ -133,7 +132,7 @@ const forceNetworkDeletion = async (): Promise<Array<string> | null> => {
         } catch (e) {
           throw new Error(
             `Invalid JSON response got for ${request.method} on snode ${ed25519Str(
-              snodeToMakeRequestTo.pubkey_ed25519
+              targetNode.pubkey_ed25519
             )}, ${ret}`
           );
         }
@@ -183,19 +182,19 @@ const networkDeleteMessageOurSwarm = async (
   try {
     const success = await pRetry(
       async () => {
-        const snodeToMakeRequestTo = await SnodePool.getNodeFromSwarmOrThrow(request.destination);
+        const targetNode = await SnodePool.getNodeFromSwarmOrThrow(request.destination);
 
         const controller = new AbortController();
         const ret = await timeoutWithAbort(
-          BatchRequests.doUnsignedSnodeBatchRequestNoRetries(
-            [request],
-            snodeToMakeRequestTo,
-            10 * DURATION.SECONDS,
-            request.destination,
-            false,
-            'batch',
-            controller.signal
-          ),
+          BatchRequests.doUnsignedSnodeBatchRequestNoRetries({
+            unsignedSubRequests: [request],
+            targetNode,
+            timeoutMs: 10 * DURATION.SECONDS,
+            associatedWith: request.destination,
+            allow401s: false,
+            method: 'batch',
+            abortSignal: controller.signal,
+          }),
           30 * DURATION.SECONDS,
           controller
         );
@@ -203,7 +202,7 @@ const networkDeleteMessageOurSwarm = async (
         if (!ret || !ret?.[0].body || ret[0].code !== 200) {
           throw new Error(
             `networkDeleteMessageOurSwarm: Empty response got for ${request.method} on snode ${ed25519Str(
-              snodeToMakeRequestTo.pubkey_ed25519
+              targetNode.pubkey_ed25519
             )} about pk: ${ed25519Str(request.destination)}`
           );
         }
@@ -215,7 +214,7 @@ const networkDeleteMessageOurSwarm = async (
           if (!swarm) {
             throw new Error(
               `networkDeleteMessageOurSwarm: Invalid JSON swarm response got for ${request.method} on snode ${ed25519Str(
-                snodeToMakeRequestTo.pubkey_ed25519
+                targetNode.pubkey_ed25519
               )}, ${firstResultParsedBody}`
             );
           }
@@ -223,7 +222,7 @@ const networkDeleteMessageOurSwarm = async (
           if (!swarmAsArray.length) {
             throw new Error(
               `networkDeleteMessageOurSwarm: Invalid JSON swarmAsArray response got for ${request.method} on snode ${ed25519Str(
-                snodeToMakeRequestTo.pubkey_ed25519
+                targetNode.pubkey_ed25519
               )}, ${firstResultParsedBody}`
             );
           }
@@ -241,13 +240,13 @@ const networkDeleteMessageOurSwarm = async (
                 if (reason && statusCode) {
                   window?.log?.warn(
                     `networkDeleteMessageOurSwarm: Could not ${request.method} from ${ed25519Str(
-                      snodeToMakeRequestTo.pubkey_ed25519
+                      targetNode.pubkey_ed25519
                     )} due to error: ${reason}: ${statusCode}`
                   );
                 } else {
                   window?.log?.warn(
                     `networkDeleteMessageOurSwarm: Could not ${request.method} from ${ed25519Str(
-                      snodeToMakeRequestTo.pubkey_ed25519
+                      targetNode.pubkey_ed25519
                     )}`
                   );
                 }
@@ -277,7 +276,7 @@ const networkDeleteMessageOurSwarm = async (
         } catch (e) {
           throw new Error(
             `networkDeleteMessageOurSwarm: Invalid JSON response got for ${request.method} on snode ${ed25519Str(
-              snodeToMakeRequestTo.pubkey_ed25519
+              targetNode.pubkey_ed25519
             )}, ${ret}`
           );
         }
@@ -339,18 +338,18 @@ const networkDeleteMessagesForGroup = async (
 
     await pRetry(
       async () => {
-        const snodeToMakeRequestTo = await SnodePool.getNodeFromSwarmOrThrow(request.destination);
+        const targetNode = await SnodePool.getNodeFromSwarmOrThrow(request.destination);
         const controller = new AbortController();
         const ret = await timeoutWithAbort(
-          BatchRequests.doUnsignedSnodeBatchRequestNoRetries(
-            [request],
-            snodeToMakeRequestTo,
-            10 * DURATION.SECONDS,
-            request.destination,
-            false,
-            'batch',
-            controller.signal
-          ),
+          BatchRequests.doUnsignedSnodeBatchRequestNoRetries({
+            unsignedSubRequests: [request],
+            targetNode,
+            timeoutMs: 10 * DURATION.SECONDS,
+            associatedWith: request.destination,
+            allow401s: false,
+            method: 'batch',
+            abortSignal: controller.signal,
+          }),
           30 * DURATION.SECONDS,
           controller
         );
@@ -358,7 +357,7 @@ const networkDeleteMessagesForGroup = async (
         if (!ret || !ret?.[0].body || ret[0].code !== 200) {
           throw new Error(
             `networkDeleteMessagesForGroup: Empty response got for ${request.method} on snode ${ed25519Str(
-              snodeToMakeRequestTo.pubkey_ed25519
+              targetNode.pubkey_ed25519
             )} about pk: ${ed25519Str(request.destination)}`
           );
         }

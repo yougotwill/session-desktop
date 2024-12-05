@@ -47,15 +47,15 @@ async function getExpiriesFromNodesNoRetries(
 ) {
   try {
     const expireRequest = new GetExpiriesFromNodeSubRequest({ messagesHashes: messageHashes });
-    const result = await BatchRequests.doUnsignedSnodeBatchRequestNoRetries(
-      [expireRequest],
+    const result = await BatchRequests.doUnsignedSnodeBatchRequestNoRetries({
+      unsignedSubRequests: [expireRequest],
       targetNode,
-      10 * DURATION.SECONDS,
+      timeoutMs: 10 * DURATION.SECONDS,
       associatedWith,
-      false,
-      'batch',
-      null
-    );
+      allow401s: false,
+      method: 'batch',
+      abortSignal: null,
+    });
 
     if (!result || result.length !== 1) {
       throw Error(

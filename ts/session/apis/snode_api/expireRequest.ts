@@ -146,15 +146,15 @@ async function updateExpiryOnNodesNoRetries(
   expireRequests: Array<UpdateExpiryOnNodeUserSubRequest>
 ): Promise<Array<UpdatedExpiryWithHash>> {
   try {
-    const result = await BatchRequests.doUnsignedSnodeBatchRequestNoRetries(
-      expireRequests,
+    const result = await BatchRequests.doUnsignedSnodeBatchRequestNoRetries({
+      unsignedSubRequests: expireRequests,
       targetNode,
-      10 * DURATION.SECONDS,
-      ourPubKey,
-      false,
-      'batch',
-      null
-    );
+      timeoutMs: 10 * DURATION.SECONDS,
+      associatedWith: ourPubKey,
+      allow401s: false,
+      method: 'batch',
+      abortSignal: null,
+    });
 
     if (!result || result.length !== expireRequests.length) {
       window.log.error(
@@ -381,7 +381,7 @@ export async function expireMessagesOnSnode(
     // TODO after the next storage server fork we will get a new endpoint allowing to batch
     // update expiries even when they are * not * the same for all the message hashes.
     // But currently we can't access it that endpoint, so we need to keep this hacky way for now.
-    // groupby expiries ( expireTimer+ readAt), then batch them with a limit of MAX_SUBREQUESTS_COUNT batch calls per batch requests, then do those in parralel, for now.
+    // group by expiries ( expireTimer+ readAt), then batch them with a limit of MAX_SUBREQUESTS_COUNT batch calls per batch requests, then do those in parallel, for now.
     const expireRequestsParams = await Promise.all(
       chunkedExpiries.map(chk =>
         getBatchExpiryChunk({

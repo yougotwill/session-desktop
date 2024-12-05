@@ -221,7 +221,7 @@ export const NoMessageInConversation = () => {
   const isPublic = useSelectedIsPublic();
 
   const getHtmlToRender = () => {
-    // First, handle the "oteToSelf and various "private" cases
+    // First, handle the "noteToSelf and various "private" cases
     if (isMe) {
       return localize('noteToSelfEmpty').toString();
     }
@@ -229,7 +229,7 @@ export const NoMessageInConversation = () => {
       return localize('messageRequestsTurnedOff').withArgs({ name }).toString();
     }
     if (isPrivate) {
-      // "You have no messages in X, send a message to start a conversation."
+      // "You have no messages from X. Send a message to start the conversation!"
       return localize('groupNoMessages').withArgs({ group_name: name }).toString();
     }
 
@@ -247,6 +247,7 @@ export const NoMessageInConversation = () => {
         return localize('groupRemovedYou').withArgs({ group_name: name }).toString();
       }
       if (canWrite) {
+        // "You have no messages from X. Send a message to start the conversation!"
         return localize('groupNoMessages').withArgs({ group_name: name }).toString();
       }
       // if we cannot write for some reason, don't show the "send a message" part

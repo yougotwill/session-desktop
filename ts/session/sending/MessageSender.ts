@@ -289,15 +289,15 @@ async function sendSingleMessage({
 
       const targetNode = await SnodePool.getNodeFromSwarmOrThrow(destination);
 
-      const batchResult = await BatchRequests.doUnsignedSnodeBatchRequestNoRetries(
-        subRequests,
+      const batchResult = await BatchRequests.doUnsignedSnodeBatchRequestNoRetries({
+        unsignedSubRequests: subRequests,
         targetNode,
-        10 * DURATION.SECONDS,
-        destination,
-        false,
-        'sequence',
-        null
-      );
+        timeoutMs: 10 * DURATION.SECONDS,
+        associatedWith: destination,
+        allow401s: false,
+        method: 'sequence',
+        abortSignal: null,
+      });
 
       await handleBatchResultWithSubRequests({ batchResult, subRequests, destination });
       return {
@@ -441,15 +441,15 @@ async function sendMessagesDataToSnode<T extends PubkeyType | GroupPubkeyType>({
   const targetNode = await SnodePool.getNodeFromSwarmOrThrow(associatedWith);
 
   try {
-    const responses = await BatchRequests.doUnsignedSnodeBatchRequestNoRetries(
-      sortedSubRequests,
+    const responses = await BatchRequests.doUnsignedSnodeBatchRequestNoRetries({
+      unsignedSubRequests: sortedSubRequests,
       targetNode,
-      6000,
+      timeoutMs: 6 * DURATION.SECONDS,
       associatedWith,
-      false,
+      allow401s: false,
       method,
-      abortSignal
-    );
+      abortSignal,
+    });
 
     if (!responses || !responses.length) {
       window?.log?.warn(

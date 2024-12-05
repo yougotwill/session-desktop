@@ -20,19 +20,19 @@ async function requestSnodesForPubkeyWithTargetNodeRetryable(
   }
   const subRequest = new SwarmForSubRequest(pubkey);
 
-  const result = await BatchRequests.doUnsignedSnodeBatchRequestNoRetries(
-    [subRequest],
+  const result = await BatchRequests.doUnsignedSnodeBatchRequestNoRetries({
+    unsignedSubRequests: [subRequest],
     targetNode,
-    10 * DURATION.SECONDS,
-    pubkey,
-    false,
-    'batch',
-    null
-  );
+    timeoutMs: 10 * DURATION.SECONDS,
+    associatedWith: pubkey,
+    allow401s: false,
+    method: 'batch',
+    abortSignal: null,
+  });
 
   if (!result || !result.length) {
     window?.log?.warn(
-      `SessionSnodeAPI::requestSnodesForPubkeyWithTargetNodeRetryable - sessionRpc on ${targetNode.ip}:${targetNode.port} returned falsish value`,
+      `SessionSnodeAPI::requestSnodesForPubkeyWithTargetNodeRetryable - sessionRpc on ${targetNode.ip}:${targetNode.port} returned falsy value`,
       result
     );
     throw new Error('requestSnodesForPubkeyWithTargetNodeRetryable: Invalid result');
@@ -49,7 +49,7 @@ async function requestSnodesForPubkeyWithTargetNodeRetryable(
     const body = firstResult.body;
     if (!body.snodes || !isArray(body.snodes) || !body.snodes.length) {
       window?.log?.warn(
-        `SessionSnodeAPI::requestSnodesForPubkeyRetryable - sessionRpc on ${targetNode.ip}:${targetNode.port} returned falsish value for snodes`,
+        `SessionSnodeAPI::requestSnodesForPubkeyRetryable - sessionRpc on ${targetNode.ip}:${targetNode.port} returned falsy value for snodes`,
         result
       );
       throw new Error('requestSnodesForPubkey: Invalid json (empty)');
@@ -117,7 +117,7 @@ async function requestSnodesForPubkeyRetryable(pubKey: string): Promise<Array<Sn
 export async function requestSnodesForPubkeyFromNetwork(pubKey: string): Promise<Array<Snode>> {
   try {
     // catch exception in here only.
-    // the idea is that the pretry will retry a few times each calls, except if an AbortError is thrown.
+    // the idea is that the p-retry will retry a few times each calls, except if an AbortError is thrown.
 
     // if all retry fails, we will end up in the catch below when the last exception thrown
     return await requestSnodesForPubkeyRetryable(pubKey);

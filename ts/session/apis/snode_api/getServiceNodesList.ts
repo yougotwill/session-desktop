@@ -15,15 +15,15 @@ import { DURATION } from '../../constants';
 async function getSnodePoolFromSnode(targetNode: Snode): Promise<Array<Snode>> {
   const subRequest = new GetServiceNodesSubRequest();
 
-  const results = await BatchRequests.doUnsignedSnodeBatchRequestNoRetries(
-    [subRequest],
+  const results = await BatchRequests.doUnsignedSnodeBatchRequestNoRetries({
+    unsignedSubRequests: [subRequest],
     targetNode,
-    10 * DURATION.SECONDS,
-    null,
-    false,
-    'batch',
-    null
-  );
+    timeoutMs: 10 * DURATION.SECONDS,
+    associatedWith: null,
+    allow401s: false,
+    method: 'batch',
+    abortSignal: null,
+  });
 
   const firstResult = results[0];
 

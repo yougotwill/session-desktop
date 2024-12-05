@@ -1295,6 +1295,7 @@ type StoreOnNodeSubAccountParams = Pick<
 type StoreOnNodeParams = StoreOnNodeNormalParams | StoreOnNodeSubAccountParams;
 
 export type MethodBatchType = 'batch' | 'sequence';
+export type WithMethodBatchType = { method: MethodBatchType };
 
 export type RawSnodeSubRequests =
   | RetrieveLegacyClosedGroupSubRequest

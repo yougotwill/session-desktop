@@ -10,15 +10,19 @@ import {
   builtRequestToLoggingId,
   BuiltSnodeSubRequests,
   MAX_SUBREQUESTS_COUNT,
-  MethodBatchType,
   NotEmptyArrayOfBatchResults,
   RawSnodeSubRequests,
+  WithMethodBatchType,
 } from './SnodeRequestTypes';
-import { MergedAbortSignal } from './requestWith';
+import { MergedAbortSignal, WithTimeoutMs } from './requestWith';
 
 function logSubRequests(requests: Array<BuiltSnodeSubRequests>) {
   return `[${requests.map(builtRequestToLoggingId).join(', ')}]`;
 }
+
+type WithTargetNode = { targetNode: Snode };
+type WithAssociatedWith = { associatedWith: string | null };
+type WithAllow401s = { allow401s: boolean };
 
 /**
  * This is the equivalent to the batch send on sogs. The target node runs each sub request and returns a list of all the sub status and bodies.
@@ -32,15 +36,22 @@ function logSubRequests(requests: Array<BuiltSnodeSubRequests>) {
  * @param associatedWith used mostly for handling 421 errors, we need the pubkey the change is associated to
  * @param method can be either batch or sequence. A batch call will run all calls even if one of them fails. A sequence call will stop as soon as the first one fails
  */
-async function doSnodeBatchRequestNoRetries(
-  subRequests: Array<BuiltSnodeSubRequests>,
-  targetNode: Snode,
-  timeoutMs: number,
-  associatedWith: string | null,
-  allow401s: boolean,
-  abortSignal?: MergedAbortSignal,
-  method: MethodBatchType = 'batch'
-): Promise<NotEmptyArrayOfBatchResults> {
+async function doSnodeBatchRequestNoRetries({
+  allow401s,
+  associatedWith,
+  method,
+  subRequests,
+  targetNode,
+  timeoutMs,
+  abortSignal,
+}: WithTargetNode &
+  WithTimeoutMs &
+  WithAssociatedWith &
+  WithAllow401s &
+  WithMethodBatchType & {
+    subRequests: Array<BuiltSnodeSubRequests>;
+    abortSignal?: MergedAbortSignal;
+  }): Promise<NotEmptyArrayOfBatchResults> {
   window.log.debug(
     `doSnodeBatchRequestNoRetries "${method}":`,
     JSON.stringify(logSubRequests(subRequests))
@@ -102,27 +113,35 @@ async function doSnodeBatchRequestNoRetries(
  * @param timeoutMs the max timeout to wait for a reply
  * @param associatedWith the pubkey associated with this request (used to remove snode failing to reply from that users' swarm)
  * @param method the type of request to make batch or sequence
- * @returns
+ * @param allow401 on very specific use case, we need to allow 401 (Group kicked event)
+ * @param abortSignal the signal used to know when we should abort the request
  */
-async function doUnsignedSnodeBatchRequestNoRetries(
-  unsignedSubRequests: Array<RawSnodeSubRequests>,
-  targetNode: Snode,
-  timeoutMs: number,
-  associatedWith: string | null,
-  allow401s: boolean,
-  method: MethodBatchType = 'batch',
-  abortSignal: MergedAbortSignal | null
-): Promise<NotEmptyArrayOfBatchResults> {
+async function doUnsignedSnodeBatchRequestNoRetries({
+  unsignedSubRequests,
+  targetNode,
+  timeoutMs,
+  associatedWith,
+  method,
+  allow401s,
+  abortSignal,
+}: WithTargetNode &
+  WithTimeoutMs &
+  WithAssociatedWith &
+  WithAllow401s &
+  WithMethodBatchType & {
+    unsignedSubRequests: Array<RawSnodeSubRequests>;
+    abortSignal: MergedAbortSignal | null;
+  }): Promise<NotEmptyArrayOfBatchResults> {
   const signedSubRequests = await MessageSender.signSubRequests(unsignedSubRequests);
-  return BatchRequests.doSnodeBatchRequestNoRetries(
-    signedSubRequests,
+  return BatchRequests.doSnodeBatchRequestNoRetries({
+    subRequests: signedSubRequests,
     targetNode,
     timeoutMs,
     associatedWith,
     allow401s,
-    abortSignal || undefined,
-    method
-  );
+    abortSignal: abortSignal || undefined,
+    method,
+  });
 }
 
 /**

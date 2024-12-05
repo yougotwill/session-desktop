@@ -226,16 +226,16 @@ async function retrieveNextMessagesNoRetries(
   // no retry for this one as this a call we do every few seconds while polling for messages
 
   // just to make sure that we don't hang for more than timeOutMs
-  const results = await BatchRequests.doUnsignedSnodeBatchRequestNoRetries(
-    rawRequests,
+  const results = await BatchRequests.doUnsignedSnodeBatchRequestNoRetries({
+    unsignedSubRequests: rawRequests,
     targetNode,
     // yes this is a long timeout for just messages, but 4s timeouts way to often...
-    10 * DURATION.SECONDS,
+    timeoutMs: 10 * DURATION.SECONDS,
     associatedWith,
     allow401s,
-    'batch',
-    null
-  );
+    method: 'batch',
+    abortSignal: null,
+  });
   try {
     if (!results || !isArray(results) || !results.length) {
       window?.log?.warn(
