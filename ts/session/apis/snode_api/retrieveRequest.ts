@@ -7,7 +7,6 @@ import { SnodeNamespace, SnodeNamespaces, SnodeNamespacesGroup } from './namespa
 import { UserGroupsWrapperActions } from '../../../webworker/workers/browser/libsession_worker_interface';
 import { PubKey } from '../../types';
 import { DURATION, TTL_DEFAULT } from '../../constants';
-import { sleepFor } from '../../utils/Promise';
 import { SnodeResponseError } from '../../utils/errors';
 import {
   RetrieveGroupSubRequest,
@@ -225,19 +224,18 @@ async function retrieveNextMessagesNoRetries(
 
   // let exceptions bubble up
   // no retry for this one as this a call we do every few seconds while polling for messages
-  const timeOutMs = 10 * DURATION.SECONDS; // yes this is a long timeout for just messages, but 4s timeouts way to often...
-  const timeoutPromise = async () => sleepFor(timeOutMs);
-  const fetchPromise = async () =>
-    BatchRequests.doUnsignedSnodeBatchRequestNoRetries(
-      rawRequests,
-      targetNode,
-      timeOutMs,
-      associatedWith,
-      allow401s
-    );
 
   // just to make sure that we don't hang for more than timeOutMs
-  const results = await Promise.race([timeoutPromise(), fetchPromise()]);
+  const results = await BatchRequests.doUnsignedSnodeBatchRequestNoRetries({
+    unsignedSubRequests: rawRequests,
+    targetNode,
+    // yes this is a long timeout for just messages, but 4s timeouts way to often...
+    timeoutMs: 10 * DURATION.SECONDS,
+    associatedWith,
+    allow401s,
+    method: 'batch',
+    abortSignal: null,
+  });
   try {
     if (!results || !isArray(results) || !results.length) {
       window?.log?.warn(

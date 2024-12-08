@@ -319,3 +319,5 @@ export function stringify(obj: unknown) {
     2
   );
 }
+
+export type SaveSeenMessageHash = { expiresAt: number; hash: string; conversationId: string };

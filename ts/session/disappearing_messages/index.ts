@@ -56,7 +56,11 @@ export async function destroyMessagesAndUpdateRedux(
     window.log.error('destroyMessages: removeMessagesByIds failed', e && e.message ? e.message : e);
   }
   // trigger a redux update if needed for all those messages
-  window.inboxStore?.dispatch(messagesExpired(messages));
+  window.inboxStore?.dispatch(
+    messagesExpired(
+      messages.map(m => ({ conversationId: m.conversationKey, messageId: m.messageId }))
+    )
+  );
 
   // trigger a refresh the last message for all those uniq conversation
   conversationWithChanges.forEach(convoIdToUpdate => {

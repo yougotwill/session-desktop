@@ -141,10 +141,13 @@ describe('GroupSyncJob resultsToSuccessfulChange', () => {
     ).to.be.deep.eq([]);
 
     expect(
-      LibSessionUtil.batchResultsToGroupSuccessfulChange([] as any as NotEmptyArrayOfBatchResults, {
-        allOldHashes: new Set(),
-        messages: [],
-      })
+      LibSessionUtil.batchResultsToGroupSuccessfulChange(
+        [] as unknown as NotEmptyArrayOfBatchResults,
+        {
+          allOldHashes: new Set(),
+          messages: [],
+        }
+      )
     ).to.be.deep.eq([]);
   });
 

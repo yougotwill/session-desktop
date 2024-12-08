@@ -46,7 +46,7 @@ function useIsExpired(
         dispatch(
           messagesExpired([
             {
-              conversationKey: convoId,
+              conversationId: convoId,
               messageId,
             },
           ])

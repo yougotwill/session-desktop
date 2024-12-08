@@ -133,11 +133,11 @@ describe('MessageSender', () => {
     });
 
     describe('logic', () => {
-      let messageEncyrptReturnEnvelopeType = SignalService.Envelope.Type.SESSION_MESSAGE;
+      let messageEncryptReturnEnvelopeType = SignalService.Envelope.Type.SESSION_MESSAGE;
 
       beforeEach(() => {
         encryptStub.callsFake(async (_device, plainTextBuffer, _type) => ({
-          envelopeType: messageEncyrptReturnEnvelopeType,
+          envelopeType: messageEncryptReturnEnvelopeType,
           cipherText: plainTextBuffer,
         }));
       });
@@ -164,26 +164,28 @@ describe('MessageSender', () => {
 
         const args = doSnodeBatchRequestStub.getCall(0).args;
 
-        expect(args[3]).to.equal(device.key);
+        expect(args[0].associatedWith).to.equal(device.key);
         const firstArg = args[0];
-        expect(firstArg.length).to.equal(1);
+        expect(firstArg.subRequests.length).to.equal(1);
 
-        if (firstArg[0].method !== 'store') {
+        const firstSubRequest = firstArg.subRequests[0];
+
+        if (firstSubRequest.method !== 'store') {
           throw new Error('expected a store request with data');
         }
 
         // expect(args[3]).to.equal(visibleMessage.timestamp); the timestamp is overwritten on sending by the network clock offset
-        expect(firstArg[0].params.ttl).to.equal(visibleMessage.ttl());
-        expect(firstArg[0].params.pubkey).to.equal(device.key);
-        expect(firstArg[0].params.namespace).to.equal(SnodeNamespaces.Default);
+        expect(firstSubRequest.params.ttl).to.equal(visibleMessage.ttl());
+        expect(firstSubRequest.params.pubkey).to.equal(device.key);
+        expect(firstSubRequest.params.namespace).to.equal(SnodeNamespaces.Default);
         // the request timestamp is always used fresh with the offset as the request will be denied with a 406 otherwise (clock out of sync)
-        expect(firstArg[0].params.timestamp).to.be.above(Date.now() - 10);
-        expect(firstArg[0].params.timestamp).to.be.below(Date.now() + 10);
+        expect(firstSubRequest.params.timestamp).to.be.above(Date.now() - 10);
+        expect(firstSubRequest.params.timestamp).to.be.below(Date.now() + 10);
       });
 
       it('should correctly build the envelope and override the request timestamp but not the msg one', async () => {
         TestUtils.setupTestWithSending();
-        messageEncyrptReturnEnvelopeType = SignalService.Envelope.Type.SESSION_MESSAGE;
+        messageEncryptReturnEnvelopeType = SignalService.Envelope.Type.SESSION_MESSAGE;
 
         // This test assumes the encryption stub returns the plainText passed into it.
         const device = TestUtils.generateFakePubKey();
@@ -204,11 +206,12 @@ describe('MessageSender', () => {
         });
 
         const firstArg = doSnodeBatchRequestStub.getCall(0).args[0];
+        const firstSubRequest = firstArg.subRequests[0];
 
-        if (firstArg[0].method !== 'store') {
+        if (firstSubRequest.method !== 'store') {
           throw new Error('expected a store request with data');
         }
-        const data = fromBase64ToArrayBuffer(firstArg[0].params.data);
+        const data = fromBase64ToArrayBuffer(firstSubRequest.params.data);
         const webSocketMessage = SignalService.WebSocketMessage.decode(new Uint8Array(data));
         expect(webSocketMessage.request?.body).to.not.equal(
           undefined,
@@ -226,7 +229,7 @@ describe('MessageSender', () => {
         expect(envelope.source).to.equal('');
 
         // the timestamp in the message is not overridden on sending as it should be set with the network offset when created.
-        // we need that timestamp to not be overriden as the signature of the message depends on it.
+        // we need that timestamp to not be overridden as the signature of the message depends on it.
         const decodedTimestampFromSending = _.toNumber(envelope.timestamp);
         expect(decodedTimestampFromSending).to.be.eq(visibleMessage.createAtNetworkTimestamp);
 
@@ -236,7 +239,7 @@ describe('MessageSender', () => {
       describe('SESSION_MESSAGE', () => {
         it('should set the envelope source to be empty', async () => {
           TestUtils.setupTestWithSending();
-          messageEncyrptReturnEnvelopeType = SignalService.Envelope.Type.SESSION_MESSAGE;
+          messageEncryptReturnEnvelopeType = SignalService.Envelope.Type.SESSION_MESSAGE;
           Sinon.stub(ConvoHub.use(), 'get').returns(undefined as any);
 
           // This test assumes the encryption stub returns the plainText passed into it.
@@ -255,11 +258,12 @@ describe('MessageSender', () => {
           });
 
           const firstArg = doSnodeBatchRequestStub.getCall(0).args[0];
+          const firstSubRequest = firstArg.subRequests[0];
 
-          if (firstArg[0].method !== 'store') {
+          if (firstSubRequest.method !== 'store') {
             throw new Error('expected a store request with data');
           }
-          const data = fromBase64ToArrayBuffer(firstArg[0].params.data);
+          const data = fromBase64ToArrayBuffer(firstSubRequest.params.data);
           const webSocketMessage = SignalService.WebSocketMessage.decode(new Uint8Array(data));
           expect(webSocketMessage.request?.body).to.not.equal(
             undefined,
@@ -343,17 +347,17 @@ describe('MessageSender', () => {
 
       Sinon.stub(OnionSending, 'getMinTimeoutForSogs').returns(5);
 
-      const decodev4responseStub = Sinon.stub(OnionV4, 'decodeV4Response');
-      decodev4responseStub.throws('whate');
+      const decodeV4responseStub = Sinon.stub(OnionV4, 'decodeV4Response');
+      decodeV4responseStub.throws('whatever');
 
-      decodev4responseStub.onThirdCall().returns({
+      decodeV4responseStub.onThirdCall().returns({
         metadata: { code: 200 },
         body: {},
         bodyBinary: new Uint8Array(),
         bodyContentType: 'a',
       });
       await MessageSender.sendToOpenGroupV2(message, roomInfos, false, []);
-      expect(decodev4responseStub.callCount).to.eq(3);
+      expect(decodeV4responseStub.callCount).to.eq(3);
     });
 
     it('should not retry more than 3 sendOnionRequestHandlingSnodeEjectStub ', async () => {
@@ -362,10 +366,10 @@ describe('MessageSender', () => {
       Sinon.stub(Onions, 'sendOnionRequestHandlingSnodeEjectNoRetries').resolves({} as any);
       Sinon.stub(OnionSending, 'getMinTimeoutForSogs').returns(5);
 
-      const decodev4responseStub = Sinon.stub(OnionV4, 'decodeV4Response');
-      decodev4responseStub.throws('whate');
+      const decodeV4responseStub = Sinon.stub(OnionV4, 'decodeV4Response');
+      decodeV4responseStub.throws('whatever');
 
-      decodev4responseStub.onCall(4).returns({
+      decodeV4responseStub.onCall(4).returns({
         metadata: { code: 200 },
         body: {},
         bodyBinary: new Uint8Array(),
@@ -375,7 +379,7 @@ describe('MessageSender', () => {
         await MessageSender.sendToOpenGroupV2(message, roomInfos, false, []);
       } catch (e) {}
       // we made the fourth call success, but we should not get there. We should stop at 3 the retries (1+2)
-      expect(decodev4responseStub.calledThrice);
+      expect(decodeV4responseStub.calledThrice);
     });
   });
 });

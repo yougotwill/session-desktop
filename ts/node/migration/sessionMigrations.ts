@@ -19,6 +19,7 @@ import {
   MESSAGES_TABLE,
   NODES_FOR_PUBKEY_TABLE,
   OPEN_GROUP_ROOMS_V2_TABLE,
+  SEEN_MESSAGE_TABLE,
   dropFtsAndTriggers,
   objectToJSON,
   rebuildFtsTable,
@@ -106,6 +107,7 @@ const LOKI_SCHEMA_VERSIONS = [
   updateToSessionSchemaVersion36,
   updateToSessionSchemaVersion37,
   updateToSessionSchemaVersion38,
+  updateToSessionSchemaVersion39,
 ];
 
 function updateToSessionSchemaVersion1(currentVersion: number, db: BetterSqlite3.Database) {
@@ -1995,6 +1997,26 @@ function updateToSessionSchemaVersion38(currentVersion: number, db: BetterSqlite
     db.exec(`CREATE INDEX messages_t_messageHash_author_convoId ON ${MESSAGES_TABLE} (
       messageHash,
       source,
+      conversationId
+    );`);
+    writeSessionSchemaVersion(targetVersion, db);
+  })();
+
+  console.log(`updateToSessionSchemaVersion${targetVersion}: success!`);
+}
+
+function updateToSessionSchemaVersion39(currentVersion: number, db: BetterSqlite3.Database) {
+  const targetVersion = 39;
+  if (currentVersion >= targetVersion) {
+    return;
+  }
+
+  console.log(`updateToSessionSchemaVersion${targetVersion}: starting...`);
+
+  db.transaction(() => {
+    db.exec(`ALTER TABLE ${SEEN_MESSAGE_TABLE} ADD COLUMN conversationId TEXT;`);
+
+    db.exec(`CREATE INDEX seen_hashes_per_pubkey ON ${SEEN_MESSAGE_TABLE} (
       conversationId
     );`);
     writeSessionSchemaVersion(targetVersion, db);

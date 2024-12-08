@@ -2,6 +2,7 @@
 import { WithGroupPubkey } from 'libsession_util_nodejs';
 import { compact, isEmpty, isNumber } from 'lodash';
 import { v4 } from 'uuid';
+import AbortController from 'abort-controller';
 import { StringUtils } from '../..';
 import { Data } from '../../../../data/data';
 import { deleteMessagesFromSwarmOnly } from '../../../../interactions/conversations/unsendingInteractions';
@@ -37,6 +38,7 @@ import {
 } from '../../../types/with';
 import { groupInfoActions } from '../../../../state/ducks/metaGroups';
 import { DURATION } from '../../../constants';
+import { timeoutWithAbort } from '../../Promise';
 
 const defaultMsBetweenRetries = 10000;
 const defaultMaxAttempts = 1;
@@ -186,11 +188,18 @@ class GroupPendingRemovalsJob extends PersistedJob<GroupPendingRemovalsPersisted
       }
 
       const sortedSubRequests = compact([multiEncryptRequest, ...revokeRequests, ...storeRequests]);
-      const result = await MessageSender.sendEncryptedDataToSnode({
-        sortedSubRequests,
-        destination: groupPk,
-        method: 'sequence',
-      });
+
+      const controller = new AbortController();
+      const result = await timeoutWithAbort(
+        MessageSender.sendEncryptedDataToSnode({
+          sortedSubRequests,
+          destination: groupPk,
+          method: 'sequence',
+          abortSignal: controller.signal,
+        }),
+        30 * DURATION.SECONDS,
+        controller
+      );
 
       if (
         !result ||

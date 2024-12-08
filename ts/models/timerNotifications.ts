@@ -24,7 +24,7 @@ export function getTimerNotificationStr({
   const timespanText = TimerOptions.getName(timespanSeconds || 0);
   const disabled = !timespanSeconds || timespanSeconds <= 0;
 
-  const authorName = ConvoHub.use().getContactProfileNameOrShortenedPubKey(author);
+  const authorName = ConvoHub.use().getNicknameOrRealUsernameOrPlaceholder(author);
 
   // TODO: legacy messages support will be removed in a future release
   if (isLegacyDisappearingModeEnabled(expirationMode)) {

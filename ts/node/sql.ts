@@ -48,6 +48,7 @@ import {
   NODES_FOR_PUBKEY_TABLE,
   objectToJSON,
   OPEN_GROUP_ROOMS_V2_TABLE,
+  SEEN_MESSAGE_TABLE,
   toSqliteBoolean,
 } from './database_utility';
 import type { SetupI18nReturnType } from '../types/localizer'; // checked - only node
@@ -58,6 +59,7 @@ import {
   MsgDuplicateSearchOpenGroup,
   roomHasBlindEnabled,
   SaveConversationReturn,
+  SaveSeenMessageHash,
   UnprocessedDataNode,
   UnprocessedParameter,
   UpdateLastHashType,
@@ -937,10 +939,19 @@ function saveMessage(data: MessageAttributes) {
   return id;
 }
 
-function saveSeenMessageHashes(arrayOfHashes: Array<string>) {
+function saveSeenMessageHashes(arrayOfHashes: Array<SaveSeenMessageHash>) {
   assertGlobalInstance().transaction(() => {
     map(arrayOfHashes, saveSeenMessageHash);
   })();
+}
+
+function emptySeenMessageHashesForConversation(conversationId: string) {
+  if (!isString(conversationId) || isEmpty(conversationId)) {
+    throw new Error('emptySeenMessageHashesForConversation: conversationId is not a string');
+  }
+  assertGlobalInstance()
+    .prepare(`DELETE FROM ${SEEN_MESSAGE_TABLE} WHERE conversationId=$conversationId`)
+    .run({ conversationId });
 }
 
 function updateLastHash(data: UpdateLastHashType) {
@@ -973,22 +984,43 @@ function updateLastHash(data: UpdateLastHashType) {
     });
 }
 
-function saveSeenMessageHash(data: any) {
-  const { expiresAt, hash } = data;
+function clearLastHashesForConvoId(conversationId: string) {
+  if (!isString(conversationId) || isEmpty(conversationId)) {
+    throw new Error('clearLastHashesForConvoId: conversationId is not a string');
+  }
+  assertGlobalInstance()
+    .prepare(`DELETE FROM ${LAST_HASHES_TABLE} WHERE id=$conversationId`)
+    .run({ conversationId });
+}
+
+function saveSeenMessageHash(data: SaveSeenMessageHash) {
+  const { expiresAt, hash, conversationId } = data;
+  if (!isString(conversationId)) {
+    throw new Error('saveSeenMessageHash conversationId must be a string');
+  }
+  if (!isString(hash)) {
+    throw new Error('saveSeenMessageHash hash must be a string');
+  }
+  if (!isNumber(expiresAt)) {
+    throw new Error('saveSeenMessageHash expiresAt must be a number');
+  }
   try {
     assertGlobalInstance()
       .prepare(
-        `INSERT OR REPLACE INTO seenMessages (
+        `INSERT OR REPLACE INTO ${SEEN_MESSAGE_TABLE} (
       expiresAt,
-      hash
+      hash,
+      conversationId
       ) values (
         $expiresAt,
-        $hash
+        $hash,
+        $conversationId
         );`
       )
       .run({
         expiresAt,
         hash,
+        conversationId,
       });
   } catch (e) {
     console.error('saveSeenMessageHash failed:', e.message);
@@ -1002,7 +1034,7 @@ function cleanLastHashes() {
 }
 
 function cleanSeenMessages() {
-  assertGlobalInstance().prepare('DELETE FROM seenMessages WHERE expiresAt <= $now;').run({
+  assertGlobalInstance().prepare(`DELETE FROM ${SEEN_MESSAGE_TABLE} WHERE expiresAt <= $now;`).run({
     now: Date.now(),
   });
 }
@@ -1738,7 +1770,9 @@ function getLastHashBySnode(convoId: string, snode: string, namespace: number) {
 
 function getSeenMessagesByHashList(hashes: Array<string>) {
   const rows = assertGlobalInstance()
-    .prepare(`SELECT * FROM seenMessages WHERE hash IN ( ${hashes.map(() => '?').join(', ')} );`)
+    .prepare(
+      `SELECT * FROM ${SEEN_MESSAGE_TABLE} WHERE hash IN ( ${hashes.map(() => '?').join(', ')} );`
+    )
     .all(hashes);
 
   return map(rows, row => row.hash);
@@ -1998,7 +2032,7 @@ function removeAll() {
     DELETE FROM ${LAST_HASHES_TABLE};
     DELETE FROM ${NODES_FOR_PUBKEY_TABLE};
     DELETE FROM ${CLOSED_GROUP_V2_KEY_PAIRS_TABLE};
-    DELETE FROM seenMessages;
+    DELETE FROM ${SEEN_MESSAGE_TABLE};
     DELETE FROM ${CONVERSATIONS_TABLE};
     DELETE FROM ${MESSAGES_TABLE};
     DELETE FROM ${ATTACHMENT_DOWNLOADS_TABLE};
@@ -2645,8 +2679,9 @@ export const sqlNode = {
   saveMessage,
   cleanSeenMessages,
   cleanLastHashes,
+  clearLastHashesForConvoId,
   saveSeenMessageHashes,
-  saveSeenMessageHash,
+  emptySeenMessageHashesForConversation,
   updateLastHash,
   saveMessages,
   removeMessage,

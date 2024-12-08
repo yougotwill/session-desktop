@@ -7,8 +7,8 @@ import {
   OpenGroupBatchRow,
   sogsBatchSend,
 } from './sogsV3BatchPoll';
-import { PromiseUtils } from '../../../utils';
 import { OpenGroupRequestCommonType } from '../../../../data/types';
+import { DURATION } from '../../../constants';
 
 type OpenGroupClearInboxResponse = {
   deleted: number;
@@ -34,15 +34,13 @@ export const clearInbox = async (roomInfos: OpenGroupRequestCommonType): Promise
 
   const abortSignal = new AbortController();
 
-  const result = await PromiseUtils.timeout(
-    sogsBatchSend(
-      roomInfos.serverUrl,
-      new Set([roomInfos.roomId]),
-      abortSignal.signal,
-      options,
-      'batch'
-    ),
-    10000
+  const result = await sogsBatchSend(
+    roomInfos.serverUrl,
+    new Set([roomInfos.roomId]),
+    abortSignal.signal,
+    options,
+    'batch',
+    10 * DURATION.SECONDS
   );
 
   if (!result) {

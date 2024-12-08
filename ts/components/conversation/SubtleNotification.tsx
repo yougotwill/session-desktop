@@ -19,9 +19,11 @@ import {
   useSelectedConversationKey,
   useSelectedHasDisabledBlindedMsgRequests,
   useSelectedIsApproved,
+  useSelectedIsGroupOrCommunity,
   useSelectedIsGroupV2,
   useSelectedIsNoteToSelf,
   useSelectedIsPrivate,
+  useSelectedIsPublic,
   useSelectedNicknameOrProfileNameOrShortenedPubkey,
 } from '../../state/selectors/selectedConversation';
 import {
@@ -204,6 +206,7 @@ export const NoMessageInConversation = () => {
   const selectedConversation = useSelectedConversationKey();
   const hasMessages = useSelectedHasMessages();
   const isGroupV2 = useSelectedIsGroupV2();
+  const isGroupOrCommunity = useSelectedIsGroupOrCommunity();
   const isInvitePending = useLibGroupInvitePending(selectedConversation);
 
   const isMe = useSelectedIsNoteToSelf();
@@ -215,27 +218,42 @@ export const NoMessageInConversation = () => {
   const isKickedFromGroup = useLibGroupKicked(selectedConversation);
   const isGroupDestroyed = useLibGroupDestroyed(selectedConversation);
   const name = useSelectedNicknameOrProfileNameOrShortenedPubkey();
+  const isPublic = useSelectedIsPublic();
 
   const getHtmlToRender = () => {
+    // First, handle the "noteToSelf and various "private" cases
     if (isMe) {
       return localize('noteToSelfEmpty').toString();
     }
-
-    if (canWrite) {
-      return localize('groupNoMessages').withArgs({ group_name: name }).toString();
-    }
-
     if (privateBlindedAndBlockingMsgReqs) {
       return localize('messageRequestsTurnedOff').withArgs({ name }).toString();
     }
-
-    if (isGroupV2 && isGroupDestroyed) {
-      return localize('groupDeletedMemberDescription').withArgs({ group_name: name }).toString();
+    if (isPrivate) {
+      // "You have no messages from X. Send a message to start the conversation!"
+      return localize('groupNoMessages').withArgs({ group_name: name }).toString();
     }
 
-    if (isGroupV2 && isKickedFromGroup) {
-      return localize('groupRemovedYou').withArgs({ group_name: name }).toString();
+    if (isPublic) {
+      return localize('conversationsEmpty').withArgs({ conversation_name: name }).toString();
     }
+
+    // a "group but not public" is a legacy or a groupv2 (isPublic is handled just above)
+    if (isGroupOrCommunity) {
+      if (isGroupDestroyed) {
+        return localize('groupDeletedMemberDescription').withArgs({ group_name: name }).toString();
+      }
+
+      if (isKickedFromGroup) {
+        return localize('groupRemovedYou').withArgs({ group_name: name }).toString();
+      }
+      if (canWrite) {
+        // "You have no messages from X. Send a message to start the conversation!"
+        return localize('groupNoMessages').withArgs({ group_name: name }).toString();
+      }
+      // if we cannot write for some reason, don't show the "send a message" part
+      return localize('conversationsEmpty').withArgs({ conversation_name: name }).toString();
+    }
+
     return localize('conversationsEmpty').withArgs({ conversation_name: name }).toString();
   };
 

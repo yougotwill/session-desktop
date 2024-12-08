@@ -165,7 +165,7 @@ async function pendingChangesForUs(): Promise<UserDestinationChanges> {
     results.messages.push({
       ciphertext: data,
       seqno: Long.fromNumber(seqno),
-      namespace, // we only use the namespace to know to wha
+      namespace,
     });
 
     hashes.forEach(h => results.allOldHashes.add(h)); // add all the hashes to the set
@@ -186,8 +186,6 @@ async function pendingChangesForGroup(groupPk: GroupPubkeyType): Promise<GroupDe
   }
   // one of the wrapper behind the metagroup needs a push
   const needsPush = await MetaGroupWrapperActions.needsPush(groupPk);
-
-  // we probably need to add the GROUP_KEYS check here
 
   if (!needsPush) {
     return { messages: [], allOldHashes: new Set() };

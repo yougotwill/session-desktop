@@ -32,6 +32,7 @@ import {
 } from './types';
 import { AttachmentType } from '../../types/Attachment';
 import { CONVERSATION_PRIORITIES, ConversationTypeEnum } from '../../models/types';
+import { WithConvoId, WithMessageHash, WithMessageId } from '../../session/types/with';
 
 export type MessageModelPropsWithoutConvoProps = {
   propsForMessage: PropsForMessageWithoutConvoProps;
@@ -552,20 +553,13 @@ function handleMessagesChangedOrAdded(
 
 function handleMessageExpiredOrDeleted(
   state: ConversationsStateType,
-  payload: { conversationKey: string } & (
-    | {
-        messageId: string;
-      }
-    | {
-        messageHash: string;
-      }
-  )
+  payload: WithConvoId & (WithMessageId | WithMessageHash)
 ) {
-  const { conversationKey } = payload;
+  const { conversationId } = payload;
   const messageId = (payload as any).messageId as string | undefined;
   const messageHash = (payload as any).messageHash as string | undefined;
 
-  if (conversationKey === state.selectedConversation) {
+  if (conversationId === state.selectedConversation) {
     // search if we find this message id.
     // we might have not loaded yet, so this case might not happen
     const messageInStoreIndex = state?.messages.findIndex(
@@ -615,18 +609,7 @@ function handleMessageExpiredOrDeleted(
 
 function handleMessagesExpiredOrDeleted(
   state: ConversationsStateType,
-  action: PayloadAction<
-    Array<
-      { conversationKey: string } & (
-        | {
-            messageId: string;
-          }
-        | {
-            messageHash: string;
-          }
-      )
-    >
-  >
+  action: PayloadAction<Array<WithConvoId & (WithMessageId | WithMessageHash)>>
 ): ConversationsStateType {
   let stateCopy = state;
   action.payload.forEach(element => {
@@ -761,35 +744,20 @@ const conversationsSlice = createSlice({
 
     messagesExpired(
       state: ConversationsStateType,
-      action: PayloadAction<
-        Array<{
-          messageId: string;
-          conversationKey: string;
-        }>
-      >
+      action: PayloadAction<Array<WithConvoId & WithMessageId>>
     ) {
       return handleMessagesExpiredOrDeleted(state, action);
     },
     messageHashesExpired(
       state: ConversationsStateType,
-      action: PayloadAction<
-        Array<{
-          messageHash: string;
-          conversationKey: string;
-        }>
-      >
+      action: PayloadAction<Array<WithConvoId & WithMessageHash>>
     ) {
       return handleMessagesExpiredOrDeleted(state, action);
     },
 
     messagesDeleted(
       state: ConversationsStateType,
-      action: PayloadAction<
-        Array<{
-          messageId: string;
-          conversationKey: string;
-        }>
-      >
+      action: PayloadAction<Array<WithMessageId & WithConvoId>>
     ) {
       return handleMessagesExpiredOrDeleted(state, action);
     },

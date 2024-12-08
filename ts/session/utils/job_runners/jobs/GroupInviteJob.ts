@@ -1,7 +1,8 @@
 import { GroupPubkeyType, PubkeyType } from 'libsession_util_nodejs';
 import { debounce, difference, isNumber } from 'lodash';
 import { v4 } from 'uuid';
-import { ToastUtils, UserUtils } from '../..';
+import AbortController from 'abort-controller';
+import { MessageUtils, ToastUtils, UserUtils } from '../..';
 import { groupInfoActions } from '../../../../state/ducks/metaGroups';
 import {
   MetaGroupWrapperActions,
@@ -20,11 +21,12 @@ import {
 import { LibSessionUtil } from '../../libsession/libsession_utils';
 import { showUpdateGroupMembersByConvoId } from '../../../../interactions/conversationInteractions';
 import { ConvoHub } from '../../../conversations';
-import { MessageQueue } from '../../../sending';
+import { MessageSender } from '../../../sending';
 import { NetworkTime } from '../../../../util/NetworkTime';
 import { SubaccountUnrevokeSubRequest } from '../../../apis/snode_api/SnodeRequestTypes';
 import { GroupSync } from './GroupSyncJob';
 import { DURATION } from '../../../constants';
+import { timeoutWithAbort } from '../../Promise';
 
 const defaultMsBetweenRetries = 10000;
 const defaultMaxAttempts = 1;
@@ -220,12 +222,24 @@ class GroupInviteJob extends PersistedJob<GroupInvitePersistedData> {
             groupPk,
           });
 
-      const storedAt = await MessageQueue.use().sendTo1o1NonDurably({
-        message: inviteDetails,
-        namespace: SnodeNamespaces.Default,
-        pubkey: PubKey.cast(member),
-      });
-      if (storedAt !== null) {
+      const controller = new AbortController();
+
+      const rawMessage = await MessageUtils.toRawMessage(
+        PubKey.cast(member),
+        inviteDetails,
+        SnodeNamespaces.Default
+      );
+
+      const { effectiveTimestamp } = await timeoutWithAbort(
+        MessageSender.sendSingleMessage({
+          message: rawMessage,
+          isSyncMessage: false,
+        }),
+        30 * DURATION.SECONDS,
+        controller
+      );
+
+      if (effectiveTimestamp !== null) {
         failed = false;
       }
     } catch (e) {
@@ -238,7 +252,11 @@ class GroupInviteJob extends PersistedJob<GroupInvitePersistedData> {
         `${jobType} with groupPk:"${groupPk}" member: ${member} id:"${identifier}" finished. failed:${failed}`
       );
       try {
-        await MetaGroupWrapperActions.memberSetInvited(groupPk, member, failed);
+        if (failed) {
+          await MetaGroupWrapperActions.memberSetInviteFailed(groupPk, member);
+        } else {
+          await MetaGroupWrapperActions.memberSetInviteSent(groupPk, member);
+        }
         // Depending on this field, we either send an invite or an invite-as-admin message.
         // When we do send an invite-as-admin we also need to update the promoted state, so that the invited members
         // knows he needs to accept the promotion when accepting the invite
@@ -250,7 +268,10 @@ class GroupInviteJob extends PersistedJob<GroupInvitePersistedData> {
           }
         }
       } catch (e) {
-        window.log.warn('GroupInviteJob memberSetInvited failed with', e.message);
+        window.log.warn(
+          'GroupInviteJob memberSetPromotionFailed/memberSetPromotionSent failed with',
+          e.message
+        );
       }
 
       updateFailedStateForMember(groupPk, member, failed);
@@ -303,6 +324,7 @@ export const GroupInvite = {
   GroupInviteJob,
   addJob,
 };
+
 function updateFailedStateForMember(groupPk: GroupPubkeyType, member: PubkeyType, failed: boolean) {
   let thisGroupFailure = invitesFailed.get(groupPk);
 

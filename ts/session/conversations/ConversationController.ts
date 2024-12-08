@@ -3,6 +3,7 @@
 import { ConvoVolatileType, GroupPubkeyType, PubkeyType } from 'libsession_util_nodejs';
 import { isEmpty, isNil } from 'lodash';
 
+import AbortController from 'abort-controller';
 import { Data } from '../../data/data';
 import { OpenGroupData } from '../../data/opengroups';
 import { ConversationCollection, ConversationModel } from '../../models/conversation';
@@ -46,6 +47,8 @@ import { DisappearingMessages } from '../disappearing_messages';
 import { StoreGroupRequestFactory } from '../apis/snode_api/factories/StoreGroupRequestFactory';
 import { CONVERSATION_PRIORITIES, ConversationTypeEnum } from '../../models/types';
 import { NetworkTime } from '../../util/NetworkTime';
+import { timeoutWithAbort } from '../utils/Promise';
+import { DURATION } from '../constants';
 
 let instance: ConvoController | null;
 
@@ -160,12 +163,12 @@ class ConvoController {
     return conversation;
   }
 
-  public getContactProfileNameOrShortenedPubKey(pubKey: string): string {
+  public getNicknameOrRealUsernameOrPlaceholder(pubKey: string): string {
     const conversation = ConvoHub.use().get(pubKey);
     if (!conversation) {
       return pubKey;
     }
-    return conversation.getContactProfileNameOrShortenedPubKey();
+    return conversation.getNicknameOrRealUsernameOrPlaceholder();
   }
 
   public async getOrCreateAndWait(
@@ -256,11 +259,13 @@ class ConvoController {
       deletionType,
       deleteAllMessagesOnSwarm,
       forceDestroyForAllMembers,
+      clearFetchedHashes,
     }: DeleteOptions & {
       sendLeaveMessage: boolean;
       deletionType: 'doNotKeep' | 'keepAsKicked' | 'keepAsDestroyed';
       deleteAllMessagesOnSwarm: boolean;
       forceDestroyForAllMembers: boolean;
+      clearFetchedHashes: boolean;
     }
   ) {
     if (!PubKey.is03Pubkey(groupPk)) {
@@ -268,7 +273,7 @@ class ConvoController {
     }
 
     window.log.info(
-      `deleteGroup: ${ed25519Str(groupPk)}, sendLeaveMessage:${sendLeaveMessage}, fromSyncMessage:${fromSyncMessage}, deletionType:${deletionType}, deleteAllMessagesOnSwarm:${deleteAllMessagesOnSwarm}, forceDestroyForAllMembers:${forceDestroyForAllMembers}`
+      `deleteGroup: ${ed25519Str(groupPk)}, sendLeaveMessage:${sendLeaveMessage}, fromSyncMessage:${fromSyncMessage}, deletionType:${deletionType}, deleteAllMessagesOnSwarm:${deleteAllMessagesOnSwarm}, forceDestroyForAllMembers:${forceDestroyForAllMembers}, clearFetchedHashes:${clearFetchedHashes}`
     );
 
     // this deletes all messages in the conversation
@@ -368,6 +373,14 @@ class ConvoController {
 
       // we are on the emptyGroupButKeepAsKicked=false case, so we remove it all
       await this.removeGroupOrCommunityFromDBAndRedux(groupPk);
+    }
+
+    // We want to clear the lastHash and the seenHashes of the corresponding group.
+    // We do this so that if we get reinvited to the group, we will
+    //  fetch and display all the messages from the group's swarm again.
+    if (clearFetchedHashes) {
+      await getSwarmPollingInstance().resetLastHashesForConversation(groupPk);
+      await Data.emptySeenMessageHashesForConversation(groupPk);
     }
 
     await SessionUtilConvoInfoVolatile.removeGroupFromWrapper(groupPk);
@@ -678,11 +691,17 @@ async function leaveClosedGroup(groupPk: PubkeyType | GroupPubkeyType, fromSyncM
           secretKey: group.secretKey,
         }
       );
-      const results = await MessageSender.sendEncryptedDataToSnode({
-        destination: groupPk,
-        sortedSubRequests: storeRequests,
-        method: 'sequence',
-      });
+      const controller = new AbortController();
+      const results = await timeoutWithAbort(
+        MessageSender.sendEncryptedDataToSnode({
+          destination: groupPk,
+          sortedSubRequests: storeRequests,
+          method: 'sequence',
+          abortSignal: controller.signal,
+        }),
+        30 * DURATION.SECONDS,
+        controller
+      );
 
       if (results?.[0].code !== 200) {
         throw new Error(

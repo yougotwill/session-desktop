@@ -34,7 +34,7 @@ const Mention = (props: MentionProps) => {
 
   return (
     <StyledMentionAnother>
-      @{foundConvo?.getContactProfileNameOrShortenedPubKey() || PubKey.shorten(props.text)}
+      @{foundConvo?.getNicknameOrRealUsernameOrPlaceholder() || PubKey.shorten(props.text)}
     </StyledMentionAnother>
   );
 };

@@ -46,7 +46,7 @@ export const ClickToTrustSender = (props: { messageId: string }) => {
         i18nMessage: {
           token: 'attachmentsAutoDownloadModalDescription',
           args: {
-            conversation_name: convo.getContactProfileNameOrShortenedPubKey(),
+            conversation_name: convo.getNicknameOrRealUsernameOrPlaceholder(),
           },
         },
         closeTheme: SessionButtonColor.Danger,

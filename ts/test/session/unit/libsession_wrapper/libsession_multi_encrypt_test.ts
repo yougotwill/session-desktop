@@ -5,17 +5,6 @@ import { fromHexToArray } from '../../../../session/utils/String';
 import { TestUtils } from '../../../test-utils';
 
 describe('libsession_multi_encrypt', () => {
-  // let us: TestUserKeyPairs;
-  // let groupX25519SecretKey: Uint8Array;
-
-  beforeEach(async () => {
-    // us = await TestUtils.generateUserKeyPairs();
-    // const group = await TestUtils.generateGroupV2(us.ed25519KeyPair.privKeyBytes);
-    // if (!group.secretKey) {
-    //   throw new Error('failed to create grou[p');
-    // }
-    // groupX25519SecretKey = group.secretKey;
-  });
   afterEach(() => {
     Sinon.restore();
   });

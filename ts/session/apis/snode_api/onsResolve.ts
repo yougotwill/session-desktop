@@ -12,6 +12,7 @@ import { OnsResolveSubRequest } from './SnodeRequestTypes';
 import { BatchRequests } from './batchRequest';
 import { GetNetworkTime } from './getNetworkTime';
 import { SnodePool } from './snodePool';
+import { DURATION } from '../../constants';
 
 // ONS name can have [a-zA-Z0-9_-] except that - is not allowed as start or end
 // do not define a regex but rather create it on the fly to avoid https://stackoverflow.com/questions/3891641/regex-test-only-works-every-other-time
@@ -35,16 +36,18 @@ async function getSessionIDForOnsName(onsNameCase: string) {
   const promises = range(0, validationCount).map(async () => {
     const targetNode = await SnodePool.getRandomSnode();
 
-    const results = await BatchRequests.doUnsignedSnodeBatchRequestNoRetries(
-      [subRequest],
+    const results = await BatchRequests.doUnsignedSnodeBatchRequestNoRetries({
+      unsignedSubRequests: [subRequest],
       targetNode,
-      10000,
-      null,
-      false
-    );
+      timeoutMs: 10 * DURATION.SECONDS,
+      associatedWith: null,
+      allow401s: false,
+      method: 'batch',
+      abortSignal: null,
+    });
     const firstResult = results[0];
     if (!firstResult || firstResult.code !== 200 || !firstResult.body) {
-      throw new Error('ONSresolve:Failed to resolve ONS');
+      throw new Error('OnsResolve :Failed to resolve ONS');
     }
     const parsedBody = firstResult.body;
     GetNetworkTime.handleTimestampOffsetFromNetwork('ons_resolve', parsedBody.t);
@@ -52,7 +55,7 @@ async function getSessionIDForOnsName(onsNameCase: string) {
     const intermediate = parsedBody?.result;
 
     if (!intermediate || !intermediate?.encrypted_value) {
-      throw new NotFoundError('ONSresolve: no encrypted_value');
+      throw new NotFoundError('OnsResolve: no encrypted_value');
     }
     const hexEncodedCipherText = intermediate?.encrypted_value;
 
@@ -62,18 +65,18 @@ async function getSessionIDForOnsName(onsNameCase: string) {
 
     const hexEncodedNonce = intermediate.nonce as string;
     if (!hexEncodedNonce) {
-      throw new Error('ONSresolve: No hexEncodedNonce');
+      throw new Error('OnsResolve: No hexEncodedNonce');
     }
     const nonce = fromHexToArray(hexEncodedNonce);
 
     try {
       key = sodium.crypto_generichash(sodium.crypto_generichash_BYTES, nameAsData, nameHash);
       if (!key) {
-        throw new Error('ONSresolve: Hashing failed');
+        throw new Error('OnsResolve: Hashing failed');
       }
     } catch (e) {
-      window?.log?.warn('ONSresolve: hashing failed', e);
-      throw new Error('ONSresolve: Hashing failed');
+      window?.log?.warn('OnsResolve: hashing failed', e);
+      throw new Error('OnsResolve: Hashing failed');
     }
 
     const sessionIDAsData = sodium.crypto_aead_xchacha20poly1305_ietf_decrypt(
@@ -85,7 +88,7 @@ async function getSessionIDForOnsName(onsNameCase: string) {
     );
 
     if (!sessionIDAsData) {
-      throw new Error('ONSresolve: Decryption failed');
+      throw new Error('OnsResolve: Decryption failed');
     }
 
     return toHex(sessionIDAsData);
@@ -95,16 +98,16 @@ async function getSessionIDForOnsName(onsNameCase: string) {
     // if one promise throws, we end un the catch case
     const allResolvedSessionIds = await Promise.all(promises);
     if (allResolvedSessionIds?.length !== validationCount) {
-      throw new Error('ONSresolve: Validation failed');
+      throw new Error('OnsResolve: Validation failed');
     }
 
     // assert all the returned account ids are the same
     if (_.uniq(allResolvedSessionIds).length !== 1) {
-      throw new Error('ONSresolve: Validation failed');
+      throw new Error('OnsResolve: Validation failed');
     }
     return allResolvedSessionIds[0];
   } catch (e) {
-    window.log.warn('ONSresolve: error', e);
+    window.log.warn('OnsResolve: error', e);
     throw e;
   }
 }

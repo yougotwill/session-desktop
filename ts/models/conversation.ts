@@ -303,7 +303,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
 
   public getPriority() {
     if (PubKey.is05Pubkey(this.id) && this.isPrivate()) {
-      // TODO once we have a libsession state, we can make this used accross the app without repeating as much
+      // TODO once we have a libsession state, we can make this used across the app without repeating as much
       // if a private chat, trust the value from the Libsession wrapper cached first
       const contact = SessionUtilContact.getContactCached(this.id);
       if (contact) {
@@ -1786,7 +1786,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     window.inboxStore?.dispatch(
       conversationActions.messagesDeleted([
         {
-          conversationKey: this.id,
+          conversationId: this.id,
           messageId,
         },
       ])
@@ -1802,7 +1802,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
   public didApproveMe() {
     if (PubKey.is05Pubkey(this.id) && this.isPrivate()) {
       // if a private chat, trust the value from the Libsession wrapper cached first
-      // TODO once we have a libsession state, we can make this used accross the app without repeating as much
+      // TODO once we have a libsession state, we can make this used across the app without repeating as much
       return SessionUtilContact.getContactCached(this.id)?.approvedMe ?? !!this.get('didApproveMe');
     }
     return !!this.get('didApproveMe');
@@ -1817,9 +1817,8 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
   }
 
   /**
-   * For a private convo, returns the loki profile name if set, or a shortened
-   * version of the contact pubkey.
-   * Throws an error if called on a group convo.
+   * For a private convo, returns nickname || ('You' || userDisplayName) || shortened(pk)
+   * Throws an error if called on a no-private convo.
    *
    */
   public getContactProfileNameOrShortenedPubKey() {
@@ -2862,7 +2861,7 @@ async function cleanUpExpireHistoryFromConvo(conversationId: string, isPrivate: 
     isPrivate
   );
   window?.inboxStore?.dispatch(
-    messagesDeleted(updateIdsRemoved.map(m => ({ conversationKey: conversationId, messageId: m })))
+    messagesDeleted(updateIdsRemoved.map(m => ({ conversationId, messageId: m })))
   );
 }
 

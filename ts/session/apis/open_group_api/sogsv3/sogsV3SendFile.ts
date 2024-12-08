@@ -4,6 +4,7 @@ import { roomHasBlindEnabled } from '../../../../types/sqlSharedTypes';
 import { OnionSending } from '../../../onions/onionSend';
 import { batchGlobalIsSuccess } from './sogsV3BatchPoll';
 import { OpenGroupRequestCommonType } from '../../../../data/types';
+import { DURATION } from '../../../constants';
 
 /**
  * Returns the id on which the file is saved, or null
@@ -31,6 +32,7 @@ export const uploadFileToRoomSogs3 = async (
     endpoint: `/room/${roomDetails.roomId}/file`,
     method: 'POST',
     serverUrl: roomDetails.serverUrl,
+    timeoutMs: 30 * DURATION.SECONDS, // longer time allowed for file upload
   });
 
   if (!batchGlobalIsSuccess(result)) {

@@ -866,7 +866,7 @@ class CompositionBoxInner extends Component<Props, State> {
 
       window.inboxStore?.dispatch(
         removeAllStagedAttachmentsInConversation({
-          conversationKey: this.props.selectedConversationKey,
+          conversationId: this.props.selectedConversationKey,
         })
       );
       // Empty composition box and stagedAttachments

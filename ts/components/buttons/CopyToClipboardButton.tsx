@@ -11,12 +11,13 @@ type CopyProps = {
   copyContent?: string;
   onCopyComplete?: (copiedValue: string | undefined) => void;
   hotkey?: boolean;
+  showToast?: boolean;
 };
 
 type CopyToClipboardButtonProps = Omit<SessionButtonProps, 'children' | 'onClick'> & CopyProps;
 
 export const CopyToClipboardButton = (props: CopyToClipboardButtonProps) => {
-  const { copyContent, onCopyComplete, hotkey = false, text } = props;
+  const { copyContent, onCopyComplete, hotkey = false, text, showToast = true } = props;
   const [copied, setCopied] = useState(false);
 
   const onClick = () => {
@@ -27,8 +28,9 @@ export const CopyToClipboardButton = (props: CopyToClipboardButtonProps) => {
       }
 
       clipboard.writeText(toCopy);
-
-      ToastUtils.pushCopiedToClipBoard();
+      if (showToast) {
+        ToastUtils.pushCopiedToClipBoard();
+      }
       setCopied(true);
       if (onCopyComplete) {
         onCopyComplete(text);
@@ -54,11 +56,13 @@ type CopyToClipboardIconProps = Omit<SessionIconButtonProps, 'children' | 'onCli
   CopyProps;
 
 export const CopyToClipboardIcon = (props: CopyToClipboardIconProps & { copyContent: string }) => {
-  const { copyContent, onCopyComplete, hotkey = false } = props;
+  const { copyContent, onCopyComplete, hotkey = false, showToast = true } = props;
 
   const onClick = () => {
     clipboard.writeText(copyContent);
-    ToastUtils.pushCopiedToClipBoard();
+    if (showToast) {
+      ToastUtils.pushCopiedToClipBoard();
+    }
     if (onCopyComplete) {
       onCopyComplete(copyContent);
     }

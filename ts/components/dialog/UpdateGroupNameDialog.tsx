@@ -189,6 +189,12 @@ export function UpdateGroupNameDialog(props: { conversationId: string }) {
           type="text"
           value={newGroupName}
           placeholder={window.i18n('groupNameEnter')}
+          onKeyDown={e => {
+            if (e.key === 'Enter') {
+              onClickOK();
+              e.preventDefault();
+            }
+          }}
           onChange={e => setNewGroupName(e.target.value)}
           tabIndex={0}
           required={true}

@@ -4,7 +4,7 @@ import { AbortController } from 'abort-controller';
 import { GroupPubkeyType, PubkeyType } from 'libsession_util_nodejs';
 import { isArray, isEmpty, isNumber, isString } from 'lodash';
 import pRetry from 'p-retry';
-import { Data, SeenMessageHashes } from '../../data/data';
+import { Data } from '../../data/data';
 import { UserGroupsWrapperActions } from '../../webworker/workers/browser/libsession_worker_interface';
 import { OpenGroupMessageV2 } from '../apis/open_group_api/opengroupV2/OpenGroupMessageV2';
 import {
@@ -40,7 +40,7 @@ import {
 } from '../apis/snode_api/signature/groupSignature';
 import { SnodeSignature, SnodeSignatureResult } from '../apis/snode_api/signature/snodeSignatures';
 import { SnodePool } from '../apis/snode_api/snodePool';
-import { TTL_DEFAULT } from '../constants';
+import { DURATION, TTL_DEFAULT } from '../constants';
 import { ConvoHub } from '../conversations';
 import { addMessagePadding } from '../crypto/BufferPadding';
 import { ContentMessage } from '../messages/outgoing';
@@ -53,9 +53,10 @@ import { UserUtils } from '../utils';
 import { ed25519Str, fromUInt8ArrayToBase64 } from '../utils/String';
 import { MessageSentHandler } from './MessageSentHandler';
 import { EncryptAndWrapMessageResults, MessageWrapper } from './MessageWrapper';
-import { stringify } from '../../types/sqlSharedTypes';
+import { SaveSeenMessageHash, stringify } from '../../types/sqlSharedTypes';
 import { OpenGroupRequestCommonType } from '../../data/types';
 import { NetworkTime } from '../../util/NetworkTime';
+import { MergedAbortSignal } from '../apis/snode_api/requestWith';
 
 // ================ SNODE STORE ================
 
@@ -287,13 +288,17 @@ async function sendSingleMessage({
       });
 
       const targetNode = await SnodePool.getNodeFromSwarmOrThrow(destination);
-      const batchResult = await BatchRequests.doUnsignedSnodeBatchRequestNoRetries(
-        subRequests,
+
+      const batchResult = await BatchRequests.doUnsignedSnodeBatchRequestNoRetries({
+        unsignedSubRequests: subRequests,
         targetNode,
-        6000,
-        destination,
-        false
-      );
+        timeoutMs: 10 * DURATION.SECONDS,
+        associatedWith: destination,
+        allow401s: false,
+        method: 'sequence',
+        abortSignal: null,
+      });
+
       await handleBatchResultWithSubRequests({ batchResult, subRequests, destination });
       return {
         wrappedEnvelope: encryptedAndWrapped.encryptedAndWrappedData,
@@ -304,6 +309,11 @@ async function sendSingleMessage({
       retries: Math.max(attempts - 1, 0),
       factor: 1,
       minTimeout: retryMinTimeout || MessageSender.getMinRetryTimeout(),
+      onFailedAttempt: e => {
+        window?.log?.warn(
+          `[sendSingleMessage] attempt #${e.attemptNumber} failed. ${e.retriesLeft} retries left... Error: ${e.message}`
+        );
+      },
     }
   );
 }
@@ -407,10 +417,12 @@ async function sendMessagesDataToSnode<T extends PubkeyType | GroupPubkeyType>({
   associatedWith,
   sortedSubRequests,
   method,
+  abortSignal,
 }: {
   sortedSubRequests: SortedSubRequestsType<T>;
   associatedWith: T;
   method: MethodBatchType;
+  abortSignal: MergedAbortSignal | null;
 }): Promise<NotEmptyArrayOfBatchResults> {
   if (!associatedWith) {
     throw new Error('sendMessagesDataToSnode first sub request pubkey needs to be set');
@@ -429,14 +441,15 @@ async function sendMessagesDataToSnode<T extends PubkeyType | GroupPubkeyType>({
   const targetNode = await SnodePool.getNodeFromSwarmOrThrow(associatedWith);
 
   try {
-    const responses = await BatchRequests.doUnsignedSnodeBatchRequestNoRetries(
-      sortedSubRequests,
+    const responses = await BatchRequests.doUnsignedSnodeBatchRequestNoRetries({
+      unsignedSubRequests: sortedSubRequests,
       targetNode,
-      6000,
+      timeoutMs: 6 * DURATION.SECONDS,
       associatedWith,
-      false,
-      method
-    );
+      allow401s: false,
+      method,
+      abortSignal,
+    });
 
     if (!responses || !responses.length) {
       window?.log?.warn(
@@ -493,10 +506,12 @@ async function sendEncryptedDataToSnode<T extends GroupPubkeyType | PubkeyType>(
   destination,
   sortedSubRequests,
   method,
+  abortSignal,
 }: {
   sortedSubRequests: SortedSubRequestsType<T>; // keeping those as an array because the order needs to be enforced for some (group keys for instance)
   destination: T;
   method: MethodBatchType;
+  abortSignal: MergedAbortSignal | null;
 }): Promise<NotEmptyArrayOfBatchResults | null> {
   try {
     const batchResults = await pRetry(
@@ -505,6 +520,7 @@ async function sendEncryptedDataToSnode<T extends GroupPubkeyType | PubkeyType>(
           sortedSubRequests,
           associatedWith: destination,
           method,
+          abortSignal,
         });
       },
       {
@@ -537,7 +553,7 @@ async function sendToOpenGroupV2(
   blinded: boolean,
   filesToLink: Array<number>
 ): Promise<OpenGroupMessageV2 | boolean> {
-  // we agreed to pad message for opengroup v2
+  // we agreed to pad messages for opengroup v2
   const paddedBody = addMessagePadding(rawMessage.plainTextBuffer());
   const v2Message = new OpenGroupMessageV2({
     sentTimestamp: NetworkTime.now(),
@@ -616,7 +632,7 @@ async function handleBatchResultWithSubRequests({
     return;
   }
 
-  const seenHashes: Array<SeenMessageHashes> = [];
+  const seenHashes: Array<SaveSeenMessageHash> = [];
 
   for (let index = 0; index < subRequests.length; index++) {
     const subRequest = subRequests[index];
@@ -642,9 +658,10 @@ async function handleBatchResultWithSubRequests({
         seenHashes.push({
           expiresAt: NetworkTime.now() + TTL_DEFAULT.CONTENT_MESSAGE, // non config msg expire at CONTENT_MESSAGE at most
           hash: storedHash,
+          conversationId: destination,
         });
 
-        // We need to store the hash of our synced message when for a 1o1. (as this is the one stored on our swarm)
+        // We need to store the hash of our synced message for a 1o1. (as this is the one stored on our swarm)
         // For groups, we can just store that hash directly as the group's swarm is hosting all of the group messages
         if (subRequest.dbMessageIdentifier) {
           // eslint-disable-next-line no-await-in-loop

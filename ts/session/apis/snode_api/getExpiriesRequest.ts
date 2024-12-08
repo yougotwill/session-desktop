@@ -9,6 +9,7 @@ import { GetExpiriesFromNodeSubRequest } from './SnodeRequestTypes';
 import { BatchRequests } from './batchRequest';
 import { SnodePool } from './snodePool';
 import { GetExpiriesResultsContent, WithMessagesHashes } from './types';
+import { DURATION } from '../../constants';
 
 export type GetExpiriesRequestResponseResults = Record<string, number>;
 
@@ -46,14 +47,15 @@ async function getExpiriesFromNodesNoRetries(
 ) {
   try {
     const expireRequest = new GetExpiriesFromNodeSubRequest({ messagesHashes: messageHashes });
-    const result = await BatchRequests.doUnsignedSnodeBatchRequestNoRetries(
-      [expireRequest],
+    const result = await BatchRequests.doUnsignedSnodeBatchRequestNoRetries({
+      unsignedSubRequests: [expireRequest],
       targetNode,
-      10000,
+      timeoutMs: 10 * DURATION.SECONDS,
       associatedWith,
-      false,
-      'batch'
-    );
+      allow401s: false,
+      method: 'batch',
+      abortSignal: null,
+    });
 
     if (!result || result.length !== 1) {
       throw Error(

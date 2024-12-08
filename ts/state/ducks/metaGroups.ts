@@ -54,6 +54,7 @@ import {
   WithFromMemberLeftMessage,
   WithRemoveMembers,
 } from '../../session/types/with';
+import { updateGroupNameModal } from './modalDialog';
 
 export type GroupState = {
   infos: Record<GroupPubkeyType, GroupInfoGet>;
@@ -83,7 +84,6 @@ type GroupDetailsUpdate = {
 
 async function checkWeAreAdmin(groupPk: GroupPubkeyType) {
   const us = UserUtils.getOurPubKeyStrFromCache();
-
   const usInGroup = await MetaGroupWrapperActions.memberGet(groupPk, us);
   const inUserGroup = await UserGroupsWrapperActions.getGroup(groupPk);
   // if the secretKey is not empty AND we are a member of the group, we are a current admin
@@ -149,6 +149,14 @@ const initNewGroupInWrapper = createAsyncThunk(
         groupEd25519Pubkey: toFixedUint8ArrayOfLength(groupEd2519Pk, 32).buffer,
       });
 
+      const infos = await MetaGroupWrapperActions.infoGet(groupPk);
+      if (!infos) {
+        throw new Error(`getInfos of ${groupPk} returned empty result even if it was just init.`);
+      }
+      // if the name exceeds libsession-util max length for group name, the name will be saved truncated
+      infos.name = groupName;
+      await MetaGroupWrapperActions.infoSet(groupPk, infos);
+
       for (let index = 0; index < uniqMembers.length; index++) {
         const member = uniqMembers[index];
         const convoMember = ConvoHub.use().get(member);
@@ -172,13 +180,6 @@ const initNewGroupInWrapper = createAsyncThunk(
         }
       }
 
-      const infos = await MetaGroupWrapperActions.infoGet(groupPk);
-      if (!infos) {
-        throw new Error(`getInfos of ${groupPk} returned empty result even if it was just init.`);
-      }
-      infos.name = groupName;
-      await MetaGroupWrapperActions.infoSet(groupPk, infos);
-
       const membersFromWrapper = await MetaGroupWrapperActions.memberGetAll(groupPk);
       if (!membersFromWrapper || isEmpty(membersFromWrapper)) {
         throw new Error(
@@ -196,9 +197,11 @@ const initNewGroupInWrapper = createAsyncThunk(
       // push one group change message where initial members are added to the group
       if (membersFromWrapper.length) {
         const membersHex = uniq(membersFromWrapper.map(m => m.pubkeyHex));
+
+        const membersHexWithoutUs = membersHex.filter(m => m !== us);
         const sentAt = NetworkTime.now();
         const msgModel = await ClosedGroup.addUpdateMessage({
-          diff: { type: 'add', added: membersHex, withHistory: false },
+          diff: { type: 'add', added: membersHexWithoutUs, withHistory: false },
           expireUpdate: null,
           sender: us,
           sentAt,
@@ -209,7 +212,7 @@ const initNewGroupInWrapper = createAsyncThunk(
           adminSecretKey: groupSecretKey,
           convo,
           groupPk,
-          withoutHistory: membersHex,
+          withoutHistory: membersHexWithoutUs,
           createAtNetworkTimestamp: sentAt,
           dbMsgIdentifier: msgModel.id,
         });
@@ -265,6 +268,7 @@ const initNewGroupInWrapper = createAsyncThunk(
           deletionType: 'doNotKeep',
           deleteAllMessagesOnSwarm: false,
           forceDestroyForAllMembers: false,
+          clearFetchedHashes: true,
         });
       }
       throw e;
@@ -392,7 +396,7 @@ const loadMetaDumpsFromDB = createAsyncThunk(
 
         toReturn.push({ groupPk, infos, members });
       } catch (e) {
-        // Note: Don't re trow here, we want to load everything we can
+        // Note: Don't rethrow here, we want to load everything we can
         window.log.error(
           `initGroup of Group wrapper of variant ${variant} failed with ${e.message} `
         );
@@ -521,7 +525,7 @@ async function handleWithHistoryMembers({
       memberPubkey: member,
       profileKeyHex,
     });
-    await MetaGroupWrapperActions.memberSetInvited(groupPk, member, false);
+    await MetaGroupWrapperActions.memberSetInviteSent(groupPk, member);
   }
   const encryptedSupplementKeys = withHistory.length
     ? await MetaGroupWrapperActions.generateSupplementKeys(groupPk, withHistory)
@@ -551,7 +555,7 @@ async function handleWithoutHistoryMembers({
       displayName,
       profileKeyHex,
     });
-    await MetaGroupWrapperActions.memberSetInvited(groupPk, member, false);
+    await MetaGroupWrapperActions.memberSetInviteSent(groupPk, member);
   }
 
   if (!isEmpty(withoutHistory)) {
@@ -1097,7 +1101,7 @@ const inviteResponseReceived = createAsyncThunk(
     try {
       await checkWeAreAdminOrThrow(groupPk, 'inviteResponseReceived');
 
-      await MetaGroupWrapperActions.memberSetAccepted(groupPk, member);
+      await MetaGroupWrapperActions.memberSetInviteAccepted(groupPk, member);
       try {
         const memberConvo = ConvoHub.use().get(member);
         if (memberConvo) {
@@ -1152,6 +1156,7 @@ const currentDeviceGroupNameChange = createAsyncThunk(
     await checkWeAreAdminOrThrow(groupPk, 'currentDeviceGroupNameChange');
 
     await handleNameChangeFromUI({ groupPk, ...args });
+    window.inboxStore?.dispatch(updateGroupNameModal(null));
 
     return {
       groupPk,
@@ -1213,7 +1218,7 @@ function refreshConvosModelProps(convoIds: Array<string>) {
 }
 
 /**
- * This slice is the one holding the default joinable rooms fetched once in a while from the default opengroup v2 server.
+ * This slice is representing the cached state of all our current 03-groups.
  */
 const metaGroupSlice = createSlice({
   name: 'metaGroup',
@@ -1413,7 +1418,6 @@ export const groupInfoActions = {
   currentDeviceGroupNameChange,
   triggerFakeAvatarUpdate,
   triggerFakeDeleteMsgBeforeNow,
-
   ...metaGroupSlice.actions,
 };
 export const groupReducer = metaGroupSlice.reducer;
