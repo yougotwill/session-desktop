@@ -223,8 +223,8 @@
     ],
     "publish": {
       "provider": "github",
+      "owner": "session-foundation",
       "repo": "session-desktop",
-      "owner": "oxen-io",
       "releaseType": "release"
     },
     "mac": {
