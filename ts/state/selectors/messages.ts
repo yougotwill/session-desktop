@@ -11,6 +11,7 @@ import { StateType } from '../reducer';
 import { getIsMessageSelected, getMessagePropsByMessageId } from './conversations';
 import { useSelectedIsPrivate } from './selectedConversation';
 import { LastMessageStatusType } from '../ducks/types';
+import { PubKey } from '../../session/types';
 
 function useMessagePropsByMessageId(messageId: string | undefined) {
   return useSelector((state: StateType) => getMessagePropsByMessageId(state, messageId));
@@ -34,12 +35,15 @@ export const useAuthorProfileName = (messageId: string): string | null => {
   if (!msg || !senderProps) {
     return null;
   }
+  const { sender } = msg.propsForMessage;
 
-  const senderIsUs = msg.propsForMessage.sender === UserUtils.getOurPubKeyStrFromCache();
+  const senderIsUs = sender === UserUtils.getOurPubKeyStrFromCache();
 
   const authorProfileName = senderIsUs
     ? window.i18n('you')
-    : senderProps.nickname || senderProps.displayNameInProfile || window.i18n('anonymous');
+    : senderProps.nickname ||
+      senderProps.displayNameInProfile ||
+      PubKey.shorten(sender);
   return authorProfileName || window.i18n('unknown');
 };
 
