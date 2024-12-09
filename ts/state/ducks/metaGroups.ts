@@ -660,16 +660,6 @@ async function handleMemberAddedFromUI({
     updateMessagesToPush,
     group
   );
-  // schedule send invite details, auth signature, etc. to the new users
-  // those will fail is the pushChangesToGroupSwarmIfNeeded fails, but we still want
-  // to display the toasts message saying they failed
-  await scheduleGroupInviteJobs(
-    groupPk,
-    withHistory,
-    withoutHistory,
-    window.sessionFeatureFlags.useGroupV2InviteAsAdmin
-  );
-  await LibSessionUtil.saveDumpsToDb(groupPk);
 
   // push new members & key supplement in a single batch call
   const sequenceResult = await GroupSync.pushChangesToGroupSwarmIfNeeded({
@@ -679,13 +669,20 @@ async function handleMemberAddedFromUI({
     unrevokeSubRequest,
     extraStoreRequests,
   });
-  await LibSessionUtil.saveDumpsToDb(groupPk);
-
   if (sequenceResult !== RunJobResult.Success) {
     throw new Error(
       'handleMemberAddedFromUIOrNot: pushChangesToGroupSwarmIfNeeded did not return success'
     );
   }
+
+  // schedule send invite details, auth signature, etc. to the new users
+  await scheduleGroupInviteJobs(
+    groupPk,
+    withHistory,
+    withoutHistory,
+    window.sessionFeatureFlags.useGroupV2InviteAsAdmin
+  );
+  await LibSessionUtil.saveDumpsToDb(groupPk);
 
   convo.set({
     active_at: createAtNetworkTimestamp,
