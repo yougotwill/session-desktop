@@ -5,19 +5,7 @@
 name: Session Desktop
 
 on:
-  push:
-    branches:
-      - master
-      - clearnet
-      - unstable
-      - 'release/**'
-      - 'ci/**'
-  pull_request:
-    branches:
-      - clearnet
-      - unstable
-      - 'release/**'
-      - 'ci/**'
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
