@@ -68,7 +68,7 @@ async function getInitializedGroupObject({
   if (!found) {
     found = {
       authData: null,
-      joinedAtSeconds: Date.now(),
+      joinedAtSeconds: Math.floor(Date.now()/ 1000),
       name: groupName,
       priority: 0,
       pubkeyHex: groupPk,
