@@ -41,9 +41,7 @@ export const useAuthorProfileName = (messageId: string): string | null => {
 
   const authorProfileName = senderIsUs
     ? window.i18n('you')
-    : senderProps.nickname ||
-      senderProps.displayNameInProfile ||
-      PubKey.shorten(sender);
+    : senderProps.nickname || senderProps.displayNameInProfile || PubKey.shorten(sender);
   return authorProfileName || window.i18n('unknown');
 };
 
@@ -70,7 +68,7 @@ export const useAuthorAvatarPath = (messageId: string): string | null => {
 
 export const useMessageIsDeleted = (messageId: string): boolean => {
   const props = useMessagePropsByMessageId(messageId);
-  return props?.propsForMessage.isDeleted || false;
+  return !!props?.propsForMessage.isDeleted || false;
 };
 
 export const useFirstMessageOfSeries = (messageId: string | undefined): boolean => {
