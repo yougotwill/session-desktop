@@ -41,7 +41,6 @@ const IconDiv = styled.div`
 
 
 function DescriptionPubkeysReplaced({ description }: { description: string }) {
-  // const replacedWithNames = useReplacePkInTextWithNames(description);
   return (
     <DescriptionDiv>
       <SessionHtmlRenderer html={description} />

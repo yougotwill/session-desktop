@@ -1,6 +1,5 @@
 import { useSelector } from 'react-redux';
 import { MessageModelType } from '../../models/messageType';
-import { UserUtils } from '../../session/utils';
 import {
   MessageModelPropsWithConvoProps,
   PropsForAttachment,
@@ -12,6 +11,7 @@ import { getIsMessageSelected, getMessagePropsByMessageId } from './conversation
 import { useSelectedIsPrivate } from './selectedConversation';
 import { LastMessageStatusType } from '../ducks/types';
 import { PubKey } from '../../session/types';
+import { useIsMe } from '../../hooks/useParamSelector';
 
 function useMessagePropsByMessageId(messageId: string | undefined) {
   return useSelector((state: StateType) => getMessagePropsByMessageId(state, messageId));
@@ -32,16 +32,16 @@ const useSenderConvoProps = (
 export const useAuthorProfileName = (messageId: string): string | null => {
   const msg = useMessagePropsByMessageId(messageId);
   const senderProps = useSenderConvoProps(msg);
+  const senderIsUs = useIsMe(msg?.propsForMessage?.sender);
   if (!msg || !senderProps) {
     return null;
   }
-  const { sender } = msg.propsForMessage;
-
-  const senderIsUs = sender === UserUtils.getOurPubKeyStrFromCache();
 
   const authorProfileName = senderIsUs
     ? window.i18n('you')
-    : senderProps.nickname || senderProps.displayNameInProfile || PubKey.shorten(sender);
+    : senderProps.nickname ||
+      senderProps.displayNameInProfile ||
+      PubKey.shorten(msg.propsForMessage.sender);
   return authorProfileName || window.i18n('unknown');
 };
 
