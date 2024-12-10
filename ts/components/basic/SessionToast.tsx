@@ -1,4 +1,4 @@
-import {  noop } from 'lodash';
+import { noop } from 'lodash';
 
 import styled from 'styled-components';
 
@@ -37,8 +37,6 @@ const IconDiv = styled.div`
   padding-inline-end: var(--margins-xs);
   margin: 0 var(--margins-sm) 0 var(--margins-xs);
 `;
-
-
 
 function DescriptionPubkeysReplaced({ description }: { description: string }) {
   return (

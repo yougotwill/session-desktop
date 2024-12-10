@@ -113,9 +113,12 @@ export const handleAcceptConversationRequest = async ({
   approvalMessageTimestamp: number;
 }) => {
   const convo = ConvoHub.use().get(convoId);
-  if (!convo || (!convo.isPrivate() && !convo.isClosedGroupV2())) {
+  if (!convo || convo.isApproved() || (!convo.isPrivate() && !convo.isClosedGroupV2())) {
+    window?.log?.info('Conversation is already approved or not private/03group');
+
     return null;
   }
+
   const previousIsApproved = convo.isApproved();
   const previousDidApprovedMe = convo.didApproveMe();
   // Note: we don't mark as approvedMe = true, as we do not know if they did send us a message yet.
