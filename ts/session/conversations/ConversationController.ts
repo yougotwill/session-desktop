@@ -166,7 +166,7 @@ class ConvoController {
   public getNicknameOrRealUsernameOrPlaceholder(pubKey: string): string {
     const conversation = ConvoHub.use().get(pubKey);
     if (!conversation) {
-      return pubKey;
+      return PubKey.shorten(pubKey);
     }
     return conversation.getNicknameOrRealUsernameOrPlaceholder();
   }

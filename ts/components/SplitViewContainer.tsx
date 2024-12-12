@@ -11,6 +11,7 @@ const StyledSplitView = styled.div`
   max-height: 100%;
   min-height: 0;
   display: flex;
+  flex-grow: 1;
   flex-direction: column;
 `;
 
