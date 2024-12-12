@@ -277,10 +277,10 @@ export class SessionConversation extends Component<Props, State> {
                   }
                   disableTop={!this.props.hasOngoingCallWithFocusedConvo}
                 />
-                <ConversationMessageRequestButtons />
 
                 {isDraggingFile && <SessionFileDropzone />}
               </div>
+              <ConversationMessageRequestButtons />
 
               <CompositionBox
                 sendMessage={this.sendMessageFn}

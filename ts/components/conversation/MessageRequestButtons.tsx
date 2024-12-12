@@ -25,6 +25,7 @@ const MessageRequestContainer = styled.div`
   padding: var(--margins-lg);
   gap: var(--margins-lg);
   text-align: center;
+  background: var(--background-secondary-color);
 `;
 
 const ConversationBannerRow = styled.div`
