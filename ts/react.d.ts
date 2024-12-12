@@ -233,7 +233,8 @@ declare module 'react' {
     | 'conversation-options-avatar'
     | 'copy-sender-from-details'
     | 'copy-msg-from-details'
-    | 'block-unblock-modal-description'
+    | 'modal-heading'
+    | 'modal-description'
     // modules profile name
     | 'module-conversation__user__profile-name'
     | 'module-message-search-result__header__name__profile-name'

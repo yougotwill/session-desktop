@@ -88,7 +88,7 @@ export const BlockOrUnblockDialog = ({ pubkeys, action, onConfirmed }: NonNullab
 
   return (
     <SessionWrapperModal showExitIcon={true} title={localizedAction} onClose={closeModal}>
-      <StyledModalDescriptionContainer data-testid="block-unblock-modal-description">
+      <StyledModalDescriptionContainer data-testid="modal-description">
         <Localizer {...args} />
       </StyledModalDescriptionContainer>
       <Flex container={true} flexDirection="column" alignItems="center">
