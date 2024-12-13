@@ -340,7 +340,7 @@ export async function showUpdateGroupMembersByConvoId(conversationId: string) {
   window.inboxStore?.dispatch(updateGroupMembersModal({ conversationId }));
 }
 
-export function showLeavePrivateConversationByConvoId(conversationId: string) {
+export function showDeletePrivateConversationByConvoId(conversationId: string) {
   const conversation = ConvoHub.use().get(conversationId);
   const isMe = conversation.isMe();
 
@@ -367,7 +367,7 @@ export function showLeavePrivateConversationByConvoId(conversationId: string) {
       });
       await clearConversationInteractionState({ conversationId });
     } catch (err) {
-      window.log.warn(`showLeavePrivateConversationByConvoId error: ${err}`);
+      window.log.warn(`showDeletePrivateConversationByConvoId error: ${err}`);
       await saveConversationInteractionErrorAsMessage({
         conversationId,
         interactionType: isMe
@@ -452,6 +452,21 @@ async function leaveGroupOrCommunityByConvoId({
   }
 }
 
+/**
+ * Returns true if we the convo is a 03 group and if we can try to send a leave message.
+ */
+async function hasLeavingDetails(convoId: string) {
+  if (!PubKey.is03Pubkey(convoId)) {
+    return true;
+  }
+
+  const group = await UserGroupsWrapperActions.getGroup(convoId);
+
+  // we need the authData or the secretKey to be able to attempt to leave,
+  // otherwise we won't be able to even try
+  return group && (!isEmpty(group.authData) || !isEmpty(group.secretKey));
+}
+
 export async function showLeaveGroupByConvoId(conversationId: string, name: string | undefined) {
   const conversation = ConvoHub.use().get(conversationId);
 
@@ -465,15 +480,19 @@ export async function showLeaveGroupByConvoId(conversationId: string, name: stri
   const isAdmin = admins.includes(UserUtils.getOurPubKeyStrFromCache());
   const showOnlyGroupAdminWarning = isClosedGroup && isAdmin;
   const weAreLastAdmin =
-    (PubKey.is05Pubkey(conversationId) && isAdmin && admins.length === 1) ||
-    (PubKey.is03Pubkey(conversationId) && isAdmin && admins.length === 1);
+    (PubKey.is05Pubkey(conversationId) || PubKey.is03Pubkey(conversationId)) &&
+    isAdmin &&
+    admins.length === 1;
   const lastMessageInteractionType = conversation.get('lastMessageInteractionType');
   const lastMessageInteractionStatus = conversation.get('lastMessageInteractionStatus');
 
+  const canTryToLeave = await hasLeavingDetails(conversationId);
+
   if (
     !isPublic &&
-    lastMessageInteractionType === ConversationInteractionType.Leave &&
-    lastMessageInteractionStatus === ConversationInteractionStatus.Error
+    ((lastMessageInteractionType === ConversationInteractionType.Leave &&
+      lastMessageInteractionStatus === ConversationInteractionStatus.Error) ||
+      !canTryToLeave) // if we don't have any key to send our leave message, no need to try
   ) {
     await leaveGroupOrCommunityByConvoId({ conversationId, isPublic, sendLeaveMessage: false });
     return;

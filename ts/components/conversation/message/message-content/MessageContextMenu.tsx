@@ -46,7 +46,6 @@ import { Reactions } from '../../../../util/reactions';
 import { SessionContextMenuContainer } from '../../../SessionContextMenuContainer';
 import { SessionEmojiPanel, StyledEmojiPanel } from '../../SessionEmojiPanel';
 import { MessageReactBar } from './MessageReactBar';
-import { showCopyAccountIdAction } from '../../../menu/items/CopyAccountId';
 import { CopyAccountIdMenuItem } from '../../../menu/items/CopyAccountId/CopyAccountIdMenuItem';
 import { Localizer } from '../../../basic/Localizer';
 import { ItemWithDataTestId } from '../../../menu/items/MenuItemWithDataTestId';
@@ -54,6 +53,7 @@ import { getMenuAnimation } from '../../../menu/MenuAnimation';
 import { WithMessageId } from '../../../../session/types/with';
 import { DeleteItem } from '../../../menu/items/DeleteMessage/DeleteMessageMenuItem';
 import { RetryItem } from '../../../menu/items/RetrySend/RetrySendMenuItem';
+import { showCopyAccountIdAction } from '../../../menu/items/CopyAccountId/guard';
 
 export type MessageContextMenuSelectorProps = Pick<
   MessageRenderingProps,

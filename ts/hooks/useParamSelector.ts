@@ -26,6 +26,7 @@ import {
   useLibGroupInvitePending,
   useLibGroupKicked,
 } from '../state/selectors/userGroups';
+import { ConversationInteractionStatus, ConversationInteractionType } from '../interactions/types';
 
 export function useAvatarPath(convoId: string | undefined) {
   const convoProps = useConversationPropsById(convoId);
@@ -535,4 +536,13 @@ export function useLastMessage(convoId?: string) {
   }
 
   return convoProps.lastMessage;
+}
+
+export function useLastMessageIsLeaveError(convoId?: string) {
+  const lastMessage = useLastMessage(convoId);
+
+  return (
+    lastMessage?.interactionType === ConversationInteractionType.Leave &&
+    lastMessage?.interactionStatus === ConversationInteractionStatus.Error
+  );
 }
