@@ -23,7 +23,6 @@ import {
   NotEmptyArrayOfBatchResults,
 } from '../../apis/snode_api/SnodeRequestTypes';
 import { PubKey } from '../../types';
-import { UserSync } from '../job_runners/jobs/UserSyncJob';
 import { ed25519Str } from '../String';
 
 const requiredUserVariants: Array<ConfigWrapperUser> = [
@@ -42,8 +41,6 @@ async function initializeLibSessionUtilWrappers() {
     throw new Error('edkeypair not found for current user');
   }
   const privateKeyEd25519 = keypair.privKeyBytes;
-  // let's plan a sync on start with some room for the app to be ready
-  setTimeout(() => UserSync.queueNewJobIfNeeded, 20000);
 
   // fetch the dumps we already have from the database
   const dumps = await ConfigDumpData.getAllDumpsWithData();

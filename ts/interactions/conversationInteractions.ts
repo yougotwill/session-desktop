@@ -23,9 +23,7 @@ import { PubKey } from '../session/types';
 import { perfEnd, perfStart } from '../session/utils/Performance';
 import { sleepFor, timeoutWithAbort } from '../session/utils/Promise';
 import { ed25519Str, fromHexToArray, toHex } from '../session/utils/String';
-import { UserSync } from '../session/utils/job_runners/jobs/UserSyncJob';
 import { SessionUtilContact } from '../session/utils/libsession/libsession_utils_contacts';
-import { forceSyncConfigurationNowIfNeeded } from '../session/utils/sync/syncUtils';
 import {
   conversationReset,
   quoteMessage,
@@ -124,7 +122,6 @@ export const handleAcceptConversationRequest = async ({
   // Note: we don't mark as approvedMe = true, as we do not know if they did send us a message yet.
   await convo.setIsApproved(true, false);
   await convo.commit();
-  void forceSyncConfigurationNowIfNeeded();
 
   if (convo.isPrivate()) {
     // we only need the approval message (and sending a reply) when we are accepting a message request. i.e. someone sent us a message already and we didn't accept it yet.
@@ -182,12 +179,10 @@ export async function declineConversationWithoutConfirm({
   alsoBlock,
   conversationId,
   currentlySelectedConvo,
-  syncToDevices,
   conversationIdOrigin,
 }: {
   conversationId: string;
   currentlySelectedConvo: string | undefined;
-  syncToDevices: boolean;
   alsoBlock: boolean;
   conversationIdOrigin: string | null;
 }) {
@@ -249,9 +244,6 @@ export async function declineConversationWithoutConfirm({
     });
   }
 
-  if (syncToDevices) {
-    await forceSyncConfigurationNowIfNeeded();
-  }
   if (currentlySelectedConvo && currentlySelectedConvo === conversationId) {
     window?.inboxStore?.dispatch(resetConversationExternal());
   }
@@ -259,7 +251,6 @@ export async function declineConversationWithoutConfirm({
 
 export const declineConversationWithConfirm = ({
   conversationId,
-  syncToDevices,
   alsoBlock,
   currentlySelectedConvo,
   conversationIdOrigin,
@@ -300,7 +291,6 @@ export const declineConversationWithConfirm = ({
           conversationId,
           currentlySelectedConvo,
           alsoBlock,
-          syncToDevices,
           conversationIdOrigin,
         });
       },
@@ -414,9 +404,7 @@ async function leaveGroupOrCommunityByConvoId({
     }
 
     if (isPublic) {
-      await ConvoHub.use().deleteCommunity(conversationId, {
-        fromSyncMessage: false,
-      });
+      await ConvoHub.use().deleteCommunity(conversationId);
       return;
     }
     // for groups, we have a "leaving..." state that we don't need for communities.
@@ -760,7 +748,6 @@ export async function uploadOurAvatar(newAvatarDecrypted?: ArrayBuffer) {
 
   if (newAvatarDecrypted) {
     await setLastProfileUpdateTimestamp(Date.now());
-    await UserSync.queueNewJobIfNeeded();
     const userConfigLibsession = await ReleasedFeatures.checkIsUserConfigFeatureReleased();
 
     if (!userConfigLibsession) {

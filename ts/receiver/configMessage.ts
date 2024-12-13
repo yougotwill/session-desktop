@@ -15,7 +15,6 @@ import { PubKey } from '../session/types';
 import { StringUtils, UserUtils } from '../session/utils';
 import { toHex } from '../session/utils/String';
 import { FetchMsgExpirySwarm } from '../session/utils/job_runners/jobs/FetchMsgExpirySwarmJob';
-import { UserSync } from '../session/utils/job_runners/jobs/UserSyncJob';
 import { LibSessionUtil } from '../session/utils/libsession/libsession_utils';
 import { SessionUtilContact } from '../session/utils/libsession/libsession_utils_contacts';
 import { SessionUtilConvoInfoVolatile } from '../session/utils/libsession/libsession_utils_convo_info_volatile';
@@ -506,9 +505,7 @@ async function handleCommunitiesUpdate() {
   for (let index = 0; index < communitiesToLeaveInDB.length; index++) {
     const toLeave = communitiesToLeaveInDB[index];
     window.log.info('leaving community with convoId ', toLeave.id);
-    await ConvoHub.use().deleteCommunity(toLeave.id, {
-      fromSyncMessage: true,
-    });
+    await ConvoHub.use().deleteCommunity(toLeave.id);
   }
 
   // this call can take quite a long time but must be awaited (as it is async and create the entry in the DB, used as a diff)
@@ -978,7 +975,6 @@ async function processUserMergingResults(results: Map<ConfigWrapperUser, Incomin
   }
 
   const keys = [...results.keys()];
-  let anyNeedsPush = false;
   for (let index = 0; index < keys.length; index++) {
     const wrapperType = keys[index];
     const incomingResult = results.get(wrapperType);
@@ -1031,19 +1027,10 @@ async function processUserMergingResults(results: Map<ConfigWrapperUser, Incomin
           variant,
         });
       }
-
-      if (incomingResult.needsPush) {
-        anyNeedsPush = true;
-      }
     } catch (e) {
       window.log.error(`processMergingResults failed with ${e.message}`);
       return;
     }
-  }
-  // Now that the local state has been updated, trigger a config sync (this will push any
-  // pending updates and properly update the state)
-  if (anyNeedsPush) {
-    await UserSync.queueNewJobIfNeeded();
   }
 }
 

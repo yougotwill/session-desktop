@@ -229,6 +229,8 @@ class UserSyncJob extends PersistedJob<UserSyncPersistedData> {
   }
 }
 
+let interval: NodeJS.Timeout | undefined;
+
 /**
  * Queue a new Sync Configuration if needed job.
  * A UserSyncJob can only be added if there is none of the same type queued already.
@@ -238,6 +240,10 @@ async function queueNewJobIfNeeded() {
     window.log.info('NOT Scheduling ConfSyncJob: as we are linking a device');
 
     return;
+  }
+  // let's schedule periodic UserConfig jobs so we don't need to always remember to call UserSync.queueNewJobIfNeeded
+  if (!interval) {
+    interval = global.setInterval(() => void queueNewJobIfNeeded(), defaultMsBetweenRetries);
   }
   if (
     !lastRunConfigSyncJobTimestamp ||

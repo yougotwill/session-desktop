@@ -34,7 +34,6 @@ async function joinOpenGroup(
     const groupCreated = await joinOpenGroupV2WithUIEvents(
       serverUrl,
       false,
-      false,
       uiCallback,
       errorHandler
     );

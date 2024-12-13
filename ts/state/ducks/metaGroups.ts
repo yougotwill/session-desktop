@@ -28,7 +28,6 @@ import { PreConditionFailed } from '../../session/utils/errors';
 import { GroupInvite } from '../../session/utils/job_runners/jobs/GroupInviteJob';
 import { GroupPendingRemovals } from '../../session/utils/job_runners/jobs/GroupPendingRemovalsJob';
 import { GroupSync } from '../../session/utils/job_runners/jobs/GroupSyncJob';
-import { UserSync } from '../../session/utils/job_runners/jobs/UserSyncJob';
 import { RunJobResult } from '../../session/utils/job_runners/PersistedJob';
 import { LibSessionUtil } from '../../session/utils/libsession/libsession_utils';
 import { ed25519Str } from '../../session/utils/String';
@@ -870,8 +869,6 @@ async function handleNameChangeFromUI({
       'handleNameChangeFromUIOrNot: pushChangesToGroupSwarmIfNeeded did not return success'
     );
   }
-
-  await UserSync.queueNewJobIfNeeded();
 
   convo.set({
     active_at: createAtNetworkTimestamp,

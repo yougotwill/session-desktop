@@ -17,7 +17,6 @@ import { UserUtils } from '../../session/utils';
 import { sleepFor } from '../../session/utils/Promise';
 import { ed25519Str, stringToUint8Array } from '../../session/utils/String';
 import { PreConditionFailed } from '../../session/utils/errors';
-import { UserSync } from '../../session/utils/job_runners/jobs/UserSyncJob';
 import { LibSessionUtil } from '../../session/utils/libsession/libsession_utils';
 import { SessionUtilConvoInfoVolatile } from '../../session/utils/libsession/libsession_utils_convo_info_volatile';
 import { groupInfoActions } from '../../state/ducks/metaGroups';
@@ -197,7 +196,6 @@ async function handleGroupUpdateInviteMessage({
   }
 
   await LibSessionUtil.saveDumpsToDb(UserUtils.getOurPubKeyStrFromCache());
-  await UserSync.queueNewJobIfNeeded();
   if (!found.invitePending) {
     // if this group should already be polling based on if that author is pre-approved or we've already approved that group from another device.
     getSwarmPollingInstance().addGroupId(groupPk, async () => {
@@ -620,7 +618,6 @@ async function handleGroupUpdatePromoteMessage({
   }
 
   await LibSessionUtil.saveDumpsToDb(UserUtils.getOurPubKeyStrFromCache());
-  await UserSync.queueNewJobIfNeeded();
   if (!found.invitePending) {
     // This group should already be polling based on if that author is pre-approved or we've already approved that group from another device.
     // Start polling from it, we will mark ourselves as admin once we get the first merge result, if needed.

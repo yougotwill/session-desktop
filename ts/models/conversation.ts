@@ -74,7 +74,6 @@ import {
   MessageRequestResponse,
   MessageRequestResponseParams,
 } from '../session/messages/outgoing/controlMessage/MessageRequestResponse';
-import { UserSync } from '../session/utils/job_runners/jobs/UserSyncJob';
 import { SessionUtilContact } from '../session/utils/libsession/libsession_utils_contacts';
 import { SessionUtilConvoInfoVolatile } from '../session/utils/libsession/libsession_utils_convo_info_volatile';
 import { SessionUtilUserGroups } from '../session/utils/libsession/libsession_utils_user_groups';
@@ -94,7 +93,6 @@ import {
 } from '../types/sqlSharedTypes';
 import { Notifications } from '../util/notifications';
 import { Reactions } from '../util/reactions';
-import { Registration } from '../util/registration';
 import { Storage } from '../util/storage';
 import {
   ConversationAttributes,
@@ -2754,11 +2752,6 @@ async function commitConversationAndRefreshWrapper(id: string) {
     }
   }
 
-  if (Registration.isDone()) {
-    // save the new dump if needed to the DB asap
-    // this call throttled so we do not run this too often (and not for every .commit())
-    await UserSync.queueNewJobIfNeeded();
-  }
   convo.triggerUIRefresh();
 }
 

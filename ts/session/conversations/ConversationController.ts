@@ -38,7 +38,6 @@ import { ed25519Str } from '../utils/String';
 import { PreConditionFailed } from '../utils/errors';
 import { RunJobResult } from '../utils/job_runners/PersistedJob';
 import { GroupSync } from '../utils/job_runners/jobs/GroupSyncJob';
-import { UserSync } from '../utils/job_runners/jobs/UserSyncJob';
 import { LibSessionUtil } from '../utils/libsession/libsession_utils';
 import { SessionUtilContact } from '../utils/libsession/libsession_utils_contacts';
 import { SessionUtilConvoInfoVolatile } from '../utils/libsession/libsession_utils_convo_info_volatile';
@@ -248,7 +247,6 @@ class ConvoController {
 
     // we never keep a left legacy group. Only fully remove it.
     await this.removeGroupOrCommunityFromDBAndRedux(groupPk);
-    await UserSync.queueNewJobIfNeeded();
   }
 
   public async deleteGroup(
@@ -392,10 +390,9 @@ class ConvoController {
     getSwarmPollingInstance().removePubkey(groupPk, 'deleteGroup');
 
     window.inboxStore?.dispatch(groupInfoActions.removeGroupDetailsFromSlice({ groupPk }));
-    await UserSync.queueNewJobIfNeeded();
   }
 
-  public async deleteCommunity(convoId: string, options: DeleteOptions) {
+  public async deleteCommunity(convoId: string) {
     const conversation = await this.deleteConvoInitialChecks(convoId, 'Community', false);
     if (!conversation || !conversation.isPublic()) {
       return;
@@ -408,10 +405,6 @@ class ConvoController {
     }
     await removeCommunityFromWrappers(conversation.id); // this call needs to fetch the pubkey
     await this.removeGroupOrCommunityFromDBAndRedux(conversation.id);
-
-    if (!options.fromSyncMessage) {
-      await UserSync.queueNewJobIfNeeded();
-    }
   }
 
   public async delete1o1(
@@ -453,10 +446,6 @@ class ConvoController {
       if (getCurrentlySelectedConversationOutsideRedux() === conversation.id) {
         window.inboxStore?.dispatch(resetConversationExternal());
       }
-    }
-
-    if (!options.fromSyncMessage) {
-      await UserSync.queueNewJobIfNeeded();
     }
   }
 

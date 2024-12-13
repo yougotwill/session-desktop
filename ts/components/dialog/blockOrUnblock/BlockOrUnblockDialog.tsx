@@ -14,7 +14,6 @@ import { SessionButton, SessionButtonColor, SessionButtonType } from '../../basi
 import { StyledModalDescriptionContainer } from '../shared/ModalDescriptionContainer';
 import { BlockOrUnblockModalState } from './BlockOrUnblockModalState';
 import type { LocalizerComponentPropsObject } from '../../../types/localizer';
-import { UserSync } from '../../../session/utils/job_runners/jobs/UserSyncJob';
 
 type ModalState = NonNullable<BlockOrUnblockModalState>;
 
@@ -78,7 +77,6 @@ export const BlockOrUnblockDialog = ({ pubkeys, action, onConfirmed }: NonNullab
     }
     closeModal();
     onConfirmed?.();
-    await UserSync.queueNewJobIfNeeded();
   }, [action, onConfirmed, pubkeys]);
 
   if (isEmpty(pubkeys)) {
