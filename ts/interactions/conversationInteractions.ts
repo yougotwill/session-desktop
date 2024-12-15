@@ -344,11 +344,8 @@ export function showDeletePrivateConversationByConvoId(conversationId: string) {
 
   const onClickOk = async () => {
     try {
-      await updateConversationInteractionState({
-        conversationId,
-        type: isMe ? ConversationInteractionType.Hide : ConversationInteractionType.Leave,
-        status: ConversationInteractionStatus.Start,
-      });
+      // no network calls are made when we hide/delete a private chat, so no need to have a
+      // ConversationInteractionType state
       onClickClose();
       await ConvoHub.use().delete1o1(conversationId, {
         fromSyncMessage: false,
@@ -358,12 +355,6 @@ export function showDeletePrivateConversationByConvoId(conversationId: string) {
       await clearConversationInteractionState({ conversationId });
     } catch (err) {
       window.log.warn(`showDeletePrivateConversationByConvoId error: ${err}`);
-      await saveConversationInteractionErrorAsMessage({
-        conversationId,
-        interactionType: isMe
-          ? ConversationInteractionType.Hide
-          : ConversationInteractionType.Leave,
-      });
     }
   };
 

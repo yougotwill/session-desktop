@@ -17,6 +17,8 @@ import {
 import { SnodeNamespaces } from '../namespaces';
 import { GroupUpdateDeleteMemberContentMessage } from '../../../messages/outgoing/controlMessage/group_v2/to_group/GroupUpdateDeleteMemberContentMessage';
 import { GroupUpdateMemberLeftNotificationMessage } from '../../../messages/outgoing/controlMessage/group_v2/to_group/GroupUpdateMemberLeftNotificationMessage';
+import { TTL_DEFAULT } from '../../../constants';
+import { NetworkTime } from '../../../../util/NetworkTime';
 
 export type StoreMessageToSubRequestType =
   | GroupUpdateMemberChangeMessage
@@ -81,6 +83,7 @@ async function makeGroupMessageSubRequest(
       dbMessageIdentifier: m.dbMessageIdentifier,
       ...group,
       createdAtNetworkTimestamp: m.networkTimestamp,
+      getNow: NetworkTime.now,
     });
   });
 
@@ -114,6 +117,8 @@ function makeStoreGroupKeysSubRequest({
     encryptedData: encryptedSupplementKeys,
     groupPk,
     secretKey: group.secretKey,
+    ttlMs: TTL_DEFAULT.CONFIG_MESSAGE,
+    getNow: NetworkTime.now,
   });
 }
 
@@ -151,6 +156,8 @@ function makeStoreGroupConfigSubRequest({
             encryptedData: m.ciphertext,
             groupPk,
             secretKey: group.secretKey,
+            ttlMs: TTL_DEFAULT.CONFIG_MESSAGE,
+            getNow: NetworkTime.now,
           })
         : null
     )
@@ -163,6 +170,8 @@ function makeStoreGroupConfigSubRequest({
             encryptedData: m.ciphertext,
             groupPk,
             secretKey: group.secretKey,
+            ttlMs: TTL_DEFAULT.CONFIG_MESSAGE,
+            getNow: NetworkTime.now,
           })
         : null
     )
@@ -175,6 +184,8 @@ function makeStoreGroupConfigSubRequest({
             encryptedData: m.ciphertext,
             groupPk,
             secretKey: group.secretKey,
+            ttlMs: TTL_DEFAULT.CONFIG_MESSAGE,
+            getNow: NetworkTime.now,
           })
         : null
     )

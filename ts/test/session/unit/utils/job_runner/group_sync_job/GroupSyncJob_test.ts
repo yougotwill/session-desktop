@@ -4,7 +4,7 @@ import { omit } from 'lodash';
 import Long from 'long';
 import Sinon from 'sinon';
 import { getSodiumNode } from '../../../../../../node/sodiumNode';
-import { NotEmptyArrayOfBatchResults } from '../../../../../../session/apis/snode_api/SnodeRequestTypes';
+import { NotEmptyArrayOfBatchResults } from '../../../../../../session/apis/snode_api/BatchResultEntry';
 import { SnodeNamespaces } from '../../../../../../session/apis/snode_api/namespaces';
 import { ConvoHub } from '../../../../../../session/conversations';
 import { LibSodiumWrappers } from '../../../../../../session/crypto';

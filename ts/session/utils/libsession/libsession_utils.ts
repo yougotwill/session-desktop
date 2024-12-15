@@ -21,7 +21,7 @@ import { SnodeNamespaces, SnodeNamespacesUserConfig } from '../../apis/snode_api
 import {
   BatchResultEntry,
   NotEmptyArrayOfBatchResults,
-} from '../../apis/snode_api/SnodeRequestTypes';
+} from '../../apis/snode_api/BatchResultEntry';
 import { PubKey } from '../../types';
 import { ed25519Str } from '../String';
 
