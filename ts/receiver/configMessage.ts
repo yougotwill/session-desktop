@@ -703,7 +703,6 @@ async function handleSingleGroupUpdate({
   userEdKeypair,
 }: {
   groupInWrapper: UserGroupsGet;
-  latestEnvelopeTimestamp: number;
   userEdKeypair: UserUtils.ByteKeyPair;
 }) {
   const groupPk = groupInWrapper.pubkeyHex;
@@ -725,7 +724,8 @@ async function handleSingleGroupUpdate({
 
   if (!ConvoHub.use().get(groupPk)) {
     const created = await ConvoHub.use().getOrCreateAndWait(groupPk, ConversationTypeEnum.GROUPV2);
-    const joinedAt = groupInWrapper.joinedAtSeconds * 1000 || Date.now();
+    const joinedAt =
+      groupInWrapper.joinedAtSeconds * 1000 || CONVERSATION.LAST_JOINED_FALLBACK_TIMESTAMP;
     const expireTimer =
       groupInWrapper.disappearingTimerSeconds && groupInWrapper.disappearingTimerSeconds > 0
         ? groupInWrapper.disappearingTimerSeconds
@@ -766,7 +766,7 @@ async function handleSingleGroupUpdateToLeave(toLeave: GroupPubkeyType) {
 /**
  * Called when we just got a userGroups merge from the network. We need to apply the changes to our local state. (i.e. DB and redux slice of 03 groups)
  */
-async function handleGroupUpdate(latestEnvelopeTimestamp: number) {
+async function handleGroupUpdate(_latestEnvelopeTimestamp: number) {
   // first let's check which groups needs to be joined or left by doing a diff of what is in the wrapper and what is in the DB
   const allGroupsInWrapper = await UserGroupsWrapperActions.getAllGroups();
   const allGroupsIdsInDb = ConvoHub.use()
@@ -786,7 +786,7 @@ async function handleGroupUpdate(latestEnvelopeTimestamp: number) {
   for (let index = 0; index < allGroupsInWrapper.length; index++) {
     const groupInWrapper = allGroupsInWrapper[index];
     window.inboxStore?.dispatch(groupInfoActions.handleUserGroupUpdate(groupInWrapper) as any);
-    await handleSingleGroupUpdate({ groupInWrapper, latestEnvelopeTimestamp, userEdKeypair });
+    await handleSingleGroupUpdate({ groupInWrapper, userEdKeypair });
   }
 
   const groupsInDbButNotInWrapper = difference(allGroupsIdsInDb, allGroupsIdsInWrapper);
