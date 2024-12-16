@@ -230,9 +230,9 @@ describe('libsession_user_groups', () => {
         const groupWrapper = new UserGroupsWrapperNode(us.ed25519KeyPair.privKeyBytes, null);
 
         const group = groupWrapper.createGroup();
-        group.joinedAtSeconds = 4099680000 - 1; // 4099680000 is 1st january 2100 GMT
+        group.joinedAtSeconds = 9000000000 - 1; // 9000000000 is the cut off by libsession-util-nodejs
         groupWrapper.setGroup(group); // shouldn't throw
-        group.joinedAtSeconds = 4099680000 + 1; // 4099680000 is 1st january 2100 GMT
+        group.joinedAtSeconds = 9000000000 + 1; // 9000000000 is the cut off by libsession-util-nodejs
         expect(() => {
           groupWrapper.setGroup(group);
         }).to.throw();
