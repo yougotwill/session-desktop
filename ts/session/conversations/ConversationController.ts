@@ -293,9 +293,10 @@ class ConvoController {
         // this is caught and is adding an interaction notification message
         throw new Error('Failed to send our leaving message to 03 group');
       }
-      // now that we know we've sent the leave message, delete any remaining messages
-      await this.deleteConvoInitialChecks(groupPk, 'Group', false);
     }
+
+    // now that we know we've sent the leave message, delete any remaining messages
+    await this.deleteConvoInitialChecks(groupPk, 'Group', false);
 
     // a group 03 can be removed fully or kept empty as kicked.
     // when it was pendingInvite, we delete it fully,
@@ -330,49 +331,59 @@ class ConvoController {
         }
       }
     } else {
+      // Let's check if we still have a MetaGroupWrapper for this group. If we don't we won't be able to do anything..
+      let metaGroupWrapperExists = false;
       try {
-        const us = UserUtils.getOurPubKeyStrFromCache();
-        const allMembers = await MetaGroupWrapperActions.memberGetAll(groupPk);
-        const otherAdminsCount = allMembers
-          .filter(m => m.nominatedAdmin)
-          .filter(m => m.pubkeyHex !== us).length;
-        const weAreLastAdmin = otherAdminsCount === 0;
-        const infos = await MetaGroupWrapperActions.infoGet(groupPk);
-        const fromUserGroup = await UserGroupsWrapperActions.getGroup(groupPk);
-        if (!infos || !fromUserGroup || isEmpty(infos) || isEmpty(fromUserGroup)) {
-          throw new Error('deleteGroup: some required data not present');
-        }
-        const { secretKey } = fromUserGroup;
-
-        // check if we are the last admin
-        if (secretKey && !isEmpty(secretKey) && (weAreLastAdmin || forceDestroyForAllMembers)) {
-          const deleteAllMessagesSubRequest = deleteAllMessagesOnSwarm
-            ? new DeleteAllFromGroupMsgNodeSubRequest({
-                groupPk,
-                secretKey,
-              })
-            : undefined;
-
-          // this marks the group info as deleted. We need to push those details
-          await MetaGroupWrapperActions.infoDestroy(groupPk);
-          const lastPushResult = await GroupSync.pushChangesToGroupSwarmIfNeeded({
-            groupPk,
-            deleteAllMessagesSubRequest,
-            extraStoreRequests: [],
-          });
-          await LibSessionUtil.saveDumpsToDb(groupPk);
-
-          if (lastPushResult !== RunJobResult.Success) {
-            throw new Error(`Failed to destroyGroupDetails for pk ${ed25519Str(groupPk)}`);
+        await MetaGroupWrapperActions.infoGet(groupPk);
+        metaGroupWrapperExists = true;
+      } catch {
+        window.log.warn(`deleteGroup: MetaGroupWrapperActions for ${groupPk} does not exist.`);
+      }
+      if (metaGroupWrapperExists) {
+        try {
+          const us = UserUtils.getOurPubKeyStrFromCache();
+          const allMembers = await MetaGroupWrapperActions.memberGetAll(groupPk);
+          const otherAdminsCount = allMembers
+            .filter(m => m.nominatedAdmin)
+            .filter(m => m.pubkeyHex !== us).length;
+          const weAreLastAdmin = otherAdminsCount === 0;
+          const infos = await MetaGroupWrapperActions.infoGet(groupPk);
+          const fromUserGroup = await UserGroupsWrapperActions.getGroup(groupPk);
+          if (!infos || !fromUserGroup || isEmpty(infos) || isEmpty(fromUserGroup)) {
+            throw new Error('deleteGroup: some required data not present');
           }
+          const { secretKey } = fromUserGroup;
+
+          // check if we are the last admin
+          if (secretKey && !isEmpty(secretKey) && (weAreLastAdmin || forceDestroyForAllMembers)) {
+            const deleteAllMessagesSubRequest = deleteAllMessagesOnSwarm
+              ? new DeleteAllFromGroupMsgNodeSubRequest({
+                  groupPk,
+                  secretKey,
+                })
+              : undefined;
+
+            // this marks the group info as deleted. We need to push those details
+            await MetaGroupWrapperActions.infoDestroy(groupPk);
+            const lastPushResult = await GroupSync.pushChangesToGroupSwarmIfNeeded({
+              groupPk,
+              deleteAllMessagesSubRequest,
+              extraStoreRequests: [],
+            });
+            await LibSessionUtil.saveDumpsToDb(groupPk);
+
+            if (lastPushResult !== RunJobResult.Success) {
+              throw new Error(`Failed to destroyGroupDetails for pk ${ed25519Str(groupPk)}`);
+            }
+          }
+        } catch (e) {
+          // if that group was already freed this will happen.
+          // we still want to delete it entirely though
+          window.log.warn(
+            `deleteGroup: MetaGroupWrapperActions failed with: ${e.message}... Keeping it as this should be a retryable error`
+          );
+          throw e;
         }
-      } catch (e) {
-        // if that group was already freed this will happen.
-        // we still want to delete it entirely though
-        window.log.warn(
-          `deleteGroup: MetaGroupWrapperActions failed with: ${e.message}... Keeping it as this should be a retryable error`
-        );
-        throw e;
       }
 
       // this deletes the secretKey if we had it. If we need it for something, it has to be done before this call.
