@@ -660,17 +660,26 @@ async function handleMemberAddedFromUI({
     group
   );
 
-  // push new members & key supplement in a single batch call
-  const sequenceResult = await GroupSync.pushChangesToGroupSwarmIfNeeded({
-    groupPk,
-    supplementalKeysSubRequest,
-    revokeSubRequest,
-    unrevokeSubRequest,
-    extraStoreRequests,
-  });
-  if (sequenceResult !== RunJobResult.Success) {
-    throw new Error(
-      'handleMemberAddedFromUIOrNot: pushChangesToGroupSwarmIfNeeded did not return success'
+  try {
+    // push new members & key supplement in a single batch call
+    const sequenceResult = await GroupSync.pushChangesToGroupSwarmIfNeeded({
+      groupPk,
+      supplementalKeysSubRequest,
+      revokeSubRequest,
+      unrevokeSubRequest,
+      extraStoreRequests,
+    });
+    if (sequenceResult !== RunJobResult.Success) {
+      await LibSessionUtil.saveDumpsToDb(groupPk);
+
+      throw new Error(
+        'handleMemberAddedFromUIOrNot: pushChangesToGroupSwarmIfNeeded did not return success'
+      );
+    }
+  } catch (e) {
+    window.log.warn(
+      'handleNameChangeFromUIOrNot: pushChangesToGroupSwarmIfNeeded failed with:',
+      e.message
     );
   }
 
@@ -779,15 +788,21 @@ async function handleMemberRemovedFromUI({
     [removedControlMessage],
     group
   );
-
-  // Send the updated config (with changes to pending_removal) and that GroupUpdateMessage request (if any) as a sequence.
-  const sequenceResult = await GroupSync.pushChangesToGroupSwarmIfNeeded({
-    groupPk,
-    extraStoreRequests,
-  });
-  if (sequenceResult !== RunJobResult.Success) {
-    throw new Error(
-      'currentDeviceGroupMembersChange: pushChangesToGroupSwarmIfNeeded did not return success'
+  try {
+    // Send the updated config (with changes to pending_removal) and that GroupUpdateMessage request (if any) as a sequence.
+    const sequenceResult = await GroupSync.pushChangesToGroupSwarmIfNeeded({
+      groupPk,
+      extraStoreRequests,
+    });
+    if (sequenceResult !== RunJobResult.Success) {
+      throw new Error(
+        'currentDeviceGroupMembersChange: pushChangesToGroupSwarmIfNeeded did not return success'
+      );
+    }
+  } catch (e) {
+    window.log.warn(
+      'currentDeviceGroupMembersChange: pushChangesToGroupSwarmIfNeeded failed with:',
+      e.message
     );
   }
 
@@ -859,14 +874,23 @@ async function handleNameChangeFromUI({
     group
   );
 
-  const batchResult = await GroupSync.pushChangesToGroupSwarmIfNeeded({
-    groupPk,
-    extraStoreRequests,
-  });
+  try {
+    const batchResult = await GroupSync.pushChangesToGroupSwarmIfNeeded({
+      groupPk,
+      extraStoreRequests,
+    });
 
-  if (batchResult !== RunJobResult.Success) {
-    throw new Error(
-      'handleNameChangeFromUIOrNot: pushChangesToGroupSwarmIfNeeded did not return success'
+    if (batchResult !== RunJobResult.Success) {
+      await LibSessionUtil.saveDumpsToDb(groupPk);
+
+      throw new Error(
+        'handleNameChangeFromUIOrNot: pushChangesToGroupSwarmIfNeeded did not return success'
+      );
+    }
+  } catch (e) {
+    window.log.warn(
+      'handleNameChangeFromUIOrNot: pushChangesToGroupSwarmIfNeeded failed with:',
+      e.message
     );
   }
 
@@ -975,14 +999,20 @@ const triggerFakeAvatarUpdate = createAsyncThunk(
       [updateMsg],
       group
     );
-
-    const batchResult = await GroupSync.pushChangesToGroupSwarmIfNeeded({
-      groupPk,
-      extraStoreRequests,
-    });
-    if (!batchResult) {
-      window.log.warn(`failed to send avatarChange message for group ${ed25519Str(groupPk)}`);
-      throw new Error('failed to send avatarChange message');
+    try {
+      const batchResult = await GroupSync.pushChangesToGroupSwarmIfNeeded({
+        groupPk,
+        extraStoreRequests,
+      });
+      if (!batchResult) {
+        window.log.warn(`failed to send avatarChange message for group ${ed25519Str(groupPk)}`);
+        throw new Error('failed to send avatarChange message');
+      }
+    } catch (e) {
+      window.log.warn(
+        'currentDeviceGroupMembersChange: pushChangesToGroupSwarmIfNeeded failed with:',
+        e.message
+      );
     }
   }
 );
@@ -1024,16 +1054,22 @@ const triggerFakeDeleteMsgBeforeNow = createAsyncThunk(
     await MetaGroupWrapperActions.infoSet(groupPk, infoGet);
 
     const extraStoreRequests = await StoreGroupRequestFactory.makeGroupMessageSubRequest([], group);
-
-    const batchResult = await GroupSync.pushChangesToGroupSwarmIfNeeded({
-      groupPk,
-      extraStoreRequests,
-    });
-    if (!batchResult) {
+    try {
+      const batchResult = await GroupSync.pushChangesToGroupSwarmIfNeeded({
+        groupPk,
+        extraStoreRequests,
+      });
+      if (!batchResult) {
+        window.log.warn(
+          `failed to send deleteBeforeSeconds/deleteAttachBeforeSeconds message for group ${ed25519Str(groupPk)}`
+        );
+        throw new Error('failed to send deleteBeforeSeconds/deleteAttachBeforeSeconds message');
+      }
+    } catch (e) {
       window.log.warn(
-        `failed to send deleteBeforeSeconds/deleteAttachBeforeSeconds message for group ${ed25519Str(groupPk)}`
+        'currentDeviceGroupMembersChange: pushChangesToGroupSwarmIfNeeded failed with:',
+        e.message
       );
-      throw new Error('failed to send deleteBeforeSeconds/deleteAttachBeforeSeconds message');
     }
   }
 );

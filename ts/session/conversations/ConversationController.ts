@@ -274,8 +274,9 @@ class ConvoController {
       `deleteGroup: ${ed25519Str(groupPk)}, sendLeaveMessage:${sendLeaveMessage}, fromSyncMessage:${fromSyncMessage}, deletionType:${deletionType}, deleteAllMessagesOnSwarm:${deleteAllMessagesOnSwarm}, forceDestroyForAllMembers:${forceDestroyForAllMembers}, clearFetchedHashes:${clearFetchedHashes}`
     );
 
-    // this deletes all messages in the conversation
-    const conversation = await this.deleteConvoInitialChecks(groupPk, 'Group', false);
+    // Keep the messages until we have effectively left the group (and managed to send our leave message)m
+    // because we have the "Leaving..." state (left pane) linked to the last message in conversation.
+    const conversation = await this.deleteConvoInitialChecks(groupPk, 'Group', true);
     if (!conversation || !conversation.isClosedGroup()) {
       return;
     }
@@ -292,7 +293,10 @@ class ConvoController {
         // this is caught and is adding an interaction notification message
         throw new Error('Failed to send our leaving message to 03 group');
       }
+      // now that we know we've sent the leave message, delete any remaining messages
+      await this.deleteConvoInitialChecks(groupPk, 'Group', false);
     }
+
     // a group 03 can be removed fully or kept empty as kicked.
     // when it was pendingInvite, we delete it fully,
     // when it was not, we empty the group but keep it with the "you have been kicked" message
@@ -356,6 +360,8 @@ class ConvoController {
             deleteAllMessagesSubRequest,
             extraStoreRequests: [],
           });
+          await LibSessionUtil.saveDumpsToDb(groupPk);
+
           if (lastPushResult !== RunJobResult.Success) {
             throw new Error(`Failed to destroyGroupDetails for pk ${ed25519Str(groupPk)}`);
           }
@@ -363,7 +369,10 @@ class ConvoController {
       } catch (e) {
         // if that group was already freed this will happen.
         // we still want to delete it entirely though
-        window.log.warn(`deleteGroup: MetaGroupWrapperActions failed with: ${e.message}`);
+        window.log.warn(
+          `deleteGroup: MetaGroupWrapperActions failed with: ${e.message}... Keeping it as this should be a retryable error`
+        );
+        throw e;
       }
 
       // this deletes the secretKey if we had it. If we need it for something, it has to be done before this call.
