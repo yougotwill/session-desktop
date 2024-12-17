@@ -401,6 +401,8 @@ class ConvoController {
       await Data.emptySeenMessageHashesForConversation(groupPk);
     }
 
+    await LibSessionUtil.saveDumpsToDb(UserUtils.getOurPubKeyStrFromCache());
+
     await SessionUtilConvoInfoVolatile.removeGroupFromWrapper(groupPk);
     // release the memory (and the current meta-dumps in memory for that group)
     window.log.info(`freeing meta group wrapper: ${ed25519Str(groupPk)}`);
