@@ -1202,8 +1202,6 @@ const currentDeviceGroupNameChange = createAsyncThunk(
 function deleteGroupPkEntriesFromState(state: GroupState, groupPk: GroupPubkeyType) {
   delete state.infos[groupPk];
   delete state.members[groupPk];
-  delete state.membersInviteSending[groupPk];
-  delete state.membersPromoteSending[groupPk];
 }
 
 function applySendingStateChange({
