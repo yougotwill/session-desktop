@@ -11,6 +11,7 @@ export const RetryItem = ({ messageId }: WithMessageId) => {
   const isOutgoing = direction === 'outgoing';
 
   const showRetry = status === 'error' && isOutgoing;
+
   const onRetry = useCallback(async () => {
     const found = await Data.getMessageById(messageId);
     if (found) {

@@ -244,6 +244,7 @@ const DeleteGroupPanelButton = () => {
   if (!showItem || !convoId) {
     return null;
   }
+
   const token = PubKey.is03Pubkey(convoId) ? 'groupDelete' : 'conversationsDelete';
 
   return (

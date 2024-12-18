@@ -795,6 +795,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
 
     const messageRequestResponse = new MessageRequestResponse(messageRequestResponseParams);
     const pubkeyForSending = new PubKey(this.id);
+    window.log.info(`Sending message request accepted message to ${PubKey.shorten(this.id)}`);
     await MessageQueue.use()
       .sendToPubKey(pubkeyForSending, messageRequestResponse, SnodeNamespaces.Default)
       .catch(window?.log?.error);

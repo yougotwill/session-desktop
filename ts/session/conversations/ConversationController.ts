@@ -274,7 +274,7 @@ class ConvoController {
       `deleteGroup: ${ed25519Str(groupPk)}, sendLeaveMessage:${sendLeaveMessage}, fromSyncMessage:${fromSyncMessage}, deletionType:${deletionType}, deleteAllMessagesOnSwarm:${deleteAllMessagesOnSwarm}, forceDestroyForAllMembers:${forceDestroyForAllMembers}, clearFetchedHashes:${clearFetchedHashes}`
     );
 
-    // Keep the messages until we have effectively left the group (and managed to send our leave message)m
+    // Keep the messages until we have effectively left the group (and managed to send our leave message)
     // because we have the "Leaving..." state (left pane) linked to the last message in conversation.
     const conversation = await this.deleteConvoInitialChecks(groupPk, 'Group', true);
     if (!conversation || !conversation.isClosedGroup()) {
