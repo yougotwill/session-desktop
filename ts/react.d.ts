@@ -179,6 +179,8 @@ declare module 'react' {
     // to sort
     | 'restore-using-recovery'
     | 'link-device'
+    | 'join-community-conversation'
+    | 'join-community-button'
     | 'select-contact'
     | 'contact' // this is way too generic
     | 'contact-status'
