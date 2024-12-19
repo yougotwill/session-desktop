@@ -2442,16 +2442,11 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     });
 
     // no need to trigger a UI update now, we trigger a messagesAdded just below
-    const messageId = await model.commit(false);
+    const messageId = await model.commit(true);
     model.set({ id: messageId });
 
     await model.setToExpire();
-
-    const messageModelProps = model.getMessageModelProps();
-    window.inboxStore?.dispatch(conversationActions.messagesChanged([messageModelProps]));
     this.updateLastMessage();
-
-    await this.commit();
     return model;
   }
 
