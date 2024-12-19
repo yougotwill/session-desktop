@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import useAsyncFn from 'react-use/lib/useAsyncFn';
 import { WithMessageId } from '../../../../session/types/with';
 import { useMessageDirection, useMessageStatus } from '../../../../state/selectors';
 import { ItemWithDataTestId } from '../MenuItemWithDataTestId';
@@ -12,7 +12,7 @@ export const RetryItem = ({ messageId }: WithMessageId) => {
 
   const showRetry = status === 'error' && isOutgoing;
 
-  const onRetry = useCallback(async () => {
+  const [, doResend] = useAsyncFn(async () => {
     const found = await Data.getMessageById(messageId);
     if (found) {
       await found.retrySend();
@@ -21,6 +21,6 @@ export const RetryItem = ({ messageId }: WithMessageId) => {
 
   return showRetry ? (
     // eslint-disable-next-line @typescript-eslint/no-misused-promises
-    <ItemWithDataTestId onClick={onRetry}>{window.i18n('resend')}</ItemWithDataTestId>
+    <ItemWithDataTestId onClick={() => doResend()}>{window.i18n('resend')}</ItemWithDataTestId>
   ) : null;
 };

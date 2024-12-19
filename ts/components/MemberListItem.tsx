@@ -200,10 +200,6 @@ const GroupStatusText = ({ groupPk, pubkey }: { pubkey: PubkeyType; groupPk: Gro
     return null;
   }
 
-  /**
-   * Note: Keep the "sending" checks here first, as we might be "sending" when we've previously failed.
-   * If we were to have the "failed" checks first, we'd hide the "sending" state when we are retrying.
-   */
   const statusText = localisedStatusFromMemberStatus(memberStatus);
   if (!statusText) {
     return null;

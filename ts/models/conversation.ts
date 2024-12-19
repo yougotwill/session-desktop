@@ -2441,7 +2441,6 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       flags,
     });
 
-    // no need to trigger a UI update now, we trigger a messagesAdded just below
     const messageId = await model.commit(true);
     model.set({ id: messageId });
 
