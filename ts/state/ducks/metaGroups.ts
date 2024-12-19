@@ -524,7 +524,8 @@ async function handleWithHistoryMembers({
       memberPubkey: member,
       profileKeyHex,
     });
-    await MetaGroupWrapperActions.memberSetInviteSent(groupPk, member);
+    // a group invite job will be added to the queue
+    await MetaGroupWrapperActions.memberSetInviteNotSent(groupPk, member);
   }
   const encryptedSupplementKeys = withHistory.length
     ? await MetaGroupWrapperActions.generateSupplementKeys(groupPk, withHistory)
@@ -554,7 +555,8 @@ async function handleWithoutHistoryMembers({
       displayName,
       profileKeyHex,
     });
-    await MetaGroupWrapperActions.memberSetInviteSent(groupPk, member);
+    // a group invite job will be added to the queue
+    await MetaGroupWrapperActions.memberSetInviteNotSent(groupPk, member);
   }
 
   if (!isEmpty(withoutHistory)) {

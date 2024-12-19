@@ -259,6 +259,8 @@ const ResendButton = ({ groupPk, pubkey }: { pubkey: PubkeyType; groupPk: GroupP
           window.log.warn('tried to resend invite but we do not have correct details');
           return;
         }
+        await MetaGroupWrapperActions.memberSetInviteNotSent(groupPk, pubkey);
+
         // if we tried to invite that member as admin right away, let's retry it as such.
         const inviteAsAdmin = member.nominatedAdmin;
         await GroupInvite.addJob({
