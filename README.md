@@ -14,7 +14,7 @@ Please search for any [existing issues](https://github.com/session-foundation/se
 
 ## Supported platforms
 
-Session requires Windows 10 or later, macOS Monterey (12) or later, or a Linux distribution with glibc 2.28 or later like Debian 10 or Ubuntu 20.04.
+Session requires Windows 10 or later, macOS Ventura (13) or later, or a Linux distribution with glibc 2.28 or later like Debian 10 or Ubuntu 20.04.
 
 ## Build instruction
 
