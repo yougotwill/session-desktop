@@ -295,14 +295,14 @@ class ConvoController {
       }
     }
 
-    // now that we know we've sent the leave message, delete any remaining messages
-    await this.deleteConvoInitialChecks(groupPk, 'Group', false);
-
     // a group 03 can be removed fully or kept empty as kicked.
     // when it was pendingInvite, we delete it fully,
     // when it was not, we empty the group but keep it with the "you have been kicked" message
     // Note: the pendingInvite=true case cannot really happen as we wouldn't be polling from that group (and so, not get the message kicking us)
     if (deletionType === 'keepAsKicked' || deletionType === 'keepAsDestroyed') {
+      // now that we know we've sent the leave message, delete any remaining messages
+      await this.deleteConvoInitialChecks(groupPk, 'Group', false);
+
       // delete the secretKey/authData if we had it. If we need it for something, it has to be done before this call.
       if (groupInUserGroup) {
         groupInUserGroup.authData = null;
@@ -380,11 +380,13 @@ class ConvoController {
           // if that group was already freed this will happen.
           // we still want to delete it entirely though
           window.log.warn(
-            `deleteGroup: MetaGroupWrapperActions failed with: ${e.message}... Keeping it as this should be a retryable error`
+            `deleteGroup: MetaGroupWrapperActions failed with: ${e.message}... Keeping it as this should be a retryable error (we are admin case)`
           );
           throw e;
         }
       }
+      // now that we know we've pushed the group as destroyed, destroy the group's messages locally
+      await this.deleteConvoInitialChecks(groupPk, 'Group', false);
 
       // this deletes the secretKey if we had it. If we need it for something, it has to be done before this call.
       await UserGroupsWrapperActions.eraseGroup(groupPk);
