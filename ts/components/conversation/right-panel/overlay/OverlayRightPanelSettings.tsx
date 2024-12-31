@@ -1,7 +1,7 @@
 import { compact, flatten, isEqual } from 'lodash';
 import { SessionDataTestId, useEffect, useState } from 'react';
 
-import { useDispatch, useSelector } from 'react-redux';
+import { useDispatch } from 'react-redux';
 import useInterval from 'react-use/lib/useInterval';
 import styled from 'styled-components';
 import { Data } from '../../../../data/data';
@@ -11,13 +11,14 @@ import {
   useConversationUsername,
   useDisappearingMessageSettingText,
   useIsClosedGroup,
+  useIsGroupDestroyed,
   useIsKickedFromGroup,
   useIsPublic,
-  useLastMessageIsLeaveError,
 } from '../../../../hooks/useParamSelector';
 import { useIsRightPanelShowing } from '../../../../hooks/useUI';
 import {
   showAddModeratorsByConvoId,
+  showDeleteGroupByConvoId,
   showInviteContactByConvoId,
   showLeaveGroupByConvoId,
   showRemoveModeratorsByConvoId,
@@ -57,7 +58,7 @@ import {
   showDeleteGroupItem,
   showLeaveGroupItem,
 } from '../../../menu/items/LeaveAndDeleteGroup/guard';
-import { getIsMessageRequestOverlayShown } from '../../../../state/selectors/section';
+import { useIsMessageRequestOverlayShown } from '../../../../state/selectors/section';
 import { showLeaveCommunityItem } from '../../../menu/items/LeaveCommunity/guard';
 
 async function getMediaGalleryProps(conversationId: string): Promise<{
@@ -229,16 +230,18 @@ const LeaveCommunityPanelButton = () => {
 const DeleteGroupPanelButton = () => {
   const convoId = useSelectedConversationKey();
   const isGroup = useIsClosedGroup(convoId);
-  const isMessageRequestShown = useSelector(getIsMessageRequestOverlayShown);
+  const isMessageRequestShown = useIsMessageRequestOverlayShown();
   const isKickedFromGroup = useIsKickedFromGroup(convoId) || false;
-  const lastMessageIsLeaveError = useLastMessageIsLeaveError(convoId);
   const selectedUsername = useConversationUsername(convoId) || convoId;
+  const isPublic = useIsPublic(convoId);
+  const isGroupDestroyed = useIsGroupDestroyed(convoId);
 
   const showItem = showDeleteGroupItem({
     isGroup,
     isKickedFromGroup,
     isMessageRequestShown,
-    lastMessageIsLeaveError,
+    isPublic,
+    isGroupDestroyed,
   });
 
   if (!showItem || !convoId) {
@@ -251,7 +254,7 @@ const DeleteGroupPanelButton = () => {
     <PanelIconButton
       text={window.i18n(token)}
       dataTestId="leave-group-button"
-      onClick={() => void showLeaveGroupByConvoId(convoId, selectedUsername)}
+      onClick={() => void showDeleteGroupByConvoId(convoId, selectedUsername)}
       color={'var(--danger-color)'}
       iconType={'delete'}
     />
@@ -262,15 +265,17 @@ const LeaveGroupPanelButton = () => {
   const selectedConvoKey = useSelectedConversationKey();
   const isGroup = useIsClosedGroup(selectedConvoKey);
   const username = useConversationUsername(selectedConvoKey) || selectedConvoKey;
-  const isMessageRequestShown = useSelector(getIsMessageRequestOverlayShown);
+  const isMessageRequestShown = useIsMessageRequestOverlayShown();
   const isKickedFromGroup = useIsKickedFromGroup(selectedConvoKey) || false;
-  const lastMessageIsLeaveError = useLastMessageIsLeaveError(selectedConvoKey);
+  const isPublic = useIsPublic(selectedConvoKey);
+  const isGroupDestroyed = useIsGroupDestroyed(selectedConvoKey);
 
   const showItem = showLeaveGroupItem({
     isGroup,
     isKickedFromGroup,
     isMessageRequestShown,
-    lastMessageIsLeaveError,
+    isPublic,
+    isGroupDestroyed,
   });
 
   if (!selectedConvoKey || !showItem) {

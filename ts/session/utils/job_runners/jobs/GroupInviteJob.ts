@@ -200,6 +200,7 @@ class GroupInviteJob extends PersistedJob<GroupInvitePersistedData> {
           groupPk,
           unrevokeSubRequest,
           extraStoreRequests: [],
+          allow401s: false,
         });
         if (sequenceResult !== RunJobResult.Success) {
           await LibSessionUtil.saveDumpsToDb(groupPk);

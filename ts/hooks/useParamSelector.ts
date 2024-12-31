@@ -212,7 +212,7 @@ export function useIsKickedFromGroup(convoId?: string) {
 export function useIsGroupDestroyed(convoId?: string) {
   const libIsDestroyed = useLibGroupDestroyed(convoId);
   if (convoId && PubKey.is03Pubkey(convoId)) {
-    return libIsDestroyed;
+    return libIsDestroyed || false;
   }
   return false;
 }

@@ -5,8 +5,8 @@ import { useConvoIdFromContext } from '../../contexts/ConvoIdContext';
 import { useIsPinned, useIsPrivate, useIsPrivateAndFriend } from '../../hooks/useParamSelector';
 import { ConvoHub } from '../../session/conversations';
 import {
-  getIsMessageRequestOverlayShown,
   getIsMessageSection,
+  useIsMessageRequestOverlayShown,
 } from '../../state/selectors/section';
 import { useIsSearching } from '../../state/selectors/search';
 import { SessionContextMenuContainer } from '../SessionContextMenuContainer';
@@ -91,7 +91,7 @@ export const PinConversationMenuItem = (): JSX.Element | null => {
   const isPrivateAndFriend = useIsPrivateAndFriend(conversationId);
   const isPrivate = useIsPrivate(conversationId);
   const isPinned = useIsPinned(conversationId);
-  const isMessageRequest = useSelector(getIsMessageRequestOverlayShown);
+  const isMessageRequest = useIsMessageRequestOverlayShown();
 
   if (isMessagesSection && !isMessageRequest && (!isPrivate || (isPrivate && isPrivateAndFriend))) {
     const conversation = ConvoHub.use().get(conversationId);

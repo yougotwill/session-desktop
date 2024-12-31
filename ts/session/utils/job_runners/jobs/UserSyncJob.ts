@@ -126,6 +126,7 @@ async function pushChangesToUserSwarmIfNeeded() {
       destination: us,
       method: 'sequence',
       abortSignal: controller.signal,
+      allow401s: false, // user swarm push, we shouldn't need to allow 401s
     }),
     30 * DURATION.SECONDS,
     controller

@@ -15,6 +15,7 @@ import {
 } from './SnodeRequestTypes';
 import { NotEmptyArrayOfBatchResults } from './BatchResultEntry';
 import { MergedAbortSignal, WithTimeoutMs } from './requestWith';
+import { WithAllow401s } from '../../types/with';
 
 function logSubRequests(requests: Array<BuiltSnodeSubRequests>) {
   return `[${requests.map(builtRequestToLoggingId).join(', ')}]`;
@@ -22,7 +23,6 @@ function logSubRequests(requests: Array<BuiltSnodeSubRequests>) {
 
 type WithTargetNode = { targetNode: Snode };
 type WithAssociatedWith = { associatedWith: string | null };
-type WithAllow401s = { allow401s: boolean };
 
 /**
  * This is the equivalent to the batch send on sogs. The target node runs each sub request and returns a list of all the sub status and bodies.

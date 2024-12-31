@@ -225,6 +225,7 @@ const initNewGroupInWrapper = createAsyncThunk(
       const result = await GroupSync.pushChangesToGroupSwarmIfNeeded({
         groupPk,
         extraStoreRequests,
+        allow401s: false,
       });
       if (result !== RunJobResult.Success) {
         window.log.warn('GroupSync.pushChangesToGroupSwarmIfNeeded during create failed');
@@ -670,6 +671,7 @@ async function handleMemberAddedFromUI({
       revokeSubRequest,
       unrevokeSubRequest,
       extraStoreRequests,
+      allow401s: false,
     });
     if (sequenceResult !== RunJobResult.Success) {
       await LibSessionUtil.saveDumpsToDb(groupPk);
@@ -795,6 +797,7 @@ async function handleMemberRemovedFromUI({
     const sequenceResult = await GroupSync.pushChangesToGroupSwarmIfNeeded({
       groupPk,
       extraStoreRequests,
+      allow401s: false,
     });
     if (sequenceResult !== RunJobResult.Success) {
       throw new Error(
@@ -880,6 +883,7 @@ async function handleNameChangeFromUI({
     const batchResult = await GroupSync.pushChangesToGroupSwarmIfNeeded({
       groupPk,
       extraStoreRequests,
+      allow401s: false,
     });
 
     if (batchResult !== RunJobResult.Success) {
@@ -1005,6 +1009,7 @@ const triggerFakeAvatarUpdate = createAsyncThunk(
       const batchResult = await GroupSync.pushChangesToGroupSwarmIfNeeded({
         groupPk,
         extraStoreRequests,
+        allow401s: false,
       });
       if (!batchResult) {
         window.log.warn(`failed to send avatarChange message for group ${ed25519Str(groupPk)}`);
@@ -1060,6 +1065,7 @@ const triggerFakeDeleteMsgBeforeNow = createAsyncThunk(
       const batchResult = await GroupSync.pushChangesToGroupSwarmIfNeeded({
         groupPk,
         extraStoreRequests,
+        allow401s: false,
       });
       if (!batchResult) {
         window.log.warn(

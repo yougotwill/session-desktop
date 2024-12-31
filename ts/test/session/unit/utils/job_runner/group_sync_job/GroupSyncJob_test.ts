@@ -297,6 +297,7 @@ describe('GroupSyncJob pushChangesToGroupSwarmIfNeeded', () => {
     const result = await GroupSync.pushChangesToGroupSwarmIfNeeded({
       groupPk,
       extraStoreRequests: [],
+      allow401s: false,
     });
     expect(result).to.be.eq(RunJobResult.Success);
     expect(sendStub.callCount).to.be.eq(0);
@@ -322,6 +323,7 @@ describe('GroupSyncJob pushChangesToGroupSwarmIfNeeded', () => {
     const result = await GroupSync.pushChangesToGroupSwarmIfNeeded({
       groupPk,
       extraStoreRequests: [],
+      allow401s: false,
     });
 
     sendStub.resolves(undefined);
@@ -369,6 +371,7 @@ describe('GroupSyncJob pushChangesToGroupSwarmIfNeeded', () => {
     const result = await GroupSync.pushChangesToGroupSwarmIfNeeded({
       groupPk,
       extraStoreRequests: [],
+      allow401s: false,
     });
 
     expect(sendStub.callCount).to.be.eq(1);

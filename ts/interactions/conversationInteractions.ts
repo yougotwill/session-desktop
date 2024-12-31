@@ -431,21 +431,6 @@ async function leaveGroupOrCommunityByConvoId({
   }
 }
 
-/**
- * Returns true if we the convo is a 03 group and if we can try to send a leave message.
- */
-async function hasLeavingDetails(convoId: string) {
-  if (!PubKey.is03Pubkey(convoId)) {
-    return true;
-  }
-
-  const group = await UserGroupsWrapperActions.getGroup(convoId);
-
-  // we need the authData or the secretKey to be able to attempt to leave,
-  // otherwise we won't be able to even try
-  return group && (!isEmpty(group.authData) || !isEmpty(group.secretKey));
-}
-
 export async function showLeaveGroupByConvoId(conversationId: string, name: string | undefined) {
   const conversation = ConvoHub.use().get(conversationId);
 
@@ -462,20 +447,6 @@ export async function showLeaveGroupByConvoId(conversationId: string, name: stri
     (PubKey.is05Pubkey(conversationId) || PubKey.is03Pubkey(conversationId)) &&
     isAdmin &&
     admins.length === 1;
-  const lastMessageInteractionType = conversation.get('lastMessageInteractionType');
-  const lastMessageInteractionStatus = conversation.get('lastMessageInteractionStatus');
-
-  const canTryToLeave = await hasLeavingDetails(conversationId);
-
-  if (
-    !isPublic &&
-    ((lastMessageInteractionType === ConversationInteractionType.Leave &&
-      lastMessageInteractionStatus === ConversationInteractionStatus.Error) ||
-      !canTryToLeave) // if we don't have any key to send our leave message, no need to try
-  ) {
-    await leaveGroupOrCommunityByConvoId({ conversationId, isPublic, sendLeaveMessage: false });
-    return;
-  }
 
   // if this is a community, or we legacy group are not admin, we can just show a confirmation dialog
 
@@ -523,6 +494,46 @@ export async function showLeaveGroupByConvoId(conversationId: string, name: stri
       })
     );
   }
+}
+
+/**
+ * Can be used to show a dialog asking confirmation about deleting a group.
+ * Communities are explicitly forbidden.
+ * This function won't attempt to send a leave message. Use `showLeaveGroupByConvoId` for that purpose
+ */
+export async function showDeleteGroupByConvoId(conversationId: string, name: string | undefined) {
+  const conversation = ConvoHub.use().get(conversationId);
+
+  const isPublic = conversation.isPublic();
+
+  if (!conversation.isGroup() || isPublic) {
+    throw new Error('showDeleteGroupByConvoId() called with a non group convo.');
+  }
+
+  const onClickClose = () => {
+    window?.inboxStore?.dispatch(updateConfirmModal(null));
+  };
+
+  const onClickOk = async () => {
+    await leaveGroupOrCommunityByConvoId({
+      conversationId,
+      isPublic, // we check for isPublic above, and throw if it's true
+      sendLeaveMessage: false,
+      onClickClose,
+    });
+  };
+
+  window?.inboxStore?.dispatch(
+    updateConfirmModal({
+      title: window.i18n('groupDelete'),
+      i18nMessage: { token: 'groupDeleteDescriptionMember', args: { group_name: name ?? '' } },
+      onClickOk,
+      okText: window.i18n('delete'),
+      okTheme: SessionButtonColor.Danger,
+      onClickClose,
+      conversationId,
+    })
+  );
 }
 
 export function showInviteContactByConvoId(conversationId: string) {
@@ -1027,6 +1038,7 @@ export async function promoteUsersInGroup({
       method: 'batch',
       sortedSubRequests: storeRequests,
       abortSignal: controller.signal,
+      allow401s: false,
     }),
     2 * DURATION.MINUTES,
     controller

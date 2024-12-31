@@ -25,3 +25,4 @@ export type WithLocalMessageDeletionType = { deletionType: 'complete' | 'markDel
 export type ShortenOrExtend = 'extend' | 'shorten' | '';
 export type WithShortenOrExtend = { shortenOrExtend: ShortenOrExtend };
 export type WithMessagesHashes = { messagesHashes: Array<string> };
+export type WithAllow401s = { allow401s: boolean };

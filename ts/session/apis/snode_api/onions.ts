@@ -21,6 +21,7 @@ import { fileServerHost } from '../file_server_api/FileServerApi';
 import { hrefPnServerProd } from '../push_notification_api/PnServer';
 import { ERROR_CODE_NO_CONNECT } from './SNodeAPI';
 import { MergedAbortSignal, WithAbortSignal, WithTimeoutMs } from './requestWith';
+import { WithAllow401s } from '../../types/with';
 
 // hold the ed25519 key of a snode against the time it fails. Used to remove a snode only after a few failures (snodeFailureThreshold failures)
 let snodeFailureCount: Record<string, number> = {};
@@ -310,12 +311,11 @@ export async function processOnionRequestErrorAtDestination({
   destinationSnodeEd25519,
   associatedWith,
   allow401s,
-}: {
+}: WithAllow401s & {
   statusCode: number;
   body: string;
   destinationSnodeEd25519?: string;
   associatedWith?: string;
-  allow401s: boolean;
 }) {
   if (statusCode === 200) {
     return;
@@ -526,14 +526,14 @@ async function processOnionResponse({
   associatedWith,
   destinationSnodeEd25519,
   allow401s,
-}: Partial<WithAbortSignal> & {
-  response?: { text: () => Promise<string>; status: number };
-  symmetricKey?: ArrayBuffer;
-  guardNode: Snode;
-  destinationSnodeEd25519?: string;
-  associatedWith?: string;
-  allow401s: boolean;
-}): Promise<SnodeResponse> {
+}: Partial<WithAbortSignal> &
+  WithAllow401s & {
+    response?: { text: () => Promise<string>; status: number };
+    symmetricKey?: ArrayBuffer;
+    guardNode: Snode;
+    destinationSnodeEd25519?: string;
+    associatedWith?: string;
+  }): Promise<SnodeResponse> {
   let ciphertext = '';
 
   processAbortedRequest(abortSignal);
@@ -828,7 +828,8 @@ async function sendOnionRequestHandlingSnodeEjectNoRetries({
   allow401s,
   timeoutMs,
 }: WithAbortSignal &
-  WithTimeoutMs & {
+  WithTimeoutMs &
+  WithAllow401s & {
     nodePath: Array<Snode>;
     destSnodeX25519: string;
     finalDestOptions: FinalDestOptions;
@@ -836,7 +837,6 @@ async function sendOnionRequestHandlingSnodeEjectNoRetries({
     associatedWith?: string;
     useV4: boolean;
     throwErrors: boolean;
-    allow401s: boolean;
   }): Promise<SnodeResponse | SnodeResponseV4 | undefined> {
   // this sendOnionRequestNoRetries() call has to be the only one like this.
   // If you need to call it, call it through sendOnionRequestHandlingSnodeEjectNoRetries because this is the one handling path rebuilding and known errors
@@ -1118,12 +1118,12 @@ async function sendOnionRequestSnodeDestNoRetries({
   timeoutMs,
   associatedWith,
 }: WithTimeoutMs &
-  WithAbortSignal & {
+  WithAbortSignal &
+  WithAllow401s & {
     onionPath: Array<Snode>;
     targetNode: Snode;
     headers: Record<string, any>;
     plaintext: string | null;
-    allow401s: boolean;
     associatedWith?: string;
   }) {
   return Onions.sendOnionRequestHandlingSnodeEjectNoRetries({
@@ -1155,12 +1155,12 @@ async function lokiOnionFetchNoRetries({
   abortSignal,
   timeoutMs,
 }: WithTimeoutMs &
-  WithAbortSignal & {
+  WithAbortSignal &
+  WithAllow401s & {
     targetNode: Snode;
     headers: Record<string, any>;
     body: string | null;
     associatedWith?: string;
-    allow401s: boolean;
   }): Promise<SnodeResponse | undefined> {
   try {
     // Get a path excluding `targetNode`:

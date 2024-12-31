@@ -1,13 +1,13 @@
-import { useSelector } from 'react-redux';
 import { useConvoIdFromContext } from '../../../../contexts/ConvoIdContext';
 import {
   useConversationUsername,
   useIsKickedFromGroup,
   useIsClosedGroup,
-  useLastMessageIsLeaveError,
+  useIsPublic,
+  useIsGroupDestroyed,
 } from '../../../../hooks/useParamSelector';
 import { showLeaveGroupByConvoId } from '../../../../interactions/conversationInteractions';
-import { getIsMessageRequestOverlayShown } from '../../../../state/selectors/section';
+import { useIsMessageRequestOverlayShown } from '../../../../state/selectors/section';
 import { ItemWithDataTestId } from '../MenuItemWithDataTestId';
 import { showLeaveGroupItem } from './guard';
 import { Localizer } from '../../../basic/Localizer';
@@ -15,16 +15,18 @@ import { Localizer } from '../../../basic/Localizer';
 export const LeaveGroupMenuItem = () => {
   const convoId = useConvoIdFromContext();
   const isGroup = useIsClosedGroup(convoId);
+  const isPublic = useIsPublic(convoId);
   const username = useConversationUsername(convoId) || convoId;
-  const isMessageRequestShown = useSelector(getIsMessageRequestOverlayShown);
+  const isMessageRequestShown = useIsMessageRequestOverlayShown();
   const isKickedFromGroup = useIsKickedFromGroup(convoId) || false;
-  const lastMessageIsLeaveError = useLastMessageIsLeaveError(convoId);
+  const isGroupDestroyed = useIsGroupDestroyed(convoId);
 
   const showLeave = showLeaveGroupItem({
     isGroup,
     isMessageRequestShown,
     isKickedFromGroup,
-    lastMessageIsLeaveError,
+    isPublic,
+    isGroupDestroyed,
   });
 
   if (!showLeave) {

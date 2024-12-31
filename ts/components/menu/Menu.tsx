@@ -49,8 +49,8 @@ import {
 } from '../../state/ducks/modalDialog';
 import { useConversationIdOrigin } from '../../state/selectors/conversations';
 import {
-  getIsMessageRequestOverlayShown,
   getIsMessageSection,
+  useIsMessageRequestOverlayShown,
 } from '../../state/selectors/section';
 import { useSelectedConversationKey } from '../../state/selectors/selectedConversation';
 import type { LocalizerToken } from '../../types/localizer';
@@ -84,7 +84,7 @@ export const MarkConversationUnreadMenuItem = (): JSX.Element | null => {
   const isMessagesSection = useSelector(getIsMessageSection);
   const isPrivate = useIsPrivate(conversationId);
   const isPrivateAndFriend = useIsPrivateAndFriend(conversationId);
-  const isMessageRequestShown = useSelector(getIsMessageRequestOverlayShown);
+  const isMessageRequestShown = useIsMessageRequestOverlayShown();
 
   if (
     isMessagesSection &&
@@ -358,7 +358,7 @@ export const ChangeNicknameMenuItem = () => {
  */
 export const DeleteMessagesMenuItem = () => {
   const convoId = useConvoIdFromContext();
-  const isMessageRequestShown = useSelector(getIsMessageRequestOverlayShown);
+  const isMessageRequestShown = useIsMessageRequestOverlayShown();
 
   if (!convoId || isMessageRequestShown) {
     return null;
@@ -495,7 +495,7 @@ export const NotificationForConvoMenuItem = (): JSX.Element | null => {
 
   const isFriend = useIsPrivateAndFriend(convoId);
   const isPrivate = useIsPrivate(convoId);
-  const isMessageRequestShown = useSelector(getIsMessageRequestOverlayShown);
+  const isMessageRequestShown = useIsMessageRequestOverlayShown();
 
   if (
     !convoId ||
