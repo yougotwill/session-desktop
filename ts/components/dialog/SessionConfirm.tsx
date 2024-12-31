@@ -132,7 +132,7 @@ export const SessionConfirm = (props: SessionConfirmDialogProps) => {
 
       <div className="session-modal__centered">
         {i18nMessage ? (
-          <StyledI18nSubText {...i18nMessage} data-testid="modal-description" />
+          <StyledI18nSubText localizerProps={i18nMessage} dataTestId="modal-description" />
         ) : null}
         {radioOptions && chosenOption !== '' ? (
           <SessionRadioGroup

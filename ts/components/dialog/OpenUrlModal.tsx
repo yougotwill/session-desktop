@@ -47,7 +47,10 @@ export function OpenUrlModal(props: OpenUrlModalState) {
     >
       <div className="session-modal__centered">
         <StyledScrollDescriptionContainer>
-          <StyledI18nSubText token="urlOpenDescription" asTag="span" args={{ url }} />
+          <StyledI18nSubText
+            localizerProps={{ token: 'urlOpenDescription', asTag: 'span', args: { url } }}
+            dataTestId="modal-description"
+          />
         </StyledScrollDescriptionContainer>
       </div>
       <SpacerMD />

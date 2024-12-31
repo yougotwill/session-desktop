@@ -1,5 +1,5 @@
 import styled from 'styled-components';
-import { forwardRef } from 'react';
+import { SessionDataTestId } from 'react';
 import { Localizer } from './Localizer';
 import type { LocalizerComponentProps, LocalizerToken } from '../../types/localizer';
 
@@ -15,13 +15,18 @@ const StyledI18nSubTextContainer = styled('div')`
   padding-inline: var(--margins-lg);
 `;
 
-export const StyledI18nSubText = forwardRef<
-  HTMLSpanElement,
-  LocalizerComponentProps<LocalizerToken>
->(({ className, ...props }) => {
+export const StyledI18nSubText = ({
+  className,
+  dataTestId,
+  localizerProps,
+}: {
+  className?: string;
+  dataTestId: SessionDataTestId;
+  localizerProps: LocalizerComponentProps<LocalizerToken>;
+}) => {
   return (
-    <StyledI18nSubTextContainer className={className}>
-      <Localizer {...props} />
+    <StyledI18nSubTextContainer className={className} data-testid={dataTestId}>
+      <Localizer {...localizerProps} />
     </StyledI18nSubTextContainer>
   );
-});
+};

@@ -85,7 +85,10 @@ export const QuitModal = (props: SessionConfirmDialogProps) => {
           style={modalStyle}
         >
           <SpacerLG />
-          <StyledI18nSubText {...i18nMessage}></StyledI18nSubText>
+          <StyledI18nSubText
+            localizerProps={i18nMessage}
+            dataTestId="modal-description"
+          ></StyledI18nSubText>
           <SpacerLG />
         </Flex>
       ) : null}
