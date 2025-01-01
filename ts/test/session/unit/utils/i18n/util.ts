@@ -13,7 +13,8 @@ export const testDictionary = {
 
 export function initI18n(dictionary: Record<string, string> = en) {
   return setupI18n({
+    // testing
     crowdinLocale: 'en',
-    translationDictionary: dictionary as LocalizerDictionary,
+    translationDictionary: dictionary as LocalizerDictionary, // testing
   });
 }

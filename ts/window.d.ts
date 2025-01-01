@@ -5,12 +5,7 @@ import { Store } from '@reduxjs/toolkit';
 import { Persistor } from 'redux-persist/es/types';
 
 import { PrimaryColorStateType, ThemeStateType } from './themes/constants/colors';
-import type {
-  GetMessageArgs,
-  I18nMethods,
-  LocalizerDictionary,
-  LocalizerToken,
-} from './types/localizer';
+import type { GetMessageArgs, I18nMethods, LocalizerToken } from './types/localizer';
 
 export interface LibTextsecure {
   messaging: boolean;
@@ -50,7 +45,7 @@ declare global {
      * window.i18n('search', { count: 1, found_count: 1 });
      * // => '1 of 1 match'
      */
-    i18n: (<T extends LocalizerToken, R extends LocalizerDictionary[T]>(
+    i18n: (<T extends LocalizerToken, R extends string>(
       ...[token, args]: GetMessageArgs<T>
     ) => R) & {
       /** NOTE: Because of docstring limitations changes MUST be manually synced between {@link setupI18n.getRawMessage } and {@link window.i18n.getRawMessage } */

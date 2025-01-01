@@ -55,18 +55,11 @@ def extract_vars(text):
     vars = re.findall(r'\{(.*?)\}', text)
     return vars
 
-def extract_plurals(text: str) -> List[Tuple[str, str]]:
-    pattern = r'(\b\w+\b)\s*(\[[^\]]+\])'
-
-    matches = re.findall(pattern, text)
-
-    return matches
-
 
 def vars_to_record(vars):
     arr = []
     for var in vars:
-        to_append = '"' + var + '": ' + ('number' if var == 'count' else 'string')
+        to_append = '' + var + ': ' + ('"number"' if var == 'count' or var == 'found_count' else '"string"')
         if to_append not in arr:
           arr.append(to_append)
 
@@ -100,45 +93,69 @@ def generate_type_object(locales):
       str: A string representation of the JavaScript object.
     """
     js_object = "{\n"
+    plural_pattern = r"(zero|one|two|few|many|other)\s*\[([^\]]+)\]"
 
     for key, value_en in locales['en'].items():
-        # print('value',value)
         if value_en.startswith("{count, plural, "):
-            continue
-            # plurals = extract_plurals(value)
-            # print(plurals)
-            # js_plural_object = "{\n"
+            extracted_vars_en = extract_vars(replaced_en)
+            plurals_other = [[locale, replace_static_strings(data.get(key, ""))] for locale, data in locales.items()]
+            en_plurals_with_token = re.findall(plural_pattern, value_en.replace('#', '{count}'))
 
-            # for plural in plurals:
-            #     plural_token = plural[0]
-            #     plural_str = plural[1].replace('#', '{count}')
-            #     extracted_vars = extract_vars(replace_static_strings(plural_str))
-            #     if('count' not in extracted_vars):
-            #         extracted_vars.append('count')
-            #     print('extracted_vars',extracted_vars)
+            if not en_plurals_with_token:
+               raise ValueError("invalid plural string")
 
-            #     as_record_type = vars_to_record(extracted_vars)
-            #     js_plural_object += f"    {wrapValue(plural_token)}: {as_record_type},\n"
-            # js_plural_object += "  }"
-            # js_object += f"  {wrapValue(key)}: {js_plural_object},\n"
+            all_locales_plurals = []
+
+            extracted_vars = extract_vars(replace_static_strings(en_plurals_with_token[0][1]))
+            if('count' not in extracted_vars):
+                extracted_vars.append('count')
+
+            for plural in plurals_other:
+              js_plural_object = ""
+
+              locale_key = plural[0] # 'lo', 'th', ....
+              plural_str = plural[1].replace('#', '{count}')
+
+              plurals_with_token = re.findall(plural_pattern, plural_str)
+
+
+              all_locales_strings = []
+              as_record_type_en = vars_to_record(extracted_vars)
+
+              for token, localized_string in plurals_with_token:
+                if localized_string:
+                  to_append = ""
+                  to_append += token
+                  to_append += f": \"{localized_string.replace("\n", "\\n")}\""
+                  all_locales_strings.append(to_append)
+
+              # if that locale doesn't have translation in plurals, add the english hones
+              if not len(all_locales_strings):
+                 for plural_en_token, plural_en_str in en_plurals_with_token:
+                    all_locales_strings.append(f"{plural_en_token}: \"{plural_en_str.replace("\n", "\\n")}\"")
+              js_plural_object += f"    {wrapValue(locale_key)}:"
+              js_plural_object += "{\n      "
+              js_plural_object += ",\n      ".join(all_locales_strings)
+              js_plural_object += "\n    },"
+
+              all_locales_plurals.append(js_plural_object)
+            js_object += f"  {wrapValue(key)}: {{\n{"\n".join(all_locales_plurals)}\n    args: {f"{as_record_type_en} as const," if as_record_type_en else 'undefined,'}\n  }},\n"
+
         else:
           replaced_en = replace_static_strings(value_en)
-          extracted_vars = extract_vars(replaced_en)
-          as_record_type = vars_to_record(extracted_vars)
-          other_locales_replaced_values = [[locale, replace_static_strings(data.get(key, ""))] for locale, data in  locales.items()]
+          extracted_vars_en = extract_vars(replaced_en)
+          as_record_type_en = vars_to_record(extracted_vars_en)
+          other_locales_replaced_values = [[locale, replace_static_strings(data.get(key, ""))] for locale, data in locales.items()]
 
-          filtered_values = []
-          # filter out strings that matches the english one (i.e. untranslated strings)
+          all_locales_strings = []
           for locale, replaced_val in other_locales_replaced_values:
-            if replaced_val == replaced_en and not locale == 'en':
-              # print(f"{locale}: ${key} saved content is the same as english saved.")
-              filtered_values.append(f"{locale}: undefined")
+            if replaced_val:
+              all_locales_strings.append(f"{locale}: \"{replaced_val.replace("\n", "\\n")}\"")
             else:
-              filtered_values.append(f"{locale}: \"{replaced_val}\"")
-
+              all_locales_strings.append(f"{locale}: \"{replaced_en.replace("\n", "\\n")}\"")
 
           # print('key',key, " other_locales_replaced_values:", other_locales_replaced_values)
-          js_object += f"  {wrapValue(key)}:{{\n      {",\n      ".join(filtered_values)},\n      args: {as_record_type if as_record_type else 'undefined'}\n  }},\n"
+          js_object += f"  {wrapValue(key)}: {{\n      {",\n      ".join(all_locales_strings)},\n      args: {f"{as_record_type_en} as const," if as_record_type_en else 'undefined,'}\n  }},\n"
 
     js_object += "}"
     return js_object
@@ -189,7 +206,7 @@ def generateLocalesMergedType(locales):
         )
 
         ts_file.write(
-            f"export const plop = {generate_type_object(locales)};\n"
+            f"export const dictionary = {generate_type_object(locales)};\n\nexport type Dictionary = typeof dictionary;\n"
         )
 
     return f"Locales generated at: {OUTPUT_FILE}"

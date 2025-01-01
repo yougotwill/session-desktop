@@ -29,6 +29,7 @@ export const setupI18n = ({
   if (!translationDictionary || isEmpty(translationDictionary)) {
     throw new Error('translationDictionary was not provided');
   }
+  console.warn('translationDictionary', translationDictionary);
 
   setInitialLocale(crowdinLocale, translationDictionary);
 

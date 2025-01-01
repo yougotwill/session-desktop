@@ -719,7 +719,6 @@
   "searchContacts": "ค้นหาผู้ติดต่อ",
   "searchConversation": "ค้นหาอะไรในการสนทนา",
   "searchEnter": "เขียนที่ค้นหา",
-  "searchMatches": "{count, plural, other [{found_count} จาก # รายการ]}",
   "searchMatchesNone": "ไม่พบข้อมูลเลย",
   "searchMatchesNoneSpecific": "ไม่พบข้อมูลเกี่ยวกับ '{query}",
   "searchMembers": "ค้นหาสมาชิก",

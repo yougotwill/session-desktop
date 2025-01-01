@@ -1,6 +1,5 @@
 import type { ElementType } from 'react';
 import type { Dictionary } from '../localization/locales';
-import type { LOCALE_DEFAULTS } from '../localization/constants';
 
 /** The dictionary of localized strings */
 export type LocalizerDictionary = Dictionary;
@@ -9,7 +8,8 @@ export type LocalizerDictionary = Dictionary;
 export type LocalizerToken = keyof Dictionary;
 
 /** A dynamic argument that can be used in a localized string */
-export type DynamicArg = string | number;
+type DynamicArg = string | number;
+type DynamicArgStr = 'string' | 'number';
 
 /** A record of dynamic arguments for a specific key in the localization dictionary */
 export type ArgsRecord<T extends LocalizerToken> = Record<DynamicArgs<Dictionary[T]>, DynamicArg>;
@@ -19,31 +19,32 @@ export type DictionaryWithoutPluralStrings = Dictionary;
 export type PluralKey = 'count';
 export type PluralString = `{${string}, plural, one [${string}] other [${string}]}`;
 
-/** The dynamic arguments in a localized string */
-type DynamicArgs<LocalizedString extends string> =
-  /** If a string follows the plural format use its plural variable name and recursively check for
-   *  dynamic args inside all plural forms */
-  LocalizedString extends `{${infer PluralVar}, plural, one [${infer PluralOne}] other [${infer PluralOther}]}`
-    ? PluralVar | DynamicArgs<PluralOne> | DynamicArgs<PluralOther>
-    : /** If a string segment follows the variable form parse its variable name and recursively
-       * check for more dynamic args */
-      LocalizedString extends `${string}{${infer Var}}${infer Rest}`
-      ? Var | DynamicArgs<Rest>
-      : never;
+type ArgsTypeStrToTypes<T extends DynamicArgStr> = T extends 'string'
+  ? string
+  : T extends 'number'
+    ? number
+    : never;
 
-export type ArgsRecordExcludingDefaults<T extends LocalizerToken> = Omit<
-  ArgsRecord<T>,
-  keyof typeof LOCALE_DEFAULTS
->;
+// those are still a string of the type "string" | "number" and not the typescript types themselves
+type ArgsFromTokenStr<T extends LocalizerToken> = Dictionary[T]['args'] extends undefined
+  ? never
+  : Dictionary[T]['args'];
+
+type ArgsFromToken<T extends LocalizerToken> = MappedToTsTypes<ArgsFromTokenStr<T>>;
+type IsTokenWithCountArgs<T extends LocalizerToken> = 'count' extends keyof ArgsFromToken<T>
+  ? true
+  : false;
 
 /** The arguments for retrieving a localized message */
 export type GetMessageArgs<T extends LocalizerToken> = T extends LocalizerToken
-  ? DynamicArgs<Dictionary[T]> extends never
+  ? ArgsFromToken<T> extends never
     ? [T]
-    : ArgsRecordExcludingDefaults<T> extends Record<string, never>
-      ? [T]
-      : [T, ArgsRecordExcludingDefaults<T>]
+    : [T, ArgsFromToken<T>]
   : never;
+
+type MappedToTsTypes<T extends Record<string, DynamicArgStr>> = {
+  [K in keyof T]: ArgsTypeStrToTypes<T[K]>;
+};
 
 /** Basic props for all calls of the Localizer component */
 type LocalizerComponentBaseProps<T extends LocalizerToken> = {
@@ -54,11 +55,11 @@ type LocalizerComponentBaseProps<T extends LocalizerToken> = {
 
 /** The props for the localization component */
 export type LocalizerComponentProps<T extends LocalizerToken> = T extends LocalizerToken
-  ? DynamicArgs<Dictionary[T]> extends never
+  ? ArgsFromToken<T> extends never
     ? LocalizerComponentBaseProps<T>
-    : ArgsRecordExcludingDefaults<T> extends Record<string, never>
+    : ArgsFromToken<T> extends Record<string, never>
       ? LocalizerComponentBaseProps<T>
-      : LocalizerComponentBaseProps<T> & { args: ArgsRecordExcludingDefaults<T> }
+      : LocalizerComponentBaseProps<T> & { args: ArgsFromToken<T> }
   : never;
 
 export type LocalizerComponentPropsObject = LocalizerComponentProps<LocalizerToken>;

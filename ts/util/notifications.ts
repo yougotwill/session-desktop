@@ -221,7 +221,7 @@ function update(forceRefresh = false) {
   if (shouldHideExpiringMessageBody) {
     message = window.i18n('messageNew', { count: messagesNotificationCount });
   }
-
+  
   window.drawAttention();
   if (status.shouldPlayNotificationSound) {
     if (!sound) {
