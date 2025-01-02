@@ -176,6 +176,12 @@ declare module 'react' {
     | 'session-link-helpdesk'
     | 'session-faq-link'
 
+    // link preview (staged)
+    | 'link-preview-loading'
+    | 'link-preview-image'
+    | 'link-preview-title'
+    | 'link-preview-close'
+
     // to sort
     | 'restore-using-recovery'
     | 'link-device'
