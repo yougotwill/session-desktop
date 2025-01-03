@@ -187,6 +187,7 @@ declare module 'react' {
     | 'link-device'
     | 'join-community-conversation'
     | 'join-community-button'
+    | 'audio-player'
     | 'select-contact'
     | 'contact' // this is way too generic
     | 'contact-status'

@@ -1,5 +1,5 @@
 // Audio Player
-import { useEffect, useRef, useState } from 'react';
+import { SessionDataTestId, useEffect, useRef, useState } from 'react';
 import H5AudioPlayer, { RHAP_UI } from 'react-h5-audio-player';
 import { useDispatch, useSelector } from 'react-redux';
 import styled from 'styled-components';
@@ -171,7 +171,7 @@ export const AudioPlayerWithEncryptedFile = (props: {
     direction === 'incoming'
       ? 'var(--message-bubbles-received-text-color)'
       : 'var(--message-bubbles-sent-text-color)';
-  const dataTestId = `audio-${messageId}`;
+  const dataTestId: SessionDataTestId = 'audio-player';
 
   const triggerPlayNextMessageIfNeeded = (endedMessageId: string) => {
     const justEndedMessageIndex = messageProps.findIndex(
