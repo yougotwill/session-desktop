@@ -17,7 +17,7 @@ import { ReleasedFeatures } from '../../util/releaseFeature';
 import { Flex } from '../basic/Flex';
 import { SpacerMD, TextWithChildren } from '../basic/Text';
 import { ExpirableReadableMessage } from './message/message-item/ExpirableReadableMessage';
-import { LocalizerComponentPropsObject } from '../../types/localizer';
+import type { LocalizerComponentPropsObject } from '../../types/localizer';
 
 // eslint-disable-next-line import/order
 import { ConversationInteraction } from '../../interactions';

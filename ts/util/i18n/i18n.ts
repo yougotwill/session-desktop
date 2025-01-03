@@ -4,7 +4,7 @@ import type { SetupI18nReturnType } from '../../types/localizer';
 import { getMessage } from './functions/getMessage';
 import { i18nLog, setInitialLocale } from './shared';
 import { CrowdinLocale } from '../../localization/constants';
-import { setLogger } from '../../localization/localeTools';
+import { setLocaleInUse, setLogger } from '../../localization/localeTools';
 
 /**
  * Sets up the i18n function with the provided locale and messages.
@@ -29,5 +29,6 @@ export const setupI18n = ({
 
   // eslint-disable-next-line no-console
   setLogger(i18nLog);
+  setLocaleInUse(crowdinLocale);
   return getMessage;
 };

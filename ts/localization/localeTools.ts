@@ -1,29 +1,52 @@
-import { isEmpty } from 'lodash';
 import { CrowdinLocale } from './constants';
-import { getMessage } from '../util/i18n/functions/getMessage';
 import { pluralsDictionary, simpleDictionary } from './locales';
 
-export type SimpleDictionary = typeof simpleDictionary;
-export type PluralDictionary = typeof pluralsDictionary;
+type SimpleDictionary = typeof simpleDictionary;
+type PluralDictionary = typeof pluralsDictionary;
 
-export type SimpleLocalizerTokens = keyof SimpleDictionary;
-export type PluralLocalizerTokens = keyof PluralDictionary;
+type SimpleLocalizerTokens = keyof SimpleDictionary;
+type PluralLocalizerTokens = keyof PluralDictionary;
 
 export type MergedLocalizerTokens = SimpleLocalizerTokens | PluralLocalizerTokens;
+
+let localeInUse: CrowdinLocale = 'en';
 
 type Logger = (message: string) => void;
 let logger: Logger | undefined;
 
+/**
+ * Simpler than lodash. Duplicated to avoid having to import lodash in the file.
+ * Because we share it with QA, but also to have a self contained localized tool that we can copy/paste
+ */
+function isEmptyObject(obj: unknown) {
+  if (!obj) {
+    return true;
+  }
+  if (typeof obj !== 'object') {
+    return false;
+  }
+  return Object.keys(obj).length === 0;
+}
+
 export function setLogger(cb: Logger) {
   if (logger) {
     // eslint-disable-next-line no-console
-    console.log('logger already initialized');
+    console.log('logger already initialized. overwriding it');
   }
   logger = cb;
 }
 
+export function setLocaleInUse(crowdinLocale: CrowdinLocale) {
+  localeInUse = crowdinLocale;
+}
+
 function log(message: Parameters<Logger>[0]) {
-  logger?.(message);
+  if (!logger) {
+    // eslint-disable-next-line no-console
+    console.log('logger is not set');
+    return;
+  }
+  logger(message);
 }
 
 export function isSimpleToken(token: string): token is SimpleLocalizerTokens {
@@ -42,8 +65,8 @@ type MergedTokenWithArgs = TokenWithArgs<SimpleDictionary> | TokenWithArgs<Plura
 
 export function isTokenWithArgs(token: string): token is MergedTokenWithArgs {
   return (
-    (isSimpleToken(token) && !isEmpty(simpleDictionary[token]?.args)) ||
-    (isPluralToken(token) && !isEmpty(pluralsDictionary[token]?.args))
+    (isSimpleToken(token) && !isEmptyObject(simpleDictionary[token]?.args)) ||
+    (isPluralToken(token) && !isEmptyObject(pluralsDictionary[token]?.args))
   );
 }
 
@@ -113,6 +136,26 @@ export function inEnglish<T extends MergedLocalizerTokens>([token, args]: GetMes
 }
 
 /**
+ * Retrieves a localized message string, substituting variables where necessary.
+ *
+ * @param token - The token identifying the message to retrieve.
+ * @param args - An optional record of substitution variables and their replacement values. This is required if the string has dynamic variables.
+ *
+ * @returns The localized message string with substitutions applied.
+ */
+export function getMessageDefault<T extends MergedLocalizerTokens>(
+  ...props: GetMessageArgs<T>
+): string {
+  const token = props[0];
+  try {
+    return localizeFromOld(props[0], props[1] as ArgsFromToken<T>).toString();
+  } catch (error) {
+    log(error.message);
+    return token;
+  }
+}
+
+/**
  * Retrieves a localized message string, substituting variables where necessary. Then strips the message of any HTML and custom tags.
  *
  * @deprecated This will eventually be replaced altogether by LocalizedStringBuilder
@@ -128,7 +171,7 @@ export function stripped<T extends MergedLocalizerTokens>(
 ): string {
   const sanitizedArgs = args ? sanitizeArgs(args, '\u200B') : undefined;
 
-  const i18nString = getMessage<T>(...([token, sanitizedArgs] as GetMessageArgs<T>));
+  const i18nString = getMessageDefault<T>(...([token, sanitizedArgs] as GetMessageArgs<T>));
 
   const strippedString = i18nString.replaceAll(/<[^>]*>/g, '');
 
@@ -206,7 +249,7 @@ export function getRawMessage<T extends MergedLocalizerTokens>(
     const pluralsObjects = pluralsDictionary[token];
     const localePluralsObject = pluralsObjects[crowdinLocale];
 
-    if (!localePluralsObject || isEmpty(localePluralsObject)) {
+    if (!localePluralsObject || isEmptyObject(localePluralsObject)) {
       log(`Attempted to get translation for nonexistent key: '${token}'`);
       return token;
     }
@@ -234,7 +277,7 @@ export function getRawMessage<T extends MergedLocalizerTokens>(
   }
 }
 
-export function getStringForRule({
+function getStringForRule({
   dictionary,
   token,
   crowdinLocale,
@@ -255,7 +298,7 @@ export function getStringForRule({
  * @param identifier The identifier to use for the args. Use this if you want to de-sanitize the args later.
  * @returns The sanitized string
  */
-export function sanitizeHtmlTags(str: string, identifier: string = ''): string {
+function sanitizeHtmlTags(str: string, identifier: string = ''): string {
   if (identifier && /[a-zA-Z0-9></\\\-\s]+/g.test(identifier)) {
     throw new Error('Identifier is not valid');
   }
@@ -272,7 +315,7 @@ export function sanitizeHtmlTags(str: string, identifier: string = ''): string {
  * @param identifier The identifier used when the args were sanitized
  * @returns The de-sanitized string
  */
-export function deSanitizeHtmlTags(str: string, identifier: string): string {
+function deSanitizeHtmlTags(str: string, identifier: string): string {
   if (!identifier || /[a-zA-Z0-9></\\\-\s]+/g.test(identifier)) {
     throw new Error('Identifier is not valid');
   }
@@ -281,4 +324,171 @@ export function deSanitizeHtmlTags(str: string, identifier: string): string {
     .replace(new RegExp(`${identifier}&amp;${identifier}`, 'g'), '&')
     .replace(new RegExp(`${identifier}&lt;${identifier}`, 'g'), '<')
     .replace(new RegExp(`${identifier}&gt;${identifier}`, 'g'), '>');
+}
+
+class LocalizedStringBuilder<T extends MergedLocalizerTokens> extends String {
+  private readonly token: T;
+  private args?: ArgsFromToken<T>;
+  private isStripped = false;
+  private isEnglishForced = false;
+  private crowdinLocale: CrowdinLocale;
+
+  private readonly renderStringAsToken: boolean;
+
+  constructor(token: T, crowdinLocale: CrowdinLocale, renderStringAsToken?: boolean) {
+    super(token);
+    this.token = token;
+    this.crowdinLocale = crowdinLocale;
+    this.renderStringAsToken = renderStringAsToken || false;
+  }
+
+  public toString(): string {
+    try {
+      if (this.renderStringAsToken) {
+        return this.token;
+      }
+
+      const rawString = this.getRawString();
+      const str = this.formatStringWithArgs(rawString);
+
+      if (this.isStripped) {
+        return this.postProcessStrippedString(str);
+      }
+
+      return str;
+    } catch (error) {
+      log(error);
+      return this.token;
+    }
+  }
+
+  withArgs(args: ArgsFromToken<T>): Omit<this, 'withArgs'> {
+    this.args = args;
+    return this;
+  }
+
+  forceEnglish(): Omit<this, 'forceEnglish'> {
+    this.isEnglishForced = true;
+    return this;
+  }
+
+  strip(): Omit<this, 'strip'> {
+    const sanitizedArgs = this.args ? sanitizeArgs(this.args, '\u200B') : undefined;
+    if (sanitizedArgs) {
+      this.args = sanitizedArgs as ArgsFromToken<T>;
+    }
+    this.isStripped = true;
+
+    return this;
+  }
+
+  private postProcessStrippedString(str: string): string {
+    const strippedString = str.replaceAll(/<[^>]*>/g, '');
+    return deSanitizeHtmlTags(strippedString, '\u200B');
+  }
+
+  private localeToTarget(): CrowdinLocale {
+    return this.isEnglishForced ? 'en' : this.crowdinLocale;
+  }
+
+  private getRawString(): string {
+    try {
+      if (this.renderStringAsToken) {
+        return this.token;
+      }
+
+      if (isSimpleToken(this.token)) {
+        return simpleDictionary[this.token][this.localeToTarget()];
+      }
+
+      if (!isPluralToken(this.token)) {
+        throw new Error('invalid token provided');
+      }
+
+      return this.resolvePluralString();
+    } catch (error) {
+      log(error.message);
+      return this.token;
+    }
+  }
+
+  private resolvePluralString(): string {
+    const pluralKey = 'count' as const;
+
+    let num: number | string | undefined = this.args?.[pluralKey as keyof ArgsFromToken<T>];
+
+    if (num === undefined) {
+      log(
+        `Attempted to get plural count for missing argument '${pluralKey} for token '${this.token}'`
+      );
+      num = 0;
+    }
+
+    if (typeof num !== 'number') {
+      log(
+        `Attempted to get plural count for argument '${pluralKey}' which is not a number for token '${this.token}'`
+      );
+      num = parseInt(num, 10);
+      if (Number.isNaN(num)) {
+        log(
+          `Attempted to get parsed plural count for argument '${pluralKey}' which is not a number for token '${this.token}'`
+        );
+        num = 0;
+      }
+    }
+
+    const localeToTarget = this.localeToTarget();
+    const cardinalRule = new Intl.PluralRules(localeToTarget).select(num);
+
+    if (!isPluralToken(this.token)) {
+      throw new Error('resolvePluralString can only be called with a plural string');
+    }
+
+    let pluralString = getStringForRule({
+      cardinalRule,
+      crowdinLocale: localeToTarget,
+      dictionary: pluralsDictionary,
+      token: this.token,
+    });
+
+    if (!pluralString) {
+      log(
+        `Plural string not found for cardinal '${cardinalRule}': '${this.token}' Falling back to 'other' cardinal`
+      );
+
+      pluralString = getStringForRule({
+        cardinalRule: 'other',
+        crowdinLocale: localeToTarget,
+        dictionary: pluralsDictionary,
+        token: this.token,
+      });
+
+      if (!pluralString) {
+        log(`Plural string not found for fallback cardinal 'other': '${this.token}'`);
+
+        return this.token;
+      }
+    }
+
+    return pluralString.replaceAll('#', `${num}`);
+  }
+
+  private formatStringWithArgs(str: string): string {
+    /** Find and replace the dynamic variables in a localized string and substitute the variables with the provided values */
+    return str.replace(/\{(\w+)\}/g, (match, arg: string) => {
+      const matchedArg = this.args
+        ? this.args[arg as keyof ArgsFromToken<T>]?.toString()
+        : undefined;
+
+      return matchedArg ?? match;
+    });
+  }
+}
+
+export function localize<T extends MergedLocalizerTokens>(token: T) {
+  return new LocalizedStringBuilder<T>(token, localeInUse);
+}
+
+function localizeFromOld<T extends MergedLocalizerTokens>(token: T, args: ArgsFromToken<T>) {
+  return localize(token).withArgs(args);
 }
