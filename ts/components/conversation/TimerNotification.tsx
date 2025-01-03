@@ -17,11 +17,12 @@ import { ReleasedFeatures } from '../../util/releaseFeature';
 import { Flex } from '../basic/Flex';
 import { SpacerMD, TextWithChildren } from '../basic/Text';
 import { ExpirableReadableMessage } from './message/message-item/ExpirableReadableMessage';
+import { LocalizerComponentPropsObject } from '../../types/localizer';
+
 // eslint-disable-next-line import/order
 import { ConversationInteraction } from '../../interactions';
 import { ConvoHub } from '../../session/conversations';
 import { updateConfirmModal } from '../../state/ducks/modalDialog';
-import type { LocalizerComponentProps, LocalizerToken } from '../../types/localizer';
 import { Localizer } from '../basic/Localizer';
 import { SessionButtonColor } from '../basic/SessionButton';
 import { SessionIcon } from '../icon';
@@ -47,7 +48,7 @@ function useFollowSettingsButtonClick(
         ? window.i18n('disappearingMessagesTypeRead')
         : window.i18n('disappearingMessagesTypeSent');
 
-    const i18nMessage: LocalizerComponentProps<LocalizerToken> = props.disabled
+    const i18nMessage: LocalizerComponentPropsObject = props.disabled
       ? {
           token: 'disappearingMessagesFollowSettingOff',
         }

@@ -1,9 +1,4 @@
-import fs from 'fs';
-import path from 'path';
-import { isEmpty } from 'lodash';
-import type { LocalizerDictionary, SetupI18nReturnType } from '../types/localizer';
-import { getAppRootPath } from './getRootPath';
-import { en } from '../localization/locales';
+import type { SetupI18nReturnType } from '../types/localizer';
 import { setupI18n } from '../util/i18n/i18n';
 import { CrowdinLocale } from '../localization/constants';
 
@@ -32,18 +27,6 @@ export function normalizeLocaleName(locale: string) {
   return dashedLocale;
 }
 
-function getLocaleMessages(locale: string): LocalizerDictionary {
-  if (locale.includes('_')) {
-    throw new Error(
-      "getLocaleMessages: expected locale to not have a '_' in it. Those should have been replaced to -"
-    );
-  }
-
-  const targetFile = path.join(getAppRootPath(), '_locales', locale, 'messages.json');
-
-  return JSON.parse(fs.readFileSync(targetFile, 'utf-8'));
-}
-
 export function loadLocalizedDictionary({
   appLocale,
   logger,
@@ -67,24 +50,10 @@ export function loadLocalizedDictionary({
   //
   // possible locales:
   // https://github.com/electron/electron/blob/master/docs/api/locales.md
-  let crowdinLocale = normalizeLocaleName(appLocale) as CrowdinLocale;
-  let translationDictionary;
-
-  try {
-    translationDictionary = getLocaleMessages(crowdinLocale);
-  } catch (e) {
-    logger.error(`Problem loading messages for locale ${crowdinLocale} ${e.stack}`);
-    logger.error('Falling back to en locale');
-  }
-
-  if (!translationDictionary || isEmpty(translationDictionary)) {
-    translationDictionary = en;
-    crowdinLocale = 'en';
-  }
+  const crowdinLocale = normalizeLocaleName(appLocale) as CrowdinLocale;
 
   const i18n = setupI18n({
     crowdinLocale,
-    translationDictionary,
   });
 
   return {

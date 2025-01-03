@@ -1,15 +1,15 @@
 import { CallNotificationType, PropsForCallNotification } from '../../../../../state/ducks/types';
 
 import { useSelectedNicknameOrProfileNameOrShortenedPubkey } from '../../../../../state/selectors/selectedConversation';
-import type { LocalizerToken } from '../../../../../types/localizer';
 import { SessionIconType } from '../../../../icon';
 import { ExpirableReadableMessage } from '../ExpirableReadableMessage';
 import { NotificationBubble } from './NotificationBubble';
 import { Localizer } from '../../../../basic/Localizer';
+import { MergedLocalizerTokens } from '../../../../../localization/localeTools';
 
 type StyleType = Record<
   CallNotificationType,
-  { notificationTextKey: LocalizerToken; iconType: SessionIconType; iconColor: string }
+  { notificationTextKey: MergedLocalizerTokens; iconType: SessionIconType; iconColor: string }
 >;
 
 const style = {

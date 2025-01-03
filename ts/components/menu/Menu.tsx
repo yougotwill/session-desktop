@@ -53,11 +53,11 @@ import {
   getIsMessageSection,
 } from '../../state/selectors/section';
 import { useSelectedConversationKey } from '../../state/selectors/selectedConversation';
-import type { LocalizerToken } from '../../types/localizer';
 import { SessionButtonColor } from '../basic/SessionButton';
 import { ItemWithDataTestId } from './items/MenuItemWithDataTestId';
 import { useLibGroupDestroyed } from '../../state/selectors/userGroups';
 import { NetworkTime } from '../../util/NetworkTime';
+import { MergedLocalizerTokens } from '../../localization/localeTools';
 
 /** Menu items standardized */
 
@@ -516,7 +516,7 @@ export const NotificationForConvoMenuItem = (): JSX.Element | null => {
     isPrivate ? n !== 'mentions_only' : true
   ).map((n: ConversationNotificationSettingType) => {
     // do this separately so typescript's compiler likes it
-    const keyToUse: LocalizerToken =
+    const keyToUse: MergedLocalizerTokens =
       n === 'all' || !n
         ? 'notificationsAllMessages'
         : n === 'disabled'

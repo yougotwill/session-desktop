@@ -1,101 +1,17 @@
-import { en } from '../../localization/locales';
+import { pluralsDictionary, simpleDictionary } from '../../localization/locales';
 import {
-  getStringForCardinalRule,
-  getFallbackDictionary,
-  getTranslationDictionary,
-  i18nLog,
-  getCrowdinLocale,
-} from './shared';
-import { LOCALE_DEFAULTS } from '../../localization/constants';
-import { deSanitizeHtmlTags, sanitizeArgs } from '../../components/basic/Localizer';
-import type { LocalizerDictionary } from '../../types/localizer';
-
-type PluralKey = 'count';
+  ArgsFromToken,
+  deSanitizeHtmlTags,
+  getStringForRule,
+  isPluralToken,
+  isSimpleToken,
+  MergedLocalizerTokens,
+  sanitizeArgs,
+} from '../../localization/localeTools';
+import { i18nLog, getCrowdinLocale } from './shared';
+import { CrowdinLocale, LOCALE_DEFAULTS } from '../../localization/constants';
 
 type ArgString = `${string}{${string}}${string}`;
-type RawString = ArgString | string;
-
-type PluralString = `{${PluralKey}, plural, one [${RawString}] other [${RawString}]}`;
-
-type GenericLocalizedDictionary = Record<string, RawString | PluralString>;
-
-type TokenString<Dict extends GenericLocalizedDictionary> = keyof Dict extends string
-  ? keyof Dict
-  : never;
-
-/** The dynamic arguments in a localized string */
-type StringArgs<T extends string> =
-  /** If a string follows the plural format use its plural variable name and recursively check for
-   *  dynamic args inside all plural forms */
-  T extends `{${infer PluralVar}, plural, one [${infer PluralOne}] other [${infer PluralOther}]}`
-    ? PluralVar | StringArgs<PluralOne> | StringArgs<PluralOther>
-    : /** If a string segment follows the variable form parse its variable name and recursively
-       * check for more dynamic args */
-      T extends `${string}{${infer Var}}${infer Rest}`
-      ? Var | StringArgs<Rest>
-      : never;
-
-export type StringArgsRecord<T extends string> = Record<StringArgs<T>, string | number>;
-
-// TODO: move this to a test file
-//
-// const stringArgsTestStrings = {
-//   none: 'test',
-//   one: 'test{count}',
-//   two: 'test {count} second {another}',
-//   three: 'test {count} second {another} third {third}',
-//   four: 'test {count} second {another} third {third} fourth {fourth}',
-//   five: 'test {count} second {another} third {third} fourth {fourth} fifth {fifth}',
-//   twoConnected: 'test {count}{another}',
-//   threeConnected: '{count}{another}{third}',
-// } as const;
-//
-// const stringArgsTestResults = {
-//   one: { count: 'count' },
-//   two: { count: 'count', another: 'another' },
-//   three: { count: 'count', another: 'another', third: 'third' },
-//   four: { count: 'count', another: 'another', third: 'third', fourth: 'fourth' },
-//   five: { count: 'count', another: 'another', third: 'third', fourth: 'fourth', fifth: 'fifth' },
-//   twoConnected: { count: 'count', another: 'another' },
-//   threeConnected: { count: 'count', another: 'another', third: 'third' },
-// } as const;
-//
-// let st0: Record<StringArgs<typeof stringArgsTestStrings.none>, string>;
-// const st1: Record<StringArgs<typeof stringArgsTestStrings.one>, string> = stringArgsTestResults.one;
-// const st2: Record<StringArgs<typeof stringArgsTestStrings.two>, string> = stringArgsTestResults.two;
-// const st3: Record<
-//   StringArgs<typeof stringArgsTestStrings.three>,
-//   string
-// > = stringArgsTestResults.three;
-// const st4: Record<
-//   StringArgs<typeof stringArgsTestStrings.four>,
-//   string
-// > = stringArgsTestResults.four;
-// const st5: Record<
-//   StringArgs<typeof stringArgsTestStrings.five>,
-//   string
-// > = stringArgsTestResults.five;
-// const st6: Record<
-//   StringArgs<typeof stringArgsTestStrings.twoConnected>,
-//   string
-// > = stringArgsTestResults.twoConnected;
-// const st7: Record<
-//   StringArgs<typeof stringArgsTestStrings.threeConnected>,
-//   string
-// > = stringArgsTestResults.threeConnected;
-//
-// const results = [st0, st1, st2, st3, st4, st5, st6, st7];
-
-// Above is testing stuff
-
-function getPluralKey<R extends PluralKey>(string: PluralString): R {
-  const match = /{(\w+), plural, (zero|one|two|few|many|other) \[.+\]}/g.exec(string);
-  return match?.[1] as R;
-}
-
-// TODO This regex is only going to work for the one/other case what about other langs where we can have one/two/other for example
-const isPluralForm = (localizedString: string): localizedString is PluralString =>
-  /{(\w+), plural, (zero|one|two|few|many|other) \[.+\]}/g.test(localizedString);
 
 /**
  * Checks if a string contains a dynamic variable.
@@ -108,12 +24,9 @@ const isStringWithArgs = (localizedString: string): localizedString is ArgString
 const isReplaceLocalizedStringsWithKeysEnabled = () =>
   !!(typeof window !== 'undefined' && window?.sessionFeatureFlags?.replaceLocalizedStringsWithKeys);
 
-export class LocalizedStringBuilder<
-  Dict extends GenericLocalizedDictionary,
-  T extends TokenString<Dict>,
-> extends String {
+export class LocalizedStringBuilder<T extends MergedLocalizerTokens> extends String {
   private readonly token: T;
-  private args?: StringArgsRecord<Dict[T]>;
+  private args?: ArgsFromToken<T>;
   private isStripped = false;
   private isEnglishForced = false;
 
@@ -144,7 +57,7 @@ export class LocalizedStringBuilder<
     }
   }
 
-  withArgs(args: StringArgsRecord<Dict[T]>): Omit<this, 'withArgs'> {
+  withArgs(args: ArgsFromToken<T>): Omit<this, 'withArgs'> {
     this.args = args;
     return this;
   }
@@ -157,7 +70,7 @@ export class LocalizedStringBuilder<
   strip(): Omit<this, 'strip'> {
     const sanitizedArgs = this.args ? sanitizeArgs(this.args, '\u200B') : undefined;
     if (sanitizedArgs) {
-      this.args = sanitizedArgs as StringArgsRecord<Dict[T]>;
+      this.args = sanitizedArgs as ArgsFromToken<T>;
     }
     this.isStripped = true;
 
@@ -169,52 +82,35 @@ export class LocalizedStringBuilder<
     return deSanitizeHtmlTags(strippedString, '\u200B');
   }
 
-  private getRawString(): RawString | TokenString<Dict> {
+  private localeToTarget(): CrowdinLocale {
+    return this.isEnglishForced ? 'en' : getCrowdinLocale();
+  }
+
+  private getRawString(): string {
     try {
       if (this.renderStringAsToken) {
         return this.token;
       }
 
-      const dict: GenericLocalizedDictionary = this.isEnglishForced
-        ? en
-        : getTranslationDictionary();
-
-      let localizedString = dict[this.token];
-
-      if (!localizedString) {
-        i18nLog(`Attempted to get translation for nonexistent key: '${this.token}'`);
-
-        localizedString = (getFallbackDictionary() as GenericLocalizedDictionary)[this.token];
-
-        if (!localizedString) {
-          i18nLog(
-            `Attempted to get translation for nonexistent key: '${this.token}' in fallback dictionary`
-          );
-          return this.token;
-        }
+      if (isSimpleToken(this.token)) {
+        return simpleDictionary[this.token][this.localeToTarget()];
       }
 
-      return isPluralForm(localizedString)
-        ? this.resolvePluralString(localizedString)
-        : localizedString;
+      if (!isPluralToken(this.token)) {
+        throw new Error('invalid token provided');
+      }
+
+      return this.resolvePluralString();
     } catch (error) {
       i18nLog(error.message);
       return this.token;
     }
   }
 
-  private resolvePluralString(str: PluralString): string {
-    const pluralKey = getPluralKey(str);
+  private resolvePluralString(): string {
+    const pluralKey = 'count' as const;
 
-    // This should not be possible, but we need to handle it in case it does happen
-    if (!pluralKey) {
-      i18nLog(
-        `Attempted to get nonexistent pluralKey for plural form string '${str}' for token '${this.token}'`
-      );
-      return this.token;
-    }
-
-    let num = this.args?.[pluralKey as keyof StringArgsRecord<Dict[T]>];
+    let num: number | string | undefined = this.args?.[pluralKey as keyof ArgsFromToken<T>];
 
     if (num === undefined) {
       i18nLog(
@@ -236,20 +132,34 @@ export class LocalizedStringBuilder<
       }
     }
 
-    const currentLocale = getCrowdinLocale();
-    const cardinalRule = new Intl.PluralRules(currentLocale).select(num);
+    const localeToTarget = this.localeToTarget();
+    const cardinalRule = new Intl.PluralRules(localeToTarget).select(num);
 
-    let pluralString = getStringForCardinalRule(str, cardinalRule);
+    if (!isPluralToken(this.token)) {
+      throw new Error('resolvePluralString can only be called with a plural string');
+    }
+
+    let pluralString = getStringForRule({
+      cardinalRule,
+      crowdinLocale: localeToTarget,
+      dictionary: pluralsDictionary,
+      token: this.token,
+    });
 
     if (!pluralString) {
       i18nLog(
-        `Plural string not found for cardinal '${cardinalRule}': '${str}' Falling back to 'other' cardinal`
+        `Plural string not found for cardinal '${cardinalRule}': '${this.token}' Falling back to 'other' cardinal`
       );
 
-      pluralString = getStringForCardinalRule(str, 'other');
+      pluralString = getStringForRule({
+        cardinalRule: 'other',
+        crowdinLocale: localeToTarget,
+        dictionary: pluralsDictionary,
+        token: this.token,
+      });
 
       if (!pluralString) {
-        i18nLog(`Plural string not found for fallback cardinal 'other': '${str}'`);
+        i18nLog(`Plural string not found for fallback cardinal 'other': '${this.token}'`);
 
         return this.token;
       }
@@ -262,7 +172,7 @@ export class LocalizedStringBuilder<
     /** Find and replace the dynamic variables in a localized string and substitute the variables with the provided values */
     return str.replace(/\{(\w+)\}/g, (match, arg: string) => {
       const matchedArg = this.args
-        ? this.args[arg as keyof StringArgsRecord<Dict[T]>]?.toString()
+        ? this.args[arg as keyof ArgsFromToken<T>]?.toString()
         : undefined;
 
       return matchedArg ?? LOCALE_DEFAULTS[arg as keyof typeof LOCALE_DEFAULTS] ?? match;
@@ -270,13 +180,10 @@ export class LocalizedStringBuilder<
   }
 }
 
-export function localize<T extends TokenString<LocalizerDictionary>>(token: T) {
-  return new LocalizedStringBuilder<LocalizerDictionary, T>(token);
+export function localize<T extends MergedLocalizerTokens>(token: T) {
+  return new LocalizedStringBuilder<T>(token);
 }
 
-export function localizeFromOld<T extends TokenString<LocalizerDictionary>>(
-  token: T,
-  args: StringArgsRecord<LocalizerDictionary[T]>
-) {
-  return new LocalizedStringBuilder<LocalizerDictionary, T>(token).withArgs(args);
+export function localizeFromOld<T extends MergedLocalizerTokens>(token: T, args: ArgsFromToken<T>) {
+  return new LocalizedStringBuilder<T>(token).withArgs(args);
 }

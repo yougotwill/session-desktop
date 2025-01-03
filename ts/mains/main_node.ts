@@ -163,12 +163,9 @@ import { isDevProd, isTestIntegration } from '../shared/env_vars';
 import { classicDark } from '../themes';
 import type { SetupI18nReturnType } from '../types/localizer';
 
-import {
-  isSessionLocaleSet,
-  getTranslationDictionary,
-  getCrowdinLocale,
-} from '../util/i18n/shared';
+import { isSessionLocaleSet, getCrowdinLocale } from '../util/i18n/shared';
 import { loadLocalizedDictionary } from '../node/locale';
+import { simpleDictionary } from '../localization/locales';
 
 // Both of these will be set after app fires the 'ready' event
 let logger: Logger | null = null;
@@ -910,7 +907,6 @@ app.on('web-contents-created', (_createEvent, contents) => {
 ipc.on('locale-data', event => {
   // eslint-disable-next-line no-param-reassign
   event.returnValue = {
-    dictionary: getTranslationDictionary(),
     crowdinLocale: getCrowdinLocale(),
   };
 });
@@ -984,7 +980,7 @@ ipc.on('password-recovery-phrase', async (event, passPhrase) => {
     // no issues. send back undefined, meaning OK
     sendResponse(undefined);
   } catch (e) {
-    const localisedError = getTranslationDictionary().passwordIncorrect;
+    const localisedError = simpleDictionary.passwordIncorrect[getCrowdinLocale()];
     // send back the error
     sendResponse(localisedError);
   }

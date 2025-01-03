@@ -88,7 +88,6 @@ import { ConversationModel } from './conversation';
 import { READ_MESSAGE_STATE } from './conversationAttributes';
 import { ConversationInteractionStatus, ConversationInteractionType } from '../interactions/types';
 import { LastMessageStatusType } from '../state/ducks/types';
-import type { GetMessageArgs, LocalizerToken } from '../types/localizer';
 import {
   getGroupDisplayPictureChangeStr,
   getGroupNameChangeStr,
@@ -273,23 +272,21 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
         // @ts-expect-error -- TODO: Fix by using new i18n builder
         const { token, args } = getLeftGroupUpdateChangeStr(groupUpdate.left, groupName);
         // TODO: clean up this typing
-        return window.i18n.stripped(...([token, args] as GetMessageArgs<LocalizerToken>));
+        return window.i18n.stripped(...[token, args]);
       }
 
       if (groupUpdate.name) {
         const result = getGroupNameChangeStr(groupUpdate.name);
 
         if ('args' in result) {
-          return window.i18n.stripped(
-            ...([result.token, result.args] as GetMessageArgs<LocalizerToken>)
-          );
+          return window.i18n.stripped(...[result.token, result.args]);
         }
-        return window.i18n.stripped(...([result.token] as GetMessageArgs<LocalizerToken>));
+        return window.i18n.stripped(...[result.token]);
       }
 
       if (groupUpdate.avatarChange) {
         const result = getGroupDisplayPictureChangeStr();
-        return window.i18n.stripped(...([result.token] as GetMessageArgs<LocalizerToken>));
+        return window.i18n.stripped(...[result.token]);
       }
 
       if (groupUpdate.joined?.length) {
@@ -301,7 +298,7 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
           groupName
         );
         // TODO: clean up this typing
-        return window.i18n.stripped(...([token, args] as GetMessageArgs<LocalizerToken>));
+        return window.i18n.stripped(...[token, args]);
       }
 
       if (groupUpdate.joinedWithHistory?.length) {
@@ -313,20 +310,20 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
           groupName
         );
         // TODO: clean up this typing
-        return window.i18n.stripped(...([token, args] as GetMessageArgs<LocalizerToken>));
+        return window.i18n.stripped(...[token, args]);
       }
 
       if (groupUpdate.kicked?.length) {
         // @ts-expect-error -- TODO: Fix by using new i18n builder
         const { token, args } = getKickedGroupUpdateStr(groupUpdate.kicked, groupName);
         // TODO: clean up this typing
-        return window.i18n.stripped(...([token, args] as GetMessageArgs<LocalizerToken>));
+        return window.i18n.stripped(...[token, args]);
       }
       if (groupUpdate.promoted?.length) {
         // @ts-expect-error -- TODO: Fix by using new i18n builder
         const { token, args } = getPromotedGroupUpdateChangeStr(groupUpdate.promoted, groupName);
         // TODO: clean up this typing
-        return window.i18n.stripped(...([token, args] as GetMessageArgs<LocalizerToken>));
+        return window.i18n.stripped(...[token, args]);
       }
       window.log.warn('did not build a specific change for getDescription of ', groupUpdate);
 
@@ -433,11 +430,9 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
       });
 
       if ('args' in i18nProps) {
-        return window.i18n.stripped(
-          ...([i18nProps.token, i18nProps.args] as GetMessageArgs<LocalizerToken>)
-        );
+        return window.i18n.stripped(...[i18nProps.token, i18nProps.args]);
       }
-      return window.i18n.stripped(...([i18nProps.token] as GetMessageArgs<LocalizerToken>));
+      return window.i18n.stripped(...[i18nProps.token]);
     }
     const body = this.get('body');
     if (body) {

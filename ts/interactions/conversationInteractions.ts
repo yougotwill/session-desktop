@@ -50,7 +50,7 @@ import { Storage, setLastProfileUpdateTimestamp } from '../util/storage';
 import { UserGroupsWrapperActions } from '../webworker/workers/browser/libsession_worker_interface';
 import { ConversationInteractionStatus, ConversationInteractionType } from './types';
 import { BlockedNumberController } from '../util';
-import type { LocalizerComponentProps, LocalizerToken } from '../types/localizer';
+import type { LocalizerComponentPropsObject } from '../types/localizer';
 import { sendInviteResponseToGroup } from '../session/sending/group/GroupInviteResponse';
 import { NetworkTime } from '../util/NetworkTime';
 import { ClosedGroup } from '../session';
@@ -270,7 +270,7 @@ export const declineConversationWithConfirm = ({
 
   const convoName = ConvoHub.use().get(conversationId)?.getNicknameOrRealUsernameOrPlaceholder();
 
-  const i18nMessage: LocalizerComponentProps<LocalizerToken> = isGroupV2
+  const i18nMessage: LocalizerComponentPropsObject = isGroupV2
     ? alsoBlock && originNameToBlock
       ? { token: 'blockDescription', args: { name: originNameToBlock } } // groupv2, and blocking by sender name
       : { token: 'groupInviteDelete' } // groupv2, and no info about the sender, falling back to delete only

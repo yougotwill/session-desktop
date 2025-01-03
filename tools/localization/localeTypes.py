@@ -93,6 +93,7 @@ def generate_type_object(locales):
       str: A string representation of the JavaScript object.
     """
     js_object = "{\n"
+    js_plural_object_container = "{\n"
     plural_pattern = r"(zero|one|two|few|many|other)\s*\[([^\]]+)\]"
 
     for key, value_en in locales['en'].items():
@@ -113,7 +114,7 @@ def generate_type_object(locales):
             for plural in plurals_other:
               js_plural_object = ""
 
-              locale_key = plural[0] # 'lo', 'th', ....
+              locale_key = plural[0].replace("_","-") # 'lo', 'th', 'zh-CN', ....
               plural_str = plural[1].replace('#', '{count}')
 
               plurals_with_token = re.findall(plural_pattern, plural_str)
@@ -139,7 +140,7 @@ def generate_type_object(locales):
               js_plural_object += "\n    },"
 
               all_locales_plurals.append(js_plural_object)
-            js_object += f"  {wrapValue(key)}: {{\n{"\n".join(all_locales_plurals)}\n    args: {f"{as_record_type_en} as const," if as_record_type_en else 'undefined,'}\n  }},\n"
+            js_plural_object_container += f"  {wrapValue(key)}: {{\n{"\n".join(all_locales_plurals)}\n    args: {as_record_type_en if as_record_type_en else 'undefined,'}\n  }},\n"
 
         else:
           replaced_en = replace_static_strings(value_en)
@@ -150,15 +151,16 @@ def generate_type_object(locales):
           all_locales_strings = []
           for locale, replaced_val in other_locales_replaced_values:
             if replaced_val:
-              all_locales_strings.append(f"{locale}: \"{replaced_val.replace("\n", "\\n")}\"")
+              all_locales_strings.append(f"{wrapValue(locale.replace("_","-"))}: \"{replaced_val.replace("\n", "\\n")}\"")
             else:
-              all_locales_strings.append(f"{locale}: \"{replaced_en.replace("\n", "\\n")}\"")
+              all_locales_strings.append(f"{wrapValue(locale.replace("_","-"))}: \"{replaced_en.replace("\n", "\\n")}\"")
 
           # print('key',key, " other_locales_replaced_values:", other_locales_replaced_values)
-          js_object += f"  {wrapValue(key)}: {{\n      {",\n      ".join(all_locales_strings)},\n      args: {f"{as_record_type_en} as const," if as_record_type_en else 'undefined,'}\n  }},\n"
+          js_object += f"  {wrapValue(key)}: {{\n      {",\n      ".join(all_locales_strings)},\n      args: {as_record_type_en if as_record_type_en else 'undefined,'}\n  }},\n"
 
     js_object += "}"
-    return js_object
+    js_plural_object_container += "}"
+    return js_object,js_plural_object_container
 
 
 DISCLAIMER = """
@@ -205,9 +207,17 @@ def generateLocalesMergedType(locales):
             f"{DISCLAIMER}"
         )
 
-        ts_file.write(
-            f"export const dictionary = {generate_type_object(locales)};\n\nexport type Dictionary = typeof dictionary;\n"
-        )
+        dicts = generate_type_object(locales)
+
+        dictVar = "simpleDictionary"
+        pluralDictVar = "pluralsDictionary"
+
+
+        ts_file.write(f"""
+export const {dictVar} = {dicts[0]} as const;
+
+export const {pluralDictVar} = {dicts[1]} as const;
+""")
 
     return f"Locales generated at: {OUTPUT_FILE}"
 
