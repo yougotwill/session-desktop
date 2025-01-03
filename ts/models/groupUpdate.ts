@@ -1,6 +1,6 @@
+import { LocalizerComponentPropsObject } from '../localization/localeTools';
 import { ConvoHub } from '../session/conversations';
 import { UserUtils } from '../session/utils';
-import type { LocalizerComponentPropsObject } from '../types/localizer';
 
 function usAndXOthers(arr: Array<string>) {
   const us = UserUtils.getOurPubKeyStrFromCache();
@@ -23,7 +23,7 @@ export function getKickedGroupUpdateStr(
   if (us) {
     switch (others.length) {
       case 0:
-        return { token: 'groupRemovedYouGeneral' };
+        return { token: 'groupRemovedYouGeneral', args: undefined };
       case 1:
         return { token: 'groupRemovedYouTwo', args: { other_name: othersNames[0] } };
       default:
@@ -33,7 +33,7 @@ export function getKickedGroupUpdateStr(
 
   switch (othersNames.length) {
     case 0:
-      return { token: 'groupUpdated' };
+      return { token: 'groupUpdated', args: undefined };
     case 1:
       return { token: 'groupRemoved', args: { name: othersNames[0] } };
     case 2:
@@ -63,7 +63,7 @@ export function getLeftGroupUpdateChangeStr(left: Array<string>): LocalizerCompo
   }
 
   return us
-    ? { token: 'groupMemberYouLeft' }
+    ? { token: 'groupMemberYouLeft', args: undefined }
     : {
         token: 'groupMemberLeft',
         args: {
@@ -85,7 +85,10 @@ export function getJoinedGroupUpdateChangeStr(
     if (us) {
       switch (othersNames.length) {
         case 0:
-          return { token: addedWithHistory ? 'groupInviteYouHistory' : 'groupInviteYou' };
+          return {
+            token: addedWithHistory ? 'groupInviteYouHistory' : 'groupInviteYou',
+            args: undefined,
+          };
         case 1:
           return addedWithHistory
             ? { token: 'groupMemberNewYouHistoryTwo', args: { other_name: othersNames[0] } }
@@ -98,7 +101,7 @@ export function getJoinedGroupUpdateChangeStr(
     }
     switch (othersNames.length) {
       case 0:
-        return { token: 'groupUpdated' }; // this is an invalid case, but well.
+        return { token: 'groupUpdated', args: undefined }; // this is an invalid case, but well.
       case 1:
         return addedWithHistory
           ? { token: 'groupMemberNewHistory', args: { name: othersNames[0] } }
@@ -130,7 +133,7 @@ export function getJoinedGroupUpdateChangeStr(
   if (us) {
     switch (othersNames.length) {
       case 0:
-        return { token: 'legacyGroupMemberYouNew' };
+        return { token: 'legacyGroupMemberYouNew', args: undefined };
       case 1:
         return { token: 'legacyGroupMemberNewYouOther', args: { other_name: othersNames[0] } };
       default:
@@ -139,7 +142,7 @@ export function getJoinedGroupUpdateChangeStr(
   }
   switch (othersNames.length) {
     case 0:
-      return { token: 'groupUpdated' };
+      return { token: 'groupUpdated', args: undefined };
     case 1:
       return { token: 'legacyGroupMemberNew', args: { name: othersNames[0] } };
     case 2:
@@ -170,7 +173,7 @@ export function getPromotedGroupUpdateChangeStr(
   if (us) {
     switch (othersNames.length) {
       case 0:
-        return { token: 'groupPromotedYou' };
+        return { token: 'groupPromotedYou', args: undefined };
       case 1:
         return { token: 'groupPromotedYouTwo', args: { name: othersNames[0] } };
       default:
@@ -179,7 +182,7 @@ export function getPromotedGroupUpdateChangeStr(
   }
   switch (othersNames.length) {
     case 0:
-      return { token: 'groupUpdated' };
+      return { token: 'groupUpdated', args: undefined };
     case 1:
       return { token: 'adminPromotedToAdmin', args: { name: othersNames[0] } };
     case 2:
@@ -204,9 +207,9 @@ export function getPromotedGroupUpdateChangeStr(
 export function getGroupNameChangeStr(newName: string | undefined): LocalizerComponentPropsObject {
   return newName
     ? { token: 'groupNameNew', args: { group_name: newName } }
-    : { token: 'groupNameUpdated' };
+    : { token: 'groupNameUpdated', args: undefined };
 }
 
 export function getGroupDisplayPictureChangeStr(): LocalizerComponentPropsObject {
-  return { token: 'groupDisplayPictureUpdated' };
+  return { token: 'groupDisplayPictureUpdated', args: undefined };
 }

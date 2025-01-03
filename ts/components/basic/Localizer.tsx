@@ -1,8 +1,8 @@
 import styled from 'styled-components';
-import type { LocalizerComponentProps } from '../../types/localizer';
 import { SessionHtmlRenderer } from './SessionHTMLRenderer';
 import {
   GetMessageArgs,
+  LocalizerComponentProps,
   MergedLocalizerTokens,
   sanitizeArgs,
 } from '../../localization/localeTools';

@@ -10,7 +10,6 @@ import {
 } from '../../../../util/accountManager';
 import { TestUtils } from '../../../test-utils';
 import { stubWindow } from '../../../test-utils/utils';
-import { resetLocaleAndTranslationDict } from '../../../../util/i18n/shared';
 
 describe('Onboarding', () => {
   const polledDisplayName = 'Hello World';
@@ -26,7 +25,6 @@ describe('Onboarding', () => {
   });
 
   afterEach(() => {
-    resetLocaleAndTranslationDict();
     Sinon.restore();
   });
 

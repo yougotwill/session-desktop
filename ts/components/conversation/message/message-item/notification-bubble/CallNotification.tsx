@@ -45,7 +45,11 @@ export const CallNotification = (props: PropsForCallNotification) => {
       isControlMessage={true}
     >
       <NotificationBubble iconType={iconType} iconColor={iconColor}>
-        <Localizer token={notificationTextKey} args={{ name }} />
+        {notificationTextKey === 'callsInProgress' ? (
+          <Localizer token={notificationTextKey} />
+        ) : (
+          <Localizer token={notificationTextKey} args={{ name }} />
+        )}
       </NotificationBubble>
     </ExpirableReadableMessage>
   );

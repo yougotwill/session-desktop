@@ -6,13 +6,6 @@ let mappedBrowserLocaleDisplayed = false;
 let crowdinLocale: CrowdinLocale | undefined;
 
 /**
- * Only exported for testing, reset the dictionary to use for translations and the locale set
- */
-export function resetLocaleAndTranslationDict() {
-  crowdinLocale = undefined;
-}
-
-/**
  * Logs an i18n message to the console.
  * @param message - The message to log.
  * @deprecated we want to use a normal logger instead of this function, eventually.
@@ -88,7 +81,7 @@ export function getBrowserLocale() {
 
 export function setInitialLocale(crowdinLocaleArg: CrowdinLocale) {
   if (crowdinLocale) {
-    throw new Error('setInitialLocale: crowdinLocale is already init');
+    i18nLog('setInitialLocale: crowdinLocale is already init');
   }
   crowdinLocale = crowdinLocaleArg;
 }

@@ -109,6 +109,14 @@ type MappedToTsTypes<T extends Record<string, DynamicArgStr>> = {
   [K in keyof T]: ArgsTypeStrToTypes<T[K]>;
 };
 
+function propsToTuple<T extends MergedLocalizerTokens>(
+  opts: LocalizerComponentProps<T>
+): GetMessageArgs<T> {
+  return (
+    isTokenWithArgs(opts.token) ? [opts.token, opts.args] : [opts.token]
+  ) as GetMessageArgs<T>;
+}
+
 /** NOTE: Because of docstring limitations changes MUST be manually synced between {@link setupI18n.inEnglish } and {@link window.i18n.inEnglish } */
 /**
  * Retrieves a message string in the {@link en} locale, substituting variables where necessary.
@@ -176,6 +184,12 @@ export function stripped<T extends MergedLocalizerTokens>(
   const strippedString = i18nString.replaceAll(/<[^>]*>/g, '');
 
   return deSanitizeHtmlTags(strippedString, '\u200B');
+}
+
+export function strippedWithObj<T extends MergedLocalizerTokens>(
+  opts: LocalizerComponentProps<T>
+): string {
+  return stripped(...propsToTuple(opts));
 }
 
 /**
@@ -489,6 +503,26 @@ export function localize<T extends MergedLocalizerTokens>(token: T) {
   return new LocalizedStringBuilder<T>(token, localeInUse);
 }
 
-function localizeFromOld<T extends MergedLocalizerTokens>(token: T, args: ArgsFromToken<T>) {
+export function localizeFromOld<T extends MergedLocalizerTokens>(token: T, args: ArgsFromToken<T>) {
   return localize(token).withArgs(args);
 }
+
+export type LocalizerHtmlTag = 'span' | 'div';
+/** Basic props for all calls of the Localizer component */
+type LocalizerComponentBaseProps<T extends MergedLocalizerTokens> = {
+  token: T;
+  asTag?: LocalizerHtmlTag;
+  className?: string;
+};
+
+/** The props for the localization component */
+export type LocalizerComponentProps<T extends MergedLocalizerTokens> =
+  T extends MergedLocalizerTokens
+    ? ArgsFromToken<T> extends never
+      ? LocalizerComponentBaseProps<T> & { args?: undefined }
+      : ArgsFromToken<T> extends Record<string, never>
+        ? LocalizerComponentBaseProps<T> & { args?: undefined }
+        : LocalizerComponentBaseProps<T> & { args: ArgsFromToken<T> }
+    : never;
+
+export type LocalizerComponentPropsObject = LocalizerComponentProps<MergedLocalizerTokens>;

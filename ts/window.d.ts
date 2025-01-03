@@ -78,6 +78,8 @@ declare global {
        */
       stripped: I18nMethods['stripped'];
 
+      strippedWithObj: I18nMethods['strippedWithObj'];
+
       /** NOTE: Because of docstring limitations changes MUST be manually synced between {@link setupI18n.inEnglish } and {@link window.i18n.inEnglish } */
       /**
        * Retrieves a message string in the {@link en} locale, substituting variables where necessary.

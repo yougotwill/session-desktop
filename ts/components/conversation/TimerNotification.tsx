@@ -17,7 +17,6 @@ import { ReleasedFeatures } from '../../util/releaseFeature';
 import { Flex } from '../basic/Flex';
 import { SpacerMD, TextWithChildren } from '../basic/Text';
 import { ExpirableReadableMessage } from './message/message-item/ExpirableReadableMessage';
-import type { LocalizerComponentPropsObject } from '../../types/localizer';
 
 // eslint-disable-next-line import/order
 import { ConversationInteraction } from '../../interactions';
@@ -27,6 +26,7 @@ import { Localizer } from '../basic/Localizer';
 import { SessionButtonColor } from '../basic/SessionButton';
 import { SessionIcon } from '../icon';
 import { getTimerNotificationStr } from '../../models/timerNotifications';
+import { LocalizerComponentPropsObject } from '../../localization/localeTools';
 
 const FollowSettingButton = styled.button`
   color: var(--primary-color);

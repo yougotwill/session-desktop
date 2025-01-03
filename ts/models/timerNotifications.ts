@@ -5,7 +5,7 @@ import { PubKey } from '../session/types';
 import { UserUtils } from '../session/utils';
 import { TimerOptions } from '../session/disappearing_messages/timerOptions';
 import { isLegacyDisappearingModeEnabled } from '../session/disappearing_messages/legacy';
-import type { LocalizerComponentPropsObject } from '../types/localizer';
+import { LocalizerComponentPropsObject } from '../localization/localeTools';
 
 export function getTimerNotificationStr({
   expirationMode,

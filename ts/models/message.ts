@@ -269,61 +269,39 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
         this.getConversation()?.getNicknameOrRealUsernameOrPlaceholder() || window.i18n('unknown');
 
       if (groupUpdate.left) {
-        // @ts-expect-error -- TODO: Fix by using new i18n builder
-        const { token, args } = getLeftGroupUpdateChangeStr(groupUpdate.left, groupName);
-        // TODO: clean up this typing
-        return window.i18n.stripped(...[token, args]);
+        return window.i18n.strippedWithObj(getLeftGroupUpdateChangeStr(groupUpdate.left));
       }
 
       if (groupUpdate.name) {
-        const result = getGroupNameChangeStr(groupUpdate.name);
-
-        if ('args' in result) {
-          return window.i18n.stripped(...[result.token, result.args]);
-        }
-        return window.i18n.stripped(...[result.token]);
+        return window.i18n.strippedWithObj(getGroupNameChangeStr(groupUpdate.name));
       }
 
       if (groupUpdate.avatarChange) {
-        const result = getGroupDisplayPictureChangeStr();
-        return window.i18n.stripped(...[result.token]);
+        return window.i18n.strippedWithObj(getGroupDisplayPictureChangeStr());
       }
 
       if (groupUpdate.joined?.length) {
-        // @ts-expect-error -- TODO: Fix by using new i18n builder
-        const { token, args } = getJoinedGroupUpdateChangeStr(
-          groupUpdate.joined,
-          isGroupV2,
-          false,
-          groupName
-        );
-        // TODO: clean up this typing
-        return window.i18n.stripped(...[token, args]);
+        const opts = getJoinedGroupUpdateChangeStr(groupUpdate.joined, isGroupV2, false, groupName);
+        return window.i18n.strippedWithObj(opts);
       }
 
       if (groupUpdate.joinedWithHistory?.length) {
-        // @ts-expect-error -- TODO: Fix by using new i18n builder
-        const { token, args } = getJoinedGroupUpdateChangeStr(
+        const opts = getJoinedGroupUpdateChangeStr(
           groupUpdate.joinedWithHistory,
           true,
           true,
           groupName
         );
-        // TODO: clean up this typing
-        return window.i18n.stripped(...[token, args]);
+        return window.i18n.strippedWithObj(opts);
       }
 
       if (groupUpdate.kicked?.length) {
-        // @ts-expect-error -- TODO: Fix by using new i18n builder
-        const { token, args } = getKickedGroupUpdateStr(groupUpdate.kicked, groupName);
-        // TODO: clean up this typing
-        return window.i18n.stripped(...[token, args]);
+        const opts = getKickedGroupUpdateStr(groupUpdate.kicked, groupName);
+        return window.i18n.strippedWithObj(opts);
       }
       if (groupUpdate.promoted?.length) {
-        // @ts-expect-error -- TODO: Fix by using new i18n builder
-        const { token, args } = getPromotedGroupUpdateChangeStr(groupUpdate.promoted, groupName);
-        // TODO: clean up this typing
-        return window.i18n.stripped(...[token, args]);
+        const opts = getPromotedGroupUpdateChangeStr(groupUpdate.promoted);
+        return window.i18n.strippedWithObj(opts);
       }
       window.log.warn('did not build a specific change for getDescription of ', groupUpdate);
 
@@ -429,10 +407,7 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
         timespanSeconds: expireTimer,
       });
 
-      if ('args' in i18nProps) {
-        return window.i18n.stripped(...[i18nProps.token, i18nProps.args]);
-      }
-      return window.i18n.stripped(...[i18nProps.token]);
+      return window.i18n.strippedWithObj(i18nProps);
     }
     const body = this.get('body');
     if (body) {

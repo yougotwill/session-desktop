@@ -7,12 +7,14 @@ import {
   inEnglish,
   stripped,
   getMessageDefault,
+  strippedWithObj,
 } from '../../../localization/localeTools';
 
 const getMessageDefaultCopy: any = getMessageDefault;
 
 getMessageDefaultCopy.inEnglish = inEnglish;
 getMessageDefaultCopy.stripped = stripped;
+getMessageDefaultCopy.strippedWithObj = strippedWithObj;
 getMessageDefaultCopy.getRawMessage = getRawMessage;
 getMessageDefaultCopy.formatMessageWithArgs = formatMessageWithArgs;
 
