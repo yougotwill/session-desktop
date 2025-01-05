@@ -49,6 +49,12 @@ def generate_js_object(data):
     js_object += "}"
     return js_object
 
+def escape_new_lines(value):
+    """
+    Escapes new lines, from "\n" to "\\n".
+    """
+    return value.replace("\n", "\\n")
+
 
 def extract_vars(text):
     # Use a regular expression to find all strings inside curly braces
@@ -70,7 +76,6 @@ def vars_to_record(vars):
 
 
 def replace_static_strings(str):
-
     # todo make those come from the glossary
     replaced =  str.replace("{app_name}", "Session")\
       .replace("{session_download_url}", "https://getsession.org/download")\
@@ -80,6 +85,8 @@ def replace_static_strings(str):
     return replaced
 
 
+def args_to_type(args):
+   return args if args else 'undefined,'
 
 
 def generate_type_object(locales):
@@ -127,20 +134,20 @@ def generate_type_object(locales):
                 if localized_string:
                   to_append = ""
                   to_append += token
-                  to_append += f": \"{localized_string.replace("\n", "\\n")}\""
+                  to_append += f": \"{escape_new_lines(localized_string)}\""
                   all_locales_strings.append(to_append)
 
               # if that locale doesn't have translation in plurals, add the english hones
               if not len(all_locales_strings):
                  for plural_en_token, plural_en_str in en_plurals_with_token:
-                    all_locales_strings.append(f"{plural_en_token}: \"{plural_en_str.replace("\n", "\\n")}\"")
+                    all_locales_strings.append(f"{plural_en_token}: \"{escape_new_lines(plural_en_str)}\"")
               js_plural_object += f"    {wrapValue(locale_key)}:"
               js_plural_object += "{\n      "
               js_plural_object += ",\n      ".join(all_locales_strings)
               js_plural_object += "\n    },"
 
               all_locales_plurals.append(js_plural_object)
-            js_plural_object_container += f"  {wrapValue(key)}: {{\n{"\n".join(all_locales_plurals)}\n    args: {as_record_type_en if as_record_type_en else 'undefined,'}\n  }},\n"
+            js_plural_object_container += f'  {wrapValue(key)}: {{\n{"\n".join(all_locales_plurals)}\n    args: {args_to_type(as_record_type_en)}\n  }},\n'
 
         else:
           replaced_en = replace_static_strings(value_en)
@@ -151,12 +158,12 @@ def generate_type_object(locales):
           all_locales_strings = []
           for locale, replaced_val in other_locales_replaced_values:
             if replaced_val:
-              all_locales_strings.append(f"{wrapValue(locale.replace("_","-"))}: \"{replaced_val.replace("\n", "\\n")}\"")
+              all_locales_strings.append(f'{wrapValue(locale.replace("_","-"))}: "{escape_new_lines(replaced_val)}"')
             else:
-              all_locales_strings.append(f"{wrapValue(locale.replace("_","-"))}: \"{replaced_en.replace("\n", "\\n")}\"")
+              all_locales_strings.append(f'{wrapValue(locale.replace("_","-"))}: "{escape_new_lines(replaced_en)}"')
 
           # print('key',key, " other_locales_replaced_values:", other_locales_replaced_values)
-          js_object += f"  {wrapValue(key)}: {{\n      {",\n      ".join(all_locales_strings)},\n      args: {as_record_type_en if as_record_type_en else 'undefined,'}\n  }},\n"
+          js_object += f'  {wrapValue(key)}: {{\n      {",\n      ".join(all_locales_strings)},\n      args: {args_to_type(as_record_type_en)}\n  }},\n'
 
     js_object += "}"
     js_plural_object_container += "}"
