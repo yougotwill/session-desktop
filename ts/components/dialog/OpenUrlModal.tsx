@@ -8,7 +8,7 @@ import { OpenUrlModalState, updateOpenUrlModal } from '../../state/ducks/modalDi
 import { SessionWrapperModal } from '../SessionWrapperModal';
 import { SessionButton, SessionButtonColor, SessionButtonType } from '../basic/SessionButton';
 import { SpacerMD } from '../basic/Text';
-import { StyledI18nSubText } from '../basic/StyledI18nSubText';
+import { I18nSubText } from '../basic/I18nSubText';
 import { StyledModalDescriptionContainer } from './shared/ModalDescriptionContainer';
 
 const StyledScrollDescriptionContainer = styled(StyledModalDescriptionContainer)`
@@ -47,7 +47,7 @@ export function OpenUrlModal(props: OpenUrlModalState) {
     >
       <div className="session-modal__centered">
         <StyledScrollDescriptionContainer>
-          <StyledI18nSubText
+          <I18nSubText
             localizerProps={{ token: 'urlOpenDescription', asTag: 'span', args: { url } }}
             dataTestId="modal-description"
           />

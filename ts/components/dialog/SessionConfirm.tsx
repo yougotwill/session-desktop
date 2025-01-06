@@ -12,7 +12,7 @@ import { SpacerLG } from '../basic/Text';
 import { SessionSpinner } from '../loading';
 import type { LocalizerComponentPropsObject } from '../../types/localizer';
 
-import { StyledI18nSubText } from '../basic/StyledI18nSubText';
+import { I18nSubText } from '../basic/I18nSubText';
 
 export interface SessionConfirmDialogProps {
   i18nMessage?: LocalizerComponentPropsObject;
@@ -132,7 +132,7 @@ export const SessionConfirm = (props: SessionConfirmDialogProps) => {
 
       <div className="session-modal__centered">
         {i18nMessage ? (
-          <StyledI18nSubText localizerProps={i18nMessage} dataTestId="modal-description" />
+          <I18nSubText localizerProps={i18nMessage} dataTestId="modal-description" />
         ) : null}
         {radioOptions && chosenOption !== '' ? (
           <SessionRadioGroup

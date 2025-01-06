@@ -15,7 +15,7 @@ const StyledI18nSubTextContainer = styled('div')`
   padding-inline: var(--margins-lg);
 `;
 
-export const StyledI18nSubText = ({
+export const I18nSubText = ({
   className,
   dataTestId,
   localizerProps,
