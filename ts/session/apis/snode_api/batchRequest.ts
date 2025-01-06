@@ -2,7 +2,6 @@ import { isArray } from 'lodash';
 import { AbortController } from 'abort-controller';
 
 import { MessageSender } from '../../sending';
-import { Snode } from '../../../data/types';
 import { SnodeResponseError } from '../../utils/errors';
 import { processOnionRequestErrorAtDestination, SnodeResponse } from './onions';
 import { SessionRpc } from './sessionRpc';
@@ -15,14 +14,11 @@ import {
 } from './SnodeRequestTypes';
 import { NotEmptyArrayOfBatchResults } from './BatchResultEntry';
 import { MergedAbortSignal, WithTimeoutMs } from './requestWith';
-import { WithAllow401s } from '../../types/with';
+import { WithAllow401s, WithAssociatedWith, WithTargetNode } from '../../types/with';
 
 function logSubRequests(requests: Array<BuiltSnodeSubRequests>) {
   return `[${requests.map(builtRequestToLoggingId).join(', ')}]`;
 }
-
-type WithTargetNode = { targetNode: Snode };
-type WithAssociatedWith = { associatedWith: string | null };
 
 /**
  * This is the equivalent to the batch send on sogs. The target node runs each sub request and returns a list of all the sub status and bodies.
