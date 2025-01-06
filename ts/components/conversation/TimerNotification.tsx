@@ -26,7 +26,7 @@ import { Localizer } from '../basic/Localizer';
 import { SessionButtonColor } from '../basic/SessionButton';
 import { SessionIcon } from '../icon';
 import { getTimerNotificationStr } from '../../models/timerNotifications';
-import { LocalizerComponentPropsObject } from '../../localization/localeTools';
+import type { LocalizerComponentPropsObject } from '../../localization/localeTools';
 
 const FollowSettingButton = styled.button`
   color: var(--primary-color);

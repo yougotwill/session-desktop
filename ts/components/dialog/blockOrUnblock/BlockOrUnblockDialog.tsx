@@ -13,7 +13,7 @@ import { Localizer } from '../../basic/Localizer';
 import { SessionButton, SessionButtonColor, SessionButtonType } from '../../basic/SessionButton';
 import { StyledModalDescriptionContainer } from '../shared/ModalDescriptionContainer';
 import { BlockOrUnblockModalState } from './BlockOrUnblockModalState';
-import { LocalizerComponentPropsObject } from '../../../localization/localeTools';
+import type { LocalizerComponentPropsObject } from '../../../localization/localeTools';
 
 type ModalState = NonNullable<BlockOrUnblockModalState>;
 

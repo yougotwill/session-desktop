@@ -1,4 +1,4 @@
-import { LocalizerComponentPropsObject } from '../localization/localeTools';
+import type { LocalizerComponentPropsObject } from '../localization/localeTools';
 import { ConvoHub } from '../session/conversations';
 import { UserUtils } from '../session/utils';
 

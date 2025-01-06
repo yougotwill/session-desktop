@@ -57,9 +57,12 @@ export function isPluralToken(token: string): token is PluralLocalizerTokens {
   return token in pluralsDictionary;
 }
 
-type TokenWithArgs<D> = {
-  [K in keyof D]: D[K] extends { args: undefined } | { args: never } ? never : K;
-}[keyof D];
+/**
+ * This type extracts from a dictionary, the keys that have a property 'args' set (i.e. not undefined or never).
+ */
+type TokenWithArgs<Dict> = {
+  [Key in keyof Dict]: Dict[Key] extends { args: undefined } | { args: never } ? never : Key;
+}[keyof Dict];
 
 type MergedTokenWithArgs = TokenWithArgs<SimpleDictionary> | TokenWithArgs<PluralDictionary>;
 

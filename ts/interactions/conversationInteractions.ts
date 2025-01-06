@@ -58,7 +58,7 @@ import { GroupPromote } from '../session/utils/job_runners/jobs/GroupPromoteJob'
 import { MessageSender } from '../session/sending';
 import { StoreGroupRequestFactory } from '../session/apis/snode_api/factories/StoreGroupRequestFactory';
 import { DURATION } from '../session/constants';
-import { LocalizerComponentPropsObject } from '../localization/localeTools';
+import type { LocalizerComponentPropsObject } from '../localization/localeTools';
 
 export async function copyPublicKeyByConvoId(convoId: string) {
   if (OpenGroupUtils.isOpenGroupV2(convoId)) {

@@ -6,7 +6,7 @@ import { Persistor } from 'redux-persist/es/types';
 
 import { PrimaryColorStateType, ThemeStateType } from './themes/constants/colors';
 import type { GetMessageArgs, I18nMethods } from './types/localizer';
-import { MergedLocalizerTokens } from './localization/localeTools';
+import type { MergedLocalizerTokens } from './localization/localeTools';
 
 export interface LibTextsecure {
   messaging: boolean;

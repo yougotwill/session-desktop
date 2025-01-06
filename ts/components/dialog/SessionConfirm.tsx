@@ -12,7 +12,7 @@ import { SpacerLG } from '../basic/Text';
 import { SessionSpinner } from '../loading';
 
 import { StyledI18nSubText } from '../basic/StyledI18nSubText';
-import { LocalizerComponentPropsObject } from '../../localization/localeTools';
+import type { LocalizerComponentPropsObject } from '../../localization/localeTools';
 
 export interface SessionConfirmDialogProps {
   i18nMessage?: LocalizerComponentPropsObject;
