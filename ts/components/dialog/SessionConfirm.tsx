@@ -10,9 +10,8 @@ import { SessionButton, SessionButtonColor, SessionButtonType } from '../basic/S
 import { SessionRadioGroup, SessionRadioItems } from '../basic/SessionRadioGroup';
 import { SpacerLG } from '../basic/Text';
 import { SessionSpinner } from '../loading';
-
-import { StyledI18nSubText } from '../basic/StyledI18nSubText';
 import type { LocalizerComponentPropsObject } from '../../localization/localeTools';
+import { I18nSubText } from '../basic/I18nSubText';
 
 export interface SessionConfirmDialogProps {
   i18nMessage?: LocalizerComponentPropsObject;
@@ -132,7 +131,7 @@ export const SessionConfirm = (props: SessionConfirmDialogProps) => {
 
       <div className="session-modal__centered">
         {i18nMessage ? (
-          <StyledI18nSubText {...i18nMessage} data-testid="modal-description" />
+          <I18nSubText localizerProps={i18nMessage} dataTestId="modal-description" />
         ) : null}
         {radioOptions && chosenOption !== '' ? (
           <SessionRadioGroup
