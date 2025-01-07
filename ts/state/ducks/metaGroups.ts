@@ -7,7 +7,6 @@ import {
   PubkeyType,
   UserGroupsGet,
   WithGroupPubkey,
-  WithPubkey,
 } from 'libsession_util_nodejs';
 import { concat, intersection, isEmpty, uniq } from 'lodash';
 import { from_hex } from 'libsodium-wrappers-sumo';
@@ -1212,36 +1211,6 @@ function deleteGroupPkEntriesFromState(state: GroupState, groupPk: GroupPubkeyTy
   delete state.members[groupPk];
 }
 
-function applySendingStateChange({
-  groupPk,
-  pubkey,
-  sending,
-  state,
-  changeType,
-}: WithGroupPubkey &
-  WithPubkey & { sending: boolean; changeType: 'invite' | 'promote'; state: GroupState }) {
-  if (changeType === 'invite' && !state.membersInviteSending[groupPk]) {
-    state.membersInviteSending[groupPk] = [];
-  } else if (changeType === 'promote' && !state.membersPromoteSending[groupPk]) {
-    state.membersPromoteSending[groupPk] = [];
-  }
-  const arrRef =
-    changeType === 'invite'
-      ? state.membersInviteSending[groupPk]
-      : state.membersPromoteSending[groupPk];
-
-  const foundAt = arrRef.findIndex(p => p === pubkey);
-
-  if (sending && foundAt === -1) {
-    arrRef.push(pubkey);
-    return state;
-  }
-  if (!sending && foundAt >= 0) {
-    arrRef.splice(foundAt, 1);
-  }
-  return state;
-}
-
 function refreshConvosModelProps(convoIds: Array<string>) {
   /**
    *
@@ -1263,19 +1232,6 @@ const metaGroupSlice = createSlice({
   name: 'metaGroup',
   initialState: initialGroupState,
   reducers: {
-    setInvitePending(
-      state: GroupState,
-      { payload }: PayloadAction<{ sending: boolean } & WithGroupPubkey & WithPubkey>
-    ) {
-      return applySendingStateChange({ changeType: 'invite', ...payload, state });
-    },
-
-    setPromotionPending(
-      state: GroupState,
-      { payload }: PayloadAction<{ pubkey: PubkeyType; groupPk: GroupPubkeyType; sending: boolean }>
-    ) {
-      return applySendingStateChange({ changeType: 'promote', ...payload, state });
-    },
     removeGroupDetailsFromSlice(
       state: GroupState,
       { payload }: PayloadAction<{ groupPk: GroupPubkeyType }>
