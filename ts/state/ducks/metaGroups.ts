@@ -423,6 +423,10 @@ const refreshGroupDetailsFromWrapper = createAsyncThunk(
       const infos = await MetaGroupWrapperActions.infoGet(groupPk);
       const members = await MetaGroupWrapperActions.memberGetAll(groupPk);
 
+      if (window.sessionFeatureFlags.debug.debugLibsessionDumps) {
+        window.log.info(`groupInfo after refreshGroupDetailsFromWrapper: ${stringify(infos)}`);
+        window.log.info(`groupMembers after refreshGroupDetailsFromWrapper: ${stringify(members)}`);
+      }
       return { groupPk, infos, members };
     } catch (e) {
       window.log.warn('refreshGroupDetailsFromWrapper failed with ', e.message);
@@ -748,6 +752,7 @@ async function handleMemberRemovedFromUI({
   // We don't revoke the member's token right away. Instead we schedule a `GroupPendingRemovals`
   // which will deal with the revokes of all of them together.
   await GroupPendingRemovals.addJob({ groupPk });
+  window.inboxStore?.dispatch(refreshGroupDetailsFromWrapper({ groupPk }) as any);
 
   // Build a GroupUpdateMessage to be sent if that member was kicked by us.
   const createAtNetworkTimestamp = NetworkTime.now();

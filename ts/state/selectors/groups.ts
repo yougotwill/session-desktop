@@ -272,19 +272,27 @@ export function useStateOf03GroupMembers(convoId?: string) {
   );
 
   const sorted = useMemo(() => {
-    // needing an index like this outside of lodash is not pretty,
-    // but sortBy doesn't provide the index in the callback
-    let index = 0;
-    return sortBy(unsortedMembers, item => {
-      const stateSortingOrder = getSortingOrderForStatus(item.memberStatus);
-      const sortingOrder = [
-        stateSortingOrder,
+    // damn this is overkill
+    return sortBy(
+      unsortedMembers,
+      item => {
+        const sortingOrder = getSortingOrderForStatus(item.memberStatus);
+        return sortingOrder;
+      },
+      item => {
         // per section, we want "us"  first, then "nickname || displayName || pubkey"
-        item.pubkeyHex === us ? -1 : names[index],
-      ];
-      index++;
-      return sortingOrder;
-    });
+
+        if (item.pubkeyHex === us) {
+          return -1;
+        }
+        const index = unsortedMembers.findIndex(p => p.pubkeyHex === item.pubkeyHex);
+        if (index < 0 || index >= names.length) {
+          throw new Error('this should never happen');
+        }
+
+        return names[index].toLowerCase();
+      }
+    );
   }, [unsortedMembers, us, names]);
   return sorted;
 }
