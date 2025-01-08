@@ -5,12 +5,8 @@ import { Store } from '@reduxjs/toolkit';
 import { Persistor } from 'redux-persist/es/types';
 
 import { PrimaryColorStateType, ThemeStateType } from './themes/constants/colors';
-import type {
-  GetMessageArgs,
-  I18nMethods,
-  LocalizerDictionary,
-  LocalizerToken,
-} from './types/localizer';
+import type { GetMessageArgs, I18nMethods } from './types/localizer';
+import type { MergedLocalizerTokens } from './localization/localeTools';
 
 export interface LibTextsecure {
   messaging: boolean;
@@ -40,19 +36,8 @@ declare global {
      * @param args - An optional record of substitution variables and their replacement values. This is required if the string has dynamic variables.
      *
      * @returns The localized message string with substitutions applied.
-     *
-     * @example
-     * // The string greeting is 'Hello, {name}!' in the current locale
-     * window.i18n('greeting', { name: 'Alice' });
-     * // => 'Hello, Alice!'
-     *
-     * // The string search is '{count, plural, one [{found_count} of # match] other [{found_count} of # matches]}' in the current locale
-     * window.i18n('search', { count: 1, found_count: 1 });
-     * // => '1 of 1 match'
      */
-    i18n: (<T extends LocalizerToken, R extends LocalizerDictionary[T]>(
-      ...[token, args]: GetMessageArgs<T>
-    ) => R) & {
+    i18n: (<T extends MergedLocalizerTokens>(...[token, args]: GetMessageArgs<T>) => string) & {
       /** NOTE: Because of docstring limitations changes MUST be manually synced between {@link setupI18n.getRawMessage } and {@link window.i18n.getRawMessage } */
       /**
        * Retrieves a localized message string, without substituting any variables. This resolves any plural forms using the given args
@@ -64,15 +49,6 @@ declare global {
        * @deprecated
        *
        * NOTE: This is intended to be used to get the raw string then format it with {@link formatMessageWithArgs}
-       *
-       * @example
-       * // The string greeting is 'Hello, {name}!' in the current locale
-       * window.i18n.getRawMessage('greeting', { name: 'Alice' });
-       * // => 'Hello, {name}!'
-       *
-       * // The string search is '{count, plural, one [{found_count} of # match] other [{found_count} of # matches]}' in the current locale
-       * window.i18n.getRawMessage('search', { count: 1, found_count: 1 });
-       * // => '{found_count} of {count} match'
        */
       getRawMessage: I18nMethods['getRawMessage'];
 
@@ -86,19 +62,6 @@ declare global {
        * @returns The formatted message string.
        *
        * @deprecated
-       *
-       * @example
-       * // The string greeting is 'Hello, {name}!' in the current locale
-       * window.i18n.getRawMessage('greeting', { name: 'Alice' });
-       * // => 'Hello, {name}!'
-       * window.i18n.formatMessageWithArgs('Hello, {name}!', { name: 'Alice' });
-       * // => 'Hello, Alice!'
-       *
-       * // The string search is '{count, plural, one [{found_count} of # match] other [{found_count} of # matches]}' in the current locale
-       * window.i18n.getRawMessage('search', { count: 1, found_count: 1 });
-       * // => '{found_count} of {count} match'
-       * window.i18n.formatMessageWithArgs('{found_count} of {count} match', { count: 1, found_count: 1 });
-       * // => '1 of 1 match'
        */
       formatMessageWithArgs: I18nMethods['formatMessageWithArgs'];
 
@@ -112,13 +75,10 @@ declare global {
        * @param args - An optional record of substitution variables and their replacement values. This is required if the string has dynamic variables.
        *
        * @returns The localized message string with substitutions applied. Any HTML and custom tags are removed.
-       *
-       * @example
-       * // The string greeting is 'Hello, {name}! <b>Welcome!</b>' in the current locale
-       * window.i18n.stripped('greeting', { name: 'Alice' });
-       * // => 'Hello, Alice! Welcome!'
        */
       stripped: I18nMethods['stripped'];
+
+      strippedWithObj: I18nMethods['strippedWithObj'];
 
       /** NOTE: Because of docstring limitations changes MUST be manually synced between {@link setupI18n.inEnglish } and {@link window.i18n.inEnglish } */
       /**

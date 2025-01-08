@@ -33,7 +33,7 @@ import {
   useLibGroupKicked,
   useLibGroupWeHaveSecretKey,
 } from '../../state/selectors/userGroups';
-import { localize } from '../../util/i18n/localizedString';
+import { localize } from '../../localization/localeTools';
 import { SessionHtmlRenderer } from '../basic/SessionHTMLRenderer';
 
 const Container = styled.div<{ noExtraPadding: boolean }>`

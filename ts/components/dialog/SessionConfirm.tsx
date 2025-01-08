@@ -10,8 +10,7 @@ import { SessionButton, SessionButtonColor, SessionButtonType } from '../basic/S
 import { SessionRadioGroup, SessionRadioItems } from '../basic/SessionRadioGroup';
 import { SpacerLG } from '../basic/Text';
 import { SessionSpinner } from '../loading';
-import type { LocalizerComponentPropsObject } from '../../types/localizer';
-
+import type { LocalizerComponentPropsObject } from '../../localization/localeTools';
 import { I18nSubText } from '../basic/I18nSubText';
 
 export interface SessionConfirmDialogProps {

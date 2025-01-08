@@ -577,7 +577,7 @@ async function handleMemberAddedFromUI({
     throw new Error('tried to make change to group but we do not have the admin secret key');
   }
 
-  await checkWeAreAdminOrThrow(groupPk, 'handleMemberAddedFromUIOrNot');
+  await checkWeAreAdminOrThrow(groupPk, 'handleMemberAddedFromUI');
 
   const { withHistory, withoutHistory, convo, us } = validateMemberAddChange({
     withHistory: addMembersWithHistory,
@@ -675,12 +675,12 @@ async function handleMemberAddedFromUI({
       await LibSessionUtil.saveDumpsToDb(groupPk);
 
       throw new Error(
-        'handleMemberAddedFromUIOrNot: pushChangesToGroupSwarmIfNeeded did not return success'
+        'handleMemberAddedFromUI: pushChangesToGroupSwarmIfNeeded did not return success'
       );
     }
   } catch (e) {
     window.log.warn(
-      'handleNameChangeFromUIOrNot: pushChangesToGroupSwarmIfNeeded failed with:',
+      'handleMemberAddedFromUI: pushChangesToGroupSwarmIfNeeded failed with:',
       e.message
     );
   }

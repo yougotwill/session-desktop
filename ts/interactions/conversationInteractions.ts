@@ -50,7 +50,6 @@ import { Storage, setLastProfileUpdateTimestamp } from '../util/storage';
 import { UserGroupsWrapperActions } from '../webworker/workers/browser/libsession_worker_interface';
 import { ConversationInteractionStatus, ConversationInteractionType } from './types';
 import { BlockedNumberController } from '../util';
-import type { LocalizerComponentProps, LocalizerToken } from '../types/localizer';
 import { sendInviteResponseToGroup } from '../session/sending/group/GroupInviteResponse';
 import { NetworkTime } from '../util/NetworkTime';
 import { ClosedGroup } from '../session';
@@ -59,6 +58,7 @@ import { GroupPromote } from '../session/utils/job_runners/jobs/GroupPromoteJob'
 import { MessageSender } from '../session/sending';
 import { StoreGroupRequestFactory } from '../session/apis/snode_api/factories/StoreGroupRequestFactory';
 import { DURATION } from '../session/constants';
+import type { LocalizerComponentPropsObject } from '../localization/localeTools';
 
 export async function copyPublicKeyByConvoId(convoId: string) {
   if (OpenGroupUtils.isOpenGroupV2(convoId)) {
@@ -270,7 +270,7 @@ export const declineConversationWithConfirm = ({
 
   const convoName = ConvoHub.use().get(conversationId)?.getNicknameOrRealUsernameOrPlaceholder();
 
-  const i18nMessage: LocalizerComponentProps<LocalizerToken> = isGroupV2
+  const i18nMessage: LocalizerComponentPropsObject = isGroupV2
     ? alsoBlock && originNameToBlock
       ? { token: 'blockDescription', args: { name: originNameToBlock } } // groupv2, and blocking by sender name
       : { token: 'groupInviteDelete' } // groupv2, and no info about the sender, falling back to delete only

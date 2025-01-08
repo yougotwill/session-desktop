@@ -36,8 +36,8 @@
     "start-prod": "cross-env NODE_ENV=production NODE_APP_INSTANCE=devprod$MULTI electron .",
     "start-prod:pretty": "cross-env NODE_ENV=production NODE_APP_INSTANCE=devprod$MULTI electron . | npx bunyan",
     "start-dev": "cross-env NODE_ENV=development NODE_APP_INSTANCE=devprod$MULTI electron .",
-    "build-everything": "yarn clean && yarn protobuf && yarn update-git-info && yarn sass && yarn build:locales-soft && tsc && yarn build:workers",
-    "build-everything:soft": "yarn clean && yarn protobuf && yarn update-git-info && yarn sass && yarn build:locales-soft && tsc && yarn build:workers",
+    "build-everything": "yarn print-deps && yarn clean && yarn protobuf && yarn update-git-info && yarn sass && yarn build:locales-soft && tsc && yarn build:workers",
+    "build-everything:soft": "yarn print-deps && yarn clean && yarn protobuf && yarn update-git-info && yarn sass && yarn build:locales-soft && tsc && yarn build:workers",
     "build-everything:watch": "yarn clean && yarn protobuf && yarn update-git-info && yarn sass && yarn build:locales-soft && yarn build:workers && yarn tsc -w",
     "start-dev:pretty": "cross-env NODE_ENV=production NODE_APP_INSTANCE=devprod$MULTI electron . | npx bunyan",
     "build:workers": "yarn worker:utils && yarn worker:libsession",
@@ -60,7 +60,8 @@
     "worker:utils": "webpack  --config=./utils.worker.config.js",
     "worker:libsession": "rimraf 'ts/webworker/workers/node/libsession/*.node' && webpack  --config=./libsession.worker.config.js",
     "dedup-yarn-lock": "npx --yes yarn-deduplicate yarn.lock",
-    "prepare": "husky install"
+    "prepare": "husky install",
+    "print-deps": "node -v  && python3 --version"
   },
   "dependencies": {
     "@emoji-mart/data": "^1.1.2",

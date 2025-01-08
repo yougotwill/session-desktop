@@ -16,10 +16,10 @@ import {
   useSelectedIsGroupV2,
   useSelectedNicknameOrProfileNameOrShortenedPubkey,
 } from '../../../../state/selectors/selectedConversation';
-import type { LocalizerComponentPropsObject } from '../../../../types/localizer';
 import { Localizer } from '../../../basic/Localizer';
 import { ExpirableReadableMessage } from './ExpirableReadableMessage';
 import { NotificationBubble } from './notification-bubble/NotificationBubble';
+import type { LocalizerComponentPropsObject } from '../../../../localization/localeTools';
 
 // This component is used to display group updates in the conversation view.
 
