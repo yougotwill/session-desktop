@@ -37,6 +37,7 @@ import {
 } from '../PersistedJob';
 import { DURATION } from '../../../constants';
 import { WithAllow401s } from '../../../types/with';
+import type { WithTimeoutMs } from '../../../apis/snode_api/requestWith';
 
 const defaultMsBetweenRetries = 15000; // a long time between retries, to avoid running multiple jobs at the same time, when one was postponed at the same time as one already planned (5s)
 const defaultMaxAttempts = 2;
@@ -91,9 +92,10 @@ async function pushChangesToGroupSwarmIfNeeded({
   deleteAllMessagesSubRequest,
   extraStoreRequests,
   allow401s,
+  timeoutMs
 }: WithGroupPubkey &
   WithAllow401s &
-  WithRevokeSubRequest & {
+  WithRevokeSubRequest & Partial<WithTimeoutMs> & {
     supplementalKeysSubRequest?: StoreGroupKeysSubRequest;
     deleteAllMessagesSubRequest?: DeleteAllFromGroupMsgNodeSubRequest;
     extraStoreRequests: Array<StoreGroupMessageSubRequest>;
@@ -175,7 +177,7 @@ async function pushChangesToGroupSwarmIfNeeded({
       abortSignal: controller.signal,
       allow401s,
     }),
-    30 * DURATION.SECONDS,
+    timeoutMs || 30 * DURATION.SECONDS,
     controller
   );
 

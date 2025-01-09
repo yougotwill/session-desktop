@@ -234,6 +234,7 @@ const GroupStatusContainer = ({
 const ResendButton = ({ groupPk, pubkey }: { pubkey: PubkeyType; groupPk: GroupPubkeyType }) => {
   const acceptedInvite = useMemberHasAcceptedInvite(pubkey, groupPk);
   const nominatedAdmin = useMemberIsNominatedAdmin(pubkey, groupPk);
+  const memberStatus = useMemberStatus(pubkey, groupPk);
 
   // as soon as the `admin` flag is set in the group for that member, we should be able to resend a promote as we cannot remove an admin.
   const canResendPromotion = hasClosedGroupV2QAButtons() && nominatedAdmin;
@@ -252,6 +253,7 @@ const ResendButton = ({ groupPk, pubkey }: { pubkey: PubkeyType; groupPk: GroupP
       buttonShape={SessionButtonShape.Square}
       buttonType={SessionButtonType.Solid}
       text={window.i18n('resend')}
+      disabled={memberStatus === 'INVITE_SENDING' || memberStatus === 'PROMOTION_SENDING'}
       onClick={async () => {
         const group = await UserGroupsWrapperActions.getGroup(groupPk);
         const member = await MetaGroupWrapperActions.memberGet(groupPk, pubkey);
