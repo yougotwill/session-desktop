@@ -174,7 +174,7 @@ function localisedStatusFromMemberStatus(memberStatus: MemberStateGroupV2) {
     case 'REMOVED_UNKNOWN': // fallback, hopefully won't happen in production
     case 'REMOVED_MEMBER': // we want pending removal members at the end of the "invite" states
     case 'REMOVED_MEMBER_AND_MESSAGES':
-      return null; // no text for those 3 pending removal states
+      return window.i18n('groupPendingRemoval'); // no text for those 3 pending removal states
     case 'PROMOTION_FAILED':
       return window.i18n('adminPromotionFailed');
     case 'PROMOTION_NOT_SENT':
@@ -259,14 +259,12 @@ const ResendButton = ({ groupPk, pubkey }: { pubkey: PubkeyType; groupPk: GroupP
           window.log.warn('tried to resend invite but we do not have correct details');
           return;
         }
-        await MetaGroupWrapperActions.memberSetInviteNotSent(groupPk, pubkey);
 
         // if we tried to invite that member as admin right away, let's retry it as such.
-        const inviteAsAdmin = member.nominatedAdmin;
         await GroupInvite.addJob({
           groupPk,
           member: pubkey,
-          inviteAsAdmin,
+          inviteAsAdmin: member.nominatedAdmin,
           forceUnrevoke: true,
         });
       }}

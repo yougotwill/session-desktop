@@ -68,13 +68,10 @@ async function getPendingRevokeParams({
   const revokeChanges: RevokeChanges = [];
   const unrevokeChanges: RevokeChanges = [];
 
-  for (let index = 0; index < withoutHistory.length; index++) {
-    const m = withoutHistory[index];
-    const token = await MetaGroupWrapperActions.swarmSubAccountToken(groupPk, m);
-    unrevokeChanges.push({ action: 'unrevoke_subaccount', tokenToRevokeHex: token });
-  }
-  for (let index = 0; index < withHistory.length; index++) {
-    const m = withHistory[index];
+  const toUnrevoke = withoutHistory.concat(withHistory);
+
+  for (let index = 0; index < toUnrevoke.length; index++) {
+    const m = toUnrevoke[index];
     const token = await MetaGroupWrapperActions.swarmSubAccountToken(groupPk, m);
     unrevokeChanges.push({ action: 'unrevoke_subaccount', tokenToRevokeHex: token });
   }
@@ -198,6 +195,7 @@ class GroupPendingRemovalsJob extends PersistedJob<GroupPendingRemovalsPersisted
           destination: groupPk,
           method: 'sequence',
           abortSignal: controller.signal,
+          allow401s: false,
         }),
         30 * DURATION.SECONDS,
         controller

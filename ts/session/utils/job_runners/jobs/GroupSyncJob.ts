@@ -36,6 +36,7 @@ import {
   RunJobResult,
 } from '../PersistedJob';
 import { DURATION } from '../../../constants';
+import { WithAllow401s } from '../../../types/with';
 
 const defaultMsBetweenRetries = 15000; // a long time between retries, to avoid running multiple jobs at the same time, when one was postponed at the same time as one already planned (5s)
 const defaultMaxAttempts = 2;
@@ -89,7 +90,9 @@ async function pushChangesToGroupSwarmIfNeeded({
   supplementalKeysSubRequest,
   deleteAllMessagesSubRequest,
   extraStoreRequests,
+  allow401s,
 }: WithGroupPubkey &
+  WithAllow401s &
   WithRevokeSubRequest & {
     supplementalKeysSubRequest?: StoreGroupKeysSubRequest;
     deleteAllMessagesSubRequest?: DeleteAllFromGroupMsgNodeSubRequest;
@@ -170,6 +173,7 @@ async function pushChangesToGroupSwarmIfNeeded({
       destination: groupPk,
       method: 'sequence',
       abortSignal: controller.signal,
+      allow401s,
     }),
     30 * DURATION.SECONDS,
     controller
@@ -250,6 +254,7 @@ class GroupSyncJob extends PersistedJob<GroupSyncPersistedData> {
       return await GroupSync.pushChangesToGroupSwarmIfNeeded({
         groupPk: thisJobDestination,
         extraStoreRequests: [],
+        allow401s: false,
       });
     } catch (e) {
       window.log.warn('GroupSyncJob failed with', e.message);

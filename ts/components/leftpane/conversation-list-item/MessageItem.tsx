@@ -1,7 +1,6 @@
 import classNames from 'classnames';
 import { isEmpty } from 'lodash';
 
-import { useSelector } from 'react-redux';
 import { useConvoIdFromContext } from '../../../contexts/ConvoIdContext';
 import {
   useHasUnread,
@@ -12,7 +11,7 @@ import {
 } from '../../../hooks/useParamSelector';
 import { LastMessageStatusType } from '../../../state/ducks/types';
 import { useIsSearching } from '../../../state/selectors/search';
-import { getIsMessageRequestOverlayShown } from '../../../state/selectors/section';
+import { useIsMessageRequestOverlayShown } from '../../../state/selectors/section';
 import { assertUnreachable } from '../../../types/sqlSharedTypes';
 import { TypingAnimation } from '../../conversation/TypingAnimation';
 import { MessageBody } from '../../conversation/message/message-content/MessageBody';
@@ -26,7 +25,7 @@ export const MessageItem = () => {
 
   const hasUnread = useHasUnread(conversationId);
   const isConvoTyping = useIsTyping(conversationId);
-  const isMessageRequest = useSelector(getIsMessageRequestOverlayShown);
+  const isMessageRequest = useIsMessageRequestOverlayShown();
   const isOutgoingRequest = useIsOutgoingRequest(conversationId);
 
   const isSearching = useIsSearching();

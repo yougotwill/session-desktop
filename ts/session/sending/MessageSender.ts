@@ -57,6 +57,7 @@ import { SaveSeenMessageHash, stringify } from '../../types/sqlSharedTypes';
 import { OpenGroupRequestCommonType } from '../../data/types';
 import { NetworkTime } from '../../util/NetworkTime';
 import { MergedAbortSignal } from '../apis/snode_api/requestWith';
+import { WithAllow401s } from '../types/with';
 
 // ================ SNODE STORE ================
 
@@ -420,7 +421,8 @@ async function sendMessagesDataToSnode<T extends PubkeyType | GroupPubkeyType>({
   sortedSubRequests,
   method,
   abortSignal,
-}: {
+  allow401s,
+}: WithAllow401s & {
   sortedSubRequests: SortedSubRequestsType<T>;
   associatedWith: T;
   method: MethodBatchType;
@@ -448,7 +450,7 @@ async function sendMessagesDataToSnode<T extends PubkeyType | GroupPubkeyType>({
       targetNode,
       timeoutMs: 6 * DURATION.SECONDS,
       associatedWith,
-      allow401s: false,
+      allow401s,
       method,
       abortSignal,
     });
@@ -473,7 +475,9 @@ async function sendMessagesDataToSnode<T extends PubkeyType | GroupPubkeyType>({
         'first result status is not 200 for sendMessagesDataToSnode but: ',
         firstResult.code
       );
-      throw new Error('sendMessagesDataToSnode: Invalid status code');
+      if (!allow401s || firstResult.code !== 401) {
+        throw new Error('sendMessagesDataToSnode: Invalid status code');
+      }
     }
 
     GetNetworkTime.handleTimestampOffsetFromNetwork('store', firstResult.body.t);
@@ -509,7 +513,8 @@ async function sendEncryptedDataToSnode<T extends GroupPubkeyType | PubkeyType>(
   sortedSubRequests,
   method,
   abortSignal,
-}: {
+  allow401s,
+}: WithAllow401s & {
   sortedSubRequests: SortedSubRequestsType<T>; // keeping those as an array because the order needs to be enforced for some (group keys for instance)
   destination: T;
   method: MethodBatchType;
@@ -523,6 +528,7 @@ async function sendEncryptedDataToSnode<T extends GroupPubkeyType | PubkeyType>(
           associatedWith: destination,
           method,
           abortSignal,
+          allow401s,
         });
       },
       {

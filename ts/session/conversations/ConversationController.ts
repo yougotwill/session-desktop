@@ -286,8 +286,8 @@ class ConvoController {
     const groupInUserGroup = await UserGroupsWrapperActions.getGroup(groupPk);
 
     // send the leave message before we delete everything for this group (including the key!)
-    // Note: if we were kicked, we already lost the authData/secretKey for it, so no need to try to send our message.
-    if (sendLeaveMessage && !groupInUserGroup?.kicked) {
+
+    if (sendLeaveMessage) {
       const failedToSendLeaveMessage = await leaveClosedGroup(groupPk, fromSyncMessage);
       if (PubKey.is03Pubkey(groupPk) && failedToSendLeaveMessage) {
         // this is caught and is adding an interaction notification message
@@ -369,6 +369,7 @@ class ConvoController {
               groupPk,
               deleteAllMessagesSubRequest,
               extraStoreRequests: [],
+              allow401s: false,
             });
             await LibSessionUtil.saveDumpsToDb(groupPk);
 
@@ -573,7 +574,7 @@ class ConvoController {
       throw new Error(`ConvoHub.${deleteType}  needs complete initial fetch`);
     }
 
-    window.log.info(`${deleteType} with ${ed25519Str(convoId)}`);
+    window.log.info(`deleteConvoInitialChecks: type ${deleteType} with ${ed25519Str(convoId)}`);
 
     const conversation = this.conversations.get(convoId);
     if (!conversation) {
@@ -693,7 +694,7 @@ async function leaveClosedGroup(groupPk: PubkeyType | GroupPubkeyType, fromSyncM
     window?.log?.info(
       `We are leaving the group ${ed25519Str(groupPk)}. Sending our leaving messages.`
     );
-    let failedToSent03LeaveMessage = false;
+    let failedToSent03LeaveMessage = true;
     // We might not be able to send our leaving messages (no encryption key pair, we were already removed, no network, etc).
     // If that happens, we should just remove everything from our current user.
     try {
@@ -711,23 +712,28 @@ async function leaveClosedGroup(groupPk: PubkeyType | GroupPubkeyType, fromSyncM
           sortedSubRequests: storeRequests,
           method: 'sequence',
           abortSignal: controller.signal,
+          allow401s: true, // we want "allow" 401s so we don't throw
         }),
         30 * DURATION.SECONDS,
         controller
       );
 
-      if (results?.[0].code !== 200) {
+      if (results?.[0].code === 401) {
+        window.log.info(
+          `leaveClosedGroup for ${ed25519Str(groupPk)} failed with 401. Assuming we've been revoked.`
+        );
+      } else if (results?.[0].code !== 200) {
         throw new Error(
           `Even with the retries, leaving message for group ${ed25519Str(
             groupPk
           )} failed to be sent...`
         );
       }
+      failedToSent03LeaveMessage = false;
     } catch (e) {
       window?.log?.warn(
         `failed to send our leaving messages for ${ed25519Str(groupPk)}:${e.message}`
       );
-      failedToSent03LeaveMessage = true;
     }
 
     // the rest of the cleaning of that conversation is done in the `deleteClosedGroup()`

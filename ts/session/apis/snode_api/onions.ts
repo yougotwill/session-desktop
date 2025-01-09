@@ -21,6 +21,13 @@ import { fileServerHost } from '../file_server_api/FileServerApi';
 import { hrefPnServerProd } from '../push_notification_api/PnServer';
 import { ERROR_CODE_NO_CONNECT } from './SNodeAPI';
 import { MergedAbortSignal, WithAbortSignal, WithTimeoutMs } from './requestWith';
+import {
+  WithAllow401s,
+  WithAssociatedWith,
+  WithDestinationEd25519,
+  WithGuardNode,
+  WithSymmetricKey,
+} from '../../types/with';
 
 // hold the ed25519 key of a snode against the time it fails. Used to remove a snode only after a few failures (snodeFailureThreshold failures)
 let snodeFailureCount: Record<string, number> = {};
@@ -310,13 +317,11 @@ export async function processOnionRequestErrorAtDestination({
   destinationSnodeEd25519,
   associatedWith,
   allow401s,
-}: {
-  statusCode: number;
-  body: string;
-  destinationSnodeEd25519?: string;
-  associatedWith?: string;
-  allow401s: boolean;
-}) {
+}: WithAllow401s &
+  Partial<WithDestinationEd25519 & WithAssociatedWith> & {
+    statusCode: number;
+    body: string;
+  }) {
   if (statusCode === 200) {
     return;
   }
@@ -328,13 +333,13 @@ export async function processOnionRequestErrorAtDestination({
     process401Error(statusCode);
   }
   processOxenServerError(statusCode, body);
-  await process421Error(statusCode, body, associatedWith, destinationSnodeEd25519);
+  await process421Error(statusCode, body, associatedWith || undefined, destinationSnodeEd25519);
   if (destinationSnodeEd25519) {
     await processAnyOtherErrorAtDestination(
       statusCode,
       body,
       destinationSnodeEd25519,
-      associatedWith
+      associatedWith || undefined
     );
   }
 }
@@ -342,9 +347,8 @@ export async function processOnionRequestErrorAtDestination({
 async function handleNodeNotFound({
   ed25519NotFound,
   associatedWith,
-}: {
+}: Partial<WithAssociatedWith> & {
   ed25519NotFound: string;
-  associatedWith?: string;
 }) {
   const shortNodeNotFound = ed25519Str(ed25519NotFound);
   window?.log?.warn('Handling NODE NOT FOUND with: ', shortNodeNotFound);
@@ -526,14 +530,11 @@ async function processOnionResponse({
   associatedWith,
   destinationSnodeEd25519,
   allow401s,
-}: Partial<WithAbortSignal> & {
-  response?: { text: () => Promise<string>; status: number };
-  symmetricKey?: ArrayBuffer;
-  guardNode: Snode;
-  destinationSnodeEd25519?: string;
-  associatedWith?: string;
-  allow401s: boolean;
-}): Promise<SnodeResponse> {
+}: Partial<WithAbortSignal & WithDestinationEd25519 & WithAssociatedWith & WithSymmetricKey> &
+  WithAllow401s &
+  WithGuardNode & {
+    response?: { text: () => Promise<string>; status: number };
+  }): Promise<SnodeResponse> {
   let ciphertext = '';
 
   processAbortedRequest(abortSignal);
@@ -549,7 +550,7 @@ async function processOnionResponse({
     ciphertext,
     guardNode.pubkey_ed25519,
     destinationSnodeEd25519,
-    associatedWith
+    associatedWith || undefined
   );
 
   if (!ciphertext) {
@@ -598,7 +599,7 @@ async function processOnionResponse({
       }
       return value;
     }) as Record<string, any>;
-
+    // TODO: type those status
     const status = jsonRes.status_code || jsonRes.status;
 
     await processOnionRequestErrorAtDestination({
@@ -642,13 +643,10 @@ async function processOnionResponseV4({
   guardNode,
   destinationSnodeEd25519,
   associatedWith,
-}: Partial<WithAbortSignal> & {
-  response?: Response;
-  symmetricKey?: ArrayBuffer;
-  guardNode: Snode;
-  destinationSnodeEd25519?: string;
-  associatedWith?: string;
-}): Promise<SnodeResponseV4 | undefined> {
+}: Partial<WithAbortSignal & WithDestinationEd25519 & WithAssociatedWith & WithSymmetricKey> &
+  WithGuardNode & {
+    response?: Response;
+  }): Promise<SnodeResponseV4 | undefined> {
   processAbortedRequest(abortSignal);
   const validSymmetricKey = await processNoSymmetricKeyError(guardNode, symmetricKey);
 
@@ -669,7 +667,7 @@ async function processOnionResponseV4({
     cipherText,
     guardNode.pubkey_ed25519,
     destinationSnodeEd25519,
-    associatedWith
+    associatedWith || undefined
   );
 
   const plaintextBuffer = await callUtilsWorker(
@@ -705,9 +703,8 @@ export type FinalRelayOptions = {
   port?: number; // default to 443
 };
 
-export type DestinationContext = {
+export type DestinationContext = WithSymmetricKey & {
   ciphertext: Uint8Array;
-  symmetricKey: ArrayBuffer;
   ephemeralKey: ArrayBuffer;
 };
 
@@ -721,10 +718,8 @@ async function handle421InvalidSwarm({
   body,
   destinationSnodeEd25519,
   associatedWith,
-}: {
+}: Partial<WithDestinationEd25519 & WithAssociatedWith> & {
   body: string;
-  destinationSnodeEd25519?: string;
-  associatedWith?: string;
 }) {
   if (!destinationSnodeEd25519 || !associatedWith) {
     // The snode isn't associated with the given public key anymore
@@ -784,9 +779,8 @@ async function handle421InvalidSwarm({
 async function incrementBadSnodeCountOrDrop({
   snodeEd25519,
   associatedWith,
-}: {
+}: Partial<WithAssociatedWith> & {
   snodeEd25519: string;
-  associatedWith?: string;
 }) {
   const oldFailureCount = snodeFailureCount[snodeEd25519] || 0;
   const newFailureCount = oldFailureCount + 1;
@@ -828,15 +822,15 @@ async function sendOnionRequestHandlingSnodeEjectNoRetries({
   allow401s,
   timeoutMs,
 }: WithAbortSignal &
-  WithTimeoutMs & {
+  WithTimeoutMs &
+  WithAllow401s &
+  Partial<WithAssociatedWith> & {
     nodePath: Array<Snode>;
     destSnodeX25519: string;
     finalDestOptions: FinalDestOptions;
     finalRelayOptions?: FinalRelayOptions;
-    associatedWith?: string;
     useV4: boolean;
     throwErrors: boolean;
-    allow401s: boolean;
   }): Promise<SnodeResponse | SnodeResponseV4 | undefined> {
   // this sendOnionRequestNoRetries() call has to be the only one like this.
   // If you need to call it, call it through sendOnionRequestHandlingSnodeEjectNoRetries because this is the one handling path rebuilding and known errors
@@ -1118,13 +1112,13 @@ async function sendOnionRequestSnodeDestNoRetries({
   timeoutMs,
   associatedWith,
 }: WithTimeoutMs &
-  WithAbortSignal & {
+  WithAbortSignal &
+  WithAllow401s &
+  Partial<WithAssociatedWith> & {
     onionPath: Array<Snode>;
     targetNode: Snode;
     headers: Record<string, any>;
     plaintext: string | null;
-    allow401s: boolean;
-    associatedWith?: string;
   }) {
   return Onions.sendOnionRequestHandlingSnodeEjectNoRetries({
     nodePath: onionPath,
@@ -1155,12 +1149,12 @@ async function lokiOnionFetchNoRetries({
   abortSignal,
   timeoutMs,
 }: WithTimeoutMs &
-  WithAbortSignal & {
+  WithAbortSignal &
+  WithAllow401s &
+  Partial<WithAssociatedWith> & {
     targetNode: Snode;
     headers: Record<string, any>;
     body: string | null;
-    associatedWith?: string;
-    allow401s: boolean;
   }): Promise<SnodeResponse | undefined> {
   try {
     // Get a path excluding `targetNode`:

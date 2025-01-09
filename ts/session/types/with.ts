@@ -1,4 +1,5 @@
 import { PubkeyType } from 'libsession_util_nodejs';
+import { Snode } from '../../data/types';
 
 export type WithMessageHash = { messageHash: string };
 export type WithTimestamp = { timestamp: number };
@@ -25,3 +26,11 @@ export type WithLocalMessageDeletionType = { deletionType: 'complete' | 'markDel
 export type ShortenOrExtend = 'extend' | 'shorten' | '';
 export type WithShortenOrExtend = { shortenOrExtend: ShortenOrExtend };
 export type WithMessagesHashes = { messagesHashes: Array<string> };
+export type WithAllow401s = { allow401s: boolean };
+
+export type WithDestinationEd25519 = { destinationSnodeEd25519: string };
+export type WithAssociatedWith = { associatedWith: string | null };
+export type WithTargetNode = { targetNode: Snode };
+export type WithGuardNode = { guardNode: Snode };
+
+export type WithSymmetricKey = { symmetricKey: ArrayBuffer };

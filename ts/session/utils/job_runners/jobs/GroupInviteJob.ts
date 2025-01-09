@@ -68,7 +68,15 @@ async function addJob({ groupPk, member, inviteAsAdmin, forceUnrevoke }: JobExtr
       forceUnrevoke,
       nextAttemptTimestamp: Date.now(),
     });
-    window.log.debug(`addGroupInviteJob: adding group invite for ${groupPk}:${member} `);
+    window.log.debug(
+      `addGroupInviteJob: adding group invite for ${groupPk}:${member}. inviteAsAdmin:${inviteAsAdmin} `
+    );
+    if (inviteAsAdmin) {
+      // this resets the promotion status to not_sent, so that the sending state can be applied
+      await MetaGroupWrapperActions.memberSetPromoted(groupPk, member);
+    } else {
+      await MetaGroupWrapperActions.memberSetInviteNotSent(groupPk, member);
+    }
 
     window?.inboxStore?.dispatch(
       groupInfoActions.refreshGroupDetailsFromWrapper({ groupPk }) as any
@@ -76,16 +84,6 @@ async function addJob({ groupPk, member, inviteAsAdmin, forceUnrevoke }: JobExtr
     await LibSessionUtil.saveDumpsToDb(groupPk);
 
     await runners.groupInviteJobRunner.addJob(groupInviteJob);
-
-    if (inviteAsAdmin) {
-      window?.inboxStore?.dispatch(
-        groupInfoActions.setPromotionPending({ groupPk, pubkey: member, sending: true })
-      );
-    } else {
-      window?.inboxStore?.dispatch(
-        groupInfoActions.setInvitePending({ groupPk, pubkey: member, sending: true })
-      );
-    }
   }
 }
 
@@ -200,6 +198,7 @@ class GroupInviteJob extends PersistedJob<GroupInvitePersistedData> {
           groupPk,
           unrevokeSubRequest,
           extraStoreRequests: [],
+          allow401s: false,
         });
         if (sequenceResult !== RunJobResult.Success) {
           await LibSessionUtil.saveDumpsToDb(groupPk);
@@ -278,15 +277,6 @@ class GroupInviteJob extends PersistedJob<GroupInvitePersistedData> {
 
       updateFailedStateForMember(groupPk, member, failed);
 
-      if (inviteAsAdmin) {
-        window?.inboxStore?.dispatch(
-          groupInfoActions.setPromotionPending({ groupPk, pubkey: member, sending: false })
-        );
-      } else {
-        window?.inboxStore?.dispatch(
-          groupInfoActions.setInvitePending({ groupPk, pubkey: member, sending: false })
-        );
-      }
       window?.inboxStore?.dispatch(
         groupInfoActions.refreshGroupDetailsFromWrapper({ groupPk }) as any
       );

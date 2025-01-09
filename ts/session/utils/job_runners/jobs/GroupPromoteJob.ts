@@ -46,7 +46,7 @@ async function addJob({ groupPk, member }: JobExtraArgs) {
     window.log.debug(`addGroupPromoteJob: adding group promote for ${groupPk}:${member} `);
     await runners.groupPromoteJobRunner.addJob(groupPromoteJob);
     window?.inboxStore?.dispatch(
-      groupInfoActions.setPromotionPending({ groupPk, pubkey: member, sending: true })
+      groupInfoActions.refreshGroupDetailsFromWrapper({ groupPk }) as any
     );
   }
 }
@@ -111,9 +111,6 @@ class GroupPromoteJob extends PersistedJob<GroupPromotePersistedData> {
         failed = false;
       }
     } finally {
-      window?.inboxStore?.dispatch(
-        groupInfoActions.setPromotionPending({ groupPk, pubkey: member, sending: false })
-      );
       try {
         if (failed) {
           await MetaGroupWrapperActions.memberSetPromotionFailed(groupPk, member);

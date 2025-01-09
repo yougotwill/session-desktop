@@ -10,6 +10,7 @@ import { HTTPError, NotFoundError } from '../../utils/errors';
 import { APPLICATION_JSON } from '../../../types/MIME';
 import { ERROR_421_HANDLED_RETRY_REQUEST, Onions, snodeHttpsAgent, SnodeResponse } from './onions';
 import { WithAbortSignal, WithTimeoutMs } from './requestWith';
+import { WithAllow401s } from '../../types/with';
 
 export interface LokiFetchOptions {
   method: 'GET' | 'POST';
@@ -32,12 +33,12 @@ async function doRequestNoRetries({
   allow401s,
   abortSignal,
 }: WithTimeoutMs &
-  WithAbortSignal & {
+  WithAbortSignal &
+  WithAllow401s & {
     url: string;
     options: LokiFetchOptions;
     targetNode?: Snode;
     associatedWith: string | null;
-    allow401s: boolean;
   }): Promise<undefined | SnodeResponse> {
   const method = options.method || 'GET';
 
@@ -126,12 +127,12 @@ async function snodeRpcNoRetries(
     timeoutMs,
     abortSignal,
   }: WithTimeoutMs &
+    WithAllow401s &
     WithAbortSignal & {
       method: string;
       params: Record<string, any> | Array<Record<string, any>>;
       targetNode: Snode;
       associatedWith: string | null;
-      allow401s: boolean;
     } // the user pubkey this call is for. if the onion request fails, this is used to handle the error for this user swarm for instance
 ): Promise<undefined | SnodeResponse> {
   const url = `https://${targetNode.ip}:${targetNode.port}/storage_rpc/v1`;

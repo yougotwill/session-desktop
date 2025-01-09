@@ -1148,6 +1148,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
           await GroupSync.pushChangesToGroupSwarmIfNeeded({
             groupPk: this.id,
             extraStoreRequests,
+            allow401s: false,
           });
 
           await GroupSync.queueNewJobIfNeeded(this.id);

@@ -7,7 +7,6 @@ import {
   PubkeyType,
   UserGroupsGet,
   WithGroupPubkey,
-  WithPubkey,
 } from 'libsession_util_nodejs';
 import { concat, intersection, isEmpty, uniq } from 'lodash';
 import { from_hex } from 'libsodium-wrappers-sumo';
@@ -225,6 +224,7 @@ const initNewGroupInWrapper = createAsyncThunk(
       const result = await GroupSync.pushChangesToGroupSwarmIfNeeded({
         groupPk,
         extraStoreRequests,
+        allow401s: false,
       });
       if (result !== RunJobResult.Success) {
         window.log.warn('GroupSync.pushChangesToGroupSwarmIfNeeded during create failed');
@@ -423,6 +423,10 @@ const refreshGroupDetailsFromWrapper = createAsyncThunk(
       const infos = await MetaGroupWrapperActions.infoGet(groupPk);
       const members = await MetaGroupWrapperActions.memberGetAll(groupPk);
 
+      if (window.sessionFeatureFlags.debug.debugLibsessionDumps) {
+        window.log.info(`groupInfo after refreshGroupDetailsFromWrapper: ${stringify(infos)}`);
+        window.log.info(`groupMembers after refreshGroupDetailsFromWrapper: ${stringify(members)}`);
+      }
       return { groupPk, infos, members };
     } catch (e) {
       window.log.warn('refreshGroupDetailsFromWrapper failed with ', e.message);
@@ -670,6 +674,7 @@ async function handleMemberAddedFromUI({
       revokeSubRequest,
       unrevokeSubRequest,
       extraStoreRequests,
+      allow401s: false,
     });
     if (sequenceResult !== RunJobResult.Success) {
       await LibSessionUtil.saveDumpsToDb(groupPk);
@@ -747,6 +752,7 @@ async function handleMemberRemovedFromUI({
   // We don't revoke the member's token right away. Instead we schedule a `GroupPendingRemovals`
   // which will deal with the revokes of all of them together.
   await GroupPendingRemovals.addJob({ groupPk });
+  window.inboxStore?.dispatch(refreshGroupDetailsFromWrapper({ groupPk }) as any);
 
   // Build a GroupUpdateMessage to be sent if that member was kicked by us.
   const createAtNetworkTimestamp = NetworkTime.now();
@@ -795,6 +801,7 @@ async function handleMemberRemovedFromUI({
     const sequenceResult = await GroupSync.pushChangesToGroupSwarmIfNeeded({
       groupPk,
       extraStoreRequests,
+      allow401s: false,
     });
     if (sequenceResult !== RunJobResult.Success) {
       throw new Error(
@@ -880,6 +887,7 @@ async function handleNameChangeFromUI({
     const batchResult = await GroupSync.pushChangesToGroupSwarmIfNeeded({
       groupPk,
       extraStoreRequests,
+      allow401s: false,
     });
 
     if (batchResult !== RunJobResult.Success) {
@@ -1005,6 +1013,7 @@ const triggerFakeAvatarUpdate = createAsyncThunk(
       const batchResult = await GroupSync.pushChangesToGroupSwarmIfNeeded({
         groupPk,
         extraStoreRequests,
+        allow401s: false,
       });
       if (!batchResult) {
         window.log.warn(`failed to send avatarChange message for group ${ed25519Str(groupPk)}`);
@@ -1060,6 +1069,7 @@ const triggerFakeDeleteMsgBeforeNow = createAsyncThunk(
       const batchResult = await GroupSync.pushChangesToGroupSwarmIfNeeded({
         groupPk,
         extraStoreRequests,
+        allow401s: false,
       });
       if (!batchResult) {
         window.log.warn(
@@ -1206,36 +1216,6 @@ function deleteGroupPkEntriesFromState(state: GroupState, groupPk: GroupPubkeyTy
   delete state.members[groupPk];
 }
 
-function applySendingStateChange({
-  groupPk,
-  pubkey,
-  sending,
-  state,
-  changeType,
-}: WithGroupPubkey &
-  WithPubkey & { sending: boolean; changeType: 'invite' | 'promote'; state: GroupState }) {
-  if (changeType === 'invite' && !state.membersInviteSending[groupPk]) {
-    state.membersInviteSending[groupPk] = [];
-  } else if (changeType === 'promote' && !state.membersPromoteSending[groupPk]) {
-    state.membersPromoteSending[groupPk] = [];
-  }
-  const arrRef =
-    changeType === 'invite'
-      ? state.membersInviteSending[groupPk]
-      : state.membersPromoteSending[groupPk];
-
-  const foundAt = arrRef.findIndex(p => p === pubkey);
-
-  if (sending && foundAt === -1) {
-    arrRef.push(pubkey);
-    return state;
-  }
-  if (!sending && foundAt >= 0) {
-    arrRef.splice(foundAt, 1);
-  }
-  return state;
-}
-
 function refreshConvosModelProps(convoIds: Array<string>) {
   /**
    *
@@ -1257,19 +1237,6 @@ const metaGroupSlice = createSlice({
   name: 'metaGroup',
   initialState: initialGroupState,
   reducers: {
-    setInvitePending(
-      state: GroupState,
-      { payload }: PayloadAction<{ sending: boolean } & WithGroupPubkey & WithPubkey>
-    ) {
-      return applySendingStateChange({ changeType: 'invite', ...payload, state });
-    },
-
-    setPromotionPending(
-      state: GroupState,
-      { payload }: PayloadAction<{ pubkey: PubkeyType; groupPk: GroupPubkeyType; sending: boolean }>
-    ) {
-      return applySendingStateChange({ changeType: 'promote', ...payload, state });
-    },
     removeGroupDetailsFromSlice(
       state: GroupState,
       { payload }: PayloadAction<{ groupPk: GroupPubkeyType }>
