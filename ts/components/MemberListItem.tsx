@@ -174,7 +174,7 @@ function localisedStatusFromMemberStatus(memberStatus: MemberStateGroupV2) {
     case 'REMOVED_UNKNOWN': // fallback, hopefully won't happen in production
     case 'REMOVED_MEMBER': // we want pending removal members at the end of the "invite" states
     case 'REMOVED_MEMBER_AND_MESSAGES':
-      return window.i18n('groupPendingRemoval'); // no text for those 3 pending removal states
+      return window.i18n('groupPendingRemoval');
     case 'PROMOTION_FAILED':
       return window.i18n('adminPromotionFailed');
     case 'PROMOTION_NOT_SENT':
