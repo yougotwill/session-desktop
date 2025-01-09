@@ -98,12 +98,12 @@ function displayFailedInvitesForGroup(groupPk: GroupPubkeyType) {
   };
   const count = thisGroupFailures.failedMembers.length;
   const groupName = ConvoHub.use().get(groupPk)?.getRealSessionUsername() || window.i18n('unknown');
-  const firstUserName =
-    ConvoHub.use().get(thisGroupFailures.failedMembers?.[0])?.getRealSessionUsername() ||
-    window.i18n('unknown');
-  const secondUserName =
-    ConvoHub.use().get(thisGroupFailures.failedMembers?.[1])?.getRealSessionUsername() ||
-    window.i18n('unknown');
+  const firstUserName = ConvoHub.use()
+    .get(thisGroupFailures.failedMembers?.[0])
+    ?.getNicknameOrRealUsernameOrPlaceholder();
+  const secondUserName = ConvoHub.use()
+    .get(thisGroupFailures.failedMembers?.[1])
+    ?.getNicknameOrRealUsernameOrPlaceholder();
   switch (count) {
     case 1:
       ToastUtils.pushToastWarning(
