@@ -304,10 +304,6 @@ export class PersistedJobRunner<T extends TypeOfPersistedData> {
 
     // if the time is 101, and that task is to be run at t=101, we need to start it right away.
     if (nextJob.persistedData.nextAttemptTimestamp > Date.now()) {
-      window.log.info(
-        'next job is not due to be run just yet...',
-        nextJob.persistedData.nextAttemptTimestamp - Date.now()
-      );
       return;
     }
     let jobResult: RunJobResult | null = null;

@@ -92,10 +92,11 @@ async function pushChangesToGroupSwarmIfNeeded({
   deleteAllMessagesSubRequest,
   extraStoreRequests,
   allow401s,
-  timeoutMs
+  timeoutMs,
 }: WithGroupPubkey &
   WithAllow401s &
-  WithRevokeSubRequest & Partial<WithTimeoutMs> & {
+  WithRevokeSubRequest &
+  Partial<WithTimeoutMs> & {
     supplementalKeysSubRequest?: StoreGroupKeysSubRequest;
     deleteAllMessagesSubRequest?: DeleteAllFromGroupMsgNodeSubRequest;
     extraStoreRequests: Array<StoreGroupMessageSubRequest>;

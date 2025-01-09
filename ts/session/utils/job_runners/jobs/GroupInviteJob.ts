@@ -78,10 +78,10 @@ async function addJob({ groupPk, member, inviteAsAdmin, forceUnrevoke }: JobExtr
       await MetaGroupWrapperActions.memberSetInviteNotSent(groupPk, member);
     }
 
+    await LibSessionUtil.saveDumpsToDb(groupPk);
     window?.inboxStore?.dispatch(
       groupInfoActions.refreshGroupDetailsFromWrapper({ groupPk }) as any
     );
-    await LibSessionUtil.saveDumpsToDb(groupPk);
 
     await runners.groupInviteJobRunner.addJob(groupInviteJob);
   }
@@ -186,6 +186,8 @@ class GroupInviteJob extends PersistedJob<GroupInvitePersistedData> {
     }
     let failed = true;
     try {
+      let start = Date.now();
+
       if (this.persistedData.forceUnrevoke) {
         const token = await MetaGroupWrapperActions.swarmSubAccountToken(groupPk, member);
         const unrevokeSubRequest = new SubaccountUnrevokeSubRequest({
@@ -201,7 +203,14 @@ class GroupInviteJob extends PersistedJob<GroupInvitePersistedData> {
           allow401s: false,
           timeoutMs: 10 * DURATION.SECONDS,
         });
+        window?.inboxStore?.dispatch(
+          groupInfoActions.refreshGroupDetailsFromWrapper({ groupPk }) as any
+        );
         if (sequenceResult !== RunJobResult.Success) {
+          window.log.warn(
+            `GroupInvite: GroupSync.pushChangesToGroupSwarmIfNeeded failed after ${Date.now() - start}ms`
+          );
+
           await LibSessionUtil.saveDumpsToDb(groupPk);
 
           throw new Error(
@@ -231,7 +240,7 @@ class GroupInviteJob extends PersistedJob<GroupInvitePersistedData> {
         inviteDetails,
         SnodeNamespaces.Default
       );
-
+      start = Date.now();
       const { effectiveTimestamp } = await timeoutWithAbort(
         MessageSender.sendSingleMessage({
           message: rawMessage,
@@ -239,6 +248,9 @@ class GroupInviteJob extends PersistedJob<GroupInvitePersistedData> {
         }),
         10 * DURATION.SECONDS,
         controller
+      );
+      window.log.debug(
+        `GroupInvite: sendSingleMessage took ${Date.now() - start}ms. effectiveTimestamp: ${effectiveTimestamp}`
       );
 
       if (effectiveTimestamp !== null) {
