@@ -255,14 +255,14 @@ describe('JobRunner SINGLE', () => {
       expect(runner.isRunningJobs()).to.be.eq(false);
 
       runner.startProcessing(); // a job should be started right away in the list of jobs
-      await sleepFor(100);
+      await sleepFor(5);
       expect(runner.isRunningJobs()).to.be.eq(true);
 
       expect(runner.getCurrentJobs()).to.deep.eq([job.serializeJob()]);
 
       clock.tick(5000);
 
-      await sleepFor(10);
+      await sleepFor(5);
       const ret = await runner.stopAndWaitCurrentJobs();
       expect(runner.getCurrentJobs()).to.deep.eq([]);
       expect(runner.getScheduledJobs()).to.deep.eq([
@@ -412,6 +412,7 @@ describe('JobRunner MULTI', () => {
       clock.tick(110);
       // job should be started right away
       let result = await runnerMulti.addJob(job);
+
       expect(runnerMulti.getScheduledJobs()).to.deep.eq([job.serializeJob()]);
 
       expect(result).to.eq('job_added');
@@ -420,7 +421,7 @@ describe('JobRunner MULTI', () => {
       clock.tick(5010);
       // just give some time for the runner to pick up a new job
 
-      await sleepFor(100);
+      await sleepFor(5);
 
       const job2 = getFakeSleepForMultiJob({ timestamp: clock.now + 100 });
 
@@ -434,13 +435,16 @@ describe('JobRunner MULTI', () => {
       clock.tick(100);
 
       // that job2 should be running now
-      await sleepFor(100);
+      await sleepFor(5);
       clock.tick(5000);
 
       await job2.waitForCurrentTry();
+      clock.tick(730);
+
       await runnerMulti.waitCurrentJobs();
+
       // we need to give some time for the jobrunner to handle the return of job2 and remove it
-      await sleepFor(100);
+      await sleepFor(5);
 
       expect(runnerMulti.getScheduledJobs()).to.deep.eq([]);
     });

@@ -216,7 +216,7 @@ describe('MessageQueue', () => {
               done(e);
             }
           }
-        });
+        }, {interval:5});
       });
     });
   });
