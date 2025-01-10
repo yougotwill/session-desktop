@@ -1265,7 +1265,7 @@ const metaGroupSlice = createSlice({
     builder.addCase(initNewGroupInWrapper.pending, (state, _action) => {
       state.creationFromUIPending = true;
 
-      window.log.error('a initNewGroupInWrapper is pending');
+      window.log.debug('a initNewGroupInWrapper is pending');
       return state;
     });
     builder.addCase(loadMetaDumpsFromDB.fulfilled, (state, action) => {
