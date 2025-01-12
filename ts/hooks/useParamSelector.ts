@@ -272,6 +272,7 @@ export function useIsIncomingRequest(convoId?: string) {
         didApproveMe: convoProps.didApproveMe || false,
         activeAt: convoProps.activeAt || 0,
         invitePending,
+        priority: convoProps.priority,
       })
   );
 }

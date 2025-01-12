@@ -199,9 +199,8 @@ export async function declineConversationWithoutConfirm({
     `declineConversationWithoutConfirm of ${ed25519Str(conversationId)}, alsoBlock:${alsoBlock}, conversationIdOrigin:${conversationIdOrigin ? ed25519Str(conversationIdOrigin) : '<none>'}`
   );
 
-  // Note: do not set the active_at undefined as this would make that conversation not synced with the libsession wrapper
-  await conversationToDecline.setIsApproved(false, false);
-  await conversationToDecline.setDidApproveMe(false, false);
+  // Note: declining a message request just hides it.
+  await conversationToDecline.setHidden(false);
 
   if (conversationToDecline.isClosedGroupV2()) {
     // this can only be done for groupv2 convos

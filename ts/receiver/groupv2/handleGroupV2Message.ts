@@ -3,7 +3,7 @@ import { isEmpty, isFinite, isNumber } from 'lodash';
 import { Data } from '../../data/data';
 import { deleteAllMessagesByConvoIdNoConfirmation } from '../../interactions/conversationInteractions';
 import { deleteMessagesFromSwarmOnly } from '../../interactions/conversations/unsendingInteractions';
-import { ConversationTypeEnum } from '../../models/types';
+import { CONVERSATION_PRIORITIES, ConversationTypeEnum } from '../../models/types';
 import { HexString } from '../../node/hexStrings';
 import { SignalService } from '../../protobuf';
 import { getSwarmPollingInstance } from '../../session/apis/snode_api';
@@ -69,7 +69,7 @@ async function getInitializedGroupObject({
       authData: null,
       joinedAtSeconds: Math.floor(Date.now() / 1000),
       name: groupName,
-      priority: 0,
+      priority: CONVERSATION_PRIORITIES.default,
       pubkeyHex: groupPk,
       secretKey: null,
       kicked: false,

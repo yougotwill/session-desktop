@@ -399,7 +399,8 @@ const _getConversationRequests = (
   sortedConversations: Array<ReduxConversationType>
 ): Array<ReduxConversationType> => {
   return filter(sortedConversations, conversation => {
-    const { isApproved, isBlocked, isPrivate, isMe, activeAt, didApproveMe, id } = conversation;
+    const { isApproved, isBlocked, isPrivate, isMe, activeAt, didApproveMe, id, priority } =
+      conversation;
     const invitePending = PubKey.is03Pubkey(id)
       ? UserGroupsWrapperActions.getCachedGroup(id)?.invitePending || false
       : false;
@@ -412,6 +413,7 @@ const _getConversationRequests = (
       activeAt: activeAt || 0,
       didApproveMe: didApproveMe || false,
       invitePending,
+      priority,
     });
     return isIncomingRequest;
   });

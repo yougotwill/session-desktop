@@ -727,6 +727,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       activeAt: this.getActiveAt(),
       didApproveMe: this.didApproveMe(),
       invitePending,
+      priority: this.getPriority(),
     });
   }
 
@@ -2817,6 +2818,7 @@ export function hasValidIncomingRequestValues({
   activeAt,
   didApproveMe,
   invitePending,
+  priority,
 }: {
   id: string;
   isMe: boolean;
@@ -2826,16 +2828,20 @@ export function hasValidIncomingRequestValues({
   didApproveMe: boolean;
   invitePending: boolean;
   activeAt: number | undefined;
+  priority: number | undefined;
 }): boolean {
   // if a convo is not active, it means we didn't get any messages nor sent any.
   const isActive = activeAt && isFinite(activeAt) && activeAt > 0;
+  const priorityWithDefault = priority ?? CONVERSATION_PRIORITIES.default;
+  const isHidden = priorityWithDefault < 0;
   return Boolean(
     (isPrivate || (PubKey.is03Pubkey(id) && invitePending)) &&
       !isMe &&
       !isApproved &&
       !isBlocked &&
       isActive &&
-      didApproveMe
+      didApproveMe &&
+      !isHidden
   );
 }
 

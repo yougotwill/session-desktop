@@ -213,8 +213,7 @@ class ConvoController {
     // we remove the messages left in this convo. The caller has to merge them if needed
     await deleteAllMessagesByConvoIdNoConfirmation(conversation.id);
 
-    await conversation.setIsApproved(false, false);
-    await conversation.setDidApproveMe(false, false);
+    await conversation.setHidden(false);
     await conversation.commit();
   }
 
@@ -400,8 +399,7 @@ class ConvoController {
     // We do this so that if we get reinvited to the group, we will
     //  fetch and display all the messages from the group's swarm again.
     if (clearFetchedHashes) {
-      await getSwarmPollingInstance().resetLastHashesForConversation(groupPk);
-      await Data.emptySeenMessageHashesForConversation(groupPk);
+      await this.resetLastHashesForConversation(groupPk);
     }
 
     await LibSessionUtil.saveDumpsToDb(UserUtils.getOurPubKeyStrFromCache());
@@ -415,6 +413,11 @@ class ConvoController {
     getSwarmPollingInstance().removePubkey(groupPk, 'deleteGroup');
 
     window.inboxStore?.dispatch(groupInfoActions.removeGroupDetailsFromSlice({ groupPk }));
+  }
+
+  async resetLastHashesForConversation(groupPk: GroupPubkeyType) {
+    await getSwarmPollingInstance().resetLastHashesForConversation(groupPk);
+    await Data.emptySeenMessageHashesForConversation(groupPk);
   }
 
   public async deleteCommunity(convoId: string) {
@@ -455,8 +458,7 @@ class ConvoController {
     } else {
       window.log.info(`deleteContact isPrivate, reset fields and removing from wrapper: ${id}`);
 
-      await conversation.setIsApproved(false, false);
-      await conversation.setDidApproveMe(false, false);
+      await conversation.setHidden();
       conversation.set('active_at', 0);
       await BlockedNumberController.unblockAll([conversation.id]);
       await conversation.commit(); // first commit to DB so the DB knows about the changes
