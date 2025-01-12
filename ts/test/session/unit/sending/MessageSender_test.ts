@@ -88,6 +88,7 @@ describe('MessageSender', () => {
             attempts: 3,
             retryMinTimeout: 10,
             isSyncMessage: false,
+            abortSignal: null,
           });
         await expectAsyncToThrow(promise, 'Failed to encrypt');
         expect(sessionMessageAPISendStub.callCount).to.equal(0);
@@ -100,6 +101,7 @@ describe('MessageSender', () => {
           attempts: 3,
           retryMinTimeout: 10,
           isSyncMessage: false,
+          abortSignal: null,
         });
         expect(doSnodeBatchRequestStub.callCount).to.equal(1);
       });
@@ -114,6 +116,7 @@ describe('MessageSender', () => {
           attempts,
           retryMinTimeout: 10,
           isSyncMessage: false,
+          abortSignal: null,
         });
         await expect(promise).is.rejectedWith('API error');
         expect(doSnodeBatchRequestStub.callCount).to.equal(attempts);
@@ -127,6 +130,7 @@ describe('MessageSender', () => {
           attempts: 3,
           retryMinTimeout: 10,
           isSyncMessage: false,
+          abortSignal: null,
         });
         expect(doSnodeBatchRequestStub.callCount).to.equal(2);
       });
@@ -160,6 +164,7 @@ describe('MessageSender', () => {
           attempts: 3,
           retryMinTimeout: 10,
           isSyncMessage: false,
+          abortSignal: null,
         });
 
         const args = doSnodeBatchRequestStub.getCall(0).args;
@@ -203,6 +208,7 @@ describe('MessageSender', () => {
           attempts: 3,
           retryMinTimeout: 10,
           isSyncMessage: false,
+          abortSignal: null,
         });
 
         const firstArg = doSnodeBatchRequestStub.getCall(0).args[0];
@@ -255,6 +261,7 @@ describe('MessageSender', () => {
             attempts: 3,
             retryMinTimeout: 10,
             isSyncMessage: false,
+            abortSignal: null,
           });
 
           const firstArg = doSnodeBatchRequestStub.getCall(0).args[0];

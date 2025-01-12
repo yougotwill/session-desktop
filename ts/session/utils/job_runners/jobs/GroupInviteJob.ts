@@ -245,6 +245,7 @@ class GroupInviteJob extends PersistedJob<GroupInvitePersistedData> {
         MessageSender.sendSingleMessage({
           message: rawMessage,
           isSyncMessage: false,
+          abortSignal: controller.signal,
         }),
         10 * DURATION.SECONDS,
         controller

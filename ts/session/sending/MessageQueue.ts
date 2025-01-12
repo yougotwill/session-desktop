@@ -348,6 +348,7 @@ export class MessageQueueCl {
       const { effectiveTimestamp } = await MessageSender.sendSingleMessage({
         message: rawMessage,
         isSyncMessage,
+        abortSignal: null,
       });
       window.log.debug('sendSingleMessage took ', Date.now() - start);
 

@@ -203,20 +203,23 @@ describe('MessageQueue', () => {
           .then(() => messageQueueStub.processPending(device));
         // The cb is only invoke is all reties fails. Here we poll until the messageSentHandlerFailed was invoked as this is what we want to do
 
-        return PromiseUtils.poll(done => {
-          if (messageSentHandlerFailedStub.callCount === 1) {
-            try {
-              expect(messageSentHandlerFailedStub.callCount).to.be.equal(1);
-              expect(messageSentHandlerFailedStub.lastCall.args[0].identifier).to.be.equal(
-                message.identifier
-              );
-              expect(messageSentHandlerFailedStub.lastCall.args[1].message).to.equal('failure');
-              done();
-            } catch (e) {
-              done(e);
+        return PromiseUtils.poll(
+          done => {
+            if (messageSentHandlerFailedStub.callCount === 1) {
+              try {
+                expect(messageSentHandlerFailedStub.callCount).to.be.equal(1);
+                expect(messageSentHandlerFailedStub.lastCall.args[0].identifier).to.be.equal(
+                  message.identifier
+                );
+                expect(messageSentHandlerFailedStub.lastCall.args[1].message).to.equal('failure');
+                done();
+              } catch (e) {
+                done(e);
+              }
             }
-          }
-        }, {interval:5});
+          },
+          { interval: 5 }
+        );
       });
     });
   });

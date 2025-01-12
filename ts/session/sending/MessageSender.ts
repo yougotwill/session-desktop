@@ -236,8 +236,10 @@ async function sendSingleMessage({
   retryMinTimeout = 100,
   attempts = 3,
   isSyncMessage,
+  abortSignal,
 }: {
   message: OutgoingRawMessage;
+  abortSignal: MergedAbortSignal | null;
   attempts?: number;
   retryMinTimeout?: number; // in ms
   isSyncMessage: boolean;
@@ -301,7 +303,7 @@ async function sendSingleMessage({
           associatedWith: destination,
           allow401s: false,
           method: 'sequence',
-          abortSignal: null,
+          abortSignal,
         });
 
         await handleBatchResultWithSubRequests({ batchResult, subRequests, destination });
