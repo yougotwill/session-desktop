@@ -4,6 +4,7 @@ import { ThemeColorVariables } from './variableColors';
 
 export const classicLight: ThemeColorVariables = {
   '--danger-color': THEMES.CLASSIC_LIGHT.DANGER,
+  '--warning-color': THEMES.CLASSIC_LIGHT.WARNING,
   '--disabled-color': THEMES.CLASSIC_LIGHT.DISABLED,
 
   '--background-primary-color': THEMES.CLASSIC_LIGHT.COLOR6,

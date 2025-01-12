@@ -4,6 +4,7 @@ import { ThemeColorVariables } from './variableColors';
 
 export const oceanLight: ThemeColorVariables = {
   '--danger-color': THEMES.OCEAN_LIGHT.DANGER,
+  '--warning-color': THEMES.OCEAN_LIGHT.WARNING,
   '--disabled-color': THEMES.OCEAN_LIGHT.DISABLED,
 
   '--background-primary-color': THEMES.OCEAN_LIGHT.COLOR7!,

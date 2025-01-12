@@ -119,6 +119,7 @@ export function convertThemeStateToName(themeState: string): ThemeNames {
 type ThemeColors = {
   PRIMARY: string;
   DANGER: string;
+  WARNING: string;
   DISABLED: string;
   COLOR0: string;
   COLOR1: string;
@@ -134,6 +135,7 @@ type Themes = Record<ThemeNames, ThemeColors>;
 // Classic Light
 const classicLightPrimary = primaryGreen;
 const classicLightDanger = dangerLight;
+const classicLightWarning = '#A64B00';
 const classicLightDisabled = disabledLight;
 const classicLight0 = '#000000';
 const classicLight1 = '#6D6D6D';
@@ -146,6 +148,7 @@ const classicLight6 = '#FFFFFF';
 // Classic Dark
 const classicDarkPrimary = primaryGreen;
 const classicDarkDanger = dangerDark;
+const classicDarkWarning = '#FCB159';
 const classicDarkDisabled = disabledDark;
 const classicDark0 = '#000000';
 const classicDark1 = '#1B1B1B';
@@ -158,6 +161,7 @@ const classicDark6 = '#FFFFFF';
 // Ocean Light
 const oceanLightPrimary = primaryBlue;
 const oceanLightDanger = dangerLight;
+const oceanLightWarning = '#A64B00';
 const oceanLightDisabled = disabledLight;
 const oceanLight0 = '#000000';
 const oceanLight1 = '#19345D';
@@ -171,6 +175,7 @@ const oceanLight7 = '#FCFFFF';
 // Ocean Dark
 const oceanDarkPrimary = primaryBlue;
 const oceanDarkDanger = dangerDark;
+const oceanDarkWarning = '#FCB159';
 const oceanDarkDisabled = disabledDark;
 const oceanDark0 = '#000000';
 const oceanDark1 = '#1A1C28';
@@ -185,6 +190,7 @@ const THEMES: Themes = {
   CLASSIC_LIGHT: {
     PRIMARY: classicLightPrimary,
     DANGER: classicLightDanger,
+    WARNING: classicLightWarning,
     DISABLED: classicLightDisabled,
     COLOR0: classicLight0,
     COLOR1: classicLight1,
@@ -196,6 +202,7 @@ const THEMES: Themes = {
   },
   CLASSIC_DARK: {
     PRIMARY: classicDarkPrimary,
+    WARNING: classicDarkWarning,
     DANGER: classicDarkDanger,
     DISABLED: classicDarkDisabled,
     COLOR0: classicDark0,
@@ -208,6 +215,7 @@ const THEMES: Themes = {
   },
   OCEAN_LIGHT: {
     PRIMARY: oceanLightPrimary,
+    WARNING: oceanLightWarning,
     DANGER: oceanLightDanger,
     DISABLED: oceanLightDisabled,
     COLOR0: oceanLight0,
@@ -221,6 +229,7 @@ const THEMES: Themes = {
   },
   OCEAN_DARK: {
     PRIMARY: oceanDarkPrimary,
+    WARNING: oceanDarkWarning,
     DANGER: oceanDarkDanger,
     DISABLED: oceanDarkDisabled,
     COLOR0: oceanDark0,

@@ -53,8 +53,7 @@ export const NoticeBanner = (props: NoticeBannerProps) => {
 
 const StyledGroupInviteBanner = styled(Flex)`
   position: relative;
-  background-color: var(--orange-color);
-  color: var(--black-color);
+  color: var(--warning-color);
   font-size: var(--font-size-sm);
   padding: var(--margins-xs) var(--margins-lg);
   text-align: center;
@@ -62,8 +61,6 @@ const StyledGroupInviteBanner = styled(Flex)`
 
   // when part a a dialog, invert it and make it narrower (as the dialog grows to make it fit)
   ${StyledRootDialog} & {
-    background-color: unset;
-    color: var(--text-primary-color);
     max-width: 300px;
   }
 `;
