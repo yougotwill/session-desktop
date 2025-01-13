@@ -635,6 +635,7 @@ async function handleClosedGroupNameChanged(
       sentAt: toNumber(envelope.timestamp),
       expireUpdate,
       markAlreadySent: false, // legacy groups support will be removed eventually
+      messageHash: null, // legacy groups
     });
     if (!shouldOnlyAddUpdateMessage) {
       convo.set({ displayNameInProfile: newName });
@@ -699,6 +700,7 @@ async function handleClosedGroupMembersAdded(
     sentAt: toNumber(envelope.timestamp),
     expireUpdate,
     markAlreadySent: false, // legacy groups support will be removed eventually
+    messageHash: null, // legacy groups
   });
 
   if (!shouldOnlyAddUpdateMessage) {
@@ -793,6 +795,7 @@ async function handleClosedGroupMembersRemoved(
         sentAt: toNumber(envelope.timestamp),
         expireUpdate,
         markAlreadySent: false, // legacy groups support will be removed eventually
+        messageHash: null, // legacy groups
       });
       convo.updateLastMessage();
     }
@@ -932,6 +935,7 @@ async function handleClosedGroupMemberLeft(
     sentAt: toNumber(envelope.timestamp),
     expireUpdate,
     markAlreadySent: false, // legacy groups support will be removed eventually
+    messageHash: null, // legacy groups
   });
   convo.updateLastMessage();
   // if a user just left and we are the admin, we remove him right away for everyone by sending a MEMBERS_REMOVED message so no need to add him as a zombie

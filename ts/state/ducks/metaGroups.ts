@@ -205,6 +205,7 @@ const initNewGroupInWrapper = createAsyncThunk(
           sentAt,
           convo,
           markAlreadySent: false, // the store below will mark the message as sent with dbMsgIdentifier
+          messageHash: null,
         });
         groupMemberChange = await GroupUpdateMessageFactory.getWithoutHistoryControlMessage({
           adminSecretKey: groupSecretKey,
@@ -624,6 +625,7 @@ async function handleMemberAddedFromUI({
     sentAt: createAtNetworkTimestamp,
     expireUpdate: expireDetails,
     markAlreadySent: false, // the store below will mark the message as sent with dbMsgIdentifier
+    messageHash: null,
   };
   const updateMessagesToPush: Array<GroupUpdateMemberChangeMessage> = [];
   if (withHistory.length) {
@@ -779,6 +781,7 @@ async function handleMemberRemovedFromUI({
             : null,
       },
       markAlreadySent: false, // the store below will mark the message as sent using dbMsgIdentifier
+      messageHash: null,
     });
     removedControlMessage = await GroupUpdateMessageFactory.getRemovedControlMessage({
       adminSecretKey: group.secretKey,
@@ -864,6 +867,7 @@ async function handleNameChangeFromUI({
       createAtNetworkTimestamp
     ),
     markAlreadySent: false, // the store below will mark the message as sent with dbMsgIdentifier
+    messageHash: null,
   });
 
   // we want to send an update only if the change was made locally.
@@ -992,6 +996,7 @@ const triggerFakeAvatarUpdate = createAsyncThunk(
       sentAt: createAtNetworkTimestamp,
       convo,
       markAlreadySent: false, // the store below will mark the message as sent with dbMsgIdentifier
+      messageHash: null,
     });
 
     await msgModel.commit();
@@ -1169,6 +1174,7 @@ const inviteResponseReceived = createAsyncThunk(
         );
       }
       await GroupSync.queueNewJobIfNeeded(groupPk);
+      await LibSessionUtil.saveDumpsToDb(groupPk);
     } catch (e) {
       window.log.info('inviteResponseReceived failed with', e.message);
       // only admins can do the steps above, but we don't want to throw if we are not an admin

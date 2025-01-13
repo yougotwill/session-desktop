@@ -12,7 +12,7 @@ import { getSodiumRenderer } from '../../session/crypto';
 import { WithDisappearingMessageUpdate } from '../../session/disappearing_messages/types';
 import { ClosedGroup } from '../../session/group/closed-group';
 import { PubKey } from '../../session/types';
-import { WithMessageHash } from '../../session/types/with';
+import { WithMessageHash, type WithMessageHashOrNull } from '../../session/types/with';
 import { UserUtils } from '../../session/utils';
 import { sleepFor } from '../../session/utils/Promise';
 import { ed25519Str, stringToUint8Array } from '../../session/utils/String';
@@ -44,7 +44,8 @@ type GroupUpdateGeneric<T> = {
 } & WithSignatureTimestamp &
   WithGroupPubkey &
   WithAuthor &
-  WithDisappearingMessageUpdate;
+  WithDisappearingMessageUpdate &
+  WithMessageHashOrNull;
 
 type GroupUpdateDetails = {
   updateMessage: SignalService.GroupUpdateMessage;
@@ -226,6 +227,7 @@ async function handleGroupInfoChangeMessage({
   signatureTimestamp,
   author,
   expireUpdate,
+  messageHash,
 }: GroupUpdateGeneric<SignalService.GroupUpdateInfoChangeMessage>) {
   const sigValid = await verifySig({
     pubKey: HexString.fromHexStringNoPrefix(groupPk),
@@ -252,6 +254,7 @@ async function handleGroupInfoChangeMessage({
         sentAt: signatureTimestamp,
         expireUpdate,
         markAlreadySent: true,
+        messageHash,
       });
 
       break;
@@ -264,6 +267,7 @@ async function handleGroupInfoChangeMessage({
         sentAt: signatureTimestamp,
         expireUpdate,
         markAlreadySent: true,
+        messageHash,
       });
       break;
     }
@@ -298,6 +302,7 @@ async function handleGroupMemberChangeMessage({
   signatureTimestamp,
   author,
   expireUpdate,
+  messageHash,
 }: GroupUpdateGeneric<SignalService.GroupUpdateMemberChangeMessage>) {
   const convo = ConvoHub.use().get(groupPk);
   if (!convo) {
@@ -327,6 +332,7 @@ async function handleGroupMemberChangeMessage({
     sentAt: signatureTimestamp,
     expireUpdate,
     markAlreadySent: true,
+    messageHash,
   };
 
   switch (change.type) {
@@ -386,6 +392,7 @@ async function handleGroupUpdateMemberLeftNotificationMessage({
   signatureTimestamp,
   author,
   expireUpdate,
+  messageHash,
 }: GroupUpdateGeneric<SignalService.GroupUpdateMemberLeftNotificationMessage>) {
   // No need to verify sig, the author is already verified with the libsession.decrypt()
   const convo = ConvoHub.use().get(groupPk);
@@ -401,6 +408,7 @@ async function handleGroupUpdateMemberLeftNotificationMessage({
     sentAt: signatureTimestamp,
     expireUpdate,
     markAlreadySent: true,
+    messageHash,
   });
 
   convo.set({
@@ -619,6 +627,9 @@ async function handleGroupUpdatePromoteMessage({
 
   await LibSessionUtil.saveDumpsToDb(UserUtils.getOurPubKeyStrFromCache());
   if (!found.invitePending) {
+    // yes, we really want to refetch the whole history of messages from that group...
+    await ConvoHub.use().resetLastHashesForConversation(groupPk);
+
     // This group should already be polling based on if that author is pre-approved or we've already approved that group from another device.
     // Start polling from it, we will mark ourselves as admin once we get the first merge result, if needed.
     getSwarmPollingInstance().addGroupId(groupPk);

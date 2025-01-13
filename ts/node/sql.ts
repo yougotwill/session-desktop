@@ -1769,13 +1769,24 @@ function getLastHashBySnode(convoId: string, snode: string, namespace: number) {
 }
 
 function getSeenMessagesByHashList(hashes: Array<string>) {
-  const rows = assertGlobalInstance()
+  const fromSeenTableRows = assertGlobalInstance()
     .prepare(
       `SELECT * FROM ${SEEN_MESSAGE_TABLE} WHERE hash IN ( ${hashes.map(() => '?').join(', ')} );`
     )
     .all(hashes);
 
-  return map(rows, row => row.hash);
+  const fromMessagesTableRows = compact(
+    assertGlobalInstance()
+      .prepare(
+        `SELECT messageHash FROM ${MESSAGES_TABLE} WHERE messageHash IN ( ${hashes.map(() => '?').join(', ')} )`
+      )
+      .all(hashes)
+  );
+
+  const hashesFromSeen: Array<string> = map(fromSeenTableRows, row => row.hash);
+  const hashesFromMessages: Array<string> = map(fromMessagesTableRows, row => row.messageHash);
+
+  return uniq(hashesFromSeen.concat(hashesFromMessages));
 }
 
 function getExpiredMessages() {

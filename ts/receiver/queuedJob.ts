@@ -285,6 +285,7 @@ async function handleMessageFromPendingMember(
     groupPk: convoId,
     author: source,
     change: { isApproved: true },
+    messageHash: null,
   });
 }
 

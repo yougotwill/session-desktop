@@ -2,6 +2,7 @@ import { PubkeyType } from 'libsession_util_nodejs';
 import { Snode } from '../../data/types';
 
 export type WithMessageHash = { messageHash: string };
+export type WithMessageHashOrNull = { messageHash: string | null };
 export type WithTimestamp = { timestamp: number };
 export type WithSignature = { signature: string };
 export type WithSecretKey = { secretKey: Uint8Array };

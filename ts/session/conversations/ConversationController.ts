@@ -416,6 +416,7 @@ class ConvoController {
   }
 
   async resetLastHashesForConversation(groupPk: GroupPubkeyType) {
+    window.log.info(`resetLastHashesForConversation for ${ed25519Str(groupPk)}`);
     await getSwarmPollingInstance().resetLastHashesForConversation(groupPk);
     await Data.emptySeenMessageHashesForConversation(groupPk);
   }

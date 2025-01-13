@@ -1010,6 +1010,7 @@ export async function promoteUsersInGroup({
     sentAt,
     convo,
     markAlreadySent: false, // the store below will mark the message as sent with dbMsgIdentifier
+    messageHash: null,
   });
   const groupMemberChange = await GroupUpdateMessageFactory.getPromotedControlMessage({
     adminSecretKey: groupInWrapper.secretKey,
