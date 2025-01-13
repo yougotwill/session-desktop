@@ -278,6 +278,7 @@ async function handleUserProfileUpdate(result: IncomingUserResult): Promise<void
         shouldCommitConvo: false,
         fromCurrentDevice: false,
         fromConfigMessage: true,
+        messageHash: null,
       });
       changes = success;
     }
@@ -424,6 +425,7 @@ async function handleContactsUpdate(result: IncomingUserResult) {
           fromCurrentDevice: false,
           shouldCommitConvo: false,
           fromConfigMessage: true,
+          messageHash: null,
         });
         changes = changes || success;
       }
@@ -657,6 +659,7 @@ async function handleLegacyGroupUpdate(latestEnvelopeTimestamp: number) {
         shouldCommitConvo: false,
         fromCurrentDevice: false,
         fromConfigMessage: true,
+        messageHash: null, // legacy groups
       });
       changes = success;
     }

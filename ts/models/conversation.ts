@@ -137,6 +137,7 @@ import { OpenGroupRequestCommonType } from '../data/types';
 import { ConversationTypeEnum, CONVERSATION_PRIORITIES } from './types';
 import { NetworkTime } from '../util/NetworkTime';
 import { MessageQueue } from '../session/sending';
+import type { WithMessageHashOrNull } from '../session/types/with';
 
 type InMemoryConvoInfos = {
   mentionedUs: boolean;
@@ -897,7 +898,8 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     fromCurrentDevice,
     shouldCommitConvo = true,
     existingMessage,
-  }: {
+    messageHash,
+  }: WithMessageHashOrNull & {
     providedDisappearingMode?: DisappearingMessageConversationModeType;
     providedExpireTimer?: number;
     providedSource?: string;
@@ -1005,6 +1007,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
         source,
         fromSync,
       },
+      messageHash: messageHash || undefined,
     };
 
     if (!message) {

@@ -327,6 +327,7 @@ export async function handleNewClosedGroup(
         fromSync: false,
         fromCurrentDevice: false,
         fromConfigMessage: false,
+        messageHash: null, // legacy groups
       });
 
       await IncomingMessageCache.removeFromCache(envelope);

@@ -20,7 +20,7 @@ import { PreConditionFailed } from '../../session/utils/errors';
 import { LibSessionUtil } from '../../session/utils/libsession/libsession_utils';
 import { SessionUtilConvoInfoVolatile } from '../../session/utils/libsession/libsession_utils_convo_info_volatile';
 import { groupInfoActions } from '../../state/ducks/metaGroups';
-import { toFixedUint8ArrayOfLength } from '../../types/sqlSharedTypes';
+import { stringify, toFixedUint8ArrayOfLength } from '../../types/sqlSharedTypes';
 import { BlockedNumberController } from '../../util';
 import {
   MetaGroupWrapperActions,
@@ -282,6 +282,7 @@ async function handleGroupInfoChangeMessage({
           fromCurrentDevice: false,
           fromSync: false,
           fromConfigMessage: false,
+          messageHash,
         });
       }
       break;
@@ -591,6 +592,9 @@ async function handleGroupUpdatePromoteMessage({
     groupSecretKey: groupKeypair.privateKey,
     inviterIsApproved: authorIsApproved,
   });
+  window.log.info(
+    `received promote to group ${ed25519Str(groupPk)} group details: ${stringify(found)}`
+  );
 
   await UserGroupsWrapperActions.setGroup(found);
   // force markedAsUnread to be true so it shows the unread banner (we only show the banner if there are unread messages on at least one msg/group request)
@@ -605,24 +609,35 @@ async function handleGroupUpdatePromoteMessage({
     await deleteAllMessagesByConvoIdNoConfirmation(groupPk);
   }
   try {
-    await MetaGroupWrapperActions.init(groupPk, {
-      metaDumped: null,
-      groupEd25519Secretkey: groupKeypair.privateKey,
-      userEd25519Secretkey: toFixedUint8ArrayOfLength(userEd25519Secretkey, 64).buffer,
-      groupEd25519Pubkey: toFixedUint8ArrayOfLength(HexString.fromHexStringNoPrefix(groupPk), 32)
-        .buffer,
-    });
+    let wrapperAlreadyInit = false;
+    try {
+      await MetaGroupWrapperActions.infoGet(groupPk);
+      wrapperAlreadyInit = true;
+    } catch (e) {
+      // nothing to do
+    }
+    if (!wrapperAlreadyInit) {
+      await MetaGroupWrapperActions.init(groupPk, {
+        metaDumped: null,
+        groupEd25519Secretkey: groupKeypair.privateKey,
+        userEd25519Secretkey: toFixedUint8ArrayOfLength(userEd25519Secretkey, 64).buffer,
+        groupEd25519Pubkey: toFixedUint8ArrayOfLength(HexString.fromHexStringNoPrefix(groupPk), 32)
+          .buffer,
+      });
+    }
   } catch (e) {
     window.log.warn(
-      `handleGroupUpdatePromoteMessage: init of ${ed25519Str(groupPk)} failed with ${e.message}. Trying to just load admin keys`
+      `handleGroupUpdatePromoteMessage: init of ${ed25519Str(groupPk)} failed with ${e.message}.`
     );
-    try {
-      await MetaGroupWrapperActions.loadAdminKeys(groupPk, groupKeypair.privateKey);
-    } catch (e2) {
-      window.log.warn(
-        `handleGroupUpdatePromoteMessage: loadAdminKeys of ${ed25519Str(groupPk)} failed with ${e.message}`
-      );
-    }
+  }
+
+  try {
+    window.log.info(`Trying to just load admin keys for group ${ed25519Str(groupPk)}`);
+    await MetaGroupWrapperActions.loadAdminKeys(groupPk, groupKeypair.privateKey);
+  } catch (e2) {
+    window.log.warn(
+      `handleGroupUpdatePromoteMessage: loadAdminKeys of ${ed25519Str(groupPk)} failed with ${e2.message}`
+    );
   }
 
   await LibSessionUtil.saveDumpsToDb(UserUtils.getOurPubKeyStrFromCache());

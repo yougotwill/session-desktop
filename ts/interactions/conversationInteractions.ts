@@ -647,6 +647,7 @@ export async function setDisappearingMessagesByConvoId(
       fromSync: false,
       fromCurrentDevice: true,
       fromConfigMessage: false,
+      messageHash: null,
     });
   } else {
     await conversation.updateExpireTimer({
@@ -655,6 +656,7 @@ export async function setDisappearingMessagesByConvoId(
       fromSync: false,
       fromCurrentDevice: true,
       fromConfigMessage: false,
+      messageHash: null,
     });
   }
 }
