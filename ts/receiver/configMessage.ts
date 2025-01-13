@@ -794,7 +794,8 @@ async function handleGroupUpdate(_latestEnvelopeTimestamp: number) {
 
   const groupsInDbButNotInWrapper = difference(allGroupsIdsInDb, allGroupsIdsInWrapper);
   window.log.info(
-    `we have to leave ${groupsInDbButNotInWrapper.length} 03 groups in DB compared to what is in the wrapper`
+    `we have to leave ${groupsInDbButNotInWrapper.length} 03 groups in DB compared to what is in the wrapper`,
+    groupsInDbButNotInWrapper
   );
 
   for (let index = 0; index < groupsInDbButNotInWrapper.length; index++) {

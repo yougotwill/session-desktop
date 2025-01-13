@@ -288,11 +288,17 @@ const handleUserGroupUpdate = createAsyncThunk(
     const state = payloadCreator.getState() as StateType;
     const groupPk = userGroup.pubkeyHex;
     if (state.groups.infos[groupPk] && state.groups.members[groupPk]) {
-      window.log.info('handleUserGroupUpdate group already present in redux slice');
+      const infos = await MetaGroupWrapperActions.infoGet(groupPk);
+      const members = await MetaGroupWrapperActions.memberGetAll(groupPk);
+      window.log.info(
+        `handleUserGroupUpdate group ${ed25519Str(groupPk)} already present in redux slice`,
+        infos,
+        members
+      );
       return {
         groupPk,
-        infos: await MetaGroupWrapperActions.infoGet(groupPk),
-        members: await MetaGroupWrapperActions.memberGetAll(groupPk),
+        infos,
+        members,
       };
     }
 

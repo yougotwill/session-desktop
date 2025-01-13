@@ -1,6 +1,6 @@
 /* eslint-disable no-await-in-loop */
 /* eslint-disable more/no-then */
-import { ConvoVolatileType, GroupPubkeyType, PubkeyType } from 'libsession_util_nodejs';
+import { GroupPubkeyType, PubkeyType, type ConvoVolatileType } from 'libsession_util_nodejs';
 import { isEmpty, isNil } from 'lodash';
 
 import AbortController from 'abort-controller';
@@ -20,7 +20,7 @@ import { deleteAllMessagesByConvoIdNoConfirmation } from '../../interactions/con
 import { removeAllClosedGroupEncryptionKeyPairs } from '../../receiver/closedGroups';
 import { groupInfoActions } from '../../state/ducks/metaGroups';
 import { getCurrentlySelectedConversationOutsideRedux } from '../../state/selectors/conversations';
-import { assertUnreachable } from '../../types/sqlSharedTypes';
+import { assertUnreachable, stringify } from '../../types/sqlSharedTypes';
 import {
   MetaGroupWrapperActions,
   UserGroupsWrapperActions,
@@ -284,9 +284,17 @@ class ConvoController {
 
     const groupInUserGroup = await UserGroupsWrapperActions.getGroup(groupPk);
 
-    // send the leave message before we delete everything for this group (including the key!)
+    // Let's check if we still have a MetaGroupWrapper for this group. If we don't we won't be able to do anything..
+    let metaGroupWrapperExists = false;
+    try {
+      await MetaGroupWrapperActions.infoGet(groupPk);
+      metaGroupWrapperExists = true;
+    } catch {
+      window.log.warn(`deleteGroup: MetaGroupWrapperActions for ${groupPk} does not exist.`);
+    }
 
-    if (sendLeaveMessage) {
+    // send the leave message before we delete everything for this group (including the key!)
+    if (sendLeaveMessage && metaGroupWrapperExists) {
       const failedToSendLeaveMessage = await leaveClosedGroup(groupPk, fromSyncMessage);
       if (PubKey.is03Pubkey(groupPk) && failedToSendLeaveMessage) {
         // this is caught and is adding an interaction notification message
@@ -330,30 +338,36 @@ class ConvoController {
         }
       }
     } else {
-      // Let's check if we still have a MetaGroupWrapper for this group. If we don't we won't be able to do anything..
-      let metaGroupWrapperExists = false;
-      try {
-        await MetaGroupWrapperActions.infoGet(groupPk);
-        metaGroupWrapperExists = true;
-      } catch {
-        window.log.warn(`deleteGroup: MetaGroupWrapperActions for ${groupPk} does not exist.`);
-      }
       if (metaGroupWrapperExists) {
+        let secretKey: Uint8Array | null = null;
+        let weAreLastAdmin = false;
+        // this is pretty ugly. We need to **try to check** if we are the last admin before we destroy.
+        // That **try** is because we might not have the data we need to check that.
+        // If we do manage to check it AND we are the last admin,
+        // we mark the group as destroyed before destroying it locally.
         try {
           const us = UserUtils.getOurPubKeyStrFromCache();
           const allMembers = await MetaGroupWrapperActions.memberGetAll(groupPk);
           const otherAdminsCount = allMembers
             .filter(m => m.nominatedAdmin)
             .filter(m => m.pubkeyHex !== us).length;
-          const weAreLastAdmin = otherAdminsCount === 0;
+          // check if we are the last admin
+          weAreLastAdmin = otherAdminsCount === 0;
           const infos = await MetaGroupWrapperActions.infoGet(groupPk);
           const fromUserGroup = await UserGroupsWrapperActions.getGroup(groupPk);
           if (!infos || !fromUserGroup || isEmpty(infos) || isEmpty(fromUserGroup)) {
+            window.log.debug(
+              `deleteGroup: some required data not present for ${ed25519Str(groupPk)}: infos:${stringify(infos)} fromUserGroup:${stringify(fromUserGroup)}`
+            );
             throw new Error('deleteGroup: some required data not present');
           }
-          const { secretKey } = fromUserGroup;
-
-          // check if we are the last admin
+          secretKey = fromUserGroup.secretKey;
+        } catch (e) {
+          window.log.info(
+            `deleteGroup: initialchecks failed with: ${e.message}. Considering this error as not important and deleting the group anyway.`
+          );
+        }
+        try {
           if (secretKey && !isEmpty(secretKey) && (weAreLastAdmin || forceDestroyForAllMembers)) {
             const deleteAllMessagesSubRequest = deleteAllMessagesOnSwarm
               ? new DeleteAllFromGroupMsgNodeSubRequest({
@@ -378,7 +392,6 @@ class ConvoController {
           }
         } catch (e) {
           // if that group was already freed this will happen.
-          // we still want to delete it entirely though
           window.log.warn(
             `deleteGroup: MetaGroupWrapperActions failed with: ${e.message}... Keeping it as this should be a retryable error (we are admin case)`
           );
