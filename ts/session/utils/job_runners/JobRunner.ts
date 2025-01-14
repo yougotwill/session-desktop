@@ -248,7 +248,7 @@ export class PersistedJobRunner<T extends TypeOfPersistedData> {
 
   private async addJobUnchecked(job: PersistedJob<T>) {
     this.jobsScheduled.push(cloneDeep(job));
-    this.sortJobsList(); // keeping this here as it is not await (and await)
+    this.sortJobsList();
     await this.writeJobsToDB();
     // a job has been added, let's check if we should/can run it now
     this.planNextJobs();

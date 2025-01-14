@@ -242,7 +242,6 @@ describe('JobRunner SINGLE', () => {
     });
 
     it('does await if there are jobs and at least one is running', async () => {
-      TestUtils.stubWindowLog();
       await runner.loadJobsFromDb();
       clock.tick(100);
       const job = getFakeSleepForJob(150);

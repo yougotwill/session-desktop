@@ -42,6 +42,10 @@ const primaryRed = '#FF9C8E';
 const dangerLight = '#E12D19';
 const dangerDark = '#FF3A3A';
 
+// Warning
+const warningLight = '#A64B00';
+const warningDark = '#FCB159';
+
 // Disabled
 const disabledLight = '#6D6D6D';
 const disabledDark = '#A1A2A1';
@@ -135,7 +139,7 @@ type Themes = Record<ThemeNames, ThemeColors>;
 // Classic Light
 const classicLightPrimary = primaryGreen;
 const classicLightDanger = dangerLight;
-const classicLightWarning = '#A64B00';
+const classicLightWarning = warningLight;
 const classicLightDisabled = disabledLight;
 const classicLight0 = '#000000';
 const classicLight1 = '#6D6D6D';
@@ -148,7 +152,7 @@ const classicLight6 = '#FFFFFF';
 // Classic Dark
 const classicDarkPrimary = primaryGreen;
 const classicDarkDanger = dangerDark;
-const classicDarkWarning = '#FCB159';
+const classicDarkWarning = warningDark;
 const classicDarkDisabled = disabledDark;
 const classicDark0 = '#000000';
 const classicDark1 = '#1B1B1B';
@@ -161,7 +165,7 @@ const classicDark6 = '#FFFFFF';
 // Ocean Light
 const oceanLightPrimary = primaryBlue;
 const oceanLightDanger = dangerLight;
-const oceanLightWarning = '#A64B00';
+const oceanLightWarning = warningLight;
 const oceanLightDisabled = disabledLight;
 const oceanLight0 = '#000000';
 const oceanLight1 = '#19345D';
@@ -175,7 +179,7 @@ const oceanLight7 = '#FCFFFF';
 // Ocean Dark
 const oceanDarkPrimary = primaryBlue;
 const oceanDarkDanger = dangerDark;
-const oceanDarkWarning = '#FCB159';
+const oceanDarkWarning = warningDark;
 const oceanDarkDisabled = disabledDark;
 const oceanDark0 = '#000000';
 const oceanDark1 = '#1A1C28';

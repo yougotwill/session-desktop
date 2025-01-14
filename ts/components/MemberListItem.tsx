@@ -247,12 +247,14 @@ const ResendButton = ({ groupPk, pubkey }: { pubkey: PubkeyType; groupPk: GroupP
   if (!shouldShowResendButton) {
     return null;
   }
+
   const resendButtonDisabled =
     memberStatus === 'INVITE_SENDING' ||
     memberStatus === 'PROMOTION_SENDING' ||
     memberStatus === 'REMOVED_MEMBER' ||
     memberStatus === 'REMOVED_MEMBER_AND_MESSAGES' ||
     memberStatus === 'REMOVED_UNKNOWN';
+
   return (
     <SessionButton
       dataTestId={'resend-invite-button'}

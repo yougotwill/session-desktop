@@ -157,7 +157,6 @@ describe('OnionPaths', () => {
     });
 
     it('throws if we cannot find a valid edge snode', async () => {
-      TestUtils.stubWindowLog();
       const badPool = generateFakeSnodes(0).map(m => {
         return { ...m, storage_server_version: [2, 1, 1] };
       });

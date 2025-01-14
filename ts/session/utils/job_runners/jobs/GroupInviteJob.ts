@@ -250,9 +250,7 @@ class GroupInviteJob extends PersistedJob<GroupInvitePersistedData> {
         10 * DURATION.SECONDS,
         controller
       );
-      window.log.debug(
-        `GroupInvite: sendSingleMessage took ${Date.now() - start}ms. effectiveTimestamp: ${effectiveTimestamp}`
-      );
+
 
       if (effectiveTimestamp !== null) {
         failed = false;
