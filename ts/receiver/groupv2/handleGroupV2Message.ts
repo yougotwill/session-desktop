@@ -3,7 +3,7 @@ import { isEmpty, isFinite, isNumber } from 'lodash';
 import { Data } from '../../data/data';
 import { deleteAllMessagesByConvoIdNoConfirmation } from '../../interactions/conversationInteractions';
 import { deleteMessagesFromSwarmOnly } from '../../interactions/conversations/unsendingInteractions';
-import { ConversationTypeEnum } from '../../models/types';
+import { CONVERSATION_PRIORITIES, ConversationTypeEnum } from '../../models/types';
 import { HexString } from '../../node/hexStrings';
 import { SignalService } from '../../protobuf';
 import { getSwarmPollingInstance } from '../../session/apis/snode_api';
@@ -12,7 +12,7 @@ import { getSodiumRenderer } from '../../session/crypto';
 import { WithDisappearingMessageUpdate } from '../../session/disappearing_messages/types';
 import { ClosedGroup } from '../../session/group/closed-group';
 import { PubKey } from '../../session/types';
-import { WithMessageHash } from '../../session/types/with';
+import { WithMessageHash, type WithMessageHashOrNull } from '../../session/types/with';
 import { UserUtils } from '../../session/utils';
 import { sleepFor } from '../../session/utils/Promise';
 import { ed25519Str, stringToUint8Array } from '../../session/utils/String';
@@ -20,7 +20,7 @@ import { PreConditionFailed } from '../../session/utils/errors';
 import { LibSessionUtil } from '../../session/utils/libsession/libsession_utils';
 import { SessionUtilConvoInfoVolatile } from '../../session/utils/libsession/libsession_utils_convo_info_volatile';
 import { groupInfoActions } from '../../state/ducks/metaGroups';
-import { toFixedUint8ArrayOfLength } from '../../types/sqlSharedTypes';
+import { stringify, toFixedUint8ArrayOfLength } from '../../types/sqlSharedTypes';
 import { BlockedNumberController } from '../../util';
 import {
   MetaGroupWrapperActions,
@@ -44,7 +44,8 @@ type GroupUpdateGeneric<T> = {
 } & WithSignatureTimestamp &
   WithGroupPubkey &
   WithAuthor &
-  WithDisappearingMessageUpdate;
+  WithDisappearingMessageUpdate &
+  WithMessageHashOrNull;
 
 type GroupUpdateDetails = {
   updateMessage: SignalService.GroupUpdateMessage;
@@ -69,7 +70,7 @@ async function getInitializedGroupObject({
       authData: null,
       joinedAtSeconds: Math.floor(Date.now() / 1000),
       name: groupName,
-      priority: 0,
+      priority: CONVERSATION_PRIORITIES.default,
       pubkeyHex: groupPk,
       secretKey: null,
       kicked: false,
@@ -226,6 +227,7 @@ async function handleGroupInfoChangeMessage({
   signatureTimestamp,
   author,
   expireUpdate,
+  messageHash,
 }: GroupUpdateGeneric<SignalService.GroupUpdateInfoChangeMessage>) {
   const sigValid = await verifySig({
     pubKey: HexString.fromHexStringNoPrefix(groupPk),
@@ -252,6 +254,7 @@ async function handleGroupInfoChangeMessage({
         sentAt: signatureTimestamp,
         expireUpdate,
         markAlreadySent: true,
+        messageHash,
       });
 
       break;
@@ -264,6 +267,7 @@ async function handleGroupInfoChangeMessage({
         sentAt: signatureTimestamp,
         expireUpdate,
         markAlreadySent: true,
+        messageHash,
       });
       break;
     }
@@ -278,6 +282,7 @@ async function handleGroupInfoChangeMessage({
           fromCurrentDevice: false,
           fromSync: false,
           fromConfigMessage: false,
+          messageHash,
         });
       }
       break;
@@ -298,6 +303,7 @@ async function handleGroupMemberChangeMessage({
   signatureTimestamp,
   author,
   expireUpdate,
+  messageHash,
 }: GroupUpdateGeneric<SignalService.GroupUpdateMemberChangeMessage>) {
   const convo = ConvoHub.use().get(groupPk);
   if (!convo) {
@@ -327,6 +333,7 @@ async function handleGroupMemberChangeMessage({
     sentAt: signatureTimestamp,
     expireUpdate,
     markAlreadySent: true,
+    messageHash,
   };
 
   switch (change.type) {
@@ -386,6 +393,7 @@ async function handleGroupUpdateMemberLeftNotificationMessage({
   signatureTimestamp,
   author,
   expireUpdate,
+  messageHash,
 }: GroupUpdateGeneric<SignalService.GroupUpdateMemberLeftNotificationMessage>) {
   // No need to verify sig, the author is already verified with the libsession.decrypt()
   const convo = ConvoHub.use().get(groupPk);
@@ -401,6 +409,7 @@ async function handleGroupUpdateMemberLeftNotificationMessage({
     sentAt: signatureTimestamp,
     expireUpdate,
     markAlreadySent: true,
+    messageHash,
   });
 
   convo.set({
@@ -583,6 +592,9 @@ async function handleGroupUpdatePromoteMessage({
     groupSecretKey: groupKeypair.privateKey,
     inviterIsApproved: authorIsApproved,
   });
+  window.log.info(
+    `received promote to group ${ed25519Str(groupPk)} group details: ${stringify(found)}`
+  );
 
   await UserGroupsWrapperActions.setGroup(found);
   // force markedAsUnread to be true so it shows the unread banner (we only show the banner if there are unread messages on at least one msg/group request)
@@ -597,28 +609,42 @@ async function handleGroupUpdatePromoteMessage({
     await deleteAllMessagesByConvoIdNoConfirmation(groupPk);
   }
   try {
-    await MetaGroupWrapperActions.init(groupPk, {
-      metaDumped: null,
-      groupEd25519Secretkey: groupKeypair.privateKey,
-      userEd25519Secretkey: toFixedUint8ArrayOfLength(userEd25519Secretkey, 64).buffer,
-      groupEd25519Pubkey: toFixedUint8ArrayOfLength(HexString.fromHexStringNoPrefix(groupPk), 32)
-        .buffer,
-    });
+    let wrapperAlreadyInit = false;
+    try {
+      await MetaGroupWrapperActions.infoGet(groupPk);
+      wrapperAlreadyInit = true;
+    } catch (e) {
+      // nothing to do
+    }
+    if (!wrapperAlreadyInit) {
+      await MetaGroupWrapperActions.init(groupPk, {
+        metaDumped: null,
+        groupEd25519Secretkey: groupKeypair.privateKey,
+        userEd25519Secretkey: toFixedUint8ArrayOfLength(userEd25519Secretkey, 64).buffer,
+        groupEd25519Pubkey: toFixedUint8ArrayOfLength(HexString.fromHexStringNoPrefix(groupPk), 32)
+          .buffer,
+      });
+    }
   } catch (e) {
     window.log.warn(
-      `handleGroupUpdatePromoteMessage: init of ${ed25519Str(groupPk)} failed with ${e.message}. Trying to just load admin keys`
+      `handleGroupUpdatePromoteMessage: init of ${ed25519Str(groupPk)} failed with ${e.message}.`
     );
-    try {
-      await MetaGroupWrapperActions.loadAdminKeys(groupPk, groupKeypair.privateKey);
-    } catch (e2) {
-      window.log.warn(
-        `handleGroupUpdatePromoteMessage: loadAdminKeys of ${ed25519Str(groupPk)} failed with ${e.message}`
-      );
-    }
+  }
+
+  try {
+    window.log.info(`Trying to just load admin keys for group ${ed25519Str(groupPk)}`);
+    await MetaGroupWrapperActions.loadAdminKeys(groupPk, groupKeypair.privateKey);
+  } catch (e2) {
+    window.log.warn(
+      `handleGroupUpdatePromoteMessage: loadAdminKeys of ${ed25519Str(groupPk)} failed with ${e2.message}`
+    );
   }
 
   await LibSessionUtil.saveDumpsToDb(UserUtils.getOurPubKeyStrFromCache());
   if (!found.invitePending) {
+    // yes, we really want to refetch the whole history of messages from that group...
+    await ConvoHub.use().resetLastHashesForConversation(groupPk);
+
     // This group should already be polling based on if that author is pre-approved or we've already approved that group from another device.
     // Start polling from it, we will mark ourselves as admin once we get the first merge result, if needed.
     getSwarmPollingInstance().addGroupId(groupPk);

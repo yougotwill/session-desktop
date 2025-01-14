@@ -168,6 +168,7 @@ export function UpdateGroupNameDialog(props: { conversationId: string }) {
             animate={{ opacity: errorDisplayed ? 1 : 0 }}
             transition={{ duration: THEME_GLOBALS['--duration-modal-error-shown'] }}
             style={{ marginTop: errorDisplayed ? '0' : '-5px' }}
+            data-testid="error-message"
           >
             {errorMsg}
           </StyledErrorMessage>

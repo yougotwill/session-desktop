@@ -78,10 +78,10 @@ async function addJob({ groupPk, member, inviteAsAdmin, forceUnrevoke }: JobExtr
       await MetaGroupWrapperActions.memberSetInviteNotSent(groupPk, member);
     }
 
+    await LibSessionUtil.saveDumpsToDb(groupPk);
     window?.inboxStore?.dispatch(
       groupInfoActions.refreshGroupDetailsFromWrapper({ groupPk }) as any
     );
-    await LibSessionUtil.saveDumpsToDb(groupPk);
 
     await runners.groupInviteJobRunner.addJob(groupInviteJob);
   }
@@ -98,12 +98,12 @@ function displayFailedInvitesForGroup(groupPk: GroupPubkeyType) {
   };
   const count = thisGroupFailures.failedMembers.length;
   const groupName = ConvoHub.use().get(groupPk)?.getRealSessionUsername() || window.i18n('unknown');
-  const firstUserName =
-    ConvoHub.use().get(thisGroupFailures.failedMembers?.[0])?.getRealSessionUsername() ||
-    window.i18n('unknown');
-  const secondUserName =
-    ConvoHub.use().get(thisGroupFailures.failedMembers?.[1])?.getRealSessionUsername() ||
-    window.i18n('unknown');
+  const firstUserName = ConvoHub.use()
+    .get(thisGroupFailures.failedMembers?.[0])
+    ?.getNicknameOrRealUsernameOrPlaceholder();
+  const secondUserName = ConvoHub.use()
+    .get(thisGroupFailures.failedMembers?.[1])
+    ?.getNicknameOrRealUsernameOrPlaceholder();
   switch (count) {
     case 1:
       ToastUtils.pushToastWarning(
@@ -186,6 +186,8 @@ class GroupInviteJob extends PersistedJob<GroupInvitePersistedData> {
     }
     let failed = true;
     try {
+      let start = Date.now();
+
       if (this.persistedData.forceUnrevoke) {
         const token = await MetaGroupWrapperActions.swarmSubAccountToken(groupPk, member);
         const unrevokeSubRequest = new SubaccountUnrevokeSubRequest({
@@ -199,8 +201,16 @@ class GroupInviteJob extends PersistedJob<GroupInvitePersistedData> {
           unrevokeSubRequest,
           extraStoreRequests: [],
           allow401s: false,
+          timeoutMs: 10 * DURATION.SECONDS,
         });
+        window?.inboxStore?.dispatch(
+          groupInfoActions.refreshGroupDetailsFromWrapper({ groupPk }) as any
+        );
         if (sequenceResult !== RunJobResult.Success) {
+          window.log.warn(
+            `GroupInvite: GroupSync.pushChangesToGroupSwarmIfNeeded failed after ${Date.now() - start}ms`
+          );
+
           await LibSessionUtil.saveDumpsToDb(groupPk);
 
           throw new Error(
@@ -230,15 +240,17 @@ class GroupInviteJob extends PersistedJob<GroupInvitePersistedData> {
         inviteDetails,
         SnodeNamespaces.Default
       );
-
+      start = Date.now();
       const { effectiveTimestamp } = await timeoutWithAbort(
         MessageSender.sendSingleMessage({
           message: rawMessage,
           isSyncMessage: false,
+          abortSignal: controller.signal,
         }),
-        30 * DURATION.SECONDS,
+        10 * DURATION.SECONDS,
         controller
       );
+
 
       if (effectiveTimestamp !== null) {
         failed = false;

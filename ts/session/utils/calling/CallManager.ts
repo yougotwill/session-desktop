@@ -555,6 +555,7 @@ export async function USER_callRecipient(recipient: string) {
   const { wrappedEnvelope } = await MessageSender.sendSingleMessage({
     message: rawPreOffer,
     isSyncMessage: false,
+    abortSignal: null,
   });
   void PnServer.notifyPnServer(wrappedEnvelope, recipient);
 

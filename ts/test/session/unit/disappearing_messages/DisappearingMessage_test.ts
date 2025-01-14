@@ -557,6 +557,7 @@ describe('DisappearingMessage', () => {
           existingMessage: undefined,
           fromCurrentDevice: false,
           fromConfigMessage: false,
+          messageHash: null,
         });
         await expect(promise).is.rejectedWith(
           'updateExpireTimer() Disappearing messages are only supported int groups and private chats'
@@ -587,6 +588,7 @@ describe('DisappearingMessage', () => {
           existingMessage: undefined,
           fromCurrentDevice: false,
           fromConfigMessage: false,
+          messageHash: null,
         });
         expect(updateSuccess, 'should be true').to.be.true;
       });
@@ -611,6 +613,7 @@ describe('DisappearingMessage', () => {
           existingMessage: undefined,
           fromCurrentDevice: false,
           fromConfigMessage: false,
+          messageHash: null,
         });
         expect(updateSuccess, 'should be true').to.be.true;
         expect(

@@ -34,6 +34,7 @@ import { PreConditionFailed } from '../utils/errors';
 import { ConversationTypeEnum } from '../../models/types';
 import { NetworkTime } from '../../util/NetworkTime';
 import { MessageQueue } from '../sending';
+import type { WithMessageHashOrNull } from '../types/with';
 
 export type GroupInfo = {
   id: string;
@@ -128,6 +129,7 @@ async function initiateClosedGroupUpdate(
     const dbMessageName = await addUpdateMessage({
       diff: nameOnlyDiff,
       ...sharedDetails,
+      messageHash: null, // this is legacy groups
     });
     await sendNewName(convo, diff.newName, dbMessageName.id as string);
   }
@@ -138,6 +140,7 @@ async function initiateClosedGroupUpdate(
     const dbMessageAdded = await addUpdateMessage({
       diff: joiningOnlyDiff,
       ...sharedDetails,
+      messageHash: null, // this is legacy groups
     });
     await sendAddedMembers(convo, diff.added, dbMessageAdded.id as string, updateObj);
   }
@@ -148,6 +151,7 @@ async function initiateClosedGroupUpdate(
     const dbMessageLeaving = await addUpdateMessage({
       diff: leavingOnlyDiff,
       ...sharedDetails,
+      messageHash: null, // this is legacy groups
     });
     await sendRemovedMembers(convo, diff.kicked, updatedMembers, dbMessageLeaving.id as string);
   }
@@ -161,7 +165,8 @@ export async function addUpdateMessage({
   sentAt,
   expireUpdate,
   markAlreadySent,
-}: {
+  messageHash,
+}: WithMessageHashOrNull & {
   convo: ConversationModel;
   diff: GroupDiff;
   sender: string;
@@ -197,6 +202,7 @@ export async function addUpdateMessage({
     source: sender,
     conversationId: convo.id,
     type: isUs ? 'outgoing' : 'incoming',
+    messageHash: messageHash || undefined,
   };
 
   /**

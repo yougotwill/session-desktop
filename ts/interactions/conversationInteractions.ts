@@ -199,9 +199,8 @@ export async function declineConversationWithoutConfirm({
     `declineConversationWithoutConfirm of ${ed25519Str(conversationId)}, alsoBlock:${alsoBlock}, conversationIdOrigin:${conversationIdOrigin ? ed25519Str(conversationIdOrigin) : '<none>'}`
   );
 
-  // Note: do not set the active_at undefined as this would make that conversation not synced with the libsession wrapper
-  await conversationToDecline.setIsApproved(false, false);
-  await conversationToDecline.setDidApproveMe(false, false);
+  // Note: declining a message request just hides it.
+  await conversationToDecline.setHidden(false);
 
   if (conversationToDecline.isClosedGroupV2()) {
     // this can only be done for groupv2 convos
@@ -232,7 +231,6 @@ export async function declineConversationWithoutConfirm({
   }
 
   if (PubKey.is03Pubkey(conversationId)) {
-    await UserGroupsWrapperActions.eraseGroup(conversationId);
     // when deleting a 03 group message request, we also need to remove the conversation altogether
     await ConvoHub.use().deleteGroup(conversationId, {
       deleteAllMessagesOnSwarm: false,
@@ -648,6 +646,7 @@ export async function setDisappearingMessagesByConvoId(
       fromSync: false,
       fromCurrentDevice: true,
       fromConfigMessage: false,
+      messageHash: null,
     });
   } else {
     await conversation.updateExpireTimer({
@@ -656,6 +655,7 @@ export async function setDisappearingMessagesByConvoId(
       fromSync: false,
       fromCurrentDevice: true,
       fromConfigMessage: false,
+      messageHash: null,
     });
   }
 }
@@ -1011,6 +1011,7 @@ export async function promoteUsersInGroup({
     sentAt,
     convo,
     markAlreadySent: false, // the store below will mark the message as sent with dbMsgIdentifier
+    messageHash: null,
   });
   const groupMemberChange = await GroupUpdateMessageFactory.getPromotedControlMessage({
     adminSecretKey: groupInWrapper.secretKey,

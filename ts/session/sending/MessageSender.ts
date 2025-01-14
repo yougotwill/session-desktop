@@ -58,6 +58,7 @@ import { OpenGroupRequestCommonType } from '../../data/types';
 import { NetworkTime } from '../../util/NetworkTime';
 import { MergedAbortSignal } from '../apis/snode_api/requestWith';
 import { WithAllow401s } from '../types/with';
+import { ERROR_421_HANDLED_RETRY_REQUEST } from '../apis/snode_api/onions';
 
 // ================ SNODE STORE ================
 
@@ -235,8 +236,10 @@ async function sendSingleMessage({
   retryMinTimeout = 100,
   attempts = 3,
   isSyncMessage,
+  abortSignal,
 }: {
   message: OutgoingRawMessage;
+  abortSignal: MergedAbortSignal | null;
   attempts?: number;
   retryMinTimeout?: number; // in ms
   isSyncMessage: boolean;
@@ -247,66 +250,76 @@ async function sendSingleMessage({
   }
   return pRetry(
     async () => {
-      const recipient = PubKey.cast(message.device);
-      // we can only have a single message in this send function for now
-      const [encryptedAndWrapped] = await MessageWrapper.encryptMessagesAndWrap([
-        {
-          destination: message.device,
-          plainTextBuffer: message.plainTextBuffer,
-          namespace: message.namespace,
-          ttl: message.ttl,
-          identifier: message.identifier,
-          networkTimestamp: message.networkTimestampCreated,
-          isSyncMessage: Boolean(isSyncMessage),
-        },
-      ]);
+      try {
+        const recipient = PubKey.cast(message.device);
+        // we can only have a single message in this send function for now
+        const [encryptedAndWrapped] = await MessageWrapper.encryptMessagesAndWrap([
+          {
+            destination: message.device,
+            plainTextBuffer: message.plainTextBuffer,
+            namespace: message.namespace,
+            ttl: message.ttl,
+            identifier: message.identifier,
+            networkTimestamp: message.networkTimestampCreated,
+            isSyncMessage: Boolean(isSyncMessage),
+          },
+        ]);
 
-      // make sure to update the local sent_at timestamp, because sometimes, we will get the just pushed message in the receiver side
-      // before we return from the await below.
-      // and the isDuplicate messages relies on sent_at timestamp to be valid.
-      const found = await Data.getMessageById(encryptedAndWrapped.identifier);
+        // make sure to update the local sent_at timestamp, because sometimes, we will get the just pushed message in the receiver side
+        // before we return from the await below.
+        // and the isDuplicate messages relies on sent_at timestamp to be valid.
+        const found = await Data.getMessageById(encryptedAndWrapped.identifier);
 
-      // make sure to not update the sent timestamp if this a currently syncing message
-      if (found && !found.get('sentSync')) {
-        found.set({ sent_at: encryptedAndWrapped.networkTimestamp });
-        await found.commit();
+        // make sure to not update the sent timestamp if this a currently syncing message
+        if (found && !found.get('sentSync')) {
+          found.set({ sent_at: encryptedAndWrapped.networkTimestamp });
+          await found.commit();
+        }
+        const isSyncedDeleteAfterReadMessage =
+          found &&
+          UserUtils.isUsFromCache(recipient.key) &&
+          found.getExpirationType() === 'deleteAfterRead' &&
+          found.getExpireTimerSeconds() > 0 &&
+          encryptedAndWrapped.isSyncMessage;
+
+        let overriddenTtl = encryptedAndWrapped.ttl;
+        if (isSyncedDeleteAfterReadMessage && found.getExpireTimerSeconds() > 0) {
+          const asMs = found.getExpireTimerSeconds() * 1000;
+          window.log.debug(`overriding ttl for synced DaR message to ${asMs}`);
+          overriddenTtl = asMs;
+        }
+
+        const subRequests = await messagesToRequests({
+          encryptedAndWrappedArr: [{ ...encryptedAndWrapped, ttl: overriddenTtl }],
+          destination,
+        });
+
+        const targetNode = await SnodePool.getNodeFromSwarmOrThrow(destination);
+
+        const batchResult = await BatchRequests.doUnsignedSnodeBatchRequestNoRetries({
+          unsignedSubRequests: subRequests,
+          targetNode,
+          timeoutMs: 10 * DURATION.SECONDS,
+          associatedWith: destination,
+          allow401s: false,
+          method: 'sequence',
+          abortSignal,
+        });
+
+        await handleBatchResultWithSubRequests({ batchResult, subRequests, destination });
+        return {
+          wrappedEnvelope: encryptedAndWrapped.encryptedAndWrappedData,
+          effectiveTimestamp: encryptedAndWrapped.networkTimestamp,
+        };
+      } catch (e) {
+        if (e instanceof pRetry.AbortError && e.message === ERROR_421_HANDLED_RETRY_REQUEST) {
+          // sendSingleMessage handles fetching a new snode itself once 421 was handled, but a pRetry.AbortError thrown
+          // will stop the retry process. We need to catch this specific error and throw it again (as a normal error)
+          // to let pRetry retry the request.
+          throw new Error(e.message);
+        }
+        throw e;
       }
-      const isSyncedDeleteAfterReadMessage =
-        found &&
-        UserUtils.isUsFromCache(recipient.key) &&
-        found.getExpirationType() === 'deleteAfterRead' &&
-        found.getExpireTimerSeconds() > 0 &&
-        encryptedAndWrapped.isSyncMessage;
-
-      let overriddenTtl = encryptedAndWrapped.ttl;
-      if (isSyncedDeleteAfterReadMessage && found.getExpireTimerSeconds() > 0) {
-        const asMs = found.getExpireTimerSeconds() * 1000;
-        window.log.debug(`overriding ttl for synced DaR message to ${asMs}`);
-        overriddenTtl = asMs;
-      }
-
-      const subRequests = await messagesToRequests({
-        encryptedAndWrappedArr: [{ ...encryptedAndWrapped, ttl: overriddenTtl }],
-        destination,
-      });
-
-      const targetNode = await SnodePool.getNodeFromSwarmOrThrow(destination);
-
-      const batchResult = await BatchRequests.doUnsignedSnodeBatchRequestNoRetries({
-        unsignedSubRequests: subRequests,
-        targetNode,
-        timeoutMs: 10 * DURATION.SECONDS,
-        associatedWith: destination,
-        allow401s: false,
-        method: 'sequence',
-        abortSignal: null,
-      });
-
-      await handleBatchResultWithSubRequests({ batchResult, subRequests, destination });
-      return {
-        wrappedEnvelope: encryptedAndWrapped.encryptedAndWrappedData,
-        effectiveTimestamp: encryptedAndWrapped.networkTimestamp,
-      };
     },
     {
       retries: Math.max(attempts - 1, 0),

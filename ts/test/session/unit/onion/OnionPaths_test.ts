@@ -143,7 +143,7 @@ describe('OnionPaths', () => {
       SNodeAPI.Onions.resetSnodeFailureCount();
       OnionPaths.resetPathFailureCount();
       OnionPaths.clearTestOnionPath();
-      Sinon.stub(OnionPaths, 'getOnionPathMinTimeout').returns(10);
+      Sinon.stub(OnionPaths, 'getOnionPathMinTimeout').returns(1);
     });
 
     afterEach(() => {

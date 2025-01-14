@@ -285,6 +285,7 @@ async function handleMessageFromPendingMember(
     groupPk: convoId,
     author: source,
     change: { isApproved: true },
+    messageHash: null,
   });
 }
 
@@ -488,6 +489,7 @@ export async function handleMessageJob(
         shouldCommitConvo: false,
         fromCurrentDevice: false,
         fromConfigMessage: false,
+        messageHash,
         // NOTE we don't commit yet because we want to get the message id, see below
       });
     } else {

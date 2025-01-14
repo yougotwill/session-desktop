@@ -619,6 +619,10 @@ export class SwarmPolling {
           return { namespace, lastHash };
         })
       );
+      window.log.debug(
+        `namespacesAndLastHashes for ${ed25519Str(pubkey)}:`,
+        JSON.stringify(namespacesAndLastHashes)
+      );
 
       const allow401s = type === ConversationTypeEnum.GROUPV2;
       const results = await SnodeAPIRetrieve.retrieveNextMessagesNoRetries(
@@ -629,6 +633,23 @@ export class SwarmPolling {
         configHashesToBump,
         allow401s
       );
+
+      const namespacesAndLastHashesAfterFetch = await Promise.all(
+        namespaces.map(async namespace => {
+          const lastHash = await this.getLastHash(snodeEdkey, pubkey, namespace);
+          return { namespace, lastHash };
+        })
+      );
+
+      if (
+        namespacesAndLastHashes.some(m => m) &&
+        namespacesAndLastHashesAfterFetch.every(m => !m)
+      ) {
+        window.log.info(
+          `SwarmPolling: hashes for ${ed25519Str(pubkey)} have been reset while we were fetching new messages. discarding them....`
+        );
+        return [];
+      }
 
       if (!results.length) {
         return [];

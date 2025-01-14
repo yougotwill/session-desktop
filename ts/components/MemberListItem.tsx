@@ -174,7 +174,7 @@ function localisedStatusFromMemberStatus(memberStatus: MemberStateGroupV2) {
     case 'REMOVED_UNKNOWN': // fallback, hopefully won't happen in production
     case 'REMOVED_MEMBER': // we want pending removal members at the end of the "invite" states
     case 'REMOVED_MEMBER_AND_MESSAGES':
-      return window.i18n('groupPendingRemoval'); // no text for those 3 pending removal states
+      return window.i18n('groupPendingRemoval');
     case 'PROMOTION_FAILED':
       return window.i18n('adminPromotionFailed');
     case 'PROMOTION_NOT_SENT':
@@ -234,6 +234,7 @@ const GroupStatusContainer = ({
 const ResendButton = ({ groupPk, pubkey }: { pubkey: PubkeyType; groupPk: GroupPubkeyType }) => {
   const acceptedInvite = useMemberHasAcceptedInvite(pubkey, groupPk);
   const nominatedAdmin = useMemberIsNominatedAdmin(pubkey, groupPk);
+  const memberStatus = useMemberStatus(pubkey, groupPk);
 
   // as soon as the `admin` flag is set in the group for that member, we should be able to resend a promote as we cannot remove an admin.
   const canResendPromotion = hasClosedGroupV2QAButtons() && nominatedAdmin;
@@ -246,12 +247,21 @@ const ResendButton = ({ groupPk, pubkey }: { pubkey: PubkeyType; groupPk: GroupP
   if (!shouldShowResendButton) {
     return null;
   }
+
+  const resendButtonDisabled =
+    memberStatus === 'INVITE_SENDING' ||
+    memberStatus === 'PROMOTION_SENDING' ||
+    memberStatus === 'REMOVED_MEMBER' ||
+    memberStatus === 'REMOVED_MEMBER_AND_MESSAGES' ||
+    memberStatus === 'REMOVED_UNKNOWN';
+
   return (
     <SessionButton
       dataTestId={'resend-invite-button'}
       buttonShape={SessionButtonShape.Square}
       buttonType={SessionButtonType.Solid}
       text={window.i18n('resend')}
+      disabled={resendButtonDisabled}
       onClick={async () => {
         const group = await UserGroupsWrapperActions.getGroup(groupPk);
         const member = await MetaGroupWrapperActions.memberGet(groupPk, pubkey);

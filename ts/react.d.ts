@@ -244,6 +244,7 @@ declare module 'react' {
     | 'copy-msg-from-details'
     | 'modal-heading'
     | 'modal-description'
+    | 'error-message'
     // modules profile name
     | 'module-conversation__user__profile-name'
     | 'module-message-search-result__header__name__profile-name'

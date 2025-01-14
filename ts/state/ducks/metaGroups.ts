@@ -205,6 +205,7 @@ const initNewGroupInWrapper = createAsyncThunk(
           sentAt,
           convo,
           markAlreadySent: false, // the store below will mark the message as sent with dbMsgIdentifier
+          messageHash: null,
         });
         groupMemberChange = await GroupUpdateMessageFactory.getWithoutHistoryControlMessage({
           adminSecretKey: groupSecretKey,
@@ -287,11 +288,17 @@ const handleUserGroupUpdate = createAsyncThunk(
     const state = payloadCreator.getState() as StateType;
     const groupPk = userGroup.pubkeyHex;
     if (state.groups.infos[groupPk] && state.groups.members[groupPk]) {
-      window.log.info('handleUserGroupUpdate group already present in redux slice');
+      const infos = await MetaGroupWrapperActions.infoGet(groupPk);
+      const members = await MetaGroupWrapperActions.memberGetAll(groupPk);
+      window.log.info(
+        `handleUserGroupUpdate group ${ed25519Str(groupPk)} already present in redux slice`,
+        infos,
+        members
+      );
       return {
         groupPk,
-        infos: await MetaGroupWrapperActions.infoGet(groupPk),
-        members: await MetaGroupWrapperActions.memberGetAll(groupPk),
+        infos,
+        members,
       };
     }
 
@@ -624,6 +631,7 @@ async function handleMemberAddedFromUI({
     sentAt: createAtNetworkTimestamp,
     expireUpdate: expireDetails,
     markAlreadySent: false, // the store below will mark the message as sent with dbMsgIdentifier
+    messageHash: null,
   };
   const updateMessagesToPush: Array<GroupUpdateMemberChangeMessage> = [];
   if (withHistory.length) {
@@ -779,6 +787,7 @@ async function handleMemberRemovedFromUI({
             : null,
       },
       markAlreadySent: false, // the store below will mark the message as sent using dbMsgIdentifier
+      messageHash: null,
     });
     removedControlMessage = await GroupUpdateMessageFactory.getRemovedControlMessage({
       adminSecretKey: group.secretKey,
@@ -864,6 +873,7 @@ async function handleNameChangeFromUI({
       createAtNetworkTimestamp
     ),
     markAlreadySent: false, // the store below will mark the message as sent with dbMsgIdentifier
+    messageHash: null,
   });
 
   // we want to send an update only if the change was made locally.
@@ -992,6 +1002,7 @@ const triggerFakeAvatarUpdate = createAsyncThunk(
       sentAt: createAtNetworkTimestamp,
       convo,
       markAlreadySent: false, // the store below will mark the message as sent with dbMsgIdentifier
+      messageHash: null,
     });
 
     await msgModel.commit();
@@ -1169,6 +1180,7 @@ const inviteResponseReceived = createAsyncThunk(
         );
       }
       await GroupSync.queueNewJobIfNeeded(groupPk);
+      await LibSessionUtil.saveDumpsToDb(groupPk);
     } catch (e) {
       window.log.info('inviteResponseReceived failed with', e.message);
       // only admins can do the steps above, but we don't want to throw if we are not an admin
@@ -1265,7 +1277,7 @@ const metaGroupSlice = createSlice({
     builder.addCase(initNewGroupInWrapper.pending, (state, _action) => {
       state.creationFromUIPending = true;
 
-      window.log.error('a initNewGroupInWrapper is pending');
+      window.log.debug('a initNewGroupInWrapper is pending');
       return state;
     });
     builder.addCase(loadMetaDumpsFromDB.fulfilled, (state, action) => {
