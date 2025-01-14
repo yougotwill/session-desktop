@@ -54,7 +54,7 @@ export const NoticeBanner = (props: NoticeBannerProps) => {
 const StyledGroupInviteBanner = styled(Flex)`
   position: relative;
   color: var(--black-color);
-  background-color: var(--warning-color);
+  background-color: var(--orange-color);
   font-size: var(--font-size-sm);
   padding: var(--margins-xs) var(--margins-lg);
   text-align: center;
