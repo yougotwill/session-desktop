@@ -54,11 +54,11 @@ import { sendInviteResponseToGroup } from '../session/sending/group/GroupInviteR
 import { NetworkTime } from '../util/NetworkTime';
 import { ClosedGroup } from '../session';
 import { GroupUpdateMessageFactory } from '../session/messages/message_factory/group/groupUpdateMessageFactory';
-import { GroupPromote } from '../session/utils/job_runners/jobs/GroupPromoteJob';
 import { MessageSender } from '../session/sending';
 import { StoreGroupRequestFactory } from '../session/apis/snode_api/factories/StoreGroupRequestFactory';
 import { DURATION } from '../session/constants';
 import type { LocalizerComponentPropsObject } from '../localization/localeTools';
+import { GroupInvite } from '../session/utils/job_runners/jobs/GroupInviteJob';
 
 export async function copyPublicKeyByConvoId(convoId: string) {
   if (OpenGroupUtils.isOpenGroupV2(convoId)) {
@@ -1053,6 +1053,6 @@ export async function promoteUsersInGroup({
   for (let index = 0; index < membersHex.length; index++) {
     const member = membersHex[index];
     // eslint-disable-next-line no-await-in-loop
-    await GroupPromote.addJob({ groupPk, member });
+    await GroupInvite.addJob({ groupPk, member, inviteAsAdmin: true, forceUnrevoke: true });
   }
 }
