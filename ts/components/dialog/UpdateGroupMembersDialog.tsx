@@ -175,11 +175,15 @@ export const UpdateGroupMembersDialog = (props: Props) => {
 
   const onClickOK = async () => {
     if (PubKey.is03Pubkey(conversationId)) {
+      const toRemoveAndCurrentMembers = membersToRemove.filter(m =>
+        existingMembers.includes(m as PubkeyType)
+      );
+
       const groupv2Action = groupInfoActions.currentDeviceGroupMembersChange({
         groupPk: conversationId,
         addMembersWithHistory: [],
         addMembersWithoutHistory: [],
-        removeMembers: membersToRemove as Array<PubkeyType>,
+        removeMembers: toRemoveAndCurrentMembers as Array<PubkeyType>,
         alsoRemoveMessages,
       });
       dispatch(groupv2Action as any);
