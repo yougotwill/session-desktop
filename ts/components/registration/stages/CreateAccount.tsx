@@ -34,6 +34,7 @@ import { ContinueButton, OnboardDescription, OnboardHeading } from '../component
 import { BackButtonWithinContainer } from '../components/BackButton';
 import { displayNameIsValid, sanitizeDisplayNameOrToast } from '../utils';
 import { localize } from '../../../util/i18n/localizedString';
+import { RetrieveDisplayNameError } from '../../../session/utils/errors';
 
 export type AccountDetails = {
   recoveryPassword: string;
@@ -108,15 +109,9 @@ export const CreateAccount = () => {
       );
       dispatch(setAccountCreationStep(AccountCreation.DisplayName));
 
-      switch (err.message) {
-        case 'failed to retrieve display name after setting it':
-          dispatch(setDisplayNameError(localize('displayNameErrorDescription').toString()));
-          return;
-        case 'failed to get truncated displayName after setting it':
-          dispatch(setDisplayNameError(localize('displayNameErrorDescription').toString()));
-          return;
-        default:
-        // we can't guarantee that an error has a message so we handle the final case outside of the switch
+      if (err instanceof RetrieveDisplayNameError) {
+        dispatch(setDisplayNameError(localize('displayNameErrorDescription').toString()));
+        return;
       }
 
       // Note: we have to assume here that libsession threw an error because the name was too long since we covered the other cases.

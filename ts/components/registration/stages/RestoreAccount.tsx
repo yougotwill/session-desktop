@@ -6,7 +6,7 @@ import { InvalidWordsError, NotEnoughWordsError } from '../../../session/crypto/
 import { ProfileManager } from '../../../session/profile_manager/ProfileManager';
 import { PromiseUtils } from '../../../session/utils';
 import { TaskTimedOutError } from '../../../session/utils/Promise';
-import { NotFoundError } from '../../../session/utils/errors';
+import { NotFoundError, RetrieveDisplayNameError } from '../../../session/utils/errors';
 import { trigger } from '../../../shims/events';
 import {
   AccountRestoration,
@@ -198,15 +198,9 @@ export const RestoreAccount = () => {
       );
       dispatch(setAccountRestorationStep(AccountRestoration.DisplayName));
 
-      switch (err.message) {
-        case 'failed to retrieve display name after setting it':
-          dispatch(setDisplayNameError(localize('displayNameErrorDescription').toString()));
-          return;
-        case 'failed to get truncated displayName after setting it':
-          dispatch(setDisplayNameError(localize('displayNameErrorDescription').toString()));
-          return;
-        default:
-        // we can't guarantee that an error has a message so we handle the final case outside of the switch
+      if (err instanceof RetrieveDisplayNameError) {
+        dispatch(setDisplayNameError(localize('displayNameErrorDescription').toString()));
+        return;
       }
 
       // Note: we have to assume here that libsession threw an error because the name was too long since we covered the other cases.

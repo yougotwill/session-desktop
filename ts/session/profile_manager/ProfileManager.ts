@@ -6,6 +6,7 @@ import { SyncUtils, UserUtils } from '../utils';
 import { fromHexToArray, sanitizeSessionUsername, toHex } from '../utils/String';
 import { AvatarDownload } from '../utils/job_runners/jobs/AvatarDownloadJob';
 import { CONVERSATION_PRIORITIES, ConversationTypeEnum } from '../../models/types';
+import { RetrieveDisplayNameError } from '../utils/errors';
 
 export type Profile = {
   displayName: string | undefined;
@@ -115,7 +116,7 @@ async function updateOurProfileDisplayNameOnboarding(newName: string) {
     const appliedName = await UserConfigWrapperActions.getName();
 
     if (isNil(appliedName)) {
-      throw new Error('failed to retrieve display name after setting it');
+      throw new RetrieveDisplayNameError();
     }
 
     return appliedName;
@@ -141,7 +142,7 @@ async function updateOurProfileDisplayName(newName: string) {
   await UserConfigWrapperActions.setNameTruncated(sanitizeSessionUsername(newName).trim());
   const truncatedName = await UserConfigWrapperActions.getName();
   if (isNil(truncatedName)) {
-    throw new Error('failed to get truncated displayName after setting it');
+    throw new RetrieveDisplayNameError();
   }
   await UserConfigWrapperActions.setPriority(dbPriority);
   if (dbProfileUrl && !isEmpty(dbProfileKey)) {
