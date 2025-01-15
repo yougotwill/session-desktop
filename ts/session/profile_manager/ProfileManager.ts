@@ -115,9 +115,7 @@ async function updateOurProfileDisplayNameOnboarding(newName: string) {
     const appliedName = await UserConfigWrapperActions.getName();
 
     if (isNil(appliedName)) {
-      throw new Error(
-        'updateOurProfileDisplayNameOnboarding failed to retrieve name after setting it'
-      );
+      throw new Error('failed to retrieve display name after setting it');
     }
 
     return appliedName;
@@ -143,7 +141,7 @@ async function updateOurProfileDisplayName(newName: string) {
   await UserConfigWrapperActions.setNameTruncated(sanitizeSessionUsername(newName).trim());
   const truncatedName = await UserConfigWrapperActions.getName();
   if (isNil(truncatedName)) {
-    throw new Error('updateOurProfileDisplayName: failed to get truncated displayName back');
+    throw new Error('failed to get truncated displayName after setting it');
   }
   await UserConfigWrapperActions.setPriority(dbPriority);
   if (dbProfileUrl && !isEmpty(dbProfileKey)) {
