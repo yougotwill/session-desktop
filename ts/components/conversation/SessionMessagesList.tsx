@@ -49,16 +49,14 @@ export const SessionMessagesList = (props: {
 
   useLayoutEffect(() => {
     const newTopMessageId = messagesProps.length
-      ? messagesProps[messagesProps.length - 1].message.props.messageId
+      ? messagesProps[messagesProps.length - 1].messageId
       : undefined;
 
     if (oldTopMessageId !== newTopMessageId && oldTopMessageId && newTopMessageId) {
       props.scrollAfterLoadMore(oldTopMessageId, 'load-more-top');
     }
 
-    const newBottomMessageId = messagesProps.length
-      ? messagesProps[0].message.props.messageId
-      : undefined;
+    const newBottomMessageId = messagesProps.length ? messagesProps[0].messageId : undefined;
 
     if (newBottomMessageId !== oldBottomMessageId && oldBottomMessageId && newBottomMessageId) {
       props.scrollAfterLoadMore(oldBottomMessageId, 'load-more-bottom');
@@ -93,7 +91,7 @@ export const SessionMessagesList = (props: {
   return (
     <IsDetailMessageViewContext.Provider value={false}>
       {messagesProps.map(messageProps => {
-        const messageId = messageProps.message.props.messageId;
+        const { messageId } = messageProps;
         const unreadIndicator = messageProps.showUnreadIndicator ? (
           <SessionLastSeenIndicator
             key={'unread-indicator'}

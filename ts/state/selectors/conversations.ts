@@ -140,15 +140,18 @@ export const getSortedMessagesTypesOfSelectedConversation = createSelector(
           ? messageTimestamp
           : undefined;
 
-      const common = { showUnreadIndicator: isFirstUnread, showDateBreak };
-      const messageIdProps = { messageId: msg.propsForMessage.id };
+      const common = {
+        showUnreadIndicator: isFirstUnread,
+        showDateBreak,
+        messageId: msg.propsForMessage.id,
+      };
 
       if (msg.propsForDataExtractionNotification) {
         return {
           ...common,
           message: {
             messageType: 'data-extraction',
-            props: { ...msg.propsForDataExtractionNotification, ...messageIdProps },
+            props: { ...msg.propsForDataExtractionNotification },
           },
         };
       }
@@ -158,7 +161,6 @@ export const getSortedMessagesTypesOfSelectedConversation = createSelector(
           ...common,
           message: {
             messageType: 'message-request-response',
-            props: messageIdProps,
           },
         };
       }
@@ -168,7 +170,6 @@ export const getSortedMessagesTypesOfSelectedConversation = createSelector(
           ...common,
           message: {
             messageType: 'group-invitation',
-            props: messageIdProps,
           },
         };
       }
@@ -178,7 +179,7 @@ export const getSortedMessagesTypesOfSelectedConversation = createSelector(
           ...common,
           message: {
             messageType: 'group-notification',
-            props: { ...msg.propsForGroupUpdateMessage, ...messageIdProps },
+            props: { ...msg.propsForGroupUpdateMessage },
           },
         };
       }
@@ -188,7 +189,7 @@ export const getSortedMessagesTypesOfSelectedConversation = createSelector(
           ...common,
           message: {
             messageType: 'timer-notification',
-            props: { ...msg.propsForTimerNotification, ...messageIdProps },
+            props: { ...msg.propsForTimerNotification },
           },
         };
       }
@@ -200,7 +201,6 @@ export const getSortedMessagesTypesOfSelectedConversation = createSelector(
             messageType: 'call-notification',
             props: {
               ...msg.propsForCallNotification,
-              ...messageIdProps,
             },
           },
         };
@@ -213,18 +213,15 @@ export const getSortedMessagesTypesOfSelectedConversation = createSelector(
             messageType: 'interaction-notification',
             props: {
               ...msg.propsForInteractionNotification,
-              ...messageIdProps,
             },
           },
         };
       }
 
       return {
-        showUnreadIndicator: isFirstUnread,
-        showDateBreak,
+        ...common,
         message: {
           messageType: 'regular-message',
-          props: messageIdProps,
         },
       };
     });
