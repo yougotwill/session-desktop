@@ -151,7 +151,6 @@ export const getSortedMessagesTypesOfSelectedConversation = createSelector(
           ...common,
           message: {
             messageType: 'data-extraction',
-            props: { ...msg.propsForDataExtractionNotification },
           },
         };
       }

@@ -19,12 +19,10 @@ import {
   uploadQuoteThumbnailsToFileServer,
 } from '../session/utils';
 import {
-  DataExtractionNotificationMsg,
   MessageAttributes,
   MessageAttributesOptionals,
   MessageGroupUpdate,
   MessageModelType,
-  PropsForDataExtractionNotification,
   fillMessageAttributesWithDefaults,
 } from './messageType';
 
@@ -222,7 +220,7 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
     this.set(attributes);
   }
 
-  public isCommunityInvitation() {
+  private isCommunityInvitation() {
     return !!this.getCommunityInvitation();
   }
   public getCommunityInvitation() {
@@ -233,21 +231,16 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
     return !!this.get('messageRequestResponse');
   }
 
-  public isDataExtractionNotification() {
-    return !!this.getDataExtractionNotification();
-  }
-  public getDataExtractionNotification() {
-    return this.get('dataExtractionNotification');
+  private isDataExtractionNotification() {
+    // if set to {} this returns true
+    return !!this.get('dataExtractionNotification');
   }
 
-  public isCallNotification() {
-    return !!this.getCallNotification();
-  }
-  public getCallNotification() {
-    return this.get('callNotificationType');
+  private isCallNotification() {
+    return !!this.get('callNotificationType');
   }
 
-  public isInteractionNotification() {
+  private isInteractionNotification() {
     return !!this.getInteractionNotification();
   }
   public getInteractionNotification() {
@@ -306,17 +299,8 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
     }
 
     if (this.isDataExtractionNotification()) {
-      const dataExtraction = this.get(
-        'dataExtractionNotification'
-      ) as DataExtractionNotificationMsg;
-      if (dataExtraction.type === SignalService.DataExtractionNotification.Type.SCREENSHOT) {
-        return window.i18n.stripped('screenshotTaken', {
-          name: ConvoHub.use().getNicknameOrRealUsernameOrPlaceholder(dataExtraction.source),
-        });
-      }
-
       return window.i18n.stripped('attachmentsMediaSaved', {
-        name: ConvoHub.use().getNicknameOrRealUsernameOrPlaceholder(dataExtraction.source),
+        name: ConvoHub.use().getNicknameOrRealUsernameOrPlaceholder(this.get('source')),
       });
     }
     if (this.isCallNotification()) {
@@ -519,26 +503,8 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
     };
   }
 
-  private getPropsForDataExtractionNotification(): PropsForDataExtractionNotification | null {
-    if (!this.isDataExtractionNotification()) {
-      return null;
-    }
-    const dataExtractionNotification = this.getDataExtractionNotification();
-
-    if (!dataExtractionNotification) {
-      window.log.warn('dataExtractionNotification should not happen');
-      return null;
-    }
-
-    const contact = findAndFormatContact(dataExtractionNotification.source);
-
-    return {
-      ...dataExtractionNotification,
-      name: contact.profileName || contact.name || dataExtractionNotification.source,
-      receivedAt: this.get('received_at'),
-      isUnread: this.isUnread(),
-      ...this.getPropsForExpiringMessage(),
-    };
+  private getPropsForDataExtractionNotification(): boolean {
+    return !!this.isDataExtractionNotification();
   }
 
   private getPropsForGroupUpdateMessage(): PropsForGroupUpdate | null {

@@ -203,3 +203,4 @@ export function useMessageCommunityInvitationFullUrl(messageId: string) {
 export function useMessageCommunityInvitationCommunityName(messageId: string) {
   return useMessagePropsByMessageId(messageId)?.propsForGroupInvitation?.serverName;
 }
+

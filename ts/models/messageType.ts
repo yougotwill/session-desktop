@@ -127,12 +127,6 @@ export interface MessageAttributes {
   interactionNotification?: InteractionNotificationType;
 }
 
-export interface DataExtractionNotificationMsg {
-  type: number; // screenshot or saving event, based on SignalService.DataExtractionNotification.Type
-  source: string; // the guy who made a screenshot
-  referencedAttachmentTimestamp: number; // the attachment timestamp he screenshot
-}
-
 export interface MessageRequestResponseMsg {
   source: string;
   isApproved: boolean;
@@ -144,10 +138,12 @@ export enum MessageDirection {
   any = '%',
 }
 
-export type PropsForDataExtractionNotification = DataExtractionNotificationMsg & {
-  name: string;
-  messageId: string;
+type DataExtractionNotificationMsg = {
+  // Note: we only support one type (media saved, screenshot is not supported at all anymore)
+  // Note: just keeping this an object in case we need to add details to it.
 };
+
+export type PropsForDataExtractionNotification = DataExtractionNotificationMsg;
 
 export type PropsForMessageRequestResponse = MessageRequestResponseMsg & {
   conversationId?: string;
@@ -196,11 +192,7 @@ export interface MessageAttributesOptionals {
   hasAttachments?: boolean;
   hasFileAttachments?: boolean;
   hasVisualMediaAttachments?: boolean;
-  dataExtractionNotification?: {
-    type: number;
-    source: string;
-    referencedAttachmentTimestamp: number;
-  };
+  dataExtractionNotification?: DataExtractionNotificationMsg;
   messageRequestResponse?: {
     /** 1 means approved, 0 means unapproved. */
     isApproved?: number;

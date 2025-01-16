@@ -913,15 +913,14 @@ export async function handleDataExtractionNotification({
   envelope,
   expireUpdate,
   messageHash,
-  dataExtractionNotification,
 }: {
   envelope: EnvelopePlus;
   dataExtractionNotification: SignalService.DataExtractionNotification;
   expireUpdate: ReadyToDisappearMsgUpdate | undefined;
   messageHash: string;
 }): Promise<void> {
-  // we currently don't care about the timestamp included in the field itself, just the timestamp of the envelope
-  const { type, timestamp: referencedAttachment } = dataExtractionNotification;
+  // Note: we currently don't care about the timestamp included in the field itself, just the timestamp of the envelope
+  // Note: we only support one type of data extraction notification
 
   const { source, timestamp } = envelope;
   await IncomingMessageCache.removeFromCache(envelope);
@@ -933,23 +932,20 @@ export async function handleDataExtractionNotification({
     return;
   }
 
-  if (!type || !source || !timestamp) {
+  if (!source || !timestamp) {
     window?.log?.info('DataNotification pre check failed');
 
     return;
   }
 
   const sentAtTimestamp = toNumber(timestamp);
-  const referencedAttachmentTimestamp = toNumber(referencedAttachment);
 
   let created = await convo.addSingleIncomingMessage({
     source,
     messageHash,
     sent_at: sentAtTimestamp,
     dataExtractionNotification: {
-      type,
-      referencedAttachmentTimestamp, // currently unused
-      source,
+      // just set it to non empty object. We don't need anything else than this for now
     },
   });
 

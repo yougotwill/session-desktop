@@ -2,7 +2,6 @@ import { useLayoutEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
 
 import useKey from 'react-use/lib/useKey';
-import { PropsForDataExtractionNotification } from '../../models/messageType';
 import { PropsForExpirationTimer, PropsForGroupUpdate } from '../../state/ducks/conversations';
 import {
   getOldBottomMessageId,
@@ -132,10 +131,8 @@ export const SessionMessagesList = (props: {
         }
 
         if (messageProps.message?.messageType === 'data-extraction') {
-          const msgProps = messageProps.message.props as PropsForDataExtractionNotification;
-
           return [
-            <DataExtractionNotification key={messageId} {...msgProps} />,
+            <DataExtractionNotification key={messageId} messageId={messageId} />,
             ...componentToMerge,
           ];
         }
