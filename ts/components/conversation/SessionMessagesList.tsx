@@ -2,7 +2,6 @@ import { useLayoutEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
 
 import useKey from 'react-use/lib/useKey';
-import { PropsForGroupUpdate } from '../../state/ducks/conversations';
 import {
   getOldBottomMessageId,
   getOldTopMessageId,
@@ -21,6 +20,8 @@ import { SessionLastSeenIndicator } from './SessionLastSeenIndicator';
 import { TimerNotification } from './TimerNotification';
 import { DataExtractionNotification } from './message/message-item/DataExtractionNotification';
 import { InteractionNotification } from './message/message-item/InteractionNotification';
+import { assertUnreachable } from '../../types/sqlSharedTypes';
+import type { WithMessageId } from '../../session/types/with';
 
 function isNotTextboxEvent(e: KeyboardEvent) {
   return (e?.target as any)?.type === undefined;
@@ -90,6 +91,49 @@ export const SessionMessagesList = (props: {
     <IsDetailMessageViewContext.Provider value={false}>
       {messagesProps.map(messageProps => {
         const { messageId } = messageProps;
+
+        let ComponentToRender: React.FC<WithMessageId> | undefined;
+
+        switch (messageProps.message.messageType) {
+          case 'group-notification': {
+            ComponentToRender = GroupUpdateMessage;
+            break;
+          }
+          case 'group-invitation': {
+            ComponentToRender = CommunityInvitation;
+            break;
+          }
+          case 'message-request-response': {
+            ComponentToRender = MessageRequestResponse;
+            break;
+          }
+          case 'data-extraction': {
+            ComponentToRender = DataExtractionNotification;
+            break;
+          }
+          case 'timer-notification': {
+            ComponentToRender = TimerNotification;
+            break;
+          }
+          case 'call-notification': {
+            ComponentToRender = CallNotification;
+            break;
+          }
+          case 'interaction-notification': {
+            ComponentToRender = Message;
+            break;
+          }
+          case 'regular-message': {
+            ComponentToRender = InteractionNotification;
+            break;
+          }
+          default:
+            assertUnreachable(
+              messageProps.message.messageType,
+              `unhandled case with ${messageProps.message.messageType}`
+            );
+        }
+
         const unreadIndicator = messageProps.showUnreadIndicator ? (
           <SessionLastSeenIndicator
             key={'unread-indicator'}
@@ -108,54 +152,11 @@ export const SessionMessagesList = (props: {
             />
           ) : null;
 
-        const componentToMerge = [dateBreak, unreadIndicator];
-
-        if (messageProps.message?.messageType === 'group-notification') {
-          const msgProps = messageProps.message.props as PropsForGroupUpdate;
-          return [<GroupUpdateMessage key={messageId} {...msgProps} />, ...componentToMerge];
-        }
-
-        if (messageProps.message?.messageType === 'group-invitation') {
-          return [
-            <CommunityInvitation key={messageId} messageId={messageId} />,
-            ...componentToMerge,
-          ];
-        }
-
-        if (messageProps.message?.messageType === 'message-request-response') {
-          return [
-            <MessageRequestResponse key={messageId} messageId={messageId} />,
-            ...componentToMerge,
-          ];
-        }
-
-        if (messageProps.message?.messageType === 'data-extraction') {
-          return [
-            <DataExtractionNotification key={messageId} messageId={messageId} />,
-            ...componentToMerge,
-          ];
-        }
-
-        if (messageProps.message?.messageType === 'timer-notification') {
-          return [<TimerNotification key={messageId} messageId={messageId} />, ...componentToMerge];
-        }
-
-        if (messageProps.message?.messageType === 'call-notification') {
-          return [<CallNotification key={messageId} messageId={messageId} />, ...componentToMerge];
-        }
-
-        if (messageProps.message?.messageType === 'interaction-notification') {
-          return [
-            <InteractionNotification key={messageId} messageId={messageId} />,
-            ...componentToMerge,
-          ];
-        }
-
-        if (!messageProps) {
-          return null;
-        }
-
-        return [<Message messageId={messageId} key={messageId} />, ...componentToMerge];
+        return [
+          <ComponentToRender key={messageId} messageId={messageId} />,
+          unreadIndicator,
+          dateBreak,
+        ];
       })}
     </IsDetailMessageViewContext.Provider>
   );

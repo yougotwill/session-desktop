@@ -471,13 +471,13 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
 
     const timespanText = TimerOptions.getName(expireTimer || 0);
 
-    const basicProps: PropsForExpirationTimer = {
+    const props: PropsForExpirationTimer = {
       timespanText,
       timespanSeconds: expireTimer || 0,
       expirationMode: expirationMode || 'off',
     };
 
-    return basicProps;
+    return props;
   }
 
   private getPropsForGroupInvitation(): PropsForGroupInvitation | null {

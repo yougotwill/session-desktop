@@ -146,74 +146,26 @@ export const getSortedMessagesTypesOfSelectedConversation = createSelector(
         messageId: msg.propsForMessage.id,
       };
 
-      if (msg.propsForDataExtractionNotification) {
-        return {
-          ...common,
-          message: {
-            messageType: 'data-extraction',
-          },
-        };
-      }
-
-      if (msg.propsForMessageRequestResponse) {
-        return {
-          ...common,
-          message: {
-            messageType: 'message-request-response',
-          },
-        };
-      }
-
-      if (msg.propsForGroupInvitation) {
-        return {
-          ...common,
-          message: {
-            messageType: 'group-invitation',
-          },
-        };
-      }
-
-      if (msg.propsForGroupUpdateMessage) {
-        return {
-          ...common,
-          message: {
-            messageType: 'group-notification',
-            props: { ...msg.propsForGroupUpdateMessage },
-          },
-        };
-      }
-
-      if (msg.propsForTimerNotification) {
-        return {
-          ...common,
-          message: {
-            messageType: 'timer-notification',
-          },
-        };
-      }
-
-      if (msg.propsForCallNotification) {
-        return {
-          ...common,
-          message: {
-            messageType: 'call-notification',
-          },
-        };
-      }
-
-      if (msg.propsForInteractionNotification) {
-        return {
-          ...common,
-          message: {
-            messageType: 'interaction-notification',
-          },
-        };
-      }
+      const messageType = msg.propsForDataExtractionNotification
+        ? ('data-extraction' as const)
+        : msg.propsForMessageRequestResponse
+          ? ('message-request-response' as const)
+          : msg.propsForGroupInvitation
+            ? ('group-invitation' as const)
+            : msg.propsForGroupUpdateMessage
+              ? ('group-notification' as const)
+              : msg.propsForTimerNotification
+                ? ('timer-notification' as const)
+                : msg.propsForCallNotification
+                  ? ('call-notification' as const)
+                  : msg.propsForInteractionNotification
+                    ? ('interaction-notification' as const)
+                    : ('regular-message' as const);
 
       return {
         ...common,
         message: {
-          messageType: 'regular-message',
+          messageType,
         },
       };
     });

@@ -34,9 +34,9 @@ import { WithConvoId, WithMessageHash, WithMessageId } from '../../session/types
 export type MessageModelPropsWithoutConvoProps = {
   propsForMessage: PropsForMessageWithoutConvoProps;
   propsForGroupInvitation?: PropsForGroupInvitation; // plop: cleaned up
-  propsForTimerNotification?: PropsForExpirationTimer;
+  propsForTimerNotification?: PropsForExpirationTimer; // plop: cleaned up
   propsForDataExtractionNotification?: PropsForDataExtractionNotification; // plop: cleaned up
-  propsForGroupUpdateMessage?: PropsForGroupUpdate;
+  propsForGroupUpdateMessage?: PropsForGroupUpdate; // plop: cleaned up
   propsForCallNotification?: PropsForCallNotification; // plop: cleaned up
   propsForMessageRequestResponse?: PropsForMessageRequestResponse; // plop: cleaned up
   propsForQuote?: PropsForQuote;
@@ -121,7 +121,6 @@ export type PropsForGroupUpdateType =
 
 export type PropsForGroupUpdate = {
   change: PropsForGroupUpdateType;
-  messageId: string;
 };
 
 export type PropsForGroupInvitation = {

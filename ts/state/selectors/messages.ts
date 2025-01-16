@@ -264,3 +264,16 @@ export function useMessageExpirationUpdateTimespanSeconds(messageId: string) {
 export function useMessageExpirationUpdateTimespanText(messageId: string) {
   return useMessagePropsByMessageId(messageId)?.propsForTimerNotification?.timespanText;
 }
+
+/**
+ *  ============================================
+ *  Below are selectors for group change updates
+ *  ============================================
+ */
+
+/**
+ * Return the group change corresponding to this message's group update
+ */
+export function useMessageGroupUpdateChange(messageId: string) {
+  return useMessagePropsByMessageId(messageId)?.propsForGroupUpdateMessage?.change;
+}
