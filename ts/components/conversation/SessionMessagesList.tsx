@@ -120,11 +120,11 @@ export const SessionMessagesList = (props: {
             break;
           }
           case 'interaction-notification': {
-            ComponentToRender = Message;
+            ComponentToRender = InteractionNotification;
             break;
           }
           case 'regular-message': {
-            ComponentToRender = InteractionNotification;
+            ComponentToRender = Message;
             break;
           }
           default:

@@ -58,7 +58,7 @@ function useChangeItem(change?: PropsForGroupUpdateType): LocalizerComponentProp
       };
     default:
       assertUnreachable(changeType, `invalid case: ${changeType}`);
-      break;
+      throw new Error('unhandled case, but this is to make typescript happy');
   }
 }
 
