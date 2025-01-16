@@ -25,6 +25,7 @@ import {
   LastMessageType,
   PropsForCallNotification,
   PropsForInteractionNotification,
+  type PropsForMessageRequestResponse,
 } from './types';
 import { AttachmentType } from '../../types/Attachment';
 import { CONVERSATION_PRIORITIES, ConversationTypeEnum } from '../../models/types';
@@ -32,14 +33,14 @@ import { WithConvoId, WithMessageHash, WithMessageId } from '../../session/types
 
 export type MessageModelPropsWithoutConvoProps = {
   propsForMessage: PropsForMessageWithoutConvoProps;
-  propsForGroupInvitation?: PropsForGroupInvitation;
+  propsForGroupInvitation?: PropsForGroupInvitation; // plop: cleaned up
   propsForTimerNotification?: PropsForExpirationTimer;
-  propsForDataExtractionNotification?: PropsForDataExtractionNotification;
+  propsForDataExtractionNotification?: PropsForDataExtractionNotification; // plop: cleaned up
   propsForGroupUpdateMessage?: PropsForGroupUpdate;
-  propsForCallNotification?: PropsForCallNotification;
-  propsForMessageRequestResponse?: boolean;
+  propsForCallNotification?: PropsForCallNotification; // plop: cleaned up
+  propsForMessageRequestResponse?: PropsForMessageRequestResponse; // plop: cleaned up
   propsForQuote?: PropsForQuote;
-  propsForInteractionNotification?: PropsForInteractionNotification;
+  propsForInteractionNotification?: PropsForInteractionNotification; // plop: cleaned up
 };
 
 export type MessageModelPropsWithConvoProps = SortedMessageModelProps & {
@@ -78,13 +79,6 @@ export type PropsForExpirationTimer = {
   expirationMode: DisappearingMessageConversationModeType;
   timespanText: string;
   timespanSeconds: number | null;
-  disabled: boolean;
-  pubkey: string;
-  avatarPath: string | null;
-  name: string | null;
-  profileName: string | null;
-  type: 'fromMe' | 'fromSync' | 'fromOther';
-  messageId: string;
 };
 
 export type PropsForGroupUpdateAdd = {
@@ -161,7 +155,6 @@ export type PropsForMessageWithoutConvoProps = {
   sender: string; // this is the sender
   convoId: string; // this is the conversation in which this message was sent
   text?: string;
-
   receivedAt?: number;
   serverTimestamp?: number;
   serverId?: number;

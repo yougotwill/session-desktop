@@ -141,7 +141,7 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
       messageProps.propsForDataExtractionNotification = propsForDataExtractionNotification;
     }
     if (isMessageResponse) {
-      messageProps.propsForMessageRequestResponse = isMessageResponse;
+      messageProps.propsForMessageRequestResponse = {};
     }
     if (propsForGroupInvitation) {
       messageProps.propsForGroupInvitation = propsForGroupInvitation;
@@ -167,10 +167,6 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
     if (interactionNotification) {
       messageProps.propsForInteractionNotification = {
         notificationType: interactionNotification,
-        convoId: this.get('conversationId'),
-        messageId: this.id,
-        receivedAt: this.get('received_at') || Date.now(),
-        isUnread: this.isUnread(),
       };
     }
 
@@ -375,7 +371,7 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
         expireTimer
       );
 
-      const source = expireTimerUpdate?.source;
+      const source = this.get('source');
       const i18nProps = getTimerNotificationStr({
         convoId: convo.id,
         author: source as PubkeyType,
@@ -462,11 +458,11 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
     const timerUpdate = this.getExpirationTimerUpdate();
     const convo = this.getConversation();
 
-    if (!timerUpdate || !timerUpdate.source || !convo) {
+    if (!timerUpdate || !this.get('source') || !convo) {
       return null;
     }
 
-    const { expireTimer, fromSync, source } = timerUpdate;
+    const { expireTimer } = timerUpdate;
     const expirationMode = DisappearingMessages.changeToDisappearingConversationMode(
       convo,
       timerUpdate?.expirationType || 'unknown',
@@ -474,18 +470,11 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
     );
 
     const timespanText = TimerOptions.getName(expireTimer || 0);
-    const disabled = !expireTimer;
 
     const basicProps: PropsForExpirationTimer = {
-      ...findAndFormatContact(source),
       timespanText,
       timespanSeconds: expireTimer || 0,
-      disabled,
-      type: fromSync ? 'fromSync' : UserUtils.isUsFromCache(source) ? 'fromMe' : 'fromOther',
-      receivedAt: this.get('received_at'),
-      isUnread: this.isUnread(),
       expirationMode: expirationMode || 'off',
-      ...this.getPropsForExpiringMessage(),
     };
 
     return basicProps;

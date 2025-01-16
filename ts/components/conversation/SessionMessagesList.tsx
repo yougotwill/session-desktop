@@ -2,7 +2,7 @@ import { useLayoutEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
 
 import useKey from 'react-use/lib/useKey';
-import { PropsForExpirationTimer, PropsForGroupUpdate } from '../../state/ducks/conversations';
+import { PropsForGroupUpdate } from '../../state/ducks/conversations';
 import {
   getOldBottomMessageId,
   getOldTopMessageId,
@@ -21,7 +21,6 @@ import { SessionLastSeenIndicator } from './SessionLastSeenIndicator';
 import { TimerNotification } from './TimerNotification';
 import { DataExtractionNotification } from './message/message-item/DataExtractionNotification';
 import { InteractionNotification } from './message/message-item/InteractionNotification';
-import { PropsForInteractionNotification } from '../../state/ducks/types';
 
 function isNotTextboxEvent(e: KeyboardEvent) {
   return (e?.target as any)?.type === undefined;
@@ -138,9 +137,7 @@ export const SessionMessagesList = (props: {
         }
 
         if (messageProps.message?.messageType === 'timer-notification') {
-          const msgProps = messageProps.message.props as PropsForExpirationTimer;
-
-          return [<TimerNotification key={messageId} {...msgProps} />, ...componentToMerge];
+          return [<TimerNotification key={messageId} messageId={messageId} />, ...componentToMerge];
         }
 
         if (messageProps.message?.messageType === 'call-notification') {
@@ -148,9 +145,10 @@ export const SessionMessagesList = (props: {
         }
 
         if (messageProps.message?.messageType === 'interaction-notification') {
-          const msgProps = messageProps.message.props as PropsForInteractionNotification;
-
-          return [<InteractionNotification key={messageId} {...msgProps} />, ...componentToMerge];
+          return [
+            <InteractionNotification key={messageId} messageId={messageId} />,
+            ...componentToMerge,
+          ];
         }
 
         if (!messageProps) {

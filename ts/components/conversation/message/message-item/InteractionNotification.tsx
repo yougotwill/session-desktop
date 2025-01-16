@@ -1,10 +1,6 @@
 import { isEmpty } from 'lodash';
 import styled from 'styled-components';
-import {
-  useIsPrivate,
-  useIsPublic,
-  useNicknameOrProfileNameOrShortenedPubkey,
-} from '../../../../hooks/useParamSelector';
+import { useNicknameOrProfileNameOrShortenedPubkey } from '../../../../hooks/useParamSelector';
 import { assertUnreachable } from '../../../../types/sqlSharedTypes';
 import { Flex } from '../../../basic/Flex';
 import { ReadableMessage } from './ReadableMessage';
@@ -12,21 +8,37 @@ import {
   ConversationInteractionStatus,
   ConversationInteractionType,
 } from '../../../../interactions/types';
-import { PropsForInteractionNotification } from '../../../../state/ducks/types';
+import {
+  useSelectedConversationKey,
+  useSelectedIsPrivate,
+  useSelectedIsPublic,
+} from '../../../../state/selectors/selectedConversation';
+import {
+  useMessageInteractionNotification,
+  useMessageIsUnread,
+  useMessageReceivedAt,
+} from '../../../../state/selectors';
+import type { WithMessageId } from '../../../../session/types/with';
 
 const StyledFailText = styled.div`
   color: var(--danger-color);
 `;
 
-export const InteractionNotification = (props: PropsForInteractionNotification) => {
-  const { notificationType, convoId, messageId, receivedAt, isUnread } = props;
+export const InteractionNotification = (props: WithMessageId) => {
+  const { messageId } = props;
 
-  const { interactionStatus, interactionType } = notificationType;
-
+  const convoId = useSelectedConversationKey();
   const displayName = useNicknameOrProfileNameOrShortenedPubkey(convoId);
+  const isGroup = !useSelectedIsPrivate();
+  const isCommunity = useSelectedIsPublic();
+  const isUnread = useMessageIsUnread(messageId) || false;
+  const receivedAt = useMessageReceivedAt(messageId);
+  const interactionNotification = useMessageInteractionNotification(messageId);
 
-  const isGroup = !useIsPrivate(convoId);
-  const isCommunity = useIsPublic(convoId);
+  if (!convoId || !messageId || !interactionNotification) {
+    return null;
+  }
+  const { interactionStatus, interactionType } = interactionNotification;
 
   // NOTE at this time we don't show visible control messages in communities, that might change in future...
   if (isCommunity) {

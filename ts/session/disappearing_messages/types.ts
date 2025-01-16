@@ -20,9 +20,6 @@ export type DisappearingMessageConversationModeType =
 export type ExpirationTimerUpdate = {
   expirationType: DisappearingMessageType | undefined;
   expireTimer: number;
-  source: string;
-  /** updated setting from another device */
-  fromSync?: boolean;
 };
 
 export type DisappearingMessageUpdate = {

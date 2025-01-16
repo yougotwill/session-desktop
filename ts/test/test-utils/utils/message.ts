@@ -171,11 +171,9 @@ export function generateDisappearingVisibleMessage({
 export function generateFakeExpirationTimerUpdate({
   expirationType,
   expireTimer,
-  source = '',
 }: {
   expirationType: DisappearingMessageType;
   expireTimer: number;
-  source?: string;
 }): MessageModel {
   const convoId = TestUtils.generateFakePubKeyStr();
   return new MessageModel({
@@ -187,7 +185,6 @@ export function generateFakeExpirationTimerUpdate({
     expirationTimerUpdate: {
       expirationType,
       expireTimer,
-      source,
     },
     flags: 2,
   });

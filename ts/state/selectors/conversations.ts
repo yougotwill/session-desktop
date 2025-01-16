@@ -188,7 +188,6 @@ export const getSortedMessagesTypesOfSelectedConversation = createSelector(
           ...common,
           message: {
             messageType: 'timer-notification',
-            props: { ...msg.propsForTimerNotification },
           },
         };
       }
@@ -198,9 +197,6 @@ export const getSortedMessagesTypesOfSelectedConversation = createSelector(
           ...common,
           message: {
             messageType: 'call-notification',
-            props: {
-              ...msg.propsForCallNotification,
-            },
           },
         };
       }
@@ -210,9 +206,6 @@ export const getSortedMessagesTypesOfSelectedConversation = createSelector(
           ...common,
           message: {
             messageType: 'interaction-notification',
-            props: {
-              ...msg.propsForInteractionNotification,
-            },
           },
         };
       }

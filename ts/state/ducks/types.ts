@@ -10,6 +10,10 @@ export type PropsForCallNotification = {
   notificationType: CallNotificationType;
 };
 
+export type PropsForMessageRequestResponse = {
+  // keeping this an object in case we need to add some details here
+};
+
 export type LastMessageStatusType = 'sending' | 'sent' | 'read' | 'error' | undefined;
 
 export type LastMessageType = {
@@ -26,8 +30,4 @@ export type InteractionNotificationType = {
 
 export type PropsForInteractionNotification = {
   notificationType: InteractionNotificationType;
-  convoId: string;
-  messageId: string;
-  receivedAt: number;
-  isUnread: boolean;
 };

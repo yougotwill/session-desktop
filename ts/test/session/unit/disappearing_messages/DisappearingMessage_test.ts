@@ -392,7 +392,6 @@ describe('DisappearingMessage', () => {
         expirationTimerUpdate: {
           expirationType: 'deleteAfterSend',
           expireTimer: 300,
-          source: testPubkey,
         },
       });
 
@@ -426,7 +425,6 @@ describe('DisappearingMessage', () => {
         expirationTimerUpdate: {
           expirationType: 'deleteAfterSend',
           expireTimer: 300,
-          source: testPubkey,
         },
       });
 
@@ -631,7 +629,6 @@ describe('DisappearingMessage', () => {
         const expirationTimerUpdateMessage = generateFakeExpirationTimerUpdate({
           expirationType: 'deleteAfterSend',
           expireTimer: 300,
-          source: testPubkey,
         });
 
         expect(expirationTimerUpdateMessage.get('flags'), 'flags should be 2').to.equal(2);

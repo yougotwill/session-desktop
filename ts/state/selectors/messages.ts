@@ -216,3 +216,51 @@ export function useMessageCommunityInvitationCommunityName(messageId: string) {
 export function useMessageCallNotificationType(messageId: string) {
   return useMessagePropsByMessageId(messageId)?.propsForCallNotification?.notificationType;
 }
+
+/**
+ *  ================================================
+ *  Below are selectors for interaction notification
+ *  ================================================
+ */
+
+/**
+ * Return the call notification type linked to the specified message
+ */
+export function useMessageInteractionNotification(messageId: string) {
+  return useMessagePropsByMessageId(messageId)?.propsForInteractionNotification?.notificationType;
+}
+
+/**
+ *  ================================================
+ *  Below are selectors for expiration timer updates
+ *  ================================================
+ */
+
+/**
+ * Return the expiration update mode linked to the specified message
+ */
+export function useMessageExpirationUpdateMode(messageId: string) {
+  return useMessagePropsByMessageId(messageId)?.propsForTimerNotification?.expirationMode;
+}
+
+/**
+ * Return true if the message is disabling expiration timer update (timespanSeconds === 0)
+ */
+export function useMessageExpirationUpdateDisabled(messageId: string) {
+  const timespanSeconds = useMessageExpirationUpdateTimespanSeconds(messageId);
+  return timespanSeconds === 0;
+}
+
+/**
+ * Return the timespan in seconds to which this expiration timer update is sett
+ */
+export function useMessageExpirationUpdateTimespanSeconds(messageId: string) {
+  return useMessagePropsByMessageId(messageId)?.propsForTimerNotification?.timespanSeconds;
+}
+
+/**
+ * Return the timespan in text (localised) built from the field timespanSeconds
+ */
+export function useMessageExpirationUpdateTimespanText(messageId: string) {
+  return useMessagePropsByMessageId(messageId)?.propsForTimerNotification?.timespanText;
+}
