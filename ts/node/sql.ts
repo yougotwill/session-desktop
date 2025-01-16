@@ -1205,6 +1205,7 @@ function cleanUpExpirationTimerUpdateHistory(
     )
     .all({ conversationId });
 
+  // we keep at most one, so if we have <= 1, we can just return that nothing was removed.
   if (rows.length <= 1) {
     return [];
   }

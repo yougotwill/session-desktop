@@ -12,6 +12,7 @@ import { useSelectedIsPrivate } from './selectedConversation';
 import { LastMessageStatusType } from '../ducks/types';
 import { PubKey } from '../../session/types';
 import { useIsMe } from '../../hooks/useParamSelector';
+import { UserUtils } from '../../session/utils';
 
 function useMessagePropsByMessageId(messageId: string | undefined) {
   return useSelector((state: StateType) => getMessagePropsByMessageId(state, messageId));
@@ -83,6 +84,10 @@ export const useMessageAuthor = (messageId: string | undefined): string | undefi
   return useMessagePropsByMessageId(messageId)?.propsForMessage.sender;
 };
 
+export const useMessageAuthorIsUs = (messageId: string | undefined): boolean => {
+  return UserUtils.isUsFromCache(useMessagePropsByMessageId(messageId)?.propsForMessage.sender);
+};
+
 export const useMessageDirection = (
   messageId: string | undefined
 ): MessageModelType | undefined => {
@@ -129,6 +134,10 @@ export function useMessageReceivedAt(messageId: string | undefined) {
   return useMessagePropsByMessageId(messageId)?.propsForMessage.receivedAt;
 }
 
+export function useMessageIsUnread(messageId: string | undefined) {
+  return useMessagePropsByMessageId(messageId)?.propsForMessage.isUnread;
+}
+
 export function useMessageTimestamp(messageId: string | undefined) {
   return useMessagePropsByMessageId(messageId)?.propsForMessage.timestamp;
 }
@@ -173,4 +182,24 @@ export function useHideAvatarInMsgList(messageId?: string, isDetailView?: boolea
 
 export function useMessageSelected(messageId?: string) {
   return useSelector((state: StateType) => getIsMessageSelected(state, messageId));
+}
+
+/**
+ *  ==================================================
+ *  Below are selectors for community invitation props
+ *  ==================================================
+ */
+
+/**
+ * Return the full url needed to join a community through a community invitation message
+ */
+export function useMessageCommunityInvitationFullUrl(messageId: string) {
+  return useMessagePropsByMessageId(messageId)?.propsForGroupInvitation?.fullUrl;
+}
+
+/**
+ * Return the community display name to have a guess of what a community is about
+ */
+export function useMessageCommunityInvitationCommunityName(messageId: string) {
+  return useMessagePropsByMessageId(messageId)?.propsForGroupInvitation?.serverName;
 }

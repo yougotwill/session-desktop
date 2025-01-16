@@ -2,15 +2,8 @@ import { useLayoutEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
 
 import useKey from 'react-use/lib/useKey';
-import {
-  PropsForDataExtractionNotification,
-  PropsForMessageRequestResponse,
-} from '../../models/messageType';
-import {
-  PropsForExpirationTimer,
-  PropsForGroupInvitation,
-  PropsForGroupUpdate,
-} from '../../state/ducks/conversations';
+import { PropsForDataExtractionNotification } from '../../models/messageType';
+import { PropsForExpirationTimer, PropsForGroupUpdate } from '../../state/ducks/conversations';
 import {
   getOldBottomMessageId,
   getOldTopMessageId,
@@ -18,7 +11,7 @@ import {
 } from '../../state/selectors/conversations';
 import { useSelectedConversationKey } from '../../state/selectors/selectedConversation';
 import { MessageDateBreak } from './message/message-item/DateBreak';
-import { GroupInvitation } from './message/message-item/GroupInvitation';
+import { CommunityInvitation } from './message/message-item/GroupInvitation';
 import { GroupUpdateMessage } from './message/message-item/GroupUpdateMessage';
 import { Message } from './message/message-item/Message';
 import { MessageRequestResponse } from './message/message-item/MessageRequestResponse';
@@ -127,14 +120,17 @@ export const SessionMessagesList = (props: {
         }
 
         if (messageProps.message?.messageType === 'group-invitation') {
-          const msgProps = messageProps.message.props as PropsForGroupInvitation;
-          return [<GroupInvitation key={messageId} {...msgProps} />, ...componentToMerge];
+          return [
+            <CommunityInvitation key={messageId} messageId={messageId} />,
+            ...componentToMerge,
+          ];
         }
 
         if (messageProps.message?.messageType === 'message-request-response') {
-          const msgProps = messageProps.message.props as PropsForMessageRequestResponse;
-
-          return [<MessageRequestResponse key={messageId} {...msgProps} />, ...componentToMerge];
+          return [
+            <MessageRequestResponse key={messageId} messageId={messageId} />,
+            ...componentToMerge,
+          ];
         }
 
         if (messageProps.message?.messageType === 'data-extraction') {

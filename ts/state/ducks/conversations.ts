@@ -11,11 +11,7 @@ import {
   ConversationAttributes,
   ConversationNotificationSettingType,
 } from '../../models/conversationAttributes';
-import {
-  MessageModelType,
-  PropsForDataExtractionNotification,
-  PropsForMessageRequestResponse,
-} from '../../models/messageType';
+import { MessageModelType, PropsForDataExtractionNotification } from '../../models/messageType';
 import { ConvoHub } from '../../session/conversations';
 import { DisappearingMessages } from '../../session/disappearing_messages';
 import {
@@ -36,13 +32,12 @@ import { WithConvoId, WithMessageHash, WithMessageId } from '../../session/types
 
 export type MessageModelPropsWithoutConvoProps = {
   propsForMessage: PropsForMessageWithoutConvoProps;
-  propsForExpiringMessage?: PropsForExpiringMessage;
   propsForGroupInvitation?: PropsForGroupInvitation;
   propsForTimerNotification?: PropsForExpirationTimer;
   propsForDataExtractionNotification?: PropsForDataExtractionNotification;
   propsForGroupUpdateMessage?: PropsForGroupUpdate;
   propsForCallNotification?: PropsForCallNotification;
-  propsForMessageRequestResponse?: PropsForMessageRequestResponse;
+  propsForMessageRequestResponse?: boolean;
   propsForQuote?: PropsForQuote;
   propsForInteractionNotification?: PropsForInteractionNotification;
 };
@@ -137,10 +132,7 @@ export type PropsForGroupUpdate = {
 
 export type PropsForGroupInvitation = {
   serverName: string;
-  url: string;
-  direction: MessageModelType;
-  acceptUrl: string;
-  messageId: string;
+  fullUrl: string;
 };
 
 export type PropsForAttachment = AttachmentType & {

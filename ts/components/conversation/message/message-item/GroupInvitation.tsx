@@ -2,12 +2,18 @@ import classNames from 'classnames';
 
 import styled from 'styled-components';
 
+import { useMemo } from 'react';
 import { acceptOpenGroupInvitation } from '../../../../interactions/messageInteractions';
-import { PropsForGroupInvitation } from '../../../../state/ducks/conversations';
 import { SessionIconButton } from '../../../icon';
 import { ExpirableReadableMessage } from './ExpirableReadableMessage';
+import {
+  useMessageCommunityInvitationFullUrl,
+  useMessageCommunityInvitationCommunityName,
+  useMessageDirection,
+} from '../../../../state/selectors';
+import type { WithMessageId } from '../../../../session/types/with';
 
-const StyledGroupInvitation = styled.div`
+const StyledCommunityInvitation = styled.div`
   background-color: var(--message-bubbles-received-background-color);
 
   &.invitation-outgoing {
@@ -67,14 +73,30 @@ const StyledIconContainer = styled.div`
   border-radius: 100%;
 `;
 
-export const GroupInvitation = (props: PropsForGroupInvitation) => {
-  const { messageId } = props;
+export const CommunityInvitation = ({ messageId }: WithMessageId) => {
+  const messageDirection = useMessageDirection(messageId);
   const classes = ['group-invitation'];
 
-  if (props.direction === 'outgoing') {
+  const fullUrl = useMessageCommunityInvitationFullUrl(messageId);
+  const communityName = useMessageCommunityInvitationCommunityName(messageId);
+
+  const hostname = useMemo(() => {
+    try {
+      const url = new URL(fullUrl || '');
+      return url.origin;
+    } catch (e) {
+      window?.log?.warn('failed to get hostname from open groupv2 invitation', fullUrl);
+      return '';
+    }
+  }, [fullUrl]);
+
+  if (messageDirection === 'outgoing') {
     classes.push('invitation-outgoing');
   }
-  const openGroupInvitation = window.i18n('communityInvitation');
+
+  if (!fullUrl || !hostname) {
+    return null;
+  }
 
   return (
     <ExpirableReadableMessage
@@ -82,29 +104,29 @@ export const GroupInvitation = (props: PropsForGroupInvitation) => {
       key={`readable-message-${messageId}`}
       dataTestId="control-message"
     >
-      <StyledGroupInvitation className={classNames(classes)}>
+      <StyledCommunityInvitation className={classNames(classes)}>
         <div className="contents">
           <StyledIconContainer>
             <SessionIconButton
               iconColor={
-                props.direction === 'outgoing'
+                messageDirection === 'outgoing'
                   ? 'var(--message-bubbles-sent-text-color)'
                   : 'var(--message-bubbles-received-text-color)'
               }
-              iconType={props.direction === 'outgoing' ? 'communities' : 'plus'}
+              iconType={messageDirection === 'outgoing' ? 'communities' : 'plus'}
               iconSize={'large'}
               onClick={() => {
-                acceptOpenGroupInvitation(props.acceptUrl, props.serverName);
+                acceptOpenGroupInvitation(fullUrl, communityName);
               }}
             />
           </StyledIconContainer>
           <span className="group-details">
-            <span className="group-name">{props.serverName}</span>
-            <span className="group-type">{openGroupInvitation}</span>
-            <span className="group-address">{props.url}</span>
+            <span className="group-name">{communityName}</span>
+            <span className="group-type">{window.i18n('communityInvitation')}</span>
+            <span className="group-address">{hostname}</span>
           </span>
         </div>
-      </StyledGroupInvitation>
+      </StyledCommunityInvitation>
     </ExpirableReadableMessage>
   );
 };

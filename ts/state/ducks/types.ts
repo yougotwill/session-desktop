@@ -6,8 +6,8 @@ import {
 export type CallNotificationType = 'missed-call' | 'started-call' | 'answered-a-call';
 
 export type PropsForCallNotification = {
-  notificationType: CallNotificationType;
   messageId: string;
+  notificationType: CallNotificationType;
 };
 
 export type LastMessageStatusType = 'sending' | 'sent' | 'read' | 'error' | undefined;
