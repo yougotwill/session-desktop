@@ -24,6 +24,7 @@ import {
   MessageGroupUpdate,
   MessageModelType,
   fillMessageAttributesWithDefaults,
+  type DataExtractionNotificationMsg,
 } from './messageType';
 
 import { Data } from '../data/data';
@@ -229,7 +230,7 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
 
   private isDataExtractionNotification() {
     // if set to {} this returns true
-    return !!this.get('dataExtractionNotification');
+    return !isEmpty(this.get('dataExtractionNotification'));
   }
 
   private isCallNotification() {
@@ -295,8 +296,14 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
     }
 
     if (this.isDataExtractionNotification()) {
-      return window.i18n.stripped('attachmentsMediaSaved', {
-        name: ConvoHub.use().getNicknameOrRealUsernameOrPlaceholder(this.get('source')),
+      const dataExtraction = this.get(
+        'dataExtractionNotification'
+      ) as DataExtractionNotificationMsg;
+      const authorName = ConvoHub.use().getNicknameOrRealUsernameOrPlaceholder(this.get('source'));
+      const isScreenshot =
+        dataExtraction.type === SignalService.DataExtractionNotification.Type.SCREENSHOT;
+      return window.i18n.stripped(isScreenshot ? 'screenshotTaken' : 'attachmentsMediaSaved', {
+        name: authorName,
       });
     }
     if (this.isCallNotification()) {
@@ -492,8 +499,12 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
     };
   }
 
-  private getPropsForDataExtractionNotification(): boolean {
-    return !!this.isDataExtractionNotification();
+  private getPropsForDataExtractionNotification(): DataExtractionNotificationMsg | null {
+    const dataExtraction = this.get('dataExtractionNotification');
+    if (!dataExtraction || !dataExtraction.type) {
+      return null;
+    }
+    return { type: dataExtraction.type };
   }
 
   private getPropsForGroupUpdateMessage(): PropsForGroupUpdate | null {

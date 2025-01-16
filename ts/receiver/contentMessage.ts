@@ -914,6 +914,7 @@ export async function handleDataExtractionNotification({
   envelope,
   expireUpdate,
   messageHash,
+  dataExtractionNotification,
 }: {
   envelope: EnvelopePlus;
   dataExtractionNotification: SignalService.DataExtractionNotification;
@@ -921,7 +922,6 @@ export async function handleDataExtractionNotification({
   messageHash: string;
 }): Promise<void> {
   // Note: we currently don't care about the timestamp included in the field itself, just the timestamp of the envelope
-  // Note: we only support one type of data extraction notification
 
   const { source, timestamp } = envelope;
   await IncomingMessageCache.removeFromCache(envelope);
@@ -946,7 +946,7 @@ export async function handleDataExtractionNotification({
     messageHash,
     sent_at: sentAtTimestamp,
     dataExtractionNotification: {
-      // just set it to non empty object. We don't need anything else than this for now
+      type: dataExtractionNotification.type,
     },
   });
 

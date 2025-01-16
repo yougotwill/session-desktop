@@ -218,6 +218,19 @@ export function useMessageCallNotificationType(messageId: string) {
 }
 
 /**
+ *  ====================================================
+ *  Below are selectors for data extraction notification
+ *  ====================================================
+ */
+
+/**
+ * Return the call notification type linked to the specified message
+ */
+export function useMessageDataExtractionType(messageId: string) {
+  return useMessagePropsByMessageId(messageId)?.propsForDataExtractionNotification?.type;
+}
+
+/**
  *  ================================================
  *  Below are selectors for interaction notification
  *  ================================================

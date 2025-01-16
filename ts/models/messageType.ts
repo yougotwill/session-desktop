@@ -14,6 +14,7 @@ import {
   CallNotificationType,
   InteractionNotificationType,
 } from '../state/ducks/types';
+import type { SignalService } from '../protobuf';
 
 export type MessageModelType = 'incoming' | 'outgoing';
 
@@ -138,9 +139,8 @@ export enum MessageDirection {
   any = '%',
 }
 
-type DataExtractionNotificationMsg = {
-  // Note: we only support one type (media saved, screenshot is not supported at all anymore)
-  // Note: just keeping this an object in case we need to add details to it.
+export type DataExtractionNotificationMsg = {
+  type: SignalService.DataExtractionNotification.Type;
 };
 
 export type PropsForDataExtractionNotification = DataExtractionNotificationMsg;
