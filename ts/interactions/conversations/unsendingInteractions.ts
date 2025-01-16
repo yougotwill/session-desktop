@@ -242,7 +242,7 @@ export async function deleteMessagesFromSwarmAndCompletelyLocally(
   // LEGACY GROUPS -- we cannot delete on the swarm (just unsend which is done separately)
   if (conversation.isClosedGroup() && PubKey.is05Pubkey(pubkey)) {
     window.log.info('Cannot delete message from a closed group swarm, so we just complete delete.');
-    await deleteMessageLocallyOnly({ conversation, messages, deletionType: 'complete' });
+    await deletesMessageLocallyOnly({ conversation, messages, deletionType: 'complete' });
     return;
   }
   window.log.info(
@@ -257,7 +257,7 @@ export async function deleteMessagesFromSwarmAndCompletelyLocally(
       'deleteMessagesFromSwarmAndCompletelyLocally: some messages failed to be deleted. Maybe they were already deleted?'
     );
   }
-  await deleteMessageLocallyOnly({ conversation, messages, deletionType: 'complete' });
+  await deletesMessageLocallyOnly({ conversation, messages, deletionType: 'complete' });
 }
 
 /**
@@ -273,7 +273,7 @@ export async function deleteMessagesFromSwarmAndMarkAsDeletedLocally(
     window.log.info(
       'Cannot delete messages from a legacy closed group swarm, so we just markDeleted.'
     );
-    await deleteMessageLocallyOnly({ conversation, messages, deletionType: 'markDeleted' });
+    await deletesMessageLocallyOnly({ conversation, messages, deletionType: 'markDeleted' });
 
     return;
   }
@@ -290,7 +290,7 @@ export async function deleteMessagesFromSwarmAndMarkAsDeletedLocally(
       'deleteMessagesFromSwarmAndMarkAsDeletedLocally: some messages failed to be deleted but still removing the messages content... '
     );
   }
-  await deleteMessageLocallyOnly({ conversation, messages, deletionType: 'markDeleted' });
+  await deletesMessageLocallyOnly({ conversation, messages, deletionType: 'markDeleted' });
 }
 
 /**
@@ -298,7 +298,7 @@ export async function deleteMessagesFromSwarmAndMarkAsDeletedLocally(
  * @param message Message to delete
  * @param deletionType 'complete' means completely delete the item from the database, markDeleted means empty the message content but keep an entry
  */
-export async function deleteMessageLocallyOnly({
+async function deletesMessageLocallyOnly({
   conversation,
   messages,
   deletionType,
@@ -380,7 +380,7 @@ const doDeleteSelectedMessagesInSOGS = async (
     toDeleteLocallyIds.map(async id => {
       const msgToDeleteLocally = await Data.getMessageById(id);
       if (msgToDeleteLocally) {
-        return deleteMessageLocallyOnly({
+        return deletesMessageLocallyOnly({
           conversation,
           messages: [msgToDeleteLocally],
           deletionType: 'complete',
@@ -457,7 +457,7 @@ const doDeleteSelectedMessages = async ({
 
   // delete just for me in a groupv2 only means delete locally (not even synced to our other devices)
   if (conversation.isClosedGroupV2()) {
-    await deleteMessageLocallyOnly({
+    await deletesMessageLocallyOnly({
       conversation,
       messages: selectedMessages,
       deletionType: 'markDeleted',
