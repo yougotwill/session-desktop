@@ -22,7 +22,6 @@ import { ReplyingToMessageProps } from '../../components/conversation/compositio
 import { MessageAttachmentSelectorProps } from '../../components/conversation/message/message-content/MessageAttachment';
 import { MessageContentSelectorProps } from '../../components/conversation/message/message-content/MessageContent';
 import { MessageContentWithStatusSelectorProps } from '../../components/conversation/message/message-content/MessageContentWithStatus';
-import { MessageTextSelectorProps } from '../../components/conversation/message/message-content/MessageText';
 import { GenericReadableMessageSelectorProps } from '../../components/conversation/message/message-item/GenericReadableMessage';
 import { hasValidIncomingRequestValues } from '../../models/conversation';
 import { isOpenOrClosedGroup } from '../../models/conversationAttributes';
@@ -852,25 +851,6 @@ export const getMessageQuoteProps = createSelector(
     return {
       quote,
     };
-  }
-);
-
-export const getMessageTextProps = createSelector(
-  getMessagePropsByMessageId,
-  (props): MessageTextSelectorProps | undefined => {
-    if (!props || isEmpty(props)) {
-      return undefined;
-    }
-
-    const msgProps: MessageTextSelectorProps = pick(props.propsForMessage, [
-      'direction',
-      'status',
-      'text',
-      'isDeleted',
-      'conversationType',
-    ]);
-
-    return msgProps;
   }
 );
 

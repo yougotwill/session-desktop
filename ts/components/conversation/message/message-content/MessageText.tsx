@@ -1,26 +1,20 @@
 import classNames from 'classnames';
 
-import { useSelector } from 'react-redux';
 import styled from 'styled-components';
-import { isOpenOrClosedGroup } from '../../../../models/conversationAttributes';
-import { MessageRenderingProps } from '../../../../models/messageType';
-import { StateType } from '../../../../state/reducer';
-import {
-  getMessageTextProps,
-  isMessageSelectionMode,
-} from '../../../../state/selectors/conversations';
 import { SessionIcon } from '../../../icon';
 import { MessageBody } from './MessageBody';
-import { useMessageDirection } from '../../../../state/selectors';
+import {
+  useMessageDirection,
+  useMessageIsDeleted,
+  useMessageText,
+} from '../../../../state/selectors';
+import {
+  useIsMessageSelectionMode,
+  useSelectedIsGroupOrCommunity,
+} from '../../../../state/selectors/selectedConversation';
+import type { WithMessageId } from '../../../../session/types/with';
 
-type Props = {
-  messageId: string;
-};
-
-export type MessageTextSelectorProps = Pick<
-  MessageRenderingProps,
-  'text' | 'direction' | 'status' | 'isDeleted' | 'conversationType'
->;
+type Props = WithMessageId;
 
 const StyledMessageText = styled.div<{ isDeleted?: boolean }>`
   white-space: pre-wrap;
@@ -37,16 +31,12 @@ const StyledMessageText = styled.div<{ isDeleted?: boolean }>`
     `}
 `;
 
-export const MessageText = (props: Props) => {
-  const selected = useSelector((state: StateType) => getMessageTextProps(state, props.messageId));
-  const multiSelectMode = useSelector(isMessageSelectionMode);
-  const direction = useMessageDirection(props.messageId);
-
-  if (!selected) {
-    return null;
-  }
-  const { text, isDeleted, conversationType } = selected;
-
+export const MessageText = ({ messageId }: Props) => {
+  const multiSelectMode = useIsMessageSelectionMode();
+  const direction = useMessageDirection(messageId);
+  const isDeleted = useMessageIsDeleted(messageId);
+  const text = useMessageText(messageId);
+  const isOpenOrClosedGroup = useSelectedIsGroupOrCommunity();
   const contents = isDeleted ? window.i18n('deleteMessageDeletedGlobally') : text?.trim();
 
   if (!contents) {
@@ -69,7 +59,7 @@ export const MessageText = (props: Props) => {
         text={contents || ''}
         disableLinks={multiSelectMode}
         disableJumbomoji={false}
-        isGroup={isOpenOrClosedGroup(conversationType)}
+        isGroup={isOpenOrClosedGroup}
       />
     </StyledMessageText>
   );
