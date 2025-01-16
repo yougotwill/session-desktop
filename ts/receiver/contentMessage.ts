@@ -793,6 +793,7 @@ async function handleMessageRequestResponse(
   envelope: EnvelopePlus,
   messageRequestResponse: SignalService.MessageRequestResponse
 ) {
+  // no one cares about the is `messageRequestResponse.isApproved` field currently.
   if (!messageRequestResponse || !messageRequestResponse.isApproved) {
     window?.log?.error('handleMessageRequestResponse: Invalid parameters -- dropping message.');
     await IncomingMessageCache.removeFromCache(envelope);

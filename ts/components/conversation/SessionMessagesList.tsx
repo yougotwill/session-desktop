@@ -21,7 +21,7 @@ import { SessionLastSeenIndicator } from './SessionLastSeenIndicator';
 import { TimerNotification } from './TimerNotification';
 import { DataExtractionNotification } from './message/message-item/DataExtractionNotification';
 import { InteractionNotification } from './message/message-item/InteractionNotification';
-import { PropsForCallNotification, PropsForInteractionNotification } from '../../state/ducks/types';
+import { PropsForInteractionNotification } from '../../state/ducks/types';
 
 function isNotTextboxEvent(e: KeyboardEvent) {
   return (e?.target as any)?.type === undefined;
@@ -144,9 +144,7 @@ export const SessionMessagesList = (props: {
         }
 
         if (messageProps.message?.messageType === 'call-notification') {
-          const msgProps = messageProps.message.props as PropsForCallNotification;
-
-          return [<CallNotification key={messageId} {...msgProps} />, ...componentToMerge];
+          return [<CallNotification key={messageId} messageId={messageId} />, ...componentToMerge];
         }
 
         if (messageProps.message?.messageType === 'interaction-notification') {

@@ -753,9 +753,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
   public async addOutgoingApprovalMessage(timestamp: number) {
     await this.addSingleOutgoingMessage({
       sent_at: timestamp,
-      messageRequestResponse: {
-        isApproved: 1,
-      },
+      messageRequestResponse: {},
       expireTimer: 0,
     });
 
@@ -771,9 +769,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     await this.addSingleIncomingMessage({
       sent_at: timestamp,
       source,
-      messageRequestResponse: {
-        isApproved: 1,
-      },
+      messageRequestResponse: {},
       unread: READ_MESSAGE_STATE.unread, // 1 means unread
       expireTimer: 0,
     });

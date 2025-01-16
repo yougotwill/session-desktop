@@ -194,8 +194,8 @@ export interface MessageAttributesOptionals {
   hasVisualMediaAttachments?: boolean;
   dataExtractionNotification?: DataExtractionNotificationMsg;
   messageRequestResponse?: {
-    /** 1 means approved, 0 means unapproved. */
-    isApproved?: number;
+    // keeping it as a object in case we ever add a field here.
+    // Note: we had isApproved field, but it was unused so I got rid of it
   };
   unread?: number;
   group?: any;

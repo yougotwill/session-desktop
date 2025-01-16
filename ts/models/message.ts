@@ -227,7 +227,7 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
     return this.get('groupInvitation');
   }
 
-  public isMessageRequestResponse() {
+  private isMessageRequestResponse() {
     return !!this.get('messageRequestResponse');
   }
 

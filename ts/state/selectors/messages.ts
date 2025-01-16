@@ -204,3 +204,15 @@ export function useMessageCommunityInvitationCommunityName(messageId: string) {
   return useMessagePropsByMessageId(messageId)?.propsForGroupInvitation?.serverName;
 }
 
+/**
+ *  =========================================
+ *  Below are selectors for call notification
+ *  =========================================
+ */
+
+/**
+ * Return the call notification type linked to the specified message
+ */
+export function useMessageCallNotificationType(messageId: string) {
+  return useMessagePropsByMessageId(messageId)?.propsForCallNotification?.notificationType;
+}
