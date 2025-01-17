@@ -6,6 +6,7 @@ import {
   getOldBottomMessageId,
   getOldTopMessageId,
   getSortedMessagesTypesOfSelectedConversation,
+  type MessagePropsType,
 } from '../../state/selectors/conversations';
 import { useSelectedConversationKey } from '../../state/selectors/selectedConversation';
 import { MessageDateBreak } from './message/message-item/DateBreak';
@@ -20,7 +21,6 @@ import { SessionLastSeenIndicator } from './SessionLastSeenIndicator';
 import { TimerNotification } from './TimerNotification';
 import { DataExtractionNotification } from './message/message-item/DataExtractionNotification';
 import { InteractionNotification } from './message/message-item/InteractionNotification';
-import { assertUnreachable } from '../../types/sqlSharedTypes';
 import type { WithMessageId } from '../../session/types/with';
 
 function isNotTextboxEvent(e: KeyboardEvent) {
@@ -28,6 +28,17 @@ function isNotTextboxEvent(e: KeyboardEvent) {
 }
 
 let previousRenderedConvo: string | undefined;
+
+const componentForMessageType: Record<MessagePropsType, React.FC<WithMessageId>> = {
+  'group-notification': GroupUpdateMessage,
+  'group-invitation': CommunityInvitation,
+  'message-request-response': MessageRequestResponse,
+  'data-extraction': DataExtractionNotification,
+  'timer-notification': TimerNotification,
+  'call-notification': CallNotification,
+  'interaction-notification': InteractionNotification,
+  'regular-message': Message,
+};
 
 export const SessionMessagesList = (props: {
   scrollAfterLoadMore: (
@@ -92,47 +103,7 @@ export const SessionMessagesList = (props: {
       {messagesProps.map(messageProps => {
         const { messageId } = messageProps;
 
-        let ComponentToRender: React.FC<WithMessageId> | undefined;
-
-        switch (messageProps.message.messageType) {
-          case 'group-notification': {
-            ComponentToRender = GroupUpdateMessage;
-            break;
-          }
-          case 'group-invitation': {
-            ComponentToRender = CommunityInvitation;
-            break;
-          }
-          case 'message-request-response': {
-            ComponentToRender = MessageRequestResponse;
-            break;
-          }
-          case 'data-extraction': {
-            ComponentToRender = DataExtractionNotification;
-            break;
-          }
-          case 'timer-notification': {
-            ComponentToRender = TimerNotification;
-            break;
-          }
-          case 'call-notification': {
-            ComponentToRender = CallNotification;
-            break;
-          }
-          case 'interaction-notification': {
-            ComponentToRender = InteractionNotification;
-            break;
-          }
-          case 'regular-message': {
-            ComponentToRender = Message;
-            break;
-          }
-          default:
-            assertUnreachable(
-              messageProps.message.messageType,
-              `unhandled case with ${messageProps.message.messageType}`
-            );
-        }
+        const ComponentToRender = componentForMessageType[messageProps.message.messageType];
 
         const unreadIndicator = messageProps.showUnreadIndicator ? (
           <SessionLastSeenIndicator

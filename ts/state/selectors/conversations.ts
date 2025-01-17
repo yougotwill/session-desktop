@@ -112,7 +112,6 @@ export type MessagePropsType =
   | 'message-request-response'
   | 'timer-notification'
   | 'regular-message'
-  | 'unread-indicator'
   | 'call-notification'
   | 'interaction-notification';
 
@@ -145,7 +144,7 @@ export const getSortedMessagesTypesOfSelectedConversation = createSelector(
         messageId: msg.propsForMessage.id,
       };
 
-      const messageType = msg.propsForDataExtractionNotification
+      const messageType: MessagePropsType = msg.propsForDataExtractionNotification
         ? ('data-extraction' as const)
         : msg.propsForMessageRequestResponse
           ? ('message-request-response' as const)
