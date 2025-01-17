@@ -3,6 +3,7 @@ import type {
   MergedLocalizerTokens,
   GetMessageArgs,
   LocalizerComponentProps,
+  SimpleLocalizerTokens,
 } from '../localization/localeTools';
 import { CrowdinLocale } from '../localization/constants';
 
@@ -13,7 +14,7 @@ export type I18nMethods = {
     opts: LocalizerComponentProps<T>
   ) => string | T;
   /** @see {@link window.i18n.inEnglish} */
-  inEnglish: <T extends MergedLocalizerTokens>(...[token, args]: GetMessageArgs<T>) => string | T;
+  inEnglish: <T extends SimpleLocalizerTokens>(token: T) => string | T;
   /** @see {@link window.i18n.formatMessageWithArgs */
   getRawMessage: <T extends MergedLocalizerTokens>(
     crowdinLocale: CrowdinLocale,

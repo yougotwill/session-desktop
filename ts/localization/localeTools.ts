@@ -1,10 +1,12 @@
+// eslint-disable-next-line no-restricted-imports
+import type { I18nMethods } from '../types/localizer';
 import { CrowdinLocale } from './constants';
 import { pluralsDictionary, simpleDictionary } from './locales';
 
 type SimpleDictionary = typeof simpleDictionary;
 type PluralDictionary = typeof pluralsDictionary;
 
-type SimpleLocalizerTokens = keyof SimpleDictionary;
+export type SimpleLocalizerTokens = keyof SimpleDictionary;
 type PluralLocalizerTokens = keyof PluralDictionary;
 
 export type MergedLocalizerTokens = SimpleLocalizerTokens | PluralLocalizerTokens;
@@ -133,7 +135,7 @@ function propsToTuple<T extends MergedLocalizerTokens>(
  * @param token - The token identifying the message to retrieve.
  * @param args - An optional record of substitution variables and their replacement values. This is equired if the string has dynamic variables.
  */
-export function inEnglish<T extends MergedLocalizerTokens>([token, args]: GetMessageArgs<T>) {
+export const inEnglish: I18nMethods['inEnglish'] = token => {
   if (!isSimpleToken(token)) {
     throw new Error('inEnglish only supports simple strings for now');
   }
@@ -143,8 +145,8 @@ export function inEnglish<T extends MergedLocalizerTokens>([token, args]: GetMes
     log(`Attempted to get forced en string for nonexistent key: '${token}' in fallback dictionary`);
     return token;
   }
-  return formatMessageWithArgs(rawMessage, args);
-}
+  return formatMessageWithArgs(rawMessage);
+};
 
 /**
  * Retrieves a localized message string, substituting variables where necessary.
@@ -176,24 +178,21 @@ export function getMessageDefault<T extends MergedLocalizerTokens>(
  *
  * @returns The localized message string with substitutions applied. Any HTML and custom tags are removed.
  */
-
-export function stripped<T extends MergedLocalizerTokens>(
-  ...[token, args]: GetMessageArgs<T>
-): string {
+export const stripped: I18nMethods['stripped'] = (...[token, args]) => {
   const sanitizedArgs = args ? sanitizeArgs(args, '\u200B') : undefined;
 
-  const i18nString = getMessageDefault<T>(...([token, sanitizedArgs] as GetMessageArgs<T>));
+  // Note: the `as any` is needed because we don't have the <T> template argument available
+  // when enforcing the type of the stripped function to be the one defined by I18nMethods
+  const i18nString = getMessageDefault(...([token, sanitizedArgs] as GetMessageArgs<any>));
 
   const strippedString = i18nString.replaceAll(/<[^>]*>/g, '');
 
   return deSanitizeHtmlTags(strippedString, '\u200B');
-}
+};
 
-export function strippedWithObj<T extends MergedLocalizerTokens>(
-  opts: LocalizerComponentProps<T>
-): string {
+export const strippedWithObj: I18nMethods['strippedWithObj'] = opts => {
   return stripped(...propsToTuple(opts));
-}
+};
 
 /**
  * Sanitizes the args to be used in the i18n function
@@ -224,17 +223,14 @@ export function sanitizeArgs(
  * @deprecated
  *
  */
-export function formatMessageWithArgs<T extends MergedLocalizerTokens>(
-  rawMessage: string,
-  args?: ArgsFromToken<T>
-): string {
+export const formatMessageWithArgs: I18nMethods['formatMessageWithArgs'] = (rawMessage, args) => {
   /** Find and replace the dynamic variables in a localized string and substitute the variables with the provided values */
   return rawMessage.replace(/\{(\w+)\}/g, (match: any, arg: string) => {
     const matchedArg = args ? args[arg as keyof typeof args] : undefined;
 
     return matchedArg?.toString() ?? match;
   });
-}
+};
 
 /**
  * Retrieves a localized message string, without substituting any variables. This resolves any plural forms using the given args
@@ -245,16 +241,13 @@ export function formatMessageWithArgs<T extends MergedLocalizerTokens>(
  *
  * NOTE: This is intended to be used to get the raw string then format it with {@link formatMessageWithArgs}
  */
-export function getRawMessage<T extends MergedLocalizerTokens>(
-  crowdinLocale: CrowdinLocale,
-  ...[token, args]: GetMessageArgs<T>
-): string {
+export const getRawMessage: I18nMethods['getRawMessage'] = (crowdinLocale, ...[token, args]) => {
   try {
     if (
       typeof window !== 'undefined' &&
       window?.sessionFeatureFlags?.replaceLocalizedStringsWithKeys
     ) {
-      return token as T;
+      return token;
     }
 
     if (isSimpleToken(token)) {
@@ -284,15 +277,15 @@ export function getRawMessage<T extends MergedLocalizerTokens>(
 
     if (!pluralString) {
       log(`Plural string not found for cardinal '${cardinalRule}': '${pluralString}'`);
-      return token as T;
+      return token;
     }
 
     return pluralString.replaceAll('#', `${num}`);
   } catch (error) {
     log(error.message);
-    return token as T;
+    return token;
   }
-}
+};
 
 function getStringForRule({
   dictionary,
