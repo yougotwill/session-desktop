@@ -194,20 +194,20 @@ export function useMessageSelected(messageId?: string) {
  * Return the full url needed to join a community through a community invitation message
  */
 export function useMessageCommunityInvitationFullUrl(messageId: string) {
-  return useMessagePropsByMessageId(messageId)?.propsForGroupInvitation?.fullUrl;
+  return useMessagePropsByMessageId(messageId)?.propsForCommunityInvitation?.fullUrl;
 }
 
 /**
  * Return the community display name to have a guess of what a community is about
  */
 export function useMessageCommunityInvitationCommunityName(messageId: string) {
-  return useMessagePropsByMessageId(messageId)?.propsForGroupInvitation?.serverName;
+  return useMessagePropsByMessageId(messageId)?.propsForCommunityInvitation?.serverName;
 }
 
 /**
- *  =========================================
- *  Below are selectors for call notification
- *  =========================================
+ *  ==========================================
+ *  Below are selectors for call notifications
+ *  ==========================================
  */
 
 /**
@@ -224,7 +224,7 @@ export function useMessageCallNotificationType(messageId: string) {
  */
 
 /**
- * Return the call notification type linked to the specified message
+ * Return the data exrtaction type linked to the specified message
  */
 export function useMessageDataExtractionType(messageId: string) {
   return useMessagePropsByMessageId(messageId)?.propsForDataExtractionNotification?.type;
@@ -237,7 +237,7 @@ export function useMessageDataExtractionType(messageId: string) {
  */
 
 /**
- * Return the call notification type linked to the specified message
+ * Return the interaction notification type linked to the specified message
  */
 export function useMessageInteractionNotification(messageId: string) {
   return useMessagePropsByMessageId(messageId)?.propsForInteractionNotification?.notificationType;
@@ -253,7 +253,7 @@ export function useMessageInteractionNotification(messageId: string) {
  * Return the expiration update mode linked to the specified message
  */
 export function useMessageExpirationUpdateMode(messageId: string) {
-  return useMessagePropsByMessageId(messageId)?.propsForTimerNotification?.expirationMode;
+  return useMessagePropsByMessageId(messageId)?.propsForTimerNotification?.expirationMode || 'off';
 }
 
 /**
@@ -265,7 +265,7 @@ export function useMessageExpirationUpdateDisabled(messageId: string) {
 }
 
 /**
- * Return the timespan in seconds to which this expiration timer update is sett
+ * Return the timespan in seconds to which this expiration timer update is set
  */
 export function useMessageExpirationUpdateTimespanSeconds(messageId: string) {
   return useMessagePropsByMessageId(messageId)?.propsForTimerNotification?.timespanSeconds;
@@ -275,7 +275,7 @@ export function useMessageExpirationUpdateTimespanSeconds(messageId: string) {
  * Return the timespan in text (localised) built from the field timespanSeconds
  */
 export function useMessageExpirationUpdateTimespanText(messageId: string) {
-  return useMessagePropsByMessageId(messageId)?.propsForTimerNotification?.timespanText;
+  return useMessagePropsByMessageId(messageId)?.propsForTimerNotification?.timespanText || '';
 }
 
 /**

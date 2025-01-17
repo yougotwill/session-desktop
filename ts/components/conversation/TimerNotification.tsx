@@ -42,10 +42,10 @@ const FollowSettingButton = styled.button`
 
 function useFollowSettingsButtonClick({ messageId }: WithMessageId) {
   const selectedConvoKey = useSelectedConversationKey();
-  const timespanSeconds = useMessageExpirationUpdateTimespanSeconds(messageId) || 0;
-  const expirationMode = useMessageExpirationUpdateMode(messageId) || 'off';
-  const disabled = useMessageExpirationUpdateDisabled(messageId) || false;
-  const timespanText = useMessageExpirationUpdateTimespanText(messageId) || '';
+  const timespanSeconds = useMessageExpirationUpdateTimespanSeconds(messageId);
+  const expirationMode = useMessageExpirationUpdateMode(messageId);
+  const disabled = useMessageExpirationUpdateDisabled(messageId);
+  const timespanText = useMessageExpirationUpdateTimespanText(messageId);
 
   const dispatch = useDispatch();
   const onExit = () => dispatch(updateConfirmModal(null));
@@ -108,9 +108,9 @@ function useFollowSettingsButtonClick({ messageId }: WithMessageId) {
 }
 
 function useAreSameThanOurSide({ messageId }: WithMessageId) {
-  const timespanSeconds = useMessageExpirationUpdateTimespanSeconds(messageId) || 0;
-  const expirationMode = useMessageExpirationUpdateMode(messageId) || 'off';
-  const disabled = useMessageExpirationUpdateDisabled(messageId) || false;
+  const timespanSeconds = useMessageExpirationUpdateTimespanSeconds(messageId);
+  const expirationMode = useMessageExpirationUpdateMode(messageId);
+  const disabled = useMessageExpirationUpdateDisabled(messageId);
 
   const selectedMode = useSelectedConversationDisappearingMode();
   const selectedTimespan = useSelectedExpireTimer();
@@ -129,7 +129,7 @@ const FollowSettingsButton = ({ messageId }: WithMessageId) => {
   const v2Released = ReleasedFeatures.isUserConfigFeatureReleasedCached();
   const isPrivateAndFriend = useSelectedIsPrivateFriend();
 
-  const expirationMode = useMessageExpirationUpdateMode(messageId) || 'off';
+  const expirationMode = useMessageExpirationUpdateMode(messageId);
   const authorIsUs = useMessageAuthorIsUs(messageId);
 
   const click = useFollowSettingsButtonClick({

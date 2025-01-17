@@ -54,7 +54,7 @@ import {
   MessageModelPropsWithoutConvoProps,
   PropsForAttachment,
   PropsForExpirationTimer,
-  PropsForGroupInvitation,
+  PropsForCommunityInvitation,
   PropsForGroupUpdate,
   PropsForGroupUpdateAdd,
   PropsForGroupUpdateAvatarChange,
@@ -125,7 +125,7 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
 
   public getMessageModelProps(): MessageModelPropsWithoutConvoProps {
     const propsForDataExtractionNotification = this.getPropsForDataExtractionNotification();
-    const propsForGroupInvitation = this.getPropsForGroupInvitation();
+    const propsForCommunityInvitation = this.getPropsForCommunityInvitation();
     const propsForGroupUpdateMessage = this.getPropsForGroupUpdateMessage();
     const propsForTimerNotification = this.getPropsForTimerNotification();
     const isMessageResponse = this.isMessageRequestResponse();
@@ -141,8 +141,8 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
     if (isMessageResponse) {
       messageProps.propsForMessageRequestResponse = {};
     }
-    if (propsForGroupInvitation) {
-      messageProps.propsForGroupInvitation = propsForGroupInvitation;
+    if (propsForCommunityInvitation) {
+      messageProps.propsForCommunityInvitation = propsForCommunityInvitation;
     }
     if (propsForGroupUpdateMessage) {
       messageProps.propsForGroupUpdateMessage = propsForGroupUpdateMessage;
@@ -455,7 +455,7 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
     return props;
   }
 
-  private getPropsForGroupInvitation(): PropsForGroupInvitation | null {
+  private getPropsForCommunityInvitation(): PropsForCommunityInvitation | null {
     const invitation = this.getCommunityInvitation();
     if (!invitation || !invitation.url) {
       return null;

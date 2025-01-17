@@ -145,16 +145,6 @@ export type DataExtractionNotificationMsg = {
 
 export type PropsForDataExtractionNotification = DataExtractionNotificationMsg;
 
-export type PropsForMessageRequestResponse = MessageRequestResponseMsg & {
-  conversationId?: string;
-  name?: string;
-  messageId: string;
-  receivedAt?: number;
-  isUnread: boolean;
-  isApproved?: boolean;
-  source?: string;
-};
-
 export type MessageGroupUpdate = {
   left?: Array<PubkeyType>;
   joined?: Array<PubkeyType>;

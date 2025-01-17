@@ -9,7 +9,7 @@ import {
 } from '../../state/selectors/conversations';
 import { useSelectedConversationKey } from '../../state/selectors/selectedConversation';
 import { MessageDateBreak } from './message/message-item/DateBreak';
-import { CommunityInvitation } from './message/message-item/GroupInvitation';
+import { CommunityInvitation } from './message/message-item/CommunityInvitation';
 import { GroupUpdateMessage } from './message/message-item/GroupUpdateMessage';
 import { Message } from './message/message-item/Message';
 import { MessageRequestResponse } from './message/message-item/MessageRequestResponse';

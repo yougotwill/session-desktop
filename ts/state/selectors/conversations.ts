@@ -149,7 +149,7 @@ export const getSortedMessagesTypesOfSelectedConversation = createSelector(
         ? ('data-extraction' as const)
         : msg.propsForMessageRequestResponse
           ? ('message-request-response' as const)
-          : msg.propsForGroupInvitation
+          : msg.propsForCommunityInvitation
             ? ('group-invitation' as const)
             : msg.propsForGroupUpdateMessage
               ? ('group-notification' as const)

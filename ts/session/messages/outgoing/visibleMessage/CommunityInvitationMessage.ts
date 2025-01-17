@@ -2,16 +2,16 @@ import { SignalService } from '../../../../protobuf';
 import { DataMessage } from '../DataMessage';
 import { ExpirableMessageParams } from '../ExpirableMessage';
 
-interface GroupInvitationMessageParams extends ExpirableMessageParams {
+interface CommunityInvitationMessageParams extends ExpirableMessageParams {
   url: string;
   name: string;
 }
 
-export class GroupInvitationMessage extends DataMessage {
+export class CommunityInvitationMessage extends DataMessage {
   private readonly url: string;
   private readonly name: string;
 
-  constructor(params: GroupInvitationMessageParams) {
+  constructor(params: CommunityInvitationMessageParams) {
     super({
       createAtNetworkTimestamp: params.createAtNetworkTimestamp,
       identifier: params.identifier,
