@@ -1,6 +1,5 @@
-// eslint-disable-next-line no-restricted-imports
-import type { I18nMethods } from '../types/localizer';
 import { CrowdinLocale } from './constants';
+import type { I18nMethods } from './I18nMethods';
 import { pluralsDictionary, simpleDictionary } from './locales';
 
 type SimpleDictionary = typeof simpleDictionary;

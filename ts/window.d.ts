@@ -5,7 +5,8 @@ import { Store } from '@reduxjs/toolkit';
 import { Persistor } from 'redux-persist/es/types';
 
 import { PrimaryColorStateType, ThemeStateType } from './themes/constants/colors';
-import type { GetMessageArgs, I18nMethods } from './types/localizer';
+import type { GetMessageArgs } from './types/localizer';
+import type { I18nMethods } from './types/I18nMethods';
 import type { MergedLocalizerTokens } from './localization/localeTools';
 
 export interface LibTextsecure {
