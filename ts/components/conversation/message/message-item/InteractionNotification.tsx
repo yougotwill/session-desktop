@@ -13,11 +13,7 @@ import {
   useSelectedIsPrivate,
   useSelectedIsPublic,
 } from '../../../../state/selectors/selectedConversation';
-import {
-  useMessageInteractionNotification,
-  useMessageIsUnread,
-  useMessageReceivedAt,
-} from '../../../../state/selectors';
+import { useMessageInteractionNotification, useMessageIsUnread } from '../../../../state/selectors';
 import type { WithMessageId } from '../../../../session/types/with';
 
 const StyledFailText = styled.div`
@@ -32,7 +28,6 @@ export const InteractionNotification = (props: WithMessageId) => {
   const isGroup = !useSelectedIsPrivate();
   const isCommunity = useSelectedIsPublic();
   const isUnread = useMessageIsUnread(messageId) || false;
-  const receivedAt = useMessageReceivedAt(messageId);
   const interactionNotification = useMessageInteractionNotification(messageId);
 
   if (!convoId || !messageId || !interactionNotification) {
@@ -80,7 +75,6 @@ export const InteractionNotification = (props: WithMessageId) => {
   return (
     <ReadableMessage
       messageId={messageId}
-      receivedAt={receivedAt}
       isUnread={isUnread}
       key={`readable-message-${messageId}`}
       dataTestId="interaction-notification"

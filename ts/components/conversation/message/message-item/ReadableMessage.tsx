@@ -31,12 +31,12 @@ import {
 } from '../../../../state/selectors/conversations';
 import { getIsAppFocused } from '../../../../state/selectors/section';
 import { useSelectedConversationKey } from '../../../../state/selectors/selectedConversation';
+import type { WithConvoId, WithMessageId } from '../../../../session/types/with';
 
 export type ReadableMessageProps = {
   children: ReactNode;
   messageId: string;
   className?: string;
-  receivedAt: number | undefined;
   isUnread: boolean;
   onClick?: MouseEventHandler<HTMLElement>;
   onDoubleClickCapture?: MouseEventHandler<HTMLElement>;
@@ -70,12 +70,36 @@ const debouncedTriggerLoadMoreBottom = debounce(
   100
 );
 
+async function markReadFromMessageId({
+  conversationId,
+  messageId,
+  isUnread,
+}: WithMessageId & WithConvoId & { isUnread: boolean }) {
+  // isUnread comes from the redux store in memory, so pretty fast and allows us to fetch from the DB too often
+  if (!isUnread) {
+    return;
+  }
+  const found = await Data.getMessageById(messageId);
+
+  if (!found) {
+    return;
+  }
+
+  if (found.isUnread()) {
+    ConvoHub.use()
+      .get(conversationId)
+      ?.markConversationRead({
+        newestUnreadDate: found.get('sent_at') || found.get('serverTimestamp') || Date.now(),
+        fromConfigMessage: false,
+      });
+  }
+}
+
 export const ReadableMessage = (props: ReadableMessageProps) => {
   const {
     messageId,
     onContextMenu,
     className,
-    receivedAt,
     isUnread,
     onClick,
     onDoubleClickCapture,
@@ -127,9 +151,12 @@ export const ReadableMessage = (props: ReadableMessageProps) => {
         // make sure the app is focused, because we mark message as read here
         if (inView === true && isAppFocused) {
           dispatch(showScrollToBottomButton(false));
-          ConvoHub.use()
-            .get(selectedConversationKey)
-            ?.markConversationRead({ newestUnreadDate: receivedAt || 0, fromConfigMessage: false }); // TODOLATER this should be `sentAt || serverTimestamp` I think
+          // TODO this is pretty expensive and should instead use values from the redux store
+          await markReadFromMessageId({
+            messageId,
+            conversationId: selectedConversationKey,
+            isUnread,
+          });
 
           dispatch(markConversationFullyRead(selectedConversationKey));
         } else if (inView === false) {
@@ -147,23 +174,12 @@ export const ReadableMessage = (props: ReadableMessageProps) => {
 
       // this part is just handling the marking of the message as read if needed
       if (inView) {
-        if (isUnread) {
-          // TODOLATER this is pretty expensive and should instead use values from the redux store
-          const found = await Data.getMessageById(messageId);
-
-          if (found && Boolean(found.get('unread'))) {
-            const foundSentAt = found.get('sent_at') || found.get('serverTimestamp');
-            // we should stack those and send them in a single message once every 5secs or something.
-            // this would be part of an redesign of the sending pipeline
-            // mark the whole conversation as read until this point.
-            // this will trigger the expire timer.
-            if (foundSentAt) {
-              ConvoHub.use()
-                .get(selectedConversationKey)
-                ?.markConversationRead({ newestUnreadDate: foundSentAt, fromConfigMessage: false });
-            }
-          }
-        }
+        // TODO this is pretty expensive and should instead use values from the redux store
+        await markReadFromMessageId({
+          messageId,
+          conversationId: selectedConversationKey,
+          isUnread,
+        });
       }
     },
     [
@@ -173,10 +189,9 @@ export const ReadableMessage = (props: ReadableMessageProps) => {
       oldestMessageId,
       fetchingMoreInProgress,
       isAppFocused,
-      receivedAt,
       messageId,
-      isUnread,
       youngestMessageId,
+      isUnread,
     ]
   );
 

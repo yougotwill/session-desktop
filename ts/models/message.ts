@@ -129,7 +129,6 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
     const propsForGroupUpdateMessage = this.getPropsForGroupUpdateMessage();
     const propsForTimerNotification = this.getPropsForTimerNotification();
     const isMessageResponse = this.isMessageRequestResponse();
-    const propsForQuote = this.getPropsForQuote();
     const callNotificationType = this.get('callNotificationType');
     const interactionNotification = this.getInteractionNotification();
 
@@ -150,9 +149,6 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
     }
     if (propsForTimerNotification) {
       messageProps.propsForTimerNotification = propsForTimerNotification;
-    }
-    if (propsForQuote) {
-      messageProps.propsForQuote = propsForQuote;
     }
 
     if (callNotificationType) {
@@ -198,7 +194,9 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
   }
 
   public isUnread() {
-    return !!this.get('unread');
+    const unreadField = this.get('unread');
+
+    return !!unreadField;
   }
 
   // Important to allow for this.set({ unread}), save to db, then fetch()

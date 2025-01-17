@@ -39,7 +39,6 @@ export type MessageModelPropsWithoutConvoProps = {
   propsForGroupUpdateMessage?: PropsForGroupUpdate; // plop: cleaned up
   propsForCallNotification?: PropsForCallNotification; // plop: cleaned up
   propsForMessageRequestResponse?: PropsForMessageRequestResponse; // plop: cleaned up
-  propsForQuote?: PropsForQuote;
   propsForInteractionNotification?: PropsForInteractionNotification; // plop: cleaned up
 };
 
@@ -151,7 +150,7 @@ export type PropsForMessageWithoutConvoProps = {
   id: string; // messageId
   direction: MessageModelType;
   timestamp: number;
-  sender: string; // this is the sender
+  sender: string; // this is the sender/author
   convoId: string; // this is the conversation in which this message was sent
   text?: string;
   receivedAt?: number;
@@ -170,6 +169,11 @@ export type PropsForMessageWithoutConvoProps = {
   expirationDurationMs?: number;
   expirationTimestamp?: number | null;
   isExpired?: boolean;
+  /**
+   * true if the sender of that message is trusted for auto attachment downloads.
+   * Note: we keep it in the PropsForMessageWithoutConvoProps because it is a per-sender setting
+   * rather than a per-convo setting (especially for groups)
+   */
   isTrustedForAttachmentDownload?: boolean;
 };
 

@@ -494,6 +494,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
    * Fetches from the Database an update of what are the memory only informations like mentionedUs and the unreadCount, etc
    */
   public async refreshInMemoryDetails(providedMemoryDetails?: SaveConversationReturn) {
+
     if (!SessionUtilConvoInfoVolatile.isConvoToStoreInWrapper(this)) {
       return;
     }

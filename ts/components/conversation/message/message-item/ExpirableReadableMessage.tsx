@@ -82,8 +82,7 @@ const StyledReadableMessage = styled(ReadableMessage)<{
   flex-direction: column;
 `;
 
-export interface ExpirableReadableMessageProps
-  extends Omit<ReadableMessageProps, 'receivedAt' | 'isUnread'> {
+export interface ExpirableReadableMessageProps extends Omit<ReadableMessageProps, 'isUnread'> {
   messageId: string;
   isControlMessage?: boolean;
 }
@@ -130,7 +129,6 @@ export const ExpirableReadableMessage = (props: ExpirableReadableMessageProps) =
   const {
     messageId,
     direction: _direction,
-    receivedAt,
     isUnread,
     expirationDurationMs,
     expirationTimestamp,
@@ -143,7 +141,6 @@ export const ExpirableReadableMessage = (props: ExpirableReadableMessageProps) =
   return (
     <StyledReadableMessage
       messageId={messageId}
-      receivedAt={receivedAt}
       isUnread={!!isUnread}
       isIncoming={isIncoming}
       onClick={onClick}
