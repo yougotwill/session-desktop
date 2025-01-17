@@ -75,7 +75,7 @@ async function markReadFromMessageId({
   messageId,
   isUnread,
 }: WithMessageId & WithConvoId & { isUnread: boolean }) {
-  // isUnread comes from the redux store in memory, so pretty fast and allows us to fetch from the DB too often
+  // isUnread comes from the redux store in memory, so pretty fast and allows us to not fetch from the DB too often
   if (!isUnread) {
     return;
   }

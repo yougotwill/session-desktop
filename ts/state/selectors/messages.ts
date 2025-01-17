@@ -224,7 +224,7 @@ export function useMessageCallNotificationType(messageId: string) {
  */
 
 /**
- * Return the data exrtaction type linked to the specified message
+ * Return the data extraction type linked to the specified message
  */
 export function useMessageDataExtractionType(messageId: string) {
   return useMessagePropsByMessageId(messageId)?.propsForDataExtractionNotification?.type;

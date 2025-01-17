@@ -107,7 +107,7 @@ function useFollowSettingsButtonClick({ messageId }: WithMessageId) {
   return { doIt };
 }
 
-function useAreSameThanOurSide({ messageId }: WithMessageId) {
+function useOurExpirationMatches({ messageId }: WithMessageId) {
   const timespanSeconds = useMessageExpirationUpdateTimespanSeconds(messageId);
   const expirationMode = useMessageExpirationUpdateMode(messageId);
   const disabled = useMessageExpirationUpdateDisabled(messageId);
@@ -135,7 +135,7 @@ const FollowSettingsButton = ({ messageId }: WithMessageId) => {
   const click = useFollowSettingsButtonClick({
     messageId,
   });
-  const areSameThanOurs = useAreSameThanOurSide({ messageId });
+  const areSameThanOurs = useOurExpirationMatches({ messageId });
 
   if (!v2Released || !isPrivateAndFriend) {
     return null;
