@@ -33,6 +33,8 @@ import { resetRegistration } from '../RegistrationStages';
 import { ContinueButton, OnboardDescription, OnboardHeading } from '../components';
 import { BackButtonWithinContainer } from '../components/BackButton';
 import { displayNameIsValid, sanitizeDisplayNameOrToast } from '../utils';
+import { localize } from '../../../util/i18n/localizedString';
+import { RetrieveDisplayNameError } from '../../../session/utils/errors';
 
 export type AccountDetails = {
   recoveryPassword: string;
@@ -106,9 +108,15 @@ export const CreateAccount = () => {
         `[onboarding] create account: signUpWithDetails failed! Error: ${err.message || String(err)}`
       );
       dispatch(setAccountCreationStep(AccountCreation.DisplayName));
-      // Note: we have to assume here that libsession threw an error because the name was too long.
+
+      if (err instanceof RetrieveDisplayNameError) {
+        dispatch(setDisplayNameError(localize('displayNameErrorDescription').toString()));
+        return;
+      }
+
+      // Note: we have to assume here that libsession threw an error because the name was too long since we covered the other cases.
       // The error reported by libsession is not localized
-      dispatch(setDisplayNameError(window.i18n('displayNameErrorDescriptionShorter')));
+      dispatch(setDisplayNameError(localize('displayNameErrorDescriptionShorter').toString()));
     }
   };
 

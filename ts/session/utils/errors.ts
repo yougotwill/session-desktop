@@ -87,3 +87,10 @@ export class SnodeResponseError extends BaseError {
     super(message);
   }
 }
+export class RetrieveDisplayNameError extends Error {
+  constructor(message = 'failed to retrieve display name after setting it') {
+    super(message);
+    // restore prototype chain
+    Object.setPrototypeOf(this, SnodeResponseError.prototype);
+  }
+}

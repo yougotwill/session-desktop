@@ -14,7 +14,7 @@ Please search for any [existing issues](https://github.com/session-foundation/se
 
 ## Supported platforms
 
-Session requires Windows 10 or later, macOS Monterey (12) or later, or a Linux distribution with glibc 2.28 or later like Debian 10 or Ubuntu 20.04.
+Session requires Windows 10 or later, macOS Ventura (13) or later, or a Linux distribution with glibc 2.28 or later like Debian 10 or Ubuntu 20.04.
 
 ## Build instruction
 
@@ -32,7 +32,7 @@ gpg --import KeeJef.asc
 Get the signed hash for this release, the SESSION_VERSION needs to be updated for the release you want to verify
 
 ```
-export SESSION_VERSION=1.6.1
+export SESSION_VERSION=1.15.0
 wget https://github.com/session-foundation/session-desktop/releases/download/v$SESSION_VERSION/signatures.asc
 ```
 

@@ -6,7 +6,7 @@ import { InvalidWordsError, NotEnoughWordsError } from '../../../session/crypto/
 import { ProfileManager } from '../../../session/profile_manager/ProfileManager';
 import { PromiseUtils } from '../../../session/utils';
 import { TaskTimedOutError } from '../../../session/utils/Promise';
-import { NotFoundError } from '../../../session/utils/errors';
+import { NotFoundError, RetrieveDisplayNameError } from '../../../session/utils/errors';
 import { trigger } from '../../../shims/events';
 import {
   AccountRestoration,
@@ -43,6 +43,7 @@ import { BackButtonWithinContainer } from '../components/BackButton';
 import { useRecoveryProgressEffect } from '../hooks';
 import { displayNameIsValid, sanitizeDisplayNameOrToast } from '../utils';
 import { AccountDetails } from './CreateAccount';
+import { localize } from '../../../util/i18n/localizedString';
 
 type AccountRestoreDetails = AccountDetails & { dispatch: Dispatch; abortSignal?: AbortSignal };
 
@@ -197,9 +198,14 @@ export const RestoreAccount = () => {
       );
       dispatch(setAccountRestorationStep(AccountRestoration.DisplayName));
 
-      // Note: we have to assume here that libsession threw an error because the name was too long.
+      if (err instanceof RetrieveDisplayNameError) {
+        dispatch(setDisplayNameError(localize('displayNameErrorDescription').toString()));
+        return;
+      }
+
+      // Note: we have to assume here that libsession threw an error because the name was too long since we covered the other cases.
       // The error reported by libsession is not localized
-      dispatch(setDisplayNameError(window.i18n('displayNameErrorDescriptionShorter')));
+      dispatch(setDisplayNameError(localize('displayNameErrorDescriptionShorter').toString()));
     }
   };
 
