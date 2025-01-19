@@ -1,7 +1,6 @@
 import classNames from 'classnames';
 import { isEqual } from 'lodash';
 import { memo, SessionDataTestId, useState } from 'react';
-import { useSelector } from 'react-redux';
 import styled from 'styled-components';
 
 import { useDisableDrag } from '../../hooks/useDisableDrag';
@@ -11,10 +10,10 @@ import {
   useConversationUsername,
   useIsClosedGroup,
 } from '../../hooks/useParamSelector';
-import { isMessageSelectionMode } from '../../state/selectors/conversations';
 import { SessionIcon } from '../icon';
 import { AvatarPlaceHolder } from './AvatarPlaceHolder/AvatarPlaceHolder';
 import { ClosedGroupAvatar } from './AvatarPlaceHolder/ClosedGroupAvatar';
+import { useIsMessageSelectionMode } from '../../state/selectors/selectedConversation';
 
 export enum AvatarSize {
   XS = 28,
@@ -127,7 +126,7 @@ const AvatarInner = (props: Props) => {
   } = props;
   const [imageBroken, setImageBroken] = useState(false);
 
-  const isSelectingMessages = useSelector(isMessageSelectionMode);
+  const isSelectingMessages = useIsMessageSelectionMode();
 
   const isClosedGroup = useIsClosedGroup(pubkey);
   const avatarPath = useAvatarPath(pubkey);

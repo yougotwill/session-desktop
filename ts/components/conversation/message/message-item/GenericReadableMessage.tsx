@@ -9,12 +9,10 @@ import { MessageRenderingProps } from '../../../../models/messageType';
 import { ConvoHub } from '../../../../session/conversations';
 import { StateType } from '../../../../state/reducer';
 import { useMessageSelected } from '../../../../state/selectors';
-import {
-  getGenericReadableMessageSelectorProps,
-  isMessageSelectionMode,
-} from '../../../../state/selectors/conversations';
+import { getGenericReadableMessageSelectorProps } from '../../../../state/selectors/conversations';
 import { MessageContentWithStatuses } from '../message-content/MessageContentWithStatus';
 import { StyledMessageReactionsContainer } from '../message-content/MessageReactions';
+import { useIsMessageSelectionMode } from '../../../../state/selectors/selectedConversation';
 
 export type GenericReadableMessageSelectorProps = Pick<
   MessageRenderingProps,
@@ -74,7 +72,7 @@ export const GenericReadableMessage = (props: Props) => {
 
   const isMessageSelected = useMessageSelected(props.messageId);
 
-  const multiSelectMode = useSelector(isMessageSelectionMode);
+  const multiSelectMode = useIsMessageSelectionMode();
 
   const [isRightClicked, setIsRightClicked] = useState(false);
   const onMessageLoseFocus = useCallback(() => {

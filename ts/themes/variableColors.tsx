@@ -79,6 +79,7 @@ export type ThemeColorVariables = {
   /* Simple */
   '--button-simple-text-color': string;
   '--button-simple-disabled-color': string;
+  '--button-simple-text-hover-color': string;
 
   /* Icons */
   '--button-icon-background-color': string;

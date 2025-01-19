@@ -5,7 +5,7 @@ import useKey from 'react-use/lib/useKey';
 import styled from 'styled-components';
 
 import { concat, isEmpty } from 'lodash';
-import useUpdate from 'react-use/lib/useUpdate';
+import useBoolean from 'react-use/lib/useBoolean';
 import { MemberListItem } from '../../MemberListItem';
 import { SessionButton } from '../../basic/SessionButton';
 
@@ -116,8 +116,8 @@ export const OverlayClosedGroupV2 = () => {
   const privateContactsPubkeys = useContactsToInviteToGroup();
   const isCreatingGroup = useIsCreatingGroupFromUIPending();
   const [groupName, setGroupName] = useState('');
+  const [inviteAsAdmin, setInviteAsAdmin] = useBoolean(false);
   const [groupNameError, setGroupNameError] = useState<string | undefined>();
-  const forceUpdate = useUpdate();
   const {
     uniqueValues: selectedMemberIds,
     addTo: addToSelected,
@@ -166,6 +166,7 @@ export const OverlayClosedGroupV2 = () => {
         members: concat(selectedMemberIds, [us]),
         groupName,
         us,
+        inviteAsAdmin,
       }) as any
     );
   }
@@ -214,11 +215,9 @@ export const OverlayClosedGroupV2 = () => {
             <span style={{ display: 'flex', alignItems: 'center' }}>
               Invite as admin?{'  '}
               <SessionToggle
-                active={window.sessionFeatureFlags.useGroupV2InviteAsAdmin}
+                active={inviteAsAdmin}
                 onClick={() => {
-                  window.sessionFeatureFlags.useGroupV2InviteAsAdmin =
-                    !window.sessionFeatureFlags.useGroupV2InviteAsAdmin;
-                  forceUpdate();
+                  setInviteAsAdmin(!inviteAsAdmin);
                 }}
               />
             </span>

@@ -11,11 +11,7 @@ import {
   ConversationAttributes,
   ConversationNotificationSettingType,
 } from '../../models/conversationAttributes';
-import {
-  MessageModelType,
-  PropsForDataExtractionNotification,
-  PropsForMessageRequestResponse,
-} from '../../models/messageType';
+import { MessageModelType, PropsForDataExtractionNotification } from '../../models/messageType';
 import { ConvoHub } from '../../session/conversations';
 import { DisappearingMessages } from '../../session/disappearing_messages';
 import {
@@ -29,6 +25,7 @@ import {
   LastMessageType,
   PropsForCallNotification,
   PropsForInteractionNotification,
+  type PropsForMessageRequestResponse,
 } from './types';
 import { AttachmentType } from '../../types/Attachment';
 import { CONVERSATION_PRIORITIES, ConversationTypeEnum } from '../../models/types';
@@ -36,14 +33,12 @@ import { WithConvoId, WithMessageHash, WithMessageId } from '../../session/types
 
 export type MessageModelPropsWithoutConvoProps = {
   propsForMessage: PropsForMessageWithoutConvoProps;
-  propsForExpiringMessage?: PropsForExpiringMessage;
-  propsForGroupInvitation?: PropsForGroupInvitation;
+  propsForCommunityInvitation?: PropsForCommunityInvitation;
   propsForTimerNotification?: PropsForExpirationTimer;
   propsForDataExtractionNotification?: PropsForDataExtractionNotification;
   propsForGroupUpdateMessage?: PropsForGroupUpdate;
   propsForCallNotification?: PropsForCallNotification;
   propsForMessageRequestResponse?: PropsForMessageRequestResponse;
-  propsForQuote?: PropsForQuote;
   propsForInteractionNotification?: PropsForInteractionNotification;
 };
 
@@ -83,13 +78,6 @@ export type PropsForExpirationTimer = {
   expirationMode: DisappearingMessageConversationModeType;
   timespanText: string;
   timespanSeconds: number | null;
-  disabled: boolean;
-  pubkey: string;
-  avatarPath: string | null;
-  name: string | null;
-  profileName: string | null;
-  type: 'fromMe' | 'fromSync' | 'fromOther';
-  messageId: string;
 };
 
 export type PropsForGroupUpdateAdd = {
@@ -132,15 +120,11 @@ export type PropsForGroupUpdateType =
 
 export type PropsForGroupUpdate = {
   change: PropsForGroupUpdateType;
-  messageId: string;
 };
 
-export type PropsForGroupInvitation = {
+export type PropsForCommunityInvitation = {
   serverName: string;
-  url: string;
-  direction: MessageModelType;
-  acceptUrl: string;
-  messageId: string;
+  fullUrl: string;
 };
 
 export type PropsForAttachment = AttachmentType & {
@@ -166,10 +150,9 @@ export type PropsForMessageWithoutConvoProps = {
   id: string; // messageId
   direction: MessageModelType;
   timestamp: number;
-  sender: string; // this is the sender
+  sender: string; // this is the sender/author
   convoId: string; // this is the conversation in which this message was sent
   text?: string;
-
   receivedAt?: number;
   serverTimestamp?: number;
   serverId?: number;
@@ -186,6 +169,11 @@ export type PropsForMessageWithoutConvoProps = {
   expirationDurationMs?: number;
   expirationTimestamp?: number | null;
   isExpired?: boolean;
+  /**
+   * true if the sender of that message is trusted for auto attachment downloads.
+   * Note: we keep it in the PropsForMessageWithoutConvoProps because it is a per-sender setting
+   * rather than a per-convo setting (especially for groups)
+   */
   isTrustedForAttachmentDownload?: boolean;
 };
 

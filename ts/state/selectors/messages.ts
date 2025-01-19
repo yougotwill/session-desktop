@@ -12,6 +12,7 @@ import { useSelectedIsPrivate } from './selectedConversation';
 import { LastMessageStatusType } from '../ducks/types';
 import { PubKey } from '../../session/types';
 import { useIsMe } from '../../hooks/useParamSelector';
+import { UserUtils } from '../../session/utils';
 
 function useMessagePropsByMessageId(messageId: string | undefined) {
   return useSelector((state: StateType) => getMessagePropsByMessageId(state, messageId));
@@ -83,6 +84,10 @@ export const useMessageAuthor = (messageId: string | undefined): string | undefi
   return useMessagePropsByMessageId(messageId)?.propsForMessage.sender;
 };
 
+export const useMessageAuthorIsUs = (messageId: string | undefined): boolean => {
+  return UserUtils.isUsFromCache(useMessagePropsByMessageId(messageId)?.propsForMessage.sender);
+};
+
 export const useMessageDirection = (
   messageId: string | undefined
 ): MessageModelType | undefined => {
@@ -129,6 +134,10 @@ export function useMessageReceivedAt(messageId: string | undefined) {
   return useMessagePropsByMessageId(messageId)?.propsForMessage.receivedAt;
 }
 
+export function useMessageIsUnread(messageId: string | undefined) {
+  return useMessagePropsByMessageId(messageId)?.propsForMessage.isUnread;
+}
+
 export function useMessageTimestamp(messageId: string | undefined) {
   return useMessagePropsByMessageId(messageId)?.propsForMessage.timestamp;
 }
@@ -173,4 +182,111 @@ export function useHideAvatarInMsgList(messageId?: string, isDetailView?: boolea
 
 export function useMessageSelected(messageId?: string) {
   return useSelector((state: StateType) => getIsMessageSelected(state, messageId));
+}
+
+/**
+ *  ==================================================
+ *  Below are selectors for community invitation props
+ *  ==================================================
+ */
+
+/**
+ * Return the full url needed to join a community through a community invitation message
+ */
+export function useMessageCommunityInvitationFullUrl(messageId: string) {
+  return useMessagePropsByMessageId(messageId)?.propsForCommunityInvitation?.fullUrl;
+}
+
+/**
+ * Return the community display name to have a guess of what a community is about
+ */
+export function useMessageCommunityInvitationCommunityName(messageId: string) {
+  return useMessagePropsByMessageId(messageId)?.propsForCommunityInvitation?.serverName;
+}
+
+/**
+ *  ==========================================
+ *  Below are selectors for call notifications
+ *  ==========================================
+ */
+
+/**
+ * Return the call notification type linked to the specified message
+ */
+export function useMessageCallNotificationType(messageId: string) {
+  return useMessagePropsByMessageId(messageId)?.propsForCallNotification?.notificationType;
+}
+
+/**
+ *  ====================================================
+ *  Below are selectors for data extraction notification
+ *  ====================================================
+ */
+
+/**
+ * Return the data extraction type linked to the specified message
+ */
+export function useMessageDataExtractionType(messageId: string) {
+  return useMessagePropsByMessageId(messageId)?.propsForDataExtractionNotification?.type;
+}
+
+/**
+ *  ================================================
+ *  Below are selectors for interaction notification
+ *  ================================================
+ */
+
+/**
+ * Return the interaction notification type linked to the specified message
+ */
+export function useMessageInteractionNotification(messageId: string) {
+  return useMessagePropsByMessageId(messageId)?.propsForInteractionNotification?.notificationType;
+}
+
+/**
+ *  ================================================
+ *  Below are selectors for expiration timer updates
+ *  ================================================
+ */
+
+/**
+ * Return the expiration update mode linked to the specified message
+ */
+export function useMessageExpirationUpdateMode(messageId: string) {
+  return useMessagePropsByMessageId(messageId)?.propsForTimerNotification?.expirationMode || 'off';
+}
+
+/**
+ * Return true if the message is disabling expiration timer update (timespanSeconds === 0)
+ */
+export function useMessageExpirationUpdateDisabled(messageId: string) {
+  const timespanSeconds = useMessageExpirationUpdateTimespanSeconds(messageId);
+  return timespanSeconds === 0;
+}
+
+/**
+ * Return the timespan in seconds to which this expiration timer update is set
+ */
+export function useMessageExpirationUpdateTimespanSeconds(messageId: string) {
+  return useMessagePropsByMessageId(messageId)?.propsForTimerNotification?.timespanSeconds;
+}
+
+/**
+ * Return the timespan in text (localised) built from the field timespanSeconds
+ */
+export function useMessageExpirationUpdateTimespanText(messageId: string) {
+  return useMessagePropsByMessageId(messageId)?.propsForTimerNotification?.timespanText || '';
+}
+
+/**
+ *  ============================================
+ *  Below are selectors for group change updates
+ *  ============================================
+ */
+
+/**
+ * Return the group change corresponding to this message's group update
+ */
+export function useMessageGroupUpdateChange(messageId: string) {
+  return useMessagePropsByMessageId(messageId)?.propsForGroupUpdateMessage?.change;
 }

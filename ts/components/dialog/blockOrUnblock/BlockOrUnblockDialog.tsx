@@ -101,7 +101,6 @@ export const BlockOrUnblockDialog = ({ pubkeys, action, onConfirmed }: NonNullab
             />
             <SessionButton
               buttonType={SessionButtonType.Simple}
-              buttonColor={SessionButtonColor.White}
               onClick={closeModal}
               text={window.i18n('cancel')}
               dataTestId="session-confirm-cancel-button"

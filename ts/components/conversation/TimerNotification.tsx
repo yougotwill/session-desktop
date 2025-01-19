@@ -1,9 +1,8 @@
 import { useDispatch } from 'react-redux';
 import styled from 'styled-components';
 import { PubkeyType } from 'libsession_util_nodejs';
-import { PropsForExpirationTimer } from '../../state/ducks/conversations';
+import { isNil } from 'lodash';
 
-import { UserUtils } from '../../session/utils';
 import {
   useSelectedConversationDisappearingMode,
   useSelectedConversationKey,
@@ -27,35 +26,44 @@ import { SessionButtonColor } from '../basic/SessionButton';
 import { SessionIcon } from '../icon';
 import { getTimerNotificationStr } from '../../models/timerNotifications';
 import type { LocalizerComponentPropsObject } from '../../localization/localeTools';
+import type { WithMessageId } from '../../session/types/with';
+import {
+  useMessageAuthor,
+  useMessageAuthorIsUs,
+  useMessageExpirationUpdateDisabled,
+  useMessageExpirationUpdateMode,
+  useMessageExpirationUpdateTimespanSeconds,
+  useMessageExpirationUpdateTimespanText,
+} from '../../state/selectors';
 
 const FollowSettingButton = styled.button`
   color: var(--primary-color);
 `;
 
-function useFollowSettingsButtonClick(
-  props: Pick<
-    PropsForExpirationTimer,
-    'disabled' | 'expirationMode' | 'timespanText' | 'timespanSeconds'
-  >
-) {
+function useFollowSettingsButtonClick({ messageId }: WithMessageId) {
   const selectedConvoKey = useSelectedConversationKey();
+  const timespanSeconds = useMessageExpirationUpdateTimespanSeconds(messageId);
+  const expirationMode = useMessageExpirationUpdateMode(messageId);
+  const disabled = useMessageExpirationUpdateDisabled(messageId);
+  const timespanText = useMessageExpirationUpdateTimespanText(messageId);
+
   const dispatch = useDispatch();
   const onExit = () => dispatch(updateConfirmModal(null));
 
   const doIt = () => {
     const localizedMode =
-      props.expirationMode === 'deleteAfterRead'
+      expirationMode === 'deleteAfterRead'
         ? window.i18n('disappearingMessagesTypeRead')
         : window.i18n('disappearingMessagesTypeSent');
 
-    const i18nMessage: LocalizerComponentPropsObject = props.disabled
+    const i18nMessage: LocalizerComponentPropsObject = disabled
       ? {
           token: 'disappearingMessagesFollowSettingOff',
         }
       : {
           token: 'disappearingMessagesFollowSettingOn',
           args: {
-            time: props.timespanText,
+            time: timespanText,
             disappearing_messages_type: localizedMode,
           },
         };
@@ -79,16 +87,16 @@ function useFollowSettingsButtonClick(
           if (!convo.isPrivate()) {
             throw new Error('follow settings only work for private chats');
           }
-          if (props.expirationMode === 'legacy') {
+          if (expirationMode === 'legacy') {
             throw new Error('follow setting does not apply with legacy');
           }
-          if (props.expirationMode !== 'off' && !props.timespanSeconds) {
+          if (expirationMode !== 'off' && !timespanSeconds) {
             throw new Error('non-off mode requires seconds arg to be given');
           }
           await ConversationInteraction.setDisappearingMessagesByConvoId(
             selectedConvoKey,
-            props.expirationMode,
-            props.timespanSeconds ?? undefined
+            expirationMode,
+            timespanSeconds ?? undefined
           );
         },
         showExitIcon: false,
@@ -99,36 +107,43 @@ function useFollowSettingsButtonClick(
   return { doIt };
 }
 
-function useAreSameThanOurSide(
-  props: Pick<PropsForExpirationTimer, 'disabled' | 'expirationMode' | 'timespanSeconds'>
-) {
+function useOurExpirationMatches({ messageId }: WithMessageId) {
+  const timespanSeconds = useMessageExpirationUpdateTimespanSeconds(messageId);
+  const expirationMode = useMessageExpirationUpdateMode(messageId);
+  const disabled = useMessageExpirationUpdateDisabled(messageId);
+
   const selectedMode = useSelectedConversationDisappearingMode();
   const selectedTimespan = useSelectedExpireTimer();
-  if (props.disabled && (selectedMode === 'off' || selectedMode === undefined)) {
+
+  if (disabled && (selectedMode === 'off' || selectedMode === undefined)) {
     return true;
   }
 
-  if (props.expirationMode === selectedMode && props.timespanSeconds === selectedTimespan) {
+  if (expirationMode === selectedMode && timespanSeconds === selectedTimespan) {
     return true;
   }
   return false;
 }
 
-const FollowSettingsButton = (props: PropsForExpirationTimer) => {
+const FollowSettingsButton = ({ messageId }: WithMessageId) => {
   const v2Released = ReleasedFeatures.isUserConfigFeatureReleasedCached();
   const isPrivateAndFriend = useSelectedIsPrivateFriend();
-  const click = useFollowSettingsButtonClick(props);
-  const areSameThanOurs = useAreSameThanOurSide(props);
+
+  const expirationMode = useMessageExpirationUpdateMode(messageId);
+  const authorIsUs = useMessageAuthorIsUs(messageId);
+
+  const click = useFollowSettingsButtonClick({
+    messageId,
+  });
+  const areSameThanOurs = useOurExpirationMatches({ messageId });
 
   if (!v2Released || !isPrivateAndFriend) {
     return null;
   }
   if (
-    props.type === 'fromMe' ||
-    props.type === 'fromSync' ||
-    props.pubkey === UserUtils.getOurPubKeyStrFromCache() ||
+    authorIsUs ||
     areSameThanOurs ||
-    props.expirationMode === 'legacy' // we cannot follow settings with legacy mode
+    expirationMode === 'legacy' // we cannot follow settings with legacy mode
   ) {
     return null;
   }
@@ -143,14 +158,18 @@ const FollowSettingsButton = (props: PropsForExpirationTimer) => {
   );
 };
 
-export const TimerNotification = (props: PropsForExpirationTimer) => {
-  const { messageId, expirationMode, pubkey, timespanSeconds } = props;
+export const TimerNotification = (props: WithMessageId) => {
+  const { messageId } = props;
+  const timespanSeconds = useMessageExpirationUpdateTimespanSeconds(messageId);
+  const expirationMode = useMessageExpirationUpdateMode(messageId);
+  const disabled = useMessageExpirationUpdateDisabled(messageId);
+  const pubkey = useMessageAuthor(messageId);
   const convoId = useSelectedConversationKey();
   const isGroupOrCommunity = useSelectedIsGroupOrCommunity();
   const isGroupV2 = useSelectedIsGroupV2();
   const isPublic = useSelectedIsPublic();
 
-  if (!convoId) {
+  if (!convoId || !messageId || isNil(timespanSeconds) || isNil(expirationMode)) {
     return null;
   }
 
@@ -163,7 +182,7 @@ export const TimerNotification = (props: PropsForExpirationTimer) => {
   });
 
   // renderOff is true when the update is put to off, or when we have a legacy group control message (as they are not expiring at all)
-  const renderOffIcon = props.disabled || (isGroupOrCommunity && isPublic && !isGroupV2);
+  const renderOffIcon = disabled || (isGroupOrCommunity && isPublic && !isGroupV2);
 
   return (
     <ExpirableReadableMessage

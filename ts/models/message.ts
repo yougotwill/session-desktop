@@ -19,14 +19,11 @@ import {
   uploadQuoteThumbnailsToFileServer,
 } from '../session/utils';
 import {
-  DataExtractionNotificationMsg,
   MessageAttributes,
   MessageAttributesOptionals,
   MessageGroupUpdate,
-  MessageModelType,
-  PropsForDataExtractionNotification,
-  PropsForMessageRequestResponse,
   fillMessageAttributesWithDefaults,
+  type DataExtractionNotificationMsg,
 } from './messageType';
 
 import { Data } from '../data/data';
@@ -57,8 +54,7 @@ import {
   MessageModelPropsWithoutConvoProps,
   PropsForAttachment,
   PropsForExpirationTimer,
-  PropsForExpiringMessage,
-  PropsForGroupInvitation,
+  PropsForCommunityInvitation,
   PropsForGroupUpdate,
   PropsForGroupUpdateAdd,
   PropsForGroupUpdateAvatarChange,
@@ -87,7 +83,7 @@ import { Storage } from '../util/storage';
 import { ConversationModel } from './conversation';
 import { READ_MESSAGE_STATE } from './conversationAttributes';
 import { ConversationInteractionStatus, ConversationInteractionType } from '../interactions/types';
-import { LastMessageStatusType } from '../state/ducks/types';
+import { LastMessageStatusType, type PropsForCallNotification } from '../state/ducks/types';
 import {
   getGroupDisplayPictureChangeStr,
   getGroupNameChangeStr,
@@ -129,12 +125,10 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
 
   public getMessageModelProps(): MessageModelPropsWithoutConvoProps {
     const propsForDataExtractionNotification = this.getPropsForDataExtractionNotification();
-    const propsForGroupInvitation = this.getPropsForGroupInvitation();
+    const propsForCommunityInvitation = this.getPropsForCommunityInvitation();
     const propsForGroupUpdateMessage = this.getPropsForGroupUpdateMessage();
     const propsForTimerNotification = this.getPropsForTimerNotification();
-    const propsForExpiringMessage = this.getPropsForExpiringMessage();
-    const propsForMessageRequestResponse = this.getPropsForMessageRequestResponse();
-    const propsForQuote = this.getPropsForQuote();
+    const isMessageResponse = this.isMessageRequestResponse();
     const callNotificationType = this.get('callNotificationType');
     const interactionNotification = this.getInteractionNotification();
 
@@ -144,11 +138,11 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
     if (propsForDataExtractionNotification) {
       messageProps.propsForDataExtractionNotification = propsForDataExtractionNotification;
     }
-    if (propsForMessageRequestResponse) {
-      messageProps.propsForMessageRequestResponse = propsForMessageRequestResponse;
+    if (isMessageResponse) {
+      messageProps.propsForMessageRequestResponse = {};
     }
-    if (propsForGroupInvitation) {
-      messageProps.propsForGroupInvitation = propsForGroupInvitation;
+    if (propsForCommunityInvitation) {
+      messageProps.propsForCommunityInvitation = propsForCommunityInvitation;
     }
     if (propsForGroupUpdateMessage) {
       messageProps.propsForGroupUpdateMessage = propsForGroupUpdateMessage;
@@ -156,30 +150,18 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
     if (propsForTimerNotification) {
       messageProps.propsForTimerNotification = propsForTimerNotification;
     }
-    if (propsForQuote) {
-      messageProps.propsForQuote = propsForQuote;
-    }
-
-    if (propsForExpiringMessage) {
-      messageProps.propsForExpiringMessage = propsForExpiringMessage;
-    }
 
     if (callNotificationType) {
-      messageProps.propsForCallNotification = {
+      const propsForCallNotification: PropsForCallNotification = {
+        messageId: this.id,
         notificationType: callNotificationType,
-        receivedAt: this.get('received_at') || Date.now(),
-        isUnread: this.isUnread(),
-        ...this.getPropsForExpiringMessage(),
       };
+      messageProps.propsForCallNotification = propsForCallNotification;
     }
 
     if (interactionNotification) {
       messageProps.propsForInteractionNotification = {
         notificationType: interactionNotification,
-        convoId: this.get('conversationId'),
-        messageId: this.id,
-        receivedAt: this.get('received_at') || Date.now(),
-        isUnread: this.isUnread(),
       };
     }
 
@@ -208,11 +190,13 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
   }
 
   public isIncoming() {
-    return this.get('type') === 'incoming';
+    return this.get('type') === 'incoming' || this.get('direction') === 'incoming';
   }
 
   public isUnread() {
-    return !!this.get('unread');
+    const unreadField = this.get('unread');
+
+    return !!unreadField;
   }
 
   // Important to allow for this.set({ unread}), save to db, then fetch()
@@ -229,32 +213,27 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
     this.set(attributes);
   }
 
-  public isCommunityInvitation() {
+  private isCommunityInvitation() {
     return !!this.getCommunityInvitation();
   }
   public getCommunityInvitation() {
     return this.get('groupInvitation');
   }
 
-  public isMessageRequestResponse() {
+  private isMessageRequestResponse() {
     return !!this.get('messageRequestResponse');
   }
 
-  public isDataExtractionNotification() {
-    return !!this.getDataExtractionNotification();
-  }
-  public getDataExtractionNotification() {
-    return this.get('dataExtractionNotification');
+  private isDataExtractionNotification() {
+    // if set to {} this returns true
+    return !isEmpty(this.get('dataExtractionNotification'));
   }
 
-  public isCallNotification() {
-    return !!this.getCallNotification();
-  }
-  public getCallNotification() {
-    return this.get('callNotificationType');
+  private isCallNotification() {
+    return !!this.get('callNotificationType');
   }
 
-  public isInteractionNotification() {
+  private isInteractionNotification() {
     return !!this.getInteractionNotification();
   }
   public getInteractionNotification() {
@@ -316,14 +295,11 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
       const dataExtraction = this.get(
         'dataExtractionNotification'
       ) as DataExtractionNotificationMsg;
-      if (dataExtraction.type === SignalService.DataExtractionNotification.Type.SCREENSHOT) {
-        return window.i18n.stripped('screenshotTaken', {
-          name: ConvoHub.use().getNicknameOrRealUsernameOrPlaceholder(dataExtraction.source),
-        });
-      }
-
-      return window.i18n.stripped('attachmentsMediaSaved', {
-        name: ConvoHub.use().getNicknameOrRealUsernameOrPlaceholder(dataExtraction.source),
+      const authorName = ConvoHub.use().getNicknameOrRealUsernameOrPlaceholder(this.get('source'));
+      const isScreenshot =
+        dataExtraction.type === SignalService.DataExtractionNotification.Type.SCREENSHOT;
+      return window.i18n.stripped(isScreenshot ? 'screenshotTaken' : 'attachmentsMediaSaved', {
+        name: authorName,
       });
     }
     if (this.isCallNotification()) {
@@ -398,7 +374,7 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
         expireTimer
       );
 
-      const source = expireTimerUpdate?.source;
+      const source = this.get('source');
       const i18nProps = getTimerNotificationStr({
         convoId: convo.id,
         author: source as PubkeyType,
@@ -449,35 +425,7 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
     }
   }
 
-  public getPropsForExpiringMessage(): PropsForExpiringMessage {
-    const expirationType = this.getExpirationType();
-    const expirationDurationMs = this.getExpireTimerSeconds()
-      ? this.getExpireTimerSeconds() * DURATION.SECONDS
-      : null;
-
-    const expireTimerStart = this.getExpirationStartTimestamp() || null;
-
-    const expirationTimestamp =
-      expirationType && expireTimerStart && expirationDurationMs
-        ? expireTimerStart + expirationDurationMs
-        : null;
-
-    const direction =
-      this.get('direction') === 'outgoing' || this.get('type') === 'outgoing'
-        ? 'outgoing'
-        : 'incoming';
-
-    return {
-      convoId: this.get('conversationId'),
-      messageId: this.get('id'),
-      direction,
-      expirationDurationMs,
-      expirationTimestamp,
-      isExpired: this.isExpired(),
-    };
-  }
-
-  public getPropsForTimerNotification(): PropsForExpirationTimer | null {
+  private getPropsForTimerNotification(): PropsForExpirationTimer | null {
     if (!this.isExpirationTimerUpdate()) {
       return null;
     }
@@ -485,11 +433,11 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
     const timerUpdate = this.getExpirationTimerUpdate();
     const convo = this.getConversation();
 
-    if (!timerUpdate || !timerUpdate.source || !convo) {
+    if (!timerUpdate || !this.get('source') || !convo) {
       return null;
     }
 
-    const { expireTimer, fromSync, source } = timerUpdate;
+    const { expireTimer } = timerUpdate;
     const expirationMode = DisappearingMessages.changeToDisappearingConversationMode(
       convo,
       timerUpdate?.expirationType || 'unknown',
@@ -497,104 +445,41 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
     );
 
     const timespanText = TimerOptions.getName(expireTimer || 0);
-    const disabled = !expireTimer;
 
-    const basicProps: PropsForExpirationTimer = {
-      ...findAndFormatContact(source),
+    const props: PropsForExpirationTimer = {
       timespanText,
       timespanSeconds: expireTimer || 0,
-      disabled,
-      type: fromSync ? 'fromSync' : UserUtils.isUsFromCache(source) ? 'fromMe' : 'fromOther',
-      receivedAt: this.get('received_at'),
-      isUnread: this.isUnread(),
       expirationMode: expirationMode || 'off',
-      ...this.getPropsForExpiringMessage(),
     };
 
-    return basicProps;
+    return props;
   }
 
-  public getPropsForGroupInvitation(): PropsForGroupInvitation | null {
+  private getPropsForCommunityInvitation(): PropsForCommunityInvitation | null {
     const invitation = this.getCommunityInvitation();
     if (!invitation || !invitation.url) {
       return null;
     }
-    let serverAddress = '';
-
-    try {
-      const url = new URL(invitation.url);
-      serverAddress = url.origin;
-    } catch (e) {
-      window?.log?.warn('failed to get hostname from open groupv2 invitation', invitation);
-    }
 
     return {
       serverName: invitation.name,
-      url: serverAddress,
-      acceptUrl: invitation.url,
-      receivedAt: this.get('received_at'),
-      isUnread: this.isUnread(),
-      ...this.getPropsForExpiringMessage(),
+      fullUrl: invitation.url,
     };
   }
 
-  public getPropsForDataExtractionNotification(): PropsForDataExtractionNotification | null {
-    if (!this.isDataExtractionNotification()) {
+  private getPropsForDataExtractionNotification(): DataExtractionNotificationMsg | null {
+    const dataExtraction = this.get('dataExtractionNotification');
+    if (!dataExtraction || !dataExtraction.type) {
       return null;
     }
-    const dataExtractionNotification = this.getDataExtractionNotification();
-
-    if (!dataExtractionNotification) {
-      window.log.warn('dataExtractionNotification should not happen');
-      return null;
-    }
-
-    const contact = findAndFormatContact(dataExtractionNotification.source);
-
-    return {
-      ...dataExtractionNotification,
-      name: contact.profileName || contact.name || dataExtractionNotification.source,
-      receivedAt: this.get('received_at'),
-      isUnread: this.isUnread(),
-      ...this.getPropsForExpiringMessage(),
-    };
+    return { type: dataExtraction.type };
   }
 
-  public getPropsForMessageRequestResponse(): PropsForMessageRequestResponse | null {
-    if (!this.isMessageRequestResponse()) {
-      return null;
-    }
-    const messageRequestResponse = this.get('messageRequestResponse');
-
-    if (!messageRequestResponse) {
-      window.log.warn('messageRequestResponse should not happen');
-      return null;
-    }
-
-    const contact = findAndFormatContact(messageRequestResponse.source);
-
-    return {
-      ...messageRequestResponse,
-      name: contact.profileName || contact.name || messageRequestResponse.source,
-      messageId: this.id,
-      receivedAt: this.get('received_at'),
-      isUnread: this.isUnread(),
-      conversationId: this.get('conversationId'),
-      source: this.get('source'),
-    };
-  }
-
-  public getPropsForGroupUpdateMessage(): PropsForGroupUpdate | null {
+  private getPropsForGroupUpdateMessage(): PropsForGroupUpdate | null {
     const groupUpdate = this.getGroupUpdateAsArray();
     if (!groupUpdate || isEmpty(groupUpdate)) {
       return null;
     }
-
-    const sharedProps = {
-      isUnread: this.isUnread(),
-      receivedAt: this.get('received_at'),
-      ...this.getPropsForExpiringMessage(),
-    };
 
     if (groupUpdate.joined?.length) {
       const change: PropsForGroupUpdateAdd = {
@@ -602,7 +487,7 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
         added: groupUpdate.joined as Array<PubkeyType>,
         withHistory: false,
       };
-      return { change, ...sharedProps };
+      return { change };
     }
     if (groupUpdate.joinedWithHistory?.length) {
       const change: PropsForGroupUpdateAdd = {
@@ -610,7 +495,7 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
         added: groupUpdate.joinedWithHistory as Array<PubkeyType>,
         withHistory: true,
       };
-      return { change, ...sharedProps };
+      return { change };
     }
 
     if (groupUpdate.kicked?.length) {
@@ -618,7 +503,7 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
         type: 'kicked',
         kicked: groupUpdate.kicked as Array<PubkeyType>,
       };
-      return { change, ...sharedProps };
+      return { change };
     }
 
     if (groupUpdate.left?.length) {
@@ -626,7 +511,7 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
         type: 'left',
         left: groupUpdate.left as Array<PubkeyType>,
       };
-      return { change, ...sharedProps };
+      return { change };
     }
 
     if (groupUpdate.promoted?.length) {
@@ -634,20 +519,20 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
         type: 'promoted',
         promoted: groupUpdate.promoted as Array<PubkeyType>,
       };
-      return { change, ...sharedProps };
+      return { change };
     }
     if (groupUpdate.name) {
       const change: PropsForGroupUpdateName = {
         type: 'name',
         newName: groupUpdate.name,
       };
-      return { change, ...sharedProps };
+      return { change };
     }
     if (groupUpdate.avatarChange) {
       const change: PropsForGroupUpdateAvatarChange = {
         type: 'avatarChange',
       };
-      return { change, ...sharedProps };
+      return { change };
     }
 
     return null;
@@ -701,8 +586,12 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
   public getPropsForMessage(): PropsForMessageWithoutConvoProps {
     const sender = this.getSource();
     const expirationType = this.getExpirationType();
-    const expirationDurationMs = this.getExpireTimerSeconds() * DURATION.SECONDS;
-    const expireTimerStart = this.getExpirationStartTimestamp();
+    const expirationDurationMs = this.getExpireTimerSeconds()
+      ? this.getExpireTimerSeconds() * DURATION.SECONDS
+      : null;
+
+    const expireTimerStart = this.getExpirationStartTimestamp() || null;
+
     const expirationTimestamp =
       expirationType && expireTimerStart && expirationDurationMs
         ? expireTimerStart + expirationDurationMs
@@ -713,7 +602,7 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
     const body = this.get('body');
     const props: PropsForMessageWithoutConvoProps = {
       id: this.id,
-      direction: (this.isIncoming() ? 'incoming' : 'outgoing') as MessageModelType,
+      direction: this.isIncoming() ? 'incoming' : 'outgoing',
       timestamp: this.get('sent_at') || 0,
       sender,
       convoId: this.get('conversationId'),
@@ -782,7 +671,7 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
     return props;
   }
 
-  public getPropsForPreview(): Array<any> | null {
+  private getPropsForPreview(): Array<any> | null {
     const previews = this.get('preview') || null;
 
     if (!previews || previews.length === 0) {
@@ -807,11 +696,11 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
     });
   }
 
-  public getPropsForReacts(): ReactionList | null {
+  private getPropsForReacts(): ReactionList | null {
     return this.get('reacts') || null;
   }
 
-  public getPropsForQuote(): PropsForQuote | null {
+  private getPropsForQuote(): PropsForQuote | null {
     return this.get('quote') || null;
   }
 

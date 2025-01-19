@@ -20,7 +20,7 @@ export class DataExtractionNotificationMessage extends ExpirableMessage {
   constructor(params: DataExtractionNotificationMessageParams) {
     super(params);
     this.referencedAttachmentTimestamp = params.referencedAttachmentTimestamp;
-    // this does not make any sense
+    // this is unused. Probably on all platforms, but well.
     if (!this.referencedAttachmentTimestamp) {
       throw new Error('referencedAttachmentTimestamp must be set');
     }

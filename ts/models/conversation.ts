@@ -36,7 +36,7 @@ import { OpenGroupUtils } from '../session/apis/open_group_api/utils';
 import { getOpenGroupV2FromConversationId } from '../session/apis/open_group_api/utils/OpenGroupUtils';
 import { ExpirationTimerUpdateMessage } from '../session/messages/outgoing/controlMessage/ExpirationTimerUpdateMessage';
 import { TypingMessage } from '../session/messages/outgoing/controlMessage/TypingMessage';
-import { GroupInvitationMessage } from '../session/messages/outgoing/visibleMessage/GroupInvitationMessage';
+import { CommunityInvitationMessage } from '../session/messages/outgoing/visibleMessage/CommunityInvitationMessage';
 import { OpenGroupVisibleMessage } from '../session/messages/outgoing/visibleMessage/OpenGroupVisibleMessage';
 import {
   VisibleMessage,
@@ -753,9 +753,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
   public async addOutgoingApprovalMessage(timestamp: number) {
     await this.addSingleOutgoingMessage({
       sent_at: timestamp,
-      messageRequestResponse: {
-        isApproved: 1,
-      },
+      messageRequestResponse: {},
       expireTimer: 0,
     });
 
@@ -771,9 +769,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     await this.addSingleIncomingMessage({
       sent_at: timestamp,
       source,
-      messageRequestResponse: {
-        isApproved: 1,
-      },
+      messageRequestResponse: {},
       unread: READ_MESSAGE_STATE.unread, // 1 means unread
       expireTimer: 0,
     });
@@ -2148,7 +2144,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
         const communityInvitation = message.getCommunityInvitation();
 
         if (communityInvitation && communityInvitation.url) {
-          const groupInviteMessage = new GroupInvitationMessage({
+          const communityInviteMessage = new CommunityInvitationMessage({
             identifier: id,
             createAtNetworkTimestamp: networkTimestamp,
             name: communityInvitation.name,
@@ -2159,7 +2155,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
           // we need the return await so that errors are caught in the catch {}
           await MessageQueue.use().sendToPubKey(
             destinationPubkey,
-            groupInviteMessage,
+            communityInviteMessage,
             SnodeNamespaces.Default
           );
           return;
@@ -2853,6 +2849,7 @@ async function cleanUpExpireHistoryFromConvo(conversationId: string, isPrivate: 
     conversationId,
     isPrivate
   );
+
   window?.inboxStore?.dispatch(
     messagesDeleted(updateIdsRemoved.map(m => ({ conversationId, messageId: m })))
   );

@@ -22,7 +22,6 @@ import { ReplyingToMessageProps } from '../../components/conversation/compositio
 import { MessageAttachmentSelectorProps } from '../../components/conversation/message/message-content/MessageAttachment';
 import { MessageContentSelectorProps } from '../../components/conversation/message/message-content/MessageContent';
 import { MessageContentWithStatusSelectorProps } from '../../components/conversation/message/message-content/MessageContentWithStatus';
-import { MessageTextSelectorProps } from '../../components/conversation/message/message-content/MessageText';
 import { GenericReadableMessageSelectorProps } from '../../components/conversation/message/message-item/GenericReadableMessage';
 import { hasValidIncomingRequestValues } from '../../models/conversation';
 import { isOpenOrClosedGroup } from '../../models/conversationAttributes';
@@ -113,7 +112,6 @@ export type MessagePropsType =
   | 'message-request-response'
   | 'timer-notification'
   | 'regular-message'
-  | 'unread-indicator'
   | 'call-notification'
   | 'interaction-notification';
 
@@ -140,90 +138,32 @@ export const getSortedMessagesTypesOfSelectedConversation = createSelector(
           ? messageTimestamp
           : undefined;
 
-      const common = { showUnreadIndicator: isFirstUnread, showDateBreak };
-
-      if (msg.propsForDataExtractionNotification) {
-        return {
-          ...common,
-          message: {
-            messageType: 'data-extraction',
-            props: { ...msg.propsForDataExtractionNotification, messageId: msg.propsForMessage.id },
-          },
-        };
-      }
-
-      if (msg.propsForMessageRequestResponse) {
-        return {
-          ...common,
-          message: {
-            messageType: 'message-request-response',
-            props: { ...msg.propsForMessageRequestResponse, messageId: msg.propsForMessage.id },
-          },
-        };
-      }
-
-      if (msg.propsForGroupInvitation) {
-        return {
-          ...common,
-          message: {
-            messageType: 'group-invitation',
-            props: { ...msg.propsForGroupInvitation, messageId: msg.propsForMessage.id },
-          },
-        };
-      }
-
-      if (msg.propsForGroupUpdateMessage) {
-        return {
-          ...common,
-          message: {
-            messageType: 'group-notification',
-            props: { ...msg.propsForGroupUpdateMessage, messageId: msg.propsForMessage.id },
-          },
-        };
-      }
-
-      if (msg.propsForTimerNotification) {
-        return {
-          ...common,
-          message: {
-            messageType: 'timer-notification',
-            props: { ...msg.propsForTimerNotification, messageId: msg.propsForMessage.id },
-          },
-        };
-      }
-
-      if (msg.propsForCallNotification) {
-        return {
-          ...common,
-          message: {
-            messageType: 'call-notification',
-            props: {
-              ...msg.propsForCallNotification,
-              messageId: msg.propsForMessage.id,
-            },
-          },
-        };
-      }
-
-      if (msg.propsForInteractionNotification) {
-        return {
-          ...common,
-          message: {
-            messageType: 'interaction-notification',
-            props: {
-              ...msg.propsForInteractionNotification,
-              messageId: msg.propsForMessage.id,
-            },
-          },
-        };
-      }
-
-      return {
+      const common = {
         showUnreadIndicator: isFirstUnread,
         showDateBreak,
+        messageId: msg.propsForMessage.id,
+      };
+
+      const messageType: MessagePropsType = msg.propsForDataExtractionNotification
+        ? ('data-extraction' as const)
+        : msg.propsForMessageRequestResponse
+          ? ('message-request-response' as const)
+          : msg.propsForCommunityInvitation
+            ? ('group-invitation' as const)
+            : msg.propsForGroupUpdateMessage
+              ? ('group-notification' as const)
+              : msg.propsForTimerNotification
+                ? ('timer-notification' as const)
+                : msg.propsForCallNotification
+                  ? ('call-notification' as const)
+                  : msg.propsForInteractionNotification
+                    ? ('interaction-notification' as const)
+                    : ('regular-message' as const);
+
+      return {
+        ...common,
         message: {
-          messageType: 'regular-message',
-          props: { messageId: msg.propsForMessage.id },
+          messageType,
         },
       };
     });
@@ -910,25 +850,6 @@ export const getMessageQuoteProps = createSelector(
     return {
       quote,
     };
-  }
-);
-
-export const getMessageTextProps = createSelector(
-  getMessagePropsByMessageId,
-  (props): MessageTextSelectorProps | undefined => {
-    if (!props || isEmpty(props)) {
-      return undefined;
-    }
-
-    const msgProps: MessageTextSelectorProps = pick(props.propsForMessage, [
-      'direction',
-      'status',
-      'text',
-      'isDeleted',
-      'conversationType',
-    ]);
-
-    return msgProps;
   }
 );
 

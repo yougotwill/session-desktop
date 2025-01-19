@@ -242,11 +242,7 @@ export async function deleteMessagesFromSwarmAndCompletelyLocally(
   // LEGACY GROUPS -- we cannot delete on the swarm (just unsend which is done separately)
   if (conversation.isClosedGroup() && PubKey.is05Pubkey(pubkey)) {
     window.log.info('Cannot delete message from a closed group swarm, so we just complete delete.');
-    await Promise.all(
-      messages.map(async message => {
-        return deleteMessageLocallyOnly({ conversation, message, deletionType: 'complete' });
-      })
-    );
+    await deleteMessagesLocallyOnly({ conversation, messages, deletionType: 'complete' });
     return;
   }
   window.log.info(
@@ -261,11 +257,7 @@ export async function deleteMessagesFromSwarmAndCompletelyLocally(
       'deleteMessagesFromSwarmAndCompletelyLocally: some messages failed to be deleted. Maybe they were already deleted?'
     );
   }
-  await Promise.all(
-    messages.map(async message => {
-      return deleteMessageLocallyOnly({ conversation, message, deletionType: 'complete' });
-    })
-  );
+  await deleteMessagesLocallyOnly({ conversation, messages, deletionType: 'complete' });
 }
 
 /**
@@ -281,11 +273,8 @@ export async function deleteMessagesFromSwarmAndMarkAsDeletedLocally(
     window.log.info(
       'Cannot delete messages from a legacy closed group swarm, so we just markDeleted.'
     );
-    await Promise.all(
-      messages.map(async message => {
-        return deleteMessageLocallyOnly({ conversation, message, deletionType: 'markDeleted' });
-      })
-    );
+    await deleteMessagesLocallyOnly({ conversation, messages, deletionType: 'markDeleted' });
+
     return;
   }
 
@@ -301,11 +290,7 @@ export async function deleteMessagesFromSwarmAndMarkAsDeletedLocally(
       'deleteMessagesFromSwarmAndMarkAsDeletedLocally: some messages failed to be deleted but still removing the messages content... '
     );
   }
-  await Promise.all(
-    messages.map(async message => {
-      return deleteMessageLocallyOnly({ conversation, message, deletionType: 'markDeleted' });
-    })
-  );
+  await deleteMessagesLocallyOnly({ conversation, messages, deletionType: 'markDeleted' });
 }
 
 /**
@@ -313,21 +298,27 @@ export async function deleteMessagesFromSwarmAndMarkAsDeletedLocally(
  * @param message Message to delete
  * @param deletionType 'complete' means completely delete the item from the database, markDeleted means empty the message content but keep an entry
  */
-export async function deleteMessageLocallyOnly({
+async function deleteMessagesLocallyOnly({
   conversation,
-  message,
+  messages,
   deletionType,
 }: WithLocalMessageDeletionType & {
   conversation: ConversationModel;
-  message: MessageModel;
+  messages: Array<MessageModel>;
 }) {
-  if (deletionType === 'complete') {
-    // remove the message from the database
-    await conversation.removeMessage(message.get('id'));
-  } else {
-    // just mark the message as deleted but still show in conversation
-    await message.markAsDeleted();
+  for (let index = 0; index < messages.length; index++) {
+    const message = messages[index];
+    if (deletionType === 'complete') {
+      // remove the message from the database
+      // eslint-disable-next-line no-await-in-loop
+      await conversation.removeMessage(message.get('id'));
+    } else {
+      // just mark the message as deleted but still show in conversation
+      // eslint-disable-next-line no-await-in-loop
+      await message.markAsDeleted();
+    }
   }
+
   conversation.updateLastMessage();
 }
 
@@ -389,9 +380,9 @@ const doDeleteSelectedMessagesInSOGS = async (
     toDeleteLocallyIds.map(async id => {
       const msgToDeleteLocally = await Data.getMessageById(id);
       if (msgToDeleteLocally) {
-        return deleteMessageLocallyOnly({
+        return deleteMessagesLocallyOnly({
           conversation,
-          message: msgToDeleteLocally,
+          messages: [msgToDeleteLocally],
           deletionType: 'complete',
         });
       }
@@ -430,11 +421,9 @@ const doDeleteSelectedMessages = async ({
     return;
   }
 
-  /**
-   * Note: groupv2 support deleteForEveryone only.
-   * For groupv2, a user can delete only his messages, but an admin can delete the messages of anyone.
-   *  */
-  if (deleteForEveryone || conversation.isClosedGroupV2()) {
+  //  Note: a groupv2 member can delete messages for everyone if they are the admin, or if that message is theirs.
+
+  if (deleteForEveryone) {
     if (conversation.isClosedGroupV2()) {
       const convoId = conversation.id;
       if (!PubKey.is03Pubkey(convoId)) {
@@ -463,6 +452,16 @@ const doDeleteSelectedMessages = async ({
       return;
     }
     await unsendMessagesForEveryone(conversation, selectedMessages, { deletionType: 'complete' }); // not 03 group: delete completely
+    return;
+  }
+
+  // delete just for me in a groupv2 only means delete locally (not even synced to our other devices)
+  if (conversation.isClosedGroupV2()) {
+    await deleteMessagesLocallyOnly({
+      conversation,
+      messages: selectedMessages,
+      deletionType: 'markDeleted',
+    });
     return;
   }
 

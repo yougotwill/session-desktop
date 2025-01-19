@@ -14,6 +14,7 @@ import {
   CallNotificationType,
   InteractionNotificationType,
 } from '../state/ducks/types';
+import type { SignalService } from '../protobuf';
 
 export type MessageModelType = 'incoming' | 'outgoing';
 
@@ -127,12 +128,6 @@ export interface MessageAttributes {
   interactionNotification?: InteractionNotificationType;
 }
 
-export interface DataExtractionNotificationMsg {
-  type: number; // screenshot or saving event, based on SignalService.DataExtractionNotification.Type
-  source: string; // the guy who made a screenshot
-  referencedAttachmentTimestamp: number; // the attachment timestamp he screenshot
-}
-
 export interface MessageRequestResponseMsg {
   source: string;
   isApproved: boolean;
@@ -144,20 +139,11 @@ export enum MessageDirection {
   any = '%',
 }
 
-export type PropsForDataExtractionNotification = DataExtractionNotificationMsg & {
-  name: string;
-  messageId: string;
+export type DataExtractionNotificationMsg = {
+  type: SignalService.DataExtractionNotification.Type;
 };
 
-export type PropsForMessageRequestResponse = MessageRequestResponseMsg & {
-  conversationId?: string;
-  name?: string;
-  messageId: string;
-  receivedAt?: number;
-  isUnread: boolean;
-  isApproved?: boolean;
-  source?: string;
-};
+export type PropsForDataExtractionNotification = DataExtractionNotificationMsg;
 
 export type MessageGroupUpdate = {
   left?: Array<PubkeyType>;
@@ -196,14 +182,10 @@ export interface MessageAttributesOptionals {
   hasAttachments?: boolean;
   hasFileAttachments?: boolean;
   hasVisualMediaAttachments?: boolean;
-  dataExtractionNotification?: {
-    type: number;
-    source: string;
-    referencedAttachmentTimestamp: number;
-  };
+  dataExtractionNotification?: DataExtractionNotificationMsg;
   messageRequestResponse?: {
-    /** 1 means approved, 0 means unapproved. */
-    isApproved?: number;
+    // keeping it as a object in case we ever add a field here.
+    // Note: we had isApproved field, but it was unused so I got rid of it
   };
   unread?: number;
   group?: any;

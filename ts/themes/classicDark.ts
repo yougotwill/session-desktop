@@ -65,6 +65,7 @@ export const classicDark: ThemeColorVariables = {
 
   '--button-simple-text-color': 'var(--text-primary-color)',
   '--button-simple-disabled-color': 'var(--disabled-color)',
+  '--button-simple-text-hover-color': 'var(--disabled-color)',
 
   '--button-icon-background-color': 'var(--transparent-color)',
   '--button-icon-stroke-color': 'var(--text-secondary-color)',

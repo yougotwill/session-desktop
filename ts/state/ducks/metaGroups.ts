@@ -107,10 +107,12 @@ const initNewGroupInWrapper = createAsyncThunk(
       groupName,
       members,
       us,
+      inviteAsAdmin,
     }: {
       groupName: string;
       members: Array<string>;
       us: string;
+      inviteAsAdmin: boolean;
     },
     { dispatch }
   ): Promise<GroupDetailsUpdate> => {
@@ -250,7 +252,7 @@ const initNewGroupInWrapper = createAsyncThunk(
         groupPk,
         membersFromWrapper.map(m => m.pubkeyHex),
         [],
-        window.sessionFeatureFlags.useGroupV2InviteAsAdmin
+        inviteAsAdmin
       );
 
       await openConversationWithMessages({ conversationKey: groupPk, messageId: null });
@@ -699,12 +701,7 @@ async function handleMemberAddedFromUI({
   }
 
   // schedule send invite details, auth signature, etc. to the new users
-  await scheduleGroupInviteJobs(
-    groupPk,
-    withHistory,
-    withoutHistory,
-    window.sessionFeatureFlags.useGroupV2InviteAsAdmin
-  );
+  await scheduleGroupInviteJobs(groupPk, withHistory, withoutHistory, false);
   await LibSessionUtil.saveDumpsToDb(groupPk);
 
   convo.set({

@@ -793,6 +793,7 @@ async function handleMessageRequestResponse(
   envelope: EnvelopePlus,
   messageRequestResponse: SignalService.MessageRequestResponse
 ) {
+  // no one cares about the is `messageRequestResponse.isApproved` field currently.
   if (!messageRequestResponse || !messageRequestResponse.isApproved) {
     window?.log?.error('handleMessageRequestResponse: Invalid parameters -- dropping message.');
     await IncomingMessageCache.removeFromCache(envelope);
@@ -920,8 +921,7 @@ export async function handleDataExtractionNotification({
   expireUpdate: ReadyToDisappearMsgUpdate | undefined;
   messageHash: string;
 }): Promise<void> {
-  // we currently don't care about the timestamp included in the field itself, just the timestamp of the envelope
-  const { type, timestamp: referencedAttachment } = dataExtractionNotification;
+  // Note: we currently don't care about the timestamp included in the field itself, just the timestamp of the envelope
 
   const { source, timestamp } = envelope;
   await IncomingMessageCache.removeFromCache(envelope);
@@ -933,23 +933,20 @@ export async function handleDataExtractionNotification({
     return;
   }
 
-  if (!type || !source || !timestamp) {
+  if (!source || !timestamp) {
     window?.log?.info('DataNotification pre check failed');
 
     return;
   }
 
   const sentAtTimestamp = toNumber(timestamp);
-  const referencedAttachmentTimestamp = toNumber(referencedAttachment);
 
   let created = await convo.addSingleIncomingMessage({
     source,
     messageHash,
     sent_at: sentAtTimestamp,
     dataExtractionNotification: {
-      type,
-      referencedAttachmentTimestamp, // currently unused
-      source,
+      type: dataExtractionNotification.type,
     },
   });
 
