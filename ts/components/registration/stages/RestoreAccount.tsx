@@ -43,7 +43,7 @@ import { BackButtonWithinContainer } from '../components/BackButton';
 import { useRecoveryProgressEffect } from '../hooks';
 import { displayNameIsValid, sanitizeDisplayNameOrToast } from '../utils';
 import { AccountDetails } from './CreateAccount';
-import { localize } from '../../../util/i18n/localizedString';
+import { localize } from '../../../localization/localeTools';
 
 type AccountRestoreDetails = AccountDetails & { dispatch: Dispatch; abortSignal?: AbortSignal };
 
