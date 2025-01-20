@@ -418,11 +418,16 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
     return '';
   }
 
-  public async cleanup(triggerUIUpdate: boolean) {
-    const changed = await deleteExternalMessageFiles(this.attributes);
-    if (changed) {
-      await this.commit(triggerUIUpdate);
-    }
+  /**
+   * Remove from the DB all the attachments linked to that message.
+   * Note: does not commit the changes to the DB, on purpose.
+   * When we cleanup(), we always want to remove the message afterwards. So no commit() are done at all.
+   *
+   */
+  public async cleanup() {
+    await deleteExternalMessageFiles(this.attributes);
+    // Note: we don't commit here, because when we do cleanup, we always
+    // want to cleanup right before deleting the message itself.
   }
 
   private getPropsForTimerNotification(): PropsForExpirationTimer | null {

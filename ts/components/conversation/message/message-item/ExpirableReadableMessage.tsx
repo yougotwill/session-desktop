@@ -1,17 +1,17 @@
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
 import { useDispatch } from 'react-redux';
 import useInterval from 'react-use/lib/useInterval';
 import useMount from 'react-use/lib/useMount';
 import styled from 'styled-components';
 import { useIsDetailMessageView } from '../../../../contexts/isDetailViewContext';
-import { Data } from '../../../../data/data';
 import { useMessageExpirationPropsById } from '../../../../hooks/useParamSelector';
 import { MessageModelType } from '../../../../models/messageType';
-import { ConvoHub } from '../../../../session/conversations';
-import { PropsForExpiringMessage, messagesExpired } from '../../../../state/ducks/conversations';
+import { messagesExpired, PropsForExpiringMessage } from '../../../../state/ducks/conversations';
 import { getIncrement } from '../../../../util/timer';
 import { ExpireTimer } from '../../ExpireTimer';
 import { ReadableMessage, ReadableMessageProps } from './ReadableMessage';
+import { Data } from '../../../../data/data';
+import { ConvoHub } from '../../../../session/conversations';
 
 const EXPIRATION_CHECK_MINIMUM = 2000;
 
@@ -21,17 +21,9 @@ function useIsExpired(
     direction: MessageModelType | undefined;
   }
 ) {
-  const {
-    convoId,
-    messageId,
-    expirationDurationMs,
-    expirationTimestamp,
-    isExpired: isExpiredProps,
-  } = props;
+  const { convoId, messageId, expirationDurationMs, expirationTimestamp, isExpired } = props;
 
   const dispatch = useDispatch();
-
-  const [isExpired] = useState(isExpiredProps);
 
   const checkExpired = useCallback(async () => {
     const now = Date.now();
