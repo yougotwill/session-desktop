@@ -421,7 +421,7 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
   /**
    * Remove from the DB all the attachments linked to that message.
    * Note: does not commit the changes to the DB, on purpose.
-   * When we cleanup(), we always want to remove the message afterwards. So no commit() are done at all.
+   * When we cleanup(), we always want to remove the message afterwards. So no commit() calls are made.
    *
    */
   public async cleanup() {
