@@ -30,7 +30,7 @@ const avatarPlaceholderColors: Array<string> = Object.values(COLORS.PRIMARY);
 
 function useHashBasedOnPubkey(pubkey: string) {
   const [hash, setHash] = useState<number | undefined>(undefined);
-  const [loading, setIsLoading] = useState<boolean>(true);
+  const [loading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const cachedHash = cachedHashes.get(pubkey);

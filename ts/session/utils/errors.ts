@@ -94,3 +94,11 @@ export class RetrieveDisplayNameError extends Error {
     Object.setPrototypeOf(this, SnodeResponseError.prototype);
   }
 }
+
+export class AttachmentDecryptError extends Error {
+  constructor(message = 'failed to decrypt attachment') {
+    super(message);
+    // restore prototype chain
+    Object.setPrototypeOf(this, SnodeResponseError.prototype);
+  }
+}
