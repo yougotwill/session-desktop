@@ -1365,6 +1365,23 @@ const throttledAllMessagesDispatch = debounce(
   { trailing: true, leading: true, maxWait: 1000 }
 );
 
+/**
+ * With `throttledAllMessagesDispatch`, we batch refresh changed messages every XXXms.
+ * Sometimes, a message is changed and then deleted quickly.
+ * This can cause an issue because if the message is deleted, but the XXXms ticks after that,
+ * the message will appear again in the redux store.
+ * This is a mistake, and was usually fixed by reloading the corresponding conversation.
+ * Well, this function should hopefully fix this issue.
+ * Anytime we delete a message, we have to call it to "cancel scheduled refreshes"
+ * @param messageIds the ids to cancel the dispatch of.
+ */
+export function cancelUpdatesToDispatch(messageIds: Array<string>) {
+  for (let index = 0; index < messageIds.length; index++) {
+    const messageId = messageIds[index];
+    updatesToDispatch.delete(messageId);
+  }
+}
+
 const updatesToDispatch: Map<string, MessageModelPropsWithoutConvoProps> = new Map();
 
 export class MessageCollection extends Backbone.Collection<MessageModel> {}
