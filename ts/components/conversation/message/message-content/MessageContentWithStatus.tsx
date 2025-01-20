@@ -1,5 +1,5 @@
 import classNames from 'classnames';
-import { MouseEvent, useCallback, useState } from 'react';
+import { SessionDataTestId, MouseEvent, useCallback, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import styled from 'styled-components';
 import { useIsDetailMessageView } from '../../../../contexts/isDetailViewContext';
@@ -9,10 +9,7 @@ import { toggleSelectedMessageId } from '../../../../state/ducks/conversations';
 import { updateReactListModal } from '../../../../state/ducks/modalDialog';
 import { StateType } from '../../../../state/reducer';
 import { useHideAvatarInMsgList } from '../../../../state/selectors';
-import {
-  getMessageContentWithStatusesSelectorProps,
-  isMessageSelectionMode,
-} from '../../../../state/selectors/conversations';
+import { getMessageContentWithStatusesSelectorProps } from '../../../../state/selectors/conversations';
 import { Reactions } from '../../../../util/reactions';
 import { Flex } from '../../../basic/Flex';
 import { ExpirableReadableMessage } from '../message-item/ExpirableReadableMessage';
@@ -21,6 +18,7 @@ import { MessageContent } from './MessageContent';
 import { MessageContextMenu } from './MessageContextMenu';
 import { MessageReactions } from './MessageReactions';
 import { MessageStatus } from './MessageStatus';
+import { useIsMessageSelectionMode } from '../../../../state/selectors/selectedConversation';
 
 export type MessageContentWithStatusSelectorProps = { isGroup: boolean } & Pick<
   MessageRenderingProps,
@@ -30,7 +28,7 @@ export type MessageContentWithStatusSelectorProps = { isGroup: boolean } & Pick<
 type Props = {
   messageId: string;
   ctxMenuID: string;
-  dataTestId: string;
+  dataTestId: SessionDataTestId;
   enableReactions: boolean;
 };
 
@@ -63,7 +61,7 @@ export const MessageContentWithStatuses = (props: Props) => {
   const dispatch = useDispatch();
   const hideAvatar = useHideAvatarInMsgList(props.messageId);
 
-  const multiSelectMode = useSelector(isMessageSelectionMode);
+  const multiSelectMode = useIsMessageSelectionMode();
 
   const onClickOnMessageOuterContainer = useCallback(
     (event: MouseEvent<HTMLDivElement>) => {

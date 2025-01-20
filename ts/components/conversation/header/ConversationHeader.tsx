@@ -1,17 +1,19 @@
-import { useDispatch, useSelector } from 'react-redux';
-import { isMessageSelectionMode } from '../../../state/selectors/conversations';
+import { useDispatch } from 'react-redux';
 
 import { openRightPanel } from '../../../state/ducks/conversations';
 
 import { useIsOutgoingRequest } from '../../../hooks/useParamSelector';
-import { useSelectedConversationKey } from '../../../state/selectors/selectedConversation';
+import {
+  useIsMessageSelectionMode,
+  useSelectedConversationKey,
+} from '../../../state/selectors/selectedConversation';
 import { Flex } from '../../basic/Flex';
 import { AvatarHeader, CallButton } from './ConversationHeaderItems';
 import { SelectionOverlay } from './ConversationHeaderSelectionOverlay';
 import { ConversationHeaderTitle } from './ConversationHeaderTitle';
 
 export const ConversationHeaderWithDetails = () => {
-  const isSelectionMode = useSelector(isMessageSelectionMode);
+  const isSelectionMode = useIsMessageSelectionMode();
   const selectedConvoKey = useSelectedConversationKey();
   const isOutgoingRequest = useIsOutgoingRequest(selectedConvoKey);
 

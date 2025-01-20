@@ -33,8 +33,8 @@ import { resetRegistration } from '../RegistrationStages';
 import { ContinueButton, OnboardDescription, OnboardHeading } from '../components';
 import { BackButtonWithinContainer } from '../components/BackButton';
 import { displayNameIsValid, sanitizeDisplayNameOrToast } from '../utils';
-import { localize } from '../../../util/i18n/localizedString';
 import { RetrieveDisplayNameError } from '../../../session/utils/errors';
+import { localize } from '../../../localization/localeTools';
 
 export type AccountDetails = {
   recoveryPassword: string;

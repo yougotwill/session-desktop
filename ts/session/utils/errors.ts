@@ -67,14 +67,26 @@ export class HTTPError extends Error {
   }
 }
 
-export class SnodeResponseError extends Error {
-  constructor(message = 'sessionRpc could not talk to node') {
+class BaseError extends Error {
+  constructor(message: string) {
     super(message);
+    this.name = this.constructor.name;
     // restore prototype chain
     Object.setPrototypeOf(this, SnodeResponseError.prototype);
   }
 }
 
+export class SigningFailed extends BaseError {}
+export class InvalidSigningType extends BaseError {}
+export class GroupV2SigningFailed extends SigningFailed {}
+export class PreConditionFailed extends BaseError {}
+export class DecryptionFailed extends BaseError {}
+export class InvalidMessage extends BaseError {}
+export class SnodeResponseError extends BaseError {
+  constructor(message = 'sessionRpc could not talk to node') {
+    super(message);
+  }
+}
 export class RetrieveDisplayNameError extends Error {
   constructor(message = 'failed to retrieve display name after setting it') {
     super(message);

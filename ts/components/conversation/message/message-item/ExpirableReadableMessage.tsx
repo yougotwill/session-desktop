@@ -7,7 +7,7 @@ import { useIsDetailMessageView } from '../../../../contexts/isDetailViewContext
 import { Data } from '../../../../data/data';
 import { useMessageExpirationPropsById } from '../../../../hooks/useParamSelector';
 import { MessageModelType } from '../../../../models/messageType';
-import { getConversationController } from '../../../../session/conversations';
+import { ConvoHub } from '../../../../session/conversations';
 import { PropsForExpiringMessage, messagesExpired } from '../../../../state/ducks/conversations';
 import { getIncrement } from '../../../../util/timer';
 import { ExpireTimer } from '../../ExpireTimer';
@@ -46,12 +46,12 @@ function useIsExpired(
         dispatch(
           messagesExpired([
             {
-              conversationKey: convoId,
+              conversationId: convoId,
               messageId,
             },
           ])
         );
-        const convo = getConversationController().get(convoId);
+        const convo = ConvoHub.use().get(convoId);
         convo?.updateLastMessage();
       }
     }
@@ -82,8 +82,7 @@ const StyledReadableMessage = styled(ReadableMessage)<{
   flex-direction: column;
 `;
 
-export interface ExpirableReadableMessageProps
-  extends Omit<ReadableMessageProps, 'receivedAt' | 'isUnread'> {
+export interface ExpirableReadableMessageProps extends Omit<ReadableMessageProps, 'isUnread'> {
   messageId: string;
   isControlMessage?: boolean;
 }
@@ -130,7 +129,6 @@ export const ExpirableReadableMessage = (props: ExpirableReadableMessageProps) =
   const {
     messageId,
     direction: _direction,
-    receivedAt,
     isUnread,
     expirationDurationMs,
     expirationTimestamp,
@@ -143,7 +141,6 @@ export const ExpirableReadableMessage = (props: ExpirableReadableMessageProps) =
   return (
     <StyledReadableMessage
       messageId={messageId}
-      receivedAt={receivedAt}
       isUnread={!!isUnread}
       isIncoming={isIncoming}
       onClick={onClick}

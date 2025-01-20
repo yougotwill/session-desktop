@@ -11,12 +11,12 @@ const _ = require('lodash');
 
 const { setupI18n } = require('./ts/util/i18n/i18n');
 
-const { dictionary, crowdinLocale } = ipc.sendSync('locale-data');
+const { crowdinLocale } = ipc.sendSync('locale-data');
 
 const config = url.parse(window.location.toString(), true).query;
 const configAny = config;
 
-window.i18n = setupI18n({ crowdinLocale, translationDictionary: dictionary });
+window.i18n = setupI18n({ crowdinLocale });
 
 let title = config.name;
 if (config.environment !== 'production') {
@@ -40,11 +40,13 @@ window.saveLog = additionalText => ipc.send('save-debug-log', additionalText);
 window.sessionFeatureFlags = {
   useOnionRequests: true,
   useTestNet: isTestNet() || isTestIntegration(),
-  useClosedGroupV3: false,
+  useClosedGroupV2: true, // TODO DO NOT MERGE Remove after QA
+  useClosedGroupV2QAButtons: true, // TODO DO NOT MERGE Remove after QA
   replaceLocalizedStringsWithKeys: false,
   debug: {
     debugLogging: !_.isEmpty(process.env.SESSION_DEBUG),
     debugLibsessionDumps: !_.isEmpty(process.env.SESSION_DEBUG_LIBSESSION_DUMPS),
+    debugBuiltSnodeRequests: !_.isEmpty(process.env.SESSION_DEBUG_BUILT_SNODE_REQUEST),
     debugFileServerRequests: false,
     debugNonSnodeRequests: false,
     debugOnionRequests: false,
@@ -254,10 +256,11 @@ if (config.proxyUrl) {
 window.nodeSetImmediate = setImmediate;
 
 const data = require('./ts/data/dataInit');
-window.Signal = data.initData();
+data.initData();
 
-const { getConversationController } = require('./ts/session/conversations/ConversationController');
-window.getConversationController = getConversationController;
+const { ConvoHub } = require('./ts/session/conversations/ConversationController');
+window.getConversationController = ConvoHub.use;
+
 // Linux seems to periodically let the event loop stop, so this is a global workaround
 setInterval(() => {
   window.nodeSetImmediate(() => {});

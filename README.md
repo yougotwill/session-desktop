@@ -32,7 +32,7 @@ gpg --import KeeJef.asc
 Get the signed hash for this release, the SESSION_VERSION needs to be updated for the release you want to verify
 
 ```
-export SESSION_VERSION=1.14.5
+export SESSION_VERSION=1.15.0
 wget https://github.com/session-foundation/session-desktop/releases/download/v$SESSION_VERSION/signatures.asc
 ```
 
@@ -67,3 +67,5 @@ Licensed under the GPLv3: https://www.gnu.org/licenses/gpl-3.0.html<br/>
 ## Attributions
 
 The IP-to-country mapping data used in this project is provided by [MaxMind GeoLite2](https://dev.maxmind.com/geoip/geolite2-free-geolocation-data).
+
+This project uses the [Lucide Icon Font](https://lucide.dev/), which is licensed under the [ISC License](./third_party_licenses/LucideLicense.txt).
