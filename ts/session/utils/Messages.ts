@@ -41,8 +41,9 @@ export async function toRawMessage(
 ): Promise<OutgoingRawMessage> {
   const ttl = message.ttl();
   const plainTextBuffer = message.plainTextBuffer();
+  const is03group = PubKey.is03Pubkey(destinationPubKey.key);
 
-  const encryption = getEncryptionTypeFromMessageType(message, isGroup);
+  const encryption = getEncryptionTypeFromMessageType(message, isGroup || is03group);
 
   const rawMessage: OutgoingRawMessage = {
     identifier: message.identifier,
