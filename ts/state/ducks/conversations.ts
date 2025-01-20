@@ -6,11 +6,7 @@ import { ReplyingToMessageProps } from '../../components/conversation/compositio
 import { QuotedAttachmentType } from '../../components/conversation/message/message-content/quote/Quote';
 import { Data } from '../../data/data';
 
-import {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  ConversationAttributes,
-  ConversationNotificationSettingType,
-} from '../../models/conversationAttributes';
+import { ConversationNotificationSettingType } from '../../models/conversationAttributes';
 import { MessageModelType, PropsForDataExtractionNotification } from '../../models/messageType';
 import { ConvoHub } from '../../session/conversations';
 import { DisappearingMessages } from '../../session/disappearing_messages';
