@@ -1,57 +1,99 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import { DecryptedAttachmentsManager } from '../session/crypto/DecryptedAttachmentsManager';
-import { perfEnd, perfStart } from '../session/utils/Performance';
+import { AttachmentDecryptError } from '../session/utils/errors';
 
 export const useEncryptedFileFetch = (
-  /** undefined if the message is not visible yet, url is '' if something is broken */
+  /** undefined if the message is not visible yet, url is '' if visible but we have not tried to decrypt yet */
   url: string | undefined,
   contentType: string,
   isAvatar: boolean,
-  timestamp?: number
-) => {
-  /** undefined if the attachment is not decrypted yet, '' if the attachment fails to decrypt */
+  pending?: boolean
+): {
+  urlToLoad: string | undefined;
+  loading: boolean;
+  failed: boolean;
+} => {
   const [urlToLoad, setUrlToLoad] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState(true);
+  const [waiting, setWaiting] = useState(false);
+  const [failed, setFailed] = useState(false);
 
-  const alreadyDecrypted = url ? DecryptedAttachmentsManager.getAlreadyDecryptedMediaUrl(url) : '';
+  const alreadyDecrypted = DecryptedAttachmentsManager.getAlreadyDecryptedMediaUrl(url || '');
 
   const fetchUrl = useCallback(
     async (mediaUrl: string | undefined) => {
-      if (alreadyDecrypted || !mediaUrl) {
+      try {
         if (alreadyDecrypted) {
           setUrlToLoad(alreadyDecrypted);
           setLoading(false);
+          window.log.debug(`WIP: [useEncryptedFileFetch] alreadyDecrypted ${alreadyDecrypted}`);
+          return;
         }
-        return;
-      }
 
-      setLoading(true);
+        // not visible yet
+        if (mediaUrl === undefined) {
+          window.log.debug(`WIP: [useEncryptedFileFetch] not visible yet`);
+          return;
+        }
 
-      try {
-        perfStart(`getDecryptedMediaUrl-${mediaUrl}-${timestamp}`);
+        if (!waiting) {
+          setWaiting(true);
+          window.log.debug(
+            `WIP: [useEncryptedFileFetch]  mediaUrl is defined and now we wait for decryption`
+          );
+          return;
+        }
+
+        if (!mediaUrl && waiting) {
+          return;
+        }
+
+        if (!mediaUrl) {
+          window.log.debug(
+            `WIP: [useEncryptedFileFetch] we are no longer waiting but mediaUrl is defined so throw error`
+          );
+          throw new AttachmentDecryptError();
+        }
+
         const decryptedUrl = await DecryptedAttachmentsManager.getDecryptedMediaUrl(
           mediaUrl,
           contentType,
           isAvatar
         );
-        perfEnd(
-          `getDecryptedMediaUrl-${mediaUrl}-${timestamp}`,
-          `getDecryptedMediaUrl-${mediaUrl}-${timestamp}`
-        );
+
+        if (!decryptedUrl) {
+          window.log.error(`WIP: [useEncryptedFileFetch] !decryptedUrl throwing error`);
+          throw new AttachmentDecryptError();
+        }
+
         setUrlToLoad(decryptedUrl);
+        window.log.debug(`WIP: [useEncryptedFileFetch] decryptedUrl ${decryptedUrl}`);
+
+        setLoading(false);
       } catch (error) {
+        setFailed(true);
         setUrlToLoad('');
-      } finally {
+        setWaiting(false);
         setLoading(false);
       }
     },
-    [alreadyDecrypted, contentType, isAvatar, timestamp]
+    [alreadyDecrypted, contentType, isAvatar, waiting]
   );
 
   useEffect(() => {
     void fetchUrl(url);
   }, [fetchUrl, url]);
 
-  return { urlToLoad, loading };
+  useEffect(() => {
+    if (urlToLoad && waiting && !pending) {
+      setWaiting(false);
+    }
+  }, [pending, urlToLoad, waiting]);
+
+  return {
+    urlToLoad,
+    loading,
+    failed,
+  };
 };

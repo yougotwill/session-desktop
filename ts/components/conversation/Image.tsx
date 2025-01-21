@@ -9,11 +9,7 @@ import { Spinner } from '../loading';
 import { MessageGenericAttachment } from './message/message-content/MessageGenericAttachment';
 import { useEncryptedFileFetch } from '../../hooks/useEncryptedFileFetch';
 import { useMessageIdFromContext } from '../../contexts/MessageIdContext';
-import {
-  useMessageDirection,
-  useMessageSelected,
-  useMessageTimestamp,
-} from '../../state/selectors';
+import { useMessageDirection, useMessageSelected } from '../../state/selectors';
 import { AriaLabels } from '../../util/hardcodedAriaLabels';
 
 type Props = {
@@ -76,54 +72,46 @@ export const Image = (props: Props) => {
   const messageId = useMessageIdFromContext();
   const dropShadow = useMessageSelected(messageId);
   const direction = useMessageDirection(messageId);
-  /** used for debugging */
-  const timestamp = useMessageTimestamp(messageId);
 
   const disableDrag = useDisableDrag();
-  const { loading, urlToLoad } = useEncryptedFileFetch(
+  const { loading, urlToLoad, failed } = useEncryptedFileFetch(
     url,
     attachment.contentType,
     false,
-    timestamp
+    attachment.pending
   );
 
   const { caption } = attachment || { caption: null };
-  const [pending, setPending] = useState<boolean>(attachment.pending || true);
-  const [mounted, setMounted] = useState<boolean>(
-    (!loading || !pending) && urlToLoad === undefined
-  );
+  // const pending = attachment.pending;
+  const [fail, setFail] = useState(false);
 
-  const canClick = onClick && !pending;
+  const canClick = onClick && !loading;
   const role = canClick ? 'button' : undefined;
-
-  const onErrorUrlFilterering = useCallback(() => {
-    if (mounted && url && urlToLoad === '' && onError) {
-      onError();
-      setPending(false);
-    }
-  }, [mounted, onError, url, urlToLoad]);
-
   const width = isNumber(_width) ? `${_width}px` : _width;
   const height = isNumber(_height) ? `${_height}px` : _height;
 
+  const onFail = useCallback(
+    (value?: boolean) => {
+      const haveFailed = imageBroken || failed || value === true;
+      setFail(haveFailed);
+      if (haveFailed && onError) {
+        onError();
+      }
+    },
+    [failed, imageBroken, onError]
+  );
+
   useEffect(() => {
-    if (mounted && url === '') {
-      setPending(false);
-      onErrorUrlFilterering();
+    if (!loading && (imageBroken || failed)) {
+      onFail();
     }
+  }, [failed, imageBroken, loading, onFail]);
 
-    if (mounted && imageBroken && urlToLoad === '') {
-      setPending(false);
-      onErrorUrlFilterering();
-    }
+  window.log.debug(
+    `WIP: Image.tsx messageId ${messageId} loading ${loading} pending ${attachment.pending} imageBroken ${imageBroken} failed ${failed} fail ${fail} url ${url}`
+  );
 
-    if (url) {
-      setPending(false);
-      setMounted(!loading && !pending);
-    }
-  }, [imageBroken, loading, mounted, onErrorUrlFilterering, pending, url, urlToLoad]);
-
-  if (mounted && imageBroken) {
+  if (!loading && fail) {
     return (
       <MessageGenericAttachment
         attachment={attachment as AttachmentTypeWithPath}
@@ -158,7 +146,7 @@ export const Image = (props: Props) => {
       }}
       data-attachmentindex={attachmentIndex}
     >
-      {!mounted ? (
+      {loading ? (
         <div
           className="module-image__loading-placeholder"
           style={{
@@ -173,60 +161,69 @@ export const Image = (props: Props) => {
           <Spinner size="normal" />
         </div>
       ) : (
-        <img
-          onError={onErrorUrlFilterering}
-          className={classNames(
-            'module-image__image',
-            forceSquare ? 'module-image__image-cover' : ''
+        <>
+          <img
+            onError={() => {
+              window.log.error(`WIP: [useEncryptedFileFetch] img onErrortrigger`);
+              onFail(true);
+            }}
+            className={classNames(
+              'module-image__image',
+              forceSquare ? 'module-image__image-cover' : ''
+            )}
+            alt={alt}
+            style={{
+              maxHeight: height,
+              maxWidth: width,
+              minHeight: height,
+              minWidth: width,
+              width: forceSquare ? width : '',
+              height: forceSquare ? height : '',
+            }}
+            src={urlToLoad}
+            onDragStart={disableDrag}
+          />
+          {urlToLoad && (
+            <>
+              {caption ? (
+                <img
+                  className="module-image__caption-icon"
+                  src="images/caption-shadow.svg"
+                  alt={AriaLabels.imageCaptionAlt}
+                  onDragStart={disableDrag}
+                />
+              ) : null}
+              <StyledOverlay
+                className={classNames(softCorners ? 'module-image--soft-corners' : null)}
+                darkOverlay={darkOverlay}
+                softCorners={softCorners}
+              />
+              {closeButton ? (
+                <div
+                  role="button"
+                  onClick={(e: any) => {
+                    e.stopPropagation();
+                    if (onClickClose) {
+                      onClickClose(attachment);
+                    }
+                  }}
+                  className="module-image__close-button"
+                />
+              ) : null}
+              {playIconOverlay ? (
+                <div className="module-image__play-overlay__circle">
+                  <div className="module-image__play-overlay__icon" />
+                </div>
+              ) : null}
+              {overlayText ? (
+                <div className="module-image__text-container" style={{ lineHeight: height }}>
+                  {overlayText}
+                </div>
+              ) : null}
+            </>
           )}
-          alt={alt}
-          style={{
-            maxHeight: height,
-            maxWidth: width,
-            minHeight: height,
-            minWidth: width,
-            width: forceSquare ? width : '',
-            height: forceSquare ? height : '',
-          }}
-          src={urlToLoad}
-          onDragStart={disableDrag}
-        />
+        </>
       )}
-      {caption ? (
-        <img
-          className="module-image__caption-icon"
-          src="images/caption-shadow.svg"
-          alt={AriaLabels.imageCaptionAlt}
-          onDragStart={disableDrag}
-        />
-      ) : null}
-      <StyledOverlay
-        className={classNames(softCorners ? 'module-image--soft-corners' : null)}
-        darkOverlay={darkOverlay}
-        softCorners={softCorners}
-      />
-      {closeButton ? (
-        <div
-          role="button"
-          onClick={(e: any) => {
-            e.stopPropagation();
-            if (onClickClose) {
-              onClickClose(attachment);
-            }
-          }}
-          className="module-image__close-button"
-        />
-      ) : null}
-      {mounted && playIconOverlay ? (
-        <div className="module-image__play-overlay__circle">
-          <div className="module-image__play-overlay__icon" />
-        </div>
-      ) : null}
-      {overlayText ? (
-        <div className="module-image__text-container" style={{ lineHeight: height }}>
-          {overlayText}
-        </div>
-      ) : null}
     </div>
   );
 };
