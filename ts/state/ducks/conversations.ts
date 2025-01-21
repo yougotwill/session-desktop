@@ -26,6 +26,7 @@ import {
 import { AttachmentType } from '../../types/Attachment';
 import { CONVERSATION_PRIORITIES, ConversationTypeEnum } from '../../models/types';
 import { WithConvoId, WithMessageHash, WithMessageId } from '../../session/types/with';
+import { cancelUpdatesToDispatch } from '../../models/message';
 
 export type MessageModelPropsWithoutConvoProps = {
   propsForMessage: PropsForMessageWithoutConvoProps;
@@ -542,6 +543,10 @@ function handleMessageExpiredOrDeleted(
   const { conversationId } = payload;
   const messageId = (payload as any).messageId as string | undefined;
   const messageHash = (payload as any).messageHash as string | undefined;
+
+  if (messageId) {
+    cancelUpdatesToDispatch([messageId]);
+  }
 
   if (conversationId === state.selectedConversation) {
     // search if we find this message id.

@@ -418,11 +418,16 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
     return '';
   }
 
-  public async cleanup(triggerUIUpdate: boolean) {
-    const changed = await deleteExternalMessageFiles(this.attributes);
-    if (changed) {
-      await this.commit(triggerUIUpdate);
-    }
+  /**
+   * Remove from the DB all the attachments linked to that message.
+   * Note: does not commit the changes to the DB, on purpose.
+   * When we cleanup(), we always want to remove the message afterwards. So no commit() calls are made.
+   *
+   */
+  public async cleanup() {
+    await deleteExternalMessageFiles(this.attributes);
+    // Note: we don't commit here, because when we do cleanup, we always
+    // want to cleanup right before deleting the message itself.
   }
 
   private getPropsForTimerNotification(): PropsForExpirationTimer | null {
@@ -1364,6 +1369,23 @@ const throttledAllMessagesDispatch = debounce(
   500,
   { trailing: true, leading: true, maxWait: 1000 }
 );
+
+/**
+ * With `throttledAllMessagesDispatch`, we batch refresh changed messages every XXXms.
+ * Sometimes, a message is changed and then deleted quickly.
+ * This can cause an issue because if the message is deleted, but the XXXms ticks after that,
+ * the message will appear again in the redux store.
+ * This is a mistake, and was usually fixed by reloading the corresponding conversation.
+ * Well, this function should hopefully fix this issue.
+ * Anytime we delete a message, we have to call it to "cancel scheduled refreshes"
+ * @param messageIds the ids to cancel the dispatch of.
+ */
+export function cancelUpdatesToDispatch(messageIds: Array<string>) {
+  for (let index = 0; index < messageIds.length; index++) {
+    const messageId = messageIds[index];
+    updatesToDispatch.delete(messageId);
+  }
+}
 
 const updatesToDispatch: Map<string, MessageModelPropsWithoutConvoProps> = new Map();
 
