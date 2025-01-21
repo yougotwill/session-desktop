@@ -43,7 +43,7 @@ async function makeGroupMessageSubRequest(
   const allTimestamps = uniqBy(compactedMessages, m => m.createAtNetworkTimestamp);
   if (allTimestamps.length !== compactedMessages.length) {
     throw new Error(
-      'tried to send batch request with messages having the same timestamp, and some platformn do not support this.'
+      'tried to send batch request with messages having the same timestamp, this is not supported on all platforms.'
     );
   }
 

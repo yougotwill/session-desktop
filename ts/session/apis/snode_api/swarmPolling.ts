@@ -134,7 +134,7 @@ function mergeMultipleRetrieveResults(
 
   // Convert the merged map back to an array
   return Array.from(mapped.entries()).map(([namespace, messagesMap]) => ({
-    code: 200, // Assuming success code, adjust as needed
+    code: results.find(m => m.namespace === namespace)?.code || 200,
     namespace,
     messages: { messages: Array.from(messagesMap.values()) },
   }));
@@ -477,7 +477,7 @@ export class SwarmPolling {
         })
       );
       window.log.info(
-        `SwarmPolling: pollNodeForKey of ${ed25519Str(pubkey)} namespaces: ${namespaces} returned ${resultsFromAllSnodesSettled.filter(m => m.status === 'fulfilled')}/${RETRIEVE_SNODES_COUNT} fulfilled promises`
+        `SwarmPolling: pollNodeForKey of ${ed25519Str(pubkey)} namespaces: ${namespaces} returned ${resultsFromAllSnodesSettled.filter(m => m.status === 'fulfilled').length}/${RETRIEVE_SNODES_COUNT} fulfilled promises`
       );
       resultsFromAllNamespaces = mergeMultipleRetrieveResults(
         compact(
