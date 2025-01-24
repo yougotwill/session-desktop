@@ -41,7 +41,11 @@ const Container = styled.div<{ noExtraPadding: boolean }>`
   flex-direction: row;
   justify-content: center;
   background-color: var(--background-secondary-color);
-  padding: ${props => (props.noExtraPadding ? '' : 'var(--margins-lg)')};
+
+  // add padding only if we have a child.
+  &:has(*:not(:empty)) {
+    padding: ${props => (props.noExtraPadding ? '' : 'var(--margins-lg)')};
+  }
 `;
 
 const TextInner = styled.div`

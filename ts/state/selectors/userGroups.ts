@@ -26,7 +26,7 @@ export function useLibGroupInviteGroupName(convoId?: string) {
   return useSelector((state: StateType) => getGroupById(state, convoId)?.name);
 }
 
-function getLibGroupKicked(state: StateType, convoId?: string) {
+export function getLibGroupKicked(state: StateType, convoId?: string) {
   return getGroupById(state, convoId)?.kicked;
 }
 
