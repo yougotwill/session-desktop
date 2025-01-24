@@ -363,7 +363,7 @@ export const MessageContextMenu = (props: Props) => {
           <RetryItem messageId={messageId} />
           {isDeletable ? (
             <ItemWithDataTestId onClick={onSelect}>
-              <Localizer token="messageSelect" />
+              <Localizer token="select" />
             </ItemWithDataTestId>
           ) : null}
           <DeleteItem messageId={messageId} />
