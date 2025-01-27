@@ -130,6 +130,7 @@ export const SettingsCategoryPrivacy = (props: {
             dataTestId="change-password-settings-button"
           />
           <SessionSettingButtonItem
+            title={window.i18n('passwordRemove')}
             description={window.i18n('passwordRemoveDescription')}
             onClick={() => {
               displayPasswordModal('remove', props.onPasswordUpdated);

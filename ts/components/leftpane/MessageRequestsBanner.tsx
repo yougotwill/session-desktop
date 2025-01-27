@@ -62,10 +62,10 @@ const StyledGridContainer = styled.div`
   justify-content: center;
   align-items: center;
   border-radius: 50%;
-  background-color: var(--text-secondary-color);
+  background-color: var(--primary-color);
 `;
 
-export const CirclularIcon = (props: {
+export const CircularIcon = (props: {
   iconType: SessionIconType;
   iconSize: SessionIconSize | number;
 }) => {
@@ -120,7 +120,7 @@ export const MessageRequestsBanner = (props: { handleOnClick: () => any }) => {
         }}
         data-testid="message-request-banner"
       >
-        <CirclularIcon iconType="messageRequest" iconSize={22} />
+        <CircularIcon iconType="messageRequest" iconSize={22} />
         <StyledMessageRequestBannerHeader>
           <Localizer token="sessionMessageRequests" />
         </StyledMessageRequestBannerHeader>

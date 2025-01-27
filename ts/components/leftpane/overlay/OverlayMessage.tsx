@@ -193,8 +193,8 @@ export const OverlayMessage = () => {
 
       {!isEmpty(pubkeyOrOns) ? (
         <SessionButton
-          ariaLabel={window.i18n('theContinue')}
-          text={window.i18n('theContinue')}
+          ariaLabel={window.i18n('next')}
+          text={window.i18n('next')}
           disabled={disableNextButton}
           onClick={handleMessageButtonClick}
           dataTestId="next-new-conversation-button"
