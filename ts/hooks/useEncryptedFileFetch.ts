@@ -25,7 +25,11 @@ export const useEncryptedFileFetch = (
       setLoading(true);
 
       try {
-        const decryptedUrl = await DecryptedAttachmentsManager.getDecryptedMediaUrl(mediaUrl, contentType, isAvatar);
+        const decryptedUrl = await DecryptedAttachmentsManager.getDecryptedMediaUrl(
+          mediaUrl,
+          contentType,
+          isAvatar
+        );
         setUrlToLoad(decryptedUrl);
       } catch (error) {
         setUrlToLoad('');

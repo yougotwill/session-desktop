@@ -192,7 +192,6 @@ export class SessionSetPasswordDialog extends Component<Props, State> {
         },
         () => this.showError()
       );
-      this.showError();
       return false;
     }
     return true;
