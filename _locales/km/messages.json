@@ -590,7 +590,7 @@
   "onboardingAccountExists": "ខ្ញុំមានគណនីមួយ",
   "onboardingBackAccountCreation": "អ្នកមិនអាចថយក្រោយបន្ថែមទៀតបានទេ។ ដើម្បីបោះបង់ការបង្កើតគណនី {app_name} ត្រូវទាំងបញ្ចប់ផ្នែកនេះ។",
   "onboardingBackLoadAccount": "អ្នកមិនអាចថយក្រោយបន្ថែមទៀតបានទេ។ ដើម្បីបញ្ឈប់ការរុករកគណនីរបស់អ្នក {app_name} ត្រូវបញ្ចប់។",
-  "onboardingBubbleCreatingAnAccountIsEasy": "ការបង្កើតគណនីគឺមានភ្លាមៗ, \noofសាន្ត និងមិនបង្ហាញអត្តសញ្ញាណ {emoji}",
+  "onboardingBubbleCreatingAnAccountIsEasy": "ការបង្កើតគណនីគឺភ្លាមៗ ឥតគិតថ្លៃ និងអនាមិក {emoji}",
   "onboardingBubbleNoPhoneNumber": "អ្នកមិនចាំបាច់ចូលប្រព័ន្ធទៅតាមលេខលេខទូរស័ព្ទទេ.",
   "onboardingBubblePrivacyInYourPocket": "ឯកជនភាពនៅក្នុងហោប៉ៅរបស់អ្នក។",
   "onboardingBubbleSessionIsEngineered": "{app_name} ត្រូវបានបង្កើតឡើងដើម្បីការពារភាពឯកជនរបស់អ្នក។",
