@@ -667,7 +667,7 @@ function OutdatedLegacyGroupBanner(props: {
     <NoticeBanner
       text={window.i18n('groupLegacyBanner', { date: '[Date]' })} // Remove after QA
       onBannerClick={() => {
-        showLinkVisitWarningDialog('https://getsession.org/blog/session-groups-v2', dispatch);
+        showLinkVisitWarningDialog('https://getsession.org/groups', dispatch);
       }}
       icon="externalLink"
       dataTestId="legacy-group-banner"
