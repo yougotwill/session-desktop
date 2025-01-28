@@ -54,7 +54,7 @@ export class GroupUpdateDeleteMemberContentMessage extends GroupUpdateMessage {
   public dataProto(): SignalService.DataMessage {
     // If we have the secretKey, we can delete it for anyone `"DELETE_CONTENT" || timestamp || sessionId[0] || ... || messageHashes[0] || ...`
 
-    let adminSignature = new Uint8Array();
+    let adminSignature: Uint8Array | undefined;
     if (this.secretKey && !_.isEmpty(this.secretKey) && this.sodium) {
       adminSignature = this.sodium.crypto_sign_detached(
         stringToUint8Array(
