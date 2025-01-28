@@ -1,6 +1,6 @@
 {
   "about": "Info",
-  "accept": "Přijmou",
+  "accept": "Přijmout",
   "accountIDCopy": "Kopírovat ID účtu",
   "accountIdCopied": "ID účtu zkopírováno",
   "accountIdCopyDescription": "Zkopírujte své ID účtu a pak ho sdílejte s přáteli, aby vám mohli poslat zprávu.",
@@ -430,6 +430,7 @@
   "groupNameVisible": "Název skupiny je viditelný pro všechny členy skupiny.",
   "groupNoMessages": "Nemáte žádné zprávy od <b>{group_name}</b>. Pošlete zprávu pro zahájení konverzace!",
   "groupOnlyAdmin": "Jste jediný správce ve skupině <b>{group_name}</b>.<br/><br/>Členové skupiny a nastavení nelze změnit bez správce.",
+  "groupPendingRemoval": "Čeká na odebrání",
   "groupPromotedYou": "<b>Byli jste povýšeni na správce.</b>",
   "groupPromotedYouMultiple": "<b>Vy</b> a <b>{count} dalších</b> jste byli povýšeni na správce.",
   "groupPromotedYouTwo": "<b>Vy</b> a <b>{name}</b> jste byli povýšeni na správce.",
@@ -554,7 +555,6 @@
   "messages": "Zprávy",
   "minimize": "Minimalizovat",
   "next": "Další",
-  "nicknameDescription": "Vyberte přezdívku pro <b>{name}</b>. Tato přezdívka se vám zobrazí ve vašich 1-1 a skupinových konverzacích.",
   "nicknameEnter": "Zadejte přezdívku",
   "nicknameErrorShorter": "Zadejte prosím kratší přezdívku",
   "nicknameRemove": "Odstranit přezdívku",

@@ -92,3 +92,4 @@ export const crowdinLocales = [
 ] as const;
 
 export type CrowdinLocale = (typeof crowdinLocales)[number];
+

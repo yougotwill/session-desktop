@@ -170,7 +170,7 @@
   "clearDataAll": "Összes adat törlése",
   "clearDataAllDescription": "Ezáltal az összes üzeneted és kontaktod törölve lesz. Csak erről az eszközről, vagy a hálózatról is törölni kívánod az adataidat?",
   "clearDataError": "Adatok nem lettek törölve",
-  "clearDataErrorDescription": "{count, plural, one [# szolgáltatási csomópoint nem törölte az adatokat. A csomópont azonosítója: {service_node_id}.] other [# szolgáltatási csomópoint nem törölte az adatokat. A csomópontok azonosítói: {service_node_id}.]}",
+  "clearDataErrorDescription": "{count, plural, one [Az adatok nem lettek törölve # kiszolgálócsomópont által. Kiszolgálócsomópont azonosító: {service_node_id}.] other [Az adatok nem lettek törölve # kiszolgálócsomópont által. Kiszolgálócsomópontok azonosítói: {service_node_id}.]}",
   "clearDataErrorDescriptionGeneric": "Ismeretlen hiba történt, és az adataid nem lettek törölve. Szeretnéd törölni az adatokat csak erről az eszközről?",
   "clearDevice": "Eszköz törlése",
   "clearDeviceAndNetwork": "Törlés az eszközről és a hálózatról",
