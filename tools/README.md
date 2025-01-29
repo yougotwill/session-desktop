@@ -8,6 +8,12 @@ The Python scripts are located in the `tools` directory. To run a script, use th
 python3 ./tools/<script>.py
 ```
 
+If using macOS always run the script with the `--disable-concurrency` flag.
+
+```bash
+python3 ./tools/<script>.py --disable-concurrency
+```
+
 Most of these scripts can take arguments. To see the arguments for a script, use the following command:
 
 ```bash
