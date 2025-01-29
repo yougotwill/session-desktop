@@ -79,9 +79,19 @@ async function confirmPushedAndDump(
         assertUnreachable(namespace, 'buildAndSaveDumpsToDB assertUnreachable');
     }
   }
-
-  await MetaGroupWrapperActions.metaConfirmPushed(...toConfirm);
-  return LibSessionUtil.saveDumpsToDb(groupPk);
+  try {
+    await MetaGroupWrapperActions.metaConfirmPushed(...toConfirm);
+    await LibSessionUtil.saveDumpsToDb(groupPk);
+  } catch (e) {
+    // The reason we catch exception here is because sometimes we can have a race condition where
+    // - we push a change to the group (req1 takes 10s)
+    // - while req1 is running, a poll merge results with the group marked as destroyed
+    // - this means we have free the wrapper
+    // - then, req finishes, and tries to metaConfirmPushed/saveDumpsToDb which fails as the wrapper was freed.
+    window.log.warn(
+      `metaConfirmPushed/saveDumpsToDb for group ${ed25519Str(groupPk)} failed with ${e.message}. This can safely be ignored` // I hope
+    );
+  }
 }
 
 async function pushChangesToGroupSwarmIfNeeded({

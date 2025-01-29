@@ -345,21 +345,32 @@ function batchResultsToUserSuccessfulChange(
 async function saveDumpsToDb(pubkey: PubkeyType | GroupPubkeyType) {
   // first check if this is relating a group
   if (PubKey.is03Pubkey(pubkey)) {
-    const metaNeedsDump = await MetaGroupWrapperActions.needsDump(pubkey);
-    // save the concatenated dumps as a single entry in the DB if any of the dumps had a need for dump
-    if (metaNeedsDump) {
-      window.log.debug(`About to make and save dumps for metagroup ${ed25519Str(pubkey)}`);
+    try {
+      const metaNeedsDump = await MetaGroupWrapperActions.needsDump(pubkey);
+      // save the concatenated dumps as a single entry in the DB if any of the dumps had a need for dump
+      if (metaNeedsDump) {
+        window.log.debug(`About to make and save dumps for metagroup ${ed25519Str(pubkey)}`);
 
-      const dump = await MetaGroupWrapperActions.metaDump(pubkey);
-      await ConfigDumpData.saveConfigDump({
-        data: dump,
-        publicKey: pubkey,
-        variant: `MetaGroupConfig-${pubkey}`,
-      });
+        const dump = await MetaGroupWrapperActions.metaDump(pubkey);
+        await ConfigDumpData.saveConfigDump({
+          data: dump,
+          publicKey: pubkey,
+          variant: `MetaGroupConfig-${pubkey}`,
+        });
 
-      window.log.info(`Saved dumps for metagroup ${ed25519Str(pubkey)}`);
-    } else {
-      window.log.debug(`No need to update local dumps for metagroup ${ed25519Str(pubkey)}`);
+        window.log.info(`Saved dumps for metagroup ${ed25519Str(pubkey)}`);
+      } else {
+        window.log.debug(`No need to update local dumps for metagroup ${ed25519Str(pubkey)}`);
+      }
+    } catch (e) {
+      // The reason we catch exception here is because sometimes we can have a race condition where
+      // - we push a change to the group (req1 takes 10s)
+      // - while req1 is running, a poll merge results with the group marked as destroyed
+      // - this means we have to free the wrapper
+      // - then, req finishes, and tries to saveDumpsToDb which fails as the wrapper was freed.
+      window.log.warn(
+        `saveDumpsToDb for group ${ed25519Str(pubkey)} failed with ${e.message}. This can safely be ignored` // I hope
+      );
     }
     return;
   }
