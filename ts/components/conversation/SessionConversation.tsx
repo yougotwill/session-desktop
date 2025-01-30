@@ -526,7 +526,7 @@ export class SessionConversation extends Component<Props, State> {
 
       return {
         id: pubKey,
-        authorProfileName: profileName,
+        display: profileName,
       };
     });
 

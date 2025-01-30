@@ -8,7 +8,6 @@ import {
   ConversationLookupType,
   ConversationsStateType,
   lookupQuote,
-  MentionsMembersType,
   MessageModelPropsWithConvoProps,
   MessageModelPropsWithoutConvoProps,
   PropsForQuote,
@@ -40,6 +39,7 @@ import { PubKey } from '../../session/types';
 import { UserGroupsWrapperActions } from '../../webworker/workers/browser/libsession_worker_interface';
 import { getSelectedConversationKey } from './selectedConversation';
 import { getModeratorsOutsideRedux } from './sogsRoomInfo';
+import type { SessionSuggestionDataItem } from '../../components/conversation/composition/types';
 
 export const getConversations = (state: StateType): ConversationsStateType => state.conversations;
 
@@ -532,7 +532,7 @@ export const getShouldHighlightMessage = (state: StateType): boolean =>
 export const getNextMessageToPlayId = (state: StateType): string | undefined =>
   state.conversations.nextMessageToPlayId || undefined;
 
-export const getMentionsInput = (state: StateType): MentionsMembersType =>
+export const getMentionsInput = (state: StateType): Array<SessionSuggestionDataItem> =>
   state.conversations.mentionMembers;
 
 /// Those calls are just related to ordering messages in the redux store.

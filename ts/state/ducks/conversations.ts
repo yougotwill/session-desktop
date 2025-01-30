@@ -27,6 +27,7 @@ import { AttachmentType } from '../../types/Attachment';
 import { CONVERSATION_PRIORITIES, ConversationTypeEnum } from '../../models/types';
 import { WithConvoId, WithMessageHash, WithMessageId } from '../../session/types/with';
 import { cancelUpdatesToDispatch } from '../../models/message';
+import type { SessionSuggestionDataItem } from '../../components/conversation/composition/types';
 
 export type MessageModelPropsWithoutConvoProps = {
   propsForMessage: PropsForMessageWithoutConvoProps;
@@ -295,13 +296,8 @@ export type ConversationsStateType = {
   animateQuotedMessageId?: string;
   shouldHighlightMessage: boolean;
   nextMessageToPlayId?: string;
-  mentionMembers: MentionsMembersType;
+  mentionMembers: Array<SessionSuggestionDataItem>;
 };
-
-export type MentionsMembersType = Array<{
-  id: string;
-  authorProfileName: string;
-}>;
 
 function buildQuoteId(sender: string, timestamp: number) {
   return `${timestamp}-${sender}`;
@@ -915,7 +911,7 @@ const conversationsSlice = createSlice({
     },
     updateMentionsMembers(
       state: ConversationsStateType,
-      action: PayloadAction<MentionsMembersType>
+      action: PayloadAction<Array<SessionSuggestionDataItem>>
     ) {
       window?.log?.info('updating mentions input members length', action.payload?.length);
       state.mentionMembers = action.payload;

@@ -13,6 +13,7 @@ import { renderUserMentionRow, styleForCompositionBoxSuggestions } from './UserM
 import { HTMLDirection, useHTMLDirection } from '../../../util/i18n/rtlSupport';
 import { ConvoHub } from '../../../session/conversations';
 import { Constants } from '../../../session';
+import type { SessionSuggestionDataItem } from './types';
 
 const sendMessageStyle = (dir?: HTMLDirection) => {
   return {
@@ -43,13 +44,13 @@ type Props = {
   setDraft: (draft: string) => void;
   container: RefObject<HTMLDivElement>;
   textAreaRef: RefObject<HTMLTextAreaElement>;
-  fetchUsersForGroup: (query: string, callback: (data: any) => void) => void;
+  fetchMentionData: (query: string) => Array<SessionSuggestionDataItem>;
   typingEnabled: boolean;
   onKeyDown: (event: any) => void;
 };
 
 export const CompositionTextArea = (props: Props) => {
-  const { draft, setDraft, container, textAreaRef, fetchUsersForGroup, typingEnabled, onKeyDown } =
+  const { draft, setDraft, container, textAreaRef, fetchMentionData, typingEnabled, onKeyDown } =
     props;
 
   const [lastBumpTypingMessageLength, setLastBumpTypingMessageLength] = useState(0);
@@ -139,10 +140,10 @@ export const CompositionTextArea = (props: Props) => {
         markup="@ￒ__id__ￗ__display__ￒ" // ￒ = \uFFD2 is one of the forbidden char for a display name (check displayNameRegex)
         trigger="@"
         // this is only for the composition box visible content. The real stuff on the backend box is the @markup
-        displayTransform={(_id, display) =>
-          htmlDirection === 'rtl' ? `${display}@` : `@${display}`
-        }
-        data={fetchUsersForGroup}
+        displayTransform={(_id, display) => {
+          return htmlDirection === 'rtl' ? `${display}@` : `@${display}`;
+        }}
+        data={fetchMentionData}
         renderSuggestion={renderUserMentionRow}
       />
       <Mention
