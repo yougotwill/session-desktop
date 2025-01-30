@@ -1,10 +1,9 @@
-import _, { debounce, isEmpty } from 'lodash';
+import _, { debounce, isEmpty, uniq } from 'lodash';
 
 import { connect } from 'react-redux';
 import styled from 'styled-components';
 
 import { AbortController } from 'abort-controller';
-import { SuggestionDataItem } from 'react-mentions';
 
 import autoBind from 'auto-bind';
 import { Component, RefObject, createRef } from 'react';
@@ -16,7 +15,7 @@ import { SessionRecording } from '../SessionRecording';
 import { SettingsKey } from '../../../data/settings-key';
 import { showLinkSharingConfirmationModalDialog } from '../../../interactions/conversationInteractions';
 import { ConvoHub } from '../../../session/conversations';
-import { ToastUtils } from '../../../session/utils';
+import { ToastUtils, UserUtils } from '../../../session/utils';
 import { ReduxConversationType } from '../../../state/ducks/conversations';
 import { removeAllStagedAttachmentsInConversation } from '../../../state/ducks/stagedAttachments';
 import { StateType } from '../../../state/reducer';
@@ -32,7 +31,6 @@ import {
 } from '../../../state/selectors/selectedConversation';
 import { AttachmentType } from '../../../types/Attachment';
 import { processNewAttachment } from '../../../types/MessageAttachment';
-import { FixedBaseEmoji } from '../../../types/Reaction';
 import { AttachmentUtil } from '../../../util';
 import {
   StagedAttachmentImportedType,
@@ -60,6 +58,9 @@ import { CompositionTextArea } from './CompositionTextArea';
 import { cleanMentions, mentionsRegex } from './UserMentions';
 import { HTMLDirection } from '../../../util/i18n/rtlSupport';
 import { PubKey } from '../../../session/types';
+import { localize } from '../../../localization/localeTools';
+import type { FixedBaseEmoji } from '../../../types/Reaction';
+import type { SessionSuggestionDataItem } from './types';
 
 export interface ReplyingToMessageProps {
   convoId: string;
@@ -441,7 +442,7 @@ class CompositionBoxInner extends Component<Props, State> {
             }}
             container={this.container}
             textAreaRef={this.textarea}
-            fetchUsersForGroup={this.fetchUsersForGroup}
+            fetchMentionData={this.fetchMentionData}
             typingEnabled={this.props.typingEnabled}
             onKeyDown={this.onKeyDown}
           />
@@ -464,85 +465,49 @@ class CompositionBoxInner extends Component<Props, State> {
     );
   }
 
-  /* eslint-enable @typescript-eslint/no-misused-promises */
-  private fetchUsersForOpenGroup(
-    query: string,
-    callback: (data: Array<SuggestionDataItem>) => void
-  ) {
-    const mentionsInput = getMentionsInput(window?.inboxStore?.getState() || []);
-    const filtered =
-      mentionsInput
+  private filterMentionDataByQuery(query: string, mentionData: Array<SessionSuggestionDataItem>) {
+    return (
+      mentionData
         .filter(d => !!d)
-        .filter(d => d.authorProfileName !== 'Anonymous')
-        .filter(d => d.authorProfileName?.toLowerCase()?.includes(query.toLowerCase()))
-        // Transform the users to what react-mentions expects
-        .map(user => {
-          return {
-            display: user.authorProfileName,
-            id: user.id,
-          };
-        }) || [];
-
-    callback(filtered);
+        .filter(
+          d =>
+            d.display?.toLowerCase()?.includes(query.toLowerCase()) ||
+            d.id?.toLowerCase()?.includes(query.toLowerCase())
+        ) || []
+    );
   }
 
-  private fetchUsersForGroup(query: string, callback: (data: Array<SuggestionDataItem>) => void) {
+  private membersInThisChat(): Array<SessionSuggestionDataItem> {
+    const { selectedConversation } = this.props;
+    if (!selectedConversation) {
+      return [];
+    }
+    if (selectedConversation.isPublic) {
+      return getMentionsInput(window?.inboxStore?.getState() || []);
+    }
+    const members = selectedConversation.isPrivate
+      ? uniq([UserUtils.getOurPubKeyStrFromCache(), selectedConversation.id])
+      : selectedConversation.members || [];
+    return members.map(m => {
+      return {
+        id: m,
+        display: UserUtils.isUsFromCache(m)
+          ? localize('you').toString()
+          : ConvoHub.use().get(m)?.getNicknameOrRealUsernameOrPlaceholder() || PubKey.shorten(m),
+      };
+    });
+  }
+
+  private fetchMentionData(query: string): Array<SessionSuggestionDataItem> {
     let overriddenQuery = query;
     if (!query) {
       overriddenQuery = '';
     }
     if (!this.props.selectedConversation) {
-      return;
+      return [];
     }
 
-    if (this.props.selectedConversation.isPrivate) {
-      return;
-    }
-
-    if (this.props.selectedConversation.isPublic) {
-      this.fetchUsersForOpenGroup(overriddenQuery, callback);
-      return;
-    }
-    // can only be a closed group here
-    this.fetchUsersForClosedGroup(overriddenQuery, callback);
-  }
-
-  private fetchUsersForClosedGroup(
-    query: string,
-    callback: (data: Array<SuggestionDataItem>) => void
-  ) {
-    const { selectedConversation } = this.props;
-    if (!selectedConversation) {
-      return;
-    }
-    const allPubKeys = selectedConversation.members;
-    if (!allPubKeys || allPubKeys.length === 0) {
-      return;
-    }
-
-    const allMembers = allPubKeys.map(pubKey => {
-      const convo = ConvoHub.use().get(pubKey);
-      const profileName = convo?.getNicknameOrRealUsernameOrPlaceholder() || PubKey.shorten(pubKey);
-
-      return {
-        id: pubKey,
-        authorProfileName: profileName,
-      };
-    });
-    // keep anonymous members so we can still quote them with their id
-    const members = allMembers
-      .filter(d => !!d)
-      .filter(
-        d =>
-          d.authorProfileName?.toLowerCase()?.includes(query.toLowerCase()) || !d.authorProfileName
-      );
-
-    // Transform the users to what react-mentions expects
-    const mentionsData = members.map(user => ({
-      display: user.authorProfileName || PubKey.shorten(user.id),
-      id: user.id,
-    }));
-    callback(mentionsData);
+    return this.filterMentionDataByQuery(overriddenQuery, this.membersInThisChat());
   }
 
   private renderStagedLinkPreview(): JSX.Element | null {
