@@ -1,6 +1,6 @@
 import type { SetupI18nReturnType } from '../types/localizer';
 import { setupI18n } from '../util/i18n/i18n';
-import { CrowdinLocale } from '../localization/constants';
+import {CrowdinLocale, isCrowdinLocale} from '../localization/constants';
 
 export function normalizeLocaleName(locale: string) {
   const dashedLocale = locale.replaceAll('_', '-');
@@ -27,6 +27,15 @@ export function normalizeLocaleName(locale: string) {
   return dashedLocale;
 }
 
+function resolveLocale(crowdinLocale: string): CrowdinLocale {
+  const locale = normalizeLocaleName(crowdinLocale)
+  if (isCrowdinLocale(locale)) {
+    return locale;
+  }
+  console.error(`Invalid locale: ${locale} falling back to en`);
+  return 'en' as CrowdinLocale;
+}
+
 export function loadLocalizedDictionary({
   appLocale,
   logger,
@@ -50,7 +59,7 @@ export function loadLocalizedDictionary({
   //
   // possible locales:
   // https://github.com/electron/electron/blob/master/docs/api/locales.md
-  const crowdinLocale = normalizeLocaleName(appLocale) as CrowdinLocale;
+  const crowdinLocale = resolveLocale(appLocale);
 
   const i18n = setupI18n({
     crowdinLocale,
