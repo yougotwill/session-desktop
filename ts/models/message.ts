@@ -3,7 +3,7 @@ import Backbone from 'backbone';
 import autoBind from 'auto-bind';
 import filesize from 'filesize';
 import { GroupPubkeyType, PubkeyType } from 'libsession_util_nodejs';
-import { cloneDeep, debounce, isEmpty, size as lodashSize, partition, pick, uniq } from 'lodash';
+import { cloneDeep, debounce, isEmpty, size as lodashSize, uniq } from 'lodash';
 import { SignalService } from '../protobuf';
 import { ConvoHub } from '../session/conversations';
 import { ContentMessage } from '../session/messages/outgoing';
@@ -886,7 +886,7 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
       return null;
     }
 
-    this.set({ errors: null, sent: false, sent_to: [] });
+    this.set({ errors: undefined, sent: false, sent_to: [] });
     await this.commit();
     try {
       const conversation: ConversationModel | undefined = this.getConversation();
@@ -987,19 +987,12 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
         message: closedGroupVisibleMessage,
         namespace: SnodeNamespaces.LegacyClosedGroup,
       });
-    } catch (e) {
-      await this.saveErrors(e);
+    } catch (e: unknown) {
+      if (e instanceof Error) {
+        await this.saveErrors(e);
+      }
       return null;
     }
-  }
-
-  public removeOutgoingErrors(number: string) {
-    const errors = partition(
-      this.get('errors'),
-      e => e.number === number && e.name === 'SendMessageNetworkError'
-    );
-    this.set({ errors: errors[1] });
-    return errors[0][0];
   }
 
   public getConversation(): ConversationModel | undefined {
@@ -1114,32 +1107,14 @@ export class MessageModel extends Backbone.Model<MessageAttributes> {
     await this.commit();
   }
 
-  public async saveErrors(providedErrors: any) {
-    let errors = providedErrors;
-
-    if (!(errors instanceof Array)) {
-      errors = [errors];
+  public async saveErrors(providedError: Error) {
+    if (!(providedError instanceof Error)) {
+      throw new Error('saveErrors expects a single error to be provided');
     }
-    errors.forEach((e: any) => {
-      window?.log?.error(
-        'Message.saveErrors:',
-        e && e.reason ? e.reason : null,
-        e && e.stack ? e.stack : e
-      );
-    });
-    errors = errors.map((e: any) => {
-      if (
-        e.constructor === Error ||
-        e.constructor === TypeError ||
-        e.constructor === ReferenceError
-      ) {
-        return pick(e, 'name', 'message', 'code', 'number', 'reason');
-      }
-      return e;
-    });
-    errors = errors.concat(this.get('errors') || []);
 
-    this.set({ errors });
+    const errorStr = `${providedError.name} - "${providedError.message || 'unknown error message'}"`;
+
+    this.set({ errors: errorStr });
     await this.commit();
   }
 

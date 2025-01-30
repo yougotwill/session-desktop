@@ -143,6 +143,7 @@ async function handleSwarmMessageSentSuccess(
     sent_to: sentTo,
     sent: true,
     sent_at: effectiveTimestamp,
+    errors: undefined,
   });
 
   DisappearingMessages.checkForExpiringOutgoingMessage(fetchedMessage, 'handleMessageSentSuccess');

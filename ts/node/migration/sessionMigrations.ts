@@ -108,6 +108,7 @@ const LOKI_SCHEMA_VERSIONS = [
   updateToSessionSchemaVersion37,
   updateToSessionSchemaVersion38,
   updateToSessionSchemaVersion39,
+  updateToSessionSchemaVersion40,
 ];
 
 function updateToSessionSchemaVersion1(currentVersion: number, db: BetterSqlite3.Database) {
@@ -2019,6 +2020,27 @@ function updateToSessionSchemaVersion39(currentVersion: number, db: BetterSqlite
     db.exec(`CREATE INDEX seen_hashes_per_pubkey ON ${SEEN_MESSAGE_TABLE} (
       conversationId
     );`);
+    writeSessionSchemaVersion(targetVersion, db);
+  })();
+
+  console.log(`updateToSessionSchemaVersion${targetVersion}: success!`);
+}
+
+function updateToSessionSchemaVersion40(currentVersion: number, db: BetterSqlite3.Database) {
+  const targetVersion = 40;
+  if (currentVersion >= targetVersion) {
+    return;
+  }
+
+  console.log(`updateToSessionSchemaVersion${targetVersion}: starting...`);
+
+  db.transaction(() => {
+    // the 'errors' field used to do different things. We need to extract it to be a single string.
+    db.exec(`ALTER TABLE ${MESSAGES_TABLE} ADD COLUMN errors TEXT;`);
+    db.exec(`UPDATE ${MESSAGES_TABLE}
+      SET json = json_remove(json, '$.errors');
+    `);
+
     writeSessionSchemaVersion(targetVersion, db);
   })();
 

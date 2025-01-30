@@ -103,7 +103,7 @@ const StyledMessageInfoContainer = styled.div`
 `;
 
 type MessageInfoProps = {
-  errors: Array<Error>;
+  errors?: string;
   attachments: Array<PropsForAttachment>;
 };
 
@@ -151,10 +151,7 @@ async function getPropsForMessageInfo(
       }
     }
 
-    // This will make the error message for outgoing key errors a bit nicer
-    const errors = (found.get('errors') || []).map((error: any) => {
-      return error;
-    });
+    const errors = found.get('errors');
 
     const toRet: MessageInfoProps = {
       errors,

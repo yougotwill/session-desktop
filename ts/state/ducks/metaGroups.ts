@@ -132,6 +132,7 @@ const initNewGroupInWrapper = createAsyncThunk(
         throw new Error('groupSecretKey was empty just after creation.');
       }
       newGroup.name = groupName; // this will be used by the linked devices until they fetch the info from the groups swarm
+      newGroup.joinedAtSeconds = Math.floor(Date.now() / 1000);
       // the `GroupSync` below will need the secretKey of the group to be saved in the wrapper. So save it!
       await UserGroupsWrapperActions.setGroup(newGroup);
       const ourEd25519KeyPairBytes = await UserUtils.getUserED25519KeyPairBytes();

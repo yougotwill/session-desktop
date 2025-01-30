@@ -13,6 +13,7 @@ import {
 import {
   DeleteAllFromGroupMsgNodeSubRequest,
   DeleteHashesFromGroupNodeSubRequest,
+  MAX_SUBREQUESTS_COUNT,
   StoreGroupKeysSubRequest,
   StoreGroupMessageSubRequest,
   SubaccountRevokeSubRequest,
@@ -38,6 +39,13 @@ import {
 import { DURATION } from '../../../constants';
 import { WithAllow401s } from '../../../types/with';
 import type { WithTimeoutMs } from '../../../apis/snode_api/requestWith';
+import { Data } from '../../../../data/data';
+import { GroupUpdateInfoChangeMessage } from '../../../messages/outgoing/controlMessage/group_v2/to_group/GroupUpdateInfoChangeMessage';
+import { NetworkTime } from '../../../../util/NetworkTime';
+import { SignalService } from '../../../../protobuf';
+import { getSodiumRenderer } from '../../../crypto';
+import { DisappearingMessages } from '../../../disappearing_messages';
+import { GroupUpdateMemberChangeMessage } from '../../../messages/outgoing/controlMessage/group_v2/to_group/GroupUpdateMemberChangeMessage';
 
 const defaultMsBetweenRetries = 15000; // a long time between retries, to avoid running multiple jobs at the same time, when one was postponed at the same time as one already planned (5s)
 const defaultMaxAttempts = 2;
@@ -223,6 +231,123 @@ async function pushChangesToGroupSwarmIfNeeded({
   return RunJobResult.Success;
 }
 
+async function allFailedToSentGroupControlMessagesToRetry(groupPk: GroupPubkeyType) {
+  try {
+    const sodium = await getSodiumRenderer();
+    const msgsToResend = await Data.fetchAllGroupUpdateFailedMessage(groupPk);
+    if (!msgsToResend.length) {
+      return;
+    }
+    const firstChunk = msgsToResend.slice(0, Math.floor(MAX_SUBREQUESTS_COUNT));
+    const convo = ConvoHub.use().get(groupPk);
+    if (!convo) {
+      throw new Error('allFailedToSentGroupControlMessagesToRetry: convo not found');
+    }
+    const group = await UserGroupsWrapperActions.getGroup(groupPk);
+    if (!group || !group.secretKey || isEmpty(group.secretKey)) {
+      throw new Error('allFailedToSentGroupControlMessagesToRetry: group secret key is not found');
+    }
+    const secretKey = group.secretKey;
+    const extraStoreRequests = await StoreGroupRequestFactory.makeGroupMessageSubRequest(
+      firstChunk.map(m => {
+        const groupUpdate = m.get('group_update');
+        const createAtNetworkTimestamp = m.get('sent_at') || NetworkTime.now();
+        const identifier = m.get('id');
+        if (!group.secretKey) {
+          return null;
+        }
+        const shared = {
+          groupPk,
+          identifier,
+          createAtNetworkTimestamp,
+          secretKey,
+          sodium,
+          ...DisappearingMessages.getExpireDetailsForOutgoingMessage(
+            convo,
+            createAtNetworkTimestamp
+          ),
+        };
+        if (groupUpdate?.avatarChange) {
+          return new GroupUpdateInfoChangeMessage({
+            typeOfChange: SignalService.GroupUpdateInfoChangeMessage.Type.AVATAR,
+            ...shared,
+          });
+        }
+        if (groupUpdate?.name) {
+          return new GroupUpdateInfoChangeMessage({
+            typeOfChange: SignalService.GroupUpdateInfoChangeMessage.Type.NAME,
+            updatedName: groupUpdate.name || '',
+            ...shared,
+          });
+        }
+        if (groupUpdate?.joined?.length) {
+          return new GroupUpdateMemberChangeMessage({
+            typeOfChange: 'added',
+            added: groupUpdate.joined,
+            ...shared,
+          });
+        }
+        if (groupUpdate?.joinedWithHistory?.length) {
+          return new GroupUpdateMemberChangeMessage({
+            typeOfChange: 'addedWithHistory',
+            added: groupUpdate.joinedWithHistory,
+            ...shared,
+          });
+        }
+        if (groupUpdate?.kicked?.length) {
+          return new GroupUpdateMemberChangeMessage({
+            typeOfChange: 'removed',
+            removed: groupUpdate.kicked,
+            ...shared,
+          });
+        }
+        if (groupUpdate?.promoted?.length) {
+          return new GroupUpdateMemberChangeMessage({
+            typeOfChange: 'promoted',
+            promoted: groupUpdate.promoted,
+            ...shared,
+          });
+        }
+        const expirationTimerUpdate = m.get('expirationTimerUpdate');
+        if (expirationTimerUpdate) {
+          return new GroupUpdateInfoChangeMessage({
+            typeOfChange: SignalService.GroupUpdateInfoChangeMessage.Type.DISAPPEARING_MESSAGES,
+            ...shared,
+            updatedExpirationSeconds: expirationTimerUpdate.expireTimer,
+            expirationType: expirationTimerUpdate.expirationType || 'unknown',
+          });
+        }
+        window.log.warn(
+          `allFailedToSentGroupControlMessagesToRetry unhandled result for ms ${shared.identifier}`
+        );
+        return null;
+      }),
+      group
+    );
+
+    if (!extraStoreRequests.length) {
+      return;
+    }
+    const controller = new AbortController();
+
+    // we don't really care about the result. The messages in DB will get their state
+    // updated as part of sendEncryptedDataToSnode
+    await timeoutWithAbort(
+      MessageSender.sendEncryptedDataToSnode({
+        sortedSubRequests: extraStoreRequests,
+        destination: groupPk,
+        method: 'sequence',
+        abortSignal: controller.signal,
+        allow401s: false,
+      }),
+      30 * DURATION.SECONDS,
+      controller
+    );
+  } catch (e) {
+    window.log.warn('failed');
+  }
+}
+
 class GroupSyncJob extends PersistedJob<GroupSyncPersistedData> {
   constructor({
     identifier, // this has to be the group's pubkey
@@ -262,6 +387,8 @@ class GroupSyncJob extends PersistedJob<GroupSyncPersistedData> {
         window.log.warn('did not find our own conversation');
         return RunJobResult.PermanentFailure;
       }
+
+      await allFailedToSentGroupControlMessagesToRetry(thisJobDestination);
 
       // return await so we catch exceptions in here
       return await GroupSync.pushChangesToGroupSwarmIfNeeded({

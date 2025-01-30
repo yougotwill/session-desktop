@@ -132,7 +132,7 @@ function propsToTuple<T extends MergedLocalizerTokens>(
  * @deprecated this will eventually be replaced by LocalizedStringBuilder
  *
  * @param token - The token identifying the message to retrieve.
- * @param args - An optional record of substitution variables and their replacement values. This is equired if the string has dynamic variables.
+ * @param args - An optional record of substitution variables and their replacement values. This is required if the string has dynamic variables.
  */
 export const inEnglish: I18nMethods['inEnglish'] = token => {
   if (!isSimpleToken(token)) {

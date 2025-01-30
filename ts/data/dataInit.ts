@@ -56,6 +56,7 @@ const channelsToMake = new Set([
   'findAllMessageFromSendersInConversation',
   'findAllMessageHashesInConversation',
   'findAllMessageHashesInConversationMatchingAuthor',
+  'fetchAllGroupUpdateFailedMessage',
   'getMessageCount',
   'filterAlreadyFetchedOpengroupMessage',
   'getMessagesBySenderAndSentAt',
