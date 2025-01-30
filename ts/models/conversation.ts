@@ -841,7 +841,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       const error = new Error('Network is not available');
       error.name = 'SendMessageNetworkError';
       (error as any).number = this.id;
-      await messageModel.saveErrors([error]);
+      await messageModel.saveErrors(error);
       await this.commit();
 
       return;
@@ -2204,8 +2204,10 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       }
 
       throw new TypeError(`Invalid conversation type: '${this.get('type')}'`);
-    } catch (e) {
-      await message.saveErrors(e);
+    } catch (e: unknown) {
+      if (e instanceof Error) {
+        await message.saveErrors(e);
+      }
     }
   }
 

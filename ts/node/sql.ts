@@ -851,6 +851,7 @@ function saveMessage(data: MessageAttributes) {
     expirationStartTimestamp,
     flags,
     messageHash,
+    errors,
   } = data;
 
   if (!id) {
@@ -884,6 +885,7 @@ function saveMessage(data: MessageAttributes) {
     unread,
     flags: flags ?? 0,
     messageHash,
+    errors,
   };
 
   assertGlobalInstance()
@@ -909,7 +911,8 @@ function saveMessage(data: MessageAttributes) {
     type,
     unread,
     flags,
-    messageHash
+    messageHash,
+    errors
   ) values (
     $id,
     $json,
@@ -931,7 +934,8 @@ function saveMessage(data: MessageAttributes) {
     $type,
     $unread,
     $flags,
-    $messageHash
+    $messageHash,
+    $errors
   );`
     )
     .run(payload);
@@ -1189,6 +1193,29 @@ function findAllMessageHashesInConversationMatchingAuthor(
     return null;
   }
   return map(rows, row => jsonToObject(row.json));
+}
+
+function fetchAllGroupUpdateFailedMessage(
+  groupPk: GroupPubkeyType,
+  instance?: BetterSqlite3.Database
+) {
+  if (!groupPk) {
+    return [];
+  }
+  const rows = assertGlobalInstanceOrInstance(instance)
+    .prepare(
+      `SELECT json FROM ${MESSAGES_TABLE} WHERE conversationId = ? AND JSON_EXTRACT(json, '$.group_update') IS NOT NULL AND errors IS NOT NULL;`
+    )
+    .all(groupPk);
+
+  if (!rows || isEmpty(rows)) {
+    return [];
+  }
+  const objs = map(rows, row => jsonToObject(row.json)).filter(m => {
+    return !isEmpty(m);
+  });
+
+  return objs;
 }
 
 function cleanUpExpirationTimerUpdateHistory(
@@ -2730,6 +2757,7 @@ export const sqlNode = {
   findAllMessageFromSendersInConversation,
   findAllMessageHashesInConversation,
   findAllMessageHashesInConversationMatchingAuthor,
+  fetchAllGroupUpdateFailedMessage,
   getUnreadByConversation,
   getUnreadDisappearingByConversation,
   markAllAsReadByConversationNoExpiration,

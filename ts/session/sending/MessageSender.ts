@@ -16,6 +16,7 @@ import {
   DeleteAllFromGroupMsgNodeSubRequest,
   DeleteHashesFromGroupNodeSubRequest,
   DeleteHashesFromUserNodeSubRequest,
+  isStoreUserInitiatedMessage,
   MethodBatchType,
   RawSnodeSubRequests,
   StoreGroupInfoSubRequest,
@@ -559,6 +560,18 @@ async function sendEncryptedDataToSnode<T extends GroupPubkeyType | PubkeyType>(
     return batchResults;
   } catch (e) {
     window.log.warn(`sendEncryptedDataToSnode failed with ${e.message}`);
+    const sortedSubRequestsWithMsg = sortedSubRequests.filter(r => isStoreUserInitiatedMessage(r));
+    for (let index = 0; index < sortedSubRequestsWithMsg.length; index++) {
+      const request = sortedSubRequestsWithMsg[index];
+      if (request.dbMessageIdentifier) {
+        // eslint-disable-next-line no-await-in-loop
+        await MessageSentHandler.handleSwarmMessageSentFailure(
+          { device: destination, identifier: request.dbMessageIdentifier },
+          e
+        );
+      }
+    }
+
     return null;
   }
 }
@@ -660,11 +673,7 @@ async function handleBatchResultWithSubRequests({
 
     // there are some things we need to do when storing messages
     // for groups/legacy groups or user (but not for config messages)
-    if (
-      subRequest instanceof StoreGroupMessageSubRequest ||
-      subRequest instanceof StoreLegacyGroupMessageSubRequest ||
-      subRequest instanceof StoreUserMessageSubRequest
-    ) {
+    if (isStoreUserInitiatedMessage(subRequest)) {
       const storedAt = batchResult?.[index]?.body?.t;
       const storedHash = batchResult?.[index]?.body?.hash;
       const subRequestStatusCode = batchResult?.[index]?.code;

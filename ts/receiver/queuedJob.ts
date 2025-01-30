@@ -312,7 +312,7 @@ async function handleRegularMessage(
     body: rawDataMessage.body,
     conversationId: conversation.id,
     messageHash,
-    errors: [],
+    errors: undefined,
   });
 
   const serverTimestamp = message.get('serverTimestamp');

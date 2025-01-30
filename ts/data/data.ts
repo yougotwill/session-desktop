@@ -616,6 +616,16 @@ async function findAllMessageHashesInConversationMatchingAuthor(
   return msgAttrs.map((msg: any) => new MessageModel(msg));
 }
 
+async function fetchAllGroupUpdateFailedMessage(groupPk: GroupPubkeyType) {
+  const msgAttrs = await channels.fetchAllGroupUpdateFailedMessage(groupPk);
+
+  if (!msgAttrs || isEmpty(msgAttrs) || !isArray(msgAttrs)) {
+    return [];
+  }
+
+  return msgAttrs.map((msg: any) => new MessageModel(msg));
+}
+
 async function getMessagesBySentAt(sentAt: number): Promise<MessageCollection> {
   const messages = await channels.getMessagesBySentAt(sentAt);
   return new MessageCollection(messages);
@@ -902,6 +912,7 @@ export const Data = {
   findAllMessageFromSendersInConversation,
   findAllMessageHashesInConversation,
   findAllMessageHashesInConversationMatchingAuthor,
+  fetchAllGroupUpdateFailedMessage,
   getMessagesBySentAt,
   getExpiredMessages,
   getOutgoingWithoutExpiresAt,

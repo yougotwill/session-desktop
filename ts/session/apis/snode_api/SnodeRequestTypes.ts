@@ -1384,3 +1384,18 @@ export type BatchStoreWithExtraParams =
   | DeleteHashesFromUserNodeSubRequest
   | SubaccountRevokeSubRequest
   | SubaccountUnrevokeSubRequest;
+
+export type StoreUserInitiatedMessage =
+  | StoreGroupMessageSubRequest
+  | StoreLegacyGroupMessageSubRequest
+  | StoreUserMessageSubRequest;
+
+export function isStoreUserInitiatedMessage(
+  request: SnodeAPISubRequest<string>
+): request is StoreUserInitiatedMessage {
+  return (
+    request instanceof StoreGroupMessageSubRequest ||
+    request instanceof StoreLegacyGroupMessageSubRequest ||
+    request instanceof StoreUserMessageSubRequest
+  );
+}

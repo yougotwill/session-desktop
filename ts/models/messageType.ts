@@ -44,7 +44,7 @@ export interface MessageAttributes {
   groupInvitation?: { url: string | undefined; name: string } | undefined;
   attachments?: any;
   conversationId: string;
-  errors?: any;
+  errors?: string;
   flags?: number;
   hasAttachments: 1 | 0;
   hasFileAttachments: 1 | 0;
