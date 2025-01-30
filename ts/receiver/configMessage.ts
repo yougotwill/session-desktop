@@ -741,6 +741,7 @@ async function handleSingleGroupUpdate({
       lastJoinedTimestamp: joinedAt,
       expireTimer,
       expirationMode: expireTimer ? 'deleteAfterSend' : 'off',
+      didApproveMe: groupInWrapper.invitePending,
     });
     await created.commit();
     getSwarmPollingInstance().addGroupId(PubKey.cast(groupPk));
