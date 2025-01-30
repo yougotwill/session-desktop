@@ -16,7 +16,7 @@ import {
   DeleteAllFromGroupMsgNodeSubRequest,
   DeleteHashesFromGroupNodeSubRequest,
   DeleteHashesFromUserNodeSubRequest,
-  isStoreUserInitiatedMessage,
+  isStoreUserInitiatedSubRequest,
   MethodBatchType,
   RawSnodeSubRequests,
   StoreGroupInfoSubRequest,
@@ -560,7 +560,9 @@ async function sendEncryptedDataToSnode<T extends GroupPubkeyType | PubkeyType>(
     return batchResults;
   } catch (e) {
     window.log.warn(`sendEncryptedDataToSnode failed with ${e.message}`);
-    const sortedSubRequestsWithMsg = sortedSubRequests.filter(r => isStoreUserInitiatedMessage(r));
+    const sortedSubRequestsWithMsg = sortedSubRequests.filter(r =>
+      isStoreUserInitiatedSubRequest(r)
+    );
     for (let index = 0; index < sortedSubRequestsWithMsg.length; index++) {
       const request = sortedSubRequestsWithMsg[index];
       if (request.dbMessageIdentifier) {
@@ -673,7 +675,7 @@ async function handleBatchResultWithSubRequests({
 
     // there are some things we need to do when storing messages
     // for groups/legacy groups or user (but not for config messages)
-    if (isStoreUserInitiatedMessage(subRequest)) {
+    if (isStoreUserInitiatedSubRequest(subRequest)) {
       const storedAt = batchResult?.[index]?.body?.t;
       const storedHash = batchResult?.[index]?.body?.hash;
       const subRequestStatusCode = batchResult?.[index]?.code;

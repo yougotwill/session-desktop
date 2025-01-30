@@ -1385,14 +1385,20 @@ export type BatchStoreWithExtraParams =
   | SubaccountRevokeSubRequest
   | SubaccountUnrevokeSubRequest;
 
-export type StoreUserInitiatedMessage =
+/**
+ * A `StoreUserInitiatedSubRequest` is a request that the user made and that (potentially) has
+ * a corresponding message in the database.
+ * Those messages are the messages that display a failed/sent status, so we need to update them when the request is done, to reflect the
+ * success/failure of the sending step.
+ */
+export type StoreUserInitiatedSubRequest =
   | StoreGroupMessageSubRequest
   | StoreLegacyGroupMessageSubRequest
   | StoreUserMessageSubRequest;
 
-export function isStoreUserInitiatedMessage(
+export function isStoreUserInitiatedSubRequest(
   request: SnodeAPISubRequest<string>
-): request is StoreUserInitiatedMessage {
+): request is StoreUserInitiatedSubRequest {
   return (
     request instanceof StoreGroupMessageSubRequest ||
     request instanceof StoreLegacyGroupMessageSubRequest ||
