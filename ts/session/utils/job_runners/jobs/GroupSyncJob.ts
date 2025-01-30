@@ -235,7 +235,10 @@ async function allFailedToSentGroupControlMessagesToRetry(groupPk: GroupPubkeyTy
   try {
     const sodium = await getSodiumRenderer();
     const msgsToResend = await Data.fetchAllGroupUpdateFailedMessage(groupPk);
-    const firstChunk = msgsToResend.slice(0, Math.floor(MAX_SUBREQUESTS_COUNT / 2));
+    if (!msgsToResend.length) {
+      return;
+    }
+    const firstChunk = msgsToResend.slice(0, Math.floor(MAX_SUBREQUESTS_COUNT));
     const convo = ConvoHub.use().get(groupPk);
     if (!convo) {
       throw new Error('allFailedToSentGroupControlMessagesToRetry: convo not found');
@@ -325,12 +328,21 @@ async function allFailedToSentGroupControlMessagesToRetry(groupPk: GroupPubkeyTy
     if (!extraStoreRequests.length) {
       return;
     }
+    const controller = new AbortController();
 
-    await pushChangesToGroupSwarmIfNeeded({
-      groupPk,
-      extraStoreRequests,
-      allow401s: false,
-    });
+    // we don't really care about the result. The messages in DB will get their state
+    // updated as part of sendEncryptedDataToSnode
+    await timeoutWithAbort(
+      MessageSender.sendEncryptedDataToSnode({
+        sortedSubRequests: extraStoreRequests,
+        destination: groupPk,
+        method: 'sequence',
+        abortSignal: controller.signal,
+        allow401s: false,
+      }),
+      30 * DURATION.SECONDS,
+      controller
+    );
   } catch (e) {
     window.log.warn('failed');
   }
