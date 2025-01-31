@@ -1204,7 +1204,7 @@ function fetchAllGroupUpdateFailedMessage(
   }
   const rows = assertGlobalInstanceOrInstance(instance)
     .prepare(
-      `SELECT json FROM ${MESSAGES_TABLE} WHERE conversationId = ? AND JSON_EXTRACT(json, '$.group_update') IS NOT NULL AND errors IS NOT NULL;`
+      `SELECT json FROM ${MESSAGES_TABLE} WHERE conversationId = ? AND (JSON_EXTRACT(json, '$.group_update') IS NOT NULL OR JSON_EXTRACT(json, '$.expirationTimerUpdate') IS NOT NULL) AND errors IS NOT NULL;`
     )
     .all(groupPk);
 
