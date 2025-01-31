@@ -1,10 +1,14 @@
 import { RefObject, useState } from 'react';
 import { Mention, MentionsInput } from 'react-mentions';
+import { uniq } from 'lodash';
+import { useSelector } from 'react-redux';
 import {
   useSelectedConversationKey,
   useSelectedIsBlocked,
   useSelectedIsGroupDestroyed,
   useSelectedIsKickedFromGroup,
+  useSelectedIsPrivate,
+  useSelectedIsPublic,
   useSelectedNicknameOrProfileNameOrShortenedPubkey,
 } from '../../../state/selectors/selectedConversation';
 import { updateDraftForConversation } from '../SessionConversationDrafts';
@@ -14,6 +18,11 @@ import { HTMLDirection, useHTMLDirection } from '../../../util/i18n/rtlSupport';
 import { ConvoHub } from '../../../session/conversations';
 import { Constants } from '../../../session';
 import type { SessionSuggestionDataItem } from './types';
+import { getMentionsInput } from '../../../state/selectors/conversations';
+import { UserUtils } from '../../../session/utils';
+import { localize } from '../../../localization/localeTools';
+import { PubKey } from '../../../session/types';
+import { useLibGroupMembers } from '../../../state/selectors/groups';
 
 const sendMessageStyle = (dir?: HTMLDirection) => {
   return {
@@ -44,14 +53,62 @@ type Props = {
   setDraft: (draft: string) => void;
   container: RefObject<HTMLDivElement>;
   textAreaRef: RefObject<HTMLTextAreaElement>;
-  fetchMentionData: (query: string) => Array<SessionSuggestionDataItem>;
   typingEnabled: boolean;
   onKeyDown: (event: any) => void;
 };
 
+function filterMentionDataByQuery(query: string, mentionData: Array<SessionSuggestionDataItem>) {
+  return (
+    mentionData
+      .filter(d => !!d)
+      .filter(
+        d =>
+          d.display?.toLowerCase()?.includes(query.toLowerCase()) ||
+          d.id?.toLowerCase()?.includes(query.toLowerCase())
+      ) || []
+  );
+}
+
+function useMembersInThisChat(): Array<SessionSuggestionDataItem> {
+  const selectedConvoKey = useSelectedConversationKey();
+  const isPrivate = useSelectedIsPrivate();
+  const isPublic = useSelectedIsPublic();
+  const membersForCommunity = useSelector(getMentionsInput);
+  const membersFor03Group = useLibGroupMembers(selectedConvoKey);
+
+  if (!selectedConvoKey) {
+    return [];
+  }
+  if (isPublic) {
+    return membersForCommunity || [];
+  }
+  const members = isPrivate
+    ? uniq([UserUtils.getOurPubKeyStrFromCache(), selectedConvoKey])
+    : membersFor03Group || [];
+  return members.map(m => {
+    return {
+      id: m,
+      display: UserUtils.isUsFromCache(m)
+        ? localize('you').toString()
+        : ConvoHub.use().get(m)?.getNicknameOrRealUsernameOrPlaceholder() || PubKey.shorten(m),
+    };
+  });
+}
+
+function fetchMentionData(
+  query: string,
+  fetchedMembersInThisChat: Array<SessionSuggestionDataItem>
+): Array<SessionSuggestionDataItem> {
+  let overriddenQuery = query;
+  if (!query) {
+    overriddenQuery = '';
+  }
+
+  return filterMentionDataByQuery(overriddenQuery, fetchedMembersInThisChat);
+}
+
 export const CompositionTextArea = (props: Props) => {
-  const { draft, setDraft, container, textAreaRef, fetchMentionData, typingEnabled, onKeyDown } =
-    props;
+  const { draft, setDraft, container, textAreaRef, typingEnabled, onKeyDown } = props;
 
   const [lastBumpTypingMessageLength, setLastBumpTypingMessageLength] = useState(0);
 
@@ -61,6 +118,7 @@ export const CompositionTextArea = (props: Props) => {
   const isGroupDestroyed = useSelectedIsGroupDestroyed();
   const isBlocked = useSelectedIsBlocked();
   const groupName = useSelectedNicknameOrProfileNameOrShortenedPubkey();
+  const membersInThisChat = useMembersInThisChat();
 
   if (!selectedConversationKey) {
     return null;
@@ -143,7 +201,7 @@ export const CompositionTextArea = (props: Props) => {
         displayTransform={(_id, display) => {
           return htmlDirection === 'rtl' ? `${display}@` : `@${display}`;
         }}
-        data={fetchMentionData}
+        data={(query: string) => fetchMentionData(query, membersInThisChat)}
         renderSuggestion={renderUserMentionRow}
       />
       <Mention
