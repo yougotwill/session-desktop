@@ -1,4 +1,4 @@
-import _, { debounce, isEmpty, uniq } from 'lodash';
+import _, { debounce, isEmpty } from 'lodash';
 
 import { connect } from 'react-redux';
 import styled from 'styled-components';
@@ -14,16 +14,11 @@ import { SessionRecording } from '../SessionRecording';
 
 import { SettingsKey } from '../../../data/settings-key';
 import { showLinkSharingConfirmationModalDialog } from '../../../interactions/conversationInteractions';
-import { ConvoHub } from '../../../session/conversations';
-import { ToastUtils, UserUtils } from '../../../session/utils';
+import { ToastUtils } from '../../../session/utils';
 import { ReduxConversationType } from '../../../state/ducks/conversations';
 import { removeAllStagedAttachmentsInConversation } from '../../../state/ducks/stagedAttachments';
 import { StateType } from '../../../state/reducer';
-import {
-  getMentionsInput,
-  getQuotedMessage,
-  getSelectedConversation,
-} from '../../../state/selectors/conversations';
+import { getQuotedMessage, getSelectedConversation } from '../../../state/selectors/conversations';
 import {
   getIsSelectedBlocked,
   getSelectedCanWrite,
@@ -57,10 +52,7 @@ import {
 import { CompositionTextArea } from './CompositionTextArea';
 import { cleanMentions, mentionsRegex } from './UserMentions';
 import { HTMLDirection } from '../../../util/i18n/rtlSupport';
-import { PubKey } from '../../../session/types';
-import { localize } from '../../../localization/localeTools';
 import type { FixedBaseEmoji } from '../../../types/Reaction';
-import type { SessionSuggestionDataItem } from './types';
 
 export interface ReplyingToMessageProps {
   convoId: string;
@@ -442,7 +434,6 @@ class CompositionBoxInner extends Component<Props, State> {
             }}
             container={this.container}
             textAreaRef={this.textarea}
-            fetchMentionData={this.fetchMentionData}
             typingEnabled={this.props.typingEnabled}
             onKeyDown={this.onKeyDown}
           />
@@ -464,52 +455,6 @@ class CompositionBoxInner extends Component<Props, State> {
       </Flex>
     );
   }
-
-  private filterMentionDataByQuery(query: string, mentionData: Array<SessionSuggestionDataItem>) {
-    return (
-      mentionData
-        .filter(d => !!d)
-        .filter(
-          d =>
-            d.display?.toLowerCase()?.includes(query.toLowerCase()) ||
-            d.id?.toLowerCase()?.includes(query.toLowerCase())
-        ) || []
-    );
-  }
-
-  private membersInThisChat(): Array<SessionSuggestionDataItem> {
-    const { selectedConversation } = this.props;
-    if (!selectedConversation) {
-      return [];
-    }
-    if (selectedConversation.isPublic) {
-      return getMentionsInput(window?.inboxStore?.getState() || []);
-    }
-    const members = selectedConversation.isPrivate
-      ? uniq([UserUtils.getOurPubKeyStrFromCache(), selectedConversation.id])
-      : selectedConversation.members || [];
-    return members.map(m => {
-      return {
-        id: m,
-        display: UserUtils.isUsFromCache(m)
-          ? localize('you').toString()
-          : ConvoHub.use().get(m)?.getNicknameOrRealUsernameOrPlaceholder() || PubKey.shorten(m),
-      };
-    });
-  }
-
-  private fetchMentionData(query: string): Array<SessionSuggestionDataItem> {
-    let overriddenQuery = query;
-    if (!query) {
-      overriddenQuery = '';
-    }
-    if (!this.props.selectedConversation) {
-      return [];
-    }
-
-    return this.filterMentionDataByQuery(overriddenQuery, this.membersInThisChat());
-  }
-
   private renderStagedLinkPreview(): JSX.Element | null {
     // Don't generate link previews if user has turned them off
     if (!(window.getSettingValue(SettingsKey.settingsLinkPreview) || false)) {

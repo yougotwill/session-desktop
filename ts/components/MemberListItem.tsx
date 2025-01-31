@@ -31,6 +31,8 @@ import {
   UserGroupsWrapperActions,
 } from '../webworker/workers/browser/libsession_worker_interface';
 import { assertUnreachable } from '../types/sqlSharedTypes';
+import { isUsAnySogsFromCache } from '../session/apis/open_group_api/sogsv3/knownBlindedkeys';
+import { localize } from '../localization/localeTools';
 
 const AvatarContainer = styled.div`
   position: relative;
@@ -332,8 +334,7 @@ export const MemberListItem = ({
   hideRadioButton,
 }: MemberListItemProps) => {
   const memberName = useNicknameOrProfileNameOrShortenedPubkey(pubkey);
-  const isUs = UserUtils.isUsFromCache(pubkey);
-  const ourName = isUs ? window.i18n('you') : null;
+  const ourName = isUsAnySogsFromCache(pubkey) ? localize('you').toString() : null;
 
   return (
     <StyledSessionMemberItem

@@ -59,6 +59,9 @@ import { RightPanel, StyledRightPanelContainer } from './right-panel/RightPanel'
 import { HTMLDirection } from '../../util/i18n/rtlSupport';
 import { showLinkVisitWarningDialog } from '../dialog/OpenUrlModal';
 import { InvitedToGroup, NoMessageInConversation } from './SubtleNotification';
+import { PubKey } from '../../session/types';
+import { isUsAnySogsFromCache } from '../../session/apis/open_group_api/sogsv3/knownBlindedkeys';
+import { localize } from '../../localization/localeTools';
 
 const DEFAULT_JPEG_QUALITY = 0.85;
 
@@ -521,12 +524,12 @@ export class SessionConversation extends Component<Props, State> {
     );
 
     const allMembers = allPubKeys.map((pubKey: string) => {
-      const convo = ConvoHub.use().get(pubKey);
-      const profileName = convo?.getNicknameOrRealUsernameOrPlaceholder();
-
       return {
         id: pubKey,
-        display: profileName,
+        display: isUsAnySogsFromCache(pubKey)
+          ? localize('you').toString()
+          : ConvoHub.use().get(pubKey)?.getNicknameOrRealUsernameOrPlaceholder() ||
+            PubKey.shorten(pubKey),
       };
     });
 
