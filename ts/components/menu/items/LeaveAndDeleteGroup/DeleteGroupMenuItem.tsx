@@ -12,6 +12,7 @@ import { useIsMessageRequestOverlayShown } from '../../../../state/selectors/sec
 import { ItemWithDataTestId } from '../MenuItemWithDataTestId';
 import { showDeleteGroupItem } from './guard';
 import { Localizer } from '../../../basic/Localizer';
+import { useDisableLegacyGroupDeprecatedActions } from '../../../../hooks/useRefreshReleasedFeaturesTimestamp';
 
 export const DeleteGroupMenuItem = () => {
   const convoId = useConvoIdFromContext();
@@ -35,6 +36,29 @@ export const DeleteGroupMenuItem = () => {
   }
 
   const token = PubKey.is03Pubkey(convoId) ? 'groupDelete' : 'conversationsDelete';
+
+  return (
+    <ItemWithDataTestId
+      onClick={() => {
+        void showDeleteGroupByConvoId(convoId, username);
+      }}
+    >
+      <Localizer token={token} />
+    </ItemWithDataTestId>
+  );
+};
+
+export const DeleteDeprecatedLegacyGroupMenuItem = () => {
+  const convoId = useConvoIdFromContext();
+  const username = useConversationUsername(convoId) || convoId;
+
+  const shortCircuitDeleteDeprecatedGroup = useDisableLegacyGroupDeprecatedActions(convoId);
+
+  if (!shortCircuitDeleteDeprecatedGroup) {
+    return null;
+  }
+
+  const token = 'groupDelete';
 
   return (
     <ItemWithDataTestId

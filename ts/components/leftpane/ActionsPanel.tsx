@@ -49,6 +49,7 @@ import { getIsModalVisible } from '../../state/selectors/modal';
 
 import { ReleasedFeatures } from '../../util/releaseFeature';
 import { MessageQueue } from '../../session/sending';
+import { useRefreshReleasedFeaturesTimestamp } from '../../hooks/useRefreshReleasedFeaturesTimestamp';
 
 const Section = (props: { type: SectionType }) => {
   const ourNumber = useSelector(getOurNumber);
@@ -296,6 +297,8 @@ export const ActionsPanel = () => {
     // this won't be run every days, but if the app stays open for more than 10 days
     void triggerAvatarReUploadIfNeeded();
   }, DURATION.DAYS * 1);
+
+  useRefreshReleasedFeaturesTimestamp();
 
   if (!ourPrimaryConversation) {
     window?.log?.warn('ActionsPanel: ourPrimaryConversation is not set');

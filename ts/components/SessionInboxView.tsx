@@ -40,6 +40,7 @@ import { Storage } from '../util/storage';
 import { UserGroupsWrapperActions } from '../webworker/workers/browser/libsession_worker_interface';
 import { NoticeBanner } from './NoticeBanner';
 import { Flex } from './basic/Flex';
+import { initialReleasedFeaturesState } from '../state/ducks/releasedFeatures';
 
 function makeLookup<T>(items: Array<T>, key: string): { [key: string]: T } {
   // Yep, we can't index into item without knowing what it is. True. But we want to.
@@ -88,6 +89,7 @@ async function createSessionInboxStore() {
     settings: getSettingsInitialState(),
     groups: initialGroupState,
     userGroups: { userGroups },
+    releasedFeatures: initialReleasedFeaturesState,
   };
 
   return createStore(initialState);
