@@ -23,6 +23,7 @@ import { UserUtils } from '../../../session/utils';
 import { localize } from '../../../localization/localeTools';
 import { PubKey } from '../../../session/types';
 import { useLibGroupMembers } from '../../../state/selectors/groups';
+import { use05GroupMembers } from '../../../hooks/useParamSelector';
 
 const sendMessageStyle = (dir?: HTMLDirection) => {
   return {
@@ -76,6 +77,8 @@ function useMembersInThisChat(): Array<SessionSuggestionDataItem> {
   const membersForCommunity = useSelector(getMentionsInput);
   const membersFor03Group = useLibGroupMembers(selectedConvoKey);
 
+  const membersFor05LegacyGroup = use05GroupMembers(selectedConvoKey);
+
   if (!selectedConvoKey) {
     return [];
   }
@@ -84,7 +87,10 @@ function useMembersInThisChat(): Array<SessionSuggestionDataItem> {
   }
   const members = isPrivate
     ? uniq([UserUtils.getOurPubKeyStrFromCache(), selectedConvoKey])
-    : membersFor03Group || [];
+    : PubKey.is03Pubkey(selectedConvoKey)
+      ? membersFor03Group
+      : membersFor05LegacyGroup;
+
   return members.map(m => {
     return {
       id: m,

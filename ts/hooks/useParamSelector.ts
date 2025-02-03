@@ -470,9 +470,13 @@ export function useQuoteAuthorName(authorId?: string): {
   return { authorName, isMe };
 }
 
-function useMembers(convoId: string | undefined) {
+export function use05GroupMembers(convoId: string | undefined): Array<PubkeyType> {
   const props = useConversationPropsById(convoId);
-  return props?.members || undefined;
+  const members = props?.members || [];
+  if (members.every(m => PubKey.is05Pubkey(m))) {
+    return members;
+  }
+  throw new Error('use05GroupMembers: some members not 05 prefixed. That cannot be possible.');
 }
 
 /**
@@ -480,7 +484,7 @@ function useMembers(convoId: string | undefined) {
  * @param convoId the closed group id to extract members from
  */
 export function useSortedGroupMembers(convoId: string | undefined): Array<PubkeyType> {
-  const members = useMembers(convoId);
+  const members = use05GroupMembers(convoId);
   const isPublic = useIsPublic(convoId);
   const isPrivate = useIsPrivate(convoId);
   const libMembers = useLibGroupMembers(convoId);
@@ -488,10 +492,10 @@ export function useSortedGroupMembers(convoId: string | undefined): Array<Pubkey
     return [];
   }
   if (convoId && PubKey.is03Pubkey(convoId)) {
-    return compact(libMembers?.slice()?.sort()) || [];
+    return compact(libMembers.slice()?.sort());
   }
   // we need to clone the array before being able to call sort() it
-  return (compact(members?.slice()?.sort()) || []) as Array<PubkeyType>;
+  return compact(members.slice()?.sort());
 }
 
 export function useDisappearingMessageSettingText({
