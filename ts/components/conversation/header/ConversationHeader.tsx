@@ -91,8 +91,8 @@ function useShowRecreateModal() {
     (name: string, members: Array<PubkeyType>) => {
       dispatch(
         updateConfirmModal({
-          title: localize('groupRecreate').toString(),
-          i18nMessage: { token: 'groupRecreateDescription' },
+          title: localize('recreateGroup').toString(),
+          i18nMessage: { token: 'legacyGroupChatHistory' },
           okText: localize('theContinue').toString(),
           cancelText: localize('cancel').toString(),
           okTheme: SessionButtonColor.Danger,
@@ -135,7 +135,7 @@ function RecreateGroupButton() {
           showRecreateGroupModal(name || 'Unknown group name', members);
         }}
       >
-        {localize('groupRecreate').toString()}
+        {localize('recreateGroup').toString()}
       </SessionButton>
     </RecreateGroupContainer>
   );

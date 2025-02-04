@@ -481,6 +481,11 @@
   "learnMore": "Learn More",
   "leave": "Leave",
   "leaving": "Leaving...",
+  "legacyGroupAfterDeprecationAdmin": "This group is now read-only. Recreate this group to keep chatting.",
+  "legacyGroupAfterDeprecationMember": "This group is now read-only. Ask the group admin to recreate this group to keep chatting.",
+  "legacyGroupBeforeDeprecationAdmin": "Groups have been upgraded! Recreate this group for improved reliability. This group will become read-only on {date}.",
+  "legacyGroupBeforeDeprecationMember": "Groups have been upgraded! Ask the group admin to recreate this group for improved reliability. This group will become read-only on {date}.",
+  "legacyGroupChatHistory": "Chat history will not be transferred to the new group. You can still view all chat history in your old group.",
   "legacyGroupMemberNew": "<b>{name}</b> joined the group.",
   "legacyGroupMemberNewMultiple": "<b>{name}</b> and <b>{count} others</b> joined the group.",
   "legacyGroupMemberNewYouMultiple": "<b>You</b> and <b>{count} others</b> joined the group.",
@@ -724,6 +729,7 @@
   "recoveryPasswordRestoreDescription": "Enter your recovery password to load your account. If you haven't saved it, you can find it in your app settings.",
   "recoveryPasswordView": "View Password",
   "recoveryPasswordWarningSendDescription": "This is your recovery password. If you send it to someone they'll have full access to your account.",
+  "recreateGroup": "Recreate Group",
   "redo": "Redo",
   "remove": "Remove",
   "removePasswordFail": "Failed to remove password",
@@ -773,6 +779,7 @@
   "shareAccountIdDescription": "Invite your friend to chat with you on {app_name} by sharing your Account ID with them.",
   "shareAccountIdDescriptionCopied": "Share with your friends wherever you usually speak with them — then move the conversation here.",
   "shareExtensionDatabaseError": "There is an issue opening the database. Please restart the app and try again.",
+  "shareExtensionNoAccountError": "Oops! Looks like you don't have a {app_name} account yet.<br/><br/>You'll need to create one in the {app_name} app before you can share.",
   "shareToSession": "Share to {app_name}",
   "show": "Show",
   "showAll": "Show All",
@@ -814,4 +821,3 @@
   "yes": "Yes",
   "you": "You"
 }
-

@@ -678,9 +678,11 @@ function OutdatedLegacyGroupBanner() {
   // FIXME change the date here. Remove after QA
   const text = deprecatedLegacyGroups
     ? localize(
-        weAreAdmin ? 'groupLegacyBannerAdminDeprecated' : 'groupLegacyBannerMemberDeprecated'
+        weAreAdmin ? 'legacyGroupAfterDeprecationAdmin' : 'legacyGroupAfterDeprecationMember'
       ).toString()
-    : localize(weAreAdmin ? 'groupLegacyBannerAdmin' : 'groupLegacyBannerMember')
+    : localize(
+        weAreAdmin ? 'legacyGroupBeforeDeprecationAdmin' : 'legacyGroupBeforeDeprecationMember'
+      )
         .withArgs({ date: '[Date]' })
         .toString();
 
