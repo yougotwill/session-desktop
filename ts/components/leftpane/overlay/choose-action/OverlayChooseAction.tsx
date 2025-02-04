@@ -8,6 +8,7 @@ import { SpacerSM } from '../../../basic/Text';
 import { StyledLeftPaneOverlay } from '../OverlayMessage';
 import { ActionRow, StyledActionRowContainer } from './ActionRow';
 import { ContactsListWithBreaks } from './ContactsListWithBreaks';
+import { groupInfoActions } from '../../../../state/ducks/metaGroups';
 
 export const OverlayChooseAction = () => {
   const dispatch = useDispatch();
@@ -21,6 +22,8 @@ export const OverlayChooseAction = () => {
 
   const openCreateGroup = useCallback(() => {
     dispatch(setLeftOverlayMode('closed-group'));
+    dispatch(groupInfoActions.updateGroupCreationName({ name: '' }));
+    dispatch(groupInfoActions.setSelectedGroupMembers({ membersToSet: [] }));
   }, [dispatch]);
 
   const openJoinCommunity = useCallback(() => {

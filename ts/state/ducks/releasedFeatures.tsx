@@ -1,6 +1,8 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
+import { DURATION } from '../../session/constants';
 
-export const LEGACY_GROUP_DEPRECATED_TIMESTAMP_MS = Date.now() + 10 * 1000;
+// FIXME update this to the correct timestamp REMOVE AFTER QA
+export const LEGACY_GROUP_DEPRECATED_TIMESTAMP_MS = Date.now() + DURATION.WEEKS * 52;
 
 export interface ReleasedFeaturesState {
   legacyGroupDeprecationTimestampRefreshAtMs: number;

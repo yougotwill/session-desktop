@@ -109,7 +109,6 @@ function isDisappearMessageV2FeatureReleasedCached(): boolean {
   return !!isDisappearingMessageFeatureReleased;
 }
 
-
 export const ReleasedFeatures = {
   checkIsUserConfigFeatureReleased,
   checkIsDisappearMessageV2FeatureReleased,

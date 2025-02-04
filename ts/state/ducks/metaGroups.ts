@@ -8,7 +8,7 @@ import {
   UserGroupsGet,
   WithGroupPubkey,
 } from 'libsession_util_nodejs';
-import { concat, intersection, isEmpty, uniq } from 'lodash';
+import { concat, intersection, isEmpty, isNil, uniq } from 'lodash';
 import { from_hex } from 'libsodium-wrappers-sumo';
 import { ConfigDumpData } from '../../data/configDump/configDump';
 import { HexString } from '../../node/hexStrings';
@@ -57,11 +57,15 @@ import { updateGroupNameModal } from './modalDialog';
 export type GroupState = {
   infos: Record<GroupPubkeyType, GroupInfoGet>;
   members: Record<GroupPubkeyType, Array<GroupMemberGet>>;
-  creationFromUIPending: boolean;
   memberChangesFromUIPending: boolean;
   nameChangesFromUIPending: boolean;
   membersInviteSending: Record<GroupPubkeyType, Array<PubkeyType>>;
   membersPromoteSending: Record<GroupPubkeyType, Array<PubkeyType>>;
+
+  // those are group creation-related fields
+  creationFromUIPending: boolean;
+  creationMembersSelected: Array<PubkeyType>;
+  creationGroupName: string;
 };
 
 export const initialGroupState: GroupState = {
@@ -72,6 +76,8 @@ export const initialGroupState: GroupState = {
   nameChangesFromUIPending: false,
   membersInviteSending: {},
   membersPromoteSending: {},
+  creationMembersSelected: [],
+  creationGroupName: '',
 };
 
 type GroupDetailsUpdate = {
@@ -1255,6 +1261,44 @@ const metaGroupSlice = createSlice({
       delete state.members[payload.groupPk];
       delete state.membersInviteSending[payload.groupPk];
       delete state.membersPromoteSending[payload.groupPk];
+    },
+    addSelectedGroupMember(
+      state: GroupState,
+      { payload }: PayloadAction<{ memberToAdd: PubkeyType }>
+    ) {
+      if (!state.creationMembersSelected?.length) {
+        state.creationMembersSelected = [payload.memberToAdd];
+        return state;
+      }
+      if (state.creationMembersSelected.includes(payload.memberToAdd)) {
+        return state;
+      }
+      const together = state.creationMembersSelected.concat(payload.memberToAdd);
+      state.creationMembersSelected = uniq(together);
+      return state;
+    },
+
+    setSelectedGroupMembers(
+      state: GroupState,
+      { payload }: PayloadAction<{ membersToSet: Array<PubkeyType> }>
+    ) {
+      state.creationMembersSelected = uniq(payload.membersToSet);
+      return state;
+    },
+    removeSelectedGroupMember(
+      state: GroupState,
+      { payload }: PayloadAction<{ memberToRemove: PubkeyType }>
+    ) {
+      const foundAt = state.creationMembersSelected?.indexOf(payload.memberToRemove);
+      if (state.creationMembersSelected && !isNil(foundAt) && foundAt >= 0) {
+        state.creationMembersSelected.splice(foundAt, 1);
+      }
+      return state;
+    },
+
+    updateGroupCreationName(state: GroupState, { payload }: PayloadAction<{ name: string }>) {
+      state.creationGroupName = payload.name;
+      return state;
     },
   },
   extraReducers: builder => {

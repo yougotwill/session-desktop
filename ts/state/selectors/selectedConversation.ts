@@ -258,10 +258,9 @@ export function useSelectedIsPublic() {
  */
 export function useSelectedIsLegacyGroup() {
   const isGroupOrCommunity = useSelectedIsGroupOrCommunity();
-  const isGroupV2 = useSelectedIsGroupV2();
-  const isPublic = useSelectedIsPublic();
+  const selectedConvoKey = useSelectedConversationKey();
 
-  return isGroupOrCommunity && !isGroupV2 && !isPublic;
+  return isGroupOrCommunity && selectedConvoKey && PubKey.is05Pubkey(selectedConvoKey);
 }
 
 export function useSelectedIsPrivate() {
