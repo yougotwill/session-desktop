@@ -142,3 +142,5 @@ export const getLightBoxOptions = createSelector(
   getModal,
   (state: ModalState): LightBoxOptions => state.lightBoxOptions
 );
+
+export const getDebugMenuModalState = (state: StateType) => getModal(state).debugMenuModal;

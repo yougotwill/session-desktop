@@ -54,6 +54,8 @@ export type LightBoxOptions = {
   onClose?: () => void;
 } | null;
 
+export type DebugMenuModalState = object | null;
+
 export type ModalState = {
   confirmModal: ConfirmModalState;
   inviteContactModal: InviteContactModalState;
@@ -76,6 +78,7 @@ export type ModalState = {
   hideRecoveryPasswordModalState: HideRecoveryPasswordModalState;
   openUrlModal: OpenUrlModalState;
   lightBoxOptions: LightBoxOptions;
+  debugMenuModal: DebugMenuModalState;
 };
 
 export const initialModalState: ModalState = {
@@ -100,6 +103,7 @@ export const initialModalState: ModalState = {
   hideRecoveryPasswordModalState: null,
   openUrlModal: null,
   lightBoxOptions: null,
+  debugMenuModal: null,
 };
 
 const ModalSlice = createSlice({
@@ -183,6 +187,9 @@ const ModalSlice = createSlice({
 
       return { ...state, lightBoxOptions };
     },
+    updateDebugMenuModal(state, action: PayloadAction<DebugMenuModalState>) {
+      return { ...state, debugMenuModal: action.payload };
+    },
   },
 });
 
@@ -209,5 +216,6 @@ export const {
   updateHideRecoveryPasswordModal,
   updateOpenUrlModal,
   updateLightBoxOptions,
+  updateDebugMenuModal,
 } = actions;
 export const modalReducer = reducer;
