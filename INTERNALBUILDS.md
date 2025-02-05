@@ -1,6 +1,8 @@
 # Building
 
-This document alongside [Releasing.md](RELEASING.md) primarily covers our internal build process for release builds, if you are an external contributor please refer to [Contributing.md](CONTRIBUTING.md) for building instructions.
+This document alongside [Releasing.md](RELEASING.md) primarily covers our internal build process for release builds.
+
+If you are an external contributor please refer to [Contributing.md](CONTRIBUTING.md) for building instructions.
 
 ## Automated
 
@@ -30,21 +32,13 @@ base64 -i certificate.p12 -o encoded.txt
 2.  Under your repository name, click **Settings**.
 3.  In the left sidebar, click **Secrets**.
 4.  Add the following secrets:
-    1.  Certificate
-    - Name: `MAC_CERTIFICATE`
-    - Value: The encoded Base64 certificate
-    2.  Certificate password
-    - Name: `MAC_CERTIFICATE_PASSWORD`
-    - Value: The password that was set when the certificate was exported.
-    3.  Apple ID
-    - Name: `SIGNING_APPLE_ID`
-    - Value: The apple id (email) to use for signing
-    4.  Apple Password
-    - Name: `SIGNING_APP_PASSWORD`
-    - Value: The app-specific password that was generated for the apple id
-    5.  Team ID (Optional)
-    - Name: `SIGNING_TEAM_ID`
-    - Value: The apple team id if you're signing the application for a team
+    | Name | Value |
+    | -------------------------- | ----------------------------------------------------------------------- |
+    | `MAC_CERTIFICATE` | The encoded Base64 certificate |
+    | `MAC_CERTIFICATE_PASSWORD` | The password that was set when the certificate was exported |
+    | `SIGNING_APPLE_ID` | The apple id (email) to use for signing |
+    | `SIGNING_APP_PASSWORD` | The app-specific password that was generated for the apple id |
+    | `SIGNING_TEAM_ID` | **OPTIONAL** The apple team id if you're signing the application for a team |
 
 </details>
 
