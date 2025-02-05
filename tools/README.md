@@ -45,9 +45,8 @@ The script can automatically open the files in VSCode by passing the `--open` fl
 python3 ./tools/findString.py <token> --open
 ```
 
-**Warning:** The --open flag will open only the first result for the token in VSCode. If you wish to open more files,
-you can pass the `--limit` flag with the maximum number of files you wish to open. You can also pass the `--limit 0`
-flag to open all files containing the token.
+> [!WARNING]
+> The --open flag will open only the first result for the token in VSCode. If you wish to open more files, you can pass the `--limit` flag with the maximum number of files you wish to open. You can also pass the `--limit 0` flag to open all files containing the token.
 
 ```bash
 python3 ./tools/findString.py <token> --open --limit 5

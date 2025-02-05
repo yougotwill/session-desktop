@@ -35,7 +35,8 @@ If you use other python versions you might have or need a python version manager
 
 - [asdf](https://asdf-vm.com/) - you can run `asdf install` in the project directory and it will use the python version specified in `.tool-versions`.
 
--> ⚠️ **Warning:** [setuptools](https://pypi.org/project/setuptools/) was removed in Python 3.12, so you'll need to install it manually.
+> [!WARNING]
+> The package [setuptools](https://pypi.org/project/setuptools/) was removed in Python 3.12, so you'll need to install it manually.
 
 ```shell
 pip install setuptools
