@@ -38,7 +38,7 @@ If you use other python versions you might have or need a python version manager
 > [!WARNING]
 > The package [setuptools](https://pypi.org/project/setuptools/) was removed in Python 3.12, so you'll need to install it manually.
 
-```shell
+```sh
 pip install setuptools
 ```
 
@@ -94,13 +94,13 @@ Setup instructions for Windows using Chocolatey:
 
 - Install [Git](https://git-scm.com/download/win)
 
-  ```shell
+  ```sh
   choco install git
   ```
 
 - Install [Git-LFS](https://git-lfs.com/)
 
-  ```shell
+  ```sh
   choco install git-lfs
   ```
 
@@ -108,19 +108,19 @@ Setup instructions for Windows using Chocolatey:
 
   CMake does not add itself to the system path by default, so you'll need specify the `ADD_CMAKE_TO_PATH` argument.
 
-  ```shell
+  ```sh
   choco install cmake --installargs 'ADD_CMAKE_TO_PATH=System'
   ```
 
 - Install [Visual Studio 2022](https://visualstudio.microsoft.com/downloads/)
 
-  ```shell
+  ```sh
   choco install visualstudio2022community
   ```
 
 - Install [Visual C++ build tools workload for Visual Studio 2022](https://community.chocolatey.org/packages/visualstudio2022-workload-vctools)
 
-  ```shell
+  ```sh
   choco install visualstudio2022-workload-vctools
   ```
 
@@ -132,7 +132,7 @@ Setup instructions for Windows using Chocolatey:
 
   You can get the current `<version>` from the [`.nvmrc`](.nvmrc).
 
-  ```shell
+  ```sh
   choco install nodejs --version <version>
   ```
 
@@ -140,19 +140,19 @@ Setup instructions for Windows using Chocolatey:
 
   You can get the current `<version>` from the [`.tool-versions`](.tool-versions).
 
-  ```shell
+  ```sh
   choco install python --version <version>
   ```
 
 - Install [setuptools](https://pypi.org/project/setuptools/)
 
-  ```shell
+  ```sh
   pip install setuptools
   ```
 
 - Install [Yarn Classic](https://classic.yarnpkg.com/en/docs/install/#windows-stable)
 
-  ```shell
+  ```sh
   npm install --global yarn
   ```
 
@@ -166,7 +166,7 @@ Setup instructions for Windows using Chocolatey:
 
 - Install build tools (this installs make, g++, gcc).
 
-```shell
+```sh
 apt install build-essential cmake
 ```
 
@@ -174,14 +174,14 @@ apt install build-essential cmake
 
 - In Ubuntu, you may also need to install
 
-```shell
+```sh
 sudo apt install cmake
 npm install cmake-js
 ```
 
 - In Fedora, you may also need to install
 
-```shell
+```sh
 sudo dnf install make automake gcc gcc-c++ kernel-devel
 ```
 
@@ -189,7 +189,7 @@ sudo dnf install make automake gcc gcc-c++ kernel-devel
 
 Now, run these commands in your preferred terminal in a good directory for development:
 
-```shell
+```sh
 git clone https://github.com/session-foundation/session-desktop.git
 cd session-desktop
 npm install --global yarn      # (only if you don’t already have `yarn`)
@@ -208,7 +208,7 @@ is no automatic restart mechanism for the entire application.
 
 You can keep the developer tools open (`View > Toggle Developer Tools`) and press <kbd>Cmd</kbd> + <kbd>R</kbd> (macOS) or <kbd>Ctrl</kbd> + <kbd>R</kbd> (Windows & Linux) to reload the application frontend.
 
-```shell
+```sh
 # runs until you stop it, re-generating built assets on file changes.
 
 # Once this command is waiting for changes, you will need to run in another terminal `yarn build:workers` to fix the "exports undefined" error on start.
@@ -240,14 +240,14 @@ This user profile folder will change directories from `[PROFILE_PATH]/Session-{e
 
 There are a few scripts which you can use:
 
-```shell
+```sh
 yarn start-prod # Start production but in development mode
 MULTI=1 yarn start-prod # Start another instance of production
 ```
 
 For more than 2 clients, you may run the above command with `MULTI` set before them. For example, running:
 
-```shell
+```sh
 MULTI=alice yarn start-prod
 ```
 
@@ -338,7 +338,7 @@ see how they did things.
 
 You can build a production binary by running the following:
 
-```shell
+```sh
 yarn build-everything
 yarn build-release
 ```

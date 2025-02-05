@@ -22,7 +22,7 @@ Once you have your `Developer ID Application` you need to export it into a `.p12
 
 We need to Base64 encode this file, so run the following command:
 
-```shell
+```sh
 base64 -i certificate.p12 -o encoded.txt
 ```
 
@@ -53,11 +53,11 @@ Follow the instructions in [Contributing.md](CONTRIBUTING.md) to set up your dev
 
 The [rpm](https://rpm.org) package is required for running the build-release script on Linux. Run the appropriate command to install the `rpm` package:
 
-```shell
+```sh
 sudo pacman -S rpm    # Arch
 ```
 
-```shell
+```sh
 sudo apt install rpm  # Ubuntu/Debian
 ```
 
@@ -72,7 +72,7 @@ You will also need an [App-specific password](https://support.apple.com/en-al/HT
 
 Then run the following to export the variables
 
-```shell
+```sh
 export SIGNING_APPLE_ID=<your apple id>
 export SIGNING_APP_PASSWORD=<your app specific password>
 export SIGNING_TEAM_ID=<your team id if applicable>
@@ -84,7 +84,7 @@ export SIGNING_TEAM_ID=<your team id if applicable>
 
 Once your development environment is set up, here are the steps to build the application:
 
-```shell
+```sh
 yarn install --frozen-lockfile # install all dependencies of this project
 yarn build-everything # transpile and assemble files
 yarn build-release

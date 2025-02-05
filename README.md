@@ -34,7 +34,7 @@ Want to help us translate Session into your language? You can do so at https://g
 
 Add Jason's GPG key. Jason Rhinelander, a member of the [Session Technology Foundation](https://session.foundation/) and is the current signer for all Session Desktop releases. His GPG key can be found on his GitHub and other sources.
 
-```shell
+```sh
 wget https://github.com/jagerman.gpg
 gpg --import jagerman.gpg
 ```
@@ -43,7 +43,7 @@ gpg --import jagerman.gpg
 
 Get the signed hashes for this release. `SESSION_VERSION` needs to be updated for the release you want to verify.
 
-```shell
+```sh
 export SESSION_VERSION=1.15.0
 wget https://github.com/session-foundation/session-desktop/releases/download/v$SESSION_VERSION/signature.asc
 ```
@@ -52,7 +52,7 @@ wget https://github.com/session-foundation/session-desktop/releases/download/v$S
 
 Verify the signature of the hashes of the files.
 
-```shell
+```sh
 gpg --verify signature.asc 2>&1 |grep "Good signature from"
 ```
 
@@ -65,7 +65,7 @@ Make sure the two commands below return the same hash for the file you are check
 <details>
 <summary>Linux</summary>
 
-```shell
+```sh
 sha256sum session-desktop-linux-amd64-$SESSION_VERSION.deb
 grep .deb signature.asc
 ```
@@ -77,14 +77,14 @@ grep .deb signature.asc
 
 **Apple Silicon**
 
-```shell
+```sh
 sha256sum releases/session-desktop-mac-arm64-$SESSION_VERSION.dmg
 grep .dmg signature.asc
 ```
 
 **Intel**
 
-```shell
+```sh
 sha256sum releases/session-desktop-mac-x64-$SESSION_VERSION.dmg
 grep .dmg signature.asc
 ```
@@ -103,7 +103,7 @@ Select-String -Pattern ".exe" signature.asc
 
 **Bash**
 
-```shell
+```sh
 sha256sum session-desktop-win-x64-$SESSION_VERSION.exe
 grep .exe signature.asc
 ```
