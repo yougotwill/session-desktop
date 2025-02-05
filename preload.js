@@ -10,6 +10,8 @@ const url = require('url');
 const _ = require('lodash');
 
 const { setupI18n } = require('./ts/util/i18n/i18n');
+const { UserUtils } = require('./ts/session/utils');
+const { BlindingActions } = require('./ts/webworker/workers/browser/libsession_worker_interface');
 
 const { crowdinLocale } = ipc.sendSync('locale-data');
 
@@ -36,6 +38,15 @@ window.getNodeVersion = () => configAny.node_version;
 window.getOSRelease = () =>
   `${os.type()} ${os.release()}, Node.js ${config.node_version} ${os.platform()} ${os.arch()}`;
 window.saveLog = additionalText => ipc.send('save-debug-log', additionalText);
+window.getUserKeys = async () => {
+  const pubkey = UserUtils.getOurPubKeyStrFromCache();
+  const userEd25519SecretKey = (await UserUtils.getUserED25519KeyPairBytes())?.privKeyBytes;
+  const blindedPkHex = await BlindingActions.blindVersionPubkey({
+    ed25519SecretKey: userEd25519SecretKey,
+  });
+
+  return { id: pubkey, vbid: blindedPkHex };
+};
 
 window.sessionFeatureFlags = {
   useOnionRequests: true,

@@ -179,5 +179,6 @@ declare global {
     setAutoUpdateEnabled: (enabled: boolean) => void;
     setZoomFactor: (newZoom: number) => void;
     updateZoomFactor: () => void;
+    getUserKeys: () => Promise<{ id: string; vbid: string }>;
   }
 }
