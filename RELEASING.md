@@ -4,7 +4,7 @@ Creating a new Session Desktop release is very simple.
 
 1.  Bump up the version in `package.json`.
 2.  Merge all changes required into the `master` branch.
-    * This will trigger github actions to start building a draft release
+    - This will trigger github actions to start building a draft release
 3.  After github actions has finished building. Go to Release page in the repository.
 4.  Click on the draft release and change the tag target to `master`.
 5.  Add in release notes.
@@ -29,9 +29,9 @@ Flatpak generation is different from the normal build process and thus must be d
 
 1. Clone https://github.com/flathub/network.loki.Session
 2. Update `network.loki.Session.metainfo.xml` with the release information
-    - `<release version="[version]" date="[date]"/>`
+   - `<release version="[version]" date="[date]"/>`
 3. Update `network.loki.Session.json`
-    - Under `sources`, change the `url` so it points to the latest `deb` and update the `sha256` signature.
+   - Under `sources`, change the `url` so it points to the latest `deb` and update the `sha256` signature.
 4. Create a pull request with the changes
 
-Once that is done, a developer will go in a review them before merging them in which will trigger a build and release into the flathub repo.
+Once that is done, a developer will go in a review them before merging them in which will trigger a build and release into the Flathub repo.
