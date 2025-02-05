@@ -81,10 +81,11 @@ The script can be run with:
   python3 ./tools/localization/generateLocalizedStringsAnalysis.py
 ```
 
-If using macOS always run this script with the `--disable-concurrency` flag.
+> [!WARNING]
+> If using macOS always run this script with the `--disable-concurrency` flag.
 
 ```bash
-python3 ./tools/<script>.py --disable-concurrency
+python3 ./tools/localization/generateLocalizedStringsAnalysis.py --disable-concurrency
 ```
 
 The script can also take the following arguments:
