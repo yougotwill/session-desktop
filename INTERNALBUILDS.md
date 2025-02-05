@@ -32,13 +32,14 @@ base64 -i certificate.p12 -o encoded.txt
 2.  Under your repository name, click **Settings**.
 3.  In the left sidebar, click **Secrets**.
 4.  Add the following secrets:
-    | Name | Value |
-    | -------------------------- | ----------------------------------------------------------------------- |
-    | `MAC_CERTIFICATE` | The encoded Base64 certificate |
-    | `MAC_CERTIFICATE_PASSWORD` | The password that was set when the certificate was exported |
-    | `SIGNING_APPLE_ID` | The apple id (email) to use for signing |
-    | `SIGNING_APP_PASSWORD` | The app-specific password that was generated for the apple id |
-    | `SIGNING_TEAM_ID` | **OPTIONAL** The apple team id if you're signing the application for a team |
+
+    | Name                       | Value                                                                       |
+    | -------------------------- | --------------------------------------------------------------------------- |
+    | `MAC_CERTIFICATE`          | The encoded Base64 certificate                                              |
+    | `MAC_CERTIFICATE_PASSWORD` | The password that was set when the certificate was exported                 |
+    | `SIGNING_APPLE_ID`         | The apple id (email) to use for signing                                     |
+    | `SIGNING_APP_PASSWORD`     | The app-specific password that was generated for the apple id               |
+    | `SIGNING_TEAM_ID`          | **OPTIONAL** The apple team id if you're signing the application for a team |
 
 </details>
 
