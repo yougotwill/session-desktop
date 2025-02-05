@@ -13,6 +13,25 @@ export interface LibTextsecure {
   messaging: boolean;
 }
 
+export type SessionFeatureFlags = {
+  useOnionRequests: boolean;
+  useTestNet: boolean;
+  useClosedGroupV2: boolean;
+  useClosedGroupV2QAButtons: boolean;
+  forceLegacyGroupsDeprecated: boolean;
+  replaceLocalizedStringsWithKeys: boolean;
+  debug: {
+    debugLogging: boolean;
+    debugLibsessionDumps: boolean;
+    debugBuiltSnodeRequests: boolean;
+    debugFileServerRequests: boolean;
+    debugNonSnodeRequests: boolean;
+    debugOnionRequests: boolean;
+  };
+};
+
+export type SessionFeatureFlagsKeys = RecursiveKeys<SessionFeatureFlags>;
+
 /*
 We declare window stuff here instead of global.d.ts because we are importing other declarations.
 If you import anything in global.d.ts, the type system won't work correctly.
@@ -98,22 +117,7 @@ declare global {
       inEnglish: I18nMethods['inEnglish'];
     };
     log: any;
-    sessionFeatureFlags: {
-      useOnionRequests: boolean;
-      useTestNet: boolean;
-      useClosedGroupV2: boolean;
-      useClosedGroupV2QAButtons: boolean;
-      forceLegacyGroupsDeprecated: boolean;
-      replaceLocalizedStringsWithKeys: boolean;
-      debug: {
-        debugLogging: boolean;
-        debugLibsessionDumps: boolean;
-        debugBuiltSnodeRequests: boolean;
-        debugFileServerRequests: boolean;
-        debugNonSnodeRequests: boolean;
-        debugOnionRequests: boolean;
-      };
-    };
+    sessionFeatureFlags: SessionFeatureFlags;
     onLogin: (pw: string) => Promise<void>; // only set on the password window
     onTryPassword: (pw: string) => Promise<void>; // only set on the main window
     persistStore?: Persistor;
