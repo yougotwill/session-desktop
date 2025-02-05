@@ -4,7 +4,8 @@
 
 Start small. The PRs most likely to be merged are the ones that make small,
 easily reviewed changes with clear and specific intentions.
-[guidelines on pull requests](#pull-requests).
+
+[Guidelines on Pull Requests](#pull-requests).
 
 It's a good idea to gauge interest in your intended work by finding the current issue
 for it or creating a new one yourself. Use Github issues as a place to signal
@@ -24,12 +25,48 @@ If you use other node versions you might have or need a node version manager.
 
 - [nvm](https://github.com/creationix/nvm) - you can run `nvm use` in the project directory and it will use the node version specified in `.nvmrc`.
 - Some node version management tools can read from the `.nvmrc` file and automatically make the change. If you use [asdf](https://asdf-vm.com/) you can make a [config change](https://asdf-vm.com/guide/getting-started.html#using-existing-tool-version-files) to support the `.nvmrc` file.
+- We use [Yarn Classic](https://classic.yarnpkg.com) as our package manager. You can install it by running `npm install --global yarn`.
+
+## Python
+
+You will need a [Python](https://www.python.org) version which matches our current version. You can check [`.tool-versions` in the `unstable` branch](https://github.com/session-foundation/session-desktop/blob/unstable/.tool-versions) to see what the current version is.
+
+If you use other python versions you might have or need a python version manager.
+
+- [asdf](https://asdf-vm.com/) - you can run `asdf install` in the project directory and it will use the python version specified in `.tool-versions`.
+
+-> ⚠️ **Warning:** [setuptools](https://pypi.org/project/setuptools/) was removed in Python 3.12, so you'll need to install it manually.
+
+```shell
+pip install setuptools
+```
 
 ## Platform Specific Instructions
 
 ### macOS
 
-1.  Install the [Xcode Command-Line Tools](http://osxdaily.com/2014/02/12/install-command-line-tools-mac-os-x/).
+- Install the [Xcode Command-Line Tools](http://osxdaily.com/2014/02/12/install-command-line-tools-mac-os-x/).
+
+  - **Optional:** Install [Homebrew](https://brew.sh/).
+
+- Install [Git](https://git-scm.com).
+
+  - We recommend using Homebrew to install Git. Run `brew install git`.
+
+- Install [Git-LFS](https://git-lfs.com/)
+
+  - We recommend using Homebrew to install Git-LFS. Run `brew install git-lfs`.
+
+- Install [Node.JS](https://nodejs.org)
+
+  - We recommend using `nvm` or `asdf`.
+  - You can get the current `<version>` from the [`.nvmrc`](.nvmrc).
+  - Install [Yarn Classic](https://classic.yarnpkg.com/en/docs/install/#mac-stable) by running `npm install --global yarn`.
+
+- Install [Python](https://www.python.org)
+  - We recommend using `asdf`.
+  - You can get the current `<version>` from the [`.tool-versions`](.tool-versions).
+  - Install [setuptools](https://pypi.org/project/setuptools/) by running `pip install setuptools`.
 
 ### Windows
 
@@ -60,6 +97,12 @@ Setup instructions for Windows using Chocolatey:
   choco install git
   ```
 
+- Install [Git-LFS](https://git-lfs.com/)
+
+  ```shell
+  choco install git-lfs
+  ```
+
 - Install [CMake](https://cmake.org/download/)
 
   CMake does not add itself to the system path by default, so you'll need specify the `ADD_CMAKE_TO_PATH` argument.
@@ -80,25 +123,27 @@ Setup instructions for Windows using Chocolatey:
   choco install visualstudio2022-workload-vctools
   ```
 
-- Install [Node.js](https://nodejs.org/en/download/) 18.15.0
+- Install [Node.js](https://nodejs.org/en/download/)
 
   If you have multiple node version installed and/or use a node version manager you should install a Node how you normally would.
 
   If you are using [nvm for windows](https://github.com/coreybutler/nvm-windows) you will need to run `nvm install <version>` and `nvm use <version>` as it doesn't support `.nvmrc` files.
 
+  You can get the current `<version>` from the [`.nvmrc`](.nvmrc).
+
   ```shell
-  choco install nodejs --version 18.15.0
+  choco install nodejs --version <version>
   ```
 
-- Install [Python](https://www.python.org/downloads/) 3.12.2
+- Install [Python](https://www.python.org/downloads/)
+
+  You can get the current `<version>` from the [`.tool-versions`](.tool-versions).
 
   ```shell
-  choco install python --version 3.12.2
+  choco install python --version <version>
   ```
 
 - Install [setuptools](https://pypi.org/project/setuptools/)
-
-  Setuptools was removed in python 3.12, so you'll need to install it manually.
 
   ```shell
   pip install setuptools
@@ -118,19 +163,24 @@ Setup instructions for Windows using Chocolatey:
 
 ### Linux
 
-1.  Install build tools `apt install build-essential cmake` (this installs make, g++, gcc)
-2.  Depending on your distro, you might need to install `hunspell` and `hunspell-<lan>` (e.g. `hunspell-en-au`)
+- Install build tools (this installs make, g++, gcc).
 
-In Ubuntu, you may also need to install
-
+```shell
+apt install build-essential cmake
 ```
+
+- Depending on your distro, you might need to install `hunspell` and `hunspell-<lan>` (e.g. `hunspell-en-au`)
+
+- In Ubuntu, you may also need to install
+
+```shell
 sudo apt install cmake
 npm install cmake-js
 ```
 
-In Fedora, you may also need to install
+- In Fedora, you may also need to install
 
-```
+```shell
 sudo dnf install make automake gcc gcc-c++ kernel-devel
 ```
 
@@ -138,7 +188,7 @@ sudo dnf install make automake gcc gcc-c++ kernel-devel
 
 Now, run these commands in your preferred terminal in a good directory for development:
 
-```
+```shell
 git clone https://github.com/session-foundation/session-desktop.git
 cd session-desktop
 npm install --global yarn      # (only if you don’t already have `yarn`)
@@ -148,16 +198,30 @@ yarn test                      # A good idea to make sure tests run first
 yarn start-prod                # Start Session!
 ```
 
-You'll need to restart the application regularly to see your changes, as there
-is no automatic restart mechanism. Alternatively, keep the developer tools open
-(`View > Toggle Developer Tools`), hover over them, and press
-<kbd>Cmd</kbd> + <kbd>R</kbd> (macOS) or <kbd>Ctrl</kbd> + <kbd>R</kbd>
-(Windows & Linux).
+This will build the project and start the application in production mode.
 
-```
-yarn build-everything:watch # runs until you stop it, re-generating built assets on file changes
-# Once this command is waiting for changes, you will need to run in another terminal `yarn worker:utils && yarn worker:libsession` to fix the "exports undefined" error on start.
-# If you do change the sass while this command is running, it won't pick it up. You need to either run `yarn sass` or have `yarn sass:watch` running in a separate terminal.
+### Hot reloading
+
+More often than not, you'll need to restart the application regularly to see your changes, as there
+is no automatic restart mechanism for the entire application.
+
+You can keep the developer tools open (`View > Toggle Developer Tools`) and press <kbd>Cmd</kbd> + <kbd>R</kbd> (macOS) or <kbd>Ctrl</kbd> + <kbd>R</kbd> (Windows & Linux) to reload the application frontend.
+
+```shell
+# runs until you stop it, re-generating built assets on file changes.
+
+# Once this command is waiting for changes, you will need to run in another terminal `yarn build:workers` to fix the "exports undefined" error on start.
+
+# Terminal A
+yarn build-everything:watch # this process will keep running until you stop it
+
+# Terminal B
+yarn build:workers
+
+# If you change any SASS files while running "yarn build-everything:watch" it won't be detected. You will need to run the sass build command.
+
+# Terminal B
+yarn sass
 ```
 
 ## Multiple instances
@@ -165,20 +229,24 @@ yarn build-everything:watch # runs until you stop it, re-generating built assets
 Since there is no registration for Session, you can create as many accounts as you
 can public keys. Each client however has a dedicated storage profile which is determined by the environment and instance variables.
 
-This profile will change [userData](https://electron.atom.io/docs/all/#appgetpathname)
-directory from `%appData%/Session` to `%appData%/Session-{environment}-{instance}`.
+### Profile Paths
+
+- Linux `~/.config/`
+- macOS `~/Library/Application Support/`
+- Windows `%AppData%/`
+
+This user profile folder will change directories from `[PROFILE_PATH]/Session-{environment}` to `[PROFILE_PATH]/Session-{environment}-{instance}`.
 
 There are a few scripts which you can use:
 
-```
-yarn start-prod - Start production but in development mode
-MULTI=1 yarn start-prod - Start another instance of production
+```shell
+yarn start-prod # Start production but in development mode
+MULTI=1 yarn start-prod # Start another instance of production
 ```
 
-For more than 2 clients, you may run the above command with `NODE_APP_INSTANCE` set before them.
-For example, running:
+For more than 2 clients, you may run the above command with `NODE_APP_INSTANCE` set before them. For example, running:
 
-```
+```shell
 NODE_APP_INSTANCE=alice yarn start-prod
 ```
 
@@ -191,13 +259,13 @@ Local config files will be ignored by default in git.
 For example, to create an 'alice' profile locally, put a file called `local-alice.json` in the
 `config` directory:
 
-```
+```json
 {
-  "storageProfile": "alice-profile",
+  "storageProfile": "alice-profile"
 }
 ```
 
-This will then set the `userData` directory to `%appData%/Session-alice-profile` when running the `alice` instance.
+This will then set the `userData` directory to `[PROFILE_PATH]//Session-alice-profile` when running the `alice` instance.
 
 # Making changes
 
@@ -233,9 +301,7 @@ So you wanna make a pull request? Please observe the following guidelines.
   [`_locales/en/messages.json`](_locales/en/messages.json).
   Other locales are generated automatically based on that file and then periodically
   uploaded to Crowdin for translation. If you add or change strings in messages.json
-  you will need to run [`tools/updateI18nKeysType.py`](tools/updateI18nKeysType.py)
-  this script generates updated TypeScript type definitions to ensure you aren't
-  using a localisation key which doesn't exist.
+  you will need to run `yarn buid:locales-soft` this command generates updated TypeScript type definitions to ensure you aren't using a localization key which doesn't exist.
 - Please do not submit pull requests for pure translation fixes. Anyone can update
   the translations at [Crowdin](https://getsession.org/translate).
 - [Rebase](https://nathanleclaire.com/blog/2014/09/14/dont-be-scared-of-git-rebase/) your
@@ -243,7 +309,7 @@ So you wanna make a pull request? Please observe the following guidelines.
   This ensures that your changes will merge cleanly when you open your PR.
 - Be sure to add and run tests!
 - Make sure the diff between `unstable` and your branch contains only the
-  minimal set of changes needed to implement your feature or bugfix. This will
+  minimal set of changes needed to implement your feature or bug fix. This will
   make it easier for the person reviewing your code to approve the changes.
   Please do not submit a PR with commented out code or unfinished features.
 - Avoid meaningless or too-granular commits. If your branch contains commits like
@@ -271,9 +337,16 @@ see how they did things.
 
 You can build a production binary by running the following:
 
-```
+```shell
 yarn build-everything
 yarn build-release
 ```
 
-On linux, you can change in package.json `"target": ["deb"],` to any of the [electron-builder targets](https://www.electron.build/linux#target) to build for another target.
+The binaries will be placed inside the `release/` folder.
+
+<details>
+<summary>Linux</summary>
+
+You can change in [package.json](./package.json) `"target": ["deb"],` to any of the [electron-builder targets](https://www.electron.build/linux#target) to build for another target.
+
+</details>
