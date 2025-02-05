@@ -14,6 +14,7 @@ import {
   QuoteLookupType,
   ReduxConversationType,
   SortedMessageModelProps,
+  type PropsForMessageWithoutConvoProps,
 } from '../ducks/conversations';
 import { StateType } from '../reducer';
 
@@ -535,6 +536,16 @@ export const getNextMessageToPlayId = (state: StateType): string | undefined =>
 export const getMentionsInput = (state: StateType): Array<SessionSuggestionDataItem> =>
   state.conversations.mentionMembers;
 
+/**
+ * Returns true if the props are not corresponding to a visible message.
+ * We want to show the author avatar/display name when the next/previous message is not a visible one.
+ * This is to make a sure a sequence of messages from the same author, with one of them being a control message,
+ * shows the avatar/name of the author before and after the control message.
+ */
+function messagePropsHaveVisibleMessage(msgProps?: PropsForMessageWithoutConvoProps) {
+  return !!msgProps?.text || !isEmpty(msgProps?.attachments);
+}
+
 /// Those calls are just related to ordering messages in the redux store.
 
 function updateFirstMessageOfSeries(
@@ -548,17 +559,24 @@ function updateFirstMessageOfSeries(
   for (let i = 0; i < messageModelsProps.length; i++) {
     const currentSender = messageModelsProps[i].propsForMessage?.sender;
     // most recent message is at index 0, so the previous message sender is 1+index
-    const previousSender =
-      i < messageModelsProps.length - 1
-        ? messageModelsProps[i + 1].propsForMessage?.sender
-        : undefined;
-    const nextSender = i > 0 ? messageModelsProps[i - 1].propsForMessage?.sender : undefined;
+    const previousPropsMessage =
+      i < messageModelsProps.length - 1 ? messageModelsProps[i + 1].propsForMessage : undefined;
+    const nextPropsMessage = i > 0 ? messageModelsProps[i - 1].propsForMessage : undefined;
+
+    const previousSender = previousPropsMessage?.sender;
+    const previousMessageIsVisibleMessage = messagePropsHaveVisibleMessage(previousPropsMessage);
+    const nextSender = nextPropsMessage?.sender;
+    const nextMessageIsVisibleMessage = messagePropsHaveVisibleMessage(nextPropsMessage);
     // Handle firstMessageOfSeries for conditional avatar rendering
+
+    const firstMessageOfSeries =
+      !(i >= 0 && currentSender === previousSender) || !previousMessageIsVisibleMessage;
+    const lastMessageOfSeries = currentSender !== nextSender || !nextMessageIsVisibleMessage;
 
     sortedMessageProps.push({
       ...messageModelsProps[i],
-      firstMessageOfSeries: !(i >= 0 && currentSender === previousSender),
-      lastMessageOfSeries: currentSender !== nextSender,
+      firstMessageOfSeries,
+      lastMessageOfSeries,
     });
   }
   return sortedMessageProps;
