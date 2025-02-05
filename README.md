@@ -20,9 +20,13 @@ Submissions can be made by making a pull request to our development branch.If yo
 
 Session requires Windows 10 or later, macOS Ventura (13) or later, or a Linux distribution with glibc 2.28 or later like Debian 10 or Ubuntu 20.04.
 
-## Build instruction
+## Build instructions
 
 Build instructions can be found in [Contributing.md](CONTRIBUTING.md).
+
+## Translations
+
+Want to help us translate Session into your language? You can do so at https://getsession.org/translate!
 
 ## Verifying signatures
 
