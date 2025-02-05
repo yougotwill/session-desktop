@@ -245,10 +245,10 @@ yarn start-prod # Start production but in development mode
 MULTI=1 yarn start-prod # Start another instance of production
 ```
 
-For more than 2 clients, you may run the above command with `NODE_APP_INSTANCE` set before them. For example, running:
+For more than 2 clients, you may run the above command with `MULTI` set before them. For example, running:
 
 ```shell
-NODE_APP_INSTANCE=alice yarn start-prod
+MULTI=alice yarn start-prod
 ```
 
 Will run the development environment with the `alice` instance and thus create a separate storage profile.
