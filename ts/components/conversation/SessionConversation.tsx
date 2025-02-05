@@ -62,6 +62,13 @@ import { InvitedToGroup, NoMessageInConversation } from './SubtleNotification';
 import { PubKey } from '../../session/types';
 import { isUsAnySogsFromCache } from '../../session/apis/open_group_api/sogsv3/knownBlindedkeys';
 import { localize } from '../../localization/localeTools';
+import {
+  useSelectedConversationKey,
+  useSelectedIsPrivate,
+  useSelectedIsPublic,
+  useSelectedWeAreAdmin,
+} from '../../state/selectors/selectedConversation';
+import { useAreLegacyGroupsDeprecatedYet } from '../../state/selectors/releasedFeatures';
 
 const DEFAULT_JPEG_QUALITY = 0.85;
 
@@ -253,7 +260,7 @@ export class SessionConversation extends Component<Props, State> {
             ourDisplayNameInProfile={ourDisplayNameInProfile}
             selectedConversation={selectedConversation}
           />
-          <OutdatedLegacyGroupBanner selectedConversation={selectedConversation} />
+          <OutdatedLegacyGroupBanner />
         </div>
         {isSelectedConvoInitialLoadingInProgress ? (
           <ConvoLoadingSpinner />
@@ -283,6 +290,7 @@ export class SessionConversation extends Component<Props, State> {
 
                 {isDraggingFile && <SessionFileDropzone />}
               </div>
+
               <ConversationMessageRequestButtons />
 
               <CompositionBox
@@ -655,20 +663,32 @@ function OutdatedClientBanner(props: {
   ) : null;
 }
 
-function OutdatedLegacyGroupBanner(props: {
-  selectedConversation: Pick<ReduxConversationType, 'id' | 'isPrivate' | 'isPublic'>;
-}) {
-  const { selectedConversation } = props;
+function OutdatedLegacyGroupBanner() {
   const dispatch = useDispatch();
 
+  const weAreAdmin = useSelectedWeAreAdmin();
+  const selectedConversationKey = useSelectedConversationKey();
+  const isPrivate = useSelectedIsPrivate();
+  const isPublic = useSelectedIsPublic();
+  const deprecatedLegacyGroups = useAreLegacyGroupsDeprecatedYet();
+
   const isLegacyGroup =
-    !selectedConversation.isPrivate &&
-    !selectedConversation.isPublic &&
-    selectedConversation.id.startsWith('05');
+    !isPrivate && !isPublic && selectedConversationKey && selectedConversationKey.startsWith('05');
+
+  // FIXME change the date here. Remove after QA
+  const text = deprecatedLegacyGroups
+    ? localize(
+        weAreAdmin ? 'legacyGroupAfterDeprecationAdmin' : 'legacyGroupAfterDeprecationMember'
+      ).toString()
+    : localize(
+        weAreAdmin ? 'legacyGroupBeforeDeprecationAdmin' : 'legacyGroupBeforeDeprecationMember'
+      )
+        .withArgs({ date: '[Date]' })
+        .toString();
 
   return isLegacyGroup ? (
     <NoticeBanner
-      text={window.i18n('groupLegacyBanner', { date: '[Date]' })} // Remove after QA
+      text={text}
       onBannerClick={() => {
         showLinkVisitWarningDialog('https://getsession.org/groups', dispatch);
       }}

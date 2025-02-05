@@ -18,6 +18,7 @@ import {
 import { getLibMembersPubkeys, useLibGroupName } from './groups';
 import { getCanWrite, getModerators, getSubscriberCount } from './sogsRoomInfo';
 import { getLibGroupDestroyed, getLibGroupKicked, useLibGroupDestroyed } from './userGroups';
+import { getDisableLegacyGroupDeprecatedActions } from '../../hooks/useRefreshReleasedFeaturesTimestamp';
 
 const getIsSelectedPrivate = (state: StateType): boolean => {
   return Boolean(getSelectedConversation(state)?.isPrivate) || false;
@@ -74,13 +75,20 @@ export function getSelectedCanWrite(state: StateType) {
 
   const isBlindedAndDisabledMsgRequests = getSelectedBlindedDisabledMsgRequests(state); // true if isPrivate, blinded and explicitly disabled msgreq
 
-  return !(
-    isBlocked ||
-    isKickedFromGroup ||
-    isSelectedGroupKicked ||
-    isSelectedGroupDestroyed ||
-    readOnlySogs ||
-    isBlindedAndDisabledMsgRequests
+  const disabledLegacyGroupWrite = getDisableLegacyGroupDeprecatedActions(
+    state,
+    selectedConvoPubkey
+  );
+
+  return (
+    !(
+      isBlocked ||
+      isKickedFromGroup ||
+      isSelectedGroupKicked ||
+      isSelectedGroupDestroyed ||
+      readOnlySogs ||
+      isBlindedAndDisabledMsgRequests
+    ) && !disabledLegacyGroupWrite
   );
 }
 
@@ -250,10 +258,9 @@ export function useSelectedIsPublic() {
  */
 export function useSelectedIsLegacyGroup() {
   const isGroupOrCommunity = useSelectedIsGroupOrCommunity();
-  const isGroupV2 = useSelectedIsGroupV2();
-  const isPublic = useSelectedIsPublic();
+  const selectedConvoKey = useSelectedConversationKey();
 
-  return isGroupOrCommunity && !isGroupV2 && !isPublic;
+  return isGroupOrCommunity && selectedConvoKey && PubKey.is05Pubkey(selectedConvoKey);
 }
 
 export function useSelectedIsPrivate() {

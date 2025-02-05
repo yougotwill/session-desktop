@@ -33,7 +33,11 @@ import { ItemWithDataTestId } from './items/MenuItemWithDataTestId';
 import { getMenuAnimation } from './MenuAnimation';
 import { LeaveCommunityMenuItem } from './items/LeaveCommunity/LeaveCommunityMenuItem';
 import { LeaveGroupMenuItem } from './items/LeaveAndDeleteGroup/LeaveGroupMenuItem';
-import { DeleteGroupMenuItem } from './items/LeaveAndDeleteGroup/DeleteGroupMenuItem';
+import {
+  DeleteDeprecatedLegacyGroupMenuItem,
+  DeleteGroupMenuItem,
+} from './items/LeaveAndDeleteGroup/DeleteGroupMenuItem';
+import { useDisableLegacyGroupDeprecatedActions } from '../../hooks/useRefreshReleasedFeaturesTimestamp';
 
 export type PropsContextConversationItem = {
   triggerId: string;
@@ -45,8 +49,20 @@ const ConversationListItemContextMenu = (props: PropsContextConversationItem) =>
 
   const convoIdFromContext = useConvoIdFromContext();
 
+  const disabledLegacyGroup = useDisableLegacyGroupDeprecatedActions(convoIdFromContext);
+
   if (isSearching) {
     return null;
+  }
+
+  if (disabledLegacyGroup) {
+    return (
+      <SessionContextMenuContainer>
+        <Menu id={triggerId} animation={getMenuAnimation()}>
+          <DeleteDeprecatedLegacyGroupMenuItem />
+        </Menu>
+      </SessionContextMenuContainer>
+    );
   }
 
   return (

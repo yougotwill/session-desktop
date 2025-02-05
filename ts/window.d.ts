@@ -103,6 +103,7 @@ declare global {
       useTestNet: boolean;
       useClosedGroupV2: boolean;
       useClosedGroupV2QAButtons: boolean;
+      forceLegacyGroupsDeprecated: boolean;
       replaceLocalizedStringsWithKeys: boolean;
       debug: {
         debugLogging: boolean;

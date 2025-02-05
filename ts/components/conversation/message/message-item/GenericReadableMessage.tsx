@@ -13,6 +13,7 @@ import { getGenericReadableMessageSelectorProps } from '../../../../state/select
 import { MessageContentWithStatuses } from '../message-content/MessageContentWithStatus';
 import { StyledMessageReactionsContainer } from '../message-content/MessageReactions';
 import { useIsMessageSelectionMode } from '../../../../state/selectors/selectedConversation';
+import { useSelectedDisableLegacyGroupDeprecatedActions } from '../../../../hooks/useRefreshReleasedFeaturesTimestamp';
 
 export type GenericReadableMessageSelectorProps = Pick<
   MessageRenderingProps,
@@ -65,6 +66,7 @@ export const GenericReadableMessage = (props: Props) => {
   const { ctxMenuID, messageId } = props;
 
   const [enableReactions, setEnableReactions] = useState(true);
+  const legacyGroupIsDeprecated = useSelectedDisableLegacyGroupDeprecatedActions();
 
   const msgProps = useSelector((state: StateType) =>
     getGenericReadableMessageSelectorProps(state, props.messageId)
@@ -83,6 +85,9 @@ export const GenericReadableMessage = (props: Props) => {
 
   const handleContextMenu = useCallback(
     (e: MouseEvent<HTMLElement>) => {
+      if (legacyGroupIsDeprecated) {
+        return;
+      }
       // this is quite dirty but considering that we want the context menu of the message to show on click on the attachment
       // and the context menu save attachment item to save the right attachment I did not find a better way for now.
 
@@ -108,7 +113,7 @@ export const GenericReadableMessage = (props: Props) => {
       }
       setIsRightClicked(enableContextMenu);
     },
-    [ctxMenuID, multiSelectMode, msgProps?.isKickedFromGroup]
+    [ctxMenuID, multiSelectMode, msgProps?.isKickedFromGroup, legacyGroupIsDeprecated]
   );
 
   useEffect(() => {

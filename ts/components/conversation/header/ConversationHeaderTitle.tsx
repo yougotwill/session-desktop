@@ -18,6 +18,7 @@ import {
   useSelectedSubscriberCount,
 } from '../../../state/selectors/selectedConversation';
 import { ConversationHeaderSubtitle } from './ConversationHeaderSubtitle';
+import { useSelectedDisableLegacyGroupDeprecatedActions } from '../../../hooks/useRefreshReleasedFeaturesTimestamp';
 
 export type SubtitleStrings = Record<string, string> & {
   notifications?: string;
@@ -63,6 +64,8 @@ export const ConversationHeaderTitle = (props: ConversationHeaderTitleProps) => 
   const isGroup = useSelectedIsGroupOrCommunity();
   const selectedMembersCount = useSelectedMembersCount();
 
+  const isDisabledLegacyGroupDeprecated = useSelectedDisableLegacyGroupDeprecatedActions();
+
   const expirationMode = useSelectedConversationDisappearingMode();
   const disappearingMessageSubtitle = useDisappearingMessageSettingText({
     convoId,
@@ -97,6 +100,9 @@ export const ConversationHeaderTitle = (props: ConversationHeaderTitleProps) => 
   }, [i18n, isGroup, isKickedFromGroup, isPublic, selectedMembersCount, subscriberCount]);
 
   const handleRightPanelToggle = () => {
+    if (isDisabledLegacyGroupDeprecated) {
+      return;
+    }
     if (isRightPanelOn) {
       dispatch(closeRightPanel());
       return;

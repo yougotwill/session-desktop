@@ -102,8 +102,8 @@ const StyledCheckContainer = styled.div`
   align-items: center;
 `;
 
-type MemberListItemProps = {
-  pubkey: string;
+type MemberListItemProps<T extends string> = {
+  pubkey: T;
   isSelected: boolean;
   // this bool is used to make a zombie appear with less opacity than a normal member
   isZombie?: boolean;
@@ -112,8 +112,8 @@ type MemberListItemProps = {
   withBorder?: boolean;
   maxNameWidth?: string;
   isAdmin?: boolean; // if true,  we add a small crown on top of their avatar
-  onSelect?: (pubkey: string) => void;
-  onUnselect?: (pubkey: string) => void;
+  onSelect?: (pubkey: T) => void;
+  onUnselect?: (pubkey: T) => void;
   dataTestId?: React.SessionDataTestId;
   displayGroupStatus?: boolean;
   groupPk?: string;
@@ -125,7 +125,7 @@ const ResendContainer = ({
   displayGroupStatus,
   groupPk,
   pubkey,
-}: Pick<MemberListItemProps, 'displayGroupStatus' | 'pubkey' | 'groupPk'>) => {
+}: Pick<MemberListItemProps<string>, 'displayGroupStatus' | 'pubkey' | 'groupPk'>) => {
   const weAreAdmin = useWeAreAdmin(groupPk);
 
   if (
@@ -220,7 +220,7 @@ const GroupStatusContainer = ({
   displayGroupStatus,
   groupPk,
   pubkey,
-}: Pick<MemberListItemProps, 'displayGroupStatus' | 'pubkey' | 'groupPk'>) => {
+}: Pick<MemberListItemProps<string>, 'displayGroupStatus' | 'pubkey' | 'groupPk'>) => {
   if (
     displayGroupStatus &&
     groupPk &&
@@ -316,7 +316,7 @@ const PromoteButton = ({ groupPk, pubkey }: { pubkey: PubkeyType; groupPk: Group
   );
 };
 
-export const MemberListItem = ({
+export const MemberListItem = <T extends string>({
   isSelected,
   pubkey,
   dataTestId,
@@ -332,7 +332,7 @@ export const MemberListItem = ({
   withBorder,
   maxNameWidth,
   hideRadioButton,
-}: MemberListItemProps) => {
+}: MemberListItemProps<T>) => {
   const memberName = useNicknameOrProfileNameOrShortenedPubkey(pubkey);
   const ourName = isUsAnySogsFromCache(pubkey) ? localize('you').toString() : null;
 

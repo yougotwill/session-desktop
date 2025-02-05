@@ -21,6 +21,7 @@ import {
 } from './ducks/stagedAttachments';
 import { userConfigReducer as userConfig, UserConfigState } from './ducks/userConfig';
 import { userGroupReducer, UserGroupState } from './ducks/userGroups';
+import { releasedFeaturesReducer, ReleasedFeaturesState } from './ducks/releasedFeatures';
 
 export type StateType = {
   search: SearchStateType;
@@ -39,6 +40,7 @@ export type StateType = {
   settings: SettingsState;
   groups: GroupState;
   userGroups: UserGroupState;
+  releasedFeatures: ReleasedFeaturesState;
 };
 
 const reducers = {
@@ -58,6 +60,7 @@ const reducers = {
   settings: settingsReducer,
   groups: groupReducer,
   userGroups: userGroupReducer,
+  releasedFeatures: releasedFeaturesReducer,
 };
 
 // Making this work would require that our reducer signature supported AnyAction, not

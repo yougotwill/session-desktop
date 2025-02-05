@@ -6,6 +6,8 @@ import styled from 'styled-components';
 
 import { concat, isEmpty } from 'lodash';
 import useBoolean from 'react-use/lib/useBoolean';
+import useUpdate from 'react-use/lib/useUpdate';
+import type { PubkeyType } from 'libsession_util_nodejs';
 import { MemberListItem } from '../../MemberListItem';
 import { SessionButton } from '../../basic/SessionButton';
 
@@ -35,6 +37,8 @@ import { SessionInput } from '../../inputs';
 import { SessionSpinner } from '../../loading';
 import { StyledLeftPaneOverlay } from './OverlayMessage';
 import { hasClosedGroupV2QAButtons } from '../../../shared/env_vars';
+import type { StateType } from '../../../state/reducer';
+import { PubKey } from '../../../session/types';
 
 const StyledMemberListNoContacts = styled.div`
   text-align: center;
@@ -115,21 +119,33 @@ export const OverlayClosedGroupV2 = () => {
   const us = useOurPkStr();
   const privateContactsPubkeys = useContactsToInviteToGroup();
   const isCreatingGroup = useIsCreatingGroupFromUIPending();
-  const [groupName, setGroupName] = useState('');
+  const groupName = useSelector((state: StateType) => state.groups.creationGroupName) || '';
   const [inviteAsAdmin, setInviteAsAdmin] = useBoolean(false);
   const [groupNameError, setGroupNameError] = useState<string | undefined>();
-  const {
-    uniqueValues: selectedMemberIds,
-    addTo: addToSelected,
-    removeFrom: removeFromSelected,
-  } = useSet<string>([]);
   const isSearch = useIsSearching();
   const searchTerm = useSelector(getSearchTerm);
   const searchResultContactsOnly = useSelector(getSearchResultsContactOnly);
 
+  const forceRefresh = useUpdate();
+  const selectedMemberIds = useSelector(
+    (state: StateType) => state.groups.creationMembersSelected || []
+  );
+
+  function addMemberToSelection(member: PubkeyType) {
+    dispatch(groupInfoActions.addSelectedGroupMember({ memberToAdd: member }));
+  }
+
+  function removeMemberFromSelection(member: PubkeyType) {
+    dispatch(groupInfoActions.removeSelectedGroupMember({ memberToRemove: member }));
+  }
+
   function closeOverlay() {
     dispatch(clearSearch());
     dispatch(resetLeftOverlayMode());
+  }
+
+  function onValueChanged(value: string) {
+    dispatch(groupInfoActions.updateGroupCreationName({ name: value }));
   }
 
   async function onEnterPressed() {
@@ -197,7 +213,7 @@ export const OverlayClosedGroupV2 = () => {
           type="text"
           placeholder={window.i18n('groupNameEnter')}
           value={groupName}
-          onValueChanged={setGroupName}
+          onValueChanged={onValueChanged}
           onEnterPressed={onEnterPressed}
           error={groupNameError}
           maxLength={LIBSESSION_CONSTANTS.BASE_GROUP_MAX_NAME_LENGTH}
@@ -221,8 +237,20 @@ export const OverlayClosedGroupV2 = () => {
                 }}
               />
             </span>
+            <span style={{ display: 'flex', alignItems: 'center' }}>
+              Deprecated Legacy groups?{'  '}
+              <SessionToggle
+                active={window.sessionFeatureFlags.forceLegacyGroupsDeprecated}
+                onClick={() => {
+                  window.sessionFeatureFlags.forceLegacyGroupsDeprecated =
+                    !window.sessionFeatureFlags.forceLegacyGroupsDeprecated;
+                  forceRefresh();
+                }}
+              />
+            </span>
           </>
         )}
+
         <SessionSpinner loading={isCreatingGroup} />
         <SpacerLG />
       </Flex>
@@ -238,18 +266,24 @@ export const OverlayClosedGroupV2 = () => {
             <Localizer token="searchMatchesNoneSpecific" args={{ query: searchTerm }} />
           </StyledNoResults>
         ) : (
-          contactsToRender.map((memberPubkey: string) => (
-            <MemberListItem
-              key={`member-list-${memberPubkey}`}
-              pubkey={memberPubkey}
-              isSelected={selectedMemberIds.includes(memberPubkey)}
-              onSelect={addToSelected}
-              onUnselect={removeFromSelected}
-              withBorder={false}
-              disabled={isCreatingGroup}
-              maxNameWidth="100%"
-            />
-          ))
+          contactsToRender.map((memberPubkey: string) => {
+            if (!PubKey.is05Pubkey(memberPubkey)) {
+              throw new Error('Invalid member rendered in member list');
+            }
+
+            return (
+              <MemberListItem
+                key={`member-list-${memberPubkey}`}
+                pubkey={memberPubkey}
+                isSelected={selectedMemberIds.includes(memberPubkey)}
+                onSelect={addMemberToSelection}
+                onUnselect={removeMemberFromSelection}
+                withBorder={false}
+                disabled={isCreatingGroup}
+                maxNameWidth="100%"
+              />
+            );
+          })
         )}
       </StyledGroupMemberListContainer>
 
