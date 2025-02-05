@@ -132,7 +132,7 @@ function RecreateGroupButton() {
         buttonColor={SessionButtonColor.Primary}
         margin="var(--margins-sm)"
         onClick={() => {
-          showRecreateGroupModal(name || 'Unknown group name', members);
+          showRecreateGroupModal(name || localize('groupUnknown').toString(), members);
         }}
       >
         {localize('recreateGroup').toString()}

@@ -1273,8 +1273,7 @@ const metaGroupSlice = createSlice({
       if (state.creationMembersSelected.includes(payload.memberToAdd)) {
         return state;
       }
-      const together = state.creationMembersSelected.concat(payload.memberToAdd);
-      state.creationMembersSelected = uniq(together);
+      state.creationMembersSelected.push(payload.memberToAdd);
       return state;
     },
 

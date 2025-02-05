@@ -144,6 +144,10 @@ export const OverlayClosedGroupV2 = () => {
     dispatch(resetLeftOverlayMode());
   }
 
+  function onValueChanged(value: string) {
+    dispatch(groupInfoActions.updateGroupCreationName({ name: value }));
+  }
+
   async function onEnterPressed() {
     setGroupNameError(undefined);
     if (isCreatingGroup) {
@@ -209,9 +213,7 @@ export const OverlayClosedGroupV2 = () => {
           type="text"
           placeholder={window.i18n('groupNameEnter')}
           value={groupName}
-          onValueChanged={value => {
-            dispatch(groupInfoActions.updateGroupCreationName({ name: value }));
-          }}
+          onValueChanged={onValueChanged}
           onEnterPressed={onEnterPressed}
           error={groupNameError}
           maxLength={LIBSESSION_CONSTANTS.BASE_GROUP_MAX_NAME_LENGTH}
