@@ -266,7 +266,7 @@ For example, to create an 'alice' profile locally, put a file called `local-alic
 }
 ```
 
-This will then set the `userData` directory to `[PROFILE_PATH]//Session-alice-profile` when running the `alice` instance.
+This will then set the `userData` directory to `[PROFILE_PATH]/Session-alice-profile` when running the `alice` instance.
 
 # Making changes
 
