@@ -48,26 +48,47 @@ pip install setuptools
 
 - Install the [Xcode Command-Line Tools](http://osxdaily.com/2014/02/12/install-command-line-tools-mac-os-x/).
 
-  - **Optional:** Install [Homebrew](https://brew.sh/).
+  **Optional:** Install [Homebrew](https://brew.sh/).
 
-- Install [Git](https://git-scm.com).
+- Install [Git](https://git-scm.com/download/mac).
 
-  - We recommend using Homebrew to install Git. Run `brew install git`.
+  We recommend using Homebrew to install Git.
+
+  ```sh
+    brew install git
+  ```
 
 - Install [Git-LFS](https://git-lfs.com/)
 
-  - We recommend using Homebrew to install Git-LFS. Run `brew install git-lfs`.
+  We recommend using Homebrew to install Git-LFS.
 
-- Install [Node.JS](https://nodejs.org)
+  ```sh
+  brew install git-lfs
+  ```
 
-  - We recommend using `nvm` or `asdf`.
-  - You can get the current `<version>` from the [`.nvmrc`](.nvmrc).
-  - Install [Yarn Classic](https://classic.yarnpkg.com/en/docs/install/#mac-stable) by running `npm install --global yarn`.
+- Install [Node.JS](https://nodejs.org/en/download/)
 
-- Install [Python](https://www.python.org)
-  - We recommend using `asdf`.
-  - You can get the current `<version>` from the [`.tool-versions`](.tool-versions).
-  - Install [setuptools](https://pypi.org/project/setuptools/) by running `pip install setuptools`.
+  We recommend using `nvm` or `asdf`.
+
+  You can get the current `<version>` from the [`.nvmrc`](.nvmrc).
+
+- Install [Python](https://www.python.org/downloads/)
+
+  We recommend using `asdf`.
+
+  You can get the current `<version>` from the [`.tool-versions`](.tool-versions).
+
+- Install [setuptools](https://pypi.org/project/setuptools/).
+
+  ```sh
+  pip install setuptools
+  ```
+
+- Install [Yarn Classic](https://classic.yarnpkg.com/en/docs/install/#mac-stable)
+
+  ```sh
+  npm install --global yarn
+  ```
 
 ### Windows
 
