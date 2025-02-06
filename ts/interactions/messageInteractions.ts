@@ -59,9 +59,11 @@ export function unbanUser(userToUnBan: string, conversationId: string) {
 }
 
 export function copyBodyToClipboard(body?: string | null) {
-  window.clipboard.writeText(body);
+  if (body) {
+    window.clipboard.writeText(body);
 
-  ToastUtils.pushCopiedToClipBoard();
+    ToastUtils.pushCopiedToClipBoard();
+  }
 }
 
 export async function removeSenderFromModerator(sender: string, convoId: string) {
