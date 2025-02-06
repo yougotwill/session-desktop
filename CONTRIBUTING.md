@@ -267,13 +267,20 @@ This will build the project and start the application in production mode.
 ## Troubleshooting
 
 <details>
-<summary>The SUID sandbox helper binary was found, but is not configured correctly. Rather than run without sandboxing I'm aborting now.</summary>
+<summary><em>The SUID sandbox helper binary was found, but is not configured correctly. Rather than run without sandboxing I'm aborting now.</em></summary>
 
 This error is caused by the [Electron](https://www.electronjs.org/) sandbox not being able to run. This is a security feature and not a bug. You can run the application with the `--no-sandbox` flag to disable this behavior.
 
 ```sh
 yarn start-prod --no-sandbox   # Start Session!
 ```
+
+</details>
+
+<details>
+<summary><em>Python was not found; run without arguments to install from the Microsoft Store, or disable this shortcut from Settings > Manage App Execution Aliases.</em></summary>
+
+We use the `python3` command for many of our scripts. If you have installed Python using [Chocolatey](https://chocolatey.org/), you will need to create an alias for `python3` that points to `python`. Alternatively, you can update the scripts to use `python` instead of `python3`.
 
 </details>
 

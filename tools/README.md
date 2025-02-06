@@ -9,13 +9,13 @@
 The Python scripts are located in the `tools` directory. To run a script, use the following command:
 
 ```bash
-python ./tools/<script>.py
+python3 ./tools/<script>.py
 ```
 
 Most of these scripts can take arguments. To see the arguments for a script, use the following command:
 
 ```bash
-python ./tools/<script>.py --help
+python3 ./tools/<script>.py --help
 ```
 
 ## Utility
@@ -25,7 +25,7 @@ python ./tools/<script>.py --help
 [./util/sortJson.py](./util/sortJson.py) sorts a given JSON file.
 
 ```bash
-python ./tools/util/sortJson.py <file>
+python3 ./tools/util/sortJson.py <file>
 ```
 
 ## Localization
@@ -40,20 +40,20 @@ searches in the following directories:
 - `./ts/`
 
 ```bash
-python ./tools/findString.py <token>
+python3 ./tools/findString.py <token>
 ```
 
 The script can automatically open the files in VSCode by passing the `--open` flag.
 
 ```bash
-python ./tools/findString.py <token> --open
+python3 ./tools/findString.py <token> --open
 ```
 
 > [!WARNING]
 > The --open flag will open only the first result for the token in VSCode. If you wish to open more files, you can pass the `--limit` flag with the maximum number of files you wish to open. You can also pass the `--limit 0` flag to open all files containing the token.
 
 ```bash
-python ./tools/findString.py <token> --open --limit 5
+python3 ./tools/findString.py <token> --open --limit 5
 ```
 
 ### [CrowdIn Post-Import](./localization/crowdInPostImport.sh)
@@ -82,14 +82,14 @@ are used but not known about. Without any input files this script outputs:
 The script can be run with:
 
 ```bash
-  python ./tools/localization/generateLocalizedStringsAnalysis.py
+  python3 ./tools/localization/generateLocalizedStringsAnalysis.py
 ```
 
 > [!WARNING]
 > If using macOS always run this script with the `--disable-concurrency` flag.
 
 ```bash
-python ./tools/localization/generateLocalizedStringsAnalysis.py --disable-concurrency
+python3 ./tools/localization/generateLocalizedStringsAnalysis.py --disable-concurrency
 ```
 
 The script can also take the following arguments:
