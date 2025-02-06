@@ -287,7 +287,8 @@ You can keep the developer tools open (`View > Toggle Developer Tools`) and pres
 ```sh
 # Runs until you stop it, re-generating built assets on file changes.
 
-# Once this command is waiting for changes, you will need to run in another terminal `yarn build:workers` to fix the "exports undefined" error on start.
+# Once this command is waiting for changes, you will need to run in another terminal
+# `yarn build:workers` to fix the "exports undefined" error on start.
 
 # Terminal A
 yarn build-everything:watch # this process will keep running until you stop it
@@ -295,7 +296,8 @@ yarn build-everything:watch # this process will keep running until you stop it
 # Terminal B
 yarn build:workers
 
-# If you change any SASS files while running "yarn build-everything:watch" it won't be detected. You will need to run the sass build command.
+# If you change any SASS files while running "yarn build-everything:watch" it won't be detected.
+# You will need to run the sass build command.
 
 # Terminal B
 yarn sass
