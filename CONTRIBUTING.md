@@ -275,6 +275,8 @@ This error is caused by the [Electron](https://www.electronjs.org/) sandbox not 
 yarn start-prod --no-sandbox   # Start Session!
 ```
 
+</details>
+
 ### Hot reloading
 
 More often than not, you'll need to restart the application regularly to see your changes, as there
