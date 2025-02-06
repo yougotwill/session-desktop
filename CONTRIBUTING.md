@@ -15,9 +15,11 @@ You're most likely to have your pull request accepted if it addresses an existin
 
 Of course we encourage community developers to work on ANY issue filed on our Github regardless of how it’s tagged, however if you pick up or create an issue without the “Good first issue” tag it would be best if you leave a comment on the issue so that the core team can give you any guidance required, especially around UI heavy features or issues which require cross platform integration.
 
-## Developer Setup Tips
+## Development setup
 
-## Node.js
+### Tips
+
+#### Node.js
 
 You'll need a [Node.js](https://nodejs.org/) version which matches our current version. You can check [`.nvmrc` in the `unstable` branch](https://github.com/session-foundation/session-desktop/blob/unstable/.nvmrc) to see what the current version is.
 
@@ -27,7 +29,7 @@ If you use other node versions you might have or need a node version manager.
 - Some node version management tools can read from the `.nvmrc` file and automatically make the change. If you use [asdf](https://asdf-vm.com/) you can make a [config change](https://asdf-vm.com/guide/getting-started.html#using-existing-tool-version-files) to support the `.nvmrc` file.
 - We use [Yarn Classic](https://classic.yarnpkg.com) as our package manager. You can install it by running `npm install --global yarn`.
 
-## Python
+#### Python
 
 You will need a [Python](https://www.python.org) version which matches our current version. You can check [`.tool-versions` in the `unstable` branch](https://github.com/session-foundation/session-desktop/blob/unstable/.tool-versions) to see what the current version is.
 
@@ -41,8 +43,6 @@ If you use other python versions you might have or need a python version manager
 ```sh
 pip install setuptools
 ```
-
-## Platform Specific Instructions
 
 ### Linux
 
@@ -248,7 +248,7 @@ Setup instructions for Windows using Chocolatey:
   Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
   ```
 
-### All platforms
+## Build and run Session
 
 Now, run these commands in your preferred terminal in a good directory for development:
 
@@ -288,7 +288,7 @@ yarn build:workers
 yarn sass
 ```
 
-## Multiple instances
+### Running multiple instances
 
 Since there is no registration for Session, you can create as many accounts as you
 can public keys. Each client however has a dedicated storage profile which is determined by the environment and instance variables.
@@ -336,7 +336,7 @@ This will then set the `userData` directory to `[PROFILE_PATH]/Session-alice-pro
 So you're in the process of preparing that pull request. Here's how to make that go
 smoothly.
 
-## Tests
+## Testing
 
 Please write tests! Our testing framework is
 [mocha](http://mochajs.org/) and our assertion library is
@@ -344,11 +344,11 @@ Please write tests! Our testing framework is
 
 The easiest way to run all tests at once is `yarn test`.
 
-## Committing your changes
+## Commit your changes
 
 Before a commit is accepted the staged changes will be formatted using [prettier](https://prettier.io/) and linted using [eslint](https://eslint.org/). The commit will be reverted if files are formatted or lint errors are returned.
 
-### Commit Message Convention
+### Commit Message Conventions
 
 This project follows [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/)
 
