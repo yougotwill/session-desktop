@@ -108,14 +108,6 @@ pip install setuptools
     brew install git
   ```
 
-- Install [Git-LFS](https://git-lfs.com/)
-
-  We recommend using Homebrew to install Git-LFS.
-
-  ```sh
-  brew install git-lfs
-  ```
-
 - Install [Node.JS](https://nodejs.org/en/download/)
 
   We recommend using [nvm](https://github.com/creationix/nvm) or [asdf](https://asdf-vm.com/).
@@ -172,12 +164,6 @@ Setup instructions for Windows using Chocolatey:
 
   ```sh
   choco install git
-  ```
-
-- Install [Git-LFS](https://git-lfs.com/)
-
-  ```sh
-  choco install git-lfs
   ```
 
 - Install [CMake](https://cmake.org/download/)
