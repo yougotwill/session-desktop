@@ -316,9 +316,41 @@ export const MessageContextMenu = (props: Props) => {
     return null;
   }
 
+  if (legacyGroupIsDeprecated) {
+    return (
+      <StyledMessageContextMenu ref={contextMenuRef}>
+        <SessionContextMenuContainer>
+          <Menu
+            id={contextMenuId}
+            onVisibilityChange={onVisibilityChange}
+            animation={getMenuAnimation()}
+          >
+            {attachments?.length && attachments.every(m => !m.pending && m.path) ? (
+              <ItemWithDataTestId onClick={saveAttachment}>
+                {window.i18n('save')}
+              </ItemWithDataTestId>
+            ) : null}
+            <ItemWithDataTestId onClick={copyText}>{window.i18n('copy')}</ItemWithDataTestId>
+            <ItemWithDataTestId
+              onClick={() => {
+                void showMessageInfoOverlay({ messageId, dispatch });
+              }}
+            >
+              <Localizer token="info" />
+            </ItemWithDataTestId>
+            {/* this is a message in the view, so always private */}
+            {sender && showCopyAccountIdAction({ isPrivate: true, pubkey: sender }) ? (
+              <CopyAccountIdMenuItem pubkey={sender} />
+            ) : null}
+          </Menu>
+        </SessionContextMenuContainer>
+      </StyledMessageContextMenu>
+    );
+  }
+
   return (
     <StyledMessageContextMenu ref={contextMenuRef}>
-      {enableReactions && !legacyGroupIsDeprecated && showEmojiPanel && (
+      {enableReactions && showEmojiPanel && (
         <StyledEmojiPanelContainer role="button" x={mouseX} y={mouseY}>
           <SessionEmojiPanel
             ref={emojiPanelRef}
@@ -336,7 +368,7 @@ export const MessageContextMenu = (props: Props) => {
           onVisibilityChange={onVisibilityChange}
           animation={getMenuAnimation()}
         >
-          {enableReactions && !legacyGroupIsDeprecated && (
+          {enableReactions && (
             // eslint-disable-next-line @typescript-eslint/no-misused-promises
             <MessageReactBar
               action={onEmojiClick}
@@ -348,7 +380,7 @@ export const MessageContextMenu = (props: Props) => {
             <ItemWithDataTestId onClick={saveAttachment}>{window.i18n('save')}</ItemWithDataTestId>
           ) : null}
           <ItemWithDataTestId onClick={copyText}>{window.i18n('copy')}</ItemWithDataTestId>
-          {(isSent || !isOutgoing) && !legacyGroupIsDeprecated && (
+          {(isSent || !isOutgoing) && (
             <ItemWithDataTestId onClick={onReply}>{window.i18n('reply')}</ItemWithDataTestId>
           )}
           <ItemWithDataTestId
@@ -362,14 +394,14 @@ export const MessageContextMenu = (props: Props) => {
           {sender && showCopyAccountIdAction({ isPrivate: true, pubkey: sender }) ? (
             <CopyAccountIdMenuItem pubkey={sender} />
           ) : null}
-          {!legacyGroupIsDeprecated && <RetryItem messageId={messageId} />}
-          {isDeletable && !legacyGroupIsDeprecated ? (
+          <RetryItem messageId={messageId} />
+          {isDeletable ? (
             <ItemWithDataTestId onClick={onSelect}>
               <Localizer token="select" />
             </ItemWithDataTestId>
           ) : null}
-          {!legacyGroupIsDeprecated && <DeleteItem messageId={messageId} />}
-          {!legacyGroupIsDeprecated && <AdminActionItems messageId={messageId} />}
+          <DeleteItem messageId={messageId} />
+          <AdminActionItems messageId={messageId} />
         </Menu>
       </SessionContextMenuContainer>
     </StyledMessageContextMenu>
