@@ -44,7 +44,8 @@ If you use other python versions you might have or need a python version manager
 pip install setuptools
 ```
 
-### Linux
+<details>
+<summary>### Linux</summary>
 
 - Depending on your distribution, you might need to install [hunspell](https://github.com/hunspell/hunspell) and your specific locale (`hunspell-<lang>`) e.g. `hunspell-en-au`.
 
@@ -102,7 +103,10 @@ pip install setuptools
   npm install --global yarn
   ```
 
-### macOS
+</details>
+
+<details>
+<summary>### macOS</summary>
 
 - Install the [Xcode Command-Line Tools](http://osxdaily.com/2014/02/12/install-command-line-tools-mac-os-x/).
 
@@ -146,7 +150,10 @@ pip install setuptools
   npm install --global yarn
   ```
 
-### Windows
+</details>
+
+<details>
+<summary>### Windows</summary>
 
 Building on Windows can be a bit tricky. You can set this up manually, but we recommend using [Chocolatey](https://chocolatey.org/) to install the necessary dependencies.
 
@@ -247,6 +254,8 @@ Setup instructions for Windows using Chocolatey:
   ```PowerShell
   Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
   ```
+
+</details>
 
 ## Build and run Session
 
