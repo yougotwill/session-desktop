@@ -305,7 +305,7 @@ yarn sass
 
 ## Running multiple instances
 
-Since there is no registration for Session, you can create as many accounts as you can public keys. Each client however has a dedicated storage profile on your machine which is determined by the environment and instance variables.
+Since there is no registration restrictions for Session, you can make as many accounts as you want. Each client however has a dedicated storage profile on your machine which is determined by the environment and instance variables.
 
 To run a new instance, you can set the `MULTI` environment variable to a unique value.
 
