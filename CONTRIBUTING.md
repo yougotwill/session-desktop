@@ -23,7 +23,7 @@ You'll need a [Node.js](https://nodejs.org/) version which matches our current v
 
 If you use other node versions you might have or need a node version manager.
 
-- [nvm](https://github.com/creationix/nvm) - you can run `nvm use` in the project directory and it will use the node version specified in `.nvmrc`.
+- [nvm](https://github.com/nvm-sh/nvm) - you can run `nvm use` in the project directory and it will use the node version specified in `.nvmrc`.
 - Some node version management tools can read from the `.nvmrc` file and automatically make the change. If you use [asdf](https://asdf-vm.com/) you can make a [config change](https://asdf-vm.com/guide/getting-started.html#using-existing-tool-version-files) to support the `.nvmrc` file.
 - We use [Yarn Classic](https://classic.yarnpkg.com) as our package manager. You can install it by running `npm install --global yarn`.
 
@@ -80,7 +80,7 @@ pip install setuptools
 
 - Install [Node.JS](https://nodejs.org/en/download/)
 
-  We recommend using [nvm](https://github.com/creationix/nvm) or [asdf](https://asdf-vm.com/).
+  We recommend using [nvm](https://github.com/nvm-sh/nvm) or [asdf](https://asdf-vm.com/).
 
   You can get the current `<version>` from the [`.nvmrc`](.nvmrc).
 
@@ -124,7 +124,7 @@ pip install setuptools
 
 - Install [Node.JS](https://nodejs.org/en/download/)
 
-  We recommend using [nvm](https://github.com/creationix/nvm) or [asdf](https://asdf-vm.com/).
+  We recommend using [nvm](https://github.com/nvm-sh/nvm) or [asdf](https://asdf-vm.com/).
 
   You can get the current `<version>` from the [`.nvmrc`](.nvmrc).
 
