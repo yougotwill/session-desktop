@@ -108,6 +108,12 @@ pip install setuptools
     brew install git
   ```
 
+  After installing Git, you may need to disable `core.autocrlf` to prevent line ending issues.
+
+  ```sh
+  git config --local core.autocrlf false
+  ```
+
 - Install [Node.JS](https://nodejs.org/en/download/)
 
   We recommend using [nvm](https://github.com/creationix/nvm) or [asdf](https://asdf-vm.com/).
@@ -164,6 +170,12 @@ Setup instructions for Windows using Chocolatey:
 
   ```sh
   choco install git
+  ```
+
+  After installing Git, you may need to disable `core.autocrlf` to prevent line ending issues.
+
+  ```sh
+  git config --local core.autocrlf false
   ```
 
 - Install [CMake](https://cmake.org/download/)
