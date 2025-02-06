@@ -285,7 +285,7 @@ is no automatic restart mechanism for the entire application.
 You can keep the developer tools open (`View > Toggle Developer Tools`) and press <kbd>Cmd</kbd> + <kbd>R</kbd> (macOS) or <kbd>Ctrl</kbd> + <kbd>R</kbd> (Windows & Linux) to reload the application frontend.
 
 ```sh
-# runs until you stop it, re-generating built assets on file changes.
+# Runs until you stop it, re-generating built assets on file changes.
 
 # Once this command is waiting for changes, you will need to run in another terminal `yarn build:workers` to fix the "exports undefined" error on start.
 
