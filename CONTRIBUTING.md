@@ -46,6 +46,8 @@ pip install setuptools
 
 ### Linux
 
+- Depending on your distribution, you might need to install [hunspell](https://github.com/hunspell/hunspell) and your specific locale (`hunspell-<lang>`) e.g. `hunspell-en-au`.
+
 - Install the required build tools for your operating system
 
   <details>
@@ -68,7 +70,13 @@ pip install setuptools
 
   </details>
 
-- Depending on your distribution, you might need to install [hunspell](https://github.com/hunspell/hunspell) and your specific locale (`hunspell-<lang>`) e.g. `hunspell-en-au`.
+- Git setup
+
+  You may need to disable `core.autocrlf` to prevent line ending issues.
+
+  ```sh
+  git config --local core.autocrlf false
+  ```
 
 - Install [Node.JS](https://nodejs.org/en/download/)
 
