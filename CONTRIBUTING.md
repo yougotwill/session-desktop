@@ -197,7 +197,7 @@ Setup instructions for Windows using Chocolatey:
 - Install build tools (this installs make, g++, gcc).
 
 ```sh
-apt install build-essential cmake
+sudo apt install build-essential cmake
 ```
 
 - Depending on your distro, you might need to install `hunspell` and `hunspell-<lan>` (e.g. `hunspell-en-au`)
