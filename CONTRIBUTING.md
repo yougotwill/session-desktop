@@ -264,6 +264,17 @@ yarn start-prod                # Start Session!
 
 This will build the project and start the application in production mode.
 
+### Troubleshooting
+
+<details>
+<summary>The SUID sandbox helper binary was found, but is not configured correctly. Rather than run without sandboxing I'm aborting now.</summary>
+
+This error is caused by the [Electron](https://www.electronjs.org/) sandbox not being able to run. This is a security feature and not a bug. You can run the application with the `--no-sandbox` flag to disable this behavior.
+
+```sh
+yarn start-prod --no-sandbox   # Start Session!
+```
+
 ### Hot reloading
 
 More often than not, you'll need to restart the application regularly to see your changes, as there
