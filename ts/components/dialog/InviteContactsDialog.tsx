@@ -7,7 +7,7 @@ import { useDispatch } from 'react-redux';
 import { VALIDATION } from '../../session/constants';
 import { ConvoHub } from '../../session/conversations';
 import { ToastUtils, UserUtils } from '../../session/utils';
-import { updateInviteContactModal } from '../../state/ducks/modalDialog';
+import { updateGroupMembersModal, updateInviteContactModal } from '../../state/ducks/modalDialog';
 import { SpacerLG } from '../basic/Text';
 
 import {
@@ -22,12 +22,10 @@ import { PubKey } from '../../session/types';
 import { SessionUtilUserGroups } from '../../session/utils/libsession/libsession_utils_user_groups';
 import { groupInfoActions } from '../../state/ducks/metaGroups';
 import { useContactsToInviteToGroup } from '../../state/selectors/conversations';
-import { useMemberGroupChangePending } from '../../state/selectors/groups';
 import { useSelectedIsGroupV2 } from '../../state/selectors/selectedConversation';
 import { MemberListItem } from '../MemberListItem';
 import { SessionWrapperModal } from '../SessionWrapperModal';
 import { SessionButton, SessionButtonColor, SessionButtonType } from '../basic/SessionButton';
-import { SessionSpinner } from '../loading';
 import { SessionToggle } from '../basic/SessionToggle';
 import { GroupInviteRequiredVersionBanner } from '../NoticeBanner';
 import { hasClosedGroupV2QAButtons } from '../../shared/env_vars';
@@ -117,9 +115,6 @@ const InviteContactsDialogInner = (props: Props) => {
   const dispatch = useDispatch();
 
   const privateContactPubkeys = useContactsToInviteToGroup() as Array<PubkeyType>;
-
-  const isProcessingUIChange = useMemberGroupChangePending();
-
   const isPrivate = useIsPrivate(conversationId);
   const isPublic = useIsPublic(conversationId);
   const membersFromRedux = useSortedGroupMembers(conversationId) || [];
@@ -163,6 +158,11 @@ const InviteContactsDialogInner = (props: Props) => {
       });
       dispatch(action as any);
       empty();
+      // We want to show the dialog where "invite sending" is visible (i.e. the current group members) instead of this one
+      // once we hit "invite"
+      closeDialog();
+      dispatch(updateGroupMembersModal({ conversationId }));
+
       return;
     }
     void submitForClosedGroup(conversationId, selectedContacts);
@@ -221,13 +221,12 @@ const InviteContactsDialogInner = (props: Props) => {
         )}
       </div>
       <SpacerLG />
-      <SessionSpinner loading={isProcessingUIChange} />
       <SpacerLG />
       <div className="session-modal__button-group">
         <SessionButton
           text={okText}
           buttonType={SessionButtonType.Simple}
-          disabled={!hasContacts || isProcessingUIChange}
+          disabled={!hasContacts}
           onClick={onClickOK}
           dataTestId="session-confirm-ok-button"
         />
@@ -236,7 +235,6 @@ const InviteContactsDialogInner = (props: Props) => {
           buttonColor={SessionButtonColor.Danger}
           buttonType={SessionButtonType.Simple}
           onClick={closeDialog}
-          disabled={isProcessingUIChange}
           dataTestId="session-confirm-cancel-button"
         />
       </div>

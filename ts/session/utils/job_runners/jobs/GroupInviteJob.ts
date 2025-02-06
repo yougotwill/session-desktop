@@ -285,7 +285,7 @@ class GroupInviteJob extends PersistedJob<GroupInvitePersistedData> {
         );
       }
 
-      updateFailedStateForMember(groupPk, member, failed);
+      debounceFailedStateForMember(groupPk, member, failed);
 
       window?.inboxStore?.dispatch(
         groupInfoActions.refreshGroupDetailsFromWrapper({ groupPk }) as any
@@ -325,9 +325,10 @@ class GroupInviteJob extends PersistedJob<GroupInvitePersistedData> {
 export const GroupInvite = {
   GroupInviteJob,
   addJob,
+  debounceFailedStateForMember,
 };
 
-function updateFailedStateForMember(groupPk: GroupPubkeyType, member: PubkeyType, failed: boolean) {
+function debounceFailedStateForMember(groupPk: GroupPubkeyType, member: PubkeyType, failed: boolean) {
   let thisGroupFailure = invitesFailed.get(groupPk);
 
   if (!failed) {

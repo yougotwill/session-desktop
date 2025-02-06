@@ -546,6 +546,8 @@ async function handleWithHistoryMembers({
     });
     // a group invite job will be added to the queue
     await MetaGroupWrapperActions.memberSetInviteNotSent(groupPk, member);
+    // update the in-memory failed state, so that if we fail again to send that invite, the toast is shown again
+    GroupInvite.debounceFailedStateForMember(groupPk, member, false);
   }
   const encryptedSupplementKeys = withHistory.length
     ? await MetaGroupWrapperActions.generateSupplementKeys(groupPk, withHistory)
@@ -695,9 +697,12 @@ async function handleMemberAddedFromUI({
     });
     if (sequenceResult !== RunJobResult.Success) {
       await LibSessionUtil.saveDumpsToDb(groupPk);
-
+      window.log.warn(
+        `handleMemberAddedFromUI: pushChangesToGroupSwarmIfNeeded for ${ed25519Str(groupPk)} did not return success`
+      );
+      // throwing so we handle the reset state in the catch below
       throw new Error(
-        'handleMemberAddedFromUI: pushChangesToGroupSwarmIfNeeded did not return success'
+        `handleMemberAddedFromUI: pushChangesToGroupSwarmIfNeeded for ${ed25519Str(groupPk)} did not return success`
       );
     }
   } catch (e) {
@@ -705,6 +710,21 @@ async function handleMemberAddedFromUI({
       'handleMemberAddedFromUI: pushChangesToGroupSwarmIfNeeded failed with:',
       e.message
     );
+
+    try {
+      const merged = withHistory.concat(withoutHistory);
+      for (let index = 0; index < merged.length; index++) {
+        await MetaGroupWrapperActions.memberSetInviteFailed(groupPk, merged[index]);
+        // this gets reset once we do send an invite to that user
+        GroupInvite.debounceFailedStateForMember(groupPk, merged[index], true);
+      }
+    } catch (e2) {
+      window.log.warn(
+        'handleMemberAddedFromUI: marking members invite failed, failed with:',
+        e2.message
+      );
+    }
+    return false;
   }
 
   // schedule send invite details, auth signature, etc. to the new users
@@ -716,6 +736,7 @@ async function handleMemberAddedFromUI({
   });
 
   await convo.commit();
+  return true;
 }
 
 /**
