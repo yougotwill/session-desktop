@@ -1,17 +1,21 @@
 # Tools
 
+> [!WARNING]
+> Make sure you have the correct version of [Python](https://www.python.org/downloads/) installed.
+> You can get the current `<version>` from the [`.tool-versions`](../.tool-versions).
+
 ## Using the Python scripts
 
 The Python scripts are located in the `tools` directory. To run a script, use the following command:
 
 ```bash
-python3 ./tools/<script>.py
+python ./tools/<script>.py
 ```
 
 Most of these scripts can take arguments. To see the arguments for a script, use the following command:
 
 ```bash
-python3 ./tools/<script>.py --help
+python ./tools/<script>.py --help
 ```
 
 ## Utility
@@ -21,7 +25,7 @@ python3 ./tools/<script>.py --help
 [./util/sortJson.py](./util/sortJson.py) sorts a given JSON file.
 
 ```bash
-python3 ./tools/util/sortJson.py <file>
+python ./tools/util/sortJson.py <file>
 ```
 
 ## Localization
@@ -36,20 +40,20 @@ searches in the following directories:
 - `./ts/`
 
 ```bash
-python3 ./tools/findString.py <token>
+python ./tools/findString.py <token>
 ```
 
 The script can automatically open the files in VSCode by passing the `--open` flag.
 
 ```bash
-python3 ./tools/findString.py <token> --open
+python ./tools/findString.py <token> --open
 ```
 
 > [!WARNING]
 > The --open flag will open only the first result for the token in VSCode. If you wish to open more files, you can pass the `--limit` flag with the maximum number of files you wish to open. You can also pass the `--limit 0` flag to open all files containing the token.
 
 ```bash
-python3 ./tools/findString.py <token> --open --limit 5
+python ./tools/findString.py <token> --open --limit 5
 ```
 
 ### [CrowdIn Post-Import](./localization/crowdInPostImport.sh)
@@ -78,14 +82,14 @@ are used but not known about. Without any input files this script outputs:
 The script can be run with:
 
 ```bash
-  python3 ./tools/localization/generateLocalizedStringsAnalysis.py
+  python ./tools/localization/generateLocalizedStringsAnalysis.py
 ```
 
 > [!WARNING]
 > If using macOS always run this script with the `--disable-concurrency` flag.
 
 ```bash
-python3 ./tools/localization/generateLocalizedStringsAnalysis.py --disable-concurrency
+python ./tools/localization/generateLocalizedStringsAnalysis.py --disable-concurrency
 ```
 
 The script can also take the following arguments:
