@@ -92,6 +92,11 @@ Setup instructions for Windows using Chocolatey:
   Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
   ```
 
+> [!WARNING]
+> Make sure to read the Chocolatey output for each `choco install` step.
+> It will tell you if you need to restart your terminal or computer.
+> If you don't do this, you may encounter issues with the next steps.
+
 - Install [Git](https://git-scm.com/download/win)
 
   ```sh
