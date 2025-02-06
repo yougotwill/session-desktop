@@ -15,11 +15,11 @@ You're most likely to have your pull request accepted if it addresses an existin
 
 Of course we encourage community developers to work on ANY issue filed on our Github regardless of how it’s tagged, however if you pick up or create an issue without the “Good first issue” tag it would be best if you leave a comment on the issue so that the core team can give you any guidance required, especially around UI heavy features or issues which require cross platform integration.
 
-## Development setup
+# Development setup
 
-### Tips
+## Tips
 
-#### Node.js
+### Node.js
 
 You'll need a [Node.js](https://nodejs.org/) version which matches our current version. You can check [`.nvmrc` in the `unstable` branch](https://github.com/session-foundation/session-desktop/blob/unstable/.nvmrc) to see what the current version is.
 
@@ -29,7 +29,7 @@ If you use other node versions you might have or need a node version manager.
 - Some node version management tools can read from the `.nvmrc` file and automatically make the change. If you use [asdf](https://asdf-vm.com/) you can make a [config change](https://asdf-vm.com/guide/getting-started.html#using-existing-tool-version-files) to support the `.nvmrc` file.
 - We use [Yarn Classic](https://classic.yarnpkg.com) as our package manager. You can install it by running `npm install --global yarn`.
 
-#### Python
+### Python
 
 You will need a [Python](https://www.python.org) version which matches our current version. You can check [`.tool-versions` in the `unstable` branch](https://github.com/session-foundation/session-desktop/blob/unstable/.tool-versions) to see what the current version is.
 
@@ -44,7 +44,7 @@ If you use other python versions you might have or need a python version manager
 pip install setuptools
 ```
 
-### Linux
+## Linux
 
 - Depending on your distribution, you might need to install [hunspell](https://github.com/hunspell/hunspell) and your specific locale (`hunspell-<lang>`) e.g. `hunspell-en-au`.
 
@@ -102,7 +102,7 @@ pip install setuptools
   npm install --global yarn
   ```
 
-### macOS
+## macOS
 
 - Install the [Xcode Command-Line Tools](http://osxdaily.com/2014/02/12/install-command-line-tools-mac-os-x/).
 
@@ -146,7 +146,7 @@ pip install setuptools
   npm install --global yarn
   ```
 
-### Windows
+## Windows
 
 Building on Windows can be a bit tricky. You can set this up manually, but we recommend using [Chocolatey](https://chocolatey.org/) to install the necessary dependencies.
 
@@ -248,7 +248,7 @@ Setup instructions for Windows using Chocolatey:
   Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
   ```
 
-## Build and run Session
+# Build and run
 
 Now, run these commands in your preferred terminal in a good directory for development:
 
@@ -264,7 +264,7 @@ yarn start-prod                # Start Session!
 
 This will build the project and start the application in production mode.
 
-### Troubleshooting
+## Troubleshooting
 
 <details>
 <summary>The SUID sandbox helper binary was found, but is not configured correctly. Rather than run without sandboxing I'm aborting now.</summary>
@@ -277,7 +277,7 @@ yarn start-prod --no-sandbox   # Start Session!
 
 </details>
 
-### Hot reloading
+## Hot reloading
 
 More often than not, you'll need to restart the application regularly to see your changes, as there
 is no automatic restart mechanism for the entire application.
@@ -301,48 +301,39 @@ yarn build:workers
 yarn sass
 ```
 
-### Running multiple instances
+## Running multiple instances
 
-Since there is no registration for Session, you can create as many accounts as you
-can public keys. Each client however has a dedicated storage profile which is determined by the environment and instance variables.
+Since there is no registration for Session, you can create as many accounts as you can public keys. Each client however has a dedicated storage profile on your machine which is determined by the environment and instance variables.
 
-### Profile Paths
+To run a new instance, you can set the `MULTI` environment variable to a unique value.
+
+```sh
+# Terminal A
+yarn start-prod # Start Session!
+
+# Terminal B
+MULTI=1 yarn start-prod # Start another instance of Session!
+```
+
+## Storage profile locations
 
 - Linux `~/.config/`
 - macOS `~/Library/Application Support/`
 - Windows `%AppData%/`
 
-This user profile folder will change directories from `[PROFILE_PATH]/Session-{environment}` to `[PROFILE_PATH]/Session-{environment}-{instance}`.
+This storage profile folder will change directories from `[PROFILE_PATH]/Session-{environment}` to `[PROFILE_PATH]/Session-{environment}{instance}`.
 
-There are a few scripts which you can use:
-
-```sh
-yarn start-prod # Start production but in development mode
-MULTI=1 yarn start-prod # Start another instance of production
-```
-
-For more than 2 clients, you may run the above command with `MULTI` set before them. For example, running:
+For example, running:
 
 ```sh
+# Terminal A
 MULTI=alice yarn start-prod
+
+# Terminal B
+MULTI=bob yarn start-prod
 ```
 
-Will run the development environment with the `alice` instance and thus create a separate storage profile.
-
-If a fixed profile is needed (in the case of tests), you can specify it using `storageProfile` in the config file. If the change is local then put it in `local-{instance}.json` otherwise put it in `default-{instance}.json` or `{env}-{instance}.json`.
-
-Local config files will be ignored by default in git.
-
-For example, to create an 'alice' profile locally, put a file called `local-alice.json` in the
-`config` directory:
-
-```json
-{
-  "storageProfile": "alice-profile"
-}
-```
-
-This will then set the `userData` directory to `[PROFILE_PATH]/Session-alice-profile` when running the `alice` instance.
+Will run the development environment with the `alice` and `bob` instances and thus create separate storage profiles. The storage profiles will be stored at `[PROFILE_PATH]/Session-devalice` and `[PROFILE_PATH]/Session-devbob`.
 
 # Making changes
 
