@@ -75,7 +75,7 @@ pip install setuptools
   You may need to disable `core.autocrlf` to prevent line ending issues.
 
   ```sh
-  git config --local core.autocrlf false
+  git config --global core.autocrlf false
   ```
 
 - Install [Node.JS](https://nodejs.org/en/download/)
@@ -119,7 +119,7 @@ pip install setuptools
   After installing Git, you may need to disable `core.autocrlf` to prevent line ending issues.
 
   ```sh
-  git config --local core.autocrlf false
+  git config --global core.autocrlf false
   ```
 
 - Install [Node.JS](https://nodejs.org/en/download/)
@@ -183,7 +183,7 @@ Setup instructions for Windows using Chocolatey:
   After installing Git, you may need to disable `core.autocrlf` to prevent line ending issues.
 
   ```sh
-  git config --local core.autocrlf false
+  git config --global core.autocrlf false
   ```
 
 - Install [CMake](https://cmake.org/download/)
