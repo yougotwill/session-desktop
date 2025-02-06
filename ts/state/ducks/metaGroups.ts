@@ -546,6 +546,7 @@ async function handleWithHistoryMembers({
     });
     // a group invite job will be added to the queue
     await MetaGroupWrapperActions.memberSetInviteNotSent(groupPk, member);
+    await MetaGroupWrapperActions.memberSetSupplement(groupPk, member);
     // update the in-memory failed state, so that if we fail again to send that invite, the toast is shown again
     GroupInvite.debounceFailedStateForMember(groupPk, member, false);
   }
@@ -1505,8 +1506,6 @@ async function scheduleGroupInviteJobs(
   const merged = uniq(concat(withHistory, withoutHistory));
   for (let index = 0; index < merged.length; index++) {
     const member = merged[index];
-    // Note: forceUnrevoke is false, because `scheduleGroupInviteJobs` is always called after we've done
-    // a batch unrevoke of all the members' pk
-    await GroupInvite.addJob({ groupPk, member, inviteAsAdmin, forceUnrevoke: false });
+    await GroupInvite.addJob({ groupPk, member, inviteAsAdmin });
   }
 }

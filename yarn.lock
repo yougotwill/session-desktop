@@ -4944,9 +4944,9 @@ levn@~0.3.0:
     prelude-ls "~1.1.2"
     type-check "~0.3.2"
 
-"libsession_util_nodejs@https://github.com/session-foundation/libsession-util-nodejs/releases/download/v0.4.12/libsession_util_nodejs-v0.4.12.tar.gz":
-  version "0.4.12"
-  resolved "https://github.com/session-foundation/libsession-util-nodejs/releases/download/v0.4.12/libsession_util_nodejs-v0.4.12.tar.gz#6f0eae5c81f9a3e5101e038dbb7c82a9d50bfb7a"
+"libsession_util_nodejs@https://github.com/session-foundation/libsession-util-nodejs/releases/download/v0.4.15/libsession_util_nodejs-v0.4.15.tar.gz":
+  version "0.4.15"
+  resolved "https://github.com/session-foundation/libsession-util-nodejs/releases/download/v0.4.15/libsession_util_nodejs-v0.4.15.tar.gz#de0e90e14327e60d81d2a6941bcd0af33fcfed82"
   dependencies:
     cmake-js "7.2.1"
     node-addon-api "^6.1.0"
@@ -6859,9 +6859,9 @@ semver@^6.0.0, semver@^6.2.0, semver@^6.3.0, semver@^6.3.1:
   integrity sha512-BR7VvDCVHO+q2xBEWskxS6DJE1qRnb7DxzUrogb71CWoSficBxYsiAGd+Kl0mmq/MprG9yArRkyrQxTO6XjMzA==
 
 semver@^7.1.2, semver@^7.3.2, semver@^7.3.4, semver@^7.3.5, semver@^7.3.7, semver@^7.3.8, semver@^7.5.4:
-  version "7.6.3"
-  resolved "https://registry.yarnpkg.com/semver/-/semver-7.6.3.tgz#980f7b5550bc175fb4dc09403085627f9eb33143"
-  integrity sha512-oVekP1cKtI+CTDvHWYFUcMtsK/00wmAEfyqKfNdARm8u1wNVhSgaX7A8d4UuIlUI5e84iEwOhs7ZPYRmzU9U6A==
+  version "7.7.1"
+  resolved "https://registry.yarnpkg.com/semver/-/semver-7.7.1.tgz#abd5098d82b18c6c81f6074ff2647fd3e7220c9f"
+  integrity sha512-hlq8tAfn0m/61p4BVRcPzIGr6LKiMwo4VM6dGi6pt4qcRkmNzTcWq6eCEjEh+qXjkMDvPlOFFSGwQjoEa6gyMA==
 
 serialize-error@^7.0.1:
   version "7.0.1"

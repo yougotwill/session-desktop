@@ -1053,6 +1053,6 @@ export async function promoteUsersInGroup({
   for (let index = 0; index < membersHex.length; index++) {
     const member = membersHex[index];
     // eslint-disable-next-line no-await-in-loop
-    await GroupInvite.addJob({ groupPk, member, inviteAsAdmin: true, forceUnrevoke: true });
+    await GroupInvite.addJob({ groupPk, member, inviteAsAdmin: true });
   }
 }

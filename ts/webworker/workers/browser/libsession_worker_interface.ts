@@ -657,6 +657,12 @@ export const MetaGroupWrapperActions: MetaGroupWrapperActionsCalls = {
       pubkeyHex,
       name,
     ]) as Promise<ReturnType<MetaGroupWrapperActionsCalls['memberSetNameTruncated']>>,
+  memberSetSupplement: async (groupPk: GroupPubkeyType, pubkeyHex: PubkeyType) =>
+    callLibSessionWorker([
+      `MetaGroupConfig-${groupPk}`,
+      'memberSetSupplement',
+      pubkeyHex,
+    ]) as Promise<ReturnType<MetaGroupWrapperActionsCalls['memberSetSupplement']>>,
   memberSetProfilePicture: async (
     groupPk: GroupPubkeyType,
     pubkeyHex: PubkeyType,

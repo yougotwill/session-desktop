@@ -43,7 +43,6 @@ export interface GroupInvitePersistedData extends PersistedJobData {
   groupPk: GroupPubkeyType;
   member: PubkeyType;
   inviteAsAdmin: boolean;
-  forceUnrevoke: boolean;
 }
 
 export interface GroupPromotePersistedData extends PersistedJobData {
