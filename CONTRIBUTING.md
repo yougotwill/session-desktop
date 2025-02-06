@@ -125,6 +125,10 @@ Setup instructions for Windows using Chocolatey:
 
 - Install [Visual C++ build tools workload for Visual Studio 2022](https://community.chocolatey.org/packages/visualstudio2022-workload-vctools)
 
+  > [!WARNING]
+  > This step will likely take a long time.
+  > Make sure to restart your computer once it is finished.
+
   ```sh
   choco install visualstudio2022-workload-vctools
   ```
