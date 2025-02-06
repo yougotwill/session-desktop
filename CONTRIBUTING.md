@@ -44,6 +44,56 @@ pip install setuptools
 
 ## Platform Specific Instructions
 
+### Linux
+
+- Install the required build tools for your operating system
+
+  <details>
+  <summary>Debian/Ubuntu</summary>
+
+  This will install `make`, `g++`, `gcc`, etc.
+
+  ```sh
+  sudo apt install build-essential cmake
+  ```
+
+  </details>
+
+  <details>
+  <summary>Fedora</summary>
+
+  ```sh
+  sudo dnf install make automake gcc gcc-c++ kernel-devel
+  ```
+
+  </details>
+
+- Depending on your distribution, you might need to install [hunspell](https://github.com/hunspell/hunspell) and your specific locale (`hunspell-<lang>`) e.g. `hunspell-en-au`.
+
+- Install [Node.JS](https://nodejs.org/en/download/)
+
+  We recommend using [nvm](https://github.com/creationix/nvm) or [asdf](https://asdf-vm.com/).
+
+  You can get the current `<version>` from the [`.nvmrc`](.nvmrc).
+
+- Verify your [Python](https://www.python.org/downloads/) version.
+
+  Most modern Linux distributions should come with Python 3 pre-installed.
+
+  It should be equal to or greater than the version specified in the [`.tool-versions`](.tool-versions).
+
+- Install [setuptools](https://pypi.org/project/setuptools/).
+
+  ```sh
+  pip install setuptools
+  ```
+
+- Install [Yarn Classic](https://classic.yarnpkg.com/en/docs/install/#mac-stable)
+
+  ```sh
+  npm install --global yarn
+  ```
+
 ### macOS
 
 - Install the [Xcode Command-Line Tools](http://osxdaily.com/2014/02/12/install-command-line-tools-mac-os-x/).
@@ -68,13 +118,13 @@ pip install setuptools
 
 - Install [Node.JS](https://nodejs.org/en/download/)
 
-  We recommend using `nvm` or `asdf`.
+  We recommend using [nvm](https://github.com/creationix/nvm) or [asdf](https://asdf-vm.com/).
 
   You can get the current `<version>` from the [`.nvmrc`](.nvmrc).
 
 - Install [Python](https://www.python.org/downloads/)
 
-  We recommend using `asdf`.
+  We recommend using [asdf](https://asdf-vm.com/).
 
   You can get the current `<version>` from the [`.tool-versions`](.tool-versions).
 
@@ -191,29 +241,6 @@ Setup instructions for Windows using Chocolatey:
   ```PowerShell
   Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
   ```
-
-### Linux
-
-- Install build tools (this installs make, g++, gcc).
-
-```sh
-sudo apt install build-essential cmake
-```
-
-- Depending on your distro, you might need to install `hunspell` and `hunspell-<lan>` (e.g. `hunspell-en-au`)
-
-- In Ubuntu, you may also need to install
-
-```sh
-sudo apt install cmake
-npm install cmake-js
-```
-
-- In Fedora, you may also need to install
-
-```sh
-sudo dnf install make automake gcc gcc-c++ kernel-devel
-```
 
 ### All platforms
 
