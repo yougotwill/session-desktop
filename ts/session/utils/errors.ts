@@ -99,3 +99,10 @@ export class RetrieveDisplayNameError extends BaseError {
     Object.setPrototypeOf(this, RetrieveDisplayNameError.prototype);
   }
 }
+
+export class EmptyDisplayNameError extends BaseError {
+  constructor(message = 'display name is empty') {
+    super(message);
+    Object.setPrototypeOf(this, EmptyDisplayNameError.prototype);
+  }
+}
