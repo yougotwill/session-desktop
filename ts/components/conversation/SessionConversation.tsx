@@ -69,6 +69,7 @@ import {
   useSelectedWeAreAdmin,
 } from '../../state/selectors/selectedConversation';
 import { useSelectedDisableLegacyGroupDeprecatedActions } from '../../hooks/useRefreshReleasedFeaturesTimestamp';
+import { useAreGroupsCreatedAsNewGroupsYet } from '../../state/selectors/releasedFeatures';
 
 const DEFAULT_JPEG_QUALITY = 0.85;
 
@@ -675,6 +676,8 @@ function OutdatedLegacyGroupBanner() {
   const isLegacyGroup =
     !isPrivate && !isPublic && selectedConversationKey && selectedConversationKey.startsWith('05');
 
+  const newGroupsCanBeCreated = useAreGroupsCreatedAsNewGroupsYet();
+
   // FIXME change the date here. Remove after QA
   const text = deprecatedLegacyGroups
     ? localize(
@@ -686,7 +689,7 @@ function OutdatedLegacyGroupBanner() {
         .withArgs({ date: '[Date]' })
         .toString();
 
-  return isLegacyGroup ? (
+  return isLegacyGroup && newGroupsCanBeCreated ? (
     <NoticeBanner
       text={text}
       onBannerClick={() => {
