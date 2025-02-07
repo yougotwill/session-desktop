@@ -100,18 +100,17 @@ async function updateProfileOfContact(
  * When registering a user/linking a device, we want to enforce a limit on the displayName length.
  * That limit is enforced by libsession when calling `setName` on the `UserConfigWrapper`.
  * `updateOurProfileDisplayNameOnboarding` is used to create a temporary `UserConfigWrapper`, call `setName` on it and release the memory used by the wrapper.
- * @returns the set displayName set if no error where thrown.
+ * @returns the set displayName set if no error where thrown
+ * @note Make sure the displayName has been trimmed and validated first.
  */
 async function updateOurProfileDisplayNameOnboarding(newName: string) {
-  const cleanName = sanitizeSessionUsername(newName).trim();
-
   try {
     // create a temp user config wrapper to test the display name with libsession
     const privKey = new Uint8Array(64);
     crypto.getRandomValues(privKey);
     await UserConfigWrapperActions.init(privKey, null);
     // this throws if the name is too long
-    await UserConfigWrapperActions.setName(cleanName);
+    await UserConfigWrapperActions.setName(newName);
     const appliedName = await UserConfigWrapperActions.getName();
 
     if (isNil(appliedName)) {
