@@ -277,7 +277,6 @@ const ResendButton = ({ groupPk, pubkey }: { pubkey: PubkeyType; groupPk: GroupP
           groupPk,
           member: pubkey,
           inviteAsAdmin: member.nominatedAdmin,
-          forceUnrevoke: true,
         });
       }}
     />

@@ -26,6 +26,7 @@ function emptyMember(pubkeyHex: PubkeyType): GroupMemberGet {
     },
     nominatedAdmin: false,
     pubkeyHex,
+    supplement: false,
   };
 }
 
@@ -155,7 +156,14 @@ describe('libsession_metagroup', () => {
       const memberCreated = metaGroupWrapper.memberGetOrConstruct(member);
       console.info('Object.keys(memberCreated) ', JSON.stringify(Object.keys(memberCreated)));
       expect(Object.keys(memberCreated).sort()).to.be.deep.eq(
-        ['pubkeyHex', 'name', 'profilePicture', 'memberStatus', 'nominatedAdmin'].sort(), // if you change this value, also make sure you add a test, testing that new field, below
+        [
+          'pubkeyHex',
+          'name',
+          'profilePicture',
+          'memberStatus',
+          'nominatedAdmin',
+          'supplement',
+        ].sort(), // if you change this value, also make sure you add a test, testing that new field, below
         'this test is designed to fail if you need to add tests to test a new field of libsession'
       );
     });
@@ -273,6 +281,19 @@ describe('libsession_metagroup', () => {
         ...emptyMember(member),
         profilePicture: pic,
         memberStatus: 'INVITE_SENDING',
+      };
+
+      expect(metaGroupWrapper.memberGetAll()[0]).to.be.deep.eq(expected);
+    });
+
+    it('can add via supplement set', () => {
+      metaGroupWrapper.memberConstructAndSet(member);
+      metaGroupWrapper.memberSetSupplement(member);
+      expect(metaGroupWrapper.memberGetAll().length).to.be.deep.eq(1);
+      const expected = {
+        ...emptyMember(member),
+        memberStatus: 'INVITE_SENDING', // invite_sending is the default state
+        supplement: true,
       };
 
       expect(metaGroupWrapper.memberGetAll()[0]).to.be.deep.eq(expected);

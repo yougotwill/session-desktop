@@ -403,24 +403,22 @@ abstract class AbstractRevokeSubRequest<
 > extends SnodeAPISubRequest<T> {
   public readonly destination: GroupPubkeyType;
   public readonly timestamp: number;
-  public readonly revokeTokenHex: Array<string>;
+  public readonly tokensHex: Array<string>;
   protected readonly adminSecretKey: Uint8Array;
 
   constructor({
     groupPk,
     timestamp,
-    revokeTokenHex,
+    tokensHex,
     secretKey,
     method,
-  }: WithGroupPubkey &
-    WithTimestamp &
-    WithSecretKey & { revokeTokenHex: Array<string>; method: T }) {
+  }: WithGroupPubkey & WithTimestamp & WithSecretKey & { tokensHex: Array<string>; method: T }) {
     super({ method });
     this.destination = groupPk;
     this.timestamp = timestamp;
-    this.revokeTokenHex = revokeTokenHex;
+    this.tokensHex = tokensHex;
     this.adminSecretKey = secretKey;
-    if (this.revokeTokenHex.length === 0) {
+    if (this.tokensHex.length === 0) {
       throw new Error('AbstractRevokeSubRequest needs at least one token to do a change');
     }
   }
@@ -429,7 +427,7 @@ abstract class AbstractRevokeSubRequest<
     if (!this.adminSecretKey) {
       throw new Error('we need an admin secretKey');
     }
-    const tokensBytes = from_hex(this.revokeTokenHex.join(''));
+    const tokensBytes = from_hex(this.tokensHex.join(''));
 
     const prefix = new Uint8Array(StringUtils.encode(`${this.method}${this.timestamp}`, 'utf8'));
     const sigResult = await SnodeGroupSignature.signDataWithAdminSecret(
@@ -461,7 +459,7 @@ export class SubaccountRevokeSubRequest extends AbstractRevokeSubRequest<'revoke
       params: {
         pubkey: this.destination,
         signature,
-        revoke: this.revokeTokenHex,
+        revoke: this.tokensHex,
         timestamp: this.timestamp,
       },
     };
@@ -483,7 +481,7 @@ export class SubaccountUnrevokeSubRequest extends AbstractRevokeSubRequest<'unre
       params: {
         pubkey: this.destination,
         signature,
-        unrevoke: this.revokeTokenHex,
+        unrevoke: this.tokensHex,
         timestamp: this.timestamp,
       },
     };

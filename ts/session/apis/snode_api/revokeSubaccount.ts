@@ -24,7 +24,7 @@ async function getRevokeSubaccountParams(
   const revokeSubRequest = revokeChanges.length
     ? new SubaccountRevokeSubRequest({
         groupPk,
-        revokeTokenHex: revokeChanges.map(m => m.tokenToRevokeHex),
+        tokensHex: revokeChanges.map(m => m.tokenToRevokeHex),
         timestamp: NetworkTime.now(),
         secretKey,
       })
@@ -32,7 +32,7 @@ async function getRevokeSubaccountParams(
   const unrevokeSubRequest = unrevokeChanges.length
     ? new SubaccountUnrevokeSubRequest({
         groupPk,
-        revokeTokenHex: unrevokeChanges.map(m => m.tokenToRevokeHex),
+        tokensHex: unrevokeChanges.map(m => m.tokenToRevokeHex),
         timestamp: NetworkTime.now(),
         secretKey,
       })
