@@ -54,6 +54,7 @@ import { WithMessageId } from '../../../../session/types/with';
 import { DeleteItem } from '../../../menu/items/DeleteMessage/DeleteMessageMenuItem';
 import { RetryItem } from '../../../menu/items/RetrySend/RetrySendMenuItem';
 import { showCopyAccountIdAction } from '../../../menu/items/CopyAccountId/guard';
+import { useSelectedDisableLegacyGroupDeprecatedActions } from '../../../../hooks/useRefreshReleasedFeaturesTimestamp';
 
 export type MessageContextMenuSelectorProps = Pick<
   MessageRenderingProps,
@@ -165,6 +166,7 @@ export const MessageContextMenu = (props: Props) => {
   const { messageId, contextMenuId, enableReactions } = props;
   const dispatch = useDispatch();
   const { hideAll } = useContextMenu();
+  const legacyGroupIsDeprecated = useSelectedDisableLegacyGroupDeprecatedActions();
 
   const isSelectedBlocked = useSelectedIsBlocked();
   const convoId = useSelectedConversationKey();
@@ -312,6 +314,38 @@ export const MessageContextMenu = (props: Props) => {
 
   if (!convoId) {
     return null;
+  }
+
+  if (legacyGroupIsDeprecated) {
+    return (
+      <StyledMessageContextMenu ref={contextMenuRef}>
+        <SessionContextMenuContainer>
+          <Menu
+            id={contextMenuId}
+            onVisibilityChange={onVisibilityChange}
+            animation={getMenuAnimation()}
+          >
+            {attachments?.length && attachments.every(m => !m.pending && m.path) ? (
+              <ItemWithDataTestId onClick={saveAttachment}>
+                {window.i18n('save')}
+              </ItemWithDataTestId>
+            ) : null}
+            <ItemWithDataTestId onClick={copyText}>{window.i18n('copy')}</ItemWithDataTestId>
+            <ItemWithDataTestId
+              onClick={() => {
+                void showMessageInfoOverlay({ messageId, dispatch });
+              }}
+            >
+              <Localizer token="info" />
+            </ItemWithDataTestId>
+            {/* this is a message in the view, so always private */}
+            {sender && showCopyAccountIdAction({ isPrivate: true, pubkey: sender }) ? (
+              <CopyAccountIdMenuItem pubkey={sender} />
+            ) : null}
+          </Menu>
+        </SessionContextMenuContainer>
+      </StyledMessageContextMenu>
+    );
   }
 
   return (

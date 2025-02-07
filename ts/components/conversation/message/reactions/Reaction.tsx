@@ -81,7 +81,6 @@ export const Reaction = (props: ReactionProps) => {
 
   const rightOverlayMode = useRightOverlayMode();
   const areDeprecatedLegacyGroupDisabled = useSelectedDisableLegacyGroupDeprecatedActions();
-  const legacyGroupDeprecated = useSelectedDisableLegacyGroupDeprecatedActions();
   const isMessageSelection = useIsMessageSelectionMode();
   const reactionsMap = (reactions && Object.fromEntries(reactions)) || {};
   const senders = reactionsMap[emoji]?.senders || [];
@@ -110,7 +109,7 @@ export const Reaction = (props: ReactionProps) => {
   const handleReactionClick = () => {
     if (!isMessageSelection) {
       // Note: disable emoji clicks if the legacy group is deprecated (group is readonly)
-      if (onClick && !legacyGroupDeprecated) {
+      if (onClick && !areDeprecatedLegacyGroupDisabled) {
         onClick(emoji);
       }
     }

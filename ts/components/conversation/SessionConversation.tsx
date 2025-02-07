@@ -68,7 +68,7 @@ import {
   useSelectedIsPublic,
   useSelectedWeAreAdmin,
 } from '../../state/selectors/selectedConversation';
-import { useAreLegacyGroupsDeprecatedYet } from '../../state/selectors/releasedFeatures';
+import { useSelectedDisableLegacyGroupDeprecatedActions } from '../../hooks/useRefreshReleasedFeaturesTimestamp';
 
 const DEFAULT_JPEG_QUALITY = 0.85;
 
@@ -670,7 +670,7 @@ function OutdatedLegacyGroupBanner() {
   const selectedConversationKey = useSelectedConversationKey();
   const isPrivate = useSelectedIsPrivate();
   const isPublic = useSelectedIsPublic();
-  const deprecatedLegacyGroups = useAreLegacyGroupsDeprecatedYet();
+  const deprecatedLegacyGroups = useSelectedDisableLegacyGroupDeprecatedActions();
 
   const isLegacyGroup =
     !isPrivate && !isPublic && selectedConversationKey && selectedConversationKey.startsWith('05');

@@ -1,4 +1,3 @@
-import { useSelector } from 'react-redux';
 import { NetworkTime } from '../../util/NetworkTime';
 import { LEGACY_GROUP_DEPRECATED_TIMESTAMP_MS } from '../ducks/releasedFeatures';
 
@@ -13,8 +12,4 @@ export function areLegacyGroupsDeprecatedYetOutsideRedux() {
     return false;
   }
   return areLegacyGroupsDeprecatedYet();
-}
-
-export function useAreLegacyGroupsDeprecatedYet() {
-  return useSelector(areLegacyGroupsDeprecatedYet);
 }

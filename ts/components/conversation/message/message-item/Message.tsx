@@ -10,6 +10,7 @@ type Props = {
 };
 
 export const Message = (props: Props) => {
+  // FIXME this should probably just be something static per message.
   const ctxMenuID = `ctx-menu-message-${uuidv4()}`;
 
   return <GenericReadableMessage ctxMenuID={ctxMenuID} messageId={props.messageId} />;
