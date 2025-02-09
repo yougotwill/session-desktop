@@ -5,6 +5,7 @@ import styled from 'styled-components';
 import { motion } from 'framer-motion';
 import { isEmpty } from 'lodash';
 import { useDispatch } from 'react-redux';
+import { toASCII } from 'punycode';
 
 import { ConvoHub } from '../../../session/conversations';
 
@@ -104,7 +105,7 @@ export const OverlayMessage = () => {
       return;
     }
 
-    const pubkeyOrOnsTrimmed = pubkeyOrOns.trim();
+    const pubkeyOrOnsTrimmed = toASCII(pubkeyOrOns.trim());
     const validationError = PubKey.validateWithErrorNoBlinding(pubkeyOrOnsTrimmed);
 
     if (!validationError) {
