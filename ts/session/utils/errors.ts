@@ -67,12 +67,17 @@ export class HTTPError extends Error {
   }
 }
 
+/**
+ * Base error class for all errors in the session module.
+ *
+ * @note if you make a custom error with a custom message, make sure to restore the prototype chain again using the new class prototype.
+ */
 class BaseError extends Error {
   constructor(message: string) {
     super(message);
     this.name = this.constructor.name;
-    // restore prototype chain
-    Object.setPrototypeOf(this, SnodeResponseError.prototype);
+    // NOTE Restores prototype chain. Make sure to reference the new class prototype!
+    Object.setPrototypeOf(this, BaseError.prototype);
   }
 }
 
@@ -85,12 +90,19 @@ export class InvalidMessage extends BaseError {}
 export class SnodeResponseError extends BaseError {
   constructor(message = 'sessionRpc could not talk to node') {
     super(message);
+    Object.setPrototypeOf(this, SnodeResponseError.prototype);
   }
 }
-export class RetrieveDisplayNameError extends Error {
+export class RetrieveDisplayNameError extends BaseError {
   constructor(message = 'failed to retrieve display name after setting it') {
     super(message);
-    // restore prototype chain
-    Object.setPrototypeOf(this, SnodeResponseError.prototype);
+    Object.setPrototypeOf(this, RetrieveDisplayNameError.prototype);
+  }
+}
+
+export class EmptyDisplayNameError extends BaseError {
+  constructor(message = 'display name is empty') {
+    super(message);
+    Object.setPrototypeOf(this, EmptyDisplayNameError.prototype);
   }
 }

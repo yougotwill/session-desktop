@@ -1,12 +1,17 @@
 import { Dispatch } from '@reduxjs/toolkit';
 import { isEmpty } from 'lodash';
 import { useDispatch } from 'react-redux';
+import { useState } from 'react';
 import { ONBOARDING_TIMES } from '../../../session/constants';
 import { InvalidWordsError, NotEnoughWordsError } from '../../../session/crypto/mnemonic';
 import { ProfileManager } from '../../../session/profile_manager/ProfileManager';
 import { PromiseUtils } from '../../../session/utils';
 import { TaskTimedOutError } from '../../../session/utils/Promise';
-import { NotFoundError, RetrieveDisplayNameError } from '../../../session/utils/errors';
+import {
+  EmptyDisplayNameError,
+  NotFoundError,
+  RetrieveDisplayNameError,
+} from '../../../session/utils/errors';
 import { trigger } from '../../../shims/events';
 import {
   AccountRestoration,
@@ -41,11 +46,14 @@ import { resetRegistration } from '../RegistrationStages';
 import { ContinueButton, OnboardDescription, OnboardHeading } from '../components';
 import { BackButtonWithinContainer } from '../components/BackButton';
 import { useRecoveryProgressEffect } from '../hooks';
-import { displayNameIsValid, sanitizeDisplayNameOrToast } from '../utils';
-import { AccountDetails } from './CreateAccount';
 import { localize } from '../../../localization/localeTools';
+import { sanitizeDisplayNameOrToast } from '../utils';
 
-type AccountRestoreDetails = AccountDetails & { dispatch: Dispatch; abortSignal?: AbortSignal };
+type AccountRestoreDetails = {
+  recoveryPassword: string;
+  dispatch: Dispatch;
+  abortSignal?: AbortSignal;
+};
 
 export async function finishRestore(pubkey: string, displayName: string) {
   await setSignWithRecoveryPhrase(true);
@@ -96,21 +104,14 @@ async function signInWithNewDisplayName({
   displayName,
   recoveryPassword,
   dispatch,
-}: AccountRestoreDetails) {
+}: AccountRestoreDetails & { displayName: string }) {
   try {
-    const validDisplayName = displayNameIsValid(displayName);
-
     await resetRegistration();
-    await registerSingleDevice(
-      recoveryPassword,
-      'english',
-      validDisplayName,
-      async (pubkey: string) => {
-        dispatch(setHexGeneratedPubKey(pubkey));
-        dispatch(setDisplayName(validDisplayName));
-        await finishRestore(pubkey, validDisplayName);
-      }
-    );
+    await registerSingleDevice(recoveryPassword, 'english', displayName, async (pubkey: string) => {
+      dispatch(setHexGeneratedPubKey(pubkey));
+      dispatch(setDisplayName(displayName));
+      await finishRestore(pubkey, displayName);
+    });
   } catch (e) {
     await resetRegistration();
     throw e;
@@ -128,6 +129,8 @@ export const RestoreAccount = () => {
   const progress = useProgress();
 
   const dispatch = useDispatch();
+
+  const [cannotContinue, setCannotContinue] = useState(true);
 
   useRecoveryProgressEffect();
 
@@ -171,18 +174,20 @@ export const RestoreAccount = () => {
   };
 
   const recoverAndEnterDisplayName = async () => {
-    if (
-      isEmpty(recoveryPassword) ||
-      !isEmpty(recoveryPasswordError) ||
-      isEmpty(displayName) ||
-      !isEmpty(displayNameError)
-    ) {
+    if (isEmpty(recoveryPassword) || !isEmpty(recoveryPasswordError)) {
       return;
     }
 
     try {
+      const sanitizedName = sanitizeDisplayNameOrToast(displayName);
+
+      // this should never happen, but just in case
+      if (isEmpty(sanitizedName)) {
+        return;
+      }
+
       // this will throw if the display name is too long
-      const validName = await ProfileManager.updateOurProfileDisplayNameOnboarding(displayName);
+      const validName = await ProfileManager.updateOurProfileDisplayNameOnboarding(sanitizedName);
 
       const trimmedPassword = recoveryPassword.trim();
       setRecoveryPassword(trimmedPassword);
@@ -196,16 +201,17 @@ export const RestoreAccount = () => {
       window.log.error(
         `[onboarding] restore account: Failed with new display name! Error: ${err.message || String(err)}`
       );
+
+      setCannotContinue(true);
       dispatch(setAccountRestorationStep(AccountRestoration.DisplayName));
 
-      if (err instanceof RetrieveDisplayNameError) {
+      if (err instanceof EmptyDisplayNameError || err instanceof RetrieveDisplayNameError) {
         dispatch(setDisplayNameError(localize('displayNameErrorDescription').toString()));
-        return;
+      } else {
+        // Note: we have to assume here that libsession threw an error because the name was too long since we covered the other cases.
+        // The error reported by libsession is not localized
+        dispatch(setDisplayNameError(localize('displayNameErrorDescriptionShorter').toString()));
       }
-
-      // Note: we have to assume here that libsession threw an error because the name was too long since we covered the other cases.
-      // The error reported by libsession is not localized
-      dispatch(setDisplayNameError(localize('displayNameErrorDescriptionShorter').toString()));
     }
   };
 
@@ -313,12 +319,8 @@ export const RestoreAccount = () => {
               placeholder={window.i18n('displayNameEnter')}
               value={displayName}
               onValueChanged={(name: string) => {
-                const sanitizedName = sanitizeDisplayNameOrToast(
-                  name,
-                  setDisplayNameError,
-                  dispatch
-                );
-                dispatch(setDisplayName(sanitizedName));
+                dispatch(setDisplayName(name));
+                setCannotContinue(false);
               }}
               onEnterPressed={recoverAndEnterDisplayName}
               error={displayNameError}
@@ -328,10 +330,7 @@ export const RestoreAccount = () => {
             <ContinueButton
               onClick={recoverAndEnterDisplayName}
               disabled={
-                isEmpty(recoveryPassword) ||
-                !isEmpty(recoveryPasswordError) ||
-                isEmpty(displayName) ||
-                !isEmpty(displayNameError)
+                isEmpty(recoveryPassword) || !isEmpty(recoveryPasswordError) || cannotContinue
               }
             />
           </Flex>
