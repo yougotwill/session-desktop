@@ -86,6 +86,7 @@ declare module 'react' {
     | 'settings-section'
     | 'message-section'
     | 'privacy-section'
+    | 'debug-menu-section'
 
     // settings menu item types
     | 'message-requests-settings-menu-item'

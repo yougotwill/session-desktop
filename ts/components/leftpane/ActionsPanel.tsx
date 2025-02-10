@@ -24,7 +24,11 @@ import { DecryptedAttachmentsManager } from '../../session/crypto/DecryptedAttac
 import { DURATION } from '../../session/constants';
 
 import { uploadOurAvatar } from '../../interactions/conversationInteractions';
-import { editProfileModal, onionPathModal } from '../../state/ducks/modalDialog';
+import {
+  editProfileModal,
+  onionPathModal,
+  updateDebugMenuModal,
+} from '../../state/ducks/modalDialog';
 
 import { loadDefaultRooms } from '../../session/apis/open_group_api/opengroupV2/ApiUtil';
 import { getOpenGroupManager } from '../../session/apis/open_group_api/opengroupV2/OpenGroupManagerV2';
@@ -78,6 +82,9 @@ const Section = (props: { type: SectionType }) => {
     } else if (type === SectionType.PathIndicator) {
       // Show Path Indicator Modal
       dispatch(onionPathModal({}));
+    } else if (type === SectionType.DebugMenu) {
+      // Show Debug Menu
+      dispatch(updateDebugMenuModal({}));
     } else {
       // message section
       dispatch(clearSearch());
@@ -133,6 +140,16 @@ const Section = (props: { type: SectionType }) => {
           onClick={handleClick}
           isSelected={isSelected}
           ref={settingsIconRef}
+        />
+      );
+    case SectionType.DebugMenu:
+      return (
+        <SessionIconButton
+          iconSize="medium"
+          dataTestId="debug-menu-section"
+          iconType={'debug'}
+          onClick={handleClick}
+          isSelected={isSelected}
         />
       );
     case SectionType.PathIndicator:
@@ -242,6 +259,7 @@ function useUpdateBadgeCount() {
 export const ActionsPanel = () => {
   const [startCleanUpMedia, setStartCleanUpMedia] = useState(false);
   const ourPrimaryConversation = useSelector(getOurPrimaryConversation);
+  const showDebugMenu = window?.sessionFeatureFlags?.debug?.debugLogging;
 
   // this maxi useEffect is called only once: when the component is mounted.
   // For the action panel, it means this is called only one per app start/with a user logged in
@@ -310,6 +328,7 @@ export const ActionsPanel = () => {
         <Section type={SectionType.Profile} />
         <Section type={SectionType.Message} />
         <Section type={SectionType.Settings} />
+        {showDebugMenu && <Section type={SectionType.DebugMenu} />}
         <Section type={SectionType.PathIndicator} />
         <Section type={SectionType.ColorMode} />
       </LeftPaneSectionContainer>
