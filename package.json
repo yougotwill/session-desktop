@@ -84,7 +84,7 @@
     "date-fns": "^3.6.0",
     "dompurify": "^2.0.7",
     "electron-localshortcut": "^3.2.1",
-    "electron-updater": "^4.2.2",
+    "electron-updater": "^6.3.0",
     "emoji-mart": "^5.5.2",
     "filesize": "3.6.1",
     "focus-trap-react": "^10.2.3",
