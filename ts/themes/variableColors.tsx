@@ -28,9 +28,6 @@ export type ThemeColorVariables = {
   '--message-bubbles-sent-text-color': string;
   '--message-bubbles-received-text-color': string;
 
-  /* Message Request Banner */
-  '--message-request-icon-color': string;
-
   /* Menu Button */
   '--menu-button-background-color': string;
   '--menu-button-background-hover-color': string;

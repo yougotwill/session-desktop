@@ -63,10 +63,10 @@ const StyledGridContainer = styled.div`
   align-items: center;
   border-radius: 50%;
   background-color: var(--primary-color);
-  color: var(--renderer-span-primary-color);
+  color: var(--unread-messages-alert-background-color);
 
   svg > path {
-    fill: var(--message-request-icon-color);
+    fill: var(--unread-messages-alert-text-color);
   }
 `;
 
