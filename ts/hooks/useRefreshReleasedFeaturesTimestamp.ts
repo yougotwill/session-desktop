@@ -4,7 +4,7 @@ import { DURATION } from '../session/constants';
 import { updateLegacyGroupDeprecationTimestampUpdatedAt } from '../state/ducks/releasedFeatures';
 import { NetworkTime } from '../util/NetworkTime';
 import { PubKey } from '../session/types';
-import { areLegacyGroupsDeprecatedYet } from '../state/selectors/releasedFeatures';
+import { areLegacyGroupsReadOnly } from '../state/selectors/releasedFeatures';
 import { useSelectedConversationKey } from '../state/selectors/selectedConversation';
 import type { StateType } from '../state/reducer';
 import { ConversationTypeEnum } from '../models/types';
@@ -27,7 +27,7 @@ export function getDisableLegacyGroupDeprecatedActions(state: StateType, convoId
   if (!selectedConvoIsGroup) {
     return false;
   }
-  const legacyGroupDeprecated = areLegacyGroupsDeprecatedYet();
+  const legacyGroupDeprecated = areLegacyGroupsReadOnly();
   // here we have
   // - a valid convoId
   // - that starts with 05

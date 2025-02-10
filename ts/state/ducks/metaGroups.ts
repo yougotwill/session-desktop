@@ -59,8 +59,6 @@ export type GroupState = {
   members: Record<GroupPubkeyType, Array<GroupMemberGet>>;
   memberChangesFromUIPending: boolean;
   nameChangesFromUIPending: boolean;
-  membersInviteSending: Record<GroupPubkeyType, Array<PubkeyType>>;
-  membersPromoteSending: Record<GroupPubkeyType, Array<PubkeyType>>;
 
   // those are group creation-related fields
   creationFromUIPending: boolean;
@@ -74,8 +72,6 @@ export const initialGroupState: GroupState = {
   creationFromUIPending: false,
   memberChangesFromUIPending: false,
   nameChangesFromUIPending: false,
-  membersInviteSending: {},
-  membersPromoteSending: {},
   creationMembersSelected: [],
   creationGroupName: '',
 };
@@ -406,6 +402,10 @@ const loadMetaDumpsFromDB = createAsyncThunk(
           metaDumped: data,
         });
 
+        // If we were sending to that member an invite/promote, we won't auto retry.
+        // We need to reset the sending state (on load from disk) so that the user can resend manually if needed
+        await MetaGroupWrapperActions.memberResetAllSendingState(groupPk);
+
         const infos = await MetaGroupWrapperActions.infoGet(groupPk);
         const members = await MetaGroupWrapperActions.memberGetAll(groupPk);
 
@@ -680,6 +680,9 @@ async function handleMemberAddedFromUI({
       updateMessagesToPush.push(groupChange);
     }
   }
+  await LibSessionUtil.saveDumpsToDb(groupPk);
+  refreshConvosModelProps([groupPk]);
+  window.inboxStore?.dispatch(refreshGroupDetailsFromWrapper({ groupPk }) as any);
 
   const extraStoreRequests = await StoreGroupRequestFactory.makeGroupMessageSubRequest(
     updateMessagesToPush,
@@ -1281,8 +1284,6 @@ const metaGroupSlice = createSlice({
     ) {
       delete state.infos[payload.groupPk];
       delete state.members[payload.groupPk];
-      delete state.membersInviteSending[payload.groupPk];
-      delete state.membersPromoteSending[payload.groupPk];
     },
     addSelectedGroupMember(
       state: GroupState,

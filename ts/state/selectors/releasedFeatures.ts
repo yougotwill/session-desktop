@@ -1,15 +1,29 @@
-import { NetworkTime } from '../../util/NetworkTime';
-import { LEGACY_GROUP_DEPRECATED_TIMESTAMP_MS } from '../ducks/releasedFeatures';
+import { useSelector } from 'react-redux';
+import type { StateType } from '../reducer';
 
-export const areLegacyGroupsDeprecatedYet = (): boolean => {
-  const theyAreDeprecated = NetworkTime.now() >= LEGACY_GROUP_DEPRECATED_TIMESTAMP_MS;
+const areGroupsCreatedAsNewGroupsYet = (): boolean => {
+  const shouldCreateNewGroups = !!window.inboxStore?.getState()?.releasedFeatures.canCreateGroupV2;
 
-  return window.sessionFeatureFlags.forceLegacyGroupsDeprecated || theyAreDeprecated;
+  return window.sessionFeatureFlags.useClosedGroupV2 || shouldCreateNewGroups;
 };
 
-export function areLegacyGroupsDeprecatedYetOutsideRedux() {
+export const areLegacyGroupsReadOnly = (): boolean => {
+  const theyAre = !!window.inboxStore?.getState()?.releasedFeatures.legacyGroupsReadOnly;
+
+  return window.sessionFeatureFlags.forceLegacyGroupsDeprecated || theyAre;
+};
+
+export function useAreGroupsCreatedAsNewGroupsYet() {
+  useSelector((state: StateType) => state.releasedFeatures.canCreateGroupV2);
+  return useSelector(areGroupsCreatedAsNewGroupsYet);
+}
+
+/**
+ * @returns true if legacy groups should not be polled anymore
+ */
+export function areLegacyGroupsReadOnlyOutsideRedux() {
   if (!window.inboxStore) {
     return false;
   }
-  return areLegacyGroupsDeprecatedYet();
+  return areLegacyGroupsReadOnly();
 }

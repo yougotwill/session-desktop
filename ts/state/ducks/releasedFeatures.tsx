@@ -1,15 +1,17 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
-import { DURATION } from '../../session/constants';
-
-// FIXME update this to the correct timestamp REMOVE AFTER QA
-export const LEGACY_GROUP_DEPRECATED_TIMESTAMP_MS = Date.now() + DURATION.WEEKS * 52;
+import { NetworkTime } from '../../util/NetworkTime';
+import { FEATURE_RELEASE_TIMESTAMPS } from '../../session/constants';
 
 export interface ReleasedFeaturesState {
   legacyGroupDeprecationTimestampRefreshAtMs: number;
+  canCreateGroupV2: boolean;
+  legacyGroupsReadOnly: boolean;
 }
 
 export const initialReleasedFeaturesState = {
   legacyGroupDeprecationTimestampRefreshAtMs: Date.now(),
+  canCreateGroupV2: Date.now() >= FEATURE_RELEASE_TIMESTAMPS.START_CREATE_NEW_GROUP,
+  legacyGroupsReadOnly: Date.now() >= FEATURE_RELEASE_TIMESTAMPS.LEGACY_GROUP_READONLY,
 };
 
 const releasedFeaturesSlice = createSlice({
@@ -18,6 +20,11 @@ const releasedFeaturesSlice = createSlice({
   reducers: {
     updateLegacyGroupDeprecationTimestampUpdatedAt: (state, action: PayloadAction<number>) => {
       state.legacyGroupDeprecationTimestampRefreshAtMs = action.payload;
+      state.canCreateGroupV2 =
+        NetworkTime.now() >= FEATURE_RELEASE_TIMESTAMPS.START_CREATE_NEW_GROUP;
+      state.legacyGroupsReadOnly =
+        NetworkTime.now() >= FEATURE_RELEASE_TIMESTAMPS.LEGACY_GROUP_READONLY;
+      return state;
     },
   },
 });

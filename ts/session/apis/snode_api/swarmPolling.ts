@@ -58,7 +58,7 @@ import {
 } from './types';
 import { ConversationTypeEnum } from '../../../models/types';
 import { Snode } from '../../../data/types';
-import { areLegacyGroupsDeprecatedYetOutsideRedux } from '../../../state/selectors/releasedFeatures';
+import { areLegacyGroupsReadOnlyOutsideRedux } from '../../../state/selectors/releasedFeatures';
 
 const minMsgCountShouldRetry = 95;
 /**
@@ -297,7 +297,7 @@ export class SwarmPolling {
       .filter(m => !allGroupsInWrapper.some(w => w.pubkeyHex === m.pubkey.key))
       .map(entryToKey);
 
-    const legacyGroupDeprecatedDisabled = areLegacyGroupsDeprecatedYetOutsideRedux();
+    const legacyGroupDeprecatedDisabled = areLegacyGroupsReadOnlyOutsideRedux();
 
     const allLegacyGroupsTracked = legacyGroupDeprecatedDisabled
       ? []

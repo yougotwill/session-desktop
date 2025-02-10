@@ -20,6 +20,7 @@ import { OverlayInvite } from './overlay/OverlayInvite';
 import { OverlayMessage } from './overlay/OverlayMessage';
 import { OverlayMessageRequest } from './overlay/OverlayMessageRequest';
 import { OverlayChooseAction } from './overlay/choose-action/OverlayChooseAction';
+import { useAreGroupsCreatedAsNewGroupsYet } from '../../state/selectors/releasedFeatures';
 
 const StyledLeftPaneContent = styled.div`
   display: flex;
@@ -40,17 +41,15 @@ const StyledConversationListContent = styled.div`
 const ClosableOverlay = () => {
   const leftOverlayMode = useSelector(getLeftOverlayMode);
 
+  const shouldCreateNewGroups = useAreGroupsCreatedAsNewGroupsYet();
+
   switch (leftOverlayMode) {
     case 'choose-action':
       return <OverlayChooseAction />;
     case 'open-group':
       return <OverlayCommunity />;
     case 'closed-group':
-      return window.sessionFeatureFlags.useClosedGroupV2 ? (
-        <OverlayClosedGroupV2 />
-      ) : (
-        <OverlayLegacyClosedGroup />
-      );
+      return shouldCreateNewGroups ? <OverlayClosedGroupV2 /> : <OverlayLegacyClosedGroup />;
     case 'message':
       return <OverlayMessage />;
     case 'message-requests':

@@ -25,6 +25,7 @@ import { groupInfoActions } from '../../../state/ducks/metaGroups';
 import { updateConfirmModal } from '../../../state/ducks/modalDialog';
 import { setLeftOverlayMode } from '../../../state/ducks/section';
 import { SessionButtonColor, SessionButton } from '../../basic/SessionButton';
+import { useAreGroupsCreatedAsNewGroupsYet } from '../../../state/selectors/releasedFeatures';
 
 export const ConversationHeaderWithDetails = () => {
   const isSelectionMode = useIsMessageSelectionMode();
@@ -121,8 +122,9 @@ function RecreateGroupButton() {
   const weAreAdmin = useSelectedWeAreAdmin();
 
   const showRecreateGroupModal = useShowRecreateModal();
+  const newGroupsCanBeCreated = useAreGroupsCreatedAsNewGroupsYet();
 
-  if (!isLegacyGroup || !weAreAdmin) {
+  if (!isLegacyGroup || !weAreAdmin || !newGroupsCanBeCreated) {
     return null;
   }
 
