@@ -282,12 +282,10 @@ export const OtherInfo = () => {
         flexGap="var(--margins-xs)"
       >
         {otherInfo.loading ? (
-          <p style={{ userSelect: 'text' }}>{localize('loading')}</p>
+          <p>{localize('loading')}</p>
         ) : otherInfo.error ? (
-          <p style={{ userSelect: 'text' }}>
-            <span style={{ color: 'var(--danger-color)' }}>
-              {localize('theError')}: {otherInfo.error.message || localize('errorUnknown')}
-            </span>
+          <p style={{ color: 'var(--danger-color)', userSelect: 'text' }}>
+            {localize('theError')}: {otherInfo.error.message || localize('errorUnknown')}
           </p>
         ) : null}
         {otherInfo.value
