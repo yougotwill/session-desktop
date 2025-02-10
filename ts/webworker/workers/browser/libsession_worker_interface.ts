@@ -674,6 +674,10 @@ export const MetaGroupWrapperActions: MetaGroupWrapperActionsCalls = {
       pubkeyHex,
       profilePicture,
     ]) as Promise<ReturnType<MetaGroupWrapperActionsCalls['memberSetProfilePicture']>>,
+  memberResetAllSendingState: async (groupPk: GroupPubkeyType) =>
+    callLibSessionWorker([`MetaGroupConfig-${groupPk}`, 'memberResetAllSendingState']) as Promise<
+      ReturnType<MetaGroupWrapperActionsCalls['memberResetAllSendingState']>
+    >,
 
   /** GroupKeys wrapper specific actions */
   keyRekey: async (groupPk: GroupPubkeyType) =>
