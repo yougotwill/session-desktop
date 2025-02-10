@@ -169,4 +169,5 @@ export const oceanDark: ThemeColorVariables = {
   '--session-recording-pulse-color': hexColorToRGB(THEMES.OCEAN_DARK.DANGER),
 
   '--renderer-span-primary-color': 'var(--primary-color)',
+  '--message-request-icon-color': 'var(--background-primary-color)',
 };

@@ -63,6 +63,11 @@ const StyledGridContainer = styled.div`
   align-items: center;
   border-radius: 50%;
   background-color: var(--primary-color);
+  color: var(--renderer-span-primary-color);
+
+  svg > path {
+    fill: var(--message-request-icon-color);
+  }
 `;
 
 export const CircularIcon = (props: {
