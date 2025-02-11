@@ -30,6 +30,7 @@ import { queueAllCachedFromSource } from './receiver';
 import { ConversationTypeEnum } from '../models/types';
 import { NetworkTime } from '../util/NetworkTime';
 import { MessageQueue } from '../session/sending';
+import { areLegacyGroupsReadOnlyOutsideRedux } from '../state/selectors/releasedFeatures';
 
 export const distributingClosedGroupEncryptionKeyPairs = new Map<string, ECKeyPair>();
 
@@ -253,6 +254,12 @@ export async function handleNewClosedGroup(
   groupUpdate: SignalService.DataMessage.ClosedGroupControlMessage
 ) {
   if (groupUpdate.type !== SignalService.DataMessage.ClosedGroupControlMessage.Type.NEW) {
+    return;
+  }
+
+  if (areLegacyGroupsReadOnlyOutsideRedux()) {
+    window?.log?.info('Got legacy group invite message, but they are readonly now. Dropping.');
+    await IncomingMessageCache.removeFromCache(envelope);
     return;
   }
   if (!sanityCheckNewGroup(groupUpdate)) {
