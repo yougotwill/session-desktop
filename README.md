@@ -18,7 +18,7 @@ Submissions can be made by making a pull request to our development branch.If yo
 
 ## Supported platforms
 
-Session requires Windows 10 or later, macOS Ventura (13) or later, or a Linux distribution with glibc 2.28 or later like Debian 10 or Ubuntu 20.04.
+Session requires Windows 10 or later, macOS Ventura (13) or later, or a Linux distribution with glibc 2.28 or later like Debian 10 or Ubuntu 22.04.
 
 ## Build instructions
 
