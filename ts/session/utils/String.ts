@@ -65,3 +65,18 @@ export const sanitizeSessionUsername = (inputName: string) => {
 
 export const ed25519Str = (ed25519Key: string) =>
   `(...${ed25519Key.length > 58 ? ed25519Key.substr(58) : ed25519Key})`;
+
+/**
+ * Trims a string and also removes the following characters:
+ * - LEFT-TO-RIGHT MARK (U+200F)
+ * - ZERO WIDTH SPACE (U+200B)
+ * - ZERO WIDTH NON-JOINER (U+200C)
+ * - ZERO WIDTH JOINER (U+200D)
+ * - WORD JOINER (U+2060)
+ * - ZERO WIDTH NO-BREAK SPACE (U+FEFF)
+ * @param value the string to trim
+ * @returns the trimmed string
+ */
+export const trimWhitespace = (value: string): string => {
+  return value.trim().replace(/\u200F|\u200B|\u200C|\u200D|\u2060|\uFEFF/g, '');
+};
