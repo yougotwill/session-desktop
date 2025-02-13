@@ -67,16 +67,19 @@ export const ed25519Str = (ed25519Key: string) =>
   `(...${ed25519Key.length > 58 ? ed25519Key.substr(58) : ed25519Key})`;
 
 /**
- * Trims a string and also removes the following characters:
- * - LEFT-TO-RIGHT MARK (U+200F)
+ * Trims a string and removes special whitespace characters.
+ * @param value the string to trim
+ * @returns the trimmed string
+ * @note https://en.wikipedia.org/wiki/Whitespace_character
+ * @note The following characters are considered special whitespace characters:
+ * - LEFT-TO-RIGHT MARK (U+200E)
+ * - RIGHT-TO-LEFT MARK (U+200F)
  * - ZERO WIDTH SPACE (U+200B)
  * - ZERO WIDTH NON-JOINER (U+200C)
  * - ZERO WIDTH JOINER (U+200D)
  * - WORD JOINER (U+2060)
  * - ZERO WIDTH NO-BREAK SPACE (U+FEFF)
- * @param value the string to trim
- * @returns the trimmed string
  */
 export const trimWhitespace = (value: string): string => {
-  return value.trim().replace(/\u200F|\u200B|\u200C|\u200D|\u2060|\uFEFF/g, '');
+  return value.trim().replace(/\u200E|\u200F|\u200B|\u200C|\u200D|\u2060|\uFEFF/g, '');
 };
