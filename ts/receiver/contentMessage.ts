@@ -482,7 +482,9 @@ export async function innerHandleSwarmContentMessage({
 
     const content = SignalService.Content.decode(new Uint8Array(contentDecrypted));
     if (!shouldProcessContentMessage(envelope, content, false)) {
-      window.log.info('innerHandleSwarmContentMessage: dropping invalid content message');
+      window.log.info(
+        `innerHandleSwarmContentMessage: dropping invalid content message ${envelope.timestamp}`
+      );
       await IncomingMessageCache.removeFromCache(envelope);
       return;
     }

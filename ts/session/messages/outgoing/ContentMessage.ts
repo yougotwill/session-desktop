@@ -2,11 +2,12 @@ import { SignalService } from '../../../protobuf';
 import { TTL_DEFAULT } from '../../constants';
 import { Message } from './Message';
 
-type InstanceKeys<T> = {
+type InstanceFields<T> = {
   // eslint-disable-next-line @typescript-eslint/ban-types
   [K in keyof T as T[K] extends Function ? never : K]: T[K];
 };
-type ContentFields = Partial<Omit<InstanceKeys<SignalService.Content>, 'sigTimestamp'>>;
+
+type ContentFields = Partial<Omit<InstanceFields<SignalService.Content>, 'sigTimestamp'>>;
 
 export abstract class ContentMessage extends Message {
   public plainTextBuffer(): Uint8Array {
@@ -23,8 +24,8 @@ export abstract class ContentMessage extends Message {
 
   public makeContentProto<T extends ContentFields>(extra: T) {
     return new SignalService.Content({
-      sigTimestamp: this.createAtNetworkTimestamp,
       ...extra,
+      sigTimestamp: this.createAtNetworkTimestamp,
     });
   }
 
