@@ -23,9 +23,7 @@ export class TypingMessage extends ContentMessage {
   }
 
   public contentProto(): SignalService.Content {
-    return new SignalService.Content({
-      typingMessage: this.typingProto(),
-    });
+    return super.makeContentProto({ typingMessage: this.typingProto() });
   }
 
   protected typingProto(): SignalService.TypingMessage {

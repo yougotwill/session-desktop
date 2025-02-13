@@ -36,6 +36,7 @@ import { handleCallMessage } from './callMessage';
 import { getAllCachedECKeyPair, sentAtMoreRecentThanWrapper } from './closedGroups';
 import { ECKeyPair } from './keypairs';
 import { CONVERSATION_PRIORITIES, ConversationTypeEnum } from '../models/types';
+import { shouldProcessContentMessage } from './common';
 
 export async function handleSwarmContentMessage(
   envelope: EnvelopePlus,
@@ -480,6 +481,13 @@ export async function innerHandleSwarmContentMessage({
     window.log.info('innerHandleSwarmContentMessage');
 
     const content = SignalService.Content.decode(new Uint8Array(contentDecrypted));
+    if (!shouldProcessContentMessage(envelope, content, false)) {
+      window.log.info(
+        `innerHandleSwarmContentMessage: dropping invalid content message ${envelope.timestamp}`
+      );
+      await IncomingMessageCache.removeFromCache(envelope);
+      return;
+    }
 
     /**
      * senderIdentity is set ONLY if that message is a closed group message.

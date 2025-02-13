@@ -42,6 +42,7 @@ import { sogsRollingDeletions } from './sogsRollingDeletions';
 import { processMessagesUsingCache } from './sogsV3MutationCache';
 import { OpenGroupRequestCommonType } from '../../../../data/types';
 import { ConversationTypeEnum } from '../../../../models/types';
+import { shouldProcessContentMessage } from '../../../../receiver/common';
 
 /**
  * Get the convo matching those criteria and make sure it is an opengroup convo, or return null.
@@ -405,7 +406,13 @@ async function handleInboxOutboxMessages(
         id: v4(),
         type: SignalService.Envelope.Type.SESSION_MESSAGE, // this is not right, but we forward an already decrypted envelope so we don't care
       };
-
+      const contentDecrypted = SignalService.Content.decode(content);
+      if (!shouldProcessContentMessage(builtEnvelope, contentDecrypted, true)) {
+        window.log.warn(
+          `received inbox/outbox message that did not pass the shouldProcessContentMessage test envelopeTs: ${builtEnvelope.timestamp}`
+        );
+        continue;
+      }
       if (isOutbox) {
         /**
          * Handling outbox messages needs to skip some of the pipeline.
@@ -414,7 +421,6 @@ async function handleInboxOutboxMessages(
          * We will need this to send new message to that user from our second device.
          */
         const recipient = inboxOutboxItem.recipient;
-        const contentDecrypted = SignalService.Content.decode(content);
 
         // if we already know this user's unblinded pubkey, store the blinded message we sent to that blinded recipient under
         // the unblinded conversation instead (as we would have merge the blinded one with the other )

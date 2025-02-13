@@ -31,6 +31,7 @@ export class ExpirationTimerUpdateMessage extends DataMessage {
   }
 
   public contentProto(): SignalService.Content {
+    // TODO: I am pretty sure we don't need this anymore (super.contentProto does the same in DataMessage)
     return new SignalService.Content({
       ...super.contentProto(),
       dataMessage: this.dataProto(),

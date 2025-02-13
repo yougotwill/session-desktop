@@ -127,7 +127,7 @@ async function handleSwarmMessageSentSuccess(
       }
     } catch (e) {
       window.log.info(
-        'failed to decode content (excpected except if message was for a 1o1 as we need it to send the sync message'
+        'failed to decode content (expected except if message was for a 1o1 as we need it to send the sync message'
       );
     }
   } else if (shouldMarkMessageAsSynced) {
@@ -185,7 +185,7 @@ async function handleSwarmMessageSentFailure(
       expirationStartTimestamp: undefined,
     });
     window.log.warn(
-      `[handleSwarmMessageSentFailure] Stopping a message from disppearing until we retry the send operation. messageId: ${fetchedMessage.get(
+      `[handleSwarmMessageSentFailure] Stopping a message from disappearing until we retry the send operation. messageId: ${fetchedMessage.get(
         'id'
       )}`
     );

@@ -24,7 +24,7 @@ export class ExpirableMessage extends ContentMessage {
   }
 
   public contentProto(): SignalService.Content {
-    return new SignalService.Content({
+    return super.makeContentProto({
       // TODO legacy messages support will be removed in a future release
       expirationType:
         this.expirationType === 'deleteAfterSend'

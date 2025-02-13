@@ -42,8 +42,8 @@ message MessageRequestResponse {
 
 
 message Content {
-  reserved 7, 11;
-  reserved "configurationMessage", "sharedConfigMessage";
+  reserved 7, 11, 14;
+  reserved "configurationMessage", "sharedConfigMessage", "lastDisappearingMessageChangeTimestamp";
 
   enum ExpirationType {
     UNKNOWN             = 0;
@@ -60,6 +60,7 @@ message Content {
   optional MessageRequestResponse     messageRequestResponse     = 10;
   optional ExpirationType             expirationType             = 12;
   optional uint32                     expirationTimer            = 13;
+  optional uint64                     sigTimestamp               = 15;
 }
 
 message KeyPair {
