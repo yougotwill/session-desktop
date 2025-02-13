@@ -14,6 +14,7 @@ import { fromBase64ToArray } from '../session/utils/String';
 import { cleanIncomingDataMessage, messageHasVisibleContent } from './dataMessage';
 import { handleMessageJob, toRegularMessage } from './queuedJob';
 import { OpenGroupRequestCommonType } from '../data/types';
+import { shouldProcessContentMessage } from './common';
 
 export const handleOpenGroupV4Message = async (
   message: OpenGroupMessageV4,
@@ -51,6 +52,14 @@ const handleOpenGroupMessage = async (
   const dataUint = new Uint8Array(removeMessagePadding(arr));
 
   const decodedContent = SignalService.Content.decode(dataUint);
+
+  if (!shouldProcessContentMessage({ timestamp: sentTimestamp }, decodedContent, true)) {
+    window?.log?.info(
+      'sogs message: shouldProcessContentMessage is false for message sentAt:',
+      sentTimestamp
+    );
+    return;
+  }
 
   const conversationId = getOpenGroupV2ConversationId(serverUrl, roomId);
   if (!conversationId) {

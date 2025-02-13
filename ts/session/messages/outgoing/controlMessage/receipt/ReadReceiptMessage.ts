@@ -14,9 +14,7 @@ export class ReadReceiptMessage extends ContentMessage {
   }
 
   public contentProto(): SignalService.Content {
-    return new SignalService.Content({
-      receiptMessage: this.receiptProto(),
-    });
+    return super.makeContentProto({ receiptMessage: this.receiptProto() });
   }
 
   protected receiptProto(): SignalService.ReceiptMessage {

@@ -26,9 +26,7 @@ export class MessageRequestResponse extends ContentMessage {
   }
 
   public contentProto(): SignalService.Content {
-    return new SignalService.Content({
-      messageRequestResponse: this.messageRequestResponseProto(),
-    });
+    return super.makeContentProto({ messageRequestResponse: this.messageRequestResponseProto() });
   }
 
   public messageRequestResponseProto(): SignalService.MessageRequestResponse {

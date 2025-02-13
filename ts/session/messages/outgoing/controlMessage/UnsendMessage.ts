@@ -18,9 +18,7 @@ export class UnsendMessage extends ContentMessage {
   }
 
   public contentProto(): SignalService.Content {
-    return new SignalService.Content({
-      unsendMessage: this.unsendProto(),
-    });
+    return super.makeContentProto({ unsendMessage: this.unsendProto() });
   }
 
   public unsendProto(): SignalService.Unsend {
