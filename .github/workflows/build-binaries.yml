@@ -137,7 +137,7 @@ jobs:
       - name: Setup & Build
         uses: ./actions/setup_and_build
         with:
-          cache_suffix: ${{ runner.os }}-${{ matrix.arch }}
+          cache_suffix: ${{ runner.os }}
 
         # we want to test on all platforms since some are testing the rendered menus (and are dependent on the platform)
       - name: Unit Test
@@ -184,7 +184,7 @@ jobs:
       - name: Setup & Build
         uses: ./actions/setup_and_build
         with:
-          cache_suffix: ${{ runner.os }}-${{ matrix.arch }}
+          cache_suffix: ${{ runner.os }}
 
         # we want to test on all platforms since some are testing the rendered menus (and are dependent on the platform)
       - name: Unit Test
