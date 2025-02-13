@@ -53,6 +53,87 @@ describe('Onboarding', () => {
         error.should.not.be.an.instanceOf(EmptyDisplayNameError);
       }
     });
+    it('should trim a leading space', async () => {
+      const displayName = ' Hello';
+      const validDisplayName = sanitizeDisplayNameOrToast(displayName);
+      expect(validDisplayName, `should equal "Hello"`).to.equal('Hello');
+    });
+    it('should trim a trailing space', async () => {
+      const displayName = 'Hello ';
+      const validDisplayName = sanitizeDisplayNameOrToast(displayName);
+      expect(validDisplayName, `should equal "Hello"`).to.equal('Hello');
+    });
+    // NOTE: encodeURI is used so we can see special characters in a string if there is an error
+    it('should trim U+200B', async () => {
+      const displayName = 'Hello World\u200B';
+      const validDisplayName = sanitizeDisplayNameOrToast(displayName);
+      expect(encodeURI(validDisplayName), `should equal "Hello%20World"`).to.equal(
+        encodeURI('Hello World')
+      );
+    });
+    it('should trim U+200C', async () => {
+      const displayName = 'Hello World\u200C';
+      const validDisplayName = sanitizeDisplayNameOrToast(displayName);
+      expect(encodeURI(validDisplayName), `should equal "Hello%20World"`).to.equal(
+        encodeURI('Hello World')
+      );
+    });
+    it('should trim U+200D', async () => {
+      const displayName = 'Hello World\u200D';
+      const validDisplayName = sanitizeDisplayNameOrToast(displayName);
+      expect(encodeURI(validDisplayName), `should equal "Hello%20World"`).to.equal(
+        encodeURI('Hello World')
+      );
+    });
+    it('should trim U+2060', async () => {
+      const displayName = 'Hello World\u2060';
+      const validDisplayName = sanitizeDisplayNameOrToast(displayName);
+      expect(encodeURI(validDisplayName), `should equal "Hello%20World"`).to.equal(
+        encodeURI('Hello World')
+      );
+    });
+    it('should trim U+FEFF', async () => {
+      const displayName = 'Hello World\uFEFF';
+      const validDisplayName = sanitizeDisplayNameOrToast(displayName);
+      expect(encodeURI(validDisplayName), `should equal "Hello%20World"`).to.equal(
+        encodeURI('Hello World')
+      );
+    });
+    it('should trim U+200E', async () => {
+      const displayName = 'Hello World\u200E';
+      const validDisplayName = sanitizeDisplayNameOrToast(displayName);
+      expect(encodeURI(validDisplayName), `should equal "Hello%20World"`).to.equal(
+        encodeURI('Hello World')
+      );
+    });
+    it('should trim U+200F', async () => {
+      const displayName = 'Hello World\u200F';
+      const validDisplayName = sanitizeDisplayNameOrToast(displayName);
+      expect(encodeURI(validDisplayName), `should equal "Hello%20World"`).to.equal(
+        encodeURI('Hello World')
+      );
+    });
+    it('should trim U+200B at the start', async () => {
+      const displayName = '\u200BHello World';
+      const validDisplayName = sanitizeDisplayNameOrToast(displayName);
+      expect(encodeURI(validDisplayName), `should equal "Hello%20World"`).to.equal(
+        encodeURI('Hello World')
+      );
+    });
+    it('should trim U+200B in the middle', async () => {
+      const displayName = 'Hello\u200BWorld';
+      const validDisplayName = sanitizeDisplayNameOrToast(displayName);
+      expect(encodeURI(validDisplayName), `should equal "HelloWorld"`).to.equal(
+        encodeURI('HelloWorld')
+      );
+    });
+    it('should trim many U+200B', async () => {
+      const displayName = '\u200BHello\u200BWorld\u200B';
+      const validDisplayName = sanitizeDisplayNameOrToast(displayName);
+      expect(encodeURI(validDisplayName), `should equal "HelloWorld"`).to.equal(
+        encodeURI('HelloWorld')
+      );
+    });
   });
 
   describe('registerSingleDevice', () => {
