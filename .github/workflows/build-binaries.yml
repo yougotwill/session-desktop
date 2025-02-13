@@ -62,7 +62,7 @@ jobs:
 
       - name: Build but do not publish ${{ matrix.pkg_to_build }}
         # we want this to run always, except on "push" to "master"
-        if: ${{ env.SHOULD_PUBLISH == 'false' && env.SHOULD_PUBLISH_ALPHA != 'true'  }}
+        if: ${{ env.SHOULD_PUBLISH == 'false' && env.SHOULD_PUBLISH_ALPHA == 'false'  }}
         run: |
           sed -i 's/"target": \["deb"\]/"target": "${{ matrix.pkg_to_build }}"/g' package.json && yarn build-release
 
@@ -100,7 +100,7 @@ jobs:
 
       - name: Build but do not publish
         # we want this to run always, except on "push" to "master"
-        if: ${{ env.SHOULD_PUBLISH == 'false' && env.SHOULD_PUBLISH_ALPHA != 'true'  }}
+        if: ${{ env.SHOULD_PUBLISH == 'false' && env.SHOULD_PUBLISH_ALPHA == 'false'  }}
         run: yarn build-release
 
       - name: Upload artefacts
@@ -145,7 +145,7 @@ jobs:
 
       - name: Build but do not publish
         # we want this to run always, except on "push" to "master"
-        if: ${{ env.SHOULD_PUBLISH == 'false' && env.SHOULD_PUBLISH_ALPHA != 'true'  }}
+        if: ${{ env.SHOULD_PUBLISH == 'false' && env.SHOULD_PUBLISH_ALPHA == 'false'  }}
         run: |
           source ./build/setup-mac-certificate.sh
           yarn build-release --config.mac.bundleVersion=${{ github.ref }}
@@ -192,7 +192,7 @@ jobs:
 
       - name: Build but do not publish
         # we want this to run always, except on "push" to "master"
-        if: ${{ env.SHOULD_PUBLISH == 'false' && env.SHOULD_PUBLISH_ALPHA != 'true'  }}
+        if: ${{ env.SHOULD_PUBLISH == 'false' && env.SHOULD_PUBLISH_ALPHA == 'false'  }}
         run: |
           source ./build/setup-mac-certificate.sh
           yarn build-release --config.mac.bundleVersion=${{ github.ref }}
