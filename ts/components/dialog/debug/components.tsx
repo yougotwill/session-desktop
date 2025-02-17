@@ -3,6 +3,7 @@ import useUpdate from 'react-use/lib/useUpdate';
 import useAsync from 'react-use/lib/useAsync';
 import { shell } from 'electron';
 import useBoolean from 'react-use/lib/useBoolean';
+import { useDispatch } from 'react-redux';
 import type { SessionFeatureFlagsKeys } from '../../../window';
 import { Flex } from '../../basic/Flex';
 import { SessionToggle } from '../../basic/SessionToggle';
@@ -11,13 +12,17 @@ import { localize } from '../../../localization/localeTools';
 import { CopyToClipboardIcon } from '../../buttons';
 import { saveLogToDesktop } from '../../../util/logging';
 import { Localizer } from '../../basic/Localizer';
-import { SessionButton } from '../../basic/SessionButton';
+import { SessionButton, SessionButtonColor } from '../../basic/SessionButton';
 import { ToastUtils, UserUtils } from '../../../session/utils';
 import { getLatestReleaseFromFileServer } from '../../../session/apis/file_server_api/FileServerApi';
 import { SessionSpinner } from '../../loading';
+import { setDebugMode } from '../../../state/ducks/debug';
+import { updateDebugMenuModal } from '../../../state/ducks/modalDialog';
 
 export const DebugActions = () => {
   const [loadingLatestRelease, setLoadingLatestRelease] = useBoolean(false);
+
+  const dispatch = useDispatch();
 
   return (
     <>
@@ -31,6 +36,16 @@ export const DebugActions = () => {
         flexWrap="wrap"
         flexGap="var(--margins-md) var(--margins-lg)"
       >
+        <SessionButton
+          buttonColor={SessionButtonColor.Danger}
+          onClick={() => {
+            dispatch(setDebugMode(false));
+            dispatch(updateDebugMenuModal(null));
+          }}
+        >
+          Exit Debug Mode
+        </SessionButton>
+
         <SessionButton
           onClick={() => {
             void saveLogToDesktop();
