@@ -82,7 +82,7 @@
     "config": "1.28.1",
     "curve25519-js": "https://github.com/session-foundation/curve25519-js",
     "date-fns": "^3.6.0",
-    "dompurify": "^2.0.7",
+    "dompurify": "^3.2.4",
     "electron-localshortcut": "^3.2.1",
     "electron-updater": "^4.2.2",
     "emoji-mart": "^5.5.2",
