@@ -22,6 +22,7 @@ import {
 import { userConfigReducer as userConfig, UserConfigState } from './ducks/userConfig';
 import { userGroupReducer, UserGroupState } from './ducks/userGroups';
 import { releasedFeaturesReducer, ReleasedFeaturesState } from './ducks/releasedFeatures';
+import { debugReducer, type DebugState } from './ducks/debug';
 
 export type StateType = {
   search: SearchStateType;
@@ -41,6 +42,7 @@ export type StateType = {
   groups: GroupState;
   userGroups: UserGroupState;
   releasedFeatures: ReleasedFeaturesState;
+  debug: DebugState;
 };
 
 const reducers = {
@@ -61,6 +63,7 @@ const reducers = {
   groups: groupReducer,
   userGroups: userGroupReducer,
   releasedFeatures: releasedFeaturesReducer,
+  debug: debugReducer,
 };
 
 // Making this work would require that our reducer signature supported AnyAction, not

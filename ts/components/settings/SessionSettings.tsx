@@ -20,6 +20,7 @@ import { SettingsCategoryHelp } from './section/CategoryHelp';
 import { SettingsCategoryPermissions } from './section/CategoryPermissions';
 import { SettingsCategoryPrivacy } from './section/CategoryPrivacy';
 import { SettingsCategoryRecoveryPassword } from './section/CategoryRecoveryPassword';
+import { setDebugMode } from '../../state/ducks/debug';
 
 export function displayPasswordModal(
   passwordAction: PasswordAction,
@@ -68,6 +69,10 @@ const StyledSpanSessionInfo = styled.span`
 `;
 
 const SessionInfo = () => {
+  const [clickCount, setClickCount] = useState(0);
+
+  const dispatch = useDispatch();
+
   return (
     <StyledVersionInfo>
       <StyledSpanSessionInfo
@@ -88,7 +93,17 @@ const SessionInfo = () => {
           }}
         />
       </StyledSpanSessionInfo>
-      <StyledSpanSessionInfo>{window.versionInfo.commitHash}</StyledSpanSessionInfo>
+      <StyledSpanSessionInfo
+        onClick={() => {
+          setClickCount(clickCount + 1);
+          if (clickCount === 10) {
+            dispatch(setDebugMode(true));
+            setClickCount(0);
+          }
+        }}
+      >
+        {window.versionInfo.commitHash}
+      </StyledSpanSessionInfo>
     </StyledVersionInfo>
   );
 };

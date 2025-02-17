@@ -54,6 +54,7 @@ import { getIsModalVisible } from '../../state/selectors/modal';
 import { ReleasedFeatures } from '../../util/releaseFeature';
 import { MessageQueue } from '../../session/sending';
 import { useRefreshReleasedFeaturesTimestamp } from '../../hooks/useRefreshReleasedFeaturesTimestamp';
+import { useDebugMode } from '../../state/selectors/debug';
 
 const Section = (props: { type: SectionType }) => {
   const ourNumber = useSelector(getOurNumber);
@@ -259,7 +260,7 @@ function useUpdateBadgeCount() {
 export const ActionsPanel = () => {
   const [startCleanUpMedia, setStartCleanUpMedia] = useState(false);
   const ourPrimaryConversation = useSelector(getOurPrimaryConversation);
-  const showDebugMenu = window?.sessionFeatureFlags?.debug?.debugLogging;
+  const showDebugMenu = useDebugMode();
 
   // this maxi useEffect is called only once: when the component is mounted.
   // For the action panel, it means this is called only one per app start/with a user logged in
@@ -322,6 +323,7 @@ export const ActionsPanel = () => {
     window?.log?.warn('ActionsPanel: ourPrimaryConversation is not set');
     return null;
   }
+
   return (
     <>
       <LeftPaneSectionContainer data-testid="leftpane-section-container">
