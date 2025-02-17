@@ -40,3 +40,22 @@ export const getConversationItemString = (date: Date) => {
   });
   return formatter.format(date);
 };
+
+/**
+ * Returns a date like 11:00 am, 25 Jan 2026
+ */
+export function formatDateWithDateAndTime(date: Date) {
+  const dateFormatted = new Intl.DateTimeFormat(getBrowserLocale(), {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  }).format(date);
+
+  const timeFormatted = new Intl.DateTimeFormat(getBrowserLocale(), {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  }).format(date);
+
+  return [timeFormatted, dateFormatted].join(', ');
+}

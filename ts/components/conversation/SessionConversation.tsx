@@ -70,6 +70,8 @@ import {
 } from '../../state/selectors/selectedConversation';
 import { useSelectedDisableLegacyGroupDeprecatedActions } from '../../hooks/useRefreshReleasedFeaturesTimestamp';
 import { useAreGroupsCreatedAsNewGroupsYet } from '../../state/selectors/releasedFeatures';
+import { Constants } from '../../session';
+import { formatDateWithDateAndTime } from '../../util/i18n/formatting/conversationItemTimestamp';
 
 const DEFAULT_JPEG_QUALITY = 0.85;
 
@@ -686,7 +688,11 @@ function OutdatedLegacyGroupBanner() {
     : localize(
         weAreAdmin ? 'legacyGroupBeforeDeprecationAdmin' : 'legacyGroupBeforeDeprecationMember'
       )
-        .withArgs({ date: '[Date]' })
+        .withArgs({
+          date: formatDateWithDateAndTime(
+            new Date(Constants.FEATURE_RELEASE_TIMESTAMPS.LEGACY_GROUP_READONLY)
+          ),
+        })
         .toString();
 
   return isLegacyGroup && newGroupsCanBeCreated ? (

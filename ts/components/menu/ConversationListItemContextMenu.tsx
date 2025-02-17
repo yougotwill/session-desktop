@@ -50,6 +50,7 @@ const ConversationListItemContextMenu = (props: PropsContextConversationItem) =>
   const convoIdFromContext = useConvoIdFromContext();
 
   const disabledLegacyGroup = useDisableLegacyGroupDeprecatedActions(convoIdFromContext);
+  const isPinned = useIsPinned(convoIdFromContext);
 
   if (isSearching) {
     return null;
@@ -60,6 +61,7 @@ const ConversationListItemContextMenu = (props: PropsContextConversationItem) =>
       <SessionContextMenuContainer>
         <Menu id={triggerId} animation={getMenuAnimation()}>
           <DeleteDeprecatedLegacyGroupMenuItem />
+          {isPinned ? <PinConversationMenuItem /> : null}
         </Menu>
       </SessionContextMenuContainer>
     );
