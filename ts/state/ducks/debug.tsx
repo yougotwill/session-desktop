@@ -14,7 +14,8 @@ const debugSlice = createSlice({
   reducers: {
     setDebugMode: (state, action: PayloadAction<boolean>) => {
       (window as Window).sessionFeatureFlags.debug.debugLogging = action.payload;
-      return { ...state, debugMode: action.payload };
+      state.debugMode = action.payload;
+      return state;
     },
   },
 });
