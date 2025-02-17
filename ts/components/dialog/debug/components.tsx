@@ -82,7 +82,10 @@ export const DebugActions = () => {
               return;
             }
             setLoadingLatestRelease(true);
-            const versionNumber = await getLatestReleaseFromFileServer(userEd25519SecretKey);
+            const versionNumber = await getLatestReleaseFromFileServer(
+              userEd25519SecretKey,
+              'latest'
+            );
             setLoadingLatestRelease(false);
 
             if (versionNumber) {
