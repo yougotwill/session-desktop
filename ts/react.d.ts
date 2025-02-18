@@ -246,6 +246,7 @@ declare module 'react' {
     | 'modal-heading'
     | 'modal-description'
     | 'error-message'
+    | 'group-not-updated-30-days-banner'
     // modules profile name
     | 'module-conversation__user__profile-name'
     | 'module-message-search-result__header__name__profile-name'

@@ -101,6 +101,13 @@ export interface ConversationAttributes {
   // TODO we need to make a migration to remove this value from the db since the implementation is hacky
   /** to warn the user that the person he is talking to is using an old client which might cause issues */
   hasOutdatedClient?: string;
+
+  /**
+   * An 03-group is expired if an admin didn't come online for the last 30 days.
+   * In that case, we might not have any keys on the swarm, and so restoring from seed would mean we can't actually
+   * send any messages/nor decrypt any.
+   */
+  isExpired03Group?: boolean;
 }
 
 /**

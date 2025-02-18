@@ -32,6 +32,7 @@ import { closeRightPanel } from '../../../../state/ducks/conversations';
 import { groupInfoActions } from '../../../../state/ducks/metaGroups';
 import { resetRightOverlayMode, setRightOverlayMode } from '../../../../state/ducks/section';
 import {
+  useConversationIsExpired03Group,
   useSelectedConversationKey,
   useSelectedDisplayNameInProfile,
   useSelectedIsActive,
@@ -235,6 +236,7 @@ const DeleteGroupPanelButton = () => {
   const selectedUsername = useConversationUsername(convoId) || convoId;
   const isPublic = useIsPublic(convoId);
   const isGroupDestroyed = useIsGroupDestroyed(convoId);
+  const is03GroupExpired = useConversationIsExpired03Group(convoId);
 
   const showItem = showDeleteGroupItem({
     isGroup,
@@ -242,6 +244,7 @@ const DeleteGroupPanelButton = () => {
     isMessageRequestShown,
     isPublic,
     isGroupDestroyed,
+    is03GroupExpired,
   });
 
   if (!showItem || !convoId) {

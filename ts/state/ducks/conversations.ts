@@ -212,6 +212,7 @@ export interface ReduxConversationType {
   expirationMode?: DisappearingMessageConversationModeType;
   expireTimer?: number;
   hasOutdatedClient?: string;
+  isExpired03Group?: boolean;
   isTyping?: boolean;
   isBlocked?: boolean;
   isKickedFromGroup?: boolean;

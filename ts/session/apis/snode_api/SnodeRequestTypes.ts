@@ -29,6 +29,7 @@ import {
   WithTimestamp,
   WithGetNow,
 } from '../../types/with';
+import { isDevProd } from '../../../shared/env_vars';
 
 /**
  * This is the base sub request class that every other type of request has to extend.
@@ -603,6 +604,57 @@ export class DeleteAllFromGroupMsgNodeSubRequest extends DeleteAllSubRequest {
     this.adminSecretKey = args.secretKey;
     if (isEmpty(this.adminSecretKey)) {
       throw new Error('DeleteAllFromGroupMsgNodeSubRequest needs an adminSecretKey');
+    }
+  }
+
+  public async build() {
+    const signDetails = await SnodeGroupSignature.getSnodeGroupSignature({
+      method: this.method,
+      namespace: this.namespace,
+      group: { authData: null, pubkeyHex: this.destination, secretKey: this.adminSecretKey },
+    });
+
+    if (!signDetails) {
+      throw new Error(
+        `[DeleteAllFromGroupMsgNodeSubRequest] SnodeSignature.getSnodeSignatureParamsUs returned an empty result`
+      );
+    }
+    return {
+      method: this.method,
+      params: {
+        ...signDetails,
+        namespace: this.namespace,
+      },
+    };
+  }
+
+  public loggingId(): string {
+    return `${this.method}-${ed25519Str(this.destination)}-${this.namespace}`;
+  }
+
+  public getDestination() {
+    return this.destination;
+  }
+}
+
+/**
+ * Delete all the normal and config messages from a group swarm.
+ * Note: only used for debugging purposes
+ */
+export class DeleteAllFromGroupNodeSubRequest extends DeleteAllSubRequest {
+  public readonly namespace = 'all';
+  public readonly adminSecretKey: Uint8Array;
+  public readonly destination: GroupPubkeyType;
+
+  constructor(args: WithGroupPubkey & WithSecretKey) {
+    super();
+    this.destination = args.groupPk;
+    this.adminSecretKey = args.secretKey;
+    if (isEmpty(this.adminSecretKey)) {
+      throw new Error('DeleteAllFromGroupMsgNodeSubRequest needs an adminSecretKey');
+    }
+    if (!isDevProd()) {
+      throw new Error('DeleteAllFromGroupNodeSubRequest can only be used on non-production build');
     }
   }
 
@@ -1336,7 +1388,8 @@ export type RawSnodeSubRequests =
   | SubaccountRevokeSubRequest
   | SubaccountUnrevokeSubRequest
   | GetExpiriesFromNodeSubRequest
-  | DeleteAllFromGroupMsgNodeSubRequest;
+  | DeleteAllFromGroupMsgNodeSubRequest
+  | DeleteAllFromGroupNodeSubRequest;
 
 export type BuiltSnodeSubRequests = AwaitedReturn<RawSnodeSubRequests['build']>;
 

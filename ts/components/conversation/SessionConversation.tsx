@@ -63,6 +63,7 @@ import { PubKey } from '../../session/types';
 import { isUsAnySogsFromCache } from '../../session/apis/open_group_api/sogsv3/knownBlindedkeys';
 import { localize } from '../../localization/localeTools';
 import {
+  useConversationIsExpired03Group,
   useSelectedConversationKey,
   useSelectedIsPrivate,
   useSelectedIsPublic,
@@ -107,6 +108,20 @@ const ConvoLoadingSpinner = () => {
     <StyledSpinnerContainer>
       <SessionSpinner loading={true} />
     </StyledSpinnerContainer>
+  );
+};
+
+const GroupMarkedAsExpired = () => {
+  const selectedConvo = useSelectedConversationKey();
+  const isExpired03Group = useConversationIsExpired03Group(selectedConvo);
+  if (!selectedConvo || !PubKey.is03Pubkey(selectedConvo) || !isExpired03Group) {
+    return null;
+  }
+  return (
+    <NoticeBanner
+      text={window.i18n('groupNotUpdatedWarning')}
+      dataTestId="group-not-updated-30-days-banner"
+    />
   );
 };
 
@@ -259,6 +274,7 @@ export class SessionConversation extends Component<Props, State> {
       <>
         <div className="conversation-header">
           <ConversationHeaderWithDetails />
+          <GroupMarkedAsExpired />
           <OutdatedClientBanner
             ourDisplayNameInProfile={ourDisplayNameInProfile}
             selectedConversation={selectedConversation}

@@ -29,6 +29,7 @@ import {
   StoreUserMessageSubRequest,
   SubaccountRevokeSubRequest,
   SubaccountUnrevokeSubRequest,
+  type DeleteAllFromGroupNodeSubRequest,
 } from '../apis/snode_api/SnodeRequestTypes';
 import { NotEmptyArrayOfBatchResults } from '../apis/snode_api/BatchResultEntry';
 import { BatchRequests } from '../apis/snode_api/batchRequest';
@@ -426,6 +427,7 @@ type SortedSubRequestsType<T extends PubkeyType | GroupPubkeyType> = Array<
   | StoreRequestPerPubkey<T>
   | DeleteHashesRequestPerPubkey<T>
   | DeleteAllFromGroupMsgNodeSubRequest
+  | DeleteAllFromGroupNodeSubRequest
   | SubaccountRevokeSubRequest
   | SubaccountUnrevokeSubRequest
 >;

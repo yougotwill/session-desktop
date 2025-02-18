@@ -109,6 +109,7 @@ const LOKI_SCHEMA_VERSIONS = [
   updateToSessionSchemaVersion38,
   updateToSessionSchemaVersion39,
   updateToSessionSchemaVersion40,
+  updateToSessionSchemaVersion41,
 ];
 
 function updateToSessionSchemaVersion1(currentVersion: number, db: BetterSqlite3.Database) {
@@ -2040,6 +2041,24 @@ function updateToSessionSchemaVersion40(currentVersion: number, db: BetterSqlite
     db.exec(`UPDATE ${MESSAGES_TABLE}
       SET json = json_remove(json, '$.errors');
     `);
+
+    writeSessionSchemaVersion(targetVersion, db);
+  })();
+
+  console.log(`updateToSessionSchemaVersion${targetVersion}: success!`);
+}
+
+function updateToSessionSchemaVersion41(currentVersion: number, db: BetterSqlite3.Database) {
+  const targetVersion = 41;
+  if (currentVersion >= targetVersion) {
+    return;
+  }
+
+  console.log(`updateToSessionSchemaVersion${targetVersion}: starting...`);
+
+  db.transaction(() => {
+    // the 'isExpired03Group' field is used to keep track of an 03 group is expired
+    db.prepare(`ALTER TABLE ${CONVERSATIONS_TABLE} ADD COLUMN isExpired03Group BOOLEAN;`).run();
 
     writeSessionSchemaVersion(targetVersion, db);
   })();

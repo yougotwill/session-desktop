@@ -48,6 +48,7 @@ export function showDeleteGroupItem(args: {
   isMessageRequestShown: boolean;
   isKickedFromGroup: boolean;
   isGroupDestroyed: boolean;
+  is03GroupExpired: boolean;
 }) {
-  return sharedEnabled(args) && !showLeaveGroupItem(args);
+  return (sharedEnabled(args) && !showLeaveGroupItem(args)) || args.is03GroupExpired;
 }
