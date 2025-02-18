@@ -725,7 +725,7 @@ export class SwarmPolling {
             `configs received for group marked as expired: ${ed25519Str(pubkey)}... Marking it unexpired`
           );
 
-          // Group was marked as "expired", but apparently iot is not (we have hashes saved/just fetched).
+          // Group was marked as "expired", but apparently it is not (we have hashes saved/just fetched).
           // Maybe an admin came back online?, anyway mark the group as not expired.
           convo.set({ isExpired03Group: false });
           await convo.commit();

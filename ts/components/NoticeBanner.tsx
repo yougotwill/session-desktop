@@ -4,14 +4,14 @@ import { Flex } from './basic/Flex';
 import { SessionIconButton, SessionIconType } from './icon';
 import { StyledRootDialog } from './dialog/StyledRootDialog';
 
-const StyledNoticeBanner = styled(Flex)`
+const StyledNoticeBanner = styled(Flex)<{ isClickable: boolean }>`
   background-color: var(--primary-color);
   color: var(--black-color);
   font-size: var(--font-size-md);
   padding: var(--margins-xs) var(--margins-sm);
   text-align: center;
   flex-shrink: 0;
-  cursor: pointer;
+  cursor: ${props => (props.isClickable ? 'pointer' : 'default')};
 
   .session-icon-button {
     right: var(--margins-sm);
@@ -40,6 +40,7 @@ export const NoticeBanner = (props: NoticeBannerProps) => {
       justifyContent={'center'}
       alignItems={'center'}
       data-testid={dataTestId}
+      isClickable={!!onBannerClick}
       onClick={event => {
         if (!onBannerClick) {
           return;
