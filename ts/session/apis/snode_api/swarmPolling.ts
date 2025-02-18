@@ -703,7 +703,22 @@ export class SwarmPolling {
         );
         return [];
       }
+      const noConfigBeforeFetch = namespacesAndLastHashes.some(
+        m => !m.lastHash && SnodeNamespace.isGroupConfigNamespace(m.namespace)
+      );
 
+      const noConfigAfterFetch = namespacesAndLastHashesAfterFetch.some(
+        m => !m.lastHash && SnodeNamespace.isGroupConfigNamespace(m.namespace)
+      );
+
+      if (PubKey.is03Pubkey(pubkey) && noConfigBeforeFetch && noConfigAfterFetch) {
+        window.log.warn(`no configs before and after fetch of group: ${ed25519Str(pubkey)}`);
+        const convo = ConvoHub.use().get(pubkey);
+        if (convo && !convo.get('isExpired03Group')) {
+          convo.set({ isExpired03Group: true });
+          await convo.commit();
+        }
+      }
       if (!results.length) {
         return [];
       }

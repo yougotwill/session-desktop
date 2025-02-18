@@ -381,6 +381,10 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       toRet.hasOutdatedClient = this.getHasOutdatedClient();
     }
 
+    if (this.isExpired03Group()) {
+      toRet.isExpired03Group = true;
+    }
+
     if (
       currentNotificationSetting &&
       currentNotificationSetting !== ConversationNotificationSetting[0]
@@ -2705,6 +2709,10 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
 
   public getHasOutdatedClient() {
     return this.get('hasOutdatedClient');
+  }
+
+  public isExpired03Group() {
+    return PubKey.is03Pubkey(this.id) && !!this.get('isExpired03Group');
   }
 
   // #endregion

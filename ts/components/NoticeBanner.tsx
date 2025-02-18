@@ -25,13 +25,15 @@ const StyledText = styled.span`
 
 type NoticeBannerProps = {
   text: string;
-  icon: SessionIconType;
-  onBannerClick: () => void;
+  icon?: SessionIconType;
+  onBannerClick?: () => void;
   dataTestId: SessionDataTestId;
 };
 
 export const NoticeBanner = (props: NoticeBannerProps) => {
   const { text, onBannerClick, icon, dataTestId } = props;
+
+  const canBeClicked = !!onBannerClick;
 
   return (
     <StyledNoticeBanner
@@ -41,12 +43,15 @@ export const NoticeBanner = (props: NoticeBannerProps) => {
       alignItems={'center'}
       data-testid={dataTestId}
       onClick={event => {
+        if (!canBeClicked) {
+          return;
+        }
         event?.preventDefault();
         onBannerClick();
       }}
     >
       <StyledText>{text}</StyledText>
-      <SessionIconButton iconType={icon} iconColor="inherit" iconSize="small" />
+      {icon ? <SessionIconButton iconType={icon} iconColor="inherit" iconSize="small" /> : null}
     </StyledNoticeBanner>
   );
 };

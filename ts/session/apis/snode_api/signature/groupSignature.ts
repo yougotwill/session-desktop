@@ -94,7 +94,7 @@ async function getGroupPromoteMessage({
 
 type ParamsShared = {
   groupPk: GroupPubkeyType;
-  namespace: SnodeNamespacesGroup;
+  namespace: SnodeNamespacesGroup | 'all';
   method: 'retrieve' | 'store' | 'delete_all';
 };
 
@@ -150,7 +150,7 @@ export type GroupDetailsNeededForSignature = Pick<
 
 type StoreOrRetrieve = { method: 'store' | 'retrieve'; namespace: SnodeNamespacesGroup };
 type DeleteHashes = { method: 'delete'; hashes: Array<string> };
-type DeleteAllNonConfigs = { method: 'delete_all'; namespace: SnodeNamespacesGroup };
+type DeleteAllNonConfigs = { method: 'delete_all'; namespace: SnodeNamespacesGroup | 'all' };
 
 async function getSnodeGroupSignature({
   group,

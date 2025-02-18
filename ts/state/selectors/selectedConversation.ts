@@ -436,3 +436,10 @@ export function useSelectedLastMessage() {
 export function useSelectedMessageIds() {
   return useSelector(getSelectedMessageIds);
 }
+
+export function useConversationIsExpired03Group(convoId?: string) {
+  return useSelector(
+    (state: StateType) =>
+      !!convoId && PubKey.is03Pubkey(convoId) && !!getSelectedConversation(state)?.isExpired03Group
+  );
+}

@@ -79,6 +79,7 @@ const allowedKeysFormatRowOfConversation = [
   'priority',
   'expirationMode',
   'hasOutdatedClient',
+  'isExpired03Group',
 ];
 
 export function formatRowOfConversation(
@@ -213,6 +214,7 @@ const allowedKeysOfConversationAttributes = [
   'priority',
   'expirationMode',
   'hasOutdatedClient',
+  'isExpired03Group',
 ];
 
 /**

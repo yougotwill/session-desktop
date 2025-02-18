@@ -13,6 +13,7 @@ import { ItemWithDataTestId } from '../MenuItemWithDataTestId';
 import { showDeleteGroupItem } from './guard';
 import { Localizer } from '../../../basic/Localizer';
 import { useDisableLegacyGroupDeprecatedActions } from '../../../../hooks/useRefreshReleasedFeaturesTimestamp';
+import { useConversationIsExpired03Group } from '../../../../state/selectors/selectedConversation';
 
 export const DeleteGroupMenuItem = () => {
   const convoId = useConvoIdFromContext();
@@ -23,12 +24,15 @@ export const DeleteGroupMenuItem = () => {
   const isPublic = useIsPublic(convoId);
   const isGroupDestroyed = useIsGroupDestroyed(convoId);
 
+  const is03GroupExpired = useConversationIsExpired03Group(convoId);
+
   const showLeave = showDeleteGroupItem({
     isGroup,
     isKickedFromGroup,
     isMessageRequestShown,
     isPublic,
     isGroupDestroyed,
+    is03GroupExpired,
   });
 
   if (!showLeave) {

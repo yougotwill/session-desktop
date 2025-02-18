@@ -12,6 +12,7 @@ import {
 } from '../../../../webworker/workers/browser/libsession_worker_interface';
 import {
   DeleteAllFromGroupMsgNodeSubRequest,
+  DeleteAllFromGroupNodeSubRequest,
   DeleteHashesFromGroupNodeSubRequest,
   MAX_SUBREQUESTS_COUNT,
   StoreGroupKeysSubRequest,
@@ -116,7 +117,9 @@ async function pushChangesToGroupSwarmIfNeeded({
   WithRevokeSubRequest &
   Partial<WithTimeoutMs> & {
     supplementalKeysSubRequest?: StoreGroupKeysSubRequest;
-    deleteAllMessagesSubRequest?: DeleteAllFromGroupMsgNodeSubRequest;
+    deleteAllMessagesSubRequest?:
+      | DeleteAllFromGroupMsgNodeSubRequest
+      | DeleteAllFromGroupNodeSubRequest;
     extraStoreRequests: Array<StoreGroupMessageSubRequest>;
   }): Promise<RunJobResult> {
   // save the dumps to DB even before trying to push them, so at least we have an up to date dumps in the DB in case of crash, no network etc
@@ -173,6 +176,7 @@ async function pushChangesToGroupSwarmIfNeeded({
       m instanceof SubaccountRevokeSubRequest ||
       m instanceof SubaccountUnrevokeSubRequest ||
       m instanceof DeleteAllFromGroupMsgNodeSubRequest ||
+      m instanceof DeleteAllFromGroupNodeSubRequest ||
       m instanceof DeleteHashesFromGroupNodeSubRequest
   );
 
