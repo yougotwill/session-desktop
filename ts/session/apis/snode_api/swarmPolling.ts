@@ -703,19 +703,31 @@ export class SwarmPolling {
         );
         return [];
       }
-      const noConfigBeforeFetch = namespacesAndLastHashes.some(
-        m => !m.lastHash && SnodeNamespace.isGroupConfigNamespace(m.namespace)
-      );
 
-      const noConfigAfterFetch = namespacesAndLastHashesAfterFetch.some(
-        m => !m.lastHash && SnodeNamespace.isGroupConfigNamespace(m.namespace)
-      );
+      const noConfigBeforeFetch = namespacesAndLastHashes
+        .filter(m => SnodeNamespace.isGroupConfigNamespace(m.namespace))
+        .every(m => !m.lastHash);
 
-      if (PubKey.is03Pubkey(pubkey) && noConfigBeforeFetch && noConfigAfterFetch) {
-        window.log.warn(`no configs before and after fetch of group: ${ed25519Str(pubkey)}`);
-        const convo = ConvoHub.use().get(pubkey);
-        if (convo && !convo.get('isExpired03Group')) {
-          convo.set({ isExpired03Group: true });
+      const noConfigAfterFetch = results
+        .filter(m => SnodeNamespace.isGroupConfigNamespace(m.namespace))
+        .every(m => !m.messages.messages?.length);
+      const convo = ConvoHub.use().get(pubkey);
+
+      if (PubKey.is03Pubkey(pubkey) && convo) {
+        if (noConfigBeforeFetch && noConfigAfterFetch) {
+          window.log.warn(`no configs before and after fetch of group: ${ed25519Str(pubkey)}`);
+          if (!convo.getIsExpired03Group()) {
+            convo.set({ isExpired03Group: true });
+            await convo.commit();
+          }
+        } else if (convo.getIsExpired03Group()) {
+          window.log.info(
+            `configs received for group marked as expired: ${ed25519Str(pubkey)}... Marking it unexpired`
+          );
+
+          // Group was marked as "expired", but apparently iot is not (we have hashes saved/just fetched).
+          // Maybe an admin came back online?, anyway mark the group as not expired.
+          convo.set({ isExpired03Group: false });
           await convo.commit();
         }
       }
@@ -912,9 +924,8 @@ export class SwarmPolling {
         this.lastHashes[nodeEdKey][pubkey] = {};
       }
       this.lastHashes[nodeEdKey][pubkey][namespace] = lastHash || '';
-      return this.lastHashes[nodeEdKey][pubkey][namespace];
     }
-    // return the cached value
+    // return the cached value/the one set on the line above
     return this.lastHashes[nodeEdKey][pubkey][namespace];
   }
 
