@@ -33,8 +33,6 @@ type NoticeBannerProps = {
 export const NoticeBanner = (props: NoticeBannerProps) => {
   const { text, onBannerClick, icon, dataTestId } = props;
 
-  const canBeClicked = !!onBannerClick;
-
   return (
     <StyledNoticeBanner
       container={true}
@@ -43,7 +41,7 @@ export const NoticeBanner = (props: NoticeBannerProps) => {
       alignItems={'center'}
       data-testid={dataTestId}
       onClick={event => {
-        if (!canBeClicked) {
+        if (!onBannerClick) {
           return;
         }
         event?.preventDefault();

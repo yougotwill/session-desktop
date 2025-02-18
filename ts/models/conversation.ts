@@ -381,7 +381,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
       toRet.hasOutdatedClient = this.getHasOutdatedClient();
     }
 
-    if (this.isExpired03Group()) {
+    if (this.getIsExpired03Group()) {
       toRet.isExpired03Group = true;
     }
 
@@ -2711,7 +2711,7 @@ export class ConversationModel extends Backbone.Model<ConversationAttributes> {
     return this.get('hasOutdatedClient');
   }
 
-  public isExpired03Group() {
+  public getIsExpired03Group() {
     return PubKey.is03Pubkey(this.id) && !!this.get('isExpired03Group');
   }
 
