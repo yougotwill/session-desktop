@@ -63,9 +63,5 @@ export const sanitizeSessionUsername = (inputName: string) => {
   return validChars;
 };
 
-export const ed25519Str = (ed25519Key: string) => {
-  if (ed25519Key.length <= 6) {
-    return `(${ed25519Key})`;
-  }
-  return `(${ed25519Key.substr(0, 2)}...${ed25519Key.substr(-4)})`;
-};
+export const ed25519Str = (ed25519Key: string) =>
+  `(...${ed25519Key.length > 58 ? ed25519Key.substr(58) : ed25519Key})`;
