@@ -248,18 +248,23 @@ export const AboutInfo = () => {
         alignItems="center"
         flexGap="var(--margins-xs)"
       >
-        {aboutInfo.map((info, index) => (
-          <Flex
-            key={`debug-about-info-${index}`}
-            container={true}
-            width="100%"
-            alignItems="flex-start"
-            flexGap="var(--margins-xs)"
-          >
-            <p style={{ userSelect: 'text', lineHeight: 1.5 }}>{info}</p>
-            <CopyToClipboardIcon iconSize={'medium'} copyContent={info} />
-          </Flex>
-        ))}
+        {aboutInfo.map((info, index) => {
+          if (!info) {
+            return null;
+          }
+          return (
+            <Flex
+              key={`debug-about-info-${index}`}
+              container={true}
+              width="100%"
+              alignItems="flex-start"
+              flexGap="var(--margins-xs)"
+            >
+              <p style={{ userSelect: 'text', lineHeight: 1.5 }}>{info}</p>
+              <CopyToClipboardIcon iconSize={'medium'} copyContent={info} />
+            </Flex>
+          );
+        })}
         <SpacerXS />
       </Flex>
     </Flex>
