@@ -188,7 +188,9 @@ export const OverlayClosedGroupV2 = () => {
   }
 
   useKey('Escape', closeOverlay);
-  const contactsToRender = isSearch ? searchResultContactsOnly : privateContactsPubkeys;
+  const contactsToRender = isSearch
+    ? searchResultContactsOnly.filter(m => PubKey.is05Pubkey(m))
+    : privateContactsPubkeys;
 
   const noContactsForClosedGroup = isEmpty(searchTerm) && contactsToRender.length === 0;
 
