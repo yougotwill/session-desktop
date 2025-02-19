@@ -22,7 +22,7 @@ import { ClosedGroup } from '../../session/group/closed-group';
 import { GroupUpdateInfoChangeMessage } from '../../session/messages/outgoing/controlMessage/group_v2/to_group/GroupUpdateInfoChangeMessage';
 import { GroupUpdateMemberChangeMessage } from '../../session/messages/outgoing/controlMessage/group_v2/to_group/GroupUpdateMemberChangeMessage';
 import { PubKey } from '../../session/types';
-import { UserUtils } from '../../session/utils';
+import { ToastUtils, UserUtils } from '../../session/utils';
 import { PreConditionFailed } from '../../session/utils/errors';
 import { GroupInvite } from '../../session/utils/job_runners/jobs/GroupInviteJob';
 import { GroupPendingRemovals } from '../../session/utils/job_runners/jobs/GroupPendingRemovalsJob';
@@ -53,6 +53,7 @@ import {
   WithRemoveMembers,
 } from '../../session/types/with';
 import { updateGroupNameModal } from './modalDialog';
+import { localize } from '../../localization/localeTools';
 
 export type GroupState = {
   infos: Record<GroupPubkeyType, GroupInfoGet>;
@@ -276,6 +277,7 @@ const initNewGroupInWrapper = createAsyncThunk(
           clearFetchedHashes: true,
         });
       }
+      ToastUtils.pushToastError('groupCreateFailed', localize('groupErrorCreate').toString());
       throw e;
     }
   }
