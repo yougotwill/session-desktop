@@ -79,12 +79,14 @@ export const DebugActions = () => {
               ?.privKeyBytes;
             if (!userEd25519SecretKey) {
               window.log.error('[debugMenu] debugLatestRelease no userEd25519SecretKey');
+              setLoadingLatestRelease(false);
               return;
             }
             setLoadingLatestRelease(true);
             const result = await getLatestReleaseFromFileServer(userEd25519SecretKey, 'latest');
             if (!result) {
               ToastUtils.pushToastError('debugLatestRelease', 'Failed to fetch latest release');
+              setLoadingLatestRelease(false);
               return;
             }
             const [versionNumber, releaseChannel] = result;
@@ -114,12 +116,14 @@ export const DebugActions = () => {
               ?.privKeyBytes;
             if (!userEd25519SecretKey) {
               window.log.error('[debugMenu] debugAlphaRelease no userEd25519SecretKey');
+              setLoadingAlphaRelease(false);
               return;
             }
             setLoadingAlphaRelease(true);
             const result = await getLatestReleaseFromFileServer(userEd25519SecretKey, 'alpha');
             if (!result) {
               ToastUtils.pushToastError('debugAlphaRelease', 'Failed to fetch alpha release');
+              setLoadingAlphaRelease(false);
               return;
             }
             const [versionNumber, releaseChannel] = result;
