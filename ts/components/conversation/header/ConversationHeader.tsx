@@ -24,8 +24,10 @@ import { localize } from '../../../localization/localeTools';
 import { groupInfoActions } from '../../../state/ducks/metaGroups';
 import { updateConfirmModal } from '../../../state/ducks/modalDialog';
 import { setLeftOverlayMode } from '../../../state/ducks/section';
-import { SessionButtonColor, SessionButton } from '../../basic/SessionButton';
+import { SessionButtonColor, SessionButton, SessionButtonType } from '../../basic/SessionButton';
 import { useAreGroupsCreatedAsNewGroupsYet } from '../../../state/selectors/releasedFeatures';
+import { ConvoHub } from '../../../session/conversations';
+import { ConversationTypeEnum } from '../../../models/types';
 
 export const ConversationHeaderWithDetails = () => {
   const isSelectionMode = useIsMessageSelectionMode();
@@ -131,9 +133,26 @@ function RecreateGroupButton() {
   return (
     <RecreateGroupContainer>
       <SessionButton
-        buttonColor={SessionButtonColor.Primary}
+        buttonType={SessionButtonType.Outline}
         margin="var(--margins-sm)"
-        onClick={() => {
+        onClick={async () => {
+          try {
+            for (let index = 0; index < members.length; index++) {
+              const m = members[index];
+              /* eslint-disable no-await-in-loop */
+              const memberConvo = await ConvoHub.use().getOrCreateAndWait(
+                m,
+                ConversationTypeEnum.PRIVATE
+              );
+              if (!memberConvo.get('active_at')) {
+                memberConvo.set({ active_at: 1 });
+                await memberConvo.commit();
+              }
+              /* eslint-enable no-await-in-loop */
+            }
+          } catch (e) {
+            window.log.warn('recreate group: failed to recreate a member convo', e.message);
+          }
           showRecreateGroupModal(name || localize('groupUnknown').toString(), members);
         }}
       >

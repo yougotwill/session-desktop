@@ -7,6 +7,7 @@ import classNames from 'classnames';
 import { Component, RefObject, createRef } from 'react';
 import styled from 'styled-components';
 import { useDispatch } from 'react-redux';
+import { format } from 'date-fns';
 import {
   CompositionBox,
   SendMessageType,
@@ -72,7 +73,6 @@ import {
 import { useSelectedDisableLegacyGroupDeprecatedActions } from '../../hooks/useRefreshReleasedFeaturesTimestamp';
 import { useAreGroupsCreatedAsNewGroupsYet } from '../../state/selectors/releasedFeatures';
 import { Constants } from '../../session';
-import { formatDateWithDateAndTime } from '../../util/i18n/formatting/conversationItemTimestamp';
 
 const DEFAULT_JPEG_QUALITY = 0.85;
 
@@ -695,6 +695,10 @@ function OutdatedLegacyGroupBanner() {
     !isPrivate && !isPublic && selectedConversationKey && selectedConversationKey.startsWith('05');
 
   const newGroupsCanBeCreated = useAreGroupsCreatedAsNewGroupsYet();
+  const date = format(
+    new Date(Constants.FEATURE_RELEASE_TIMESTAMPS.LEGACY_GROUP_READONLY),
+    'h:mm a, d MMM yyyy'
+  );
 
   // FIXME change the date here. Remove after QA
   const text = deprecatedLegacyGroups
@@ -705,9 +709,7 @@ function OutdatedLegacyGroupBanner() {
         weAreAdmin ? 'legacyGroupBeforeDeprecationAdmin' : 'legacyGroupBeforeDeprecationMember'
       )
         .withArgs({
-          date: formatDateWithDateAndTime(
-            new Date(Constants.FEATURE_RELEASE_TIMESTAMPS.LEGACY_GROUP_READONLY)
-          ),
+          date,
         })
         .toString();
 

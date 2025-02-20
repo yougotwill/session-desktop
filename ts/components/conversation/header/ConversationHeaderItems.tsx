@@ -14,22 +14,17 @@ import { Avatar, AvatarSize } from '../../avatar/Avatar';
 import { SessionIconButton } from '../../icon';
 import { useDisableLegacyGroupDeprecatedActions } from '../../../hooks/useRefreshReleasedFeaturesTimestamp';
 
-export const AvatarHeader = (props: {
-  pubkey: string;
-  onAvatarClick?: (pubkey: string) => void;
-}) => {
+export const AvatarHeader = (props: { pubkey: string; onAvatarClick?: () => void }) => {
   const { pubkey, onAvatarClick } = props;
   const isDisabledLegacyGroupDeprecated = useDisableLegacyGroupDeprecatedActions(pubkey);
+
+  const optOnAvatarClick = !isDisabledLegacyGroupDeprecated ? onAvatarClick : undefined;
 
   return (
     <span className="module-conversation-header__avatar">
       <Avatar
         size={AvatarSize.S}
-        onAvatarClick={() => {
-          if (onAvatarClick && !isDisabledLegacyGroupDeprecated) {
-            onAvatarClick(pubkey);
-          }
-        }}
+        onAvatarClick={optOnAvatarClick}
         pubkey={pubkey}
         dataTestId="conversation-options-avatar"
       />
