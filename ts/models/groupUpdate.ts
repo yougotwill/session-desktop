@@ -175,7 +175,7 @@ export function getPromotedGroupUpdateChangeStr(
       case 0:
         return { token: 'groupPromotedYou', args: undefined };
       case 1:
-        return { token: 'groupPromotedYouTwo', args: { name: othersNames[0] } };
+        return { token: 'groupPromotedYouTwo', args: { other_name: othersNames[0] } };
       default:
         return { token: 'groupPromotedYouMultiple', args: { count: othersNames.length } };
     }
