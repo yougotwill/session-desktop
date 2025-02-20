@@ -1,3 +1,4 @@
+/* eslint-disable no-await-in-loop */
 import { useDispatch } from 'react-redux';
 
 import type { PubkeyType } from 'libsession_util_nodejs';
@@ -137,9 +138,17 @@ function RecreateGroupButton() {
         margin="var(--margins-sm)"
         onClick={async () => {
           try {
-            await Promise.all(
-              members.map(m => ConvoHub.use().getOrCreateAndWait(m, ConversationTypeEnum.PRIVATE))
-            );
+            for (let index = 0; index < members.length; index++) {
+              const m = members[index];
+              const memberConvo = await ConvoHub.use().getOrCreateAndWait(
+                m,
+                ConversationTypeEnum.PRIVATE
+              );
+              if (!memberConvo.get('active_at')) {
+                memberConvo.set({ active_at: 1 });
+                await memberConvo.commit();
+              }
+            }
           } catch (e) {
             window.log.warn('recreate group: failed to recreate a member convo', e.message);
           }

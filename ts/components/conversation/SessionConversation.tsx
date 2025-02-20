@@ -7,6 +7,7 @@ import classNames from 'classnames';
 import { Component, RefObject, createRef } from 'react';
 import styled from 'styled-components';
 import { useDispatch } from 'react-redux';
+import { format } from 'date-fns';
 import {
   CompositionBox,
   SendMessageType,
@@ -72,7 +73,6 @@ import {
 import { useSelectedDisableLegacyGroupDeprecatedActions } from '../../hooks/useRefreshReleasedFeaturesTimestamp';
 import { useAreGroupsCreatedAsNewGroupsYet } from '../../state/selectors/releasedFeatures';
 import { Constants } from '../../session';
-import { format } from 'date-fns';
 
 const DEFAULT_JPEG_QUALITY = 0.85;
 
