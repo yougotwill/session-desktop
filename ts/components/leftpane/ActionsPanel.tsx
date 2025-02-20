@@ -1,5 +1,4 @@
 import { ipcRenderer } from 'electron';
-import { debounce } from 'lodash';
 import { useEffect, useRef, useState } from 'react';
 
 import { useDispatch, useSelector } from 'react-redux';
@@ -218,7 +217,8 @@ const doAppStartUp = async () => {
   void Data.cleanupOrphanedAttachments();
 
   // TODOLATER make this a job of the JobRunner
-  debounce(triggerAvatarReUploadIfNeeded, 200);
+  // Note: do not make this a debounce call (as for some reason it doesn't work with promises)
+  void triggerAvatarReUploadIfNeeded();
 
   /* Postpone a little bit of the polling of sogs messages to let the swarm messages come in first. */
   global.setTimeout(() => {
