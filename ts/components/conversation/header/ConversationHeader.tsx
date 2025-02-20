@@ -24,8 +24,10 @@ import { localize } from '../../../localization/localeTools';
 import { groupInfoActions } from '../../../state/ducks/metaGroups';
 import { updateConfirmModal } from '../../../state/ducks/modalDialog';
 import { setLeftOverlayMode } from '../../../state/ducks/section';
-import { SessionButtonColor, SessionButton } from '../../basic/SessionButton';
+import { SessionButtonColor, SessionButton, SessionButtonType } from '../../basic/SessionButton';
 import { useAreGroupsCreatedAsNewGroupsYet } from '../../../state/selectors/releasedFeatures';
+import { ConvoHub } from '../../../session/conversations';
+import { ConversationTypeEnum } from '../../../models/types';
 
 export const ConversationHeaderWithDetails = () => {
   const isSelectionMode = useIsMessageSelectionMode();
@@ -131,9 +133,16 @@ function RecreateGroupButton() {
   return (
     <RecreateGroupContainer>
       <SessionButton
-        buttonColor={SessionButtonColor.Primary}
+        buttonType={SessionButtonType.Outline}
         margin="var(--margins-sm)"
-        onClick={() => {
+        onClick={async () => {
+          try {
+            await Promise.all(
+              members.map(m => ConvoHub.use().getOrCreateAndWait(m, ConversationTypeEnum.PRIVATE))
+            );
+          } catch (e) {
+            window.log.warn('recreate group: failed to recreate a member convo', e.message);
+          }
           showRecreateGroupModal(name || localize('groupUnknown').toString(), members);
         }}
       >

@@ -442,8 +442,12 @@ const refreshGroupDetailsFromWrapper = createAsyncThunk(
       const members = await MetaGroupWrapperActions.memberGetAll(groupPk);
 
       if (window.sessionFeatureFlags.debug.debugLibsessionDumps) {
-        window.log.info(`groupInfo after refreshGroupDetailsFromWrapper: ${stringify(infos)}`);
-        window.log.info(`groupMembers after refreshGroupDetailsFromWrapper: ${stringify(members)}`);
+        window.log.info(
+          `groupInfo of ${ed25519Str(groupPk)} after refreshGroupDetailsFromWrapper: ${stringify(infos)}`
+        );
+        window.log.info(
+          `groupMembers of ${ed25519Str(groupPk)} after refreshGroupDetailsFromWrapper: ${stringify(members)}`
+        );
       }
       return { groupPk, infos, members };
     } catch (e) {
@@ -1365,8 +1369,10 @@ const metaGroupSlice = createSlice({
         state.infos[groupPk] = infos;
         state.members[groupPk] = members;
         if (window.sessionFeatureFlags.debug.debugLibsessionDumps) {
-          window.log.info(`groupInfo after merge: ${stringify(infos)}`);
-          window.log.info(`groupMembers after merge: ${stringify(members)}`);
+          window.log.info(`groupInfo of ${ed25519Str(groupPk)} after merge: ${stringify(infos)}`);
+          window.log.info(
+            `groupMembers of ${ed25519Str(groupPk)} after merge: ${stringify(members)}`
+          );
         }
         refreshConvosModelProps([groupPk]);
       } else {
@@ -1389,8 +1395,12 @@ const metaGroupSlice = createSlice({
         state.members[groupPk] = members;
         refreshConvosModelProps([groupPk]);
         if (window.sessionFeatureFlags.debug.debugLibsessionDumps) {
-          window.log.info(`groupInfo after handleUserGroupUpdate: ${stringify(infos)}`);
-          window.log.info(`groupMembers after handleUserGroupUpdate: ${stringify(members)}`);
+          window.log.info(
+            `groupInfo of ${ed25519Str(groupPk)} after handleUserGroupUpdate: ${stringify(infos)}`
+          );
+          window.log.info(
+            `groupMembers of ${ed25519Str(groupPk)} after handleUserGroupUpdate: ${stringify(members)}`
+          );
         }
       } else {
         window.log.debug(
@@ -1411,9 +1421,11 @@ const metaGroupSlice = createSlice({
       state.members[groupPk] = members;
       refreshConvosModelProps([groupPk]);
       if (window.sessionFeatureFlags.debug.debugLibsessionDumps) {
-        window.log.info(`groupInfo after currentDeviceGroupMembersChange: ${stringify(infos)}`);
         window.log.info(
-          `groupMembers after currentDeviceGroupMembersChange: ${stringify(members)}`
+          `groupInfo of ${ed25519Str(groupPk)} after currentDeviceGroupMembersChange: ${stringify(infos)}`
+        );
+        window.log.info(
+          `groupMembers of ${ed25519Str(groupPk)} after currentDeviceGroupMembersChange: ${stringify(members)}`
         );
       }
     });
@@ -1434,8 +1446,12 @@ const metaGroupSlice = createSlice({
       state.members[groupPk] = members;
       refreshConvosModelProps([groupPk]);
       if (window.sessionFeatureFlags.debug.debugLibsessionDumps) {
-        window.log.info(`groupInfo after currentDeviceGroupNameChange: ${stringify(infos)}`);
-        window.log.info(`groupMembers after currentDeviceGroupNameChange: ${stringify(members)}`);
+        window.log.info(
+          `groupInfo of ${ed25519Str(groupPk)} after currentDeviceGroupNameChange: ${stringify(infos)}`
+        );
+        window.log.info(
+          `groupMembers of ${ed25519Str(groupPk)} after currentDeviceGroupNameChange: ${stringify(members)}`
+        );
       }
     });
     builder.addCase(currentDeviceGroupNameChange.rejected, (state, action) => {
@@ -1453,8 +1469,12 @@ const metaGroupSlice = createSlice({
       state.members[groupPk] = members;
       refreshConvosModelProps([groupPk]);
       if (window.sessionFeatureFlags.debug.debugLibsessionDumps) {
-        window.log.info(`groupInfo after handleMemberLeftMessage: ${stringify(infos)}`);
-        window.log.info(`groupMembers after handleMemberLeftMessage: ${stringify(members)}`);
+        window.log.info(
+          `groupInfo of ${ed25519Str(groupPk)} after handleMemberLeftMessage: ${stringify(infos)}`
+        );
+        window.log.info(
+          `groupMembers of ${ed25519Str(groupPk)} after handleMemberLeftMessage: ${stringify(members)}`
+        );
       }
     });
     builder.addCase(handleMemberLeftMessage.rejected, (_state, action) => {
@@ -1467,8 +1487,12 @@ const metaGroupSlice = createSlice({
       state.members[groupPk] = members;
       refreshConvosModelProps([groupPk]);
       if (window.sessionFeatureFlags.debug.debugLibsessionDumps) {
-        window.log.info(`groupInfo after inviteResponseReceived: ${stringify(infos)}`);
-        window.log.info(`groupMembers after inviteResponseReceived: ${stringify(members)}`);
+        window.log.info(
+          `groupInfo of ${ed25519Str(groupPk)} after inviteResponseReceived: ${stringify(infos)}`
+        );
+        window.log.info(
+          `groupMembers of ${ed25519Str(groupPk)} after inviteResponseReceived: ${stringify(members)}`
+        );
       }
     });
     builder.addCase(inviteResponseReceived.rejected, (_state, action) => {
