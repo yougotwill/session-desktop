@@ -395,7 +395,6 @@
   "groupLeaveDescription": "<b>{group_name}</b>에서 나가시겠습니까?",
   "groupLeaveDescriptionAdmin": "<b>{group_name}</b> 그룹을 탈퇴하시겠습니까?<br/><br/>이 작업은 모든 멤버를 제거하고 그룹 콘텐츠를 삭제합니다.",
   "groupLeaveErrorFailed": "{group_name}을(를) 떠날 수 없습니다.",
-  "groupLegacyBanner": "그룹이 업그레이드되었습니다. 새 그룹을 생성하여 업그레이드하세요. 오래된 그룹 기능은 {date} 이후로 저하될 것입니다.",
   "groupMemberLeft": "<b>{name}님</b>이 그룹을 나갔습니다.",
   "groupMemberLeftMultiple": "<b>{name}님</b>과 <b>{count}명</b>이 그룹을 나갔습니다.",
   "groupMemberLeftTwo": "<b>{name}님</b>과 <b>{other_name}님</b>이 그룹을 나갔습니다.",

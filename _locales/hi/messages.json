@@ -395,7 +395,6 @@
   "groupLeaveDescription": "क्या आप वाकई <b>{group_name}</b> छोड़ना चाहते हैं?",
   "groupLeaveDescriptionAdmin": "क्या आप वाकई <b>{group_name}</b> छोड़ना चाहते हैं?<br/><br/>इससे सभी सदस्यों को हटा दिया जाएगा और सभी समूह सामग्री को हटा दिया जाएगा।",
   "groupLeaveErrorFailed": "{group_name} छोड़ने में विफल",
-  "groupLegacyBanner": "समूहों को अपग्रेड किया गया है, अपग्रेड करने के लिए एक नया समूह बनाएं। पुरानी समूह कार्यक्षमता {date} से कमजोर हो जाएगी।",
   "groupMemberLeft": "<b>{name}</b> ने समूह छोड़ दिया।",
   "groupMemberLeftMultiple": "<b>{name}</b> और <b>{count} अन्य</b> समूह से निकल गए।",
   "groupMemberLeftTwo": "<b>{name}</b> और <b>{other_name}</b> समूह से निकल गए।",

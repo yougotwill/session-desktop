@@ -394,7 +394,6 @@
   "groupLeaveDescription": "Վստա՞հ եք, որ ուզում եք լքել <b>{group_name}</b> խումբը:",
   "groupLeaveDescriptionAdmin": "Իսկապե՞ս ուզում եք լքել <b>{group_name}</b>-ը:<br/><br/>Սա կհեռացնի բոլոր անդամներին և կհեռացնի խմբի բոլոր բովանդակությունները:",
   "groupLeaveErrorFailed": "Չհաջողվեց լքել {group_name} խումբը",
-  "groupLegacyBanner": "Խմբերն թարմացվել են, ստեղծեք նոր խումբ՝ թարմացնելու համար: Հին խմբի ֆունկցիոնալությունը վատթարանուլ է {date}-ից:",
   "groupMemberLeft": "<b>{name}֊ը</b> լքեց խումբը:",
   "groupMemberLeftMultiple": "<b>{name}֊ը</b> և <b>{count} ուրիշներ</b> լքեցին խումբը:",
   "groupMemberLeftTwo": "<b>{name}֊ը</b> և <b>{other_name}֊ը</b> լքեցին խումբը:",

@@ -394,7 +394,6 @@
   "groupLeaveDescription": "Er du sikker på at du vil forlate <b>{group_name}</b>?",
   "groupLeaveDescriptionAdmin": "Er du sikker på at du vil forlate <b>{group_name}</b>?<br/><br/>Dette vil fjerne alle medlemmer og slette alt gruppearbeid.",
   "groupLeaveErrorFailed": "Kunne ikke forlate {group_name}",
-  "groupLegacyBanner": "Grupper har blitt oppgradert, opprett en ny gruppe for å oppgradere. Gammel gruppefunksjonalitet vil bli redusert fra {date}.",
   "groupMemberLeft": "<b>{name}</b> forlot gruppen.",
   "groupMemberLeftMultiple": "<b>{name}</b> og <b>{count} andre</b> forlot gruppen.",
   "groupMemberLeftTwo": "<b>{name}</b> og <b>{other_name}</b> forlot gruppen.",

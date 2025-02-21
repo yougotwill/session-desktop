@@ -401,7 +401,6 @@
   "groupLeaveDescription": "Чи дійсно ви бажаєте вийти з <b>{group_name}</b>?",
   "groupLeaveDescriptionAdmin": "Ви впевнені, що хочете вийти з <b>{group_name}</b>?<br/><br/>Це видалить усіх учасників та вміст групи.",
   "groupLeaveErrorFailed": "Не вдалося вийти з {group_name}",
-  "groupLegacyBanner": "Групи було оновлено, створіть нову групу для оновлення. Функціонал старої групи буде скорочено з {date}.",
   "groupMemberLeft": "<b>{name}</b> покинув групу.",
   "groupMemberLeftMultiple": "<b>{name}</b> та ще <b>{count} інших</b> покинули групу.",
   "groupMemberLeftTwo": "<b>{name}</b> та <b>{other_name}</b> покинули групу.",

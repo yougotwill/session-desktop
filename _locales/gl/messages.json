@@ -362,7 +362,6 @@
   "groupLeaveDescription": "Tes a certeza de querer abandonar <b>{group_name}</b>?",
   "groupLeaveDescriptionAdmin": "Tes a certeza de querer abandonar <b>{group_name}</b>?<br/><br/> Isto desactivará o grupo para todos os membros.",
   "groupLeaveErrorFailed": "Non se puido abandonar {group_name}",
-  "groupLegacyBanner": "Os grupos foron modernizados, crea un novo grupo para actualizar. A funcionalidade dos antigos reséntase a partir de {date}.",
   "groupMemberLeft": "<b>{name}</b> abandonou o grupo.",
   "groupMemberLeftMultiple": "<b>{name}</b> e <b>{count} máis</b> abandonaron o grupo.",
   "groupMemberLeftTwo": "<b>{name}</b> e <b>{other_name}</b> abandonaron o grupo.",

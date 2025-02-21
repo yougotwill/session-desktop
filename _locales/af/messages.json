@@ -394,7 +394,6 @@
   "groupLeaveDescription": "Is jy seker jy wil <b>{group_name}</b> verlaat?",
   "groupLeaveDescriptionAdmin": "Is jy seker jy wil <b>{group_name}</b> verlaat?<br/><br/>Dit sal alle lede verwyder en alle groepinhoud skrap.",
   "groupLeaveErrorFailed": "Kon nie {group_name} verlaat nie",
-  "groupLegacyBanner": "Groepe is opgegradeer, skep 'n nuwe groep om op te gradeer. Ou groep funksionaliteit sal vanaf {date} agteruitgaan.",
   "groupMemberLeft": "<b>{name}</b> het die groep verlaat,",
   "groupMemberLeftMultiple": "<b>{name}</b> en <b>{count} ander</b> het die groep verlaat.",
   "groupMemberLeftTwo": "<b>{name}</b> en <b>{other_name}</b> het die groep verlaat.",

@@ -394,7 +394,6 @@
   "groupLeaveDescription": "Esteu segur que voleu abandonar <b>{group_name}</b>?",
   "groupLeaveDescriptionAdmin": "Esteu segur que voleu deixar <b>{group_name}</b>?<br/><br/>Això eliminarà tots els membres i suprimirà tot el contingut del grup.",
   "groupLeaveErrorFailed": "Ha fallat intentar deixar {group_name}",
-  "groupLegacyBanner": "Els grups han estat millorats, crea un nou grup per a actualitzar-lo. La funcionalitat dels grups antics es degradarà des del {date}.",
   "groupMemberLeft": "<b>{name}</b> ha abandonat el grup.",
   "groupMemberLeftMultiple": "<b>{name}</b> i <b>{count} altres</b> han abandonat el grup.",
   "groupMemberLeftTwo": "<b>{name}</b> i <b>{other_name}</b> han abandonat el grup.",

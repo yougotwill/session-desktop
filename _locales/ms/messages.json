@@ -395,7 +395,6 @@
   "groupLeaveDescription": "Adakah anda yakin anda mahu meninggalkan <b>{group_name}</b>?",
   "groupLeaveDescriptionAdmin": "Adakah anda pasti mahu meninggalkan <b>{group_name}</b>?<br/><br/>Ini akan membuang semua ahli dan memadamkan semua kandungan kumpulan.",
   "groupLeaveErrorFailed": "Gagal keluar dari {group_name}",
-  "groupLegacyBanner": "Kumpulan telah dinaik taraf, buat kumpulan baru untuk naik taraf. Fungsi kumpulan lama akan semakin merosot dari {date}.",
   "groupMemberLeft": "<b>{name}</b> meninggalkan kumpulan.",
   "groupMemberLeftMultiple": "<b>{name}</b> dan <b>{count} lainnya </b> meninggalkan kumpulan.",
   "groupMemberLeftTwo": "<b>{name}</b> dan <b>{other_name} </b> meninggalkan kumpulan.",

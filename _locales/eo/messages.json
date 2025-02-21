@@ -394,7 +394,6 @@
   "groupLeaveDescription": "Ĉu vi certas, ke vi volas forlasi <b>{group_name}</b>?",
   "groupLeaveDescriptionAdmin": "Ĉu vi certas, ke vi volas foriri el <b>{group_name}</b>?<br/><br/>Ĉi tio forigos ĉiujn membrojn kaj forigos ĉiun grupon enhavo.",
   "groupLeaveErrorFailed": "Malsukceso forlasi {group_name}",
-  "groupLegacyBanner": "Grupoj ĝisdatigitaj, kreu novan grupon por ĝisdatigi. Malnova grupa funkcio malkreskos de {date}.",
   "groupMemberLeft": "<b>{name}</b> forlasis la grupon.",
   "groupMemberLeftMultiple": "<b>{name}</b> kaj <b>{count} aliaj</b> forlasis la grupon.",
   "groupMemberLeftTwo": "<b>{name}</b> kaj <b>{other_name}</b> forlasis la grupon.",

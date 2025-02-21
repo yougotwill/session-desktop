@@ -395,7 +395,6 @@
   "groupLeaveDescription": "Ydych chi'n siŵr eich bod am adael <b>{group_name}</b>?",
   "groupLeaveDescriptionAdmin": "Ydych chi'n siŵr eich bod am adael <b>{group_name}</b>?<br/><br/>Bydd hyn yn dileu'r holl aelodau ac yn dileu'r holl gynnwys grŵp.",
   "groupLeaveErrorFailed": "Methu gadael {group_name}",
-  "groupLegacyBanner": "Mae grwpiau wedi'u huwchraddio, creu grŵp newydd i uwchraddio. Bydd swyddogaeth hen grŵp yn dirywio o {date}.",
   "groupMemberLeft": "<b>{name} y</b> gadawodd y grŵp.",
   "groupMemberLeftMultiple": "<b>{name} y</b> a <b>{count} eraill</b> gadawodd y grŵp.",
   "groupMemberLeftTwo": "<b>{name} y</b> a <b>{other_name}</b> gadawodd y grŵp.",

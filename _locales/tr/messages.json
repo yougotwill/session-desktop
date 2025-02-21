@@ -396,7 +396,6 @@
   "groupLeaveDescription": "<b>{group_name}</b> grubundan ayrılmak istediğinizden emin misiniz?",
   "groupLeaveDescriptionAdmin": "<b>{group_name}</b> adlı gruptan ayrılmak istediğinizden emin misiniz?<br/><br/>Bu, tüm üyeleri kaldıracak ve tüm grup içeriğini silecektir.",
   "groupLeaveErrorFailed": "{group_name} çıkış yapılamadı",
-  "groupLegacyBanner": "Gruplar güncellendi, yükseltmek için yeni bir grup oluşturun. Eski grup işlevselliği {date} tarihinden itibaren azaltılacaktır.",
   "groupMemberLeft": "<b>{name}</b> gruptan ayrıldı.",
   "groupMemberLeftMultiple": "<b>{name}</b> ve <b>{count} diğer</b> gruptan ayrıldı.",
   "groupMemberLeftTwo": "<b>{name}</b> ve <b>{other_name}</b> gruptan ayrıldı.",

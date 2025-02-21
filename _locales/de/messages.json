@@ -396,7 +396,6 @@
   "groupLeaveDescription": "Bist du sicher, dass du <b> {group_name}</b> verlassen möchtest?",
   "groupLeaveDescriptionAdmin": "Bist du sicher, dass du <b>{group_name}</b> verlassen möchtest?<br/><br/>Dadurch werden alle Mitglieder entfernt und alle Gruppendaten gelöscht.",
   "groupLeaveErrorFailed": "Fehler beim Verlassen von {group_name}",
-  "groupLegacyBanner": "Gruppen wurden aktualisiert. Erstelle eine neue Gruppe, um sie zu aktualisieren. Alte Gruppenfunktionen werden ab {date} eingeschränkt.",
   "groupMemberLeft": "<b>{name}</b> hat die Gruppe verlassen.",
   "groupMemberLeftMultiple": "<b>{name}</b> und <b>{count} andere</b> haben die Gruppe verlassen.",
   "groupMemberLeftTwo": "<b>{name}</b> und <b>{other_name}</b> haben die Gruppe verlassen.",

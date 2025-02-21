@@ -401,7 +401,6 @@
   "groupLeaveDescription": "Weet u zeker dat u <b>{group_name}</b> wilt verlaten?",
   "groupLeaveDescriptionAdmin": "Weet u zeker dat u de groep <b>{group_name}</b> wil verlaten?<br/><br/>Dit zal alle leden en de inhoud van de groep verwijderen.",
   "groupLeaveErrorFailed": "Het verlaten van {group_name} is mislukt",
-  "groupLegacyBanner": "Groepen zijn geüpgraded, maak een nieuwe groep aan om te upgraden. De oude groepsfunctionaliteit zal vanaf {date} worden afgebouwd.",
   "groupMemberLeft": "<b>{name}</b> heeft de groep verlaten.",
   "groupMemberLeftMultiple": "<b>{name}</b> en <b>{count} anderen</b> hebben de groep verlaten.",
   "groupMemberLeftTwo": "<b>{name}</b> en <b>{other_name}</b> hebben de groep verlaten.",

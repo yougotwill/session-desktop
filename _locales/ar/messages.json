@@ -400,7 +400,6 @@
   "groupLeaveDescription": "هل أنت متأكد من مغادرة <b>{group_name}</b>؟",
   "groupLeaveDescriptionAdmin": "هل أنت متأكد من مغادرة <b>{group_name}</b>?<br/><br/>سيؤدي ذلك إلى إزالة جميع الأعضاء وحذف كافة محتويات المجموعة.",
   "groupLeaveErrorFailed": "فشل في مغادرة {group_name}",
-  "groupLegacyBanner": "تمت ترقية المجموعات، أنشئ مجموعة جديدة للترقية. سوف تتدهور صلاحية عمل المجموعة القديمة بدءًا من {date}.",
   "groupMemberLeft": "<b>{name}</b> غادر المجموعة.",
   "groupMemberLeftMultiple": "<b>{name}</b> و <b>{count} آخرين</b> غادروا المجموعة.",
   "groupMemberLeftTwo": "<b>{name}</b> و <b>{other_name}</b> غادروا المجموعة.",

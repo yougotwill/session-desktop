@@ -407,7 +407,6 @@
   "groupLeaveDescription": "Czy na pewno chcesz opuścić grupę <b>{group_name}</b>?",
   "groupLeaveDescriptionAdmin": "Czy na pewno chcesz opuścić grupę <b>{group_name}</b>?<br/><br/>Usunie to wszystkich jej członków i całą zawartość grupy.",
   "groupLeaveErrorFailed": "Nie udało się opuścić grupy {group_name}",
-  "groupLegacyBanner": "Grupy zostały zaktualizowane. Aby zaktualizować, utwórz nową grupę. Funkcjonalność starej grupy zostanie ograniczona od {date}.",
   "groupMemberLeft": "<b>{name}</b> opuścił(a) grupę.",
   "groupMemberLeftMultiple": "<b>{name}</b> i <b>{count} innych użytkowników</b> opuścili grupę.",
   "groupMemberLeftTwo": "Użytkownicy <b>{name}</b> i <b>{other_name}</b> opuścili grupę.",

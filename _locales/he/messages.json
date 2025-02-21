@@ -394,7 +394,6 @@
   "groupLeaveDescription": "האם אתה בטוח שברצונך לעזוב את <b>{group_name}</b>?",
   "groupLeaveDescriptionAdmin": "האם אתה בטוח שברצונך לעזוב את <b>{group_name}</b>?<br/><br/>פעולה זו תסיר את כל החברים ותמחק את כל תוכן הקבוצה.",
   "groupLeaveErrorFailed": "נכשל לעזוב את {group_name}",
-  "groupLegacyBanner": "שדרגו קבוצות, צרו קבוצה חדשה לשדרוג. תפקוד הקבוצה הישן ידרדר מ-{date}.",
   "groupMemberLeft": "<b>{name}‏</b> עזב את הקבוצה.",
   "groupMemberLeftMultiple": "<b>{name}‏</b> ו<b>{count} אחרים‏</b> עזבו את הקבוצה.",
   "groupMemberLeftTwo": "<b>{name}‏</b> ו<b>{other_name}‏</b> עזבו את הקבוצה.",

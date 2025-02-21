@@ -395,7 +395,6 @@
   "groupLeaveDescription": "Je, una uhakika unataka kuondoka <b>{group_name}</b>?",
   "groupLeaveDescriptionAdmin": "Una uhakika unataka kutoka <b>{group_name}</b>?<br/><br/>Hii itawaondoa wanachama wote na kufuta maudhui yote ya kikundi.",
   "groupLeaveErrorFailed": "Imeshindikana kuondoka {group_name}",
-  "groupLegacyBanner": "Makundi yameboreshwa, unda kikundi kipya kuboresha. Utendaji wa kikundi wa zamani utapungua kutoka {date}.",
   "groupMemberLeft": "<b>{name}</b> ameondoka kwenye kundi.",
   "groupMemberLeftMultiple": "<b>{name}</b> na <b>{count} wengine</b> wameondoka kwenye kundi.",
   "groupMemberLeftTwo": "<b>{name}</b> na <b>{other_name}</b> wameondoka kwenye kundi.",

@@ -395,7 +395,6 @@
   "groupLeaveDescription": "Haqiqatan ham <b>{group_name}</b> dan ajralmoqchimisiz?",
   "groupLeaveDescriptionAdmin": "Haqiqatan ham <b>{group_name}</b> guruhini tark etmoqchimisiz?<br/><br/>Bu barcha a'zo va guruh kontentlarini o'chiradi.",
   "groupLeaveErrorFailed": "{group_name} dan chiqish vaqtida muammo chiqdi",
-  "groupLegacyBanner": "Guruhlar yangilandi, yangilanish uchun yangi guruh yarating. Eski guruh qobiliyatlari {date} dan pastga ketadi.",
   "groupMemberLeft": "<b>{name}</b> guruhni tark etdi.",
   "groupMemberLeftMultiple": "<b>{name}</b> va <b>{count} boshqalar</b> guruhni tark etishdi.",
   "groupMemberLeftTwo": "<b>{name}</b> va <b>{other_name}</b> guruhni tark etdi.",

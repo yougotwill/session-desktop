@@ -395,7 +395,6 @@
   "groupLeaveDescription": "Та <b>{group_name}</b>-ээс гарахдаа итгэлтэй байна уу?",
   "groupLeaveDescriptionAdmin": "Та <b>{group_name}</b> бүлгээс гарахдаа итгэлтэй байна уу?<br/><br/>Энэ нь бүх гишүүдийг устгаж, бүлгийн бүх контентыг устгана.",
   "groupLeaveErrorFailed": "{group_name} оос гарахад алдаа гарлаа",
-  "groupLegacyBanner": "Бүлгүүд шинэчлэгдсэн, шинэ бүлэг үүсгэ. Хуучин бүлгийн үйл ажиллагаа {date}-аас муудна.",
   "groupMemberLeft": "<b>{name} </b> бүлгээс гарлаа.",
   "groupMemberLeftMultiple": "<b>{name}</b> болон <b>{count} бусад </b> бүлгээс гарлаа.",
   "groupMemberLeftTwo": "<b>{name}</b> болон <b>{other_name} </b> бүлгээс гарлаа.",

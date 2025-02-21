@@ -395,7 +395,6 @@
   "groupLeaveDescription": "Biztos, hogy ki akarsz lépni a(z) <b>{group_name}</b> csoportból?",
   "groupLeaveDescriptionAdmin": "Biztos, hogy ki akarsz lépni a <b>{group_name}</b> csoportból?<br/><br/>Ez az összes tag eltávolításával és a csoport teljes tartalmának törlésével jár.",
   "groupLeaveErrorFailed": "Nem sikerült kilépni a {group_name} csoportból",
-  "groupLegacyBanner": "A csoportok funkció frissítve lett, hozzon létre egy új csoportot a frissítéshez. A régi csoportok funkcionalitása {date} dátumtól csökkenni fog.",
   "groupMemberLeft": "<b>{name}</b> kilépett a csoportból.",
   "groupMemberLeftMultiple": "<b>{name}</b> és <b>{count} másik személy</b> kiléptek a csoportból.",
   "groupMemberLeftTwo": "<b>{name}</b> és <b>{other_name}</b> kiléptek a csoportból.",

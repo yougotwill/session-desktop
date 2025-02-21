@@ -394,7 +394,6 @@
   "groupLeaveDescription": "Ziur zaude <b>{group_name}</b> utzi nahi duzula?",
   "groupLeaveDescriptionAdmin": "Ziur zaude <b>{group_name}</b> taldea utzi nahi duzula?<br/><br/>Honek kide guztiak kendu eta taldeko eduki guztiak ezabatuko ditu.",
   "groupLeaveErrorFailed": "Hutsa izan da {group_name} uzten",
-  "groupLegacyBanner": "Taldeak eguneratu dira, sortu talde berria eguneratzeko. Talde zaharren funtzionalitatea {date}-tik aurrera degradatuko da.",
   "groupMemberLeft": "<b>{name}</b>(e)k taldea utzi du.",
   "groupMemberLeftMultiple": "<b>{name}</b> eta <b>beste {count} pertsona</b> taldea utzi dute.",
   "groupMemberLeftTwo": "<b>{name}</b> eta <b>{other_name}</b> taldea utzi dute.",

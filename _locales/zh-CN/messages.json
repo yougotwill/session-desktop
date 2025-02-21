@@ -401,7 +401,6 @@
   "groupLeaveDescription": "您确定要退出<b>{group_name}</b>吗？",
   "groupLeaveDescriptionAdmin": "您确定要离开<b>{group_name}</b>吗？<br/><br/>该操作将移除所有成员并删除所有群组内容。",
   "groupLeaveErrorFailed": "离开{group_name}失败",
-  "groupLegacyBanner": "群组已升级，请创建新群组以进行升级。旧群组功能将在{date}后弃用。",
   "groupMemberLeft": "<b>{name}</b>离开了群组。",
   "groupMemberLeftMultiple": "<b>{name}</b>和其他<b>{count}名</b>成员离开了群组。",
   "groupMemberLeftTwo": "<b>{name}</b>和<b>{other_name}</b>离开了群组。",

@@ -394,7 +394,6 @@
   "groupLeaveDescription": "ਕੀ ਤੁਸੀਂ ਯਕੀਨਨ <b>{group_name}</b> ਨੂੰ ਛੱਡਣਾ ਚਾਹੁੰਦੇ ਹੋ?",
   "groupLeaveDescriptionAdmin": "ਕੀ ਤੁਸੀਂ ਯਕੀਨਨ <b>{group_name}</b> ਛੱਡਣਾ ਚਾਹੁੰਦੇ ਹੋ?<br/><br/>ਇਹ ਸਾਰੇ ਮੈਂਬਰਾਂ ਨੂੰ ਹਟਾ ਦੇਵੇਗਾ ਅਤੇ ਸਾਰੀ ਗਰੁੱਪ ਸੂਚਨਾ ਨੂੰ ਮਿਟਾ ਦੇਵੇਗਾ।",
   "groupLeaveErrorFailed": "{group_name} ਨੂੰ ਛੱਡਣ ਵਿੱਚ ਅਸਫਲ",
-  "groupLegacyBanner": "ਗਰੁੱਪਾਂ ਨੂੰ ਅਪਗਰੇਡ ਕੀਤਾ ਗਿਆ ਹੈ, ਅਪਗਰੇਡ ਕਰਨ ਲਈ ਨਵਾਂ ਗਰੁੱਪ ਬਣਾਓ। ਪੁਰਾਣੀ ਗਰੁੱਪ ਵਿਸ਼ੇਸ਼ਤਾਵਾਂ {date} ਤੋਂ ਘਟਦਾ ਰਹਿਣਗੀਆਂ।",
   "groupMemberLeft": "<b>{name}</b>ਗਰੁੱਪ ਛੱਡਕੇ ਚਲੇ ਗਏ।",
   "groupMemberLeftMultiple": "<b>{name}</b>ਅਤੇ<b>{count}ਹੋਰਾਂ</b>ਗਰੁੱਪ ਛੱਡਕਰ ਚਲੇ ਗਏ।",
   "groupMemberLeftTwo": "<b>{name}</b>ਅਤੇ<b>{other_name}</b>ਗਰੁੱਪ ਛੱਡਕਰ ਚਲੇ ਗਏ।",

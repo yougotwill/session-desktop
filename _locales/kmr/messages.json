@@ -395,7 +395,6 @@
   "groupLeaveDescription": "Tu piştrast î ku tu dixwazî ji <b>{group_name}</b> derkevî?",
   "groupLeaveDescriptionAdmin": "Tu piştrast î ku tu dixwazî ji <b>{group_name}</b> derkeve?<br/><br/>Ev dixwazî hemû endaman derxistîn û hemû naveroka komeyê jê reş dikirin.",
   "groupLeaveErrorFailed": "Têbînete cavaniyên {group_name}",
-  "groupLegacyBanner": "Komên ku westîna nûvekirinê hene, koma nû biafirîne. Karûbarî grûpa kevn vê sererast be dê hertir bimeşine ji vira {date}.",
   "groupMemberLeft": "<b>{name}</b> ji komê derket.",
   "groupMemberLeftMultiple": "<b>{name}</b> û <b>{count} yên din</b> ji komê derketin.",
   "groupMemberLeftTwo": "<b>{name}</b> û <b>{other_name}</b> ji komê derketin.",

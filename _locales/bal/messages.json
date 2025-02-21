@@ -394,7 +394,6 @@
   "groupLeaveDescription": "دم کی لحاظ انت کہ ایی <b>{group_name}</b> اخلیقی؟",
   "groupLeaveDescriptionAdmin": "آیا شما مطمئن هستن که صرف <b>{group_name}</b>؟<br/><br/>ایگ انت تمام ممبران بکھی و پیغامانی ڈلیٹ.",
   "groupLeaveErrorFailed": "{group_name} کو چھوڑنے میں ناکامی",
-  "groupLegacyBanner": "گروپاںءَ آپگریڈ بوءِ گا اِنّی ایک نوک گروپ ٺاہگ۔ پُرانا گروپءِ کجيعت  {date} ہد کجے.",
   "groupMemberLeft": "<b>{name}</b> jāmš.",
   "groupMemberLeftMultiple": "<b>{name}</b> a <b>{count} drīg</b> šumārīyā jāmš.",
   "groupMemberLeftTwo": "<b>{name}</b> a <b>{other_name} </b> jāmš.",

@@ -373,7 +373,6 @@
   "groupLeaveDescription": "Vai tiešām vēlaties pamest <b>{group_name}</b>?",
   "groupLeaveDescriptionAdmin": "Vai esat pārliecināts, ka vēlaties pamest <b>{group_name}</b>?<br/><br/>Tas noņems visus dalībniekus un dzēsīs visu grupas saturu.",
   "groupLeaveErrorFailed": "Neizdevās pamest {group_name}",
-  "groupLegacyBanner": "Grupas ir atjauninātas. Izveido jaunu grupu, lai atjauninātu. Vecas grupas funkcionalitāte būs degradēta no {date}.",
   "groupMemberLeft": "<b>{name}</b> atstāja grupu.",
   "groupMemberLeftMultiple": "<b>{name}</b> un <b>{count} citi</b> atstāja grupu.",
   "groupMemberLeftTwo": "<b>{name}</b> un <b>{other_name}</b> atstāja grupu.",

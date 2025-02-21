@@ -395,7 +395,6 @@
   "groupLeaveDescription": "您確定要離開 <b>{group_name}</b> 嗎？",
   "groupLeaveDescriptionAdmin": "您確定要離開 <b>{group_name}</b> 嗎？<br/><br/>這將移除所有成員並刪除所有群組內容。",
   "groupLeaveErrorFailed": "無法退出 {group_name}",
-  "groupLegacyBanner": "群組已升級，創建一個新群組以進行升級。舊群組的功能將從 {date} 開始無法正常使用。",
   "groupMemberLeft": "<b>{name}</b> 離開此群組。",
   "groupMemberLeftMultiple": "<b>{name}</b> 和 <b>{count} 位其他成員</b> 離開了群組。",
   "groupMemberLeftTwo": "<b>{name}</b> 和 <b>{other_name}</b> 離開此群組。",
