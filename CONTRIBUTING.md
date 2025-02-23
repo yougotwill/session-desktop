@@ -41,7 +41,7 @@ If you use other python versions you might have or need a python version manager
 > The package [setuptools](https://pypi.org/project/setuptools/) was removed in Python 3.12, so you'll need to install it manually.
 
 ```sh
-pip install setuptools
+python -m pip install --upgrade pip setuptools
 ```
 
 ## Linux
@@ -93,7 +93,7 @@ pip install setuptools
 - Install [setuptools](https://pypi.org/project/setuptools/).
 
   ```sh
-  pip install setuptools
+  python -m pip install --upgrade pip setuptools
   ```
 
 - Install [Yarn Classic](https://classic.yarnpkg.com/en/docs/install/#mac-stable)
@@ -137,7 +137,7 @@ pip install setuptools
 - Install [setuptools](https://pypi.org/project/setuptools/).
 
   ```sh
-  pip install setuptools
+  python -m pip install --upgrade pip setuptools
   ```
 
 - Install [Yarn Classic](https://classic.yarnpkg.com/en/docs/install/#mac-stable)
@@ -233,7 +233,7 @@ Setup instructions for Windows using Chocolatey:
 - Install [setuptools](https://pypi.org/project/setuptools/)
 
   ```sh
-  pip install setuptools
+  python -m pip install --upgrade pip setuptools
   ```
 
 - Install [Yarn Classic](https://classic.yarnpkg.com/en/docs/install/#windows-stable)
