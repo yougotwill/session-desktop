@@ -26,7 +26,7 @@ import { MessageHighlighter } from './MessageHighlighter';
 import { MessageLinkPreview } from './MessageLinkPreview';
 import { MessageQuote } from './MessageQuote';
 import { MessageText } from './MessageText';
-import { formatFullDate } from '../../../../util/i18n/formatting/generics';
+import { useFormatFullDate } from '../../../../hooks/useFormatFullDate';
 
 export type MessageContentSelectorProps = Pick<
   MessageRenderingProps,
@@ -125,15 +125,15 @@ export const MessageContent = (props: Props) => {
     shouldHighlightMessage,
   ]);
 
+  const toolTipTitle = useFormatFullDate(contentProps?.serverTimestamp || contentProps?.timestamp);
+
   if (!contentProps) {
     return null;
   }
 
-  const { direction, text, timestamp, serverTimestamp, previews, quote } = contentProps;
+  const { direction, text, previews, quote } = contentProps;
 
   const hasContentBeforeAttachment = !isEmpty(previews) || !isEmpty(quote) || !isEmpty(text);
-
-  const toolTipTitle = formatFullDate(new Date(serverTimestamp || timestamp));
 
   return (
     <StyledMessageContent

@@ -28,6 +28,7 @@ import { SessionButtonColor, SessionButton, SessionButtonType } from '../../basi
 import { useAreGroupsCreatedAsNewGroupsYet } from '../../../state/selectors/releasedFeatures';
 import { ConvoHub } from '../../../session/conversations';
 import { ConversationTypeEnum } from '../../../models/types';
+import { Constants } from '../../../session';
 
 export const ConversationHeaderWithDetails = () => {
   const isSelectionMode = useIsMessageSelectionMode();
@@ -145,7 +146,9 @@ function RecreateGroupButton() {
                 ConversationTypeEnum.PRIVATE
               );
               if (!memberConvo.get('active_at')) {
-                memberConvo.set({ active_at: 1 });
+                memberConvo.set({
+                  active_at: Constants.CONVERSATION.LAST_JOINED_FALLBACK_TIMESTAMP,
+                });
                 await memberConvo.commit();
               }
               /* eslint-enable no-await-in-loop */
