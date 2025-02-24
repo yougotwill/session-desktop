@@ -395,7 +395,6 @@
   "groupLeaveDescription": "Sigurado ka bang gusto mong umalis sa <b>{group_name}</b>?",
   "groupLeaveDescriptionAdmin": "Sigurado ka bang gusto mong umalis sa <b>{group_name}</b>?<br/><br/>Mababura nito ang lahat ng miyembro at lahat ng group content.",
   "groupLeaveErrorFailed": "Nabigong umalis sa {group_name}",
-  "groupLegacyBanner": "Na-upgrade na ang mga grupo, lumikha ng bagong grupo upang mag-upgrade. Ang lumang pagpapagana ng grupo ay babawasan mula {date}.",
   "groupMemberLeft": "<b>{name}</b> ay umalis sa grupo.",
   "groupMemberLeftMultiple": "<b>{name}</b> at <b>{count} iba pa</b> ay umalis sa grupo.",
   "groupMemberLeftTwo": "<b>{name}</b> at <b>{other_name}</b> ay umalis sa grupo.",

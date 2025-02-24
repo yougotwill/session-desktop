@@ -393,7 +393,6 @@
   "groupLeaveDescription": "तपाईं <b>{group_name}</b> समूह छोड्न निश्चित हुनुहुन्छ?",
   "groupLeaveDescriptionAdmin": "के तपाई पक्का हुनुहुन्छ कि तपाई <b>{group_name}</b> छोड्न चाहनुहुन्छ?<br/><br/>यसले सबै सदस्यहरूलाई हटाउँछ र सबै समूह सामग्री मेटाउँछ।",
   "groupLeaveErrorFailed": "{group_name} छोड्न असफल।",
-  "groupLegacyBanner": "समूहहरू अपग्रेड गरिएका छन्, अपग्रेड गर्न नयाँ समूह सिर्जना गर्नुहोस्। पुरानो समूह कार्यक्षमता {date} देखि घटाइनेछ।",
   "groupMemberLeft": "<b>{name}</b> समूह छोड्नुभयो।",
   "groupMemberLeftMultiple": "<b>{name}</b> र <b>{count} अन्य</b> समूह छोड्नुभयो।",
   "groupMemberLeftTwo": "<b>{name}</b> र <b>{other_name}</b> समूह छोड्नुभयो।",

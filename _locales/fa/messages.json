@@ -393,7 +393,6 @@
   "groupLeave": "ترک کردن گروه",
   "groupLeaveDescriptionAdmin": "ایا مطمین هستید می خواهید <b>{group_name}</b> را ترک کنید؟ <br/><br/>این کار باعث حذف همه ی اعضا و پاک شدن تمام محتوای گروه خواهد شد.",
   "groupLeaveErrorFailed": "ترک {group_name} ناموفق بود",
-  "groupLegacyBanner": "گروه‌ها ارتقا یافته‌اند، یک گروه جدید ایجاد کنید تا ارتقا دهید. عملکرد گروه قدیمی از {date} کاهش می‌یابد.",
   "groupMemberLeft": "<b>{name}</b> گروه را ترک کرد.",
   "groupMemberLeftMultiple": "<b>{name}</b> و <b>{count} نفر دیگر</b> گروه را ترک کردند.",
   "groupMemberLeftTwo": "<b>{name}</b> و <b>{other_name}</b> گروه را ترک کردند.",

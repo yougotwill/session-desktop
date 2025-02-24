@@ -394,7 +394,6 @@
   "groupLeaveDescription": "Kas soovite grupist või kogukonnast <b>{group_name}</b> lahkuda?",
   "groupLeaveDescriptionAdmin": "Kas olete kindel, et soovite lahkuda grupist <b>{group_name}</b>?<br/><br/>See eemaldab kõik liikmed ja kustutab kogu grupi sisu.",
   "groupLeaveErrorFailed": "Ebaõnnestus lahkuda grupist {group_name}",
-  "groupLegacyBanner": "Grupid on uuendatud, loo uus grupp, et uuendada. Vana grupi funktsionaalsus hakkab alates {date} aeguma.",
   "groupMemberLeft": "<b>{name}</b> lahkus grupist.",
   "groupMemberLeftMultiple": "<b>{name}</b> ja <b>{count} teist</b> lahkusid grupist.",
   "groupMemberLeftTwo": "<b>{name}</b> ja <b>{other_name}</b> lahkusid grupist.",

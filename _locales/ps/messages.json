@@ -394,7 +394,6 @@
   "groupLeaveDescription": "ایا تاسو ډاډه یاست چې <b>{group_name}</b> پریږدئ؟",
   "groupLeaveDescriptionAdmin": "ایا تاسو ډاډه یاست چې تاسو غواړئ <b>{group_name}</b> پریږدئ؟<br/><br/>دا به ټول غړي لرې کړي او د ډلې ټول مینځپانګه به حذف کړي.",
   "groupLeaveErrorFailed": "د {group_name} پرېښودو کې ناکامه",
-  "groupLegacyBanner": "ډلې پرمختګ کړی دی، د نویو ډلو د جوړولو لپاره نوی ډله جوړه کړئ. د زړو ډلو فعالیت به له {date} څخه کم شي.",
   "groupMemberLeft": "<b>{name}</b> ګروپ پریښود.",
   "groupMemberLeftMultiple": "<b>{name}</b> او <b>{count} نورو</b> ګروپ پریښود.",
   "groupMemberLeftTwo": "<b>{name}</b> او <b>{other_name}</b> ګروپ پریښود.",

@@ -394,7 +394,6 @@
   "groupLeaveDescription": "დარწმუნებული ხართ, რომ გსურთ <b>{group_name}</b>-დან გასვლა?",
   "groupLeaveDescriptionAdmin": "დარწმუნებული ხართ, რომ გსურთ წასვლა ჯგუფიდან <b>{group_name}</b>?<br/><br/>ეს წაშლის ყველა წევრს და ყველა ჯგუფის შინაარსს.",
   "groupLeaveErrorFailed": "ვერ შევძელიში {group_name} ჯგუფიდან ანუ მიცემა",
-  "groupLegacyBanner": "ჯგუფები გაუმჯობესებულია, შექმენით ახალი ჯგუფი. ძველ ჯგუფის ფუნქციონალი დაქვეითებული იქნება {date}-დან.",
   "groupMemberLeft": "<b>{name}ს</b> დატოვა ჯგუფი.",
   "groupMemberLeftMultiple": "<b>{name}ს</b> და <b>{count} სხვებს</b> დატოვეს ჯგუფი.",
   "groupMemberLeftTwo": "<b>{name}ს</b> და <b>{other_name}ს</b> დატოვეს ჯგუფი.",

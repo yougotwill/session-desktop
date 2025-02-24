@@ -394,7 +394,6 @@
   "groupLeaveDescription": "Ar tikrai norite išeiti iš <b>{group_name}</b>?",
   "groupLeaveDescriptionAdmin": "Ar tikrai norite išeiti iš <b>{group_name}</b>?<br/><br/>Tai pašalins visus narius ir ištrins visą grupės turinį.",
   "groupLeaveErrorFailed": "Nepavyko išeiti iš {group_name}",
-  "groupLegacyBanner": "Grupės buvo atnaujintos, sukurkite naują grupę norėdami atnaujinti. Senų grupių funkcionalumas bus apribotas nuo {date}.",
   "groupMemberLeft": "<b>{name}</b> išėjo iš grupės.",
   "groupMemberLeftMultiple": "<b>{name}</b> ir <b>{count} kiti</b> išėjo iš grupės.",
   "groupMemberLeftTwo": "<b>{name}</b> ir <b>{other_name}</b> išėjo iš grupės.",

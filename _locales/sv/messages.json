@@ -396,7 +396,6 @@
   "groupLeaveDescription": "Är du säker på att du vill lämna <b>{group_name}</b>?",
   "groupLeaveDescriptionAdmin": "Är du säker på att du vill lämna <b>{group_name}</b>?<br/><br/>Detta kommer att ta bort alla medlemmar och radera allt gruppinnehåll.",
   "groupLeaveErrorFailed": "Misslyckades med att lämna {group_name}",
-  "groupLegacyBanner": "Grupper har uppgraderats, skapa en ny grupp för att uppgradera. Gamla gruppfunktioner kommer att försämras från och med {date}.",
   "groupMemberLeft": "<b>{name}</b> lämnade gruppen.",
   "groupMemberLeftMultiple": "<b>{name}</b> och <b>{count} andra</b> lämnade gruppen.",
   "groupMemberLeftTwo": "<b>{name}</b> och <b>{other_name}</b> lämnade gruppen.",

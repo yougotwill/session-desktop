@@ -394,7 +394,6 @@
   "groupLeaveDescription": "Ali ste prepričani, da želite zapustiti <b>{group_name}</b>?",
   "groupLeaveDescriptionAdmin": "Ali ste prepričani, da želite zapustiti <b>{group_name}</b>?<br/><br/>To bo odstranilo vse člane in izbrisalo vsebine skupine.",
   "groupLeaveErrorFailed": "Ni uspelo zapustiti skupine {group_name}",
-  "groupLegacyBanner": "Skupine so bile nadgrajene, ustvarite novo skupino za nadgradnjo. Stara funkcionalnost skupine bo od {date} omejena.",
   "groupMemberLeft": "<b>{name} </b> je zapustil skupino.",
   "groupMemberLeftMultiple": "<b>{name} </b> in <b>{count} drugi </b> so zapustili skupino.",
   "groupMemberLeftTwo": "<b>{name} </b> in <b>{other_name} </b> sta zapustila skupino.",

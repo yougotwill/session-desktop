@@ -395,7 +395,6 @@
   "groupLeaveDescription": "Σίγουρα θέλετε να αποχωρήσετε από την ομάδα <b>{group_name}</b>",
   "groupLeaveDescriptionAdmin": "Σίγουρα θέλετε να αποχωρήσετε από την <b>{group_name}</b>?<br/><br/>Αυτό θα αφαιρέσει όλα τα μέλη και θα διαγράψει όλο το περιεχόμενο της ομάδας.",
   "groupLeaveErrorFailed": "Αποτυχία αποχώρησης από το {group_name}",
-  "groupLegacyBanner": "Οι ομάδες έχουν αναβαθμιστεί, δημιουργήστε μια νέα ομάδα για αναβάθμιση. Η παλαιά λειτουργία ομάδας θα υποβαθμιστεί από {date}.",
   "groupMemberLeft": "<b>{name}</b> αποχώρησε από την ομάδα.",
   "groupMemberLeftMultiple": "<b>{name}</b> και <b>{count} ακόμη</b> έφυγαν από την ομάδα.",
   "groupMemberLeftTwo": "<b>{name}</b> και <b>{other_name}</b> έφυγε από την ομάδα.",

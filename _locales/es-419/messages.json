@@ -395,7 +395,6 @@
   "groupLeaveDescription": "¿Estás seguro de que deseas abandonar <b>{group_name}</b>?",
   "groupLeaveDescriptionAdmin": "¿Estás seguro de que deseas abandonar <b>{group_name}</b>?<br/><br/>Esto eliminará a todos los miembros y borrará todo el contenido del grupo.",
   "groupLeaveErrorFailed": "Falló al salir de {group_name}",
-  "groupLegacyBanner": "Los grupos han sido actualizados, crea un nuevo grupo para actualizar. La funcionalidad del grupo antiguo se degradará a partir de {date}.",
   "groupMemberLeft": "<b>{name}</b> ha abandonado el grupo.",
   "groupMemberLeftMultiple": "<b>{name}</b> y <b>{count} más</b> abandonaron el grupo.",
   "groupMemberLeftTwo": "<b>{name}</b> y <b>{other_name}</b> abandonaron el grupo.",

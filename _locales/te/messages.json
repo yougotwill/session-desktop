@@ -395,7 +395,6 @@
   "groupLeaveDescription": "మీరు <b>{group_name}</b> ను వదిలిపెట్టాలనుకుంటున్నారా?",
   "groupLeaveDescriptionAdmin": "మీరు <b>{group_name}</b> వదిలివేయాలనుకుంటున్నారా?<br/><br/> ఇది అన్ని సభ్యులను తొలగించి, అన్ని సమూహ విషయాన్ని తొలగిస్తుంది.",
   "groupLeaveErrorFailed": "{group_name} ను వదిలివేయడంలో విఫలమైంది",
-  "groupLegacyBanner": "సమూహాలు అభివృద్ధి చేయబడ్డాయి, మెరుగుపరచడానికి కొత్త సమూహం సృష్టించండి. పాత సమూహ పనితీరు {date} నుండి దిగజారిపోతుంది.",
   "groupMemberLeft": "<b>{name}</b> సమూహాన్ని వదిలి వెళ్లారు.",
   "groupMemberLeftMultiple": "<b>{name}</b> మరియు <b>{count}ఇతరులు</b> సమూహాన్ని వదిలివేశారు.",
   "groupMemberLeftTwo": "<b>{name}</b> మరియు <b>{other_name}</b> సమూహాన్ని వదిలి వెళ్లారు.",

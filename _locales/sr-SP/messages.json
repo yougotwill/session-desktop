@@ -394,7 +394,6 @@
   "groupLeaveDescription": "Да ли сте сигурни да желите да напустите <b>{group_name}</b>?",
   "groupLeaveDescriptionAdmin": "Да ли сте сигурни да желите да напустите <b>{group_name}</b>?<br/><br/>Ово ће уклонити све чланове и избрисати сав садржај групе.",
   "groupLeaveErrorFailed": "Напуштање {group_name} није успело",
-  "groupLegacyBanner": "Групе су надограђене, креирајте нову групу да бисте ажурирали. Стара функционалност групе ће бити деградирана од {date}.",
   "groupMemberLeft": "<b>{name}</b> је напустио групу.",
   "groupMemberLeftMultiple": "<b>{name}</b> и <b>{count} осталих</b> су напустили групу.",
   "groupMemberLeftTwo": "<b>{name}</b> и <b>{other_name}</b> су напустили групу.",

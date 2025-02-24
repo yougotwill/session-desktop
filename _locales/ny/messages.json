@@ -394,7 +394,6 @@
   "groupLeaveDescription": "Mukutsimikizika kuti mukufuna kusiya <b>{group_name}</b>?",
   "groupLeaveDescriptionAdmin": "Mukutsimikiza kuti mukufuna kuchoka pa <b>{group_name}</b>?<br/><br/>Izi zithandizira kuchotsa mamembala onse ndikuchotsa zonse zomwe zili m'gulu.",
   "groupLeaveErrorFailed": "Zalephera kusiya {group_name}",
-  "groupLegacyBanner": "Magulu asinthidwa, pangani gulu latsopano kuti muwonjeze. Ntchito yakale ya magulu idzalephera kuyambira {date}.",
   "groupMemberLeft": "<b>{name}</b> achoka gulu.",
   "groupMemberLeftMultiple": "<b>{name}</b> ndi <b>{count} ena</b> achoka gulu.",
   "groupMemberLeftTwo": "<b>{name}</b> ndi <b>{other_name}</b> achoka gulu.",

@@ -395,7 +395,6 @@
   "groupLeaveDescription": "คุณแน่ใจหรือว่าต้องการออก <b>{group_name}</b>?",
   "groupLeaveDescriptionAdmin": "คุณแน่ใจหรือไม่ว่าต้องการออกจากกลุ่ม <b>{group_name}</b>?<br/><br/>การกระทำนี้จะลบสมาชิกทั้งหมดและลบเนื้อหากลุ่มทั้งหมด",
   "groupLeaveErrorFailed": "ไม่สามารถออกจาก {group_name} ได้",
-  "groupLegacyBanner": "กลุ่มถูกอัปเกรด สร้างกลุ่มใหม่เพื่ออัปเกรด ฟังก์ชันกลุ่มเก่าจะลดลงตั้งแต่ {date}",
   "groupMemberLeft": "<b>{name}</b> ได้ออกจากกลุ่ม",
   "groupMemberLeftMultiple": "<b>{name}</b> and <b>{count} อื่นๆ</b> ได้ออกจากกลุ่ม",
   "groupMemberLeftTwo": "<b>{name}</b> และ <b>{other_name}</b> ได้ออกจากกลุ่ม",

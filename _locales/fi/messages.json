@@ -395,7 +395,6 @@
   "groupLeaveDescription": "Haluatko varmasti poistua yhteisöstä <b>{group_name}</b>?",
   "groupLeaveDescriptionAdmin": "Haluatko varmasti poistua ryhmästä <b>{group_name}</b>?<br/><br/>Tämä poistaa kaikki jäsenet ja poistaa kaiken ryhmäsisällön.",
   "groupLeaveErrorFailed": "Poistuminen ryhmästä {group_name} epäonnistui",
-  "groupLegacyBanner": "Ryhmäominaisuuksia päivitetty. Käytä muutoksia luomalla uusi ryhmä. Vanhat ominaisuudet poistuvat {date}.",
   "groupMemberLeft": "<b>{name}</b> poistui ryhmästä.",
   "groupMemberLeftMultiple": "<b>{name}</b> ja <b>{count} muuta</b> poistui ryhmästä.",
   "groupMemberLeftTwo": "<b>{name}</b> ja <b>{other_name}</b> poistui ryhmästä.",
