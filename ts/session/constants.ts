@@ -70,7 +70,7 @@ export const CONVERSATION = {
   DEFAULT_DOCUMENTS_FETCH_COUNT: 100,
   DEFAULT_MESSAGE_FETCH_COUNT: 30,
   MAX_MESSAGE_FETCH_COUNT: 1000,
-  // Maximum voice message duraton of 5 minutes
+  // Maximum voice message duration of 5 minutes
   // which equates to 1.97 MB
   MAX_VOICE_MESSAGE_DURATION: 300,
   MAX_CONVO_UNREAD_COUNT: 999,
@@ -100,7 +100,7 @@ export const REACT_LIMIT = 6;
 export const UPDATER_INTERVAL_MS = 10 * DURATION.MINUTES;
 
 // update this to be when we ship desktop groups REMOVE AFTER QA
-const GROUP_DESKTOP_RELEASE = 1767225600000; // currently  1st Jan 2026
+const GROUP_DESKTOP_RELEASE = 1735693200000; // currently 1st Jan 2025
 
 /**
  * 3+7 days after the release of groups (more or less), we force new groups to be created as new groups
