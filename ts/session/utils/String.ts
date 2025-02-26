@@ -67,19 +67,34 @@ export const ed25519Str = (ed25519Key: string) =>
   `(...${ed25519Key.length > 58 ? ed25519Key.substr(58) : ed25519Key})`;
 
 /**
- * Trims a string and removes special whitespace characters.
+ * Trims a string including any special whitespace characters.
  * @param value the string to trim
  * @returns the trimmed string
  * @note https://en.wikipedia.org/wiki/Whitespace_character
  * @note The following characters are considered special whitespace characters:
- * - LEFT-TO-RIGHT MARK (U+200E)
- * - RIGHT-TO-LEFT MARK (U+200F)
- * - ZERO WIDTH SPACE (U+200B)
- * - ZERO WIDTH NON-JOINER (U+200C)
- * - ZERO WIDTH JOINER (U+200D)
- * - WORD JOINER (U+2060)
- * - ZERO WIDTH NO-BREAK SPACE (U+FEFF)
+ * - U+200B ZERO WIDTH SPACE https://unicode-explorer.com/c/200B
+ * - U+200C ZERO WIDTH NON-JOINER https://unicode-explorer.com/c/200C
+ * - U+200D ZERO WIDTH JOINER https://unicode-explorer.com/c/200D
+ * - U+200E LEFT-TO-RIGHT MARK https://unicode-explorer.com/c/200E
+ * - U+200F RIGHT-TO-LEFT MARK https://unicode-explorer.com/c/200F
+ * - U+2060 WORD JOINER https://unicode-explorer.com/c/2060
+ * - U+FEFF ZERO WIDTH NO-BREAK SPACE https://unicode-explorer.com/c/FEFF
  */
 export const trimWhitespace = (value: string): string => {
-  return value.trim().replace(/\u200E|\u200F|\u200B|\u200C|\u200D|\u2060|\uFEFF/g, '');
+  const blacklist = ['​', '‌', '‍', '‎', '‏', '⁠', ''];
+
+  let trimmedValue = value.trim();
+
+  while (trimmedValue[0] && blacklist.includes(trimmedValue[0])) {
+    trimmedValue = trimmedValue.slice(1);
+  }
+
+  while (
+    trimmedValue[trimmedValue.length - 1] &&
+    blacklist.includes(trimmedValue[trimmedValue.length - 1])
+  ) {
+    trimmedValue = trimmedValue.slice(0, -1);
+  }
+
+  return trimmedValue;
 };
