@@ -264,7 +264,7 @@ export const UpdateGroupMembersDialog = (props: Props) => {
             onClick={onClickOK}
             buttonType={SessionButtonType.Simple}
             buttonColor={SessionButtonColor.Danger}
-            disabled={isProcessingUIChange}
+            disabled={isProcessingUIChange || !membersToRemove.length}
             dataTestId="session-confirm-ok-button"
           />
         )}
