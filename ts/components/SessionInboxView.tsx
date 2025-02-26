@@ -104,14 +104,22 @@ async function setupLeftPane(forceUpdateInboxComponent: () => void) {
 
   window.inboxStore?.dispatch(
     updateAllOnStorageReady({
-      hasBlindedMsgRequestsEnabled: Storage.getBoolOrFalse(
-        SettingsKey.hasBlindedMsgRequestsEnabled
+      hasBlindedMsgRequestsEnabled: Storage.getBoolOr(
+        SettingsKey.hasBlindedMsgRequestsEnabled,
+        false
       ),
-      someDeviceOutdatedSyncing: Storage.getBoolOrFalse(SettingsKey.someDeviceOutdatedSyncing),
-      settingsLinkPreview: Storage.getBoolOrFalse(SettingsKey.settingsLinkPreview),
-      hasFollowSystemThemeEnabled: Storage.getBoolOrFalse(SettingsKey.hasFollowSystemThemeEnabled),
-      hasShiftSendEnabled: Storage.getBoolOrFalse(SettingsKey.hasShiftSendEnabled),
-      hideRecoveryPassword: Storage.getBoolOrFalse(SettingsKey.hideRecoveryPassword),
+      someDeviceOutdatedSyncing: Storage.getBoolOr(SettingsKey.someDeviceOutdatedSyncing, false),
+      settingsLinkPreview: Storage.getBoolOr(SettingsKey.settingsLinkPreview, false),
+      hasFollowSystemThemeEnabled: Storage.getBoolOr(
+        SettingsKey.hasFollowSystemThemeEnabled,
+        false
+      ),
+      hasShiftSendEnabled: Storage.getBoolOr(SettingsKey.hasShiftSendEnabled, false),
+      hideRecoveryPassword: Storage.getBoolOr(SettingsKey.hideRecoveryPassword, false),
+      showOnboardingAccountJustCreated: Storage.getBoolOr(
+        SettingsKey.showOnboardingAccountJustCreated,
+        true
+      ),
     })
   );
   window.inboxStore?.dispatch(groupInfoActions.loadMetaDumpsFromDB() as any); // this loads the dumps from DB and fills the 03-groups slice with the corresponding details

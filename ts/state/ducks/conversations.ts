@@ -28,6 +28,8 @@ import { CONVERSATION_PRIORITIES, ConversationTypeEnum } from '../../models/type
 import { WithConvoId, WithMessageHash, WithMessageId } from '../../session/types/with';
 import { cancelUpdatesToDispatch } from '../../models/message';
 import type { SessionSuggestionDataItem } from '../../components/conversation/composition/types';
+import { Storage } from '../../util/storage';
+import { SettingsKey } from '../../data/settings-key';
 
 export type MessageModelPropsWithoutConvoProps = {
   propsForMessage: PropsForMessageWithoutConvoProps;
@@ -1106,6 +1108,10 @@ export async function openConversationWithMessages(args: {
   messageId: string | null;
 }) {
   const { conversationKey, messageId } = args;
+
+  if (Storage.getBoolOr(SettingsKey.showOnboardingAccountJustCreated, true)) {
+    await Storage.put(SettingsKey.showOnboardingAccountJustCreated, false);
+  }
 
   await DisappearingMessages.destroyExpiredMessages();
   await unmarkAsForcedUnread(conversationKey);
