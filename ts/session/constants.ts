@@ -99,18 +99,15 @@ export const REACT_LIMIT = 6;
 
 export const UPDATER_INTERVAL_MS = 10 * DURATION.MINUTES;
 
-// update this to be when we ship desktop groups REMOVE AFTER QA
-const GROUP_DESKTOP_RELEASE = 1735693200000; // currently 1st Jan 2025
-
 /**
- * 3+7 days after the release of groups (more or less), we force new groups to be created as new groups
+ * 3+7 days after the release of groups, we force groups to be created as *new* groups
  */
-const START_CREATE_NEW_GROUP = GROUP_DESKTOP_RELEASE + DURATION.DAYS * 10;
+const START_CREATE_NEW_GROUP = 1741816800000; // Currently Thursday March 13th 09:00 AEDT
 
 /**
  * 2 weeks after `START_CREATE_NEW_GROUP`, we mark legacy groups readonly
  */
-const LEGACY_GROUP_READONLY = START_CREATE_NEW_GROUP + DURATION.WEEKS * 2;
+const LEGACY_GROUP_READONLY = 1743026400000; // Currently Thursday March 27th 09:00 AEDT
 
 export const FEATURE_RELEASE_TIMESTAMPS = {
   DISAPPEARING_MESSAGES_V2: 1710284400000, // 13/03/2024 10:00 Melbourne time
