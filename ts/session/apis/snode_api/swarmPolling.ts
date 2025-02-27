@@ -715,10 +715,46 @@ export class SwarmPolling {
 
       if (PubKey.is03Pubkey(pubkey) && convo) {
         if (noConfigBeforeFetch && noConfigAfterFetch) {
-          window.log.warn(`no configs before and after fetch of group: ${ed25519Str(pubkey)}`);
-          if (!convo.getIsExpired03Group()) {
-            convo.set({ isExpired03Group: true });
-            await convo.commit();
+          // Well, here we are again putting bandaids to deal with our flaky backend.
+          // Sometimes (often I'd say), a snode is out of sync with its swarm but still replies with what he thinks is the swarm's content.
+          // So, here we've fetched from a snode that has no lastHash, and after the fetch we still have no lastHash.
+          // A normally constituted human would understand this as "there is nothing on that swarm for that pubkey".
+          // Well, sometimes we just hit one of those out-of-sync snode and it is telling us the swarm is empty, when for every other snode of the swarm, it is not.
+          // This isn't usually too bad, because usually not having a fetch result just means we will fetch the another snode next time.
+          // But sometimes we have destructive actions or here, show a banner.
+          // Ideally, we'd fix this on the backend, but until then I am writing one more bandaid here.
+          // The bandaid is checking if we've already fetched from any other snode a last hash for the keys namespace.
+          // If yes, we know that the snode we just polled from reports incorrectly that the swarm to be empty.
+          const swarmSnodes = await SnodePool.getSwarmFor(pubkey);
+          let foundAtLeastAHashInSwarm = false;
+          let swarmIndex = 0;
+          do {
+            const lastHash = await this.getLastHash(
+              swarmSnodes[swarmIndex].pubkey_ed25519,
+              pubkey,
+              SnodeNamespaces.ClosedGroupKeys
+            );
+            if (lastHash) {
+              foundAtLeastAHashInSwarm = true;
+              break; // breaking so the swarmIndex is correct here
+            }
+            swarmIndex++;
+          } while (swarmIndex < swarmSnodes.length);
+
+          if (foundAtLeastAHashInSwarm) {
+            // considering that group as not expired
+            window.log.info(
+              `no configs before and after fetch of group: ${ed25519Str(pubkey)} from snode ${ed25519Str(snodeEdkey)}, but another snode has config hash fetched already (${ed25519Str(swarmSnodes?.[swarmIndex]?.pubkey_ed25519)}). Group is not expired.`
+            );
+          } else {
+            // the group appears to be expired.
+            window.log.warn(
+              `no configs before and after fetch of group: ${ed25519Str(pubkey)} from snode ${ed25519Str(snodeEdkey)}, and no other snode have one either. Group is expired.`
+            );
+            if (!convo.getIsExpired03Group()) {
+              convo.set({ isExpired03Group: true });
+              await convo.commit();
+            }
           }
         } else if (convo.getIsExpired03Group()) {
           window.log.info(
