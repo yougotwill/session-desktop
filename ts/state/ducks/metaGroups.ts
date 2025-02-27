@@ -559,12 +559,13 @@ async function handleWithHistoryMembers({
   const encryptedSupplementKeys = withHistory.length
     ? await MetaGroupWrapperActions.generateSupplementKeys(groupPk, withHistory)
     : null;
+
   return encryptedSupplementKeys;
 }
 
 /**
  * Update the GROUP_MEMBER wrapper state to have those members.
- * Calls rekey() if at least one was present in the list.
+ * Does not call `rekey()` so you need to call it from the caller.
  */
 async function handleWithoutHistoryMembers({
   groupPk,
@@ -586,10 +587,6 @@ async function handleWithoutHistoryMembers({
     });
     // a group invite job will be added to the queue
     await MetaGroupWrapperActions.memberSetInviteNotSent(groupPk, member);
-  }
-
-  if (!isEmpty(withoutHistory)) {
-    await MetaGroupWrapperActions.keyRekey(groupPk);
   }
 }
 
@@ -635,6 +632,13 @@ async function handleMemberAddedFromUI({
   // then handle the addition without history of messages (full rotation of keys).
   // this adds them to the members wrapper etc
   await handleWithoutHistoryMembers({ groupPk, withoutHistory });
+
+  if (withHistory.length || withoutHistory.length) {
+    // We now always want to call rekey(), even if only a supplemental key was needed.
+    // This is to take care of an edge case where a user is reinvited but considers himself kicked.
+    // See SES3299
+    await MetaGroupWrapperActions.keyRekey(groupPk);
+  }
   const createAtNetworkTimestamp = NetworkTime.now();
 
   await LibSessionUtil.saveDumpsToDb(groupPk);
