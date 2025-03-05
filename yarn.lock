@@ -4944,9 +4944,9 @@ levn@~0.3.0:
     prelude-ls "~1.1.2"
     type-check "~0.3.2"
 
-"libsession_util_nodejs@https://github.com/session-foundation/libsession-util-nodejs/releases/download/v0.4.21/libsession_util_nodejs-v0.4.21.tar.gz":
-  version "0.4.21"
-  resolved "https://github.com/session-foundation/libsession-util-nodejs/releases/download/v0.4.21/libsession_util_nodejs-v0.4.21.tar.gz#5acd404f00a75475a6b1c14fb0c896f57aaaecb5"
+"libsession_util_nodejs@https://github.com/session-foundation/libsession-util-nodejs/releases/download/v0.4.22/libsession_util_nodejs-v0.4.22.tar.gz":
+  version "0.4.22"
+  resolved "https://github.com/session-foundation/libsession-util-nodejs/releases/download/v0.4.22/libsession_util_nodejs-v0.4.22.tar.gz#aaba8419ecff8969087e10e9854becf45977bec1"
   dependencies:
     cmake-js "7.2.1"
     node-addon-api "^6.1.0"
