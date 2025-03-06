@@ -56,7 +56,7 @@ window.sessionFeatureFlags = {
   useClosedGroupV2QAButtons: false, // TODO DO NOT MERGE Remove after QA
   replaceLocalizedStringsWithKeys: false,
   debug: {
-    debugLogging: !_.isEmpty(process.env.SESSION_DEBUG),
+    debugLogging: true,
     debugLibsessionDumps: !_.isEmpty(process.env.SESSION_DEBUG_LIBSESSION_DUMPS),
     debugBuiltSnodeRequests: !_.isEmpty(process.env.SESSION_DEBUG_BUILT_SNODE_REQUEST),
     debugFileServerRequests: false,

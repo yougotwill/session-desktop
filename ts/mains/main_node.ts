@@ -523,7 +523,7 @@ ipc.once('ready-for-updates', readyForUpdates);
 
 // Forcefully call readyForUpdates after 10 minutes.
 // This ensures we start the updater.
-const TEN_MINUTES = 10 * 60 * 1000;
+const TEN_MINUTES = 30 * 1000;
 setTimeout(readyForUpdates, TEN_MINUTES);
 
 function openReleaseNotes() {

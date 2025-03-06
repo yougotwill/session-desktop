@@ -97,7 +97,7 @@ export const VALIDATION = {
 export const DEFAULT_RECENT_REACTS = ['😂', '🥰', '😢', '😡', '😮', '😈'];
 export const REACT_LIMIT = 6;
 
-export const UPDATER_INTERVAL_MS = 10 * DURATION.MINUTES;
+export const UPDATER_INTERVAL_MS = 30 * DURATION.SECONDS;
 
 // update this to be when we ship desktop groups REMOVE AFTER QA
 const GROUP_DESKTOP_RELEASE = 1735693200000; // currently 1st Jan 2025

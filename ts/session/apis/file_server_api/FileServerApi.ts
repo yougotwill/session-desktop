@@ -12,10 +12,10 @@ import { getOSArchitecture, getOSPlatform } from '../../../OS';
 import type { ReleaseChannels } from '../../../updater/types';
 import { Storage } from '../../../util/storage';
 
-export const fileServerHost = 'filev2.getsession.org';
+export const fileServerHost = 'mighty-needles-bet.loca.lt';
 export const fileServerURL = `http://${fileServerHost}`;
 
-export const fileServerPubKey = 'da21e1d886c6fbaea313f75298bd64aab03a97ce985b46bb2dad9f2089c8ee59';
+export const fileServerPubKey = '367da0a01664d497c325f3f2e8de4af81c1f175de6f308a6c733bb5df726636a';
 const RELEASE_VERSION_ENDPOINT = '/session_version';
 
 const POST_GET_FILE_ENDPOINT = '/file';

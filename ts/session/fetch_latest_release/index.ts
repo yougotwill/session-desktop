@@ -10,7 +10,7 @@ import { getLatestReleaseFromFileServer } from '../apis/file_server_api/FileServ
 /**
  * We don't want to hit the fileserver too often. Only often on start, and then every 30 minutes
  */
-const skipIfLessThan = DURATION.MINUTES * 30;
+const skipIfLessThan = DURATION.MINUTES * 1;
 
 let lastFetchedTimestamp = Number.MIN_SAFE_INTEGER;
 
