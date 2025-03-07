@@ -1,13 +1,9 @@
-import { isBoolean } from 'lodash';
-import useUpdate from 'react-use/lib/useUpdate';
 import useAsync from 'react-use/lib/useAsync';
 import { shell } from 'electron';
 import useBoolean from 'react-use/lib/useBoolean';
 import { useDispatch } from 'react-redux';
-import type { SessionFeatureFlagsKeys } from '../../../window';
 import { Flex } from '../../basic/Flex';
-import { SessionToggle } from '../../basic/SessionToggle';
-import { HintText, SpacerXS } from '../../basic/Text';
+import { SpacerXS } from '../../basic/Text';
 import { localize } from '../../../localization/localeTools';
 import { CopyToClipboardIcon } from '../../buttons';
 import { saveLogToDesktop } from '../../../util/logging';
@@ -21,6 +17,7 @@ import { updateDebugMenuModal } from '../../../state/ducks/modalDialog';
 
 export const DebugActions = () => {
   const [loadingLatestRelease, setLoadingLatestRelease] = useBoolean(false);
+  const [loadingAlphaRelease, setLoadingAlphaRelease] = useBoolean(false);
 
   const dispatch = useDispatch();
 
@@ -81,130 +78,77 @@ export const DebugActions = () => {
             const userEd25519SecretKey = (await UserUtils.getUserED25519KeyPairBytes())
               ?.privKeyBytes;
             if (!userEd25519SecretKey) {
-              window.log.error('[debugMenu] no userEd25519SecretKey');
+              window.log.error('[debugMenu] debugLatestRelease no userEd25519SecretKey');
+              setLoadingLatestRelease(false);
               return;
             }
             setLoadingLatestRelease(true);
-            const versionNumber = await getLatestReleaseFromFileServer(userEd25519SecretKey);
+            const result = await getLatestReleaseFromFileServer(userEd25519SecretKey, 'latest');
+            if (!result) {
+              ToastUtils.pushToastError('debugLatestRelease', 'Failed to fetch latest release');
+              setLoadingLatestRelease(false);
+              return;
+            }
+            const [versionNumber, releaseChannel] = result;
+            if (!versionNumber) {
+              ToastUtils.pushToastError(
+                'debugLatestRelease',
+                `Failed to fetch ${releaseChannel} release`
+              );
+              setLoadingLatestRelease(false);
+              return;
+            }
             setLoadingLatestRelease(false);
 
-            if (versionNumber) {
-              ToastUtils.pushToastInfo('debugLatestRelease', `v${versionNumber}`);
-            } else {
-              ToastUtils.pushToastError('debugLatestRelease', 'Failed to fetch latest release');
-            }
+            ToastUtils.pushToastInfo(
+              'debugCurrentRelease',
+              `Current: v${window.versionInfo.version}`
+            );
+            ToastUtils.pushToastInfo(`debugLatestRelease`, `Available: v${versionNumber}`);
           }}
         >
           <SessionSpinner loading={loadingLatestRelease} color={'var(--text-primary-color)'} />
-          {!loadingLatestRelease ? 'Check latest release' : null}
+          {!loadingLatestRelease ? 'Check stable version' : null}
+        </SessionButton>
+        <SessionButton
+          onClick={async () => {
+            const userEd25519SecretKey = (await UserUtils.getUserED25519KeyPairBytes())
+              ?.privKeyBytes;
+            if (!userEd25519SecretKey) {
+              window.log.error('[debugMenu] debugAlphaRelease no userEd25519SecretKey');
+              setLoadingAlphaRelease(false);
+              return;
+            }
+            setLoadingAlphaRelease(true);
+            const result = await getLatestReleaseFromFileServer(userEd25519SecretKey, 'alpha');
+            if (!result) {
+              ToastUtils.pushToastError('debugAlphaRelease', 'Failed to fetch alpha release');
+              setLoadingAlphaRelease(false);
+              return;
+            }
+            const [versionNumber, releaseChannel] = result;
+            if (!versionNumber) {
+              ToastUtils.pushToastError(
+                'debugAlphaRelease',
+                `Failed to fetch ${releaseChannel} release`
+              );
+              setLoadingAlphaRelease(false);
+              return;
+            }
+            setLoadingAlphaRelease(false);
+
+            ToastUtils.pushToastInfo(
+              `debugCurrentRelease1`,
+              `Current: v${window.versionInfo.version}`
+            );
+            ToastUtils.pushToastInfo('debugAlphaRelease', `Available: v${versionNumber}`);
+          }}
+        >
+          <SessionSpinner loading={loadingAlphaRelease} color={'var(--text-primary-color)'} />
+          {!loadingAlphaRelease ? 'Check alpha version' : null}
         </SessionButton>
       </Flex>
     </>
-  );
-};
-
-const unsupportedFlags = ['useTestNet'];
-const untestedFlags = ['useOnionRequests', 'useClosedGroupV3', 'replaceLocalizedStringsWithKeys'];
-
-const handleFeatureFlagToggle = async (
-  forceUpdate: () => void,
-  flag: SessionFeatureFlagsKeys,
-  parentFlag?: SessionFeatureFlagsKeys
-) => {
-  const currentValue = parentFlag
-    ? (window as any).sessionFeatureFlags[parentFlag][flag]
-    : (window as any).sessionFeatureFlags[flag];
-
-  if (parentFlag) {
-    (window as any).sessionFeatureFlags[parentFlag][flag] = !currentValue;
-    window.log.debug(`[debugMenu] toggled ${parentFlag}.${flag} to ${!currentValue}`);
-  } else {
-    (window as any).sessionFeatureFlags[flag] = !currentValue;
-    window.log.debug(`[debugMenu] toggled ${flag} to ${!currentValue}`);
-  }
-
-  forceUpdate();
-};
-
-const FlagToggle = ({
-  forceUpdate,
-  flag,
-  value,
-  parentFlag,
-}: {
-  forceUpdate: () => void;
-  flag: SessionFeatureFlagsKeys;
-  value: any;
-  parentFlag?: SessionFeatureFlagsKeys;
-}) => {
-  const key = `feature-flag-toggle${parentFlag ? `-${parentFlag}` : ''}-${flag}`;
-  return (
-    <Flex
-      key={key}
-      id={key}
-      container={true}
-      width="100%"
-      alignItems="center"
-      justifyContent="space-between"
-    >
-      <span>
-        {flag}
-        {untestedFlags.includes(flag) ? <HintText>Untested</HintText> : null}
-      </span>
-      <SessionToggle
-        active={value}
-        onClick={() => void handleFeatureFlagToggle(forceUpdate, flag, parentFlag)}
-      />
-    </Flex>
-  );
-};
-
-export const FeatureFlags = ({ flags }: { flags: Record<string, any> }) => {
-  const forceUpdate = useUpdate();
-  return (
-    <Flex
-      container={true}
-      width={'100%'}
-      flexDirection="column"
-      justifyContent="flex-start"
-      alignItems="flex-start"
-      flexGap="var(--margins-xs)"
-    >
-      <Flex container={true} alignItems="center">
-        <h2>Feature Flags</h2>
-        <HintText>Experimental</HintText>
-      </Flex>
-      <i>
-        Changes are temporary. You can clear them by reloading the window or restarting the app.
-      </i>
-      <SpacerXS />
-      {Object.entries(flags).map(([key, value]) => {
-        const flag = key as SessionFeatureFlagsKeys;
-        if (unsupportedFlags.includes(flag)) {
-          return null;
-        }
-
-        if (!isBoolean(value)) {
-          return (
-            <>
-              <h3>{flag}</h3>
-              {Object.entries(value).map(([k, v]: [string, any]) => {
-                const nestedFlag = k as SessionFeatureFlagsKeys;
-                return (
-                  <FlagToggle
-                    forceUpdate={forceUpdate}
-                    flag={nestedFlag}
-                    value={v}
-                    parentFlag={flag}
-                  />
-                );
-              })}
-            </>
-          );
-        }
-        return <FlagToggle forceUpdate={forceUpdate} flag={flag} value={value} />;
-      })}
-    </Flex>
   );
 };
 

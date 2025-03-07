@@ -125,7 +125,7 @@
     "redux-promise-middleware": "^6.2.0",
     "rimraf": "2.6.2",
     "sanitize.css": "^12.0.1",
-    "semver": "^7.5.4",
+    "semver": "^7.7.1",
     "styled-components": "^6.1.11",
     "uuid": "8.3.2",
     "webrtc-adapter": "^4.1.1",
@@ -175,9 +175,8 @@
     "chai-bytes": "^0.1.2",
     "cross-env": "^6.0.3",
     "css-loader": "^6.7.2",
-    "dmg-builder": "23.6.0",
     "electron": "25.8.4",
-    "electron-builder": "23.0.8",
+    "electron-builder": "^25.1.8",
     "eslint": "8.57.0",
     "eslint-config-airbnb-base": "^15.0.0",
     "eslint-config-prettier": "9.1.0",
@@ -215,6 +214,7 @@
     "afterSign": "build/notarize.js",
     "afterPack": "build/afterPackHook.js",
     "artifactName": "${name}-${os}-${arch}-${version}.${ext}",
+    "generateUpdatesFilesForAllChannels": true,
     "extraResources": [
       {
         "from": "./build/launcher-script.sh",
