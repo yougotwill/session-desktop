@@ -39,13 +39,9 @@ autoUpdater.on(DOWNLOAD_PROGRESS, eventDownloadProgress => {
 autoUpdater.on(UPDATE_DOWNLOADED, () => {
   isUpdating = true;
   console.log('[updater] update downloaded');
-  // https://github.com/electron-userland/electron-builder/issues/6058#issuecomment-1130344017
-  setTimeout(() => {
-    console.info('[updater] calling quitAndInstall...');
-    autoUpdater.quitAndInstall();
-    app.exit();
-    isUpdating = false;
-  }, 1000);
+  console.info('[updater] calling quitAndInstall...');
+  autoUpdater.quitAndInstall();
+  isUpdating = false;
 });
 
 export async function start(
