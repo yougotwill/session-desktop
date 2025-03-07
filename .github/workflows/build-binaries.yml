@@ -62,13 +62,13 @@ jobs:
 
       - name: Build but do not publish ${{ matrix.pkg_to_build }}
         # we want this to run always, except on "push" to "master"
-        if: ${{ env.SHOULD_PUBLISH == 'false' && env.SHOULD_PUBLISH_ALPHA == 'false'  }}
+        if: ${{ env.SHOULD_PUBLISH == 'false' }}
         run: |
           sed -i 's/"target": \["deb"\]/"target": "${{ matrix.pkg_to_build }}"/g' package.json && yarn build-release
 
       - name: Upload artefacts ${{ matrix.pkg_to_build }}
         # we want this to run always, except on "push" to "master"
-        if: ${{ env.SHOULD_PUBLISH == 'false' && env.SHOULD_PUBLISH_ALPHA == 'false'  }}
+        if: ${{ env.SHOULD_PUBLISH == 'false' }}
         uses: ./actions/upload_prod_artefacts
         with:
           upload_prefix: ${{ runner.os }}-${{ runner.arch }}-${{ matrix.pkg_to_build }}
@@ -76,7 +76,7 @@ jobs:
 
       - name: Build & publish ${{ matrix.pkg_to_build }}
         # we want this to run only when on "push" to "master"
-        if: ${{ env.SHOULD_PUBLISH == 'true' || env.SHOULD_PUBLISH_ALPHA == 'true' }}
+        if: ${{ env.SHOULD_PUBLISH == 'true'}}
         run: |
           sed -i 's/"target": \["deb"\]/"target": "${{ matrix.pkg_to_build }}"/g' package.json && yarn build-release-publish
 
@@ -101,12 +101,12 @@ jobs:
 
       - name: Build but do not publish
         # we want this to run always, except on "push" to "master"
-        if: ${{ env.SHOULD_PUBLISH == 'false' && env.SHOULD_PUBLISH_ALPHA == 'false'  }}
+        if: ${{ env.SHOULD_PUBLISH == 'false' }}
         run: yarn build-release
 
       - name: Upload artefacts
         # we want this to run always, except on "push" to "master"
-        if: ${{ env.SHOULD_PUBLISH == 'false' && env.SHOULD_PUBLISH_ALPHA == 'false'  }}
+        if: ${{ env.SHOULD_PUBLISH == 'false' }}
         uses: ./actions/upload_prod_artefacts
         with:
           upload_prefix: ${{ runner.os }}-${{ runner.arch }}
@@ -114,7 +114,7 @@ jobs:
 
       - name: Build & publish
         # we want this to run only when on "push" to "master"
-        if: ${{ env.SHOULD_PUBLISH == 'true' || env.SHOULD_PUBLISH_ALPHA == 'true' }}
+        if: ${{ env.SHOULD_PUBLISH == 'true'}}
         run: yarn build-release-publish # No other args needed for windows publish
 
   # We want both arm64 and intel mac builds, and according to this https://docs.github.com/en/actions/using-github-hosted-runners/using-github-hosted-runners/about-github-hosted-runners#supported-runners-and-hardware-resources macos-14 and above is always arm64 and macos-13 is the last intel runner
@@ -145,14 +145,14 @@ jobs:
 
       - name: Build but do not publish
         # we want this to run always, except on "push" to "master"
-        if: ${{ env.SHOULD_PUBLISH == 'false' && env.SHOULD_PUBLISH_ALPHA == 'false'  }}
+        if: ${{ env.SHOULD_PUBLISH == 'false' }}
         run: |
           source ./build/setup-mac-certificate.sh
           yarn build-release --config.mac.bundleVersion=${{ github.ref }}
 
       - name: Upload artefacts
         # we want this to run always, except on "push" to "master"
-        if: ${{ env.SHOULD_PUBLISH == 'false' && env.SHOULD_PUBLISH_ALPHA == 'false'  }}
+        if: ${{ env.SHOULD_PUBLISH == 'false' }}
         uses: ./actions/upload_prod_artefacts
         with:
           upload_prefix: mac-arm64
@@ -160,20 +160,20 @@ jobs:
 
       - name: Build & publish
         # we want this to run only when on "push" to "master"
-        if: ${{ env.SHOULD_PUBLISH == 'true' || env.SHOULD_PUBLISH_ALPHA == 'true' }}
+        if: ${{ env.SHOULD_PUBLISH == 'true'}}
         run: |
           source ./build/setup-mac-certificate.sh
           yarn build-release-publish --config.mac.bundleVersion=${{ github.ref }}
 
       - name: Setup release metadata
         # we want this to run only when on "push" to "master"
-        if: ${{ env.SHOULD_PUBLISH == 'true' || env.SHOULD_PUBLISH_ALPHA == 'true' }}
+        if: ${{ env.SHOULD_PUBLISH == 'true'}}
         run: |
           source ./build/setup-mac-release-arch.sh
 
       - name: Upload release metadata
         # we want this to run only when on "push" to "master"
-        if: ${{ env.SHOULD_PUBLISH == 'true' || env.SHOULD_PUBLISH_ALPHA == 'true' }}
+        if: ${{ env.SHOULD_PUBLISH == 'true'}}
         uses: actions/upload-artifact@v4
         with:
           name: latest-mac-arm64.yml
@@ -205,14 +205,14 @@ jobs:
 
       - name: Build but do not publish
         # we want this to run always, except on "push" to "master"
-        if: ${{ env.SHOULD_PUBLISH == 'false' && env.SHOULD_PUBLISH_ALPHA == 'false'  }}
+        if: ${{ env.SHOULD_PUBLISH == 'false' }}
         run: |
           source ./build/setup-mac-certificate.sh
           yarn build-release --config.mac.bundleVersion=${{ github.ref }}
 
       - name: Upload artefacts
         # we want this to run always, except on "push" to "master"
-        if: ${{ env.SHOULD_PUBLISH == 'false' && env.SHOULD_PUBLISH_ALPHA == 'false'  }}
+        if: ${{ env.SHOULD_PUBLISH == 'false' }}
         uses: ./actions/upload_prod_artefacts
         with:
           upload_prefix: mac-x64
@@ -220,20 +220,20 @@ jobs:
 
       - name: Build & publish
         # we want this to run only when on "push" to "master"
-        if: ${{ env.SHOULD_PUBLISH == 'true' || env.SHOULD_PUBLISH_ALPHA == 'true' }}
+        if: ${{ env.SHOULD_PUBLISH == 'true'}}
         run: |
           source ./build/setup-mac-certificate.sh
           yarn build-release-publish --config.mac.bundleVersion=${{ github.ref }}
 
       - name: Setup release metadata
         # we want this to run only when on "push" to "master"
-        if: ${{ env.SHOULD_PUBLISH == 'true' || env.SHOULD_PUBLISH_ALPHA == 'true' }}
+        if: ${{ env.SHOULD_PUBLISH == 'true'}}
         run: |
           source ./build/setup-mac-release-arch.sh
 
       - name: Upload release metadata
         # we want this to run only when on "push" to "master"
-        if: ${{ env.SHOULD_PUBLISH == 'true' || env.SHOULD_PUBLISH_ALPHA == 'true' }}
+        if: ${{ env.SHOULD_PUBLISH == 'true'}}
         uses: actions/upload-artifact@v4
         with:
           name: latest-mac-x64.yml
@@ -245,20 +245,20 @@ jobs:
     steps:
       - name: Checkout git repo
         # we want this to run only when on "push" to "master"
-        if: ${{ env.SHOULD_PUBLISH == 'true' || env.SHOULD_PUBLISH_ALPHA == 'true' }}
+        if: ${{ env.SHOULD_PUBLISH == 'true'}}
         uses: actions/checkout@v4
 
       - name: Get version tag from package.json
         id: get_version
         # we want this to run only when on "push" to "master"
-        if: ${{ env.SHOULD_PUBLISH == 'true' || env.SHOULD_PUBLISH_ALPHA == 'true' }}
+        if: ${{ env.SHOULD_PUBLISH == 'true'}}
         run: |
           version=$(node -p "require('./package.json').version")
           echo "VERSION_TAG=$version" >> "$GITHUB_OUTPUT"
 
       - name: Download release metadata
         # we want this to run only when on "push" to "master"
-        if: ${{ env.SHOULD_PUBLISH == 'true' || env.SHOULD_PUBLISH_ALPHA == 'true' }}
+        if: ${{ env.SHOULD_PUBLISH == 'true'}}
         uses: actions/download-artifact@v4
         with:
           path: dist
@@ -267,13 +267,13 @@ jobs:
 
       - name: Combine release metadata
         # we want this to run only when on "push" to "master"
-        if: ${{ env.SHOULD_PUBLISH == 'true' || env.SHOULD_PUBLISH_ALPHA == 'true' }}
+        if: ${{ env.SHOULD_PUBLISH == 'true'}}
         run: |
           source ./build/setup-mac-release-combine.sh
 
       - name: Upload release metadata
         # we want this to run only when on "push" to "master"
-        if: ${{ env.SHOULD_PUBLISH == 'true' || env.SHOULD_PUBLISH_ALPHA == 'true' }}
+        if: ${{ env.SHOULD_PUBLISH == 'true'}}
         uses: actions/upload-artifact@v4
         with:
           name: latest-mac.yml
@@ -281,7 +281,7 @@ jobs:
 
       - name: Upload changes to draft release
         # we want this to run only when on "push" to "master"
-        if: ${{ env.SHOULD_PUBLISH == 'true' || env.SHOULD_PUBLISH_ALPHA == 'true' }}
+        if: ${{ env.SHOULD_PUBLISH == 'true'}}
         uses: ncipollo/release-action@v1
         with:
           tag: v${{ steps.get_version.outputs.VERSION_TAG }}
