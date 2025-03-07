@@ -45,7 +45,15 @@ runs:
       working-directory: ./release/
 
     - name: Upload Production Artifacts
+      if: ${{ inputs.multiarch_build == 'false' }}
       uses: actions/upload-artifact@v4
       with:
         name: ${{ inputs.upload_prefix }}-production
         path: release
+
+    - name: Upload Production Artifacts (multiarch)
+      if: ${{ inputs.multiarch_build == 'true' }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ inputs.upload_prefix }}-production
+        path: release/${{ inputs.upload_prefix }}-production
