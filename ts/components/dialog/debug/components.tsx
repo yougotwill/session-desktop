@@ -108,7 +108,7 @@ export const DebugActions = () => {
           }}
         >
           <SessionSpinner loading={loadingLatestRelease} color={'var(--text-primary-color)'} />
-          {!loadingLatestRelease ? 'Check latest release' : null}
+          {!loadingLatestRelease ? 'Check stable version' : null}
         </SessionButton>
         <SessionButton
           onClick={async () => {
@@ -145,7 +145,7 @@ export const DebugActions = () => {
           }}
         >
           <SessionSpinner loading={loadingAlphaRelease} color={'var(--text-primary-color)'} />
-          {!loadingAlphaRelease ? 'Check alpha release' : null}
+          {!loadingAlphaRelease ? 'Check alpha version' : null}
         </SessionButton>
       </Flex>
     </>
