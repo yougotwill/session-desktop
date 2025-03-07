@@ -801,7 +801,7 @@
   "updateError": "Cannot Update",
   "updateErrorDescription": "{app_name} failed to update. Please go to {session_download_url} and install the new version manually, then contact our Help Center to let us know about this problem.",
   "updateNewVersion": "A new version of {app_name} is available, tap to update",
-  "updateNewVersionDescription": "A new version of {app_name} is available.",
+  "updateNewVersionDescription": "A new version ({version}) of {app_name} is available.",
   "updateReleaseNotes": "Go to Release Notes",
   "updateSession": "{app_name} Update",
   "updateVersion": "Version {version}",
@@ -821,4 +821,3 @@
   "yes": "Yes",
   "you": "You"
 }
-
