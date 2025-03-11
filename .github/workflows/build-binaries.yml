@@ -8,12 +8,12 @@ on:
   push:
     branches:
       - master
-      - unstable
+      - dev
       - 'release/**'
       - 'ci/**'
   pull_request:
     branches:
-      - unstable
+      - dev
       - 'release/**'
       - 'ci/**'
 

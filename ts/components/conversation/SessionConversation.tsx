@@ -700,7 +700,6 @@ function OutdatedLegacyGroupBanner() {
     'h:mm a, d MMM yyyy'
   );
 
-  // FIXME change the date here. Remove after QA
   const text = deprecatedLegacyGroups
     ? localize(
         weAreAdmin ? 'legacyGroupAfterDeprecationAdmin' : 'legacyGroupAfterDeprecationMember'
